@@ -1,0 +1,311 @@
+from flask import Flask, jsonify, request, make_response
+from flask_cors import CORS
+import pandas as pd
+import io
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import Table, TableStyle
+from reportlab.lib import colors
+
+app = Flask(__name__)
+CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}})
+
+# Global variable to hold the uploaded DataFrame
+uploaded_df = None
+cleaned_data = None
+
+# Home route for testing the API
+@app.route('/', methods=['GET'])
+def home():
+    return "Welcome to the AI Data Visualization Tool Backend!"
+
+# File upload route
+@app.route('/api/upload', methods=['POST'])
+def upload_file():
+    global uploaded_df
+
+
+    if 'file' not in request.files:
+        return jsonify({"error": "No file part"}), 400
+
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({"error": "No selected file"}), 400
+
+    try:
+        # Read the file into a Pandas DataFrame
+        if file.filename.endswith('.csv'):
+            df = pd.read_csv(file)
+        elif file.filename.endswith(('.xls', '.xlsx')):
+            df = pd.read_excel(file)
+        elif file.filename.endswith('.json'):
+            df = pd.read_json(file)
+        else:
+            return jsonify({"error": "Unsupported file type"}), 400
+
+        uploaded_df = df
+
+        # Separate numeric and categorical columns
+        numeric_summary = df.select_dtypes(include='number').sum().to_dict()
+        categorical_summary = df.select_dtypes(exclude='number').apply(lambda x: x.value_counts().to_dict()).to_dict()
+
+        # Convert the first 5 rows of the DataFrame to JSON for preview
+        data_preview = df.head().to_json(orient='records')
+        print("Generated data_preview:", data_preview)
+        return jsonify({
+            "message": f"File '{file.filename}' uploaded successfully!",
+            "data_preview": data_preview,
+            "numeric_summary": numeric_summary,
+            "categorical_summary": categorical_summary
+        }), 200
+
+    
+
+    except Exception as e:
+        return jsonify({"error": f"Failed to process the file: {str(e)}"}), 500
+    
+# Route to get numerical and categorical column summaries
+@app.route('/api/numbers', methods=['GET'])
+def numbers_endpoint():
+    global uploaded_df
+
+    if uploaded_df is None:
+        return jsonify({"error": "No file has been uploaded yet"}), 400
+
+    try:
+        # Capture the output of pd.info() and return numeric/categorical summaries
+        buffer = io.StringIO()
+        uploaded_df.info(buf=buffer)
+        info_output = buffer.getvalue()
+
+        numeric_summary = uploaded_df.select_dtypes(include='number').sum().to_dict()
+        categorical_summary = uploaded_df.select_dtypes(exclude='number').apply(lambda x: x.value_counts().to_dict()).to_dict()
+
+        return jsonify({
+            "data_info": info_output,
+            "numeric_summary": numeric_summary,
+            "categorical_summary": categorical_summary
+        }), 200
+
+    except Exception as e:
+        return jsonify({"error": f"Failed to retrieve data information: {str(e)}"}), 500
+
+# Route to get categorical statistics
+@app.route('/catstats', methods=['GET'])
+def cat_col():
+    global uploaded_df
+
+    if uploaded_df is None:
+        return jsonify({"error": "No file has been uploaded yet."}), 400
+
+    try:
+        # Get 'columnName' from query parameters
+        column_name = request.args.get('columnName')
+        if not column_name:
+            return jsonify({"error": "No 'columnName' parameter provided."}), 400
+
+        # Ensure the column exists
+        if column_name not in uploaded_df.columns:
+            return jsonify({"error": f"Column '{column_name}' does not exist in the dataframe."}), 400
+
+        # Ensure the column is categorical
+        if uploaded_df[column_name].dtype != 'object':
+            return jsonify({"error": f"Column '{column_name}' is not categorical."}), 400
+
+        # Calculate counts and mode
+        category_counts = uploaded_df[column_name].value_counts(dropna=False)
+        category_mode = uploaded_df[column_name].mode(dropna=False).tolist()
+
+        # Prepare the response
+        response = {
+            "counts": category_counts.to_dict(),
+            "mode": category_mode
+        }
+
+        return jsonify(response), 200
+
+    except Exception as e:
+        return jsonify({"error": f"Error calculating categorical statistics: {str(e)}"}), 500
+
+# Route to return the available categorical columns
+@app.route('/categorical-columns', methods=['GET'])
+def get_categorical_columns():
+    global uploaded_df
+
+    if uploaded_df is None:
+        return jsonify({"error": "No file has been uploaded yet."}), 400
+
+    try:
+        categorical_columns = uploaded_df.select_dtypes(include=['object']).columns.tolist()
+        return jsonify(categorical_columns), 200
+
+    except Exception as e:
+        return jsonify({"error": f"Error retrieving categorical columns: {str(e)}"}), 500
+
+# Route to get statistical calculations (mean, median, mode) for numeric data
+@app.route('/stats', methods=['GET'])
+def get_stats():
+    global uploaded_df
+
+    if uploaded_df is None:
+        return jsonify({"error": "No file has been uploaded yet"}), 400
+
+    try:
+        # Ensure we only work with numeric columns
+        numeric_df = uploaded_df.select_dtypes(include=['number'])
+        if numeric_df.empty:
+            return jsonify({"error": "No numeric columns available for statistics calculation."}), 400
+
+        # Calculate statistics
+        mean = numeric_df.mean().to_dict()
+        median = numeric_df.median().to_dict()
+        mode = numeric_df.mode().iloc[0].to_dict()
+
+        return jsonify({
+            'mean': mean,
+            'median': median,
+            'mode': mode
+        }), 200
+
+    except Exception as e:
+        return jsonify({"error": f"Error calculating statistics: {str(e)}"}), 500
+
+
+@app.route('/cleaning', methods=['POST'])
+def get_clean():
+    global uploaded_df, cleaned_data
+
+    if uploaded_df is None:
+        return jsonify({"error": "No file has been uploaded yet"}), 400
+
+    try:
+        data = request.json
+        task = data.get('task')
+        current_cleaned_data = data.get('data')  # Get cleaned data from the client if provided
+
+        # Start with uploaded_df or use the provided cleaned data
+        if current_cleaned_data:
+            current_df = pd.DataFrame(current_cleaned_data)
+        else:
+            current_df = uploaded_df
+
+        # Perform the selected cleaning task
+        if task == "remove_nulls":
+            cleaned_df = current_df.dropna()
+
+        elif task == "fill_nulls":
+            fill_value = data.get('fill_value', '')
+            cleaned_df = current_df.fillna(fill_value)
+
+        elif task == "standardize":
+            # Standardize by converting all string data to lowercase
+            cleaned_df = current_df.applymap(lambda x: x.lower() if isinstance(x, str) else x)
+
+        elif task == "remove_outliers":
+            # Remove outliers (based on numeric columns)
+            numeric_df = current_df.select_dtypes(include=['float64', 'int64'])
+            cleaned_df = current_df[(numeric_df.apply(lambda x: (x - x.mean()).abs() <= (3 * x.std())).all(axis=1))]
+
+        else:
+            return jsonify({"error": "Invalid task"}), 400
+
+        # Provide a preview of cleaned data
+        cleaned_data_preview = cleaned_df.head(10).to_dict(orient='records')
+        cleaned_data = cleaned_df.to_dict(orient='records')
+
+        return jsonify({
+            "cleaned_data_preview": cleaned_data_preview,
+            "cleaned_data": cleaned_data,
+            "message": "Data cleaning successful"
+        }), 200
+
+    except Exception as e:
+        return jsonify({"error": f"Error during data cleaning: {str(e)}"}), 500
+
+
+# Updated /api/export endpoint with ReportLab for PDF generation
+@app.route('/api/export', methods=['GET'])
+def export_cleaned_data():
+    global cleaned_data
+
+    if cleaned_data is None:
+        return jsonify({"error": "No cleaned data available to export"}), 400
+
+    try:
+        # Convert cleaned_data back to DataFrame if needed
+        if isinstance(cleaned_data, list):
+            df = pd.DataFrame(cleaned_data)
+        else:
+            df = cleaned_data
+
+        export_format = request.args.get('format', 'csv').lower()
+
+        if export_format == 'csv':
+            response = make_response(df.to_csv(index=False))
+            response.headers['Content-Disposition'] = 'attachment; filename=cleaned_data.csv'
+            response.headers['Content-Type'] = 'text/csv'
+
+        elif export_format == 'excel':
+            output = io.BytesIO()
+            with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                df.to_excel(writer, index=False, sheet_name='CleanedData')
+            output.seek(0)  # Reset the pointer to the start of the stream
+            response = make_response(output.read())
+            response.headers['Content-Disposition'] = 'attachment; filename=cleaned_data.xlsx'
+            response.headers['Content-Type'] = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+
+
+        elif export_format == 'pdf':
+            # Use ReportLab to generate the PDF
+            output = io.BytesIO()
+            pdf = canvas.Canvas(output, pagesize=letter)
+            pdf.setFont("Helvetica", 12)
+
+            # Add title and spacing
+            pdf.drawString(100, 750, "Cleaned Data Export")
+            pdf.drawString(50, 730, "-" * 50)
+
+            # Add a header
+            pdf.setFont("Helvetica-Bold", 16)
+            pdf.drawString(50, 800, "Cleaned Data Report")
+            pdf.setFont("Helvetica", 12)
+            pdf.drawString(50, 780, "Generated on: " + pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S'))
+
+            # Add a footer with page number
+            pdf.setFont("Helvetica", 10)
+            pdf.drawString(500, 20, f"Page 1")
+
+
+            # Write column headers
+            col_y = 710
+            for col_name in df.columns:
+                pdf.drawString(50, col_y, col_name)
+                col_y -= 20
+
+            # Write row data
+            for _, row in df.iterrows():
+                row_str = ", ".join([str(val) for val in row])
+                pdf.drawString(50, col_y, row_str)
+                col_y -= 20
+                if col_y < 50:  # Start new page if space runs out
+                    pdf.showPage()
+                    pdf.setFont("Helvetica", 12)
+                    col_y = 750
+
+            pdf.save()
+            response = make_response(output.getvalue())
+            response.headers['Content-Disposition'] = 'attachment; filename=cleaned_data.pdf'
+            response.headers['Content-Type'] = 'application/pdf'
+
+        else:
+            return jsonify({"error": "Unsupported export format"}), 400
+
+        return response
+
+    except Exception as e:
+        return jsonify({"error": f"Error exporting data: {str(e)}"}), 500
+
+
+# Run the Flask app
+if __name__ == '__main__':
+    app.run(debug=True)
