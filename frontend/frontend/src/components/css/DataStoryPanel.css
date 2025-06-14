@@ -1,0 +1,153 @@
+/*──────────────────────────────────────────────────────────────────────────────
+  DataStoryPanel.css        —  Final Balanced Layout (Mimics Reference)
+──────────────────────────────────────────────────────────────────────────────*/
+
+:root {
+  --nt-red:        #e60012;
+  --nt-gray-light: #f4f4f4;
+  --nt-gray-dark:  #404040;
+  --nt-accent:     #3686ff;
+  --nt-radius:     12px;
+  --nt-shadow:     0 4px 10px rgba(0, 0, 0, .15);
+  --font-pixel:    "Press Start 2P", system-ui, sans-serif;
+  --font-body:     "Inter", "Segoe UI", sans-serif;
+}
+
+/* ── Storyboard Layout ─────────────────────────────────────────────────────── */
+.storyboard-wrapper {
+  display: flex;
+  flex-direction: row;
+  gap: 24px;
+  height: 90%;
+  padding: 16px 18px;
+  background: var(--nt-gray-light);
+  border-top: 4px solid var(--nt-red);
+  box-shadow: var(--nt-shadow);
+  border-radius: var(--nt-radius);
+  font-family: var(--font-body);
+  min-height: 100%;
+  box-sizing: border-box;
+}
+
+/* ── Chart Column (Left) ───────────────────────────────────────────────────── */
+.charts-column {
+  flex: 1 1 55%;
+  max-width: 55%;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+/* Chart Card */
+.chart-wrapper {
+  background: #fff;
+  border-radius: var(--nt-radius); 
+  box-shadow: var(--nt-shadow);
+  border-left: 6px solid var(--nt-accent);
+  padding: 10px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  height: 363px;     /* ✅ Limits chart expansion and cuts vertical white space */
+  box-sizing: border-box;
+}
+
+
+/* Toolbar inside chart */
+.chart-wrapper .chart-toolbar {
+  display: flex;
+  justify-content: flex-start;
+  gap: 0px;
+}
+
+/* ── Narrative Panel (Right) ───────────────────────────────────────────────── */
+.story-panel {
+  flex: 1 1 45%;
+  max-width: 45%;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  background: #fff;
+  border-radius: var(--nt-radius);
+  box-shadow: var(--nt-shadow);
+  padding: 24px 32px;
+  box-sizing: border-box;
+}
+
+/* Header in right panel */
+.panel-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.panel-header h3 {
+  font-family: var(--font-pixel);
+  font-size: 15px;
+  letter-spacing: 0.5px;
+  color: var(--nt-red);
+  margin: 0;
+}
+.panel-header .divider {
+  flex: 1;
+  height: 1px;
+  background: var(--nt-red);
+  opacity: .5;
+}
+
+/* Story sections */
+.story-section h4 {
+  font-family: var(--font-pixel);
+  font-size: 13px;
+  color: var(--nt-accent);
+  margin: 20px 0 6px;
+}
+.story-section p {
+  font-size: 14px;
+  line-height: 1.55;
+  margin: 0;
+  color: var(--nt-gray-dark);
+}
+
+/* ── Scrollbars (Subtle) ───────────────────────────────────────────────────── */
+.charts-column::-webkit-scrollbar,
+.story-panel::-webkit-scrollbar {
+  width: 8px;
+}
+.charts-column::-webkit-scrollbar-track,
+.story-panel::-webkit-scrollbar-track {
+  background: transparent;
+}
+.charts-column::-webkit-scrollbar-thumb,
+.story-panel::-webkit-scrollbar-thumb {
+  background: var(--nt-accent);
+  border-radius: 4px;
+}
+
+/* ── Chart.js canvas layout fix ───────────────────────────────────────────── */
+.chart-wrapper canvas {
+  display: block;
+  margin: 0 !important;
+  padding: 10 !important;
+  height: auto !important;
+  max-height: 86% !important;
+}
+
+
+/* ── Mobile fallback ───────────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .storyboard-wrapper {
+    flex-direction: column;
+  }
+  .charts-column,
+  .story-panel {
+    max-width: 100%;
+    flex: 1 1 100%;
+  }
+  .story-panel {
+    order: -1;
+  }
+}

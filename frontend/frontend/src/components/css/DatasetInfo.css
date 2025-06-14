@@ -1,0 +1,48 @@
+.numbers-list-container {
+  padding: 20px;
+  background-color: #fff;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 15px;
+  color: #333;
+}
+
+.loading-message,
+.error-message {
+  text-align: center;
+  font-weight: bold;
+}
+
+.error-message {
+  color: #d9534f;
+}
+
+.data-preview-container,
+.stat-data-container,
+.chart-container {
+  margin-bottom: 20px;
+}
+
+.data-preview-title,
+.stat-data-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-bottom: 10px;
+  color: #333;
+}
+
+.data-preview-content,
+.stat-data-content {
+  background-color: #f8f8f8;
+  padding: 15px;
+  border-radius: 4px;
+  overflow-x: auto;
+  font-family: monospace;
+  font-size: 0.9rem;
+  color: #444;
+}

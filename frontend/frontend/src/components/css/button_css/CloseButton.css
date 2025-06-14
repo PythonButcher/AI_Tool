@@ -1,0 +1,42 @@
+/* Style for the close button, EXACTLY matching the provided reference */
+.styled-close-btn {
+  /* Remove positioning - handled by flex container */
+  /* position: absolute; */
+  /* top: 10px; */
+  /* left: 890px; */
+
+  /* Styling */
+  background-color: lightcoral; /* Keeping exactly as provided in reference */
+  color: #555;                   /* Slightly softer icon/text color */
+  border: none;
+  cursor: pointer;
+  padding: 0;                   /* Remove padding if icon fills the space */
+  font-size: 1.1rem;            /* Adjust based on the icon/symbol used ('—') */
+  line-height: 1;               /* Ensure text/icon is centered vertically */
+  width: 28px;                  /* Slightly smaller size */
+  height: 28px;                 /* Slightly smaller size */
+  border-radius: 6px;           /* Consistent rounded corners */
+  display: flex;                /* Keep flex for centering content */
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease, color 0.2s ease; /* Smoother transitions */
+}
+
+/* Hover effect (Identical to reference)*/
+.styled-close-btn:hover {
+  background-color: rgba(0, 0, 0, 0.08); /* Subtle background on hover */
+  color: #111;                   /* Darker color on hover */
+  /* transform: scale(1.05); */ /* Consider removing scale for cleaner look */
+}
+
+/* Focus effect for accessibility (Identical to reference) */
+.styled-close-btn:focus {
+  outline: none; /* Remove default outline */
+  box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.4); /* Subtle focus ring */
+}
+
+/* Optional: Style for when focus is visible (Identical to reference) */
+.styled-close-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.4);
+}

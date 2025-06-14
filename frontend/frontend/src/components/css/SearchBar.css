@@ -1,0 +1,116 @@
+.sidebar-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px;
+  position: relative;
+}
+
+.sidebar-button {
+  margin: 10px 0;
+  cursor: pointer;
+  position: relative;
+}
+
+.sidebar-button-icon {
+  font-size: 24px;
+  color: #333;
+  
+}
+
+.tooltip-text {
+  visibility: hidden;
+  width: 140px;
+  background-color: #333;
+  color: #fff;
+  text-align: center;
+  border-radius: 6px;
+  padding: 5px 0;
+  position: absolute;
+  z-index: 1;
+  bottom: 125%;
+  left: 50%;
+  margin-left: -70px;
+  opacity: 0;
+  transition: opacity 0.3s;
+  font-size: 14px;
+}
+
+.sidebar-button:hover .tooltip-text {
+  visibility: visible;
+  opacity: 1;
+}
+
+.cleaning-form-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.cleaning-form-container {
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: none;
+  width: 500px;
+  text-align: center;
+  position: fixed; /* Use fixed to keep it in view */
+  top: 50%; /* Center vertically */
+  left: 50%; /* Center horizontally */
+  transform: translate(-50%, -50%); /* Adjust positioning to be truly centered */
+}
+
+
+.upload-title {
+  font-weight: bold;
+  margin-bottom: 10px;
+  color: #4a5568;
+}
+
+.file-input {
+  display: block;
+  width: 100%;
+  margin-bottom: 10px;
+}
+
+.upload-button {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  background-color: #718096;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.upload-button:hover {
+  background-color: #4a5568;
+}
+
+.error-message {
+  color: red;
+  text-align: center;
+}
+
+.browse-btn {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  background-color: #718096;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  text-align: center;
+}
+
+.browse-btn:hover {
+  background-color: #4a5568;
+}

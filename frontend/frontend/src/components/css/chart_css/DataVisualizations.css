@@ -1,0 +1,99 @@
+/* General Styling */
+.data-visuals {
+  font-family: 'Roboto', Arial, sans-serif;
+}
+
+/* Dialog Container */
+.dialog-container {
+  padding: 20px;
+  background-color: #ffffff;
+  border-radius: 10px;
+  box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+/* Header Section */
+.dialog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 10px;
+}
+
+.dialog-header h6 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #333333;
+}
+
+.dialog-close-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.5rem;
+  color: #888888;
+  transition: color 0.3s ease;
+}
+
+.dialog-close-btn:hover {
+  color: #d32f2f;
+}
+
+/* Grid Layout for Chart Thumbnails */
+.chart-thumbnail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 15px;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  background: #f9f9f9;
+  transition: box-shadow 0.3s ease, transform 0.2s ease;
+  text-align: center;
+  box-shadow: 0px 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.chart-thumbnail:hover {
+  box-shadow: 0px 8px 15px rgba(0, 0, 0, 0.2);
+  transform: translateY(-5px);
+  background: #ffffff;
+}
+
+.chart-thumbnail .chart-thumbnail-label {
+  margin-top: 10px;
+  font-size: 1rem;
+  font-weight: 500;
+  color: #444;
+}
+
+.chart-thumbnail .chart-thumbnail-label:hover {
+  color: #1976d2; /* Accent color for hover effect */
+}
+
+/* Modal Footer */
+.dialog-actions {
+  border-top: 1px solid #ddd;
+  padding: 15px;
+  display: flex;
+  justify-content: flex-end;
+  background-color: #fafafa;
+}
+
+.dialog-actions button {
+  background: #1779db;
+  color: #ffffff;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 600;
+  transition: background 0.3s ease;
+}
+
+.dialog-actions button:hover {
+  background: #155fa0;
+}

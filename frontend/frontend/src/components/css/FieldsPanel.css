@@ -1,0 +1,87 @@
+/* Modernized FieldsPanel.css */
+
+/* Sidebar and FieldsPanel wrapper */
+.sidebar-container {
+    position: relative; /* Ensures FieldsPanel is positioned relative to this */
+}
+
+/* FieldsPanel beside the sidebar icon */
+.fields-panel {
+    position: relative;
+    top: -20px; /* Adjust to align with the icon's vertical position */
+    left: 150px; /* Position it to the right of the sidebar */
+    background: rgba(45, 45, 45, 0.85);
+    backdrop-filter: blur(8px);
+    border: 3px solid rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    padding: 18px;
+    width: 250px;
+    max-height: 80vh;
+    overflow-y: visible;
+    font-family: 'Press Start 2P', monospace;
+    color: #fff;
+    box-shadow: 0px 8px 20px rgba(0, 0, 0, 0.3);
+    z-index: 1050;
+}
+
+/* FieldsPanel header styling */
+.fields-panel-header {
+    font-size: 1rem;
+    text-align: center;
+    color: #ffcc00;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+}
+
+/* Fields list styling */
+.fields-panel-item {
+    background: linear-gradient(145deg, #3a3a3a, #2d2d2d);
+    color: #fff;
+    padding: 10px;
+    border: 2px solid rgba(255, 255, 255, 0.15);
+    border-radius: 6px;
+    font-size: 0.85rem;
+    text-align: center;
+    cursor: grab;
+    transition: transform 0.2s, background 0.3s, box-shadow 0.3s;
+}
+
+.fields-panel-item:hover {
+    background: linear-gradient(145deg, #575757, #3a3a3a);
+    transform: scale(1.05);
+    color: #ffcc00;
+    box-shadow: 0px 4px 10px rgba(255, 255, 0, 0.2);
+}
+
+/* Active (dragging) state */
+.fields-panel-item:active {
+    cursor: grabbing;
+    background: linear-gradient(145deg, #292929, #1f1f1f);
+    border-color: #ff0000;
+    box-shadow: 0px 4px 12px rgba(255, 0, 0, 0.3);
+}
+
+/* Scrollbar */
+.fields-panel::-webkit-scrollbar {
+    width: 8px;
+    background-color: rgba(45, 45, 45, 0.5);
+    border-radius: 8px;
+}
+
+.fields-panel::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 8px;
+}
+
+.fields-panel::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.5);
+}
+
+/* Dragging Effect */
+.fields-panel-item.dragging {
+    opacity: 0.6;
+    cursor: grabbing;
+    background: #1f1f1f;
+    border-color: #ff0000;
+    transform: scale(1.02);
+}

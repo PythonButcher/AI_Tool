@@ -1,0 +1,139 @@
+/* Sidebar.css */
+.sidebar-container {
+    width: 40px; /* Narrower sidebar for a sleek look */
+    padding: 140px 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 70vh;
+    background: none;
+    position: fixed; /* Fix the position for consistency */
+    left: 0; /* Position on the far left */
+    background-color: transparent; /* Transparent background */
+    z-index: 1000; /* Ensure it stays above other elements */
+}
+
+/* Hide the sidebar title for an icon-only design */
+.sidebar-title {
+    display: none;
+}
+
+/* Style for each sidebar button */
+.sidebar-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 50px;
+    height: 50px;
+    margin: 10px 0;
+    position: relative;
+    transition: transform 0.2s ease;
+}
+
+.sidebar-button:hover {
+    transform: scale(1.15);
+    cursor: pointer;
+}
+
+/* Distinct colors for each icon */
+.sidebar-button:nth-child(1) .sidebar-button-icon {
+    color: #ff6347; /* Tomato */
+}
+.sidebar-button:nth-child(2) .sidebar-button-icon {
+    color: #4682b4; /* SteelBlue */
+}
+.sidebar-button:nth-child(3) .sidebar-button-icon {
+    color: #32cd32; /* LimeGreen */
+}
+.sidebar-button:nth-child(4) .sidebar-button-icon {
+    color: #daa520; /* GoldenRod */
+}
+.sidebar-button:nth-child(5) .sidebar-button-icon {
+    color: #6a5acd; /* SlateBlue */
+}
+
+/* Fields Panel Toggle Button */
+.sidebar-button:nth-child(6) .sidebar-button-icon {
+    color: #20b2aa; /* LightSeaGreen */
+}
+
+/* Tooltip styling for button hover */
+.sidebar-button[data-tooltip]:hover::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    left: 60px; /* Align tooltip to the right of the button */
+    background-color: #535252;
+    color: #fff;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 0.8em;
+    white-space: nowrap;
+    box-shadow: 0px 0px 5px rgba(180, 174, 174, 0.3);
+    z-index: 10;
+    opacity: 1;
+    transition: opacity 0.3s ease;
+}
+
+.cleaning-form-container.hidden {
+    display: none;
+}
+
+.cleaning-form-container.visible {
+    display: block;
+}
+
+/* Tooltip styling for hidden tooltips */
+.tooltip-text {
+    visibility: hidden;
+    width: 120px;
+    background-color: #333;
+    color: #fff;
+    text-align: center;
+    border-radius: 4px;
+    padding: 5px 0;
+    position: absolute;
+    z-index: 1;
+    bottom: 125%; /* Position above the button */
+    left: 50%;
+    transform: translateX(-50%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.sidebar-button:hover .tooltip-text {
+    visibility: visible;
+    opacity: 1;
+}
+
+/* Export dropdown styles */
+.export-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 120%; /* Shift it more to the right */
+    transform: translateX(0); /* Remove centering adjustment */
+    background-color: #ffffff;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+    border-radius: 6px;
+    padding: 10px 0;
+    z-index: 10;
+    width: 150px;
+}
+
+.export-dropdown button {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 10px 15px;
+    background: none;
+    border: none;
+    color: #333;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.export-dropdown button:hover {
+    background-color: #f0f0f0;
+    color: #000;
+}
+

@@ -1,0 +1,43 @@
+/* src/components/preview_components/PreviewModeSelector.css */
+
+/* Container for the toggle buttons */
+.preview-mode-selector {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+    margin: 12px 0;
+  }
+  
+  /* Base button style */
+  .preview-mode-selector button {
+    padding: 8px 16px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #333;
+    background-color: #f2f2f2;
+    border: 2px solid #ccc;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 100px;
+  }
+  
+  /* Hover and active feel */
+  .preview-mode-selector button:hover {
+    background-color: #e0e0e0;
+    border-color: #999;
+  }
+  
+  /* When a button is selected */
+  .preview-mode-selector button.active {
+    background-color: #3b82f6; /* Matching your accent blue */
+    color: white;
+    border-color: #2563eb;
+  }
+  
+  /* Smooth pressed effect */
+  .preview-mode-selector button:active {
+    transform: scale(0.98);
+  }
+  
