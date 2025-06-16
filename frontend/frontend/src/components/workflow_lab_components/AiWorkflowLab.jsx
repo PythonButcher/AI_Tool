@@ -1,6 +1,6 @@
 // 📂 AiWorkflowLab.jsx — cleaned and fixed DropZone behavior with working hover
 
-import { useState, useCallback, useContext, useRef } from "react";
+import { useState, useCallback, useContext, useRef , addEdge} from "react";
 import {
   ReactFlow,
   Controls,
@@ -85,6 +85,16 @@ function AiWorkflowLab() {
     [hasExecuted]
   );
 
+    // 🔁 Add this new handler
+  const onConnect = useCallback(
+    (params) => {
+      console.log("🔗 New edge created:", params);
+      setEdges((eds) => addEdge(params, eds));
+    },
+    []
+  );
+
+
   const onNodesChange = useCallback(
     (changes) => {
       setNodes((nds) => {
@@ -158,6 +168,7 @@ function AiWorkflowLab() {
         edges={edges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
+        onConnect={onConnect}                      
         fitView
         nodeTypes={{
           AiWorkLabNodeSizer,
