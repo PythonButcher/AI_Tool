@@ -171,7 +171,7 @@ function AiWorkflowLab() {
         onConnect={onConnect}                      
         fitView
         nodeTypes={{
-          AiWorkLabNodeSizer,
+          AiWorkLabNodeSizer: AiWorkLabNodeSizer,
           dropZoneNode: DropZoneNode,
         }}
       >
