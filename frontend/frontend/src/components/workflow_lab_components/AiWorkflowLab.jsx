@@ -1,12 +1,13 @@
 // 📂 AiWorkflowLab.jsx — cleaned and fixed DropZone behavior with working hover
 
-import { useState, useCallback, useContext, useRef , addEdge} from "react";
+import { useState, useCallback, useContext, useRef } from "react";
 import {
   ReactFlow,
   Controls,
   Background,
   applyNodeChanges,
   applyEdgeChanges,
+  addEdge,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import "../css/workflow_lab_css/AiWorkflowLab.css";
