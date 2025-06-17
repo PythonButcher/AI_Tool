@@ -9,21 +9,33 @@ const AiWorkLabNodeSizer = ({ data, selected }) => {
       <NodeResizer
         color="#444"
         isVisible={selected}
-        minWidth={100}
-        minHeight={50}
-        lineStyle={{ strokeWidth: 1.2 }}
+        minWidth={120}
+        minHeight={60}
+        lineStyle={{ strokeWidth: 1.5 }}
         handleStyle={{
           width: 10,
           height: 10,
           borderRadius: '2px',
-          backgroundColor: '#666',
+          backgroundColor: '#555',
         }}
       />
 
+      {/* Target (input) */}
       <Handle
         type="target"
         position={Position.Left}
-        style={{ background: '#666' }}
+        id="input"
+        style={{
+          width: 16,
+          height: 16,
+          backgroundColor: '#1e90ff',
+          border: '2px solid white',
+          borderRadius: '50%',
+          top: '50%',
+          left: '-8px',
+          transform: 'translateY(-50%)',
+          zIndex: 10,
+        }}
       />
 
       <div
@@ -32,34 +44,47 @@ const AiWorkLabNodeSizer = ({ data, selected }) => {
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          padding: '10px',
-          borderRadius: '8px',
-          border: '1px solid #aaa',
-          backgroundColor: '#f0f0f0',
+          padding: '14px',
+          borderRadius: '10px',
+          border: '1.5px solid #aaa',
+          backgroundColor: '#fefefe',
           boxShadow: selected
-            ? '0 0 0 2px #888'
-            : '0 2px 6px rgba(0, 0, 0, 0.15)',
-          fontFamily: 'sans-serif',
-          fontSize: '13px',
-          color: '#333',
+            ? '0 0 0 2px #4a90e2'
+            : '0 2px 6px rgba(0, 0, 0, 0.12)',
+          fontFamily: 'Segoe UI, sans-serif',
+          fontSize: '14px',
+          color: '#222',
           textAlign: 'center',
           cursor: 'grab',
-          transition: 'box-shadow 0.2s ease, transform 0.2s ease',
+          position: 'relative',
+          minWidth: '130px',
         }}
       >
-        {Icon && <Icon size={20} style={{ color: '#555' }} />}
-        <div>{data.label}</div>
-        <div style={{ fontSize: '11px', marginTop: '4px' }}>
+        {Icon && <Icon size={24} style={{ color: '#444', marginBottom: '6px' }} />}
+        <div style={{ fontWeight: 600 }}>{data.label}</div>
+        <div style={{ fontSize: '12px', marginTop: '4px', color: '#666' }}>
           {data.status === 'pending' && '⏳ Running...'}
           {data.status === 'success' && '✅ Done'}
           {data.status === 'error' && '❌ Error'}
         </div>
-        
-       </div>
+      </div>
+
+      {/* Source (output) */}
       <Handle
         type="source"
         position={Position.Right}
-        style={{ background: '#666' }}
+        id="output"
+        style={{
+          width: 16,
+          height: 16,
+          backgroundColor: '#28a745',
+          border: '2px solid white',
+          borderRadius: '50%',
+          top: '50%',
+          right: '-8px',
+          transform: 'translateY(-50%)',
+          zIndex: 10,
+        }}
       />
     </>
   );
