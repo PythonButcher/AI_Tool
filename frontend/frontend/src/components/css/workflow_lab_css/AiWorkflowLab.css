@@ -63,3 +63,13 @@
 .handle-source {
   background-color: #28a745;
 }
+
+.handle-target:hover {
+  background-color: #1c86ee;
+  box-shadow: 0 0 6px rgba(30, 144, 255, 0.5);
+}
+
+.handle-source:hover {
+  background-color: #23913d;
+  box-shadow: 0 0 6px rgba(40, 167, 69, 0.5);
+}

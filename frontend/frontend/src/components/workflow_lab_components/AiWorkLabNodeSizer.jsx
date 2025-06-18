@@ -20,7 +20,7 @@ const AiWorkLabNodeSizer = ({ data, selected }) => {
         }}
       />
 
-      {/* Target (input) */}
+      {/* Target (input) handle styled via .handle-target */}
       <Handle
         type="target"
         position={Position.Left}
@@ -65,7 +65,7 @@ const AiWorkLabNodeSizer = ({ data, selected }) => {
         </div>
       </div>
 
-      {/* Source (output) */}
+      {/* Source (output) handle styled via .handle-source */}
       <Handle
         type="source"
         position={Position.Right}
