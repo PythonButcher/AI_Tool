@@ -25,14 +25,10 @@ const AiWorkLabNodeSizer = ({ data, selected }) => {
         type="target"
         position={Position.Left}
         id="input"
+        className="handle-target"
         style={{
-          width: 16,
-          height: 16,
-          backgroundColor: '#1e90ff',
-          border: '2px solid white',
-          borderRadius: '50%',
           top: '50%',
-          left: '-8px',
+          left: '-12px',
           transform: 'translateY(-50%)',
           zIndex: 10,
         }}
@@ -74,14 +70,10 @@ const AiWorkLabNodeSizer = ({ data, selected }) => {
         type="source"
         position={Position.Right}
         id="output"
+        className="handle-source"
         style={{
-          width: 16,
-          height: 16,
-          backgroundColor: '#28a745',
-          border: '2px solid white',
-          borderRadius: '50%',
           top: '50%',
-          right: '-8px',
+          right: '-12px',
           transform: 'translateY(-50%)',
           zIndex: 10,
         }}
