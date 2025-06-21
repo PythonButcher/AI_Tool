@@ -1,6 +1,10 @@
 // src/components/workflow_lab_components/AIReporter.jsx
-import React from "react";
+import React, { useRef } from "react";
 import AICharts from "../ai_ml_components/AICharts";
+import { jsPDF } from "jspdf";
+import html2canvas from "html2canvas";
+import "../css/AIReporter.css";
+
 
 const Section = ({ title, content }) => (
   <div style={{ marginBottom: "24px" }}>
@@ -30,17 +34,31 @@ const asText = (val) =>
 
 // AIReporter.jsx
 const AIReporter = ({ summary, insights, execution, chartType, chartData }) => {
+  const reportRef = useRef(null);
+
+  const handleExportPDF = async () => {
+    if (!reportRef.current) return;
+    const canvas = await html2canvas(reportRef.current);
+    const imgData = canvas.toDataURL("image/png");
+    const pdf = new jsPDF({
+      orientation: "portrait",
+      unit: "px",
+      format: [canvas.width, canvas.height],
+    });
+    pdf.addImage(imgData, "PNG", 0, 0, canvas.width, canvas.height);
+    pdf.save("ai_report.pdf");
+  };
+
   console.log(
-    `AIReporter PROPS: chartType: '${chartType}', chartData (FULL):`, chartData, // Log the full array
+    `AIReporter PROPS: chartType: '${chartType}', chartData (FULL):`, chartData,
     `| typeof: ${typeof chartData}`,
     `| isArray: ${Array.isArray(chartData)}`,
     `| length: ${Array.isArray(chartData) ? chartData.length : 'N/A'}`
-    // The 'first element' part can be removed if you're logging the full array,
-    // as you can inspect it in the browser console.
   );
- // }
+
   return (
     <div
+      ref={reportRef}
       style={{
         background: "#f9f9f9",
         border: "1px solid #ccc",
@@ -51,6 +69,7 @@ const AIReporter = ({ summary, insights, execution, chartType, chartData }) => {
         boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
       }}
     >
+      
       <h1 style={{ fontSize: "24px", fontWeight: "700", marginBottom: "24px", textAlign: "center" }}>
         🧠 AI Reporter
       </h1>
@@ -68,7 +87,11 @@ const AIReporter = ({ summary, insights, execution, chartType, chartData }) => {
             }
           />
         )}
-
+      <div style={{ textAlign: "center", marginTop: "24px" }}>
+        <button className="export-report-button" onClick={handleExportPDF}>
+          Export Report as PDF
+        </button>
+      </div>
     </div>
   );
 };
