@@ -8,6 +8,8 @@ export const DataProvider = ({ children }) => {
   const [cleanedData,   setCleanedData]   = useState(null);
   const [filteredData,  setFilteredData]  = useState(null);
   const [pipelineResults, setPipelineResults] = useState({}); // ✅ NEW: results from AI pipeline
+  const [aiReportReady, setAiReportReady] = useState(false); // flag when report finished
+  const [showAiReport, setShowAiReport] = useState(false);
 
   useEffect(() => console.log('📦 fullData rows:', fullData?.length || 0), [fullData]);
 
@@ -16,8 +18,10 @@ export const DataProvider = ({ children }) => {
     fullData,      setFullData,
     cleanedData,   setCleanedData,
     filteredData,  setFilteredData,
-    pipelineResults, setPipelineResults, // ✅ EXPOSE in context
-  }), [uploadedData, fullData, cleanedData, filteredData, pipelineResults]);
+    pipelineResults, setPipelineResults,
+    aiReportReady, setAiReportReady,
+    showAiReport,  setShowAiReport,
+  }), [uploadedData, fullData, cleanedData, filteredData, pipelineResults, aiReportReady, showAiReport]);
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 };
