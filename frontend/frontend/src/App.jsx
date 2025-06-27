@@ -27,7 +27,7 @@ const theme = createTheme({
 });
 
 function App() {
-  const { uploadedData, setUploadedData, setFullData, pipelineResults, setPipelineResults} = useContext(DataContext);
+  const { uploadedData, setUploadedData, setFullData, pipelineResults, setPipelineResults, aiReportReady, setAiReportReady, showAiReport, setShowAiReport } = useContext(DataContext);
   console.log("App.jsx received uploadedData:", uploadedData);
 
   // Standard charting state
@@ -76,9 +76,16 @@ function App() {
     console.log("Sidebar render cleanedData:", uploadedData);
   }, [uploadedData]);
   
-  useEffect(() => {
+useEffect(() => {
   console.log("📉 Filtered data:", openDataFilter);
 }, [openDataFilter]);
+
+  // Notify when AI report has been generated
+  useEffect(() => {
+    if (pipelineResults?.ai_report?.status === 'success') {
+      setAiReportReady(true);
+    }
+  }, [pipelineResults, setAiReportReady]);
 
 
   useEffect(() => {
@@ -179,6 +186,16 @@ function App() {
   const handleCanvasMinimize = useCallback(() => {
     setShowCanvasMinimized(prev => !prev);
   }, []);
+
+  const handleAiReportOpen = useCallback(() => {
+    setShowAiReport(true);
+    setAiReportReady(false);
+  }, []);
+
+  const handleAiReportClose = useCallback(() => {
+    setShowAiReport(false);
+    setAiReportReady(false);
+  }, []);
   
 
   const handleChartSelection = useCallback((chartType) => {
@@ -243,7 +260,8 @@ function App() {
               handleApiData={handleApiData}
               handleDatabaseData={handleDatabaseData}
               setOpenDataFilter={setOpenDataFilter}
-          
+              aiReportReady={aiReportReady}
+              onAiReportClick={handleAiReportOpen}
             />
 
             <DataFilterPanel openDataFilter={openDataFilter} setOpenDataFilter={setOpenDataFilter} />
@@ -309,7 +327,9 @@ function App() {
                   pipelineResults={pipelineResults} 
                   setPipelineResults={setPipelineResults}
                   outputWindows={outputWindows}
-                  setOutputWindows={setOutputWindows}      
+                  setOutputWindows={setOutputWindows}
+                  showAiReport={showAiReport}
+                  onCloseAiReport={handleAiReportClose}
                   >
                     
                   {/* Dataset information displayed within the CanvasContainer */}

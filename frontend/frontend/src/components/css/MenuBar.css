@@ -151,3 +151,31 @@
   background-color: #404040;
   transform: translateY(1px);
 }
+
+/* Notification icon for AI report */
+.ai-report-notification {
+  position: relative;
+}
+
+.ai-report-icon {
+  animation: flash 1s infinite;
+  color: #d9534f;
+}
+
+@keyframes flash {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.ai-report-popup {
+  position: absolute;
+  top: 30px;
+  left: -10px;
+  background: #ffffff;
+  border: 1px solid #cccccc;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  z-index: 1000;
+}

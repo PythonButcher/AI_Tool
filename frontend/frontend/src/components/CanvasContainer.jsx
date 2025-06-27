@@ -55,6 +55,8 @@ function CanvasContainer({
   pipelineResults,
   setPipelineResults,
   setOutputWindows,
+  showAiReport,
+  onCloseAiReport,
 }) {
   console.log('Initial uploadedData received:', uploadedData);
   console.log('Selected Chart Type:', selectedChartType);
@@ -74,7 +76,10 @@ function CanvasContainer({
     console.log(`🧪 node ${nodeId}:`, nodeResult);
   });
 
-  const outputWindows = getWorkflowWindows(pipelineResults || {});
+  let outputWindows = getWorkflowWindows(pipelineResults || {});
+  if (!showAiReport) {
+    outputWindows = outputWindows.filter(w => w.type !== 'report');
+  }
 
   const dataset = useActiveDataset();
   const previewData = React.useMemo(() => {
@@ -117,10 +122,13 @@ function CanvasContainer({
           {/* ✅ Dynamic Workflow Output Windows */} {/* */}
           {outputWindows.map((win, idx) => (
             <div
-              key={`workflow-output-${idx}`} // Your existing key
-              className="grid-item" // Your existing class
-              // Your existing data-grid logic, e.g.:
-              data-grid={{ x: 1, y: 40 + idx * 4, w: 8, h: 6, minW: 3, minH: 3 }} //
+              key={`workflow-output-${idx}`}
+              className="grid-item"
+              data-grid={
+                win.type === 'report'
+                  ? { x: 1, y: 1, w: 8, h: 10, minW: 4, minH: 6 }
+                  : { x: 1, y: 40 + idx * 4, w: 8, h: 6, minW: 3, minH: 3 }
+              }
             >
               <div className="window-header drag-handle"> {/* Your existing structure */} {/* */}
                 <span className="header-title">{win.label}</span> {/* */}
@@ -129,16 +137,9 @@ function CanvasContainer({
                   <CloseButton
                     onClick={() => {
                       if (win.type === 'report') {
-                        console.log(
-                          `CanvasContainer (to AIReporter): chartType: '${win.content.chartType}', chartData:`, win.content.chartData,
-                          `| typeof: ${typeof win.content.chartData}`,
-                          `| isArray: ${Array.isArray(win.content.chartData)}`,
-                          `| length: ${Array.isArray(win.content.chartData) ? win.content.chartData.length : 'N/A'}`
-                        );
-                        // If closing the main AI Report window, clear all pipeline results
                         setPipelineResults({});
+                        if (onCloseAiReport) onCloseAiReport();
                       } else {
-                        // Otherwise, use the original logic to remove only this specific window's data
                         setPipelineResults(prev => {
                           const copy = { ...prev };
                           delete copy[win.id];

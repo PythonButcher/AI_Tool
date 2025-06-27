@@ -5,12 +5,12 @@ import FileUpload from './FileUpload';
 import ApiDataForm from './APiDataForm';
 import DatabaseConnectForm from './database_components/DatabaseConnectForm';
 import DragDrop from '../utils/DragDrop';
-import { FaUpload, FaChartBar, FaServer, FaDatabase, FaRedoAlt, FaFilter } from 'react-icons/fa';
+import { FaUpload, FaChartBar, FaServer, FaDatabase, FaRedoAlt, FaFilter, FaFileAlt } from 'react-icons/fa';
 import { DataContext } from '../context/DataContext';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
-function MenuBar({ onStatsSelect, handleApiData, handleDatabaseData, setOpenDataFilter}) {
+function MenuBar({ onStatsSelect, handleApiData, handleDatabaseData, setOpenDataFilter, aiReportReady, onAiReportClick }) {
   const [activeDropdown, setActiveDropdown] = useState(null);
   const { setUploadedData } = useContext(DataContext);
 
@@ -140,6 +140,17 @@ function MenuBar({ onStatsSelect, handleApiData, handleDatabaseData, setOpenData
             </div>
           )}
         </div>
+
+        {aiReportReady && (
+          <div className="ai-report-notification">
+            <FaFileAlt
+              className="menu-icon-only ai-report-icon"
+              title="AI Report Ready"
+              onClick={onAiReportClick}
+            />
+            <div className="ai-report-popup">AI Report is ready</div>
+          </div>
+        )}
 
         {/* Reset App */}
         <FaRedoAlt
