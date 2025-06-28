@@ -1,14 +1,12 @@
 import json
 from flask import Blueprint, request, jsonify, current_app
 import os
-import textwrap  # For dedenting multi-line strings
+import textwrap  # For dedenting multi-line 
+from flask import current_app
 from openai import OpenAI
 
 # Initialize OpenAI client with API key from environment variable
-api_key = os.getenv("OPENAI_API_KEY")
-if not api_key:
-    raise ValueError("OPENAI_API_KEY is not set in the environment variables.")
-client = OpenAI(api_key=api_key)
+client = OpenAI(api_key=current_app.config["OPENAI_API_KEY"])
 
 # Define Flask Blueprint for AI-related routes
 ai_bp = Blueprint("ai_bp", __name__)
@@ -76,14 +74,10 @@ def ai_response():
 
         # Call OpenAI API with the conversation history as messages
         completion = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=conversation_history,
-            max_tokens=500,
-            temperature=0.7,
-            top_p=1,
-            frequency_penalty=0.5,
-            presence_penalty=0.6
-        )
+            model=current_app.config["OPENAI_MODEL_NAME"],
+                messages=conversation_history,
+                **current_app.config["OPENAI_COMPLETION_CONFIG"]
+            )
 
         # Ensure that the response contains at least one choice
         if not completion.choices or not hasattr(completion.choices[0], "message"):
