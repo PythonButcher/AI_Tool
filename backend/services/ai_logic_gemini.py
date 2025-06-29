@@ -3,42 +3,12 @@ from flask import Blueprint, request, jsonify, current_app
 import os
 import textwrap  # For dedenting multi-line strings
 import google.generativeai as genai # Import Google Generative AI library
+from flask import current_app
 
-# Configure the Google Generative AI library with API key from environment variable
-api_key = os.getenv("GEMINI_API_KEY")  # Ensure this says GEMINI_API_KEY
-if not api_key:
-    # Make sure the error message also reflects the correct variable name
-    raise ValueError("GEMINI_API_KEY is not set in the environment variables.")
-genai.configure(api_key=api_key)
+
 
 # Define Flask Blueprint for AI-related routes
 ai_gemini_bp = Blueprint("ai_gemini_bp", __name__)
-
-# --- Model Configuration ---
-# Choose a Gemini model. 'gemini-1.5-flash' is often a good balance of speed and capability.
-# You could also use 'gemini-pro'.
-GEMINI_MODEL_NAME = 'gemini-1.5-flash' # Or 'gemini-pro'
-# Generation configuration for Gemini (maps roughly to OpenAI parameters)
-# Note: Direct equivalents for frequency_penalty/presence_penalty aren't standard.
-# Safety settings can be added if needed.
-GENERATION_CONFIG_CHAT = genai.types.GenerationConfig(
-    max_output_tokens=500,
-    temperature=0.7,
-    top_p=1.0 # Gemini often uses top_p=1.0 by default when temperature is set
-    # No direct frequency/presence penalty equivalents in standard config
-)
-GENERATION_CONFIG_CMD = genai.types.GenerationConfig(
-    max_output_tokens=300,
-    temperature=0.7 # Adjust as needed
-)
-GENERATION_CONFIG_JSON = genai.types.GenerationConfig(
-    max_output_tokens=300, # Adjust token limit for JSON output if needed
-    response_mime_type="application/json", # Request JSON output
-    temperature=0.2 # Lower temperature often better for structured output
-)
-
-# Initialize the Generative Model
-gemini_model = genai.GenerativeModel(GEMINI_MODEL_NAME)
 
 
 # --- Command Handling (Unchanged) ---
@@ -135,7 +105,9 @@ def ai_response():
         # For simplicity, let's pass the history directly. If a system prompt existed,
         # it needs to be integrated correctly, often as the first part of the contents sent.
         # If complex system instructions are needed, consider `GenerativeModel(model_name, system_instruction=...)`
+        gemini_model = genai.GenerativeModel(current_app.config["GEMINI_MODEL_NAME"])
         chat = gemini_model.start_chat(history=gemini_history)
+
 
         # The last message in the *original* history is the user's current query.
         # However, our converted history `gemini_history` is what we send to `start_chat`.
@@ -167,7 +139,7 @@ def ai_response():
 
 
         current_app.logger.debug(f"🧠 Sending to Gemini Chat: History Length={len(chat.history)}, Prompt='{prompt_to_send[:100]}...'")
-        response = chat.send_message(prompt_to_send, generation_config=GENERATION_CONFIG_CHAT)
+        response = chat.send_message(prompt_to_send, generation_config=current_app.config["GEMINI_CONFIG_CHAT"])
 
         # Check for issues in the response (e.g., blocked content)
         if not response.candidates:
@@ -234,6 +206,7 @@ def ai_command():
             # Prompt remains largely the same, emphasizing JSON output.
             # Gemini's JSON mode relies heavily on prompt instructions and the response_mime_type.
             prompt = textwrap.dedent(f"""\
+
             You are an AI assistant specialized in data visualization.
 
             Analyze the following data sample and select the single best chart type—either "Bar Chart" or "Pie Chart"—to clearly visualize it. Do NOT choose other chart types.
@@ -273,13 +246,12 @@ def ai_command():
             - Output only raw JSON—no explanations, comments, or markdown formatting.
             """)
 
-
             try:
                 current_app.logger.debug("🧠 Sending request to Gemini for chart recommendation (JSON mode)...")
-                # Use generate_content directly for single-turn command
+                gemini_model = genai.GenerativeModel(current_app.config["GEMINI_MODEL_NAME"])
                 response = gemini_model.generate_content(
                     prompt,
-                    generation_config=GENERATION_CONFIG_JSON # Use JSON specific config
+                    generation_config=current_app.config["GEMINI_CONFIG_JSON"]
                 )
 
                 # Validate Gemini response
@@ -314,7 +286,6 @@ def ai_command():
 
             except json.JSONDecodeError as json_err:
                 current_app.logger.error(f"❌ Gemini response for /charts could not be parsed as valid JSON matching schema. Error: {json_err}. Raw response: '{ai_response_content}'")
-                # Include the raw response in the error for debugging
                 return jsonify({
                     "error": "AI response could not be parsed properly or did not match expected JSON structure.",
                     "raw_response": ai_response_content # Send raw response back if parsing fails
@@ -328,40 +299,39 @@ def ai_command():
             # Handle placeholder command explicitly if needed
             if command == "/execute":
                  reply_content = COMMANDS[command](dataset) # Call the function
-                 return jsonify({"reply": reply_content })
+                 return jsonify({"reply": reply_content})
 
-            # For other commands like /summary, /insights
-            prompt = COMMANDS[command](dataset) # Get prompt from registered function
+            else:
+                # For other commands like /summary, /insights
+                prompt = COMMANDS[command](dataset) # Get prompt from registered function
 
-            try:
-                 current_app.logger.debug(f"🧠 Sending command '{command}' prompt to Gemini...")
-                 response = gemini_model.generate_content(
-                     prompt,
-                     generation_config=GENERATION_CONFIG_CMD # Use standard command config
-                 )
+                try:
+                    gemini_model = genai.GenerativeModel(current_app.config["GEMINI_MODEL_NAME"])
+                    response = gemini_model.generate_content(
+                        prompt,
+                        generation_config=current_app.config["GEMINI_CONFIG_JSON"]
+                    )
 
-                 # Validate Gemini response
-                 if not response.candidates:
-                     current_app.logger.error(f"Gemini response blocked or empty for {command}. Feedback: {response.prompt_feedback}")
-                     error_message = f"AI response blocked or unavailable. Reason: {response.prompt_feedback or 'Unknown'}"
-                     return jsonify({"error": error_message}), 500
-                 if not hasattr(response, 'text') or not response.text:
-                     current_app.logger.error(f"Invalid response structure from Gemini service for {command}: {response}")
-                     return jsonify({"error": "Invalid or empty response from AI service."}), 500
+                    if not response.candidates:
+                        current_app.logger.error(f"Gemini response blocked or empty for {command}. Feedback: {response.prompt_feedback}")
+                        error_message = f"AI response blocked or unavailable. Reason: {response.prompt_feedback or 'Unknown'}"
+                        return jsonify({"error": error_message}), 500
+                    if not hasattr(response, 'text') or not response.text:
+                        current_app.logger.error(f"Invalid response structure from Gemini service for {command}: {response}")
+                        return jsonify({"error": "Invalid or empty response from AI service."}), 500
 
-                 reply = response.text
-                 current_app.logger.debug(f"✅ Gemini Command Reply for {command}: '{reply[:100]}...'")
-                 return jsonify({"reply": reply})
+                    reply = response.text
+                    current_app.logger.debug(f"\u2705 Gemini Command Reply for {command}: '{reply[:100]}...'")
+                    return jsonify({"reply": reply})
 
-            except Exception as e:
-                 current_app.logger.error(f"❌ Gemini API Error for command {command}: {str(e)}", exc_info=True)
-                 return jsonify({"error": f"AI request failed for command {command}: {str(e)}"}), 500
+                except Exception as e:
+                    current_app.logger.error(f"\u274c Gemini API Error for command {command}: {str(e)}", exc_info=True)
+                    return jsonify({"error": f"AI request failed for command {command}: {str(e)}"}), 500
 
         else:
-            # Command not found in registered commands or special cases
             return jsonify({"error": f"Unknown command: {command}"}), 400
 
     except Exception as e:
-        # Catch-all for unexpected errors during request processing
         current_app.logger.error(f"Error in /ai_cmd: {str(e)}", exc_info=True)
         return jsonify({"error": f"An unexpected error occurred processing the command: {str(e)}"}), 500
+

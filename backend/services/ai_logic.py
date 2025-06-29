@@ -4,9 +4,8 @@ import os
 import textwrap  # For dedenting multi-line 
 from flask import current_app
 from openai import OpenAI
+from flask import current_app
 
-# Initialize OpenAI client with API key from environment variable
-client = OpenAI(api_key=current_app.config["OPENAI_API_KEY"])
 
 # Define Flask Blueprint for AI-related routes
 ai_bp = Blueprint("ai_bp", __name__)
@@ -72,12 +71,15 @@ def ai_response():
         if not dataset_message:
             return jsonify({"error": "Missing dataset context. AI requires a dataset to function."}), 400
 
-        # Call OpenAI API with the conversation history as messages
+        # ✅ Instantiate OpenAI client inside the request context
+        client = OpenAI(api_key=current_app.config["OPENAI_API_KEY"])
+
+        # ✅ Call OpenAI API using model/config from config.py
         completion = client.chat.completions.create(
             model=current_app.config["OPENAI_MODEL_NAME"],
-                messages=conversation_history,
-                **current_app.config["OPENAI_COMPLETION_CONFIG"]
-            )
+            messages=conversation_history,
+            **current_app.config["OPENAI_COMPLETION_CONFIG"]
+        )
 
         # Ensure that the response contains at least one choice
         if not completion.choices or not hasattr(completion.choices[0], "message"):
@@ -90,9 +92,9 @@ def ai_response():
         return jsonify({"reply": reply, "conversation_history": conversation_history})
 
     except Exception as e:
-        # Log error details for debugging purposes (consider using current_app.logger)
         current_app.logger.error(f"Error in /ai: {str(e)}")
         return jsonify({"error": str(e)}), 500
+
 
 @ai_bp.route("/ai_cmd", methods=["POST"])
 def ai_command():
@@ -106,10 +108,9 @@ def ai_command():
         command = data.get("command")
         dataset = data.get("dataset")
 
-        # Debug log: show received command and dataset type
         current_app.logger.debug(f"📥 Received request: {command}, dataset type: {type(dataset)}")
 
-        # Convert dataset to list if provided as a JSON string or a dict
+        # --- Dataset Parsing ---
         if isinstance(dataset, str):
             try:
                 dataset = json.loads(dataset)
@@ -119,66 +120,56 @@ def ai_command():
         if isinstance(dataset, dict):
             dataset = list(dataset.values())
 
-        # Validate that dataset is a non-empty list after conversion
         if not dataset or not isinstance(dataset, list):
             current_app.logger.debug("Invalid dataset format after conversion.")
             return jsonify({"error": "Invalid dataset provided. Expected a list."}), 400
 
-        # Special handling for the '/charts' command
+        # ✅ Create OpenAI client inside request scope
+        client = OpenAI(api_key=current_app.config["OPENAI_API_KEY"])
+
+        # --- Handle /charts command ---
         if command == "/charts":
-            # Refined prompt focusing on clarity for the combined task
-            # Assume 'dataset' here is the sample (e.g., first 10 rows) passed in the request
             prompt = textwrap.dedent(f"""\
-            You are an AI assistant specialized in creating chart data structures.
-            Analyze the following data sample and determine the single best chart type to visualize it.
-            Then, based on that chart type, aggregate the data and return a JSON object containing both the chart type and the aggregated data.
+            You are an AI assistant specializing in generating chart-ready data structures from raw datasets.
 
-            Data Sample:
+            Your task:
+            - Analyze the sample dataset below.
+            - Choose the best chart type: **"Bar Chart"**, **"Pie Chart"**, or **"Line Chart"**.
+            - Aggregate or summarize the data to fit the chart type.
+            - Output a valid JSON object (only JSON!) using the following exact schema:
+
+            {{
+            "chartType": "Bar Chart" | "Pie Chart" | "Line Chart",
+            "xAxisLabel": "string",    // e.g. "Product Category"
+            "yAxisLabel": "string",    // e.g. "Sales Total"
+            "chartData": [
+                {{ "label": "string", "value": number }},
+                ...
+            ]
+            }}
+
+            Rules:
+            - ✅ If the data is categorical → choose **Bar** or **Pie**.
+            - ✅ If the data is time-series or continuous numeric → choose **Line**.
+            - ❌ Do not fabricate values, labels, or categories.
+            - ❌ Do not return markdown, comments, headings, or explanations — only pure JSON.
+
+            Context:
+            This chart will be used in a frontend charting tool and must be directly parseable.
+
+            Dataset Sample:
             {json.dumps(dataset[:10], indent=2)}
-
-            Instructions:
-            1.  Examine the data sample to understand its structure and potential relationships.
-            2.  Determine the most suitable `chartType` (e.g., "Bar Chart", "Line Chart", "Pie Chart") for visualizing this data sample effectively.
-            3.  Identify the appropriate column(s) for labels and values based on the chosen `chartType`.
-            4.  Perform the necessary aggregation (e.g., count frequencies for categories, sum values if appropriate) directly from the provided data sample.
-            5.  Format the result STRICTLY as a JSON object containing exactly two keys: "chartType" (string) and "chartData" (an array of objects).
-            6.  Each object within the "chartData" array must have exactly two keys: "label" (string) and "value" (number).
-
-            Required JSON Output Structure:
-            {{
-            "chartType": "string",
-            "chartData": [
-                {{
-                "label": "string",
-                "value": number
-                }},
-                // ... more data objects if needed
-            ]
-            }}
-
-            Example of a valid JSON response:
-            {{
-            "chartType": "Pie Chart",
-            "chartData": [
-                {{ "label": "Electronics", "value": 5 }},
-                {{ "label": "Clothing", "value": 3 }},
-                {{ "label": "Groceries", "value": 2 }}
-            ]
-            }}
-
-            Important: Your response MUST be ONLY the raw JSON object. Do not include any introductory text, explanations, apologies, comments, or markdown formatting like ```json.
-            """) # Removed "CRITICAL:" prefix
+            """)
 
             try:
-                current_app.logger.debug(f"📥 Received /charts request: dataset type: {type(dataset)}")
                 current_app.logger.debug("Sending request to OpenAI for chart recommendation...")
                 completion = client.chat.completions.create(
-                    model="gpt-4o-mini",
+                    model=current_app.config["OPENAI_MODEL_NAME"],
                     messages=[{"role": "system", "content": prompt}],
-                    response_format={"type": "json_object"},  # Ensures JSON output if supported
+                    response_format={"type": "json_object"},
                     max_tokens=300
                 )
-                # Validate API response
+
                 if not completion.choices or not hasattr(completion.choices[0], "message"):
                     return jsonify({"error": "Invalid response from AI service."}), 500
 
@@ -190,32 +181,31 @@ def ai_command():
                 return jsonify({"error": "AI request failed"}), 500
 
             try:
-                # Parse the AI response to a JSON object
                 chart_data = json.loads(ai_response_content)
                 structured_response = {
-                    "chartType": chart_data.get("chartType", "Unknown"),  # Provide default value if missing
+                    "chartType": chart_data.get("chartType", "Unknown"),
                     "chartData": chart_data.get("chartData", [])
                 }
-                current_app.logger.debug(f"✅ Returning Chart Data: {structured_response}")
                 return jsonify(structured_response)
+
             except json.JSONDecodeError:
                 current_app.logger.error("❌ AI response could not be parsed as valid JSON.")
                 return jsonify({"error": "AI response could not be parsed properly."}), 500
 
-        # Use the COMMANDS dictionary for handling other commands
+        # --- Handle custom registered commands ---
         if command in COMMANDS:
             prompt = COMMANDS[command](dataset)
-            print(f"📦 Payload from `{command}` command:", prompt)
 
-            # ✅ If the handler returned a full response dict, return it now
+            # Some commands may return full JSON response directly
             if isinstance(prompt, dict):
                 return jsonify(prompt)
+
             completion = client.chat.completions.create(
-                model="gpt-4o-mini",
+                model=current_app.config["OPENAI_MODEL_NAME"],
                 messages=[{"role": "system", "content": prompt}],
                 max_tokens=300
             )
-            # Validate response before returning
+
             if not completion.choices or not hasattr(completion.choices[0], "message"):
                 return jsonify({"error": "Invalid response from AI service."}), 500
 
