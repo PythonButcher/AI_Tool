@@ -149,6 +149,7 @@ def ai_command():
             }}
 
             Rules:
+            - Pull in the most relevant data specifically for the when the aireporter.jsx frontend ask for data in the ai report.
             - ✅ If the data is categorical → choose **Bar** or **Pie**.
             - ✅ If the data is time-series or continuous numeric → choose **Line**.
             - ❌ Do not fabricate values, labels, or categories.
