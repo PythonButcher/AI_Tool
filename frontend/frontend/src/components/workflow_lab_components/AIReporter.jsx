@@ -7,26 +7,14 @@ import "../css/AIReporter.css";
 
 
 const Section = ({ title, content }) => (
-  <div style={{ marginBottom: "24px" }}>
-    <h2 style={{ fontSize: "18px", fontWeight: "600", marginBottom: "8px", color: "#333" }}>
-      {title}
-    </h2>
-    <div
-      style={{
-        background: "#fff",
-        border: "1px solid #ddd",
-        borderRadius: "8px",
-        padding: "16px",
-        whiteSpace: "pre-wrap",
-        fontSize: "14px",
-        color: "#555",
-        boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-      }}
-    >
+  <div className="section-container">
+    <h2 className="section-title">{title}</h2>
+    <div className="section-content">
       {content || "No data available."}
     </div>
   </div>
 );
+
 
 /* 🔑 helper — returns the actual text, no matter the shape */
 const asText = (val) =>
