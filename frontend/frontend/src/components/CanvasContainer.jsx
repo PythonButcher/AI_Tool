@@ -126,7 +126,7 @@ function CanvasContainer({
               className="grid-item"
               data-grid={
                 win.type === 'report'
-                  ? { x: 1, y: 1, w: 8, h: 10, minW: 4, minH: 6 }
+                  ? { x: 0, y: 0, w: 10, h: 30, minW: 7, minH: 15 } // 🔥 Full-page like expansion
                   : { x: 1, y: 40 + idx * 4, w: 8, h: 6, minW: 3, minH: 3 }
               }
             >
