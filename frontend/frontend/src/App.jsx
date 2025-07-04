@@ -222,13 +222,22 @@ useEffect(() => {
 
     const draggedField = active.id;
     const dropTarget = over.id;
-    if (dropTarget === 'x-axis') {
+
+    // Update manual axis state for backward compatibility
+    const normalized = dropTarget.toLowerCase();
+    if (normalized === 'x-axis') {
       setXAxis(draggedField);
       console.log('Updated xAxis:', draggedField);
-    } else if (dropTarget === 'y-axis') {
+    } else if (normalized === 'y-axis') {
       setYAxis(draggedField);
       console.log('Updated yAxis:', draggedField);
     }
+
+    // Update chart role mapping used by RolesPanel / chart generation
+    setChartMapping((prev) => ({
+      ...prev,
+      [dropTarget]: draggedField,
+    }));
   }, []);
 
   return (
