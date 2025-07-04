@@ -13,3 +13,33 @@
     background-color: #999;
     transform: scale(1.05);
 }
+
+.section-container {
+  margin-bottom: 24px;
+  width: 100%;
+  height: 150%;
+  display: flex;
+  flex-direction: column;
+}
+
+.section-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #333;
+  flex-shrink: 0;
+}
+
+.section-content {
+  flex-grow: 1;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 16px;
+  white-space: pre-wrap;
+  font-size: 14px;
+  color: #555;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  overflow: auto;
+}
+
