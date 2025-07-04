@@ -35,7 +35,7 @@ function App() {
   const [cleanedData, setCleanedData] = useState(null);
   const [chartData, setChartData] = useState(null);
   const [chartType, setChartType] = useState('Bar');
-  const [chartMapping, setChartMapping] = useState({});   // { 'X‑Axis': 'Region', 'Y‑Axis': 'Sales' }
+  const [chartMapping, setChartMapping] = useState({});   // { 'X-Axis': 'Region', 'Y-Axis': 'Sales' }
 
 
   // AI charting state (separate from standard)
@@ -221,10 +221,12 @@ useEffect(() => {
     }
 
     const draggedField = active.id;
-    const dropTarget = over.id;
+    let dropTarget = over.id;
 
-    // Update manual axis state for backward compatibility
+    // Normalize any Unicode hyphens that may come from config
+    dropTarget = dropTarget.replace('\u2011', '-');
     const normalized = dropTarget.toLowerCase();
+
     if (normalized === 'x-axis') {
       setXAxis(draggedField);
       console.log('Updated xAxis:', draggedField);
