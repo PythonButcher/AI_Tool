@@ -3,6 +3,7 @@ import MenuBar from './components/MenuBar';
 import CanvasContainer from './components/CanvasContainer';
 import DatasetInfo from './components/DatasetInfo';
 import SideBar from './components/SideBar';
+import { DndContext } from '@dnd-kit/core';
 import DataCleaningForm from './components/DataCleaningForm';
 import DataVisualizations from './components/chart_components/DataVisualization';
 import { transformToChartData } from './utils/chartDataUtils';
@@ -209,9 +210,24 @@ useEffect(() => {
     setShowChartWindow(false);
   }, []);
 
+  const handleDragEnd = useCallback((event) => {
+    const { active, over } = event;
+    if (!over) return;
+
+    const field = active.id;
+    if (over.id === 'x-axis') {
+      setXAxis(field);
+      setChartMapping(prev => ({ ...prev, 'X-Axis': field }));
+    } else if (over.id === 'y-axis') {
+      setYAxis(field);
+      setChartMapping(prev => ({ ...prev, 'Y-Axis': field }));
+    }
+  }, []);
+
 
   return (
     <ThemeProvider theme={theme}>
+        <DndContext onDragEnd={handleDragEnd}>
         <div className="app-container">
           {/* Sidebar with actions and data cleaning */}
           <SideBar
@@ -332,6 +348,7 @@ useEffect(() => {
           />
           
         </div>
+        </DndContext>
     </ThemeProvider>
   );
 }

@@ -1,19 +1,13 @@
 import PropTypes from 'prop-types';
-import { useDrop } from 'react-dnd';
+import { useDroppable } from '@dnd-kit/core';
 
-const DropZone = ({ axis, currentField, onFieldDrop }) => {
-  const [{ isOver }, drop] = useDrop({
-    accept: 'field',
-    drop: (item) => onFieldDrop(item.id),
-    collect: (monitor) => ({
-      isOver: monitor.isOver(),
-    }),
-  });
+const DropZone = ({ axis, currentField }) => {
+  const { isOver, setNodeRef } = useDroppable({ id: `${axis}-axis` });
 
   const label = currentField || `${axis.toUpperCase()} Axis`;
 
   return (
-    <div ref={drop} className={`drop-zone ${isOver ? 'active' : ''}`}> 
+    <div ref={setNodeRef} className={`drop-zone ${isOver ? 'active' : ''}`}>
       {label}
     </div>
   );
@@ -24,7 +18,6 @@ const DropZone = ({ axis, currentField, onFieldDrop }) => {
 DropZone.propTypes = {
   axis: PropTypes.oneOf(['x', 'y']).isRequired,
   currentField: PropTypes.string,
-  onFieldDrop: PropTypes.func.isRequired,
 };
 
 export default DropZone;

@@ -102,17 +102,6 @@ function CanvasContainer({
   console.log("Dataset length :", previewData.len);
   console.log("DEBUG active dataset:", dataset);
   console.log("DEBUG previewData:", previewData);
-  const handleFieldDrop = (axis, field) => {
-    if (axis === "x") {
-      setXAxis(field);
-      setChartMapping(prev => ({ ...prev, "X-Axis": field }));
-    } else if (axis === "y") {
-      setYAxis(field);
-      setChartMapping(prev => ({ ...prev, "Y-Axis": field }));
-    }
-  };
-
-
   return (
 
     <div
@@ -431,16 +420,8 @@ function CanvasContainer({
               />
 
               <div className="chart-dropzones">
-                <DropZone
-                  axis="x"
-                  currentField={xAxis}
-                  onFieldDrop={(field) => handleFieldDrop('x', field)}
-                />
-                <DropZone
-                  axis="y"
-                  currentField={yAxis}
-                  onFieldDrop={(field) => handleFieldDrop('y', field)}
-                />
+                <DropZone axis="x" currentField={xAxis} />
+                <DropZone axis="y" currentField={yAxis} />
               </div>
 
               {/* RolesPanel (new component you’ll add next) */}

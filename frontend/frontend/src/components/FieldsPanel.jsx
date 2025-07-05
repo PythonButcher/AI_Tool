@@ -1,24 +1,24 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import { useDrag } from 'react-dnd';
+import { useDraggable } from '@dnd-kit/core';
 import Paper from '@mui/material/Paper';
 import Grid2 from '@mui/material/Grid2';
 import './css/FieldsPanel.css';
 
 // DraggableField Component
 const DraggableField = ({ fieldName }) => {
-  // Use `useDraggable` to make the field draggable
-  const [{ isDragging }, drag] = useDrag(() => ({
-    type: 'field',
-    item: { id: fieldName },
-  }), [fieldName]);
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: fieldName,
+  });
   console.log("Draggable field ID:", fieldName);
 
   return (
     <Paper
-      ref={drag}
+      ref={setNodeRef}
       elevation={1}
       className={`fields-panel-item ${isDragging ? 'dragging' : ''}`}
+      {...listeners}
+      {...attributes}
     >
       {fieldName}
     </Paper>
