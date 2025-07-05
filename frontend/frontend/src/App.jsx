@@ -2,7 +2,6 @@ import React, { useState, useCallback, useEffect, useContext } from 'react';
 import MenuBar from './components/MenuBar';
 import CanvasContainer from './components/CanvasContainer';
 import DatasetInfo from './components/DatasetInfo';
-import { DndContext } from '@dnd-kit/core';
 import SideBar from './components/SideBar';
 import DataCleaningForm from './components/DataCleaningForm';
 import DataVisualizations from './components/chart_components/DataVisualization';
@@ -210,41 +209,9 @@ useEffect(() => {
     setShowChartWindow(false);
   }, []);
 
-  const handleDragEnd = useCallback((event) => {
-    const { active, over } = event;
-    console.log("Dragged field ID:", active?.id);
-    console.log("Drop target ID:", over?.id);
-
-    if (!over) {
-      console.warn('No valid drop target.');
-      return;
-    }
-
-    const draggedField = active.id;
-    let dropTarget = over.id;
-
-    // Normalize any Unicode hyphens that may come from config
-    dropTarget = dropTarget.replace('\u2011', '-');
-    const normalized = dropTarget.toLowerCase();
-
-    if (normalized === 'x-axis') {
-      setXAxis(draggedField);
-      console.log('Updated xAxis:', draggedField);
-    } else if (normalized === 'y-axis') {
-      setYAxis(draggedField);
-      console.log('Updated yAxis:', draggedField);
-    }
-
-    // Update chart role mapping used by RolesPanel / chart generation
-    setChartMapping((prev) => ({
-      ...prev,
-      [dropTarget]: draggedField,
-    }));
-  }, []);
 
   return (
     <ThemeProvider theme={theme}>
-      <DndContext onDragEnd={handleDragEnd}>
         <div className="app-container">
           {/* Sidebar with actions and data cleaning */}
           <SideBar
@@ -365,7 +332,6 @@ useEffect(() => {
           />
           
         </div>
-      </DndContext>
     </ThemeProvider>
   );
 }

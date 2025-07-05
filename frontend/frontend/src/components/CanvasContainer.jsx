@@ -18,6 +18,7 @@ import { JsonViewer } from 'view-json-react';
 import { useActiveDataset } from '../context/DataContext';
 import AIReporter from './workflow_lab_components/AIReporter';
 import { getWorkflowWindows } from '../utils/workflow_output_router';
+import DropZone from '../utils/DropZone';
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
@@ -34,6 +35,10 @@ function CanvasContainer({
   handleCloseChartWindow,
   handleCloseStoryBoard,
   showChartWindow,
+  xAxis,
+  yAxis,
+  setXAxis,
+  setYAxis,
   chartData,
   aiChartData,
   aiChartType,
@@ -97,6 +102,15 @@ function CanvasContainer({
   console.log("Dataset length :", previewData.len);
   console.log("DEBUG active dataset:", dataset);
   console.log("DEBUG previewData:", previewData);
+  const handleFieldDrop = (axis, field) => {
+    if (axis === "x") {
+      setXAxis(field);
+      setChartMapping(prev => ({ ...prev, "X-Axis": field }));
+    } else if (axis === "y") {
+      setYAxis(field);
+      setChartMapping(prev => ({ ...prev, "Y-Axis": field }));
+    }
+  };
 
 
   return (
@@ -415,6 +429,19 @@ function CanvasContainer({
                 chartData={chartData}
                 mapping={chartMapping}
               />
+
+              <div className="chart-dropzones">
+                <DropZone
+                  axis="x"
+                  currentField={xAxis}
+                  onFieldDrop={(field) => handleFieldDrop('x', field)}
+                />
+                <DropZone
+                  axis="y"
+                  currentField={yAxis}
+                  onFieldDrop={(field) => handleFieldDrop('y', field)}
+                />
+              </div>
 
               {/* RolesPanel (new component you’ll add next) */}
               <RolesPanel
