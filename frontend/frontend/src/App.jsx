@@ -218,27 +218,25 @@ useEffect(() => {
     setShowChartWindow(false);
   }, []);
 
-  const handleDragEnd = useCallback((event) => {
-    const { active, over } = event;
+  const handleDragEnd = useCallback(({ active, over }) => {
     if (!over) return;
-
     if (active.data?.current?.type !== 'field') return;
 
     const field = active.data.current.field;
-    const axis = over.data?.current?.axis || over.id;
-    if (axis === 'x' || axis === 'x-axis') {
+    const axis = over.data?.current?.axis;
+    if (!axis) return; // ignore drops outside axis zones
+
+    if (axis === 'x') {
       setXAxis(field);
       setChartMapping(prev => ({
         ...prev,
         'X-Axis': field,
-        Category: field,
       }));
-    } else if (axis === 'y' || axis === 'y-axis') {
+    } else if (axis === 'y') {
       setYAxis(field);
       setChartMapping(prev => ({
         ...prev,
         'Y-Axis': field,
-        Value: field,
       }));
     }
   }, []);
