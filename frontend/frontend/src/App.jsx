@@ -3,7 +3,7 @@ import MenuBar from './components/MenuBar';
 import CanvasContainer from './components/CanvasContainer';
 import DatasetInfo from './components/DatasetInfo';
 import SideBar from './components/SideBar';
-import { DndContext } from '@dnd-kit/core';
+import { DndContext, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import DataCleaningForm from './components/DataCleaningForm';
 import DataVisualizations from './components/chart_components/DataVisualization';
 import { transformToChartData } from './utils/chartDataUtils';
@@ -36,6 +36,10 @@ function App() {
   const [chartData, setChartData] = useState(null);
   const [chartType, setChartType] = useState('Bar');
   const [chartMapping, setChartMapping] = useState({});   // { 'X-Axis': 'Region', 'Y-Axis': 'Sales' }
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+  );
 
 
   // AI charting state (separate from standard)
@@ -218,7 +222,9 @@ useEffect(() => {
     const { active, over } = event;
     if (!over) return;
 
-    const field = active.id;
+    if (active.data?.current?.type !== 'field') return;
+
+    const field = active.data.current.field;
     if (over.id === 'x-axis') {
       setXAxis(field);
       setChartMapping(prev => ({
@@ -239,7 +245,7 @@ useEffect(() => {
 
   return (
     <ThemeProvider theme={theme}>
-        <DndContext onDragEnd={handleDragEnd}>
+        <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
         <div className="app-container">
           {/* Sidebar with actions and data cleaning */}
           <SideBar
