@@ -223,21 +223,21 @@ useEffect(() => {
     if (active.data?.current?.type !== 'field') return;
 
     const field = active.data.current.field;
-    const axis = over.data?.current?.axis;
+    // Prefer explicit axis data from the drop zone, but fall back to its id
+    const axisData = over.data?.current?.axis;
+    let axis = axisData;
+    if (!axis) {
+      if (over.id === 'x-axis') axis = 'x';
+      else if (over.id === 'y-axis') axis = 'y';
+    }
     if (!axis) return; // ignore drops outside axis zones
 
     if (axis === 'x') {
       setXAxis(field);
-      setChartMapping(prev => ({
-        ...prev,
-        'X-Axis': field,
-      }));
+      setChartMapping(prev => ({ ...prev, 'X-Axis': field }));
     } else if (axis === 'y') {
       setYAxis(field);
-      setChartMapping(prev => ({
-        ...prev,
-        'Y-Axis': field,
-      }));
+      setChartMapping(prev => ({ ...prev, 'Y-Axis': field }));
     }
   }, []);
 
