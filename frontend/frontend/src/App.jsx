@@ -225,14 +225,15 @@ useEffect(() => {
     if (active.data?.current?.type !== 'field') return;
 
     const field = active.data.current.field;
-    if (over.id === 'x-axis') {
+    const axis = over.data?.current?.axis || over.id;
+    if (axis === 'x' || axis === 'x-axis') {
       setXAxis(field);
       setChartMapping(prev => ({
         ...prev,
         'X-Axis': field,
         Category: field,
       }));
-    } else if (over.id === 'y-axis') {
+    } else if (axis === 'y' || axis === 'y-axis') {
       setYAxis(field);
       setChartMapping(prev => ({
         ...prev,

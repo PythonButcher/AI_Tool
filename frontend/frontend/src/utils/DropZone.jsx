@@ -3,7 +3,10 @@ import { useDroppable } from '@dnd-kit/core';
 
 const DropZone = ({ axis, currentField }) => {
   const safeAxis = axis || '';
-  const { isOver, setNodeRef } = useDroppable({ id: `${safeAxis}-axis` });
+  const { isOver, setNodeRef } = useDroppable({
+    id: `${safeAxis}-axis`,
+    data: { axis: safeAxis },
+  });
 
   const label = currentField || `${safeAxis.toUpperCase()} Axis`;
 
