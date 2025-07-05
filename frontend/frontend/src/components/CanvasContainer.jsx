@@ -18,7 +18,6 @@ import { JsonViewer } from 'view-json-react';
 import { useActiveDataset } from '../context/DataContext';
 import AIReporter from './workflow_lab_components/AIReporter';
 import { getWorkflowWindows } from '../utils/workflow_output_router';
-import DropZone from '../utils/DropZone';
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
@@ -28,17 +27,11 @@ function CanvasContainer({
   showDataPreview,
   handleClosePreview,
   handleCloseCanvas,
-  showFieldsPanel,
-  handleToggleField,
   cleanedData,
   selectedChartType,
   handleCloseChartWindow,
   handleCloseStoryBoard,
   showChartWindow,
-  xAxis,
-  yAxis,
-  setXAxis,
-  setYAxis,
   chartData,
   aiChartData,
   aiChartType,
@@ -418,12 +411,7 @@ function CanvasContainer({
                 mapping={chartMapping}
               />
 
-              <div className="chart-dropzones">
-                <DropZone axis="x" currentField={xAxis} />
-                <DropZone axis="y" currentField={yAxis} />
-              </div>
-
-              {/* RolesPanel (new component you’ll add next) */}
+              {/* RolesPanel handles drag targets for chart roles */}
               <RolesPanel
                 chartType={selectedChartType}
                 mapping={chartMapping}
@@ -485,34 +473,6 @@ function CanvasContainer({
             </div>
           )}
 
-          {/*-------------------------- Fields Panel Section --------------------------------*/}
-          {showFieldsPanel && uploadedData && (
-            <div
-              key="fieldsPanel"
-              className="grid-item"
-              data-grid={{
-                x: 8,
-                y: 10,
-                w: 4,
-                h: 15,
-                minW: 3,
-                minH: 5,
-                resizeHandles: ['se', 'e', 's'],
-              }}
-            >
-              <div className="preview-header drag-handle">
-                <span>Fields Panel</span>
-                <CloseButton
-                  onClick={() => {
-                    setShowAiWorkflow(false);
-                    setShowCanvasMinimized(false);
-                  }}
-                />
-              </div>
-              <FieldsPanel cleanedData={cleanedData} />
-            </div>
-            
-          )}
         </ResponsiveGridLayout>
       </div>
     </div>

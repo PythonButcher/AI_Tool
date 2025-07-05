@@ -38,7 +38,7 @@ const FieldsPanel = ({ cleanedData }) => {
   const fields = Object.keys(cleanedData[0]);
 
   return (
-    <div className="fields-panel-container">
+    <div className="fields-panel">
       <h3 className="fields-panel-header">Fields in Dataset</h3>
       <Grid2 container spacing={2}>
         {fields.map((field) => (
