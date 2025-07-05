@@ -218,20 +218,7 @@ useEffect(() => {
     setShowChartWindow(false);
   }, []);
 
-  const handleDragEnd = useCallback(({ active, over }) => {
-    if (!over) return;
-    if (active.data?.current?.type !== 'field') return;
-
-    const field = active.data.current.field;
-    // Prefer explicit axis data from the drop zone, but fall back to its id
-    const axisData = over.data?.current?.axis;
-    let axis = axisData;
-    if (!axis) {
-      if (over.id === 'x-axis') axis = 'x';
-      else if (over.id === 'y-axis') axis = 'y';
-    }
-    if (!axis) return; // ignore drops outside axis zones
-
+  const handleFieldDrop = useCallback((axis, field) => {
     if (axis === 'x') {
       setXAxis(field);
       setChartMapping(prev => ({ ...prev, 'X-Axis': field }));
@@ -240,6 +227,20 @@ useEffect(() => {
       setChartMapping(prev => ({ ...prev, 'Y-Axis': field }));
     }
   }, []);
+
+  const handleDragEnd = useCallback(({ active, over }) => {
+    if (!over || active.data?.current?.type !== 'field') return;
+
+    const field = active.data.current.field;
+    let axis = over.data?.current?.axis;
+    if (!axis) {
+      const dropId = over.id?.toString() || '';
+      if (dropId.includes('x')) axis = 'x';
+      if (dropId.includes('y')) axis = 'y';
+    }
+    if (!axis) return;
+    handleFieldDrop(axis, field);
+  }, [handleFieldDrop]);
 
 
   return (
