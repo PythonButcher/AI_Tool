@@ -94,7 +94,11 @@ useEffect(() => {
 
   // Standard chartData transformation (NOT AI)
   useEffect(() => {
-    if (!cleanedData || Object.keys(chartMapping).length === 0) {
+    if (
+      !cleanedData ||
+      !chartMapping['X-Axis'] ||
+      !chartMapping['Y-Axis']
+    ) {
       console.warn('Missing dependencies for chartData transformation.');
       return;
     }
@@ -217,10 +221,18 @@ useEffect(() => {
     const field = active.id;
     if (over.id === 'x-axis') {
       setXAxis(field);
-      setChartMapping(prev => ({ ...prev, 'X-Axis': field }));
+      setChartMapping(prev => ({
+        ...prev,
+        'X-Axis': field,
+        Category: field,
+      }));
     } else if (over.id === 'y-axis') {
       setYAxis(field);
-      setChartMapping(prev => ({ ...prev, 'Y-Axis': field }));
+      setChartMapping(prev => ({
+        ...prev,
+        'Y-Axis': field,
+        Value: field,
+      }));
     }
   }, []);
 
@@ -310,7 +322,6 @@ useEffect(() => {
                   setShowCanvasMinimized={setShowCanvasMinimized}
                   handleCanvasMinimize={handleCanvasMinimize}
                   chartMapping={chartMapping}                // ✅ NEW
-                  setChartMapping={setChartMapping}
                   storyData={storyData}
                   setStoryData={setStoryData}
                   showStoryPanel={showStoryPanel}

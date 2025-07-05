@@ -52,7 +52,6 @@ function CanvasContainer({
   setShowCanvasMinimized,
   handleCanvasMinimize,
   chartMapping,
-  setChartMapping,
   previewMode,
   setPreviewMode,
   showWhiteBoard,
@@ -428,7 +427,6 @@ function CanvasContainer({
               <RolesPanel
                 chartType={selectedChartType}
                 mapping={chartMapping}
-                setMapping={setChartMapping}
               />
             </div>
           )}

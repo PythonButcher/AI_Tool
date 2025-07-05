@@ -42,7 +42,7 @@ const FieldsPanel = ({ cleanedData }) => {
       <h3 className="fields-panel-header">Fields in Dataset</h3>
       <Grid2 container spacing={2}>
         {fields.map((field) => (
-          <Grid2 item xs={12} key={field}>
+          <Grid2 xs={12} key={field}>
             <DraggableField fieldName={field} />
           </Grid2>
         ))}

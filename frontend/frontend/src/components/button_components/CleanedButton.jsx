@@ -9,10 +9,18 @@ const CleanedButton = ({ uploadedData, setCleanedData, closeForm }) => {
             alert("No valid uploaded data available.");
             return;
         }
-    
-        console.log("Setting cleanedData to uploadedData:", uploadedData);
-        setCleanedData(uploadedData); // Directly set uploadedData as cleanedData
-        
+
+        const data = Array.isArray(uploadedData)
+            ? uploadedData
+            : Array.isArray(uploadedData.data_preview)
+                ? uploadedData.data_preview
+                : typeof uploadedData.data_preview === 'string'
+                    ? JSON.parse(uploadedData.data_preview)
+                    : [];
+
+        console.log("Setting cleanedData to uploadedData:", data);
+        setCleanedData(data);
+        if (closeForm) closeForm();
     };
     
     return (
