@@ -385,7 +385,7 @@ function CanvasContainer({
             </div>
           )}
 
-          {/* --------------------Standard Chart Window Section ------------------------*/}
+          {/* -------------------Standard Chart Window Section -----------------------*/}
           {showChartWindow && selectedChartType && (
             <div
               key="chartWindow"

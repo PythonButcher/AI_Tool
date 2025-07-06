@@ -6,7 +6,7 @@ import Paper from '@mui/material/Paper';
 import Grid2 from '@mui/material/Grid2';
 import './css/FieldsPanel.css';
 
-// DraggableField Component
+// DraggableField Components
 const DraggableField = ({ fieldName }) => {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: fieldName,
