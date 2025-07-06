@@ -231,15 +231,10 @@ useEffect(() => {
   const handleDragEnd = useCallback(({ active, over }) => {
     if (!over || active.data?.current?.type !== 'field') return;
 
-    const field = active.data.current.field;
-    let axis = over.data?.current?.axis;
-    if (!axis) {
-      const dropId = over.id?.toString() || '';
-      if (dropId.includes('x')) axis = 'x';
-      if (dropId.includes('y')) axis = 'y';
-    }
-    if (!axis) return;
-    handleFieldDrop(axis, field);
+    const axis = over.data?.current?.axis;
+    if (!axis) return; // Drop target lacks axis metadata
+
+    handleFieldDrop(axis, active.data.current.field);
   }, [handleFieldDrop]);
 
 
