@@ -4,6 +4,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import ChartComponentAI from "./chart_components/ChartComponentAI";
+import { getDynamicColors } from "../utils/ChartStyles";
 import "./css/DataStoryPanel.css";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
