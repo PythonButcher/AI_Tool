@@ -228,20 +228,18 @@ useEffect(() => {
     }
   }, []);
 
+  // Handle drag end events, mapping dropped field to the correct axis
   const handleDragEnd = useCallback(({ active, over }) => {
+    // Only handle drops on valid targets when dragging a field
     if (!over || active.data?.current?.type !== 'field') return;
-
-    let axis = over.data?.current?.axis;
-
-    if (!axis) {
-      const id = over.id?.toString().toLowerCase();
-      if (id?.includes('x')) axis = 'x';
-      else if (id?.includes('y')) axis = 'y';
+    const targetId = over.id?.toString();
+    const fieldName = active.data.current.field;
+    // Determine axis based on drop zone id
+    if (targetId === 'x-axis') {
+      handleFieldDrop('x', fieldName);
+    } else if (targetId === 'y-axis') {
+      handleFieldDrop('y', fieldName);
     }
-
-    if (!axis) return; // Drop target lacks axis metadata
-
-    handleFieldDrop(axis, active.data.current.field);
   }, [handleFieldDrop]);
 
 
