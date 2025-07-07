@@ -2,8 +2,8 @@ import React, { useState, useCallback, useEffect, useContext } from 'react';
 import MenuBar from './components/MenuBar';
 import CanvasContainer from './components/CanvasContainer';
 import DatasetInfo from './components/DatasetInfo';
-import { DndContext } from '@dnd-kit/core';
 import SideBar from './components/SideBar';
+import { DndContext, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import DataCleaningForm from './components/DataCleaningForm';
 import DataVisualizations from './components/chart_components/DataVisualization';
 import { transformToChartData } from './utils/chartDataUtils';
@@ -35,7 +35,11 @@ function App() {
   const [cleanedData, setCleanedData] = useState(null);
   const [chartData, setChartData] = useState(null);
   const [chartType, setChartType] = useState('Bar');
-  const [chartMapping, setChartMapping] = useState({});   // { 'X‑Axis': 'Region', 'Y‑Axis': 'Sales' }
+  const [chartMapping, setChartMapping] = useState({});   // { 'X-Axis': 'Region', 'Y-Axis': 'Sales' }
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+  );
 
 
   // AI charting state (separate from standard)
@@ -94,7 +98,11 @@ useEffect(() => {
 
   // Standard chartData transformation (NOT AI)
   useEffect(() => {
-    if (!cleanedData || Object.keys(chartMapping).length === 0) {
+    if (
+      !cleanedData ||
+      !chartMapping['X-Axis'] ||
+      !chartMapping['Y-Axis']
+    ) {
       console.warn('Missing dependencies for chartData transformation.');
       return;
     }
@@ -210,30 +218,36 @@ useEffect(() => {
     setShowChartWindow(false);
   }, []);
 
-  const handleDragEnd = useCallback((event) => {
-    const { active, over } = event;
-    console.log("Dragged field ID:", active?.id);
-    console.log("Drop target ID:", over?.id);
-
-    if (!over) {
-      console.warn('No valid drop target.');
-      return;
-    }
-
-    const draggedField = active.id;
-    const dropTarget = over.id;
-    if (dropTarget === 'x-axis') {
-      setXAxis(draggedField);
-      console.log('Updated xAxis:', draggedField);
-    } else if (dropTarget === 'y-axis') {
-      setYAxis(draggedField);
-      console.log('Updated yAxis:', draggedField);
+  const handleFieldDrop = useCallback((axis, field) => {
+    if (axis === 'x') {
+      setXAxis(field);
+      setChartMapping(prev => ({ ...prev, 'X-Axis': field }));
+    } else if (axis === 'y') {
+      setYAxis(field);
+      setChartMapping(prev => ({ ...prev, 'Y-Axis': field }));
     }
   }, []);
 
+  const handleDragEnd = useCallback(({ active, over }) => {
+    if (!over || active.data?.current?.type !== 'field') return;
+
+    let axis = over.data?.current?.axis;
+
+    if (!axis) {
+      const id = over.id?.toString().toLowerCase();
+      if (id?.includes('x')) axis = 'x';
+      else if (id?.includes('y')) axis = 'y';
+    }
+
+    if (!axis) return; // Drop target lacks axis metadata
+
+    handleFieldDrop(axis, active.data.current.field);
+  }, [handleFieldDrop]);
+
+
   return (
     <ThemeProvider theme={theme}>
-      <DndContext onDragEnd={handleDragEnd}>
+        <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
         <div className="app-container">
           {/* Sidebar with actions and data cleaning */}
           <SideBar
@@ -303,10 +317,6 @@ useEffect(() => {
                   selectedChartType={selectedChartType}
                   handleCloseChartWindow={handleCloseChartWindow}
                   showChartWindow={showChartWindow}
-                  xAxis={xAxis}
-                  yAxis={yAxis}
-                  setXAxis={setXAxis}
-                  setYAxis={setYAxis}
                   showAIChart={showAIChart}
                   setShowAIChart={setShowAIChart}
                   setAiChartType = {setAiChartType}
@@ -316,7 +326,6 @@ useEffect(() => {
                   setShowCanvasMinimized={setShowCanvasMinimized}
                   handleCanvasMinimize={handleCanvasMinimize}
                   chartMapping={chartMapping}                // ✅ NEW
-                  setChartMapping={setChartMapping}
                   storyData={storyData}
                   setStoryData={setStoryData}
                   showStoryPanel={showStoryPanel}
@@ -354,7 +363,7 @@ useEffect(() => {
           />
           
         </div>
-      </DndContext>
+        </DndContext>
     </ThemeProvider>
   );
 }

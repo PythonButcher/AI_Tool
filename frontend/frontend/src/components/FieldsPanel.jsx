@@ -1,27 +1,30 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import { useDraggable } from '@dnd-kit/core';
+import { CSS } from '@dnd-kit/utilities';
 import Paper from '@mui/material/Paper';
 import Grid2 from '@mui/material/Grid2';
 import './css/FieldsPanel.css';
 
-// DraggableField Component
+// DraggableField Components
 const DraggableField = ({ fieldName }) => {
-  // Use `useDraggable` to make the field draggable
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
-    id: fieldName, // Unique ID for the draggable field
-    
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: fieldName,
+    data: { type: 'field', field: fieldName },
   });
-  console.log("Draggable field ID:", fieldName);
+
+  const style = {
+    transform: CSS.Translate.toString(transform),
+  };
 
   return (
     <Paper
       ref={setNodeRef}
+      style={style}
       elevation={1}
       className={`fields-panel-item ${isDragging ? 'dragging' : ''}`}
-      {...listeners} // Attach drag listeners
-      {...attributes} // Attach drag attributes
-      
+      {...listeners}
+      {...attributes}
     >
       {fieldName}
     </Paper>
@@ -41,11 +44,11 @@ const FieldsPanel = ({ cleanedData }) => {
   const fields = Object.keys(cleanedData[0]);
 
   return (
-    <div className="fields-panel-container">
+    <div className="fields-panel">
       <h3 className="fields-panel-header">Fields in Dataset</h3>
       <Grid2 container spacing={2}>
         {fields.map((field) => (
-          <Grid2 item xs={12} key={field}>
+          <Grid2 xs={12} key={field}>
             <DraggableField fieldName={field} />
           </Grid2>
         ))}

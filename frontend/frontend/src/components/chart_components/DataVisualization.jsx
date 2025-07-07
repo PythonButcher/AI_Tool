@@ -76,7 +76,7 @@ function DataVisualizations({ onDataCleaned, setShowDataVisual, onSelectChart, u
           <DialogContent>
             <Grid2 container spacing={2} justifyContent="center">
               {chartTypes.map(({ type, Icon }) => (
-                <Grid2 item xs={4} key={type}>
+                <Grid2 xs={4} key={type}>
                   <div
                     className={`chart-thumbnail ${!onDataCleaned ? 'disabled' : ''}`}
                     onClick={() => handleSelectChartType(type)}

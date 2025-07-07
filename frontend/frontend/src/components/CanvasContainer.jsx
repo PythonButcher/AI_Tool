@@ -27,8 +27,6 @@ function CanvasContainer({
   showDataPreview,
   handleClosePreview,
   handleCloseCanvas,
-  showFieldsPanel,
-  handleToggleField,
   cleanedData,
   selectedChartType,
   handleCloseChartWindow,
@@ -47,7 +45,6 @@ function CanvasContainer({
   setShowCanvasMinimized,
   handleCanvasMinimize,
   chartMapping,
-  setChartMapping,
   previewMode,
   setPreviewMode,
   showWhiteBoard,
@@ -97,8 +94,6 @@ function CanvasContainer({
   console.log("Dataset length :", previewData.len);
   console.log("DEBUG active dataset:", dataset);
   console.log("DEBUG previewData:", previewData);
-
-
   return (
 
     <div
@@ -390,7 +385,7 @@ function CanvasContainer({
             </div>
           )}
 
-          {/* --------------------Standard Chart Window Section ------------------------*/}
+          {/* -------------------Standard Chart Window Section -----------------------*/}
           {showChartWindow && selectedChartType && (
             <div
               key="chartWindow"
@@ -416,11 +411,10 @@ function CanvasContainer({
                 mapping={chartMapping}
               />
 
-              {/* RolesPanel (new component you’ll add next) */}
+              {/* RolesPanel handles drag targets for chart roles */}
               <RolesPanel
                 chartType={selectedChartType}
                 mapping={chartMapping}
-                setMapping={setChartMapping}
               />
             </div>
           )}
@@ -479,34 +473,6 @@ function CanvasContainer({
             </div>
           )}
 
-          {/*-------------------------- Fields Panel Section --------------------------------*/}
-          {showFieldsPanel && uploadedData && (
-            <div
-              key="fieldsPanel"
-              className="grid-item"
-              data-grid={{
-                x: 8,
-                y: 10,
-                w: 4,
-                h: 15,
-                minW: 3,
-                minH: 5,
-                resizeHandles: ['se', 'e', 's'],
-              }}
-            >
-              <div className="preview-header drag-handle">
-                <span>Fields Panel</span>
-                <CloseButton
-                  onClick={() => {
-                    setShowAiWorkflow(false);
-                    setShowCanvasMinimized(false);
-                  }}
-                />
-              </div>
-              <FieldsPanel cleanedData={cleanedData} />
-            </div>
-            
-          )}
         </ResponsiveGridLayout>
       </div>
     </div>

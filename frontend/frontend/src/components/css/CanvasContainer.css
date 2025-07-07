@@ -109,13 +109,8 @@
   }
 }
 
-.chart-dropzones {
-  display: flex;
-  justify-content: space-around;
-  margin-bottom: 10px;
-}
 
-.chart-dropzones .drop-zone {
+.drop-zone {
   flex: 1;
   border: 2px dashed gray;
   margin: 0 10px;
@@ -124,11 +119,11 @@
   transition: background-color 0.3s;
 }
 
-.chart-dropzones .drop-zone:hover {
+.drop-zone:hover {
   background-color: lightyellow;
 }
 
-.chart-dropzones .drop-zone.active {
+.drop-zone.active {
   background-color: lightgreen;
 }
 

@@ -13,8 +13,7 @@ import { FcWorkflow } from "react-icons/fc";
 import './css/SideBar.css';
 import DataCleaningForm from './DataCleaningForm';
 import FileExport from './FileExport';
-import Paper from '@mui/material/Paper';
-import Grid from '@mui/material/Grid';
+import FieldsPanel from './FieldsPanel';
 
 
 const SideBar = ({ onButtonClick, onDataCleaned, 
@@ -65,13 +64,17 @@ const SideBar = ({ onButtonClick, onDataCleaned,
  };
 
   
-  const parsedDataPreview = cleanedData?.data_preview
-  ? JSON.parse(cleanedData.data_preview)
-  : [];
+  const parsedDataPreview = Array.isArray(cleanedData)
+    ? cleanedData
+    : Array.isArray(cleanedData?.data_preview)
+    ? cleanedData.data_preview
+    : typeof cleanedData?.data_preview === 'string'
+    ? JSON.parse(cleanedData.data_preview)
+    : [];
 
   const fields = parsedDataPreview.length > 0
-  ? Object.keys(parsedDataPreview[0])
-  : [];
+    ? Object.keys(parsedDataPreview[0])
+    : [];
 
 console.log("Extracted fields:", fields);
 
@@ -161,23 +164,7 @@ console.log("Extracted fields:", fields);
 
       {/* FieldsPanel */}
       {showFieldsPanel && fields.length > 0 && (
-        <Paper className="fields-panel" elevation={3}>
-          <h3 className="fields-panel-header">Fields in Dataset</h3>
-          <Grid container spacing={2}>
-            {fields.map((field) => (
-              <Grid item xs={12} key={field}>
-                <Paper
-                  elevation={1}
-                  draggable
-                  onDragStart={(e) => e.dataTransfer.setData('text/plain', field)}
-                  className="fields-panel-item"
-                >
-                  {field}
-                </Paper>
-              </Grid>
-            ))}
-          </Grid>
-        </Paper>
+        <FieldsPanel cleanedData={parsedDataPreview} />
       )}
 
       {/* Render DataCleaningForm when visible */}
