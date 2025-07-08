@@ -4,11 +4,22 @@ import DropZone from '../../utils/DropZone';
 import { chartRoles } from '../../utils/chartRoleConfig';
 import '../css/chart_css/RolesPanel.css';
 
+/**
+ * Map a chart role label to its axis identifier.
+ */
 function roleToAxis(role) {
-  const lower = role.toLowerCase();
-  if (lower.includes('x') || lower.includes('category')) return 'x';
-  if (lower.includes('y') || lower.includes('value')) return 'y';
-  return 'x';
+  switch (role) {
+    case 'X-Axis':
+      return 'x';
+    case 'Y-Axis':
+      return 'y';
+    case 'Category':
+      return 'x';
+    case 'Value':
+      return 'y';
+    default:
+      return 'x';
+  }
 }
 
 function RolesPanel({ chartType, mapping }) {

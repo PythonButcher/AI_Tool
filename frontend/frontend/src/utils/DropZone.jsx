@@ -11,7 +11,11 @@ const DropZone = ({ axis, currentField }) => {
   const label = currentField || `${safeAxis.toUpperCase()} Axis`;
 
   return (
-    <div ref={setNodeRef} className={`drop-zone ${isOver ? 'active' : ''}`}>
+    <div
+      ref={setNodeRef}
+      className={`drop-zone ${isOver ? 'active' : ''}`}
+      style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+    >
       {label}
     </div>
   );
