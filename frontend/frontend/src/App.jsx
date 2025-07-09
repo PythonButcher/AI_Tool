@@ -231,11 +231,18 @@ useEffect(() => {
 
   // Handle drag end events, mapping dropped field to the correct axis
   const handleDragEnd = useCallback(({ active, over }) => {
-    // Ensure valid drop on a droppable axis and dragging a field
+    // Only handle drops on valid targets when dragging a field
     if (!over || active.data?.current?.type !== 'field') return;
     const fieldName = active.data.current.field;
-    // Use droppable data to determine axis ('x' or 'y')
-    const axis = over.data?.current?.axis;
+
+    // Prefer droppable metadata but fall back to id parsing
+    let axis = over.data?.current?.axis;
+    if (!axis) {
+      const id = over.id?.toString().toLowerCase();
+      if (id?.includes('x')) axis = 'x';
+      else if (id?.includes('y')) axis = 'y';
+    }
+
     if (axis === 'x') {
       handleFieldDrop('x', fieldName);
     } else if (axis === 'y') {
