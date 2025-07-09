@@ -149,18 +149,19 @@ useEffect(() => {
     }
   }, [xAxis, yAxis]);
 
-   const handleFileUpload = useCallback((raw) => {
+  const handleFileUpload = useCallback((raw) => {
     // raw is whatever the backend returns
     setUploadedData(raw);                       // preview for UI
     const allRows =
-      Array.isArray(raw)                 ? raw
-      : Array.isArray(raw?.data_preview) ? raw.data_preview
+      Array.isArray(raw)                  ? raw
+      : Array.isArray(raw?.data_preview)  ? raw.data_preview
       : typeof raw?.data_preview === 'string'
         ? JSON.parse(raw.data_preview)
         : [];
-    setFullData(allRows);                       // <— NEW
+    setFullData(allRows);                     // store full data
+    setCleanedData(allRows);                  // initialize cleanedData for charting
     setShowDataPreview(true);
-  }, [setUploadedData, setFullData]);
+  }, [setUploadedData, setFullData, setCleanedData]);
 
   const handleApiData = (data) => {
     setUploadedData({
@@ -230,14 +231,14 @@ useEffect(() => {
 
   // Handle drag end events, mapping dropped field to the correct axis
   const handleDragEnd = useCallback(({ active, over }) => {
-    // Only handle drops on valid targets when dragging a field
+    // Ensure valid drop on a droppable axis and dragging a field
     if (!over || active.data?.current?.type !== 'field') return;
-    const targetId = over.id?.toString();
     const fieldName = active.data.current.field;
-    // Determine axis based on drop zone id
-    if (targetId === 'x-axis') {
+    // Use droppable data to determine axis ('x' or 'y')
+    const axis = over.data?.current?.axis;
+    if (axis === 'x') {
       handleFieldDrop('x', fieldName);
-    } else if (targetId === 'y-axis') {
+    } else if (axis === 'y') {
       handleFieldDrop('y', fieldName);
     }
   }, [handleFieldDrop]);
