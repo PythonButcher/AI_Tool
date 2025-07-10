@@ -138,7 +138,7 @@ useEffect(() => {
 
     const transformed = transformToChartData(newData, {
       labelField: xAxis || 'defaultLabel',
-      dataField: yAxis || 'defaultData',
+      dataFields: [yAxis || 'defaultData'],
     });
     if (transformed) {
       setChartData(transformed);
@@ -219,15 +219,35 @@ useEffect(() => {
     setShowChartWindow(false);
   }, []);
 
-  const handleFieldDrop = useCallback((axis, field) => {
-    if (axis === 'x') {
-      setXAxis(field);
-      setChartMapping(prev => ({ ...prev, 'X-Axis': field }));
-    } else if (axis === 'y') {
-      setYAxis(field);
-      setChartMapping(prev => ({ ...prev, 'Y-Axis': field }));
-    }
-  }, []);
+  const handleFieldDrop = useCallback(
+    (axis, field) => {
+      setChartMapping((prev) => {
+        const updated = { ...prev };
+        if (axis === 'x') {
+          setXAxis(field);
+          updated['X-Axis'] = field;
+        } else if (axis === 'y') {
+          setYAxis(field);
+          updated['Y-Axis'] = field;
+        }
+
+        if (
+          cleanedData &&
+          updated['X-Axis'] &&
+          updated['Y-Axis']
+        ) {
+          const transformed = transformToChartData(cleanedData, {
+            labelField: updated['X-Axis'],
+            dataFields: [updated['Y-Axis']],
+          });
+          setChartData(transformed);
+        }
+
+        return updated;
+      });
+    },
+    [cleanedData]
+  );
 
   // Handle drag end events, mapping dropped field to the correct axis
   const handleDragEnd = useCallback(({ active, over }) => {
