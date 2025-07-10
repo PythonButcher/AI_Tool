@@ -52,7 +52,7 @@ if (!chartData || !chartData.labels || !chartData.datasets) {
     <div
       style={{
         width: "100%",
-        height: "calc(100% - 40px)", // ✅ leave room for toolbar
+        height: "calc(95% - 8px)", // ✅ leave room for toolbar
         position: "relative",
         paddingBottom: "12px",       // ✅ prevent axis cutoffs
         boxSizing: "border-box",     // ✅ account for padding
