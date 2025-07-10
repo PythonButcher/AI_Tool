@@ -395,15 +395,15 @@ function CanvasContainer({
                   x: 2,
                   y: 15,
                   w: 8,
-                  h: 15,
+                  h: 25,
                   minW: 4,        // 🧱 prevent overly small width
                   minH: 8,        // 🧱 more vertical space to avoid collapse
                   maxH: 30,       // 🛡 optional upper bound
                   resizeHandles: ['se', 'e', 's'],
                 }}
                 style={{
-                  minWidth: '250px',
-                  minHeight: '250px',
+                  minWidth: '150px',
+                  minHeight: '150px',
                   overflow: 'hidden',         // ✅ prevent layout spill
                   backgroundColor: '#fff',    // 🩹 fix red flashing in some themes
                   zIndex: 5,
