@@ -357,6 +357,7 @@ useEffect(() => {
                   showStoryPanel={showStoryPanel}
                   setShowStoryPanel={setShowStoryPanel}
                   setAiChartData={setAiChartData}
+                  chartData={chartData} // ✅ ADD THIS
                   showWhiteBoard={showWhiteBoard}
                   setShowWhiteBoard={setShowWhiteBoard}
                   pipelineResults={pipelineResults} 
