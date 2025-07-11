@@ -1,6 +1,6 @@
 // AiCommandBlock.jsx
 
-import { FaChartBar, FaBrain, FaLightbulb, FaRocket } from "react-icons/fa";
+import { FaChartBar, FaBrain, FaLightbulb, FaRocket, FaBroom } from "react-icons/fa";
 
 // Defines all available AI command blocks for the workflow system
 export const AiCommandBlocks = {
@@ -30,6 +30,15 @@ export const AiCommandBlocks = {
     action: "fetch_insights",
     params: ["dataset"],
     icon: FaLightbulb,
+  },
+  clean: {
+    id: "cmd-clean",
+    command: "/clean",
+    display: "Clean Data",
+    description: "Automatically cleans the dataset.",
+    action: "fetch_clean",
+    params: ["dataset"],
+    icon: FaBroom,
   },
   execute: {
     id: "cmd-execute",

@@ -358,8 +358,8 @@ function CanvasContainer({
               key="showWhiteBoard"
               className="grid-item"
               data-grid={{
-                x: 0,
-                y: 0,
+                x: 0.5,
+                y: 0.5,
                 w: 10,
                 h: 27.5,
                 minW: 2,
@@ -392,10 +392,10 @@ function CanvasContainer({
                 key="chartWindow"
                 className="grid-item"
                 data-grid={{
-                  x: 2,
-                  y: 15,
-                  w: 8,
-                  h: 25,
+                  x: 0.5,
+                  y: 0.5,
+                  w: 9,
+                  h: 27.5,
                   minW: 4,        // 🧱 prevent overly small width
                   minH: 8,        // 🧱 more vertical space to avoid collapse
                   maxH: 30,       // 🛡 optional upper bound

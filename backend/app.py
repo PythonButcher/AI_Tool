@@ -1,3 +1,7 @@
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from flask import Flask
 from flask_cors import CORS
 from backend.routes.upload import upload_bp
@@ -10,8 +14,6 @@ from backend.services.ai_storyboard_gemini import ai_storyboard_gemini
 from backend.services.ai_storyboard_openai import ai_storyboard_openai
 from backend.services.ai_logic import ai_bp
 from backend.services.ai_logic_gemini import ai_gemini_bp
-import sys
-import os
 
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -39,7 +41,7 @@ def create_app():
     
     def home():
         return "Welcome to the AI Data Visualization Tool Backend!"
-    print("✅ ai_logic.py LOADED AND ACTIVE")
+    print("ai_logic.py LOADED AND ACTIVE")
 
     
     

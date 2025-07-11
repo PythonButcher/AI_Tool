@@ -43,7 +43,7 @@ const formatChartData = (chartResponse) => {
 };
 
 function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
-  const { uploadedData, cleanedData } = useContext(DataContext);
+  const { uploadedData, cleanedData, setCleanedData } = useContext(DataContext);
   const [showChat, setShowChat] = useState(false);
   const [userMessages, setUserMessages] = useState([]);
   const [userInput, setUserInput] = useState('');
@@ -61,6 +61,9 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
           return { chartType: "Unknown", chartData: [] };
         }
         return response.data;
+      }
+      if (command === "/clean") {
+        return response.data.cleaned_data;
       }
       return response.data.reply;
     } catch (error) {
@@ -108,7 +111,18 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
       return;
     }
 
-    if (AICommands.isCommand(userInput)) {
+    if (AICommands.isCommand(userInput) && userInput.startsWith("/clean")) {
+        const cleanedDataResponse = await handleUserCommand("/clean", datasetContext);
+  
+        if (!cleanedDataResponse || !Array.isArray(cleanedDataResponse)) {
+          setError("AI failed to generate valid cleaned data.");
+          setLoading(false);
+          return;
+        }
+  
+        setCleanedData(cleanedDataResponse);
+        responseText = "The data has been cleaned successfully.";
+      } else if (AICommands.isCommand(userInput)) {
       responseText = await handleUserCommand(userInput.split(" ")[0], datasetContext);
     } else {
       try {

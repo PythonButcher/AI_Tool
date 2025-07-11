@@ -59,10 +59,15 @@ def generate_summary(dataset):
 def generate_insights(dataset):
     return f"Provide key insights from this dataset:\n\n{json.dumps(dataset[:10], indent=2)}"
 
+@register_command("/clean")
+def generate_cleaned_data(dataset):
+    return f"Clean this dataset. Handle missing values, correct data types, and remove duplicates. Return the cleaned dataset as a JSON object:\n\n{json.dumps(dataset[:20], indent=2)}"
+
 @register_command("/execute")
 def generate_execute(_dataset=None):
     print("🚀 Backend: Execute command triggered")
     return "Execute command acknowledged (placeholder)" # This command seems to be a placeholder still
+
 
 # --- Route Definitions ---
 
@@ -234,7 +239,7 @@ def ai_command():
             # Prompt remains largely the same, emphasizing JSON output.
             # Gemini's JSON mode relies heavily on prompt instructions and the response_mime_type.
             prompt = textwrap.dedent(f"""\
-            You are an AI assistant specialized in data visualization.
+You are an AI assistant specialized in data visualization.
 
             Analyze the following data sample and select the single best chart type—either "Bar Chart" or "Pie Chart"—to clearly visualize it. Do NOT choose other chart types.
 
@@ -322,6 +327,43 @@ def ai_command():
             except Exception as e:
                 current_app.logger.error(f"❌ Gemini API Error for /charts: {str(e)}", exc_info=True)
                 return jsonify({"error": f"AI request failed for /charts: {str(e)}"}), 500
+        elif command == "/clean":
+            prompt = COMMANDS[command](dataset)
+            try:
+                current_app.logger.debug("🧠 Sending request to Gemini for data cleaning (JSON mode)...")
+                response = gemini_model.generate_content(
+                    prompt,
+                    generation_config=GENERATION_CONFIG_JSON
+                )
+
+                if not response.candidates:
+                    current_app.logger.error(f"Gemini response blocked or empty for /clean. Feedback: {response.prompt_feedback}")
+                    error_message = f"AI response blocked or unavailable. Reason: {response.prompt_feedback or 'Unknown'}"
+                    return jsonify({"error": error_message}), 500
+                if not hasattr(response, 'text') or not response.text:
+                    current_app.logger.error(f"Invalid response structure from Gemini service for /clean: {response}")
+                    return jsonify({"error": "Invalid or empty response from AI service."}), 500
+
+                ai_response_content = response.text
+                current_app.logger.debug(f"✅ Gemini Raw JSON Response: {ai_response_content}")
+
+                cleaned_data = json.loads(ai_response_content)
+
+                if not isinstance(cleaned_data, list):
+                    current_app.logger.error(f"❌ Cleaned data is not a list: {cleaned_data}")
+                    raise json.JSONDecodeError("Cleaned data is not a list.", ai_response_content, 0)
+
+                return jsonify({"cleaned_data": cleaned_data})
+
+            except json.JSONDecodeError as json_err:
+                current_app.logger.error(f"❌ Gemini response for /clean could not be parsed as valid JSON. Error: {json_err}. Raw response: '{ai_response_content}'")
+                return jsonify({
+                    "error": "AI response could not be parsed properly or did not match expected JSON structure.",
+                    "raw_response": ai_response_content
+                }), 500
+            except Exception as e:
+                current_app.logger.error(f"❌ Gemini API Error for /clean: {str(e)}", exc_info=True)
+                return jsonify({"error": f"AI request failed for /clean: {str(e)}"}), 500
 
         # Use the COMMANDS dictionary for handling other registered commands
         elif command in COMMANDS:
