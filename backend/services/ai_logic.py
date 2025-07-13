@@ -208,14 +208,51 @@ def ai_command():
                 return jsonify({"error": "AI request failed for /charts"}), 500
 
         elif command == "/clean":
-            prompt = COMMANDS[command](dataset)
+            instructions = data.get("instructions")
+
+            if not instructions:
+                # Step 1: provide cleaning suggestions
+                prompt = textwrap.dedent(
+                    f"""
+                    Analyze the dataset sample below and list potential cleaning operations.
+                    Mention columns with missing values, possible type conversions, or outliers.
+                    Provide the suggestions in a short bullet list.
+
+                    Dataset sample:
+                    {json.dumps(dataset[:20], indent=2)}
+                    """
+                )
+
+                completion = client.chat.completions.create(
+                    model="gpt-4o-mini",
+                    messages=[{"role": "system", "content": prompt}],
+                    max_tokens=300
+                )
+
+                if not completion.choices or not hasattr(completion.choices[0], "message"):
+                    return jsonify({"error": "Invalid response from AI service for /clean suggestions."}), 500
+
+                suggestions = completion.choices[0].message.content
+                return jsonify({"suggestions": suggestions})
+
+            # Step 2: apply cleaning based on user instructions
+            prompt = textwrap.dedent(
+                f"""
+                Clean the dataset according to these instructions: {instructions}
+                Return ONLY the cleaned dataset as a JSON array of objects.
+
+                Dataset sample:
+                {json.dumps(dataset[:20], indent=2)}
+                """
+            )
+
             try:
                 current_app.logger.debug("🧠 Sending request to OpenAI for data cleaning (JSON mode)...")
                 completion = client.chat.completions.create(
                     model="gpt-4o-mini",
                     messages=[{"role": "system", "content": prompt}],
                     response_format={"type": "json_object"},
-                    max_tokens=4096 # Significantly increased token limit
+                    max_tokens=4096
                 )
 
                 if not completion.choices or not hasattr(completion.choices[0], "message"):
@@ -224,16 +261,9 @@ def ai_command():
                 ai_response_content = completion.choices[0].message.content
                 current_app.logger.debug(f"✅ OpenAI Raw JSON Response for /clean: {ai_response_content}")
 
-                # Robust JSON parsing
                 parsed_json = json.loads(ai_response_content)
-                
-                # The AI might return {"cleaned_data": [...]}, so we handle that case
-                if isinstance(parsed_json, dict) and 'cleaned_data' in parsed_json:
-                    cleaned_data = parsed_json['cleaned_data']
-                else:
-                    cleaned_data = parsed_json
+                cleaned_data = parsed_json.get("cleaned_data", parsed_json)
 
-                # Final validation
                 if not isinstance(cleaned_data, list):
                     current_app.logger.error(f"❌ Cleaned data is not a list after parsing: {cleaned_data}")
                     raise TypeError("The cleaned data from the AI was not in the expected list format.")
@@ -241,7 +271,9 @@ def ai_command():
                 return jsonify({"cleaned_data": cleaned_data})
 
             except (json.JSONDecodeError, TypeError) as err:
-                current_app.logger.error(f"❌ OpenAI response for /clean could not be parsed as valid JSON. Error: {err}. Raw: '{ai_response_content}'")
+                current_app.logger.error(
+                    f"❌ OpenAI response for /clean could not be parsed as valid JSON. Error: {err}. Raw: '{ai_response_content}'"
+                )
                 return jsonify({
                     "error": "AI response for /clean could not be parsed into the expected format.",
                     "raw_response": ai_response_content
