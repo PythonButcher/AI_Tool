@@ -35,6 +35,10 @@ def generate_insights(dataset):
     # Provide key insights prompt using the first 10 entries of the dataset
     return f"Provide key insights from this dataset:\n\n{json.dumps(dataset[:10], indent=2)}"
 
+@register_command("/clean")
+def generate_cleaned_data(dataset):
+    return f"Clean this dataset. Handle missing values, correct data types, and remove duplicates. Return the cleaned dataset as a JSON object:\n\n{json.dumps(dataset[:20], indent=2)}"
+
 @register_command("/execute")
 def generate_execute(dataset):
     print("🚀 Backend: Execute command triggered")
@@ -122,6 +126,9 @@ def ai_command():
             except json.JSONDecodeError:
                 return jsonify({"error": "Invalid JSON string provided for dataset."}), 400
 
+        if isinstance(dataset, dict) and 'data' in dataset:
+            dataset = dataset['data']
+
         if isinstance(dataset, dict):
             dataset = list(dataset.values())
 
@@ -208,6 +215,40 @@ def ai_command():
                 current_app.logger.error("❌ AI response could not be parsed as valid JSON.")
                 return jsonify({"error": "AI response could not be parsed properly."}), 500
 
+        elif command == "/clean":
+            prompt = COMMANDS[command](dataset)
+            try:
+                current_app.logger.debug("🧠 Sending request to OpenAI for data cleaning (JSON mode)...")
+                completion = client.chat.completions.create(
+                    model="gpt-4o-mini",
+                    messages=[{"role": "system", "content": prompt}],
+                    response_format={"type": "json_object"},
+                    max_tokens=300
+                )
+
+                if not completion.choices or not hasattr(completion.choices[0], "message"):
+                    return jsonify({"error": "Invalid response from AI service."}), 500
+
+                ai_response_content = completion.choices[0].message.content
+                current_app.logger.debug(f"✅ OpenAI Raw JSON Response: {ai_response_content}")
+
+                cleaned_data = json.loads(ai_response_content)
+
+                if not isinstance(cleaned_data, list):
+                    current_app.logger.error(f"❌ Cleaned data is not a list: {cleaned_data}")
+                    raise json.JSONDecodeError("Cleaned data is not a list.", ai_response_content, 0)
+
+                return jsonify({"cleaned_data": cleaned_data})
+
+            except json.JSONDecodeError as json_err:
+                current_app.logger.error(f"❌ OpenAI response for /clean could not be parsed as valid JSON. Error: {json_err}. Raw response: '{ai_response_content}'")
+                return jsonify({
+                    "error": "AI response could not be parsed properly or did not match expected JSON structure.",
+                    "raw_response": ai_response_content
+                }), 500
+            except Exception as e:
+                current_app.logger.error(f"❌ OpenAI API Error for /clean: {str(e)}", exc_info=True)
+                return jsonify({"error": f"AI request failed for /clean: {str(e)}"}), 500
         # Use the COMMANDS dictionary for handling other commands
         if command in COMMANDS:
             prompt = COMMANDS[command](dataset)
