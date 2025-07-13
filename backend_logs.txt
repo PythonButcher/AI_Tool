@@ -1,0 +1,176 @@
+(venv) C:\Users\18022\OneDrive\Coding\Github\AI_Tool>python -m backend.app
+ai_logic.py LOADED AND ACTIVE
+ * Serving Flask app 'app'
+ * Debug mode: on
+WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+ * Running on http://127.0.0.1:5000
+Press CTRL+C to quit
+ * Restarting with stat
+ai_logic.py LOADED AND ACTIVE
+ * Debugger is active!
+ * Debugger PIN: 178-968-193
+127.0.0.1 - - [13/Jul/2025 01:14:10] "POST /api/upload HTTP/1.1" 200 -
+127.0.0.1 - - [13/Jul/2025 01:14:10] "GET /api/numbers HTTP/1.1" 200 -
+127.0.0.1 - - [13/Jul/2025 01:14:10] "GET /api/numbers HTTP/1.1" 200 -
+127.0.0.1 - - [13/Jul/2025 01:14:23] "POST /api/upload HTTP/1.1" 200 -
+127.0.0.1 - - [13/Jul/2025 01:14:23] "GET /api/numbers HTTP/1.1" 200 -
+127.0.0.1 - - [13/Jul/2025 01:14:23] "GET /api/numbers HTTP/1.1" 200 -
+127.0.0.1 - - [13/Jul/2025 01:14:31] "OPTIONS /ai_cmd HTTP/1.1" 200 -
+Received dataset: {
+  "categorical_summary": {
+    "Address": {
+      "1 Chicken Farm Rd, East Corinth, VT 05040": 1,
+      "1279-1163, Jenne Rd, Reading, VT 05062": 1,
+      "1281 Waterbury-Stowe Rd Route 100, Waterbury Village Historic District, VT 05676": 1,
+      "198 Fire Pond Road, Grafton, Vt 05146": 1,
+      "434 Edson Hill Rd, Stowe, VT 05672": 1,
+      "54 Depot St, Bellows Falls, VT 05101": 1,
+      "560 Graniteville Rd, Graniteville, VT 05654": 1,
+      "643 Bayley Hazen Road, Peacham, Vermont 05862": 1,
+      "656 Bayley Hazen Rd PO Box 253 Peacham, VT 05862": 1,
+      "6750 VT-17, Addison, VT 05491": 1,
+      "Baby Boom House, Peru, VT 05152": 1,
+      "Chittenden County ": 1,
+      "E Main St, Hyde Park, VT 05655": 1
+    },
+    "Description": {
+      "Border of Lake Champlain": 1,
+      "Brendon Mullins' house": 1,
+      "Bridge on Chicken Farm Rd": 1,
+      "Chevy Chase movie": 1,
+      "Diane Keaton movie": 1,
+      "Jack Nicholson Movie": 1,
+      "Jenne Farm": 1,
+      "Liam Neeson Movie": 1,
+      "Multiple filming location": 1,
+      "Railroad station and adjacent buildings": 1,
+      "Rock of Ages": 1,
+      "Stowehof Inn": 1,
+      "Won award at Sundance": 1
+    },
+    "Other Info": {
+      "44.207377,-72.9718379": 1,
+      "Bernie Sanders has a camero": 1,
+      "https://vermonter.com/ethan-frome/": 1,
+      "https://vermonter.com/what-lies-beneath/": 1,
+      "https://www.movie-locations.com/movies/m/Me-Myself-And-Irene.php": 1
+    },
+    "Title": {
+      "Baby Boom": 1,
+      "Beetle Juice": 1,
+      "Ethan Frome": 1,
+      "Forrest Gump": 1,
+      "Funny Farm": 1,
+      "Me, Myself & Irene": 1,
+      "Star Trek": 1,
+      "Sweet Hearts Dance": 1,
+      "The Cider House Rules": 1,
+      "The Four Seasons": 1,
+      "The Spitfire Grill": 1,
+      "What Lies Beneath": 1,
+      "Wolf": 1
+    },
+    "Town": {
+      "Barre": 1,
+      "Bellows Falls": 1,
+      "Buels Gore": 1,
+      "East Cornith": 1,
+      "Hyde Park": 1,
+      "Peachem": 2,
+      "Peru": 1,
+      "Reading": 1,
+      "Stowe": 1,
+      "Townshend": 1,
+      "Waterbury": 1,
+      "West Addison": 1
+    },
+    "URL": {
+      "https://www.imdb.com/title/tt0082405/?ref_=fn_al_tt_1": 1,
+      "https://www.imdb.com/title/tt0092605/?ref_=fn_al_tt_1": 1,
+      "https://www.imdb.com/title/tt0094721/?ref_=nv_sr_srsg_0": 1,
+      "https://www.imdb.com/title/tt0095188/?ref_=fn_al_tt_1": 1,
+      "https://www.imdb.com/title/tt0096200/?ref_=fn_al_tt_2": 1,
+      "https://www.imdb.com/title/tt0106833/?ref_=fn_al_tt_1": 1,
+      "https://www.imdb.com/title/tt0109830/?ref_=fn_al_tt_1": 1,
+      "https://www.imdb.com/title/tt0111742/?ref_=fn_al_tt_2": 1,
+      "https://www.imdb.com/title/tt0117718/?ref_=nv_sr_srsg_0": 1,
+      "https://www.imdb.com/title/tt0124315/?ref_=fn_al_tt_1": 1,
+      "https://www.imdb.com/title/tt0161081/?ref_=fn_al_tt_1": 1,
+      "https://www.imdb.com/title/tt0183505/?ref_=fn_al_tt_3": 1,
+      "https://www.imdb.com/title/tt0796366/?ref_=fn_al_tt_2": 1
+    }
+  },
+  "data_preview": "[{\"Title\":\"Star Trek\",\"Year\":2009,\"Town\":\"Barre\",\"Address\":\"560 Graniteville Rd, Graniteville, VT 05654\",\"Description\":\"Rock of Ages\",\"Other Info\":null,\"URL\":\"https:\\/\\/www.imdb.com\\/title\\/tt0796366\\/?ref_=fn_al_tt_2\",\"Unnamed: 7\":null},{\"Title\":\"Forrest Gump\",\"Year\":1993,\"Town\":\"Reading\",\"Address\":\"1279-1163, Jenne Rd, Reading, VT 05062\",\"Description\":\"Jenne Farm\",\"Other Info\":null,\"URL\":\"https:\\/\\/www.imdb.com\\/title\\/tt0109830\\/?ref_=fn_al_tt_1\",\"Unnamed: 7\":null},{\"Title\":\"Beetle Juice\",\"Year\":1988,\"Town\":\"East Cornith\",\"Address\":\"1 Chicken Farm Rd, East Corinth, VT 05040\",\"Description\":\"Bridge on Chicken Farm Rd\",\"Other Info\":null,\"URL\":\"https:\\/\\/www.imdb.com\\/title\\/tt0094721\\/?ref_=nv_sr_srsg_0\",\"Unnamed: 7\":null},{\"Title\":\"Baby Boom\",\"Year\":1987,\"Town\":\"Peru\",\"Address\":\"Baby Boom House, Peru, VT 05152\",\"Description\":\"Diane Keaton movie\",\"Other Info\":null,\"URL\":\"https:\\/\\/www.imdb.com\\/title\\/tt0092605\\/?ref_=fn_al_tt_1\",\"Unnamed: 7\":null},{\"Title\":\"The Four Seasons\",\"Year\":1981,\"Town\":\"Stowe\",\"Address\":\"434 Edson Hill Rd, Stowe, VT 05672\",\"Description\":\"Stowehof Inn\",\"Other Info\":null,\"URL\":\"https:\\/\\/www.imdb.com\\/title\\/tt0082405\\/?ref_=fn_al_tt_1\",\"Unnamed: 7\":null}]",
+  "message": "File 'VTfilmLocations.csv' uploaded successfully!",
+  "numeric_summary": {
+    "Unnamed: 7": 0,
+    "Year": 25915
+  }
+}
+[2025-07-13 01:14:32,032] DEBUG in ai_logic: 📥 Received request: /clean, dataset type: <class 'dict'>
+[2025-07-13 01:14:32,032] DEBUG in ai_logic: 🧠 Sending request to OpenAI for data cleaning (JSON mode)...
+[2025-07-13 01:14:36,130] DEBUG in ai_logic: ✅ OpenAI Raw JSON Response: {
+  "cleaned_data": [
+    {
+      "Title": "Star Trek",
+      "Year": 2009,
+      "Town": "Barre",
+      "Address": "560 Graniteville Rd, Graniteville, VT 05654",
+      "Description": "Rock of Ages",
+      "Other Info": null,
+      "URL": "https://www.imdb.com/title/tt0796366/?ref_=fn_al_tt_2"
+    },
+    {
+      "Title": "Forrest Gump",
+      "Year": 1993,
+      "Town": "Reading",
+      "Address": "1279-1163, Jenne Rd, Reading, VT 05062",
+      "Description": "Jenne Farm",
+      "Other Info": null,
+      "URL": "https://www.imdb.com/title/tt0109830/?ref_=fn_al_tt_1"
+    },
+    {
+      "Title": "Beetle Juice",
+      "Year": 1988,
+      "Town": "East Cornith",
+      "Address": "1 Chicken Farm Rd, East Corinth, VT 05040",
+      "Description": "Bridge on Chicken Farm Rd",
+      "Other Info": null,
+      "URL": "https://www.imdb.com/title/tt0094721/?ref_=nv_sr_srsg_0"
+    },
+    {
+      "Title": "Baby Boom",
+      "Year": 1987
+[2025-07-13 01:14:36,130] ERROR in ai_logic: ❌ OpenAI response for /clean could not be parsed as valid JSON. Error: Expecting ',' delimiter: line 32 column 19 (char 935). Raw response: '{
+  "cleaned_data": [
+    {
+      "Title": "Star Trek",
+      "Year": 2009,
+      "Town": "Barre",
+      "Address": "560 Graniteville Rd, Graniteville, VT 05654",
+      "Description": "Rock of Ages",
+      "Other Info": null,
+      "URL": "https://www.imdb.com/title/tt0796366/?ref_=fn_al_tt_2"
+    },
+    {
+      "Title": "Forrest Gump",
+      "Year": 1993,
+      "Town": "Reading",
+      "Address": "1279-1163, Jenne Rd, Reading, VT 05062",
+      "Description": "Jenne Farm",
+      "Other Info": null,
+      "URL": "https://www.imdb.com/title/tt0109830/?ref_=fn_al_tt_1"
+    },
+    {
+      "Title": "Beetle Juice",
+      "Year": 1988,
+      "Town": "East Cornith",
+      "Address": "1 Chicken Farm Rd, East Corinth, VT 05040",
+      "Description": "Bridge on Chicken Farm Rd",
+      "Other Info": null,
+      "URL": "https://www.imdb.com/title/tt0094721/?ref_=nv_sr_srsg_0"
+    },
+    {
+      "Title": "Baby Boom",
+      "Year": 1987'
+127.0.0.1 - - [13/Jul/2025 01:14:36] "POST /ai_cmd HTTP/1.1" 500 -

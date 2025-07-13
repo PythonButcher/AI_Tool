@@ -109,39 +109,36 @@ def ai_command():
     """
     Route to handle AI commands.
     Expects a JSON payload with 'command' and 'dataset'.
-    Supports special handling for the '/charts' command and uses registered commands for others.
+    Supports special handling for '/charts' and '/clean' commands, and uses registered commands for others.
     """
     try:
         data = request.json
         command = data.get("command")
-        dataset = data.get("dataset")
+        dataset_obj = data.get("dataset") # Rename to avoid confusion
 
-        # Debug log: show received command and dataset type
-        current_app.logger.debug(f"📥 Received request: {command}, dataset type: {type(dataset)}")
-
-        # Convert dataset to list if provided as a JSON string or a dict
-        if isinstance(dataset, str):
+        # --- Data Extraction ---
+        # The frontend sends a complex object. The actual data is in 'data_preview', which is a JSON string.
+        if isinstance(dataset_obj, dict) and 'data_preview' in dataset_obj:
             try:
-                dataset = json.loads(dataset)
-            except json.JSONDecodeError:
-                return jsonify({"error": "Invalid JSON string provided for dataset."}), 400
+                # Parse the JSON string from data_preview to get the list of records
+                dataset = json.loads(dataset_obj['data_preview'])
+            except (json.JSONDecodeError, TypeError):
+                current_app.logger.error(f"Failed to parse 'data_preview' from dataset object.")
+                return jsonify({"error": "Invalid 'data_preview' format in the dataset."}), 400
+        else:
+            # Fallback for simpler dataset structures, though the primary path is above.
+            dataset = dataset_obj
 
-        if isinstance(dataset, dict) and 'data' in dataset:
-            dataset = dataset['data']
+        # --- Dataset Validation ---
+        if not isinstance(dataset, list) or not dataset:
+            current_app.logger.error(f"Invalid dataset format after extraction. Expected a non-empty list, but got {type(dataset)}.")
+            return jsonify({"error": "Dataset could not be processed into a valid list of records."}), 400
 
-        if isinstance(dataset, dict):
-            dataset = list(dataset.values())
-
-        # Validate that dataset is a non-empty list after conversion
-        if not dataset or not isinstance(dataset, list):
-            current_app.logger.debug("Invalid dataset format after conversion.")
-            return jsonify({"error": "Invalid dataset provided. Expected a list."}), 400
+        # --- Command Handling ---
 
         # Special handling for the '/charts' command
         if command == "/charts":
-            # Refined prompt focusing on clarity for the combined task
-            # Assume 'dataset' here is the sample (e.g., first 10 rows) passed in the request
-            prompt = textwrap.dedent(f"""\
+            prompt = textwrap.dedent(f"""
             You are an AI assistant specialized in creating chart data structures.
             Analyze the following data sample and determine the single best chart type to visualize it.
             Then, based on that chart type, aggregate the data and return a JSON object containing both the chart type and the aggregated data.
@@ -180,40 +177,35 @@ def ai_command():
             }}
 
             Important: Your response MUST be ONLY the raw JSON object. Do not include any introductory text, explanations, apologies, comments, or markdown formatting like ```json.
-            """) # Removed "CRITICAL:" prefix
+            """)
 
             try:
-                current_app.logger.debug(f"📥 Received /charts request: dataset type: {type(dataset)}")
                 current_app.logger.debug("Sending request to OpenAI for chart recommendation...")
                 completion = client.chat.completions.create(
                     model="gpt-4o-mini",
                     messages=[{"role": "system", "content": prompt}],
-                    response_format={"type": "json_object"},  # Ensures JSON output if supported
-                    max_tokens=300
+                    response_format={"type": "json_object"},
+                    max_tokens=1024 # Increased for safety
                 )
-                # Validate API response
                 if not completion.choices or not hasattr(completion.choices[0], "message"):
                     return jsonify({"error": "Invalid response from AI service."}), 500
 
                 ai_response_content = completion.choices[0].message.content
-                current_app.logger.debug(f"✅ OpenAI Response: {ai_response_content}")
+                current_app.logger.debug(f"✅ OpenAI Response for /charts: {ai_response_content}")
 
-            except Exception as e:
-                current_app.logger.error(f"❌ OpenAI API Error for /charts: {str(e)}")
-                return jsonify({"error": "AI request failed"}), 500
-
-            try:
-                # Parse the AI response to a JSON object
                 chart_data = json.loads(ai_response_content)
                 structured_response = {
-                    "chartType": chart_data.get("chartType", "Unknown"),  # Provide default value if missing
+                    "chartType": chart_data.get("chartType", "Unknown"),
                     "chartData": chart_data.get("chartData", [])
                 }
-                current_app.logger.debug(f"✅ Returning Chart Data: {structured_response}")
                 return jsonify(structured_response)
+
             except json.JSONDecodeError:
-                current_app.logger.error("❌ AI response could not be parsed as valid JSON.")
-                return jsonify({"error": "AI response could not be parsed properly."}), 500
+                current_app.logger.error(f"❌ AI response for /charts could not be parsed as valid JSON. Raw: {ai_response_content}")
+                return jsonify({"error": "AI response for /charts could not be parsed properly."}), 500
+            except Exception as e:
+                current_app.logger.error(f"❌ OpenAI API Error for /charts: {str(e)}")
+                return jsonify({"error": "AI request failed for /charts"}), 500
 
         elif command == "/clean":
             prompt = COMMANDS[command](dataset)
@@ -223,53 +215,61 @@ def ai_command():
                     model="gpt-4o-mini",
                     messages=[{"role": "system", "content": prompt}],
                     response_format={"type": "json_object"},
-                    max_tokens=300
+                    max_tokens=4096 # Significantly increased token limit
                 )
 
                 if not completion.choices or not hasattr(completion.choices[0], "message"):
-                    return jsonify({"error": "Invalid response from AI service."}), 500
+                    return jsonify({"error": "Invalid response from AI service for /clean."}), 500
 
                 ai_response_content = completion.choices[0].message.content
-                current_app.logger.debug(f"✅ OpenAI Raw JSON Response: {ai_response_content}")
+                current_app.logger.debug(f"✅ OpenAI Raw JSON Response for /clean: {ai_response_content}")
 
-                cleaned_data = json.loads(ai_response_content)
+                # Robust JSON parsing
+                parsed_json = json.loads(ai_response_content)
+                
+                # The AI might return {"cleaned_data": [...]}, so we handle that case
+                if isinstance(parsed_json, dict) and 'cleaned_data' in parsed_json:
+                    cleaned_data = parsed_json['cleaned_data']
+                else:
+                    cleaned_data = parsed_json
 
+                # Final validation
                 if not isinstance(cleaned_data, list):
-                    current_app.logger.error(f"❌ Cleaned data is not a list: {cleaned_data}")
-                    raise json.JSONDecodeError("Cleaned data is not a list.", ai_response_content, 0)
+                    current_app.logger.error(f"❌ Cleaned data is not a list after parsing: {cleaned_data}")
+                    raise TypeError("The cleaned data from the AI was not in the expected list format.")
 
                 return jsonify({"cleaned_data": cleaned_data})
 
-            except json.JSONDecodeError as json_err:
-                current_app.logger.error(f"❌ OpenAI response for /clean could not be parsed as valid JSON. Error: {json_err}. Raw response: '{ai_response_content}'")
+            except (json.JSONDecodeError, TypeError) as err:
+                current_app.logger.error(f"❌ OpenAI response for /clean could not be parsed as valid JSON. Error: {err}. Raw: '{ai_response_content}'")
                 return jsonify({
-                    "error": "AI response could not be parsed properly or did not match expected JSON structure.",
+                    "error": "AI response for /clean could not be parsed into the expected format.",
                     "raw_response": ai_response_content
                 }), 500
             except Exception as e:
                 current_app.logger.error(f"❌ OpenAI API Error for /clean: {str(e)}", exc_info=True)
                 return jsonify({"error": f"AI request failed for /clean: {str(e)}"}), 500
-        # Use the COMMANDS dictionary for handling other commands
-        if command in COMMANDS:
-            prompt = COMMANDS[command](dataset)
-            print(f"📦 Payload from `{command}` command:", prompt)
 
-            # ✅ If the handler returned a full response dict, return it now
-            if isinstance(prompt, dict):
+        # Use the COMMANDS dictionary for handling other commands
+        elif command in COMMANDS:
+            prompt = COMMANDS[command](dataset)
+            
+            if isinstance(prompt, dict): # For commands like /execute that return a full payload
                 return jsonify(prompt)
+
             completion = client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[{"role": "system", "content": prompt}],
                 max_tokens=300
             )
-            # Validate response before returning
             if not completion.choices or not hasattr(completion.choices[0], "message"):
                 return jsonify({"error": "Invalid response from AI service."}), 500
 
             return jsonify({"reply": completion.choices[0].message.content})
 
-        return jsonify({"error": f"Unknown command: {command}"}), 400
+        else:
+            return jsonify({"error": f"Unknown command: {command}"}), 400
 
     except Exception as e:
-        current_app.logger.error(f"Error in /ai_cmd: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+        current_app.logger.error(f"Error in /ai_cmd: {str(e)}", exc_info=True)
+        return jsonify({"error": f"An unexpected error occurred: {str(e)}"}), 500
