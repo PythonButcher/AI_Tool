@@ -6,7 +6,7 @@ import axios from 'axios';
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 // This invisible controller manages the AI workflow execution lifecycle
-const AIPipeline = ({ nodes, dataset, onResults }) => {
+const AIPipeline = ({ nodes, dataset, onResults, onDataCleaned }) => {
   const [results, setResults] = useState({});
   const [isRunning, setIsRunning] = useState(false);
 
@@ -30,17 +30,34 @@ const AIPipeline = ({ nodes, dataset, onResults }) => {
       setResults({ ...newResults });
 
       try {
-        const response = await axios.post(`${API_URL}/ai_cmd`, {
-          command,
-          dataset,
-        });
+        let response;
+        // Special handling for the /clean command
+        if (command === '/clean') {
+          console.log("🧼 Sending request to /api/cleaning");
+          response = await axios.post(`${API_URL}/api/cleaning`, {
+            task: 'remove_nulls', // Default cleaning task
+          });
+          
+          // Update the global state with the cleaned data
+          if (onDataCleaned && response.data.cleaned_data) {
+            onDataCleaned(response.data.cleaned_data);
+            console.log("✅ Cleaned data updated in the global context.");
+          }
+        } else {
+          // Handle all other AI commands
+          response = await axios.post(`${API_URL}/ai_cmd`, {
+            command,
+            dataset,
+          });
+        }
 
         newResults[nodeId] = {
           status: 'success',
           result: response.data,
         };
-        console.log(`🧪 Result from /${command}:`, response.data);
+        console.log(`🧪 Result from ${command}:`, response.data);
         console.log(`✅ Node ${nodeId} (${command}) complete.`);
+
       } catch (error) {
         newResults[nodeId] = {
           status: 'error',
@@ -94,7 +111,7 @@ const AIPipeline = ({ nodes, dataset, onResults }) => {
   useEffect(() => {
     window.runAIPipeline = runWorkflow;
     return () => delete window.runAIPipeline;
-  }, [nodes, dataset]);
+  }, [nodes, dataset, onDataCleaned]);
 
   return null;
 };

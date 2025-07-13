@@ -35,7 +35,7 @@ const initialNodes = [
 const initialEdges = [];
 
 function AiWorkflowLab() {
-  const { uploadedData, cleanedData, pipelineResults, setPipelineResults } = useContext(DataContext);
+  const { uploadedData, cleanedData, pipelineResults, setPipelineResults, setCleanedData } = useContext(DataContext);
   const [nodes, setNodes] = useState(initialNodes);
   const [edges, setEdges] = useState(initialEdges);
   const [hasExecuted, setHasExecuted] = useState(false);
@@ -196,6 +196,7 @@ function AiWorkflowLab() {
         nodes={nodes}
         dataset={cleanedData || uploadedData}
         onResults={setPipelineResults}
+        onDataCleaned={setCleanedData}
       />
     </div>
   );
