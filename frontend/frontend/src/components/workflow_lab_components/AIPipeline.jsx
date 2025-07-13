@@ -33,15 +33,34 @@ const AIPipeline = ({ nodes, dataset, onResults, onDataCleaned }) => {
         let response;
         // Special handling for the /clean command
         if (command === '/clean') {
-          console.log("🧼 Sending request to /api/cleaning");
-          response = await axios.post(`${API_URL}/api/cleaning`, {
-            task: 'remove_nulls', // Default cleaning task
+          // First request: get suggestions
+          const suggest = await axios.post(`${API_URL}/ai_cmd`, {
+            command,
+            dataset,
           });
-          
-          // Update the global state with the cleaned data
+
+          let instructions = '';
+          if (suggest.data && suggest.data.suggestions) {
+            instructions = window.prompt(
+              `Cleaning Suggestions:\n${suggest.data.suggestions}\n\nEnter cleaning instructions:`
+            );
+          }
+
+          if (!instructions) {
+            newResults[nodeId] = { status: 'skipped', result: suggest.data };
+            setResults({ ...newResults });
+            continue;
+          }
+
+          response = await axios.post(`${API_URL}/ai_cmd`, {
+            command,
+            dataset,
+            instructions,
+          });
+
           if (onDataCleaned && response.data.cleaned_data) {
             onDataCleaned(response.data.cleaned_data);
-            console.log("✅ Cleaned data updated in the global context.");
+            console.log('✅ Cleaned data updated in the global context.');
           }
         } else {
           // Handle all other AI commands

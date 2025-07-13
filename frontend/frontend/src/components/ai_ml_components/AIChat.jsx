@@ -49,12 +49,15 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
   const [userInput, setUserInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [awaitingCleanInstructions, setAwaitingCleanInstructions] = useState(false);
 
   const toggleChat = () => setShowChat(prev => !prev);
 
-  const handleUserCommand = async (command, dataset) => {
+  const handleUserCommand = async (command, dataset, instructions = null) => {
     try {
-      const response = await axios.post(`${API_URL}/ai_cmd`, { command, dataset });
+      const payload = { command, dataset };
+      if (instructions) payload.instructions = instructions;
+      const response = await axios.post(`${API_URL}/ai_cmd`, payload);
       if (command === "/charts") {
         if (!response.data.chartType || !response.data.chartData) {
           console.error("Missing chart data fields:", response.data);
@@ -63,7 +66,9 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
         return response.data;
       }
       if (command === "/clean") {
-        return response.data.cleaned_data;
+        if (response.data.cleaned_data) return response.data.cleaned_data;
+        if (response.data.suggestions) return response.data.suggestions;
+        return null;
       }
       return response.data.reply;
     } catch (error) {
@@ -112,17 +117,33 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
     }
 
     if (AICommands.isCommand(userInput) && userInput.startsWith("/clean")) {
-        const cleanedDataResponse = await handleUserCommand("/clean", datasetContext);
-  
-        if (!cleanedDataResponse || !Array.isArray(cleanedDataResponse)) {
+      const parts = userInput.split(" ");
+      const instructions = parts.length > 1 ? parts.slice(1).join(" ") : null;
+      const result = await handleUserCommand("/clean", datasetContext, instructions);
+
+      if (instructions) {
+        if (!result || !Array.isArray(result)) {
           setError("AI failed to generate valid cleaned data.");
           setLoading(false);
           return;
         }
-  
-        setCleanedData(cleanedDataResponse);
+        setCleanedData(result);
+        setAwaitingCleanInstructions(false);
         responseText = "The data has been cleaned successfully.";
-      } else if (AICommands.isCommand(userInput)) {
+      } else {
+        responseText = result || "No suggestions returned.";
+        setAwaitingCleanInstructions(true);
+      }
+    } else if (awaitingCleanInstructions) {
+      const result = await handleUserCommand("/clean", datasetContext, userInput);
+      if (result && Array.isArray(result)) {
+        setCleanedData(result);
+        responseText = "The data has been cleaned successfully.";
+      } else {
+        responseText = typeof result === 'string' ? result : "Unable to clean data.";
+      }
+      setAwaitingCleanInstructions(false);
+    } else if (AICommands.isCommand(userInput)) {
       responseText = await handleUserCommand(userInput.split(" ")[0], datasetContext);
     } else {
       try {

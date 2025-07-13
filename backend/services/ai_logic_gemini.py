@@ -328,7 +328,40 @@ You are an AI assistant specialized in data visualization.
                 current_app.logger.error(f"❌ Gemini API Error for /charts: {str(e)}", exc_info=True)
                 return jsonify({"error": f"AI request failed for /charts: {str(e)}"}), 500
         elif command == "/clean":
-            prompt = COMMANDS[command](dataset)
+            instructions = data.get("instructions")
+
+            if not instructions:
+                prompt = textwrap.dedent(
+                    f"""
+                    Analyze the dataset sample below and suggest possible cleaning operations such as removing nulls, converting types, or dropping duplicates. Provide suggestions as a short bullet list.
+
+                    Dataset sample:
+                    {json.dumps(dataset[:20], indent=2)}
+                    """
+                )
+
+                response = gemini_model.generate_content(
+                    prompt,
+                    generation_config=GENERATION_CONFIG_CMD
+                )
+
+                if not response.candidates or not hasattr(response, 'text') or not response.text:
+                    current_app.logger.error(f"Invalid or empty response for /clean suggestions: {response}")
+                    return jsonify({"error": "Invalid response from AI service for /clean suggestions."}), 500
+
+                suggestions = response.text
+                return jsonify({"suggestions": suggestions})
+
+            prompt = textwrap.dedent(
+                f"""
+                Clean the dataset according to these instructions: {instructions}
+                Return ONLY the cleaned dataset as a JSON array of objects.
+
+                Dataset sample:
+                {json.dumps(dataset[:20], indent=2)}
+                """
+            )
+
             try:
                 current_app.logger.debug("🧠 Sending request to Gemini for data cleaning (JSON mode)...")
                 response = gemini_model.generate_content(
@@ -336,11 +369,7 @@ You are an AI assistant specialized in data visualization.
                     generation_config=GENERATION_CONFIG_JSON
                 )
 
-                if not response.candidates:
-                    current_app.logger.error(f"Gemini response blocked or empty for /clean. Feedback: {response.prompt_feedback}")
-                    error_message = f"AI response blocked or unavailable. Reason: {response.prompt_feedback or 'Unknown'}"
-                    return jsonify({"error": error_message}), 500
-                if not hasattr(response, 'text') or not response.text:
+                if not response.candidates or not hasattr(response, 'text') or not response.text:
                     current_app.logger.error(f"Invalid response structure from Gemini service for /clean: {response}")
                     return jsonify({"error": "Invalid or empty response from AI service."}), 500
 
@@ -356,7 +385,9 @@ You are an AI assistant specialized in data visualization.
                 return jsonify({"cleaned_data": cleaned_data})
 
             except json.JSONDecodeError as json_err:
-                current_app.logger.error(f"❌ Gemini response for /clean could not be parsed as valid JSON. Error: {json_err}. Raw response: '{ai_response_content}'")
+                current_app.logger.error(
+                    f"❌ Gemini response for /clean could not be parsed as valid JSON. Error: {json_err}. Raw response: '{ai_response_content}'"
+                )
                 return jsonify({
                     "error": "AI response could not be parsed properly or did not match expected JSON structure.",
                     "raw_response": ai_response_content
