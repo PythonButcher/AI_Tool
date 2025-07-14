@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import CleanSuggestionsModal from './CleanSuggestionsModal';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
@@ -9,6 +10,7 @@ const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 const AIPipeline = ({ nodes, dataset, onResults, onDataCleaned }) => {
   const [results, setResults] = useState({});
   const [isRunning, setIsRunning] = useState(false);
+  const [pendingClean, setPendingClean] = useState(null);
 
   // Function exposed globally to run the current pipeline on demand
   const runWorkflow = async () => {
@@ -41,9 +43,9 @@ const AIPipeline = ({ nodes, dataset, onResults, onDataCleaned }) => {
 
           let instructions = '';
           if (suggest.data && suggest.data.suggestions) {
-            instructions = window.prompt(
-              `Cleaning Suggestions:\n${suggest.data.suggestions}\n\nEnter cleaning instructions:`
-            );
+            instructions = await new Promise((resolve) => {
+              setPendingClean({ suggestions: suggest.data.suggestions, resolve });
+            });
           }
 
           if (!instructions) {
@@ -132,7 +134,23 @@ const AIPipeline = ({ nodes, dataset, onResults, onDataCleaned }) => {
     return () => delete window.runAIPipeline;
   }, [nodes, dataset, onDataCleaned]);
 
-  return null;
+  return (
+    <>
+      {pendingClean && (
+        <CleanSuggestionsModal
+          suggestions={pendingClean.suggestions}
+          onApply={(inst) => {
+            pendingClean.resolve(inst);
+            setPendingClean(null);
+          }}
+          onSkip={() => {
+            pendingClean.resolve(null);
+            setPendingClean(null);
+          }}
+        />
+      )}
+    </>
+  );
 };
 
 export default AIPipeline;
