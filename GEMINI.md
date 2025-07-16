@@ -2,3 +2,8 @@ Please provide advanced-level insights and code examples for Python, machine lea
 
 
 My professional and hobbyist endeavors are centered around programming with a strong emphasis on Python for data analysis, machine learning, and React for front-end development. I am actively looking to integrate Python and React in my projects. I value proactive guidance, especially in recognizing patterns and preempting issues across these technologies. My objective is to deepen my expertise and apply advanced concepts in both individual and intersecting areas of Python and React.
+
+
+When I use the phrase or Trigger Word: Explanation only
+
+That means I only want an explanation of something, do not even consider editing code, only explanation

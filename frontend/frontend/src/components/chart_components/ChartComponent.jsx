@@ -24,7 +24,14 @@ if (!chartData || !chartData.labels || !chartData.datasets) {
   const options = {
     responsive: true,
     maintainAspectRatio: false,
-    layout: { padding: 10 },
+    layout: {
+    padding: {
+      top: 20,
+      bottom: 30,     // ✅ extra breathing room
+      left: 10,
+      right: 10
+    }
+  },
     plugins: { legend: { display: true }, tooltip: { enabled: true } },
     animation: {
       onComplete: () => {
@@ -42,7 +49,16 @@ if (!chartData || !chartData.labels || !chartData.datasets) {
   };
 
   return (
-    <div style={{ width: "100%", height: "100%", position: "relative" }}>
+    <div
+      style={{
+        width: "100%",
+        height: "calc(95% - 8px)", // ✅ leave room for toolbar
+        position: "relative",
+        paddingBottom: "12px",       // ✅ prevent axis cutoffs
+        boxSizing: "border-box",     // ✅ account for padding
+      }}
+    >
+
       <ChartToolbar chartRef={chartRef} />
       {chartType === "Bar" && <Bar ref={chartRef} data={chartData} options={options} />}
       {chartType === "Line" && <Line ref={chartRef} data={chartData} options={options} />}

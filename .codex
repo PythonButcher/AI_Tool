@@ -1,0 +1,19 @@
+[include]
+paths = [
+  "frontend/frontend/src",
+  "backend",  # if you're using it
+  "README.md",
+  "requirements.txt"
+]
+
+[exclude]
+paths = [
+  "frontend/frontend/node_modules",
+  "**/.git",
+  "**/__pycache__",
+  "**/.venv",
+  "**/.env",
+  "**/.DS_Store",
+  "python",
+  "dev-test"
+]

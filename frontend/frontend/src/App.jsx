@@ -138,7 +138,7 @@ useEffect(() => {
 
     const transformed = transformToChartData(newData, {
       labelField: xAxis || 'defaultLabel',
-      dataField: yAxis || 'defaultData',
+      dataFields: [yAxis || 'defaultData'],
     });
     if (transformed) {
       setChartData(transformed);
@@ -149,18 +149,19 @@ useEffect(() => {
     }
   }, [xAxis, yAxis]);
 
-   const handleFileUpload = useCallback((raw) => {
+  const handleFileUpload = useCallback((raw) => {
     // raw is whatever the backend returns
     setUploadedData(raw);                       // preview for UI
     const allRows =
-      Array.isArray(raw)                 ? raw
-      : Array.isArray(raw?.data_preview) ? raw.data_preview
+      Array.isArray(raw)                  ? raw
+      : Array.isArray(raw?.data_preview)  ? raw.data_preview
       : typeof raw?.data_preview === 'string'
         ? JSON.parse(raw.data_preview)
         : [];
-    setFullData(allRows);                       // <— NEW
+    setFullData(allRows);                     // store full data
+    setCleanedData(allRows);                  // initialize cleanedData for charting
     setShowDataPreview(true);
-  }, [setUploadedData, setFullData]);
+  }, [setUploadedData, setFullData, setCleanedData]);
 
   const handleApiData = (data) => {
     setUploadedData({
@@ -218,26 +219,53 @@ useEffect(() => {
     setShowChartWindow(false);
   }, []);
 
-  const handleFieldDrop = useCallback((axis, field) => {
-    if (axis === 'x') {
-      setXAxis(field);
-      setChartMapping(prev => ({ ...prev, 'X-Axis': field }));
-    } else if (axis === 'y') {
-      setYAxis(field);
-      setChartMapping(prev => ({ ...prev, 'Y-Axis': field }));
-    }
-  }, []);
+  const handleFieldDrop = useCallback(
+    (axis, field) => {
+      setChartMapping((prev) => {
+        const updated = { ...prev };
+        if (axis === 'x') {
+          setXAxis(field);
+          updated['X-Axis'] = field;
+        } else if (axis === 'y') {
+          setYAxis(field);
+          updated['Y-Axis'] = field;
+        }
+
+        if (
+          cleanedData &&
+          updated['X-Axis'] &&
+          updated['Y-Axis']
+        ) {
+          const transformed = transformToChartData(cleanedData, {
+            labelField: updated['X-Axis'],
+            dataFields: [updated['Y-Axis']],
+          });
+          setChartData(transformed);
+        }
+
+        return updated;
+      });
+    },
+    [cleanedData]
+  );
 
   // Handle drag end events, mapping dropped field to the correct axis
   const handleDragEnd = useCallback(({ active, over }) => {
     // Only handle drops on valid targets when dragging a field
     if (!over || active.data?.current?.type !== 'field') return;
-    const targetId = over.id?.toString();
     const fieldName = active.data.current.field;
-    // Determine axis based on drop zone id
-    if (targetId === 'x-axis') {
+
+    // Prefer droppable metadata but fall back to id parsing
+    let axis = over.data?.current?.axis;
+    if (!axis) {
+      const id = over.id?.toString().toLowerCase();
+      if (id?.includes('x')) axis = 'x';
+      else if (id?.includes('y')) axis = 'y';
+    }
+
+    if (axis === 'x') {
       handleFieldDrop('x', fieldName);
-    } else if (targetId === 'y-axis') {
+    } else if (axis === 'y') {
       handleFieldDrop('y', fieldName);
     }
   }, [handleFieldDrop]);
@@ -329,6 +357,7 @@ useEffect(() => {
                   showStoryPanel={showStoryPanel}
                   setShowStoryPanel={setShowStoryPanel}
                   setAiChartData={setAiChartData}
+                  chartData={chartData} // ✅ ADD THIS
                   showWhiteBoard={showWhiteBoard}
                   setShowWhiteBoard={setShowWhiteBoard}
                   pipelineResults={pipelineResults} 

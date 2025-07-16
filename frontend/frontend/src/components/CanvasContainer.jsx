@@ -358,8 +358,8 @@ function CanvasContainer({
               key="showWhiteBoard"
               className="grid-item"
               data-grid={{
-                x: 0,
-                y: 0,
+                x: 0.5,
+                y: 0.5,
                 w: 10,
                 h: 27.5,
                 minW: 2,
@@ -386,20 +386,31 @@ function CanvasContainer({
           )}
 
           {/* -------------------Standard Chart Window Section -----------------------*/}
-          {showChartWindow && selectedChartType && (
-            <div
-              key="chartWindow"
-              className="grid-item"
-              data-grid={{
-                x: 2,
-                y: 15,
-                w: 8,
-                h: 15,
-                minW: 3,
-                minH: 5,
-                resizeHandles: ['se', 'e', 's'],
-              }}
-            >
+          
+             {showChartWindow && selectedChartType && (
+              <div
+                key="chartWindow"
+                className="grid-item"
+                data-grid={{
+                  x: 0.5,
+                  y: 0.5,
+                  w: 9,
+                  h: 27.5,
+                  minW: 4,        // 🧱 prevent overly small width
+                  minH: 8,        // 🧱 more vertical space to avoid collapse
+                  maxH: 30,       // 🛡 optional upper bound
+                  resizeHandles: ['se', 'e', 's'],
+                }}
+                style={{
+                  minWidth: '150px',
+                  minHeight: '150px',
+                  overflow: 'hidden',         // ✅ prevent layout spill
+                  backgroundColor: '#fff',    // 🩹 fix red flashing in some themes
+                  zIndex: 5,
+                  borderRadius: '8px',
+                }}
+              >
+
               <div className="preview-header drag-handle">
                 <span>📊 Chart Visualization</span>
                 <CloseButton onClick={handleCloseChartWindow} />
