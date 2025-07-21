@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import OutsideClickWrapper from '../utils/OutsideClickWrapper';
 import {
   FaBroom,
   FaChartBar,
@@ -10,6 +11,8 @@ import {
   FaPen,
 } from 'react-icons/fa';
 import { FcWorkflow } from "react-icons/fc";
+import { SiGooglegemini } from "react-icons/si";
+import { PiOpenAiLogo } from "react-icons/pi";
 import './css/SideBar.css';
 import DataCleaningForm from './DataCleaningForm';
 import FileExport from './FileExport';
@@ -17,18 +20,21 @@ import FieldsPanel from './FieldsPanel';
 
 
 const SideBar = ({ onButtonClick, onDataCleaned, 
-                  cleanedData, setShowDataPreview, 
-                  setStoryData,setShowAiWorkflow, setShowStoryPanel,
-                   setShowWhiteBoard}) => {
+                   cleanedData, setShowDataPreview, 
+                   setStoryData,setShowAiWorkflow,
+                   setShowStoryPanel, setShowWhiteBoard,
+                   storyModel, onStoryModelChange }) => {
   const [showCleaningForm, setShowCleaningForm] = useState(false);
   const [showExportDropdown, setShowExportDropdown] = useState(false);
   const [showFieldsPanel, setShowFieldsPanel] = useState(false); // Toggle for FieldsPanel
-
-
+  const [showModelOptions, setShowModelOptions] = useState(false);
+               
+                  
   console.log('cleanedData in SideBar:', cleanedData);
   console.log("Type of cleanedData:", typeof cleanedData);
   if (!cleanedData) {
     console.warn("cleanedData is NULL or UNDEFINED in SideBar.");
+    console.log('AI Models available:', storyModel)
 }
   // Toggles DataCleaningForm visibility
   const handleDataCleaningClick = () => {
@@ -39,6 +45,7 @@ const SideBar = ({ onButtonClick, onDataCleaned,
   const closeDataCleaningForm = () => {
     setShowCleaningForm(false);
   };
+
 
   // Toggles the export dropdown visibility
   const toggleExportDropdown = () => {
@@ -121,10 +128,41 @@ console.log("Extracted fields:", fields);
       <div
         className="sidebar-button"
         data-tooltip="Generate Story"
-        onClick={handleGenerateStory}
+        onClick={() => setShowModelOptions(prev => !prev)}
       >
         <FaBook className="sidebar-button-icon" />
       </div>
+
+      {/* Model Options Submenu */}
+      {showModelOptions && (
+        <OutsideClickWrapper onOutsideClick={() => setShowModelOptions(false)}>
+        <div className="model-choice-menu">
+          <div
+            className="sidebar-subbutton"
+            data-tooltip="Use OpenAI"
+            onClick={() => {
+              onStoryModelChange("openai");
+              handleGenerateStory();
+              setShowModelOptions(false);
+            }}
+          >
+            <PiOpenAiLogo className="sidebar-button-icon" />
+          </div>
+
+          <div
+            className="sidebar-subbutton"
+            data-tooltip="Use Gemini"
+            onClick={() => {
+              onStoryModelChange("gemini");
+              handleGenerateStory();
+              setShowModelOptions(false);
+            }}
+          >
+            <SiGooglegemini className="sidebar-button-icon" />
+          </div>
+        </div>
+        </OutsideClickWrapper>
+      )}
 
       {/* Generate White Board */}
       <div
@@ -134,9 +172,10 @@ console.log("Extracted fields:", fields);
       >
         <FaPen className="sidebar-button-icon" />
       </div>
-
+      
       {/* Export Data Button */}
       <div className="sidebar-button" data-tooltip="Export Data">
+        <OutsideClickWrapper onOutsideClick={() => setShowExportDropdown(false)}>
         <FaFileExport
           className="sidebar-button-icon"
           onClick={toggleExportDropdown}
@@ -146,6 +185,7 @@ console.log("Extracted fields:", fields);
             <FileExport />
           </div>
         )}
+        </OutsideClickWrapper>
       </div>
 
       {/* Settings Button */}
@@ -153,7 +193,7 @@ console.log("Extracted fields:", fields);
         <FaCog className="sidebar-button-icon" />
       </div>
 
-      {/* Toggle Fields Panel Button */}
+     {/* Toggle Fields Panel Button */}
       <div
         className="sidebar-button"
         data-tooltip="Toggle Fields Panel"
@@ -162,20 +202,23 @@ console.log("Extracted fields:", fields);
         <FaColumns className="sidebar-button-icon" />
       </div>
 
-      {/* FieldsPanel */}
-      {showFieldsPanel && fields.length > 0 && (
-        <FieldsPanel cleanedData={parsedDataPreview} />
-      )}
-
-      {/* Render DataCleaningForm when visible */}
+        {/* Render DataCleaningForm when visible */}
       {showCleaningForm && (
         <DataCleaningForm
           setCleanedData={onDataCleaned}
           closeForm={closeDataCleaningForm}
-        />
+          />
       )}
-    </div>
-  );
+
+      {/* FieldsPanel wrapped to close on outside click */}
+      {showFieldsPanel && fields.length > 0 && (
+        <OutsideClickWrapper onOutsideClick={() => setShowFieldsPanel(false)}>
+          <FieldsPanel cleanedData={parsedDataPreview} />
+        </OutsideClickWrapper>
+      )}
+
+          </div>
+        );
 };
 
 export default SideBar;

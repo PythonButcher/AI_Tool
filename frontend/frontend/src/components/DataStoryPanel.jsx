@@ -6,7 +6,7 @@ import "./css/DataStoryPanel.css";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
-export default function DataStoryPanel({ uploadedData, cleanedData }) {
+export default function DataStoryPanel({ uploadedData, cleanedData, model }) {
   const [story,  setStory]  = useState(null);
   const [error,  setError]  = useState(null);
 
@@ -20,8 +20,11 @@ export default function DataStoryPanel({ uploadedData, cleanedData }) {
             ? JSON.parse((cleanedData || uploadedData).data_preview)
             : (cleanedData || uploadedData);
 
-        const { data } = await axios.post(`${API_URL}/api/storyboard`, {
-          cleanedData, uploadedData: payload
+        const route = model === 'gemini' ? '/api/storyboard-gemini' : '/api/storyboard';
+
+        const { data } = await axios.post(`${API_URL}${route}`, {
+          cleanedData,
+          uploadedData: payload
         });
 
         setStory({
