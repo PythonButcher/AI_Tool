@@ -64,6 +64,7 @@ function App() {
   const [showCanvasMinimized, setShowCanvasMinimized] = useState(false);
   const [previewMode, setPreviewMode] = useState('table'); // "table" or "json"
   const [storyData, setStoryData] = useState(undefined);
+  const [storyModel, setStoryModel] = useState('openai');
   const [showStoryPanel, setShowStoryPanel] = useState(false);
   const [outputWindows, setOutputWindows] = useState([]);
 
@@ -219,6 +220,12 @@ useEffect(() => {
     setShowChartWindow(false);
   }, []);
 
+  const handleStoryModelChange = (newModel) => {
+  console.log("Switching story model to:", newModel);
+  setStoryModel(newModel);
+};
+
+
   const handleFieldDrop = useCallback(
     (axis, field) => {
       setChartMapping((prev) => {
@@ -288,6 +295,7 @@ useEffect(() => {
             setShowStoryPanel={setShowStoryPanel}
             showWhiteBoard={showWhiteBoard}
             setShowWhiteBoard={setShowWhiteBoard}
+            onStoryModelChange={handleStoryModelChange} // new model selection
           />
 
           <div className="main-content">
@@ -375,6 +383,7 @@ useEffect(() => {
                   <DataStoryPanel
                     uploadedData={uploadedData}
                     cleanedData={cleanedData} // optional if used
+                    model={storyModel}
                   />
                 )}
                 </CanvasContainer>
