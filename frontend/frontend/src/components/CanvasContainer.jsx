@@ -5,6 +5,7 @@ import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 import CloseButton from './button_components/CloseButton';
 import MinimizeButton from './button_components/MinimizeButton';
+import MaximizeButton from './button_components/MaximizeButton';
 import RolesPanel from './chart_components/RolesPanel';
 import ChartComponent from './chart_components/ChartComponent';
 import FieldsPanel from './FieldsPanel';
@@ -129,6 +130,7 @@ function CanvasContainer({
                 <span className="header-title">{win.label}</span> {/* */}
                 <div className="header-button-group"> {/* */}
                   <MinimizeButton onClick={handleCanvasMinimize} /> {/* */}
+                  <MaximizeButton onClick={() => console.log('Maximize clicked')} />
                   <CloseButton
                     onClick={() => {
                       if (win.type === 'report') {
@@ -215,6 +217,7 @@ function CanvasContainer({
                 </span>
                 <div className="header-button-group">
                   <MinimizeButton onClick={handleCanvasMinimize} />
+                  <MaximizeButton onClick={() => console.log('Maximize clicked')} />
                   <CloseButton
                     onClick={() => {
                       handleClosePreview();
@@ -280,6 +283,7 @@ function CanvasContainer({
                 <span className="header-title">📊 AI-Generated Chart</span>
                 <div className="header-button-group">
                   <MinimizeButton onClick={handleCanvasMinimize} />
+                  <MaximizeButton onClick={() => console.log('Maximize clicked')} />
                   <CloseButton onClick={() => setShowAIChart(false)} />
                 </div>
               </div>
@@ -340,6 +344,7 @@ function CanvasContainer({
                 </span>
                 <div className="header-button-group">
                   <MinimizeButton onClick={handleCanvasMinimize} />
+                  <MaximizeButton onClick={() => console.log('Maximize clicked')} />
                   <CloseButton onClick={() => setShowAiWorkflow(false)} />
                 </div>
               </div>
@@ -372,6 +377,7 @@ function CanvasContainer({
                 <span className="header-title">📊 White Board</span>
                 <div className="header-button-group">
                   <MinimizeButton onClick={handleCanvasMinimize} />
+                  <MaximizeButton onClick={() => console.log('Maximize clicked')} />
                   <CloseButton onClick={() => setShowWhiteBoard(false)} />
                 </div>
               </div>
@@ -473,6 +479,7 @@ function CanvasContainer({
                   {showCanvasMinimized ? 'Data Story (Minimized)' : '📖 Data Story'}
                 </span>
                 <MinimizeButton onClick={handleCanvasMinimize} />
+                <MaximizeButton onClick={() => console.log('Maximize clicked')} />
                 <CloseButton onClick={() => setShowStoryPanel(false)} />
               </div>
 
