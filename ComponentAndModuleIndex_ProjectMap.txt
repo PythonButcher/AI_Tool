@@ -81,6 +81,7 @@ AI_Tool/
                 ├── button_components/
                 │   ├── CleanedButton.jsx  # toggles cleaned data display
                 │   ├── CloseButton.jsx    # generic close button
+                │   ├── MaximizeButton.jsx # maximizes panels
                 │   └── MinimizeButton.jsx # minimizes panels
                 ├── chart_components/
                 │   ├── ChartComponent.jsx     # renders manual charts
@@ -124,6 +125,7 @@ AI_Tool/
                     ├── ai_ml_css/AIChat.css
                     ├── button_css/CleanedButton.css
                     ├── button_css/CloseButton.css
+                    ├── button_css/MaximizeButton.css
                     ├── button_css/MinimizeButton.css
                     ├── chart_css/ChartComponent.css
                     ├── chart_css/DataVisualizations.css
