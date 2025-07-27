@@ -6,7 +6,10 @@ import 'react-resizable/css/styles.css';
 import CloseButton from './button_components/CloseButton';
 import MinimizeButton from './button_components/MinimizeButton';
 import MaximizeButton from './button_components/MaximizeButton';
+<<<<<<< HEAD
 import MinimizedDock from './MinimizedDock';
+=======
+>>>>>>> dev-branch
 import RolesPanel from './chart_components/RolesPanel';
 import ChartComponent from './chart_components/ChartComponent';
 import FieldsPanel from './FieldsPanel';
@@ -144,7 +147,12 @@ function CanvasContainer({
               <div className="window-header drag-handle"> {/* Your existing structure */} {/* */}
                 <span className="header-title">{win.label}</span> {/* */}
                 <div className="header-button-group"> {/* */}
+<<<<<<< HEAD
                   <MinimizeButton onClick={() => minimizeWindow(`workflow-${win.id}`, win.label)} /> {/* */}
+=======
+                  <MinimizeButton onClick={handleCanvasMinimize} /> {/* */}
+                  <MaximizeButton onClick={() => console.log('Maximize clicked')} />
+>>>>>>> dev-branch
                   <CloseButton
                     onClick={() => {
                       if (win.type === 'report') {
@@ -209,7 +217,12 @@ function CanvasContainer({
               <div className="window-header drag-handle">
                 <span className="header-title">📄 Data Preview</span>
                 <div className="header-button-group">
+<<<<<<< HEAD
                   <MinimizeButton onClick={() => minimizeWindow('dataPreview', 'Data Preview')} />
+=======
+                  <MinimizeButton onClick={handleCanvasMinimize} />
+                  <MaximizeButton onClick={() => console.log('Maximize clicked')} />
+>>>>>>> dev-branch
                   <CloseButton
                     onClick={() => {
                       handleClosePreview();
@@ -270,7 +283,12 @@ function CanvasContainer({
               <div className="window-header drag-handle">
                 <span className="header-title">📊 AI-Generated Chart</span>
                 <div className="header-button-group">
+<<<<<<< HEAD
                   <MinimizeButton onClick={() => minimizeWindow('aiChartWindow', 'AI Chart')} />
+=======
+                  <MinimizeButton onClick={handleCanvasMinimize} />
+                  <MaximizeButton onClick={() => console.log('Maximize clicked')} />
+>>>>>>> dev-branch
                   <CloseButton onClick={() => setShowAIChart(false)} />
                 </div>
               </div>
@@ -309,7 +327,12 @@ function CanvasContainer({
               <div className="window-header drag-handle">
                 <span className="header-title">AI Workflow Lab</span>
                 <div className="header-button-group">
+<<<<<<< HEAD
                   <MinimizeButton onClick={() => minimizeWindow('aiWorkflowLab', 'AI Workflow')} />
+=======
+                  <MinimizeButton onClick={handleCanvasMinimize} />
+                  <MaximizeButton onClick={() => console.log('Maximize clicked')} />
+>>>>>>> dev-branch
                   <CloseButton onClick={() => setShowAiWorkflow(false)} />
                 </div>
               </div>
@@ -338,7 +361,12 @@ function CanvasContainer({
               <div className="window-header drag-handle">
                 <span className="header-title">📊 White Board</span>
                 <div className="header-button-group">
+<<<<<<< HEAD
                   <MinimizeButton onClick={() => minimizeWindow('whiteBoard', 'White Board')} />
+=======
+                  <MinimizeButton onClick={handleCanvasMinimize} />
+                  <MaximizeButton onClick={() => console.log('Maximize clicked')} />
+>>>>>>> dev-branch
                   <CloseButton onClick={() => setShowWhiteBoard(false)} />
                 </div>
               </div>
@@ -423,10 +451,24 @@ function CanvasContainer({
               }}
             >
               <div className="window-header drag-handle">
+<<<<<<< HEAD
                 <span className="header-title">📖 Data Story</span>
                 <div className="header-button-group">
                   <MinimizeButton onClick={() => minimizeWindow('storyPanel', 'Story')} />
                   <CloseButton onClick={() => setShowStoryPanel(false)} />
+=======
+                <span className="header-title">
+                  {showCanvasMinimized ? 'Data Story (Minimized)' : '📖 Data Story'}
+                </span>
+                <MinimizeButton onClick={handleCanvasMinimize} />
+                <MaximizeButton onClick={() => console.log('Maximize clicked')} />
+                <CloseButton onClick={() => setShowStoryPanel(false)} />
+              </div>
+
+              {!showCanvasMinimized && (
+                <div className="window-content" style={{ padding: '10px', height: 'calc(100% - 40px)', overflow: 'auto' }}>
+                  <DataStoryPanel uploadedData={uploadedData} cleanedData={cleanedData} />
+>>>>>>> dev-branch
                 </div>
               </div>
               <div className="window-content" style={{ padding: '10px', height: 'calc(100% - 40px)', overflow: 'auto' }}>
