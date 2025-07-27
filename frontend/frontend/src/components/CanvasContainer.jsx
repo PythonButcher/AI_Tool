@@ -6,10 +6,7 @@ import 'react-resizable/css/styles.css';
 import CloseButton from './button_components/CloseButton';
 import MinimizeButton from './button_components/MinimizeButton';
 import MaximizeButton from './button_components/MaximizeButton';
-<<<<<<< HEAD
 import MinimizedDock from './MinimizedDock';
-=======
->>>>>>> dev-branch
 import RolesPanel from './chart_components/RolesPanel';
 import ChartComponent from './chart_components/ChartComponent';
 import FieldsPanel from './FieldsPanel';
@@ -60,29 +57,6 @@ function CanvasContainer({
   showAiReport,
   onCloseAiReport,
 }) {
-  console.log('Initial uploadedData received:', uploadedData);
-  console.log('Selected Chart Type:', selectedChartType);
-  console.log('showChartWindow:', showChartWindow);
-  console.log('CanvasContainer received cleanedData:', cleanedData);
-  console.log('CanvasContainer received chartData:', aiChartData);
-  console.log('📊 showAIChart state in CanvasContainer:', showAIChart);
-  console.log('🛠 AI Chart Props in CanvasContainer:', {
-    showAIChart,
-    aiChartType,
-    aiChartData,
-  });
-
-  console.log("pipelineResults (debug):", pipelineResults);
-  console.log("🧪 pipelineResults FULL:", pipelineResults);
-  Object.entries(pipelineResults).forEach(([nodeId, nodeResult]) => {
-    console.log(`🧪 node ${nodeId}:`, nodeResult);
-  });
-
-  let outputWindows = getWorkflowWindows(pipelineResults || {});
-  if (!showAiReport) {
-    outputWindows = outputWindows.filter(w => w.type !== 'report');
-  }
-
   const [minimized, setMinimized] = React.useState({});
 
   const minimizeWindow = (id, label) => {
@@ -110,17 +84,14 @@ function CanvasContainer({
     }
     return [];
   }, [dataset]);
-  console.log("Dataset length :", previewData.len);
-  console.log("DEBUG active dataset:", dataset);
-  console.log("DEBUG previewData:", previewData);
-  return (
 
-    <div
-      className="canvas-dnd-wrapper"
-      onDragOver={(e) => e.preventDefault()}
-      onDrop={(e) => e.preventDefault()}
-      style={{ width: '100%', height: '100%' }}
-    >
+  let outputWindows = getWorkflowWindows(pipelineResults || {});
+  if (!showAiReport) {
+    outputWindows = outputWindows.filter(w => w.type !== 'report');
+  }
+
+  return (
+    <div className="canvas-dnd-wrapper" onDragOver={(e) => e.preventDefault()} onDrop={(e) => e.preventDefault()} style={{ width: '100%', height: '100%' }}>
       <div className="canvas-container">
         <ResponsiveGridLayout
           className="layout"
@@ -133,206 +104,89 @@ function CanvasContainer({
           compactType={null}
           preventCollision
         >
-          {/* ✅ Dynamic Workflow Output Windows */} {/* */}
+
+          {/* Workflow output windows */}
           {outputWindows.filter(win => !minimized[`workflow-${win.id}`]).map((win, idx) => (
-            <div
-              key={`workflow-output-${win.id}`}
-              className="grid-item"
-              data-grid={
-                win.type === 'report'
-                  ? { x: 0, y: 0, w: 10, h: 30, minW: 7, minH: 15 } // 🔥 Full-page like expansion
-                  : { x: 1, y: 40 + idx * 4, w: 8, h: 6, minW: 3, minH: 3 }
-              }
-            >
-              <div className="window-header drag-handle"> {/* Your existing structure */} {/* */}
-                <span className="header-title">{win.label}</span> {/* */}
-                <div className="header-button-group"> {/* */}
-<<<<<<< HEAD
-                  <MinimizeButton onClick={() => minimizeWindow(`workflow-${win.id}`, win.label)} /> {/* */}
-=======
-                  <MinimizeButton onClick={handleCanvasMinimize} /> {/* */}
+            <div key={`workflow-output-${win.id}`} className="grid-item"
+              data-grid={win.type === 'report' ? { x: 0, y: 0, w: 10, h: 30, minW: 7, minH: 15 } : { x: 1, y: 40 + idx * 4, w: 8, h: 6, minW: 3, minH: 3 }}>
+              <div className="window-header drag-handle">
+                <span className="header-title">{win.label}</span>
+                <div className="header-button-group">
+                  <MinimizeButton onClick={() => minimizeWindow(`workflow-${win.id}`, win.label)} />
                   <MaximizeButton onClick={() => console.log('Maximize clicked')} />
->>>>>>> dev-branch
-                  <CloseButton
-                    onClick={() => {
-                      if (win.type === 'report') {
-                        setPipelineResults({});
-                        if (onCloseAiReport) onCloseAiReport();
-                      } else {
-                        setPipelineResults(prev => {
-                          const copy = { ...prev };
-                          delete copy[win.id];
-                          return copy;
-                        });
-                      }
-                    }}
-                  /> {/* */}
+                  <CloseButton onClick={() => {
+                    if (win.type === 'report') {
+                      setPipelineResults({});
+                      if (onCloseAiReport) onCloseAiReport();
+                    } else {
+                      setPipelineResults(prev => {
+                        const copy = { ...prev };
+                        delete copy[win.id];
+                        return copy;
+                      });
+                    }
+                  }} />
                 </div>
               </div>
-              <div className="window-content" style={{ padding: '10px', overflow: 'auto' }}> {/* Your existing structure */} {/* */}
-                {/* Your existing conditional rendering based on win.type */}
-                {win.type === 'text' && <pre>{win.content}</pre>} {/* */}
-                {win.type === 'chart' && (
-                  <AICharts aiChartType={win.chartType} aiChartData={win.chartData} /> //
-      
-                )}
-                {win.type === 'report' && (
-                  <AIReporter
-                    summary={win.content.summary} //
-                    insights={win.content.insights} //
-                    execution={win.content.execution} //
-                    chartType={win.content.chartType} //
-                    chartData={win.content.chartData} //
-                  />
-                )}
+              <div className="window-content" style={{ padding: '10px', overflow: 'auto' }}>
+                {win.type === 'text' && <pre>{win.content}</pre>}
+                {win.type === 'chart' && <AICharts aiChartType={win.chartType} aiChartData={win.chartData} />}
+                {win.type === 'report' && <AIReporter summary={win.content.summary} insights={win.content.insights} execution={win.content.execution} chartType={win.content.chartType} chartData={win.content.chartData} />}
               </div>
             </div>
           ))}
 
-
-          {/* Data Preview Section */}
-
+          {/* Data Preview */}
           {dataset && previewData.length > 0 && showDataPreview && !minimized['dataPreview'] && (
-
-            <div
-              key={`dataPreview-${showDataPreview}`}
-              className="grid-item"
-              data-grid={{
-                x: 0,
-                y: 0,
-                w: 10,
-                h: 15,
-                minW: 3,
-                minH: 2,
-                resizeHandles: ['se', 'e', 's'],
-                static: false,
-              }}
-              style={{
-                backgroundColor: '#f4f4f4',
-                border: '2px solid #ccc',
-                borderRadius: '6px',
-                overflow: 'hidden',
-              }}
-            >
+            <div key="dataPreview" className="grid-item" data-grid={{ x: 0, y: 0, w: 10, h: 15, minW: 3, minH: 2, resizeHandles: ['se', 'e', 's'], static: false }}
+              style={{ backgroundColor: '#f4f4f4', border: '2px solid #ccc', borderRadius: '6px', overflow: 'hidden' }}>
               <div className="window-header drag-handle">
                 <span className="header-title">📄 Data Preview</span>
                 <div className="header-button-group">
-<<<<<<< HEAD
                   <MinimizeButton onClick={() => minimizeWindow('dataPreview', 'Data Preview')} />
-=======
-                  <MinimizeButton onClick={handleCanvasMinimize} />
                   <MaximizeButton onClick={() => console.log('Maximize clicked')} />
->>>>>>> dev-branch
-                  <CloseButton
-                    onClick={() => {
-                      handleClosePreview();
-                    }}
-                  />
+                  <CloseButton onClick={handleClosePreview} />
                 </div>
               </div>
-              <>
-                <div className="uploaded-data-preview">
-                  <PreviewModeSelector previewMode={previewMode} setPreviewMode={setPreviewMode} />
-
-                  {previewMode === 'table' && <DataTablePreview data={previewData} />}
-
-                  {previewMode === 'json' && (
-                    <div
-                      style={{
-                        backgroundColor: '#F8F8F2',
-                        borderRadius: '12px',
-                        padding: '16px',
-                        boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.2)',
-                        fontFamily: '"Press Start 2P", cursive',
-                        color: '#282828',
-                        border: '3px solid #E60012',
-                        maxHeight: '400px',
-                        overflowY: 'auto',
-                      }}
-                    >
-                      <JsonViewer
-                        data={previewData}
-                        expandLevel={2}
-                        onCopy={(copyData) => console.log('Copied data:', copyData)}
-                        style={{ fontSize: '14px', color: '#383838' }}
-                      />
-                    </div>
-                  )}
-                </div>
-
-                <div className="uploaded-data-preview">{children}</div>
-              </>
+              <div className="uploaded-data-preview">
+                <PreviewModeSelector previewMode={previewMode} setPreviewMode={setPreviewMode} />
+                {previewMode === 'table' && <DataTablePreview data={previewData} />}
+                {previewMode === 'json' && (
+                  <div style={{ backgroundColor: '#F8F8F2', borderRadius: '12px', padding: '16px', boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.2)', fontFamily: '"Press Start 2P", cursive', color: '#282828', border: '3px solid #E60012', maxHeight: '400px', overflowY: 'auto' }}>
+                    <JsonViewer data={previewData} expandLevel={2} onCopy={(copyData) => console.log('Copied data:', copyData)} style={{ fontSize: '14px', color: '#383838' }} />
+                  </div>
+                )}
+              </div>
+              <div className="uploaded-data-preview">{children}</div>
             </div>
           )}
 
-          {/* -------------------AI-Generated Chart Section --------------------*/}
+          {/* AI Chart */}
           {showAIChart && !minimized['aiChartWindow'] && (
-            <div
-              key="aiChartWindow"
-              className="grid-item"
-              data-grid={{
-                x: 0,
-                y: 0,
-                w: 10,
-                h: 15,
-                minW: 3,
-                minH: 5,
-                resizeHandles: ['se', 'e', 's'],
-              }}
-            >
+            <div key="aiChartWindow" className="grid-item" data-grid={{ x: 0, y: 0, w: 10, h: 15, minW: 3, minH: 5, resizeHandles: ['se', 'e', 's'] }}>
               <div className="window-header drag-handle">
                 <span className="header-title">📊 AI-Generated Chart</span>
                 <div className="header-button-group">
-<<<<<<< HEAD
                   <MinimizeButton onClick={() => minimizeWindow('aiChartWindow', 'AI Chart')} />
-=======
-                  <MinimizeButton onClick={handleCanvasMinimize} />
                   <MaximizeButton onClick={() => console.log('Maximize clicked')} />
->>>>>>> dev-branch
                   <CloseButton onClick={() => setShowAIChart(false)} />
                 </div>
               </div>
-
-              <div
-                className="window-content"
-                style={{ padding: '10px', height: 'calc(100% - 40px)', overflow: 'auto' }}
-              >
+              <div className="window-content" style={{ padding: '10px', height: 'calc(100% - 40px)', overflow: 'auto' }}>
                 <AICharts aiChartType={aiChartType} aiChartData={aiChartData} />
               </div>
             </div>
           )}
 
-          {/*-------------------------- AI Workflow Lab Section ----------------------------*/}
+          {/* Workflow Lab */}
           {showAiWorkflow && !minimized['aiWorkflowLab'] && (
-            <div
-              key={`aiWorkflowLab-${showAiWorkflow}`}
-              className="grid-item"
-              data-grid={{
-                x: 0,
-                y: 0,
-                w: 10,
-                h: 27.5,
-                minW: 2,
-                minH: 2,
-                resizeHandles: ['se', 'e', 's'],
-                static: true,
-              }}
-              style={{
-                backgroundColor: '#f4f4f4',
-                border: '2px solid #ccc',
-                borderRadius: '6px',
-                overflow: 'hidden',
-              }}
-            >
+            <div key="aiWorkflowLab" className="grid-item" data-grid={{ x: 0, y: 0, w: 10, h: 27.5, minW: 2, minH: 2, resizeHandles: ['se', 'e', 's'], static: true }}
+              style={{ backgroundColor: '#f4f4f4', border: '2px solid #ccc', borderRadius: '6px', overflow: 'hidden' }}>
               <div className="window-header drag-handle">
                 <span className="header-title">AI Workflow Lab</span>
                 <div className="header-button-group">
-<<<<<<< HEAD
                   <MinimizeButton onClick={() => minimizeWindow('aiWorkflowLab', 'AI Workflow')} />
-=======
-                  <MinimizeButton onClick={handleCanvasMinimize} />
                   <MaximizeButton onClick={() => console.log('Maximize clicked')} />
->>>>>>> dev-branch
                   <CloseButton onClick={() => setShowAiWorkflow(false)} />
                 </div>
               </div>
@@ -342,70 +196,27 @@ function CanvasContainer({
             </div>
           )}
 
-           {/* -------------------White Board Tool--------------------*/}
+          {/* Whiteboard */}
           {showWhiteBoard && !minimized['whiteBoard'] && (
-            <div
-              key="showWhiteBoard"
-              className="grid-item"
-              data-grid={{
-                x: 0.5,
-                y: 0.5,
-                w: 10,
-                h: 27.5,
-                minW: 2,
-                minH: 2,
-                resizeHandles: ['se', 'e', 's'],
-                static: true,
-              }}
-            >
+            <div key="whiteBoard" className="grid-item" data-grid={{ x: 0.5, y: 0.5, w: 10, h: 27.5, minW: 2, minH: 2, resizeHandles: ['se', 'e', 's'], static: true }}>
               <div className="window-header drag-handle">
                 <span className="header-title">📊 White Board</span>
                 <div className="header-button-group">
-<<<<<<< HEAD
                   <MinimizeButton onClick={() => minimizeWindow('whiteBoard', 'White Board')} />
-=======
-                  <MinimizeButton onClick={handleCanvasMinimize} />
                   <MaximizeButton onClick={() => console.log('Maximize clicked')} />
->>>>>>> dev-branch
                   <CloseButton onClick={() => setShowWhiteBoard(false)} />
                 </div>
               </div>
-
-              <div
-                className="window-content"
-                style={{ padding: '10px', height: 'calc(100% - 40px)', overflow: 'auto' }}
-              >
+              <div className="window-content" style={{ padding: '10px', height: 'calc(100% - 40px)', overflow: 'auto' }}>
                 <Whiteboard />
               </div>
             </div>
           )}
 
-          {/* -------------------Standard Chart Window Section -----------------------*/}
-          
-             {showChartWindow && selectedChartType && !minimized['chartWindow'] && (
-              <div
-                key="chartWindow"
-                className="grid-item"
-                data-grid={{
-                  x: 0.5,
-                  y: 0.5,
-                  w: 9,
-                  h: 27.5,
-                  minW: 4,        // 🧱 prevent overly small width
-                  minH: 8,        // 🧱 more vertical space to avoid collapse
-                  maxH: 30,       // 🛡 optional upper bound
-                  resizeHandles: ['se', 'e', 's'],
-                }}
-                style={{
-                  minWidth: '150px',
-                  minHeight: '150px',
-                  overflow: 'hidden',         // ✅ prevent layout spill
-                  backgroundColor: '#fff',    // 🩹 fix red flashing in some themes
-                  zIndex: 5,
-                  borderRadius: '8px',
-                }}
-              >
-
+          {/* Chart Window */}
+          {showChartWindow && selectedChartType && !minimized['chartWindow'] && (
+            <div key="chartWindow" className="grid-item" data-grid={{ x: 0.5, y: 0.5, w: 9, h: 27.5, minW: 4, minH: 8, maxH: 30, resizeHandles: ['se', 'e', 's'] }}
+              style={{ minWidth: '150px', minHeight: '150px', overflow: 'hidden', backgroundColor: '#fff', zIndex: 5, borderRadius: '8px' }}>
               <div className="preview-header drag-handle">
                 <span>📊 Chart Visualization</span>
                 <div className="header-button-group">
@@ -413,62 +224,20 @@ function CanvasContainer({
                   <CloseButton onClick={handleCloseChartWindow} />
                 </div>
               </div>
-
-              <ChartComponent
-                chartType={selectedChartType}
-                chartData={chartData}
-                mapping={chartMapping}
-              />
-
-              {/* RolesPanel handles drag targets for chart roles */}
-              <RolesPanel
-                chartType={selectedChartType}
-                mapping={chartMapping}
-              />
+              <ChartComponent chartType={selectedChartType} chartData={chartData} mapping={chartMapping} />
+              <RolesPanel chartType={selectedChartType} mapping={chartMapping} />
             </div>
           )}
 
-           {/*------------------------- AI Storyboard ----------------------------*/}
-           {showStoryPanel && !minimized['storyPanel'] && (
-            <div
-              key={`storyWindow`}
-              className="grid-item"
-              data-grid={{
-                x: 1,
-                y: 0,
-                w: 9,
-                h: 31,
-                minW: 7,
-                minH: 15,
-                resizeHandles: ['se', 'e', 's'],
-                static: false,
-              }}
-              style={{
-                backgroundColor: '#f4f4f4',
-                border: '2px solid #ccc',
-                borderRadius: '6px',
-                overflow: 'hidden',
-              }}
-            >
+          {/* Data Story */}
+          {showStoryPanel && !minimized['storyPanel'] && (
+            <div key="storyWindow" className="grid-item" data-grid={{ x: 1, y: 0, w: 9, h: 31, minW: 7, minH: 15, resizeHandles: ['se', 'e', 's'], static: false }}
+              style={{ backgroundColor: '#f4f4f4', border: '2px solid #ccc', borderRadius: '6px', overflow: 'hidden' }}>
               <div className="window-header drag-handle">
-<<<<<<< HEAD
                 <span className="header-title">📖 Data Story</span>
                 <div className="header-button-group">
                   <MinimizeButton onClick={() => minimizeWindow('storyPanel', 'Story')} />
                   <CloseButton onClick={() => setShowStoryPanel(false)} />
-=======
-                <span className="header-title">
-                  {showCanvasMinimized ? 'Data Story (Minimized)' : '📖 Data Story'}
-                </span>
-                <MinimizeButton onClick={handleCanvasMinimize} />
-                <MaximizeButton onClick={() => console.log('Maximize clicked')} />
-                <CloseButton onClick={() => setShowStoryPanel(false)} />
-              </div>
-
-              {!showCanvasMinimized && (
-                <div className="window-content" style={{ padding: '10px', height: 'calc(100% - 40px)', overflow: 'auto' }}>
-                  <DataStoryPanel uploadedData={uploadedData} cleanedData={cleanedData} />
->>>>>>> dev-branch
                 </div>
               </div>
               <div className="window-content" style={{ padding: '10px', height: 'calc(100% - 40px)', overflow: 'auto' }}>
