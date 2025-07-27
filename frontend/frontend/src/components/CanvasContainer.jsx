@@ -20,6 +20,7 @@ import { JsonViewer } from 'view-json-react';
 import { useActiveDataset } from '../context/DataContext';
 import AIReporter from './workflow_lab_components/AIReporter';
 import { getWorkflowWindows } from '../utils/workflow_output_router';
+import { useWindowContext } from '../context/WindowContext';
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
@@ -57,19 +58,7 @@ function CanvasContainer({
   showAiReport,
   onCloseAiReport,
 }) {
-  const [minimized, setMinimized] = React.useState({});
-
-  const minimizeWindow = (id, label) => {
-    setMinimized(prev => ({ ...prev, [id]: { label } }));
-  };
-
-  const restoreWindow = (id) => {
-    setMinimized(prev => {
-      const copy = { ...prev };
-      delete copy[id];
-      return copy;
-    });
-  };
+  const { minimizedWindows, minimizeWindow, restoreWindow } = useWindowContext();
 
   const dataset = useActiveDataset();
   const previewData = React.useMemo(() => {
@@ -106,14 +95,14 @@ function CanvasContainer({
         >
 
           {/* Workflow output windows */}
-          {outputWindows.filter(win => !minimized[`workflow-${win.id}`]).map((win, idx) => (
+          {outputWindows.filter(win => !minimizedWindows[`workflow-${win.id}`]).map((win, idx) => (
             <div key={`workflow-output-${win.id}`} className="grid-item"
               data-grid={win.type === 'report' ? { x: 0, y: 0, w: 10, h: 30, minW: 7, minH: 15 } : { x: 1, y: 40 + idx * 4, w: 8, h: 6, minW: 3, minH: 3 }}>
               <div className="window-header drag-handle">
                 <span className="header-title">{win.label}</span>
                 <div className="header-button-group">
                   <MinimizeButton onClick={() => minimizeWindow(`workflow-${win.id}`, win.label)} />
-                  <MaximizeButton onClick={() => console.log('Maximize clicked')} />
+                  <MaximizeButton windowId={`workflow-${win.id}`} />
                   <CloseButton onClick={() => {
                     if (win.type === 'report') {
                       setPipelineResults({});
@@ -137,14 +126,14 @@ function CanvasContainer({
           ))}
 
           {/* Data Preview */}
-          {dataset && previewData.length > 0 && showDataPreview && !minimized['dataPreview'] && (
+          {dataset && previewData.length > 0 && showDataPreview && !minimizedWindows['dataPreview'] && (
             <div key="dataPreview" className="grid-item" data-grid={{ x: 0, y: 0, w: 10, h: 15, minW: 3, minH: 2, resizeHandles: ['se', 'e', 's'], static: false }}
               style={{ backgroundColor: '#f4f4f4', border: '2px solid #ccc', borderRadius: '6px', overflow: 'hidden' }}>
               <div className="window-header drag-handle">
                 <span className="header-title">📄 Data Preview</span>
                 <div className="header-button-group">
                   <MinimizeButton onClick={() => minimizeWindow('dataPreview', 'Data Preview')} />
-                  <MaximizeButton onClick={() => console.log('Maximize clicked')} />
+                  <MaximizeButton windowId="dataPreview" />
                   <CloseButton onClick={handleClosePreview} />
                 </div>
               </div>
@@ -162,13 +151,13 @@ function CanvasContainer({
           )}
 
           {/* AI Chart */}
-          {showAIChart && !minimized['aiChartWindow'] && (
+          {showAIChart && !minimizedWindows['aiChartWindow'] && (
             <div key="aiChartWindow" className="grid-item" data-grid={{ x: 0, y: 0, w: 10, h: 15, minW: 3, minH: 5, resizeHandles: ['se', 'e', 's'] }}>
               <div className="window-header drag-handle">
                 <span className="header-title">📊 AI-Generated Chart</span>
                 <div className="header-button-group">
                   <MinimizeButton onClick={() => minimizeWindow('aiChartWindow', 'AI Chart')} />
-                  <MaximizeButton onClick={() => console.log('Maximize clicked')} />
+                  <MaximizeButton windowId="aiChartWindow" />
                   <CloseButton onClick={() => setShowAIChart(false)} />
                 </div>
               </div>
@@ -179,14 +168,14 @@ function CanvasContainer({
           )}
 
           {/* Workflow Lab */}
-          {showAiWorkflow && !minimized['aiWorkflowLab'] && (
+          {showAiWorkflow && !minimizedWindows['aiWorkflowLab'] && (
             <div key="aiWorkflowLab" className="grid-item" data-grid={{ x: 0, y: 0, w: 10, h: 27.5, minW: 2, minH: 2, resizeHandles: ['se', 'e', 's'], static: true }}
               style={{ backgroundColor: '#f4f4f4', border: '2px solid #ccc', borderRadius: '6px', overflow: 'hidden' }}>
               <div className="window-header drag-handle">
                 <span className="header-title">AI Workflow Lab</span>
                 <div className="header-button-group">
                   <MinimizeButton onClick={() => minimizeWindow('aiWorkflowLab', 'AI Workflow')} />
-                  <MaximizeButton onClick={() => console.log('Maximize clicked')} />
+                  <MaximizeButton windowId="aiWorkflowLab" />
                   <CloseButton onClick={() => setShowAiWorkflow(false)} />
                 </div>
               </div>
@@ -197,13 +186,13 @@ function CanvasContainer({
           )}
 
           {/* Whiteboard */}
-          {showWhiteBoard && !minimized['whiteBoard'] && (
+          {showWhiteBoard && !minimizedWindows['whiteBoard'] && (
             <div key="whiteBoard" className="grid-item" data-grid={{ x: 0.5, y: 0.5, w: 10, h: 27.5, minW: 2, minH: 2, resizeHandles: ['se', 'e', 's'], static: true }}>
               <div className="window-header drag-handle">
                 <span className="header-title">📊 White Board</span>
                 <div className="header-button-group">
                   <MinimizeButton onClick={() => minimizeWindow('whiteBoard', 'White Board')} />
-                  <MaximizeButton onClick={() => console.log('Maximize clicked')} />
+                  <MaximizeButton windowId="whiteBoard" />
                   <CloseButton onClick={() => setShowWhiteBoard(false)} />
                 </div>
               </div>
@@ -214,7 +203,7 @@ function CanvasContainer({
           )}
 
           {/* Chart Window */}
-          {showChartWindow && selectedChartType && !minimized['chartWindow'] && (
+          {showChartWindow && selectedChartType && !minimizedWindows['chartWindow'] && (
             <div key="chartWindow" className="grid-item" data-grid={{ x: 0.5, y: 0.5, w: 9, h: 27.5, minW: 4, minH: 8, maxH: 30, resizeHandles: ['se', 'e', 's'] }}
               style={{ minWidth: '150px', minHeight: '150px', overflow: 'hidden', backgroundColor: '#fff', zIndex: 5, borderRadius: '8px' }}>
               <div className="preview-header drag-handle">
@@ -230,7 +219,7 @@ function CanvasContainer({
           )}
 
           {/* Data Story */}
-          {showStoryPanel && !minimized['storyPanel'] && (
+          {showStoryPanel && !minimizedWindows['storyPanel'] && (
             <div key="storyWindow" className="grid-item" data-grid={{ x: 1, y: 0, w: 9, h: 31, minW: 7, minH: 15, resizeHandles: ['se', 'e', 's'], static: false }}
               style={{ backgroundColor: '#f4f4f4', border: '2px solid #ccc', borderRadius: '6px', overflow: 'hidden' }}>
               <div className="window-header drag-handle">
@@ -247,7 +236,7 @@ function CanvasContainer({
           )}
 
         </ResponsiveGridLayout>
-        <MinimizedDock windows={minimized} onRestore={restoreWindow} />
+        <MinimizedDock />
       </div>
     </div>
   );

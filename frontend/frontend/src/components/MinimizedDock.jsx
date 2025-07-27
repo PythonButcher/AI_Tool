@@ -1,16 +1,18 @@
 import React from 'react';
 import MaximizeButton from './button_components/MaximizeButton';
+import { useWindowContext } from '../context/WindowContext';
 import './css/MinimizedDock.css';
 
-const MinimizedDock = ({ windows, onRestore }) => {
-  const entries = Object.entries(windows);
+const MinimizedDock = () => {
+  const { minimizedWindows, restoreWindow } = useWindowContext();
+  const entries = Object.entries(minimizedWindows);
   if (entries.length === 0) return null;
   return (
     <div className="minimized-dock">
       {entries.map(([id, win]) => (
-        <div key={id} className="minimized-tab" onClick={() => onRestore(id)}>
+        <div key={id} className="minimized-tab" onClick={() => restoreWindow(id)}>
           <span className="tab-label">{win.label}</span>
-          <MaximizeButton onClick={() => onRestore(id)} />
+          <MaximizeButton windowId={id} />
         </div>
       ))}
     </div>
