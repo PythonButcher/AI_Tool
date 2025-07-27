@@ -1,0 +1,27 @@
+.minimized-dock {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  display: flex;
+  justify-content: flex-start;
+  padding: 4px;
+  background: rgba(0, 0, 0, 0.05);
+  z-index: 2000;
+}
+
+.minimized-tab {
+  display: flex;
+  align-items: center;
+  background: #e0e0e0;
+  border: 1px solid #ccc;
+  border-radius: 4px 4px 0 0;
+  padding: 2px 6px;
+  margin-right: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+.minimized-tab .styled-maximize-btn {
+  margin-left: 6px;
+}
