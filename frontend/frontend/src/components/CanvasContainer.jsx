@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import './css/CanvasContainer.css';
 import { Responsive, WidthProvider } from 'react-grid-layout';
 import 'react-grid-layout/css/styles.css';
@@ -59,10 +59,16 @@ function CanvasContainer({
   showAiReport,
   onCloseAiReport,
 }) {
-  const { minimizedWindows, lockedWindows, minimizeWindow, restoreWindow, lockWindow, unlockWindow } = useWindowContext();
+  const {
+    minimizedWindows,
+    lockedWindows,
+    windowLayouts,
+    minimizeWindow,
+    updateWindowLayout,
+  } = useWindowContext();
 
-  const [whiteBoardLayout, setWhiteBoardLayout] = useState({
-    i: 'whiteBoard',
+  // initial layout for the whiteboard window
+  const defaultWhiteBoardLayout = {
     x: 0.5,
     y: 0.5,
     w: 10,
@@ -70,12 +76,14 @@ function CanvasContainer({
     minW: 2,
     minH: 2,
     resizeHandles: ['se', 'e', 's'],
-    static: lockedWindows['whiteBoard'] || false,
-  });
+  };
 
-  useEffect(() => {
-    setWhiteBoardLayout((prev) => ({ ...prev, static: !!lockedWindows['whiteBoard'] }));
-  }, [lockedWindows['whiteBoard']]);
+  // merge saved position with lock state
+  const whiteBoardLayout = {
+    ...defaultWhiteBoardLayout,
+    ...windowLayouts['whiteBoard'],
+    static: !!lockedWindows['whiteBoard'],
+  };
 
   const dataset = useActiveDataset();
   const previewData = React.useMemo(() => {
@@ -101,7 +109,7 @@ function CanvasContainer({
       <div className="canvas-container">
         <ResponsiveGridLayout
           className="layout"
-          layouts={{ lg: [whiteBoardLayout] }}
+          layouts={{}}
           breakpoints={{ lg: 1200 }}
           cols={{ lg: 10 }}
           rowHeight={30}
@@ -109,10 +117,8 @@ function CanvasContainer({
           isDraggable
           compactType={null}
           preventCollision
-          onLayoutChange={(curLayout) => {
-            const wb = curLayout.find((l) => l.i === 'whiteBoard');
-            if (wb) setWhiteBoardLayout(wb);
-          }}
+          onDragStop={(layout, oldItem, newItem) => updateWindowLayout(newItem.i, newItem)}
+          onResizeStop={(layout, oldItem, newItem) => updateWindowLayout(newItem.i, newItem)}
         >
 
           {/* Workflow output windows */}
@@ -208,6 +214,7 @@ function CanvasContainer({
 
           {/* Whiteboard */}
           {showWhiteBoard && !minimizedWindows['whiteBoard'] && (
+            {/* --- whiteboard locking feature start --- */}
             <div key="whiteBoard" className="grid-item" data-grid={whiteBoardLayout}>
               <div className="window-header drag-handle">
                 <span className="header-title">📊 White Board</span>
@@ -222,6 +229,7 @@ function CanvasContainer({
                 <Whiteboard />
               </div>
             </div>
+            {/* --- whiteboard locking feature end --- */}
           )}
 
           {/* Chart Window */}

@@ -6,6 +6,7 @@ export const WindowProvider = ({ children }) => {
   const [openWindows, setOpenWindows] = useState([]);
   const [minimizedWindows, setMinimizedWindows] = useState({});
   const [lockedWindows, setLockedWindows] = useState({});
+  const [windowLayouts, setWindowLayouts] = useState({});
 
   const openWindow = (id) => {
     setOpenWindows((prev) => (prev.includes(id) ? prev : [...prev, id]));
@@ -14,6 +15,11 @@ export const WindowProvider = ({ children }) => {
   const closeWindow = (id) => {
     setOpenWindows((prev) => prev.filter((w) => w !== id));
     setMinimizedWindows((prev) => {
+      const copy = { ...prev };
+      delete copy[id];
+      return copy;
+    });
+    setWindowLayouts((prev) => {
       const copy = { ...prev };
       delete copy[id];
       return copy;
@@ -44,6 +50,10 @@ export const WindowProvider = ({ children }) => {
     });
   };
 
+  const updateWindowLayout = (id, layout) => {
+    setWindowLayouts((prev) => ({ ...prev, [id]: layout }));
+  };
+
   const maximizeWindow = (id) => {
     // placeholder for future maximize behavior
     restoreWindow(id);
@@ -54,6 +64,7 @@ export const WindowProvider = ({ children }) => {
       openWindows,
       minimizedWindows,
       lockedWindows,
+      windowLayouts,
       openWindow,
       closeWindow,
       minimizeWindow,
@@ -61,8 +72,9 @@ export const WindowProvider = ({ children }) => {
       maximizeWindow,
       lockWindow,
       unlockWindow,
+      updateWindowLayout,
     }),
-    [openWindows, minimizedWindows, lockedWindows]
+    [openWindows, minimizedWindows, lockedWindows, windowLayouts]
   );
 
   return <WindowContext.Provider value={value}>{children}</WindowContext.Provider>;
