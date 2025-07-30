@@ -1,0 +1,32 @@
+.header-button {
+  background-color: lightcoral;
+  color: #555;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  font-size: 1.1rem;
+  line-height: 1;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.header-button:hover {
+  background-color: rgba(0, 0, 0, 0.08);
+  color: #111;
+}
+
+.header-button:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.4);
+}
+
+.header-button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.4);
+}
+

@@ -6,6 +6,7 @@ import 'react-resizable/css/styles.css';
 import CloseButton from './button_components/CloseButton';
 import MinimizeButton from './button_components/MinimizeButton';
 import MaximizeButton from './button_components/MaximizeButton';
+import LockButton from './button_components/LockButton';
 import MinimizedDock from './MinimizedDock';
 import RolesPanel from './chart_components/RolesPanel';
 import ChartComponent from './chart_components/ChartComponent';
@@ -58,7 +59,7 @@ function CanvasContainer({
   showAiReport,
   onCloseAiReport,
 }) {
-  const { minimizedWindows, minimizeWindow, restoreWindow } = useWindowContext();
+  const { minimizedWindows, lockedWindows, minimizeWindow, restoreWindow, lockWindow, unlockWindow } = useWindowContext();
 
   const dataset = useActiveDataset();
   const previewData = React.useMemo(() => {
@@ -187,12 +188,17 @@ function CanvasContainer({
 
           {/* Whiteboard */}
           {showWhiteBoard && !minimizedWindows['whiteBoard'] && (
-            <div key="whiteBoard" className="grid-item" data-grid={{ x: 0.5, y: 0.5, w: 10, h: 27.5, minW: 2, minH: 2, resizeHandles: ['se', 'e', 's'], static: true }}>
+            <div
+              key="whiteBoard"
+              className="grid-item"
+              data-grid={{ x: 0.5, y: 0.5, w: 10, h: 27.5, minW: 2, minH: 2, resizeHandles: ['se', 'e', 's'], static: lockedWindows['whiteBoard'] }}
+            >
               <div className="window-header drag-handle">
                 <span className="header-title">📊 White Board</span>
                 <div className="header-button-group">
                   <MinimizeButton onClick={() => minimizeWindow('whiteBoard', 'White Board')} />
                   <MaximizeButton windowId="whiteBoard" />
+                  <LockButton windowId="whiteBoard" />
                   <CloseButton onClick={() => setShowWhiteBoard(false)} />
                 </div>
               </div>
