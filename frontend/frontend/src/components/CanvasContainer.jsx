@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import './css/CanvasContainer.css';
 import { Responsive, WidthProvider } from 'react-grid-layout';
 import 'react-grid-layout/css/styles.css';
@@ -61,6 +61,22 @@ function CanvasContainer({
 }) {
   const { minimizedWindows, lockedWindows, minimizeWindow, restoreWindow, lockWindow, unlockWindow } = useWindowContext();
 
+  const [whiteBoardLayout, setWhiteBoardLayout] = useState({
+    i: 'whiteBoard',
+    x: 0.5,
+    y: 0.5,
+    w: 10,
+    h: 27.5,
+    minW: 2,
+    minH: 2,
+    resizeHandles: ['se', 'e', 's'],
+    static: lockedWindows['whiteBoard'] || false,
+  });
+
+  useEffect(() => {
+    setWhiteBoardLayout((prev) => ({ ...prev, static: !!lockedWindows['whiteBoard'] }));
+  }, [lockedWindows['whiteBoard']]);
+
   const dataset = useActiveDataset();
   const previewData = React.useMemo(() => {
     if (Array.isArray(dataset)) return dataset.length <= 100 ? dataset : dataset.slice(0, 100);
@@ -85,7 +101,7 @@ function CanvasContainer({
       <div className="canvas-container">
         <ResponsiveGridLayout
           className="layout"
-          layouts={{}}
+          layouts={{ lg: [whiteBoardLayout] }}
           breakpoints={{ lg: 1200 }}
           cols={{ lg: 10 }}
           rowHeight={30}
@@ -93,6 +109,10 @@ function CanvasContainer({
           isDraggable
           compactType={null}
           preventCollision
+          onLayoutChange={(curLayout) => {
+            const wb = curLayout.find((l) => l.i === 'whiteBoard');
+            if (wb) setWhiteBoardLayout(wb);
+          }}
         >
 
           {/* Workflow output windows */}
@@ -188,11 +208,7 @@ function CanvasContainer({
 
           {/* Whiteboard */}
           {showWhiteBoard && !minimizedWindows['whiteBoard'] && (
-            <div
-              key="whiteBoard"
-              className="grid-item"
-              data-grid={{ x: 0.5, y: 0.5, w: 10, h: 27.5, minW: 2, minH: 2, resizeHandles: ['se', 'e', 's'], static: lockedWindows['whiteBoard'] }}
-            >
+            <div key="whiteBoard" className="grid-item" data-grid={whiteBoardLayout}>
               <div className="window-header drag-handle">
                 <span className="header-title">📊 White Board</span>
                 <div className="header-button-group">
