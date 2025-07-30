@@ -34,7 +34,7 @@ function App() {
   const [selectedStat, setSelectedStat] = useState(null);
   const [cleanedData, setCleanedData] = useState(null);
   const [chartData, setChartData] = useState(null);
-  const [chartType, setChartType] = useState('Bar');
+  //const [chartType, setChartType] = useState('Bar');
   const [chartMapping, setChartMapping] = useState({});   // { 'X-Axis': 'Region', 'Y-Axis': 'Sales' }
 
   const sensors = useSensors(
