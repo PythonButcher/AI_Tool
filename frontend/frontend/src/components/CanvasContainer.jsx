@@ -84,12 +84,228 @@ function CanvasContainer({
     outputWindows = outputWindows.filter(w => w.type !== 'report');
   }
 
+  // Collect layouts for react-grid-layout so that updates like locking
+  // immediately reflect without remounting windows.
+  const layoutLg = [];
+  const registerLayout = (id, layout) => {
+    layoutLg.push({ i: id, ...layout });
+    return layout;
+  };
+
+  const workflowElements = outputWindows
+    .filter(win => !minimizedWindows[`workflow-${win.id}`])
+    .map((win, idx) => {
+      const saved = getWindowState(`workflow-${win.id}`);
+      const defaultLayout = win.type === 'report'
+        ? { x: 0, y: 0, w: 10, h: 30, minW: 7, minH: 15 }
+        : { x: 1, y: 40 + idx * 4, w: 8, h: 6, minW: 3, minH: 3 };
+      const layout = registerLayout(`workflow-${win.id}`, {
+        ...(saved || defaultLayout),
+        static: isLocked(`workflow-${win.id}`)
+      });
+
+      return (
+        <div key={`workflow-output-${win.id}`} className="grid-item" data-grid={layout}>
+          <div className="window-header drag-handle">
+            <span className="header-title">{win.label}</span>
+            <div className="header-button-group">
+              <MinimizeButton onClick={() => minimizeWindow(`workflow-${win.id}`, win.label)} />
+              <MaximizeButton windowId={`workflow-${win.id}`} />
+              <CloseButton onClick={() => {
+                if (win.type === 'report') {
+                  setPipelineResults({});
+                  if (onCloseAiReport) onCloseAiReport();
+                } else {
+                  setPipelineResults(prev => {
+                    const copy = { ...prev };
+                    delete copy[win.id];
+                    return copy;
+                  });
+                }
+              }} />
+            </div>
+          </div>
+          <div className="window-content" style={{ padding: '10px', overflow: 'auto' }}>
+            {win.type === 'text' && <pre>{win.content}</pre>}
+            {win.type === 'chart' && <AICharts aiChartType={win.chartType} aiChartData={win.chartData} />}
+            {win.type === 'report' && <AIReporter summary={win.content.summary} insights={win.content.insights} execution={win.content.execution} chartType={win.content.chartType} chartData={win.content.chartData} />}
+          </div>
+        </div>
+      );
+    });
+
+  const dataPreviewElement = (dataset && previewData.length > 0 && showDataPreview && !minimizedWindows['dataPreview']) ? (() => {
+    const saved = getWindowState('dataPreview');
+    const layout = registerLayout('dataPreview', {
+      ...(saved || { x: 0, y: 0, w: 10, h: 15, minW: 3, minH: 2, resizeHandles: ['se', 'e', 's'] }),
+      static: isLocked('dataPreview')
+    });
+
+    return (
+      <div key="dataPreview" className="grid-item" data-grid={layout}
+        style={{ backgroundColor: '#f4f4f4', border: '2px solid #ccc', borderRadius: '6px', overflow: 'hidden' }}>
+        <div className="window-header drag-handle">
+          <span className="header-title">📄 Data Preview</span>
+          <div className="header-button-group">
+            <MinimizeButton onClick={() => minimizeWindow('dataPreview', 'Data Preview')} />
+            <MaximizeButton windowId="dataPreview" />
+            <CloseButton onClick={handleClosePreview} />
+          </div>
+        </div>
+        <div className="uploaded-data-preview">
+          <PreviewModeSelector previewMode={previewMode} setPreviewMode={setPreviewMode} />
+          {previewMode === 'table' && <DataTablePreview data={previewData} />}
+          {previewMode === 'json' && (
+            <div style={{ backgroundColor: '#F8F8F2', borderRadius: '12px', padding: '16px', boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.2)', fontFamily: '"Press Start 2P", cursive', color: '#282828', border: '3px solid #E60012', maxHeight: '400px', overflowY: 'auto' }}>
+              <JsonViewer data={previewData} expandLevel={2} onCopy={(copyData) => console.log('Copied data:', copyData)} style={{ fontSize: '14px', color: '#383838' }} />
+            </div>
+          )}
+        </div>
+        <div className="uploaded-data-preview">{children}</div>
+      </div>
+    );
+  })() : null;
+
+  const aiChartElement = (showAIChart && !minimizedWindows['aiChartWindow']) ? (() => {
+    const saved = getWindowState('aiChartWindow');
+    const layout = registerLayout('aiChartWindow', {
+      ...(saved || { x: 0, y: 0, w: 10, h: 15, minW: 3, minH: 5, resizeHandles: ['se', 'e', 's'] }),
+      static: isLocked('aiChartWindow')
+    });
+
+    return (
+      <div key="aiChartWindow" className="grid-item" data-grid={layout}>
+        <div className="window-header drag-handle">
+          <span className="header-title">📊 AI-Generated Chart</span>
+          <div className="header-button-group">
+            <MinimizeButton onClick={() => minimizeWindow('aiChartWindow', 'AI Chart')} />
+            <MaximizeButton windowId="aiChartWindow" />
+            <CloseButton onClick={() => setShowAIChart(false)} />
+          </div>
+        </div>
+        <div className="window-content" style={{ padding: '10px', height: 'calc(100% - 40px)', overflow: 'auto' }}>
+          <AICharts aiChartType={aiChartType} aiChartData={aiChartData} />
+        </div>
+      </div>
+    );
+  })() : null;
+
+  const workflowLabElement = (showAiWorkflow && !minimizedWindows['aiWorkflowLab']) ? (() => {
+    const saved = getWindowState('aiWorkflowLab');
+    const finalLayout = registerLayout('aiWorkflowLab', {
+      ...(saved || { x: 0, y: 0, w: 10, h: 27.5, minW: 2, minH: 2, resizeHandles: ['se', 'e', 's'] }),
+      static: isLocked('aiWorkflowLab')
+    });
+
+    return (
+      <div key="aiWorkflowLab" className="grid-item" data-grid={finalLayout}
+        style={{ backgroundColor: '#f4f4f4', border: '2px solid #ccc', borderRadius: '6px', overflow: 'hidden' }}>
+        <div className="window-header drag-handle">
+          <span className="header-title">AI Workflow Lab</span>
+          <div className="header-button-group">
+            <button
+              className="header-button"
+              onClick={() => toggleLock('aiWorkflowLab')}
+              title={isLocked('aiWorkflowLab') ? 'Unlock Window' : 'Lock Window'}
+            >
+              {isLocked('aiWorkflowLab') ? <FaLock /> : <FaLockOpen />}
+            </button>
+            <MinimizeButton onClick={() => minimizeWindow('aiWorkflowLab', 'AI Workflow')} />
+            <MaximizeButton windowId="aiWorkflowLab" />
+            <CloseButton onClick={() => setShowAiWorkflow(false)} />
+          </div>
+        </div>
+        <div className="uploaded-data-preview workflow-content">
+          <AiWorkflowLab />
+        </div>
+      </div>
+    );
+  })() : null;
+
+  const whiteBoardElement = (showWhiteBoard && !minimizedWindows['whiteBoard']) ? (() => {
+    const saved = getWindowState('whiteBoard');
+    const finalLayout = registerLayout('whiteBoard', {
+      ...(saved || { x: 0, y: 0, w: 10, h: 27.5, minW: 2, minH: 2, resizeHandles: ['se', 'e', 's'] }),
+      static: isLocked('whiteBoard')
+    });
+
+    return (
+      <div key="whiteBoard" className="grid-item" data-grid={finalLayout}>
+        <div className="window-header drag-handle">
+          <span className="header-title">📊 White Board</span>
+          <div className="header-button-group">
+            <button
+              className="header-button"
+              onClick={() => toggleLock('whiteBoard')}
+              title={isLocked('whiteBoard') ? 'Unlock Window' : 'Lock Window'}
+            >
+              {isLocked('whiteBoard') ? <FaLock /> : <FaLockOpen />}
+            </button>
+            <MinimizeButton onClick={() => minimizeWindow('whiteBoard', 'White Board')} />
+            <MaximizeButton windowId="whiteBoard" />
+            <CloseButton onClick={() => setShowWhiteBoard(false)} />
+          </div>
+        </div>
+        <div className="window-content" style={{ padding: '10px', height: 'calc(100% - 40px)', overflow: 'auto' }}>
+          <Whiteboard />
+        </div>
+      </div>
+    );
+  })() : null;
+
+  const chartWindowElement = (showChartWindow && selectedChartType && !minimizedWindows['chartWindow']) ? (() => {
+    const saved = getWindowState('chartWindow');
+    const layout = registerLayout('chartWindow', {
+      ...(saved || { x: 0.5, y: 0.5, w: 9, h: 27.5, minW: 4, minH: 8, maxH: 30, resizeHandles: ['se', 'e', 's'] }),
+      static: isLocked('chartWindow')
+    });
+
+    return (
+      <div key="chartWindow" className="grid-item" data-grid={layout}
+        style={{ minWidth: '150px', minHeight: '150px', overflow: 'hidden', backgroundColor: '#fff', zIndex: 5, borderRadius: '8px' }}>
+        <div className="preview-header drag-handle">
+          <span>📊 Chart Visualization</span>
+          <div className="header-button-group">
+            <MinimizeButton onClick={() => minimizeWindow('chartWindow', 'Chart')} />
+            <CloseButton onClick={handleCloseChartWindow} />
+          </div>
+        </div>
+        <ChartComponent chartType={selectedChartType} chartData={chartData} mapping={chartMapping} />
+        <RolesPanel chartType={selectedChartType} mapping={chartMapping} />
+      </div>
+    );
+  })() : null;
+
+  const storyPanelElement = (showStoryPanel && !minimizedWindows['storyPanel']) ? (() => {
+    const saved = getWindowState('storyPanel');
+    const layout = registerLayout('storyPanel', {
+      ...(saved || { x: 1, y: 0, w: 9, h: 31, minW: 7, minH: 15, resizeHandles: ['se', 'e', 's'] }),
+      static: isLocked('storyPanel')
+    });
+
+    return (
+      <div key="storyWindow" className="grid-item" data-grid={layout}
+        style={{ backgroundColor: '#f4f4f4', border: '2px solid #ccc', borderRadius: '6px', overflow: 'hidden' }}>
+        <div className="window-header drag-handle">
+          <span className="header-title">📖 Data Story</span>
+          <div className="header-button-group">
+            <MinimizeButton onClick={() => minimizeWindow('storyPanel', 'Story')} />
+            <CloseButton onClick={() => setShowStoryPanel(false)} />
+          </div>
+        </div>
+        <div className="window-content" style={{ padding: '10px', height: 'calc(100% - 40px)', overflow: 'auto' }}>
+          <DataStoryPanel uploadedData={uploadedData} cleanedData={cleanedData} />
+        </div>
+      </div>
+    );
+  })() : null;
+
   return (
     <div className="canvas-dnd-wrapper" onDragOver={(e) => e.preventDefault()} onDrop={(e) => e.preventDefault()} style={{ width: '100%', height: '100%' }}>
       <div className="canvas-container">
         <ResponsiveGridLayout
           className="layout"
-          layouts={{}}
+          layouts={{ lg: layoutLg }}
           breakpoints={{ lg: 1200 }}
           cols={{ lg: 10 }}
           rowHeight={30}
@@ -104,191 +320,13 @@ function CanvasContainer({
            }}
         >
 
-          {/* Workflow output windows */}
-          {outputWindows.filter(win => !minimizedWindows[`workflow-${win.id}`]).map((win, idx) => (
-            <div key={`workflow-output-${win.id}`} className="grid-item"
-              data-grid={win.type === 'report' ? { x: 0, y: 0, w: 10, h: 30, minW: 7, minH: 15 } : { x: 1, y: 40 + idx * 4, w: 8, h: 6, minW: 3, minH: 3 }}>
-              <div className="window-header drag-handle">
-                <span className="header-title">{win.label}</span>
-                <div className="header-button-group">
-                  <MinimizeButton onClick={() => minimizeWindow(`workflow-${win.id}`, win.label)} />
-                  <MaximizeButton windowId={`workflow-${win.id}`} />
-                  <CloseButton onClick={() => {
-                    if (win.type === 'report') {
-                      setPipelineResults({});
-                      if (onCloseAiReport) onCloseAiReport();
-                    } else {
-                      setPipelineResults(prev => {
-                        const copy = { ...prev };
-                        delete copy[win.id];
-                        return copy;
-                      });
-                    }
-                  }} />
-                </div>
-              </div>
-              <div className="window-content" style={{ padding: '10px', overflow: 'auto' }}>
-                {win.type === 'text' && <pre>{win.content}</pre>}
-                {win.type === 'chart' && <AICharts aiChartType={win.chartType} aiChartData={win.chartData} />}
-                {win.type === 'report' && <AIReporter summary={win.content.summary} insights={win.content.insights} execution={win.content.execution} chartType={win.content.chartType} chartData={win.content.chartData} />}
-              </div>
-            </div>
-          ))}
-
-          {/* Data Preview */}
-          {dataset && previewData.length > 0 && showDataPreview && !minimizedWindows['dataPreview'] && (
-            <div key="dataPreview" className="grid-item" data-grid={{ x: 0, y: 0, w: 10, h: 15, minW: 3, minH: 2, resizeHandles: ['se', 'e', 's'], static: false }}
-              style={{ backgroundColor: '#f4f4f4', border: '2px solid #ccc', borderRadius: '6px', overflow: 'hidden' }}>
-              <div className="window-header drag-handle">
-                <span className="header-title">📄 Data Preview</span>
-                <div className="header-button-group">
-                  <MinimizeButton onClick={() => minimizeWindow('dataPreview', 'Data Preview')} />
-                  <MaximizeButton windowId="dataPreview" />
-                  <CloseButton onClick={handleClosePreview} />
-                </div>
-              </div>
-              <div className="uploaded-data-preview">
-                <PreviewModeSelector previewMode={previewMode} setPreviewMode={setPreviewMode} />
-                {previewMode === 'table' && <DataTablePreview data={previewData} />}
-                {previewMode === 'json' && (
-                  <div style={{ backgroundColor: '#F8F8F2', borderRadius: '12px', padding: '16px', boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.2)', fontFamily: '"Press Start 2P", cursive', color: '#282828', border: '3px solid #E60012', maxHeight: '400px', overflowY: 'auto' }}>
-                    <JsonViewer data={previewData} expandLevel={2} onCopy={(copyData) => console.log('Copied data:', copyData)} style={{ fontSize: '14px', color: '#383838' }} />
-                  </div>
-                )}
-              </div>
-              <div className="uploaded-data-preview">{children}</div>
-            </div>
-          )}
-
-          {/* AI Chart */}
-            {showAIChart && !minimizedWindows['aiChartWindow'] && (() => {
-            // ⬇️ get previously saved layout for this window
-            const saved = getWindowState('aiChartWindow');
-            // fallback default if never saved
-            const layout = saved || { x: 0, y: 0, w: 10, h: 15, minW: 3, minH: 5, resizeHandles: ['se', 'e', 's'] };
-
-            return (
-              <div key="aiChartWindow" className="grid-item" data-grid={layout}>
-                <div className="window-header drag-handle">
-                  <span className="header-title">📊 AI-Generated Chart</span>
-                  <div className="header-button-group">
-                    <MinimizeButton onClick={() => minimizeWindow('aiChartWindow', 'AI Chart')} />
-                    <MaximizeButton windowId="aiChartWindow" />
-                    <CloseButton onClick={() => setShowAIChart(false)} />
-                  </div>
-                </div>
-                <div className="window-content" style={{ padding: '10px', height: 'calc(100% - 40px)', overflow: 'auto' }}>
-                  <AICharts aiChartType={aiChartType} aiChartData={aiChartData} />
-                </div>
-              </div>
-            );
-            })()}
-
-
-            {/* Workflow Lab */}
-          {showAiWorkflow && !minimizedWindows['aiWorkflowLab'] && (() => {
-            // ⬇️ get previously saved layout for this window
-            const saved = getWindowState('aiWorkflowLab');
-            // fallback default if never saved
-            const layout = saved || { x: 0, y: 0, w: 10, h: 27.5, minW: 2, minH: 2, resizeHandles: ['se', 'e', 's'] };
-
-            // Dynamically lock/unlock movement
-            const finalLayout = { ...layout, static: isLocked('aiWorkflowLab') };
-
-            return (
-            <div key="aiWorkflowLab" className="grid-item" data-grid={finalLayout}
-              style={{ backgroundColor: '#f4f4f4', border: '2px solid #ccc', borderRadius: '6px', overflow: 'hidden' }}>
-              <div className="window-header drag-handle">
-                <span className="header-title">AI Workflow Lab</span>
-                <div className="header-button-group">
-                  {/* NEW LOCK BUTTON */}
-                  <button
-                    className="header-button"
-                    onClick={() => toggleLock('aiWorkflowLab')}
-                    title={isLocked('aiWorkflowLab') ? 'Unlock Window' : 'Lock Window'}
-                  >
-                    {isLocked('aiWorkflowLab') ? <FaLock /> : <FaLockOpen />}
-                  </button>
-                  <MinimizeButton onClick={() => minimizeWindow('aiWorkflowLab', 'AI Workflow')} />
-                  <MaximizeButton windowId="aiWorkflowLab" />
-                  <CloseButton onClick={() => setShowAiWorkflow(false)} />
-                </div>
-              </div>
-              <div className="uploaded-data-preview workflow-content">
-                <AiWorkflowLab />
-              </div>
-            </div>
-           );
-           })()}
-
-          {/* Whiteboard */}
-          {showWhiteBoard && !minimizedWindows['whiteBoard'] && (() => {
-            const saved = getWindowState('whiteBoard');
-            const layout = saved || {
-              x: 0, y: 0, w: 10, h: 27.5,
-              minW: 2, minH: 2,
-              resizeHandles: ['se', 'e', 's']
-            };
-
-            const finalLayout = { ...layout, static: isLocked('whiteBoard') };
-
-            return (
-              <div key="whiteBoard" className="grid-item" data-grid={finalLayout}>
-                <div className="window-header drag-handle">
-                  <span className="header-title">📊 White Board</span>
-                  <div className="header-button-group">
-                    <button
-                      className="header-button"
-                      onClick={() => toggleLock('whiteBoard')}
-                      title={isLocked('whiteBoard') ? 'Unlock Window' : 'Lock Window'}
-                    >
-                      {isLocked('whiteBoard') ? <FaLock /> : <FaLockOpen />}
-                    </button>
-                    <MinimizeButton onClick={() => minimizeWindow('whiteBoard', 'White Board')} />
-                    <MaximizeButton windowId="whiteBoard" />
-                    <CloseButton onClick={() => setShowWhiteBoard(false)} />
-                  </div>
-                </div>
-                <div className="window-content" style={{ padding: '10px', height: 'calc(100% - 40px)', overflow: 'auto' }}>
-                  <Whiteboard />
-                </div>
-              </div>
-            );
-          })()}
-
-
-          {/* Chart Window */}
-          {showChartWindow && selectedChartType && !minimizedWindows['chartWindow'] && (
-            <div key="chartWindow" className="grid-item" data-grid={{ x: 0.5, y: 0.5, w: 9, h: 27.5, minW: 4, minH: 8, maxH: 30, resizeHandles: ['se', 'e', 's'] }}
-              style={{ minWidth: '150px', minHeight: '150px', overflow: 'hidden', backgroundColor: '#fff', zIndex: 5, borderRadius: '8px' }}>
-              <div className="preview-header drag-handle">
-                <span>📊 Chart Visualization</span>
-                <div className="header-button-group">
-                  <MinimizeButton onClick={() => minimizeWindow('chartWindow', 'Chart')} />
-                  <CloseButton onClick={handleCloseChartWindow} />
-                </div>
-              </div>
-              <ChartComponent chartType={selectedChartType} chartData={chartData} mapping={chartMapping} />
-              <RolesPanel chartType={selectedChartType} mapping={chartMapping} />
-            </div>
-          )}
-
-          {/* Data Story */}
-          {showStoryPanel && !minimizedWindows['storyPanel'] && (
-            <div key="storyWindow" className="grid-item" data-grid={{ x: 1, y: 0, w: 9, h: 31, minW: 7, minH: 15, resizeHandles: ['se', 'e', 's'], static: false }}
-              style={{ backgroundColor: '#f4f4f4', border: '2px solid #ccc', borderRadius: '6px', overflow: 'hidden' }}>
-              <div className="window-header drag-handle">
-                <span className="header-title">📖 Data Story</span>
-                <div className="header-button-group">
-                  <MinimizeButton onClick={() => minimizeWindow('storyPanel', 'Story')} />
-                  <CloseButton onClick={() => setShowStoryPanel(false)} />
-                </div>
-              </div>
-              <div className="window-content" style={{ padding: '10px', height: 'calc(100% - 40px)', overflow: 'auto' }}>
-                <DataStoryPanel uploadedData={uploadedData} cleanedData={cleanedData} />
-              </div>
-            </div>
-          )}
+          {workflowElements}
+          {dataPreviewElement}
+          {aiChartElement}
+          {workflowLabElement}
+          {whiteBoardElement}
+          {chartWindowElement}
+          {storyPanelElement}
 
         </ResponsiveGridLayout>
         <MinimizedDock />
