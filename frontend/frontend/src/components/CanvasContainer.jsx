@@ -184,31 +184,8 @@ function CanvasContainer({
             );
             })()}
 
-          {/* Workflow Lab */}
-          {showAiWorkflow && !minimizedWindows['aiWorkflowLab'] && (() => {
-            // ⬇️ get previously saved layout for this window
-            const saved = getWindowState('aiWorkflowLab');
-            // fallback default if never saved
-            const layout = saved || { x: 0, y: 0, w: 10, h: 27.5, minW: 2, minH: 2, resizeHandles: ['se', 'e', 's'], static: true };
-            return (
-            <div key="aiWorkflowLab" className="grid-item" data-grid={layout}
-              style={{ backgroundColor: '#f4f4f4', border: '2px solid #ccc', borderRadius: '6px', overflow: 'hidden' }}>
-              <div className="window-header drag-handle">
-                <span className="header-title">AI Workflow Lab</span>
-                <div className="header-button-group">
-                  <MinimizeButton onClick={() => minimizeWindow('aiWorkflowLab', 'AI Workflow')} />
-                  <MaximizeButton windowId="aiWorkflowLab" />
-                  <CloseButton onClick={() => setShowAiWorkflow(false)} />
-                </div>
-              </div>
-              <div className="uploaded-data-preview workflow-content">
-                <AiWorkflowLab />
-              </div>
-            </div>
-           );
-           })()}
 
-                  {/* Workflow Lab */}
+            {/* Workflow Lab */}
           {showAiWorkflow && !minimizedWindows['aiWorkflowLab'] && (() => {
             // ⬇️ get previously saved layout for this window
             const saved = getWindowState('aiWorkflowLab');
@@ -253,7 +230,6 @@ function CanvasContainer({
               resizeHandles: ['se', 'e', 's']
             };
 
-            // Dynamically lock/unlock movement
             const finalLayout = { ...layout, static: isLocked('whiteBoard') };
 
             return (
@@ -261,7 +237,6 @@ function CanvasContainer({
                 <div className="window-header drag-handle">
                   <span className="header-title">📊 White Board</span>
                   <div className="header-button-group">
-                    {/* NEW LOCK BUTTON */}
                     <button
                       className="header-button"
                       onClick={() => toggleLock('whiteBoard')}

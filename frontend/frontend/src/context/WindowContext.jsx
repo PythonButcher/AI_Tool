@@ -24,6 +24,8 @@ export const WindowProvider = ({ children }) => {
   setLockedWindows(prev => ({ ...prev, [id]: !prev[id] }));
 };
 
+  const isLocked = (id) => !!lockedWindows[id];
+
   const closeWindow = (id) => {
     setOpenWindows((prev) => prev.filter((w) => w !== id));
     setMinimizedWindows((prev) => {
@@ -56,7 +58,6 @@ export const WindowProvider = ({ children }) => {
     restoreWindow(id);
   };
 
-  const isLocked = (id) => !!lockedWindows[id];
 
   const value = useMemo(
     () => ({
