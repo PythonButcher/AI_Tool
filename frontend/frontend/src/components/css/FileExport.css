@@ -1,29 +1,48 @@
 .ExportClass {
-    margin-top: 20px;
+    margin-top: -20px;
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 12px; /* Space between multiple export buttons if present */
 }
 
 .ExportClass button {
-    background-color: #b0b0b0; /* Nintendo grey */
+    background: linear-gradient(135deg, #b0b0b0 0%, #9a9a9a 100%); /* Subtle gradient */
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    color: #333; /* Darker text for contrast */
+    color: #222; /* Darker text for strong contrast */
     border: 1px solid #888;
     padding: 10px 20px;
     cursor: pointer;
-    border-radius: 4px;
-    margin-right: 10px;
-    transition: background-color 0.3s ease, transform 0.2s ease;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2); /* Adds depth */
+    transition: background 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
 }
 
 .ExportClass button:hover {
-    background-color: #999; /* Slightly darker grey on hover */
-    transform: scale(1.05); /* Subtle scaling for interaction */
+    background: linear-gradient(135deg, #a0a0a0 0%, #7f7f7f 100%);
+    transform: translateY(-2px) scale(1.05);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3); /* Elevated on hover */
+}
+
+.ExportClass button:active {
+    transform: translateY(0) scale(0.98);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 .ImportExport input {
     padding: 10px;
-    background-color: #e0e0e0; /* Light grey background for input */
     border: 1px solid #bbb;
     color: #333;
     border-radius: 4px;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.ImportExport input:focus {
+    border-color: #666;
+    box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
+    outline: none;
 }

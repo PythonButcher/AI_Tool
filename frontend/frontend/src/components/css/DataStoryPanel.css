@@ -71,11 +71,32 @@
   flex-direction: column;
   overflow-y: auto;
   background: #fff;
+  font-weight: bold;
   border-radius: var(--nt-radius);
   box-shadow: var(--nt-shadow);
+  box-shadow: 0 0 10px rgba(59, 237, 112, 0.5); /* Red-tinted shadow */
   padding: 24px 32px;
   box-sizing: border-box;
 }
+.story-panel-no-data {
+  flex: 1 1 45%;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;     /* Center error message vertically */
+  align-items: center;         /* Center horizontally */
+  overflow-y: auto;
+  background: #ffe6e6;         /* Light red background */
+  border: 2px solid #d32f2f;   /* Strong red border */
+  color: #b71c1c;              /* Dark red text */
+  font-weight: bold;
+  font-size: 1.2rem;           /* Slightly larger text for emphasis */
+  border-radius: var(--nt-radius);
+  box-shadow: 0 0 10px rgba(211, 47, 47, 0.5); /* Red-tinted shadow */
+  padding: 24px 32px;
+  box-sizing: border-box;
+}
+
 
 /* Header in right panel */
 .panel-header {

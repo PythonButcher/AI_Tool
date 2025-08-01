@@ -5,10 +5,26 @@ export const WindowContext = createContext();
 export const WindowProvider = ({ children }) => {
   const [openWindows, setOpenWindows] = useState([]);
   const [minimizedWindows, setMinimizedWindows] = useState({});
+  const [windowStates, setWindowStates] = useState({});
+  const [lockedWindows, setLockedWindows] = useState({});
+
+
 
   const openWindow = (id) => {
     setOpenWindows((prev) => (prev.includes(id) ? prev : [...prev, id]));
   };
+
+  const saveWindowState = (id, layout) => {
+    setWindowStates(prev => ({ ...prev, [id]: layout }));
+};
+
+  const getWindowState = (id) => windowStates[id] || null;
+
+  const toggleLock = (id) => {
+  setLockedWindows(prev => ({ ...prev, [id]: !prev[id] }));
+};
+
+  const isLocked = (id) => !!lockedWindows[id];
 
   const closeWindow = (id) => {
     setOpenWindows((prev) => prev.filter((w) => w !== id));
@@ -17,7 +33,13 @@ export const WindowProvider = ({ children }) => {
       delete copy[id];
       return copy;
     });
+    setLockedWindows((prev) => {          // <-- clear lock if closed
+      const copy = { ...prev };
+      delete copy[id];
+      return copy;
+    });
   };
+
 
   const minimizeWindow = (id, label) => {
     setMinimizedWindows((prev) => ({ ...prev, [id]: { label } }));
@@ -36,6 +58,7 @@ export const WindowProvider = ({ children }) => {
     restoreWindow(id);
   };
 
+
   const value = useMemo(
     () => ({
       openWindows,
@@ -45,8 +68,12 @@ export const WindowProvider = ({ children }) => {
       minimizeWindow,
       restoreWindow,
       maximizeWindow,
+      saveWindowState,
+      getWindowState,
+      toggleLock,
+      isLocked,
     }),
-    [openWindows, minimizedWindows]
+    [openWindows, minimizedWindows, windowStates, lockedWindows]
   );
 
   return <WindowContext.Provider value={value}>{children}</WindowContext.Provider>;

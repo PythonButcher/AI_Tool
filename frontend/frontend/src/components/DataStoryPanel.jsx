@@ -39,7 +39,11 @@ export default function DataStoryPanel({ uploadedData, cleanedData, model }) {
   }, [story, uploadedData, cleanedData]);
 
   if (error) return <div className="story-panel">{error}</div>;
+    if (!uploadedData && !cleanedData)
+    return <div className="story-panel-no-data">Please upload some data to this app…</div>;
   if (!story)  return <div className="story-panel">Generating story…</div>;
+
+
 
   return (
     <div className="storyboard-wrapper">

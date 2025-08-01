@@ -1,99 +1,25 @@
-import { useState, useCallback, useEffect } from "react";
-import {
-  ReactFlow,
-  Controls,
-  Background,
-  applyNodeChanges,
-  applyEdgeChanges,
-} from "@xyflow/react";
-import "@xyflow/react/dist/style.css";
-import "../css/workflow_lab_css/AiWorkflowLab.css"; // ✅ Import CSS here
-import { AiCommandBlocks } from "../workflow_lab_components/AiCommandBlock";
+--might need this version workflowlab -- canvascontainer
 
-const initialNodes = [];
-const initialEdges = [];
-
-function AiWorkflowLab() {
-  const [nodes, setNodes] = useState(initialNodes);
-  const [edges, setEdges] = useState(initialEdges);
-
-  useEffect(() => {
-    const initialAiCommandNodes = Object.values(AiCommandBlocks).map((command, index) => ({
-      id: command.id,
-      type: "default",
-      data: {
-        label: (
-          <div className="icon-node">
-            <command.icon size={24} />
-          </div>
-        ),
-      },
-      position: { x: 100 + index * 150, y: 100 },
-    }));
-
-    setNodes((prevNodes) => [...prevNodes, ...initialAiCommandNodes]);
-  }, []);
-
-  const onNodesChange = useCallback(
-    (changes) => setNodes((nds) => applyNodeChanges(changes, nds)),
-    []
-  );
-  const onEdgesChange = useCallback(
-    (changes) => setEdges((eds) => applyEdgeChanges(changes, eds)),
-    []
-  );
-
-  return (
-    <div className="ai-workflow-lab-container">
-      <ReactFlow
-        nodes={nodes}
-        onNodesChange={onNodesChange}
-        edges={edges}
-        onEdgesChange={onEdgesChange}
-        fitView
-      >
-        <Background />
-        <Controls />
-      </ReactFlow>
-    </div>
-  );
-}
-
-
-
----------------------------------------------------------------------------------------
-
-               style={{
-                  position: showCanvasMinimized ? 'fixed' : 'relative',
-                  bottom: showCanvasMinimized ? '-1000px' : undefined,
-                  left: showCanvasMinimized ? '0px' : undefined,
-                  width: showCanvasMinimized ? '250px' : '100%',
-                  height: showCanvasMinimized ? '20px' : 'auto',
-                  zIndex: showCanvasMinimized ? 1200 : undefined,
-                  backgroundColor: '#f4f4f4',
-                  border: '2px solid #ccc',
-                  borderRadius: '6px',
-                  overflow : 'hidden',
-                  cursor: 'default',
-                  transition: 'all 0.5s ease',
-                }}
-
-
---------------------------------------------------------------------------------------------
-menubar catstats block
-import CategoricalStats from './CategoricalStats';
-  {/* Categorical Stats Dropdown */}
-        <div className="menu-button-container" ref={dropdownRefs.catStats}>
-          <button
-            className="menu-button"
-            onClick={() => setActiveDropdown((prev) => (prev === 'catStats' ? null : 'catStats'))}
-          >
-            <FaChartBar className="menu-icon" />
-            Categorical Stats
-          </button>
-          {activeDropdown === 'catStats' && (
-            <div className="menu-dropdown">
-              <CategoricalStats />
+  {/* Workflow Lab */}
+          {showAiWorkflow && !minimizedWindows['aiWorkflowLab'] && (() => {
+            // ⬇️ get previously saved layout for this window
+            const saved = getWindowState('aiWorkflowLab');
+            // fallback default if never saved
+            const layout = saved || { x: 0, y: 0, w: 10, h: 27.5, minW: 2, minH: 2, resizeHandles: ['se', 'e', 's'], static: true };
+            return (
+            <div key="aiWorkflowLab" className="grid-item" data-grid={layout}
+              style={{ backgroundColor: '#f4f4f4', border: '2px solid #ccc', borderRadius: '6px', overflow: 'hidden' }}>
+              <div className="window-header drag-handle">
+                <span className="header-title">AI Workflow Lab</span>
+                <div className="header-button-group">
+                  <MinimizeButton onClick={() => minimizeWindow('aiWorkflowLab', 'AI Workflow')} />
+                  <MaximizeButton windowId="aiWorkflowLab" />
+                  <CloseButton onClick={() => setShowAiWorkflow(false)} />
+                </div>
+              </div>
+              <div className="uploaded-data-preview workflow-content">
+                <AiWorkflowLab />
+              </div>
             </div>
-          )}
-        </div>
+           );
+           })()}

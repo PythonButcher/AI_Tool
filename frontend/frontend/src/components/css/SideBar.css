@@ -118,6 +118,13 @@
     z-index: 10;
     width: 150px;
 }
+.export-dropdown {          /* get rid of this block altogether, this just hides it
+  background: transparent;  /* remove white box */
+  border: none;             /* if any border exists */
+  box-shadow: none;         /* remove shadow if present */
+  padding: 0;               /* optional if spacing causes the box */
+}
+
 
 .export-dropdown button {
     display: block;
