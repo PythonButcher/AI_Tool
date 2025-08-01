@@ -1,6 +1,6 @@
 // 📂 AiWorkflowLab.jsx — cleaned and fixed DropZone behavior with working hover
 
-import { useState, useCallback, useContext, useRef } from "react";
+import { useState, useCallback, useContext, useRef, useEffect } from "react";
 import {
   ReactFlow,
   Controls,
@@ -19,6 +19,7 @@ import ContextMenu from "../../context/ContextMenu";
 import { DataContext } from "../../context/DataContext";
 import AIPipeline from './AIPipeline';
 import DropZoneNode from './DropZoneNode';
+import { useWindowContext } from "../../context/WindowContext";
 
 const initialNodes = [
   {
@@ -36,8 +37,10 @@ const initialEdges = [];
 
 function AiWorkflowLab() {
   const { uploadedData, cleanedData, pipelineResults, setPipelineResults, setCleanedData } = useContext(DataContext);
-  const [nodes, setNodes] = useState(initialNodes);
-  const [edges, setEdges] = useState(initialEdges);
+  const { saveComponentState, getComponentState } = useWindowContext();
+  const savedState = getComponentState('aiWorkflowLab');
+  const [nodes, setNodes] = useState(savedState?.nodes || initialNodes);
+  const [edges, setEdges] = useState(savedState?.edges || initialEdges);
   const [hasExecuted, setHasExecuted] = useState(false);
 
   const workflowRef = useRef(null);
@@ -122,6 +125,16 @@ function AiWorkflowLab() {
     (changes) => setEdges((eds) => applyEdgeChanges(changes, eds)),
     []
   );
+
+  useEffect(() => {
+    saveComponentState('aiWorkflowLab', { nodes, edges });
+  }, [nodes, edges, saveComponentState]);
+
+  useEffect(() => {
+    return () => {
+      saveComponentState('aiWorkflowLab', { nodes, edges });
+    };
+  }, [nodes, edges, saveComponentState]);
 
   const handleAddNode = useCallback(
     (type) => {

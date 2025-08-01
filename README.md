@@ -74,6 +74,10 @@ cleanedData: Holds the cleaned dataset for export and visualization.
 
 xAxis & yAxis: Stores selected fields for charting.
 
+WindowContext now preserves component-level state. Use `saveComponentState(id, state)`
+and `getComponentState(id)` to keep windows like the Workflow Lab and White Board
+intact when minimized.
+
 AI Integration
 
 Uses OpenAI GPT-4 for AI-generated dataset insights and chart suggestions.
