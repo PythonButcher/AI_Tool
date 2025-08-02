@@ -19,6 +19,7 @@ import ContextMenu from "../../context/ContextMenu";
 import { DataContext } from "../../context/DataContext";
 import AIPipeline from './AIPipeline';
 import DropZoneNode from './DropZoneNode';
+import { useWindowContext } from "../../context/WindowContext";
 
 const initialNodes = [
   {
@@ -34,10 +35,11 @@ const initialNodes = [
 
 const initialEdges = [];
 
-function AiWorkflowLab() {
+function AiWorkflowLab({ savedState }) {
   const { uploadedData, cleanedData, pipelineResults, setPipelineResults, setCleanedData } = useContext(DataContext);
-  const [nodes, setNodes] = useState(initialNodes);
-  const [edges, setEdges] = useState(initialEdges);
+  const { saveWindowContentState } = useWindowContext();
+  const [nodes, setNodes] = useState(savedState?.nodes || initialNodes);
+  const [edges, setEdges] = useState(savedState?.edges || initialEdges);
   const [hasExecuted, setHasExecuted] = useState(false);
 
   const workflowRef = useRef(null);
@@ -90,9 +92,13 @@ function AiWorkflowLab() {
   const onConnect = useCallback(
     (params) => {
       console.log("🔗 New edge created:", params);
-      setEdges((eds) => addEdge(params, eds));
+      setEdges((eds) => {
+        const updatedEdges = addEdge(params, eds);
+        saveWindowContentState('aiWorkflowLab', { nodes, edges: updatedEdges });
+        return updatedEdges;
+      });
     },
-    []
+    [nodes, saveWindowContentState]
   );
 
 
@@ -112,15 +118,22 @@ function AiWorkflowLab() {
           }
         }
 
+        saveWindowContentState('aiWorkflowLab', { nodes: updatedNodes, edges });
         return updatedNodes;
       });
     },
-    [checkOverlapAndTrigger]
+    [checkOverlapAndTrigger, saveWindowContentState, edges]
   );
 
   const onEdgesChange = useCallback(
-    (changes) => setEdges((eds) => applyEdgeChanges(changes, eds)),
-    []
+    (changes) => {
+      setEdges((eds) => {
+        const updatedEdges = applyEdgeChanges(changes, eds);
+        saveWindowContentState('aiWorkflowLab', { nodes, edges: updatedEdges });
+        return updatedEdges;
+      });
+    },
+    [nodes, saveWindowContentState]
   );
 
   const handleAddNode = useCallback(
@@ -142,10 +155,14 @@ function AiWorkflowLab() {
         },
       };
 
-      setNodes((prevNodes) => [...prevNodes, newNode]);
+      setNodes((prevNodes) => {
+        const updated = [...prevNodes, newNode];
+        saveWindowContentState('aiWorkflowLab', { nodes: updated, edges });
+        return updated;
+      });
       setClicked(false);
     },
-    [coords, setClicked]
+    [coords, setClicked, edges, saveWindowContentState]
   );
 
   const renderedNodes = nodes.map((node) => ({
@@ -169,7 +186,7 @@ function AiWorkflowLab() {
         edges={edges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
-        onConnect={onConnect}                      
+        onConnect={onConnect}
         fitView
         nodeTypes={{
           AiWorkLabNodeSizer: AiWorkLabNodeSizer,

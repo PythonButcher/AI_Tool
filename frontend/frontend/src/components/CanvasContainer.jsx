@@ -63,7 +63,8 @@ function CanvasContainer({
 }) {
   const { minimizedWindows, minimizeWindow,
           restoreWindow, saveWindowState,
-          getWindowState, toggleLock, isLocked } = useWindowContext();
+          getWindowState, toggleLock, isLocked,
+          getWindowContentState } = useWindowContext();
 
   const dataset = useActiveDataset();
   const previewData = React.useMemo(() => {
@@ -192,6 +193,7 @@ function CanvasContainer({
 
   const workflowLabElement = (showAiWorkflow && !minimizedWindows['aiWorkflowLab']) ? (() => {
     const saved = getWindowState('aiWorkflowLab');
+    const contentState = getWindowContentState('aiWorkflowLab');
     const finalLayout = registerLayout('aiWorkflowLab', {
       ...(saved || { x: 0, y: 0, w: 10, h: 27.5, minW: 2, minH: 2, resizeHandles: ['se', 'e', 's'] }),
       static: isLocked('aiWorkflowLab')
@@ -216,7 +218,7 @@ function CanvasContainer({
           </div>
         </div>
         <div className="uploaded-data-preview workflow-content">
-          <AiWorkflowLab />
+          <AiWorkflowLab savedState={contentState} />
         </div>
       </div>
     );
@@ -224,6 +226,7 @@ function CanvasContainer({
 
   const whiteBoardElement = (showWhiteBoard && !minimizedWindows['whiteBoard']) ? (() => {
     const saved = getWindowState('whiteBoard');
+    const contentState = getWindowContentState('whiteBoard');
     const finalLayout = registerLayout('whiteBoard', {
       ...(saved || { x: 0, y: 0, w: 10, h: 27.5, minW: 2, minH: 2, resizeHandles: ['se', 'e', 's'] }),
       static: isLocked('whiteBoard')
@@ -247,7 +250,7 @@ function CanvasContainer({
           </div>
         </div>
         <div className="window-content" style={{ padding: '10px', height: 'calc(100% - 40px)', overflow: 'auto' }}>
-          <Whiteboard />
+          <Whiteboard savedScene={contentState} />
         </div>
       </div>
     );

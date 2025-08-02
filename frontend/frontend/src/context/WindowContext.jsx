@@ -7,6 +7,7 @@ export const WindowProvider = ({ children }) => {
   const [minimizedWindows, setMinimizedWindows] = useState({});
   const [windowStates, setWindowStates] = useState({});
   const [lockedWindows, setLockedWindows] = useState({});
+  const [windowContentStates, setWindowContentStates] = useState({});
 
 
 
@@ -19,6 +20,12 @@ export const WindowProvider = ({ children }) => {
 };
 
   const getWindowState = (id) => windowStates[id] || null;
+
+  const saveWindowContentState = (id, data) => {
+    setWindowContentStates(prev => ({ ...prev, [id]: data }));
+  };
+
+  const getWindowContentState = (id) => windowContentStates[id] || null;
 
   const toggleLock = (id) => {
   setLockedWindows(prev => ({ ...prev, [id]: !prev[id] }));
@@ -72,8 +79,10 @@ export const WindowProvider = ({ children }) => {
       getWindowState,
       toggleLock,
       isLocked,
+      saveWindowContentState,
+      getWindowContentState,
     }),
-    [openWindows, minimizedWindows, windowStates, lockedWindows]
+    [openWindows, minimizedWindows, windowStates, lockedWindows, windowContentStates]
   );
 
   return <WindowContext.Provider value={value}>{children}</WindowContext.Provider>;
