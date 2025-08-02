@@ -1,5 +1,5 @@
 // Whiteboard.jsx
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useCallback } from "react";
 import { Excalidraw } from "@excalidraw/excalidraw";
 import "@excalidraw/excalidraw/index.css";
 import WhiteboardToolbar from "./WhiteBoardToolbar";
@@ -14,15 +14,18 @@ const Whiteboard = ({ savedScene }) => {
     },
   };
 
+  const hasLoaded = useRef(false);
+
   useEffect(() => {
-    if (savedScene && excalidrawRef.current) {
+    if (!hasLoaded.current && savedScene && excalidrawRef.current) {
       excalidrawRef.current.updateScene(savedScene);
+      hasLoaded.current = true;
     }
   }, [savedScene]);
 
-  const handleChange = (elements, appState) => {
+  const handleChange = useCallback((elements, appState) => {
     saveWindowContentState('whiteBoard', { elements, appState });
-  };
+  }, [saveWindowContentState]);
 
   return (
     <div style={{ height: "100%", width: "100%", display: "flex", flexDirection: "column" }}>
