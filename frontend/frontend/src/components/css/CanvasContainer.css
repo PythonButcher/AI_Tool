@@ -18,6 +18,10 @@
   flex-direction: column; /* Ensure contents stack properly */
 }
 
+.react-grid-item {
+  transition: transform 0.2s ease, width 0.2s ease, height 0.2s ease;
+}
+
 /* Grid Item Styling */
 .workflow-lab {
   background-color: #ffffff; /* Clean white background */

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import './css/CanvasContainer.css';
 import { Responsive, WidthProvider } from 'react-grid-layout';
 import 'react-grid-layout/css/styles.css';
@@ -66,6 +66,13 @@ function CanvasContainer({
           getWindowState, toggleLock, isLocked,
           getWindowContentState } = useWindowContext();
 
+  const [zIndices, setZIndices] = useState({});
+  const zCounter = useRef(1);
+  const bringToFront = (id) => {
+    setZIndices(prev => ({ ...prev, [id]: ++zCounter.current }));
+  };
+  const linkedResize = true;
+
   const dataset = useActiveDataset();
   const previewData = React.useMemo(() => {
     if (Array.isArray(dataset)) return dataset.length <= 100 ? dataset : dataset.slice(0, 100);
@@ -93,6 +100,33 @@ function CanvasContainer({
     return layout;
   };
 
+  const handleResizeStop = (layout, oldItem, newItem) => {
+    const snapThreshold = 1;
+    if (10 - newItem.w <= snapThreshold) {
+      newItem.w = 10;
+    }
+    saveWindowState(newItem.i, newItem);
+    if (linkedResize) {
+      const rowItems = layout.filter(item => item.y === newItem.y);
+      if (rowItems.length > 1) {
+        const others = rowItems.filter(item => item.i !== newItem.i);
+        const remaining = 10 - newItem.w;
+        const even = Math.max(Math.floor(remaining / others.length), 1);
+        let nextX = 0;
+        rowItems
+          .sort((a, b) => a.x - b.x)
+          .forEach(item => {
+            const width = item.i === newItem.i ? newItem.w : even;
+            const updated = { ...item, x: nextX, w: width };
+            nextX += width;
+            saveWindowState(item.i, updated);
+            const idx = layout.findIndex(l => l.i === item.i);
+            if (idx > -1) layout[idx] = updated;
+          });
+      }
+    }
+  };
+
   const workflowElements = outputWindows
     .filter(win => !minimizedWindows[`workflow-${win.id}`])
     .map((win, idx) => {
@@ -106,7 +140,13 @@ function CanvasContainer({
       });
 
       return (
-        <div key={`workflow-output-${win.id}`} className="grid-item" data-grid={layout}>
+        <div
+          key={`workflow-output-${win.id}`}
+          className="grid-item"
+          data-grid={layout}
+          onMouseDown={() => bringToFront(`workflow-${win.id}`)}
+          style={{ zIndex: zIndices[`workflow-${win.id}`] || 1 }}
+        >
           <div className="window-header drag-handle">
             <span className="header-title">{win.label}</span>
             <div className="header-button-group">
@@ -143,8 +183,13 @@ function CanvasContainer({
     });
 
     return (
-      <div key="dataPreview" className="grid-item" data-grid={layout}
-        style={{ backgroundColor: '#f4f4f4', border: '2px solid #ccc', borderRadius: '6px', overflow: 'hidden' }}>
+      <div
+        key="dataPreview"
+        className="grid-item"
+        data-grid={layout}
+        onMouseDown={() => bringToFront('dataPreview')}
+        style={{ backgroundColor: '#f4f4f4', border: '2px solid #ccc', borderRadius: '6px', overflow: 'hidden', zIndex: zIndices['dataPreview'] || 1 }}
+      >
         <div className="window-header drag-handle">
           <span className="header-title">📄 Data Preview</span>
           <div className="header-button-group">
@@ -175,7 +220,13 @@ function CanvasContainer({
     });
 
     return (
-      <div key="aiChartWindow" className="grid-item" data-grid={layout}>
+      <div
+        key="aiChartWindow"
+        className="grid-item"
+        data-grid={layout}
+        onMouseDown={() => bringToFront('aiChartWindow')}
+        style={{ zIndex: zIndices['aiChartWindow'] || 1 }}
+      >
         <div className="window-header drag-handle">
           <span className="header-title">📊 AI-Generated Chart</span>
           <div className="header-button-group">
@@ -200,8 +251,13 @@ function CanvasContainer({
     });
 
     return (
-      <div key="aiWorkflowLab" className="grid-item" data-grid={finalLayout}
-        style={{ backgroundColor: '#f4f4f4', border: '2px solid #ccc', borderRadius: '6px', overflow: 'hidden' }}>
+      <div
+        key="aiWorkflowLab"
+        className="grid-item"
+        data-grid={finalLayout}
+        onMouseDown={() => bringToFront('aiWorkflowLab')}
+        style={{ backgroundColor: '#f4f4f4', border: '2px solid #ccc', borderRadius: '6px', overflow: 'hidden', zIndex: zIndices['aiWorkflowLab'] || 1 }}
+      >
         <div className="window-header drag-handle">
           <span className="header-title">AI Workflow Lab</span>
           <div className="header-button-group">
@@ -233,7 +289,13 @@ function CanvasContainer({
     });
 
     return (
-      <div key="whiteBoard" className="grid-item" data-grid={finalLayout}>
+      <div
+        key="whiteBoard"
+        className="grid-item"
+        data-grid={finalLayout}
+        onMouseDown={() => bringToFront('whiteBoard')}
+        style={{ zIndex: zIndices['whiteBoard'] || 1 }}
+      >
         <div className="window-header drag-handle">
           <span className="header-title">📊 White Board</span>
           <div className="header-button-group">
@@ -264,8 +326,13 @@ function CanvasContainer({
     });
 
     return (
-      <div key="chartWindow" className="grid-item" data-grid={layout}
-        style={{ minWidth: '150px', minHeight: '150px', overflow: 'hidden', backgroundColor: '#fff', zIndex: 5, borderRadius: '8px' }}>
+      <div
+        key="chartWindow"
+        className="grid-item"
+        data-grid={layout}
+        onMouseDown={() => bringToFront('chartWindow')}
+        style={{ minWidth: '150px', minHeight: '150px', overflow: 'hidden', backgroundColor: '#fff', borderRadius: '8px', zIndex: zIndices['chartWindow'] || 5 }}
+      >
         <div className="preview-header drag-handle">
           <span>📊 Chart Visualization</span>
           <div className="header-button-group">
@@ -287,8 +354,13 @@ function CanvasContainer({
     });
 
     return (
-      <div key="storyWindow" className="grid-item" data-grid={layout}
-        style={{ backgroundColor: '#f4f4f4', border: '2px solid #ccc', borderRadius: '6px', overflow: 'hidden' }}>
+      <div
+        key="storyWindow"
+        className="grid-item"
+        data-grid={layout}
+        onMouseDown={() => bringToFront('storyPanel')}
+        style={{ backgroundColor: '#f4f4f4', border: '2px solid #ccc', borderRadius: '6px', overflow: 'hidden', zIndex: zIndices['storyPanel'] || 1 }}
+      >
         <div className="window-header drag-handle">
           <span className="header-title">📖 Data Story</span>
           <div className="header-button-group">
@@ -316,8 +388,10 @@ function CanvasContainer({
           isDraggable
           compactType={null}
           preventCollision
-          draggableHandle=".window-header" 
+          draggableHandle=".window-header"
           draggableCancel=".whiteboard-content"
+          onResizeStop={handleResizeStop}
+          onDragStart={(layout, oldItem, newItem) => bringToFront(newItem.i)}
           onLayoutChange={(currentLayout) => {
             currentLayout.forEach(item => saveWindowState(item.i, item));
            }}
