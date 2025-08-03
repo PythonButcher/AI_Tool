@@ -68,6 +68,7 @@ function CanvasContainer({
 
   const [zIndices, setZIndices] = useState({});
   const zCounter = useRef(1);
+  const layoutRef = useRef([]);
   const bringToFront = (id) => {
     setZIndices(prev => ({ ...prev, [id]: ++zCounter.current }));
   };
@@ -102,64 +103,83 @@ function CanvasContainer({
     return fullLayout;
   };
 
+  const applyLinkedResize = (layout, target, axis, save = true) => {
+    const key = axis === 'x' ? 'x' : 'y';
+    const sizeKey = axis === 'x' ? 'w' : 'h';
+    const minKey = axis === 'x' ? 'minW' : 'minH';
+    const maxKey = axis === 'x' ? 'maxW' : 'maxH';
+    const groupItems = target.group
+      ? layout.filter(item => item.group === target.group)
+      : axis === 'x'
+        ? layout.filter(item => item.y === target.y)
+        : layout.filter(item => item.x === target.x);
+    if (groupItems.length <= 1) return;
+    const sorted = groupItems.slice().sort((a, b) => a[key] - b[key]);
+    const total = axis === 'x' ? 10 : sorted.reduce((sum, item) => sum + item[sizeKey], 0);
+    const staticTotal = sorted
+      .filter(item => item.i !== target.i && item.static)
+      .reduce((sum, item) => sum + item[sizeKey], 0);
+    const adjustable = sorted.filter(item => item.i !== target.i && !item.static);
+    if (adjustable.length === 0) return;
+    const adjustableTotal = adjustable.reduce((sum, item) => sum + item[sizeKey], 0);
+    let remaining = total - target[sizeKey] - staticTotal;
+    let nextPos = Math.min(...sorted.map(item => item[key]));
+    sorted.forEach(item => {
+      if (item.i === target.i) {
+        item[key] = nextPos;
+        nextPos += item[sizeKey];
+      } else if (item.static) {
+        item[key] = nextPos;
+        nextPos += item[sizeKey];
+      } else {
+        let newSize = adjustableTotal
+          ? Math.round(remaining * (item[sizeKey] / adjustableTotal))
+          : Math.floor(remaining / adjustable.length);
+        newSize = Math.max(newSize, item[minKey] || 1);
+        if (item[maxKey]) newSize = Math.min(newSize, item[maxKey]);
+        if (item === adjustable[adjustable.length - 1]) {
+          newSize = remaining;
+        }
+        item[key] = nextPos;
+        item[sizeKey] = newSize;
+        nextPos += newSize;
+        remaining -= newSize;
+      }
+      if (save) saveWindowState(item.i, item);
+    });
+  };
+
+  const handleResize = (layout, oldItem, newItem) => {
+    if (linkedResize) {
+      if (newItem.w !== oldItem.w) applyLinkedResize(layout, newItem, 'x', false);
+      if (newItem.h !== oldItem.h) applyLinkedResize(layout, newItem, 'y', false);
+    }
+    layoutRef.current = layout;
+  };
+
   const handleResizeStop = (layout, oldItem, newItem) => {
     const snapThreshold = 1;
     if (10 - newItem.w <= snapThreshold) {
       newItem.w = 10;
     }
-    saveWindowState(newItem.i, newItem);
     if (linkedResize) {
-      const groupItems = newItem.group
-        ? layout.filter(item => item.group === newItem.group)
-        : layout.filter(item => item.y === newItem.y);
-      if (groupItems.length > 1) {
-        const sorted = groupItems.slice().sort((a, b) => a.x - b.x);
-        const staticTotal = sorted
-          .filter(item => item.i !== newItem.i && item.static)
-          .reduce((sum, item) => sum + item.w, 0);
-        const adjustable = sorted.filter(item => item.i !== newItem.i && !item.static);
-        const adjustableTotal = adjustable.reduce((sum, item) => sum + item.w, 0);
-        let remaining = 10 - newItem.w - staticTotal;
-        let nextX = 0;
-        sorted.forEach(item => {
-          if (item.i === newItem.i) {
-            const updated = { ...item, x: nextX };
-            nextX += updated.w;
-            saveWindowState(item.i, updated);
-            const idx = layout.findIndex(l => l.i === item.i);
-            if (idx > -1) layout[idx] = updated;
-          } else if (item.static) {
-            const updated = { ...item, x: nextX };
-            nextX += item.w;
-            saveWindowState(item.i, updated);
-            const idx = layout.findIndex(l => l.i === item.i);
-            if (idx > -1) layout[idx] = updated;
-          } else {
-            let width = adjustableTotal
-              ? Math.round(remaining * (item.w / adjustableTotal))
-              : Math.floor(remaining / adjustable.length);
-            width = Math.max(width, item.minW || 1);
-            if (item.maxW) width = Math.min(width, item.maxW);
-            if (item === adjustable[adjustable.length - 1]) {
-              width = remaining;
-            }
-            const updated = { ...item, x: nextX, w: width };
-            nextX += width;
-            remaining -= width;
-            saveWindowState(item.i, updated);
-            const idx = layout.findIndex(l => l.i === item.i);
-            if (idx > -1) layout[idx] = updated;
-          }
-        });
-      }
+      if (newItem.w !== oldItem.w) applyLinkedResize(layout, newItem, 'x');
+      if (newItem.h !== oldItem.h) applyLinkedResize(layout, newItem, 'y');
+    } else {
+      saveWindowState(newItem.i, newItem);
     }
+    layoutRef.current = layout;
   };
 
   const snapToFit = (id) => {
-    const current = getWindowState(id);
-    if (!current) return;
-    const updated = { ...current, x: 0, w: 10 };
-    saveWindowState(id, updated);
+    const layout = layoutRef.current.slice();
+    const item = layout.find(l => l.i === id);
+    if (!item) return;
+    item.x = 0;
+    item.w = 10;
+    applyLinkedResize(layout, item, 'x');
+    applyLinkedResize(layout, item, 'y');
+    layoutRef.current = layout;
   };
 
   const workflowElements = outputWindows
@@ -410,6 +430,8 @@ function CanvasContainer({
     );
   })() : null;
 
+  layoutRef.current = layoutLg;
+
   return (
     <div className="canvas-dnd-wrapper" onDragOver={(e) => e.preventDefault()} onDrop={(e) => e.preventDefault()} style={{ width: '100%', height: '100%' }}>
       <div className="canvas-container">
@@ -426,9 +448,11 @@ function CanvasContainer({
           resizeHandles={['se', 'e', 's']}
           draggableHandle=".window-header"
           draggableCancel=".whiteboard-content"
+          onResize={handleResize}
           onResizeStop={handleResizeStop}
           onDragStart={(layout, oldItem, newItem) => bringToFront(newItem.i)}
           onLayoutChange={(currentLayout) => {
+            layoutRef.current = currentLayout;
             currentLayout.forEach(item => saveWindowState(item.i, item));
            }}
         >
