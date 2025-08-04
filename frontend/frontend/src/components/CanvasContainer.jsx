@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import './css/CanvasContainer.css';
 import { Responsive, WidthProvider } from 'react-grid-layout';
 import 'react-grid-layout/css/styles.css';
@@ -66,6 +66,14 @@ function CanvasContainer({
           getWindowState, toggleLock, isLocked,
           getWindowContentState } = useWindowContext();
 
+  const [zIndices, setZIndices] = useState({});
+  const zCounter = useRef(1);
+  const layoutRef = useRef([]);
+  const bringToFront = (id) => {
+    setZIndices(prev => ({ ...prev, [id]: ++zCounter.current }));
+  };
+  const linkedResize = true;
+
   const dataset = useActiveDataset();
   const previewData = React.useMemo(() => {
     if (Array.isArray(dataset)) return dataset.length <= 100 ? dataset : dataset.slice(0, 100);
@@ -88,9 +96,90 @@ function CanvasContainer({
   // Collect layouts for react-grid-layout so that updates like locking
   // immediately reflect without remounting windows.
   const layoutLg = [];
-  const registerLayout = (id, layout) => {
-    layoutLg.push({ i: id, ...layout });
-    return layout;
+  const registerLayout = (id, layout, group) => {
+    const fullLayout = { i: id, ...layout };
+    if (group) fullLayout.group = group;
+    layoutLg.push(fullLayout);
+    return fullLayout;
+  };
+
+  const applyLinkedResize = (layout, target, axis, save = true) => {
+    const key = axis === 'x' ? 'x' : 'y';
+    const sizeKey = axis === 'x' ? 'w' : 'h';
+    const minKey = axis === 'x' ? 'minW' : 'minH';
+    const maxKey = axis === 'x' ? 'maxW' : 'maxH';
+    const groupItems = target.group
+      ? layout.filter(item => item.group === target.group)
+      : axis === 'x'
+        ? layout.filter(item => item.y === target.y)
+        : layout.filter(item => item.x === target.x);
+    if (groupItems.length <= 1) return;
+    const sorted = groupItems.slice().sort((a, b) => a[key] - b[key]);
+    const total = axis === 'x' ? 10 : sorted.reduce((sum, item) => sum + item[sizeKey], 0);
+    const staticTotal = sorted
+      .filter(item => item.i !== target.i && item.static)
+      .reduce((sum, item) => sum + item[sizeKey], 0);
+    const adjustable = sorted.filter(item => item.i !== target.i && !item.static);
+    if (adjustable.length === 0) return;
+    const adjustableTotal = adjustable.reduce((sum, item) => sum + item[sizeKey], 0);
+    let remaining = total - target[sizeKey] - staticTotal;
+    let nextPos = Math.min(...sorted.map(item => item[key]));
+    sorted.forEach(item => {
+      if (item.i === target.i) {
+        item[key] = nextPos;
+        nextPos += item[sizeKey];
+      } else if (item.static) {
+        item[key] = nextPos;
+        nextPos += item[sizeKey];
+      } else {
+        let newSize = adjustableTotal
+          ? Math.round(remaining * (item[sizeKey] / adjustableTotal))
+          : Math.floor(remaining / adjustable.length);
+        newSize = Math.max(newSize, item[minKey] || 1);
+        if (item[maxKey]) newSize = Math.min(newSize, item[maxKey]);
+        if (item === adjustable[adjustable.length - 1]) {
+          newSize = remaining;
+        }
+        item[key] = nextPos;
+        item[sizeKey] = newSize;
+        nextPos += newSize;
+        remaining -= newSize;
+      }
+      if (save) saveWindowState(item.i, item);
+    });
+  };
+
+  const handleResize = (layout, oldItem, newItem) => {
+    if (linkedResize) {
+      if (newItem.w !== oldItem.w) applyLinkedResize(layout, newItem, 'x', false);
+      if (newItem.h !== oldItem.h) applyLinkedResize(layout, newItem, 'y', false);
+    }
+    layoutRef.current = layout;
+  };
+
+  const handleResizeStop = (layout, oldItem, newItem) => {
+    const snapThreshold = 1;
+    if (10 - newItem.w <= snapThreshold) {
+      newItem.w = 10;
+    }
+    if (linkedResize) {
+      if (newItem.w !== oldItem.w) applyLinkedResize(layout, newItem, 'x');
+      if (newItem.h !== oldItem.h) applyLinkedResize(layout, newItem, 'y');
+    } else {
+      saveWindowState(newItem.i, newItem);
+    }
+    layoutRef.current = layout;
+  };
+
+  const snapToFit = (id) => {
+    const layout = layoutRef.current.slice();
+    const item = layout.find(l => l.i === id);
+    if (!item) return;
+    item.x = 0;
+    item.w = 10;
+    applyLinkedResize(layout, item, 'x');
+    applyLinkedResize(layout, item, 'y');
+    layoutRef.current = layout;
   };
 
   const workflowElements = outputWindows
@@ -103,11 +192,17 @@ function CanvasContainer({
       const layout = registerLayout(`workflow-${win.id}`, {
         ...(saved || defaultLayout),
         static: isLocked(`workflow-${win.id}`)
-      });
+      }, 'workflow');
 
       return (
-        <div key={`workflow-output-${win.id}`} className="grid-item" data-grid={layout}>
-          <div className="window-header drag-handle">
+        <div
+          key={`workflow-output-${win.id}`}
+          className="grid-item"
+          data-grid={layout}
+          onMouseDown={() => bringToFront(`workflow-${win.id}`)}
+          style={{ zIndex: zIndices[`workflow-${win.id}`] || 1 }}
+        >
+          <div className="window-header drag-handle" onDoubleClick={() => snapToFit(`workflow-${win.id}`)}>
             <span className="header-title">{win.label}</span>
             <div className="header-button-group">
               <MinimizeButton onClick={() => minimizeWindow(`workflow-${win.id}`, win.label)} />
@@ -140,12 +235,17 @@ function CanvasContainer({
     const layout = registerLayout('dataPreview', {
       ...(saved || { x: 0, y: 0, w: 10, h: 15, minW: 3, minH: 2, resizeHandles: ['se', 'e', 's'] }),
       static: isLocked('dataPreview')
-    });
+    }, 'preview');
 
     return (
-      <div key="dataPreview" className="grid-item" data-grid={layout}
-        style={{ backgroundColor: '#f4f4f4', border: '2px solid #ccc', borderRadius: '6px', overflow: 'hidden' }}>
-        <div className="window-header drag-handle">
+      <div
+        key="dataPreview"
+        className="grid-item"
+        data-grid={layout}
+        onMouseDown={() => bringToFront('dataPreview')}
+        style={{ backgroundColor: '#f4f4f4', border: '2px solid #ccc', borderRadius: '6px', overflow: 'hidden', zIndex: zIndices['dataPreview'] || 1 }}
+      >
+        <div className="window-header drag-handle" onDoubleClick={() => snapToFit('dataPreview')}>
           <span className="header-title">📄 Data Preview</span>
           <div className="header-button-group">
             <MinimizeButton onClick={() => minimizeWindow('dataPreview', 'Data Preview')} />
@@ -172,11 +272,17 @@ function CanvasContainer({
     const layout = registerLayout('aiChartWindow', {
       ...(saved || { x: 0, y: 0, w: 10, h: 15, minW: 3, minH: 5, resizeHandles: ['se', 'e', 's'] }),
       static: isLocked('aiChartWindow')
-    });
+    }, 'preview');
 
     return (
-      <div key="aiChartWindow" className="grid-item" data-grid={layout}>
-        <div className="window-header drag-handle">
+      <div
+        key="aiChartWindow"
+        className="grid-item"
+        data-grid={layout}
+        onMouseDown={() => bringToFront('aiChartWindow')}
+        style={{ zIndex: zIndices['aiChartWindow'] || 1 }}
+      >
+        <div className="window-header drag-handle" onDoubleClick={() => snapToFit('aiChartWindow')}>
           <span className="header-title">📊 AI-Generated Chart</span>
           <div className="header-button-group">
             <MinimizeButton onClick={() => minimizeWindow('aiChartWindow', 'AI Chart')} />
@@ -197,12 +303,17 @@ function CanvasContainer({
     const finalLayout = registerLayout('aiWorkflowLab', {
       ...(saved || { x: 0, y: 0, w: 10, h: 27.5, minW: 2, minH: 2, resizeHandles: ['se', 'e', 's'] }),
       static: isLocked('aiWorkflowLab')
-    });
+    }, 'lab');
 
     return (
-      <div key="aiWorkflowLab" className="grid-item" data-grid={finalLayout}
-        style={{ backgroundColor: '#f4f4f4', border: '2px solid #ccc', borderRadius: '6px', overflow: 'hidden' }}>
-        <div className="window-header drag-handle">
+      <div
+        key="aiWorkflowLab"
+        className="grid-item"
+        data-grid={finalLayout}
+        onMouseDown={() => bringToFront('aiWorkflowLab')}
+        style={{ backgroundColor: '#f4f4f4', border: '2px solid #ccc', borderRadius: '6px', overflow: 'hidden', zIndex: zIndices['aiWorkflowLab'] || 1 }}
+      >
+        <div className="window-header drag-handle" onDoubleClick={() => snapToFit('aiWorkflowLab')}>
           <span className="header-title">AI Workflow Lab</span>
           <div className="header-button-group">
             <button
@@ -230,11 +341,17 @@ function CanvasContainer({
     const finalLayout = registerLayout('whiteBoard', {
       ...(saved || { x: 0, y: 0, w: 10, h: 27.5, minW: 2, minH: 2, resizeHandles: ['se', 'e', 's'] }),
       static: isLocked('whiteBoard')
-    });
+    }, 'lab');
 
     return (
-      <div key="whiteBoard" className="grid-item" data-grid={finalLayout}>
-        <div className="window-header drag-handle">
+      <div
+        key="whiteBoard"
+        className="grid-item"
+        data-grid={finalLayout}
+        onMouseDown={() => bringToFront('whiteBoard')}
+        style={{ zIndex: zIndices['whiteBoard'] || 1 }}
+      >
+        <div className="window-header drag-handle" onDoubleClick={() => snapToFit('whiteBoard')}>
           <span className="header-title">📊 White Board</span>
           <div className="header-button-group">
             <button
@@ -261,12 +378,17 @@ function CanvasContainer({
     const layout = registerLayout('chartWindow', {
       ...(saved || { x: 0.5, y: 0.5, w: 9, h: 27.5, minW: 4, minH: 8, maxH: 30, resizeHandles: ['se', 'e', 's'] }),
       static: isLocked('chartWindow')
-    });
+    }, 'charts');
 
     return (
-      <div key="chartWindow" className="grid-item" data-grid={layout}
-        style={{ minWidth: '150px', minHeight: '150px', overflow: 'hidden', backgroundColor: '#fff', zIndex: 5, borderRadius: '8px' }}>
-        <div className="preview-header drag-handle">
+      <div
+        key="chartWindow"
+        className="grid-item"
+        data-grid={layout}
+        onMouseDown={() => bringToFront('chartWindow')}
+        style={{ minWidth: '150px', minHeight: '150px', overflow: 'hidden', backgroundColor: '#fff', borderRadius: '8px', zIndex: zIndices['chartWindow'] || 5 }}
+      >
+        <div className="preview-header drag-handle" onDoubleClick={() => snapToFit('chartWindow')}>
           <span>📊 Chart Visualization</span>
           <div className="header-button-group">
             <MinimizeButton onClick={() => minimizeWindow('chartWindow', 'Chart')} />
@@ -284,12 +406,17 @@ function CanvasContainer({
     const layout = registerLayout('storyPanel', {
       ...(saved || { x: 1, y: 0, w: 9, h: 31, minW: 7, minH: 15, resizeHandles: ['se', 'e', 's'] }),
       static: isLocked('storyPanel')
-    });
+    }, 'story');
 
     return (
-      <div key="storyWindow" className="grid-item" data-grid={layout}
-        style={{ backgroundColor: '#f4f4f4', border: '2px solid #ccc', borderRadius: '6px', overflow: 'hidden' }}>
-        <div className="window-header drag-handle">
+      <div
+        key="storyWindow"
+        className="grid-item"
+        data-grid={layout}
+        onMouseDown={() => bringToFront('storyPanel')}
+        style={{ backgroundColor: '#f4f4f4', border: '2px solid #ccc', borderRadius: '6px', overflow: 'hidden', zIndex: zIndices['storyPanel'] || 1 }}
+      >
+        <div className="window-header drag-handle" onDoubleClick={() => snapToFit('storyPanel')}>
           <span className="header-title">📖 Data Story</span>
           <div className="header-button-group">
             <MinimizeButton onClick={() => minimizeWindow('storyPanel', 'Story')} />
@@ -302,6 +429,8 @@ function CanvasContainer({
       </div>
     );
   })() : null;
+
+  layoutRef.current = layoutLg;
 
   return (
     <div className="canvas-dnd-wrapper" onDragOver={(e) => e.preventDefault()} onDrop={(e) => e.preventDefault()} style={{ width: '100%', height: '100%' }}>
@@ -316,9 +445,14 @@ function CanvasContainer({
           isDraggable
           compactType={null}
           preventCollision
-          draggableHandle=".window-header" 
+          resizeHandles={['se', 'e', 's']}
+          draggableHandle=".window-header"
           draggableCancel=".whiteboard-content"
+          onResize={handleResize}
+          onResizeStop={handleResizeStop}
+          onDragStart={(layout, oldItem, newItem) => bringToFront(newItem.i)}
           onLayoutChange={(currentLayout) => {
+            layoutRef.current = currentLayout;
             currentLayout.forEach(item => saveWindowState(item.i, item));
            }}
         >
