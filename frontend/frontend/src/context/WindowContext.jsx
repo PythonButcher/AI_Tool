@@ -1,4 +1,11 @@
-import React, { createContext, useContext, useState, useMemo, useEffect } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useMemo,
+  useEffect,
+  useCallback,
+} from 'react';
 
 export const WindowContext = createContext();
 
@@ -36,11 +43,14 @@ export const WindowProvider = ({ children }) => {
 
   const getWindowState = (id) => windowStates[id] || null;
 
-  const saveWindowContentState = (id, data) => {
+  const saveWindowContentState = useCallback((id, data) => {
     setWindowContentStates(prev => ({ ...prev, [id]: data }));
-  };
+  }, []);
 
-  const getWindowContentState = (id) => windowContentStates[id] || null;
+  const getWindowContentState = useCallback(
+    (id) => windowContentStates[id] || null,
+    [windowContentStates]
+  );
 
   const toggleLock = (id) => {
   setLockedWindows(prev => ({ ...prev, [id]: !prev[id] }));

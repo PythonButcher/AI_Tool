@@ -1,5 +1,5 @@
 // Whiteboard.jsx
-import React, { useRef, useCallback } from "react";
+import React, { useRef, useCallback, useState, useEffect } from "react";
 import { Excalidraw } from "@excalidraw/excalidraw";
 import "@excalidraw/excalidraw/index.css";
 import WhiteboardToolbar from "./WhiteBoardToolbar";
@@ -9,6 +9,7 @@ const Whiteboard = ({ savedScene }) => {
   const excalidrawRef = useRef(null);
   const { saveWindowContentState } = useWindowContext();
   const lastSceneRef = useRef(savedScene ? JSON.stringify(savedScene) : null);
+  const [scene, setScene] = useState(savedScene || null);
 
   const initialData = {
     appState: {
@@ -16,16 +17,20 @@ const Whiteboard = ({ savedScene }) => {
     },
   };
 
-  const handleChange = useCallback(
-    (elements, appState) => {
-      const snapshot = JSON.stringify({ elements, appState });
-      if (snapshot !== lastSceneRef.current) {
-        lastSceneRef.current = snapshot;
-        saveWindowContentState("whiteBoard", { elements, appState });
-      }
-    },
-    [saveWindowContentState]
-  );
+  const handleChange = useCallback((elements, appState) => {
+    const snapshot = { elements, appState };
+    const serialized = JSON.stringify(snapshot);
+    if (serialized !== lastSceneRef.current) {
+      lastSceneRef.current = serialized;
+      setScene(snapshot);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (scene) {
+      saveWindowContentState("whiteBoard", scene);
+    }
+  }, [scene, saveWindowContentState]);
 
   return (
     <div style={{ height: "100%", width: "100%", display: "flex", flexDirection: "column" }}>
