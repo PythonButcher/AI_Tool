@@ -16,6 +16,16 @@
   overflow: hidden; /* Prevent content overflow */
   display: flex;
   flex-direction: column; /* Ensure contents stack properly */
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.grid-item:hover {
+  box-shadow: 0px 6px 12px rgba(0, 0, 0, 0.15);
+  border-color: #b0c4de;
+}
+
+.react-grid-item {
+  transition: transform 0.2s ease, width 0.2s ease, height 0.2s ease;
 }
 
 /* Grid Item Styling */
@@ -93,6 +103,16 @@
   bottom: 0;
   right: 0;
   z-index: 10;
+  opacity: 0;
+  transition: opacity 0.2s ease, background 0.2s ease;
+}
+
+.grid-item:hover .react-resizable-handle {
+  opacity: 1;
+}
+
+.react-resizable-handle:hover {
+  background: #ff8a80;
 }
 
 /* Responsive Design */
@@ -171,6 +191,10 @@
   cursor: move;
   user-select: none;
   box-sizing: border-box;
+  }
+
+.window-header:hover {
+  background-color: #f0f0f0;
 }
 
 /* Styles for the title text */

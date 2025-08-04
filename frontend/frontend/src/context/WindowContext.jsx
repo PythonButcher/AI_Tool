@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useMemo } from 'react';
+import React, { createContext, useContext, useState, useMemo, useEffect } from 'react';
 
 export const WindowContext = createContext();
 
@@ -14,6 +14,21 @@ export const WindowProvider = ({ children }) => {
   const openWindow = (id) => {
     setOpenWindows((prev) => (prev.includes(id) ? prev : [...prev, id]));
   };
+
+  useEffect(() => {
+    const stored = localStorage.getItem('windowStates');
+    if (stored) {
+      try {
+        setWindowStates(JSON.parse(stored));
+      } catch (e) {
+        console.error('Failed to parse stored window states', e);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('windowStates', JSON.stringify(windowStates));
+  }, [windowStates]);
 
   const saveWindowState = (id, layout) => {
     setWindowStates(prev => ({ ...prev, [id]: layout }));
