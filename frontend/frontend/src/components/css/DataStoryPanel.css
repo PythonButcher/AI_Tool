@@ -19,7 +19,7 @@
   flex-direction: row;
   gap: 24px;
   height: 90%;
-  padding: 16px 18px;
+  padding: 12px 15px;
   background: var(--nt-gray-light);
   border-top: 4px solid var(--nt-red);
   box-shadow: var(--nt-shadow);
@@ -32,7 +32,7 @@
 /* ── Chart Column (Left) ───────────────────────────────────────────────────── */
 .charts-column {
   flex: 1 1 55%;
-  max-width: 55%;
+  max-width: 59%;
   display: flex;
   flex-direction: column;
   gap: 24px;
@@ -50,7 +50,7 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  width: 100%;
+  width: 95%;
   height: 363px;     /* ✅ Limits chart expansion and cuts vertical white space */
   box-sizing: border-box;
 }

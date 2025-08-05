@@ -83,7 +83,7 @@ export default function DataStoryPanel({ uploadedData, cleanedData, model }) {
 
       <div className="story-panel">
         <div className="panel-header">
-          <svg width="10" height="10" style={{ fill: "var(--nt-red)" }}>
+          <svg width="10" height="0" style={{ fill: "var(--nt-red)" }}>
             <circle cx="5" cy="5" r="5" />
           </svg>
           <h3>Data Story</h3>
