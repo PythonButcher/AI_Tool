@@ -420,7 +420,7 @@ function CanvasContainer({
 
     return (
       <div
-        key="storyWindow"
+        key="storyPanel"
         className="grid-item"
         data-grid={layout}
         onMouseDown={() => bringToFront('storyPanel')}
@@ -431,17 +431,17 @@ function CanvasContainer({
           <div className="header-button-group">
               <button
               className="header-button"
-              onClick={() => toggleLock('storyWindow')}
-              title={isLocked('storyWindow') ? 'Unlock Window' : 'Lock Window'}
+              onClick={() => toggleLock('storyPanel')}
+              title={isLocked('storyPanel') ? 'Unlock Window' : 'Lock Window'}
             >
-              {isLocked('storyWindow') ? <FaLock /> : <FaLockOpen />}
+              {isLocked('storyPanel') ? <FaLock /> : <FaLockOpen />}
               </button>
             <MinimizeButton onClick={() => minimizeWindow('storyPanel', 'Story')} />
-            <MaximizeButton windowId="storyWindow" />
+            <MaximizeButton windowId="storyPanel" />
             <CloseButton onClick={() => setShowStoryPanel(false)} />
           </div>
         </div>
-        <div className="window-content" style={{ padding: '10px', height: 'calc(100% - 40px)', overflow: 'auto' }}>
+        <div className="window-content" style={{ height: 'calc(100% - 40px)', display: 'flex', flexDirection: 'column' }}>
           <DataStoryPanel uploadedData={uploadedData} cleanedData={cleanedData} />
         </div>
       </div>

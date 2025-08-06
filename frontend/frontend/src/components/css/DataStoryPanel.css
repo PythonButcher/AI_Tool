@@ -1,58 +1,62 @@
 /*──────────────────────────────────────────────────────────────────────────────
-  DataStoryPanel.css        —  Final Balanced Layout (Mimics Reference)
+  DataStoryPanel.css – Responsive & Auto-Sized Layout
 ──────────────────────────────────────────────────────────────────────────────*/
 
 :root {
   --nt-red:        #e60012;
   --nt-gray-light: #f4f4f4;
   --nt-gray-dark:  #404040;
-  --nt-accent:     #3686ff;
-  --nt-radius:     12px;
-  --nt-shadow:     0 4px 10px rgba(0, 0, 0, .15);
+  --nt-radius:     16px;
+  --nt-shadow:     0 4px 10px rgba(162, 155, 155, 0.855);
   --font-pixel:    "Press Start 2P", system-ui, sans-serif;
   --font-body:     "Inter", "Segoe UI", sans-serif;
+  --font-size:     20;
 }
 
 /* ── Storyboard Layout ─────────────────────────────────────────────────────── */
 .storyboard-wrapper {
   display: flex;
   flex-direction: row;
-  gap: 24px;
-  height: 90%;
+  gap: 16px;
+  height: 100%;
   padding: 12px 15px;
   background: var(--nt-gray-light);
   border-top: 4px solid var(--nt-red);
   box-shadow: var(--nt-shadow);
   border-radius: var(--nt-radius);
   font-family: var(--font-body);
-  min-height: 100%;
   box-sizing: border-box;
+  min-height: 0; /* allows flex children to shrink properly */
 }
 
 /* ── Chart Column (Left) ───────────────────────────────────────────────────── */
 .charts-column {
   flex: 1 1 55%;
-  max-width: 59%;
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-  overflow-y: auto;
-  padding-right: 4px;
-}
-
-/* Chart Card */
-.chart-wrapper {
-  background: #fff;
-  border-radius: var(--nt-radius); 
-  box-shadow: var(--nt-shadow);
-  border-left: 6px solid var(--nt-accent);
-  padding: 10px 10px;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  width: 95%;
-  height: 363px;     /* ✅ Limits chart expansion and cuts vertical white space */
-  box-sizing: border-box;
+  overflow-y: auto;
+  min-height: 0; /* critical for scroll to work in flex */
+}
+
+.chart-wrapper {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border-radius: var(--nt-radius);
+  box-shadow: var(--nt-shadow);
+  padding: 10px;
+  min-height: 0;        /* critical for flexbox layouts */
+  height: auto;
+}
+
+.chart-wrapper canvas {
+  width: 100% !important;
+  height: 100% !important;  /* This is the key line! */
+  min-height: 200px;
+  max-height: 500px;
+  display: block;
 }
 
 
@@ -66,49 +70,48 @@
 /* ── Narrative Panel (Right) ───────────────────────────────────────────────── */
 .story-panel {
   flex: 1 1 45%;
-  max-width: 45%;
   display: flex;
   flex-direction: column;
   overflow-y: auto;
   background: #fff;
   font-weight: bold;
   border-radius: var(--nt-radius);
-  box-shadow: var(--nt-shadow);
-  box-shadow: 0 0 10px rgba(59, 237, 112, 0.5); /* Red-tinted shadow */
+  box-shadow: 0 0 10px rgba(59, 237, 112, 0.5);
   padding: 24px 32px;
   box-sizing: border-box;
+  min-height: 0; /* ensures proper flex scroll */
 }
+
 .story-panel-no-data {
   flex: 1 1 45%;
   max-width: 100%;
   display: flex;
   flex-direction: column;
-  justify-content: center;     /* Center error message vertically */
-  align-items: center;         /* Center horizontally */
+  justify-content: center;
+  align-items: center;
   overflow-y: auto;
-  background: #ffe6e6;         /* Light red background */
-  border: 2px solid #d32f2f;   /* Strong red border */
-  color: #b71c1c;              /* Dark red text */
+  background: #ffe6e6;
+  border: 2px solid #d32f2f;
+  color: #b71c1c;
   font-weight: bold;
-  font-size: 1.2rem;           /* Slightly larger text for emphasis */
+  font-size: 1.2rem;
   border-radius: var(--nt-radius);
-  box-shadow: 0 0 10px rgba(211, 47, 47, 0.5); /* Red-tinted shadow */
+  box-shadow: 0 0 10px rgba(211, 47, 47, 0.5);
   padding: 24px 32px;
   box-sizing: border-box;
 }
-
 
 /* Header in right panel */
 .panel-header {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: -2px;
   margin-bottom: 18px;
 }
 .panel-header h3 {
   font-family: var(--font-pixel);
-  font-size: 15px;
-  letter-spacing: 0.5px;
+  font-size: 20px;
+  letter-spacing: 0.8px;
   color: var(--nt-red);
   margin: 0;
 }
@@ -122,12 +125,12 @@
 /* Story sections */
 .story-section h4 {
   font-family: var(--font-pixel);
-  font-size: 13px;
+  font-size: 18px;
   color: var(--nt-accent);
   margin: 20px 0 6px;
 }
 .story-section p {
-  font-size: 14px;
+  font-size: 16px;
   line-height: 1.55;
   margin: 0;
   color: var(--nt-gray-dark);
@@ -156,7 +159,6 @@
   height: auto !important;
   max-height: 86% !important;
 }
-
 
 /* ── Mobile fallback ───────────────────────────────────────────────────────── */
 @media (max-width: 900px) {
