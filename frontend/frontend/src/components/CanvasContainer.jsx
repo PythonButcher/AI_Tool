@@ -267,6 +267,8 @@ function CanvasContainer({
     );
   })() : null;
 
+  // AI Charting
+
   const aiChartElement = (showAIChart && !minimizedWindows['aiChartWindow']) ? (() => {
     const saved = getWindowState('aiChartWindow');
     const layout = registerLayout('aiChartWindow', {
@@ -296,6 +298,8 @@ function CanvasContainer({
       </div>
     );
   })() : null;
+
+  // Workflowlab
 
   const workflowLabElement = (showAiWorkflow && !minimizedWindows['aiWorkflowLab']) ? (() => {
     const saved = getWindowState('aiWorkflowLab');
@@ -335,6 +339,8 @@ function CanvasContainer({
     );
   })() : null;
 
+  // WhiteBoard
+
   const whiteBoardElement = (showWhiteBoard && !minimizedWindows['whiteBoard']) ? (() => {
     const saved = getWindowState('whiteBoard');
     const contentState = getWindowContentState('whiteBoard');
@@ -373,6 +379,8 @@ function CanvasContainer({
     );
   })() : null;
 
+  // Chart visualisation (non AI)
+
   const chartWindowElement = (showChartWindow && selectedChartType && !minimizedWindows['chartWindow']) ? (() => {
     const saved = getWindowState('chartWindow');
     const layout = registerLayout('chartWindow', {
@@ -401,6 +409,8 @@ function CanvasContainer({
     );
   })() : null;
 
+  // Story Board
+
   const storyPanelElement = (showStoryPanel && !minimizedWindows['storyPanel']) ? (() => {
     const saved = getWindowState('storyPanel');
     const layout = registerLayout('storyPanel', {
@@ -410,7 +420,7 @@ function CanvasContainer({
 
     return (
       <div
-        key="storyWindow"
+        key="storyPanel"
         className="grid-item"
         data-grid={layout}
         onMouseDown={() => bringToFront('storyPanel')}
@@ -419,11 +429,19 @@ function CanvasContainer({
         <div className="window-header drag-handle" onDoubleClick={() => snapToFit('storyPanel')}>
           <span className="header-title">📖 Data Story</span>
           <div className="header-button-group">
+              <button
+              className="header-button"
+              onClick={() => toggleLock('storyPanel')}
+              title={isLocked('storyPanel') ? 'Unlock Window' : 'Lock Window'}
+            >
+              {isLocked('storyPanel') ? <FaLock /> : <FaLockOpen />}
+              </button>
             <MinimizeButton onClick={() => minimizeWindow('storyPanel', 'Story')} />
+            <MaximizeButton windowId="storyPanel" />
             <CloseButton onClick={() => setShowStoryPanel(false)} />
           </div>
         </div>
-        <div className="window-content" style={{ padding: '10px', height: 'calc(100% - 40px)', overflow: 'auto' }}>
+        <div className="window-content" style={{ height: 'calc(100% - 40px)', display: 'flex', flexDirection: 'column' }}>
           <DataStoryPanel uploadedData={uploadedData} cleanedData={cleanedData} />
         </div>
       </div>

@@ -1,6 +1,6 @@
 // 📂 AiWorkflowLab.jsx — cleaned and fixed DropZone behavior with working hover
 
-import { useState, useCallback, useContext, useRef } from "react";
+import { useState, useCallback, useContext, useRef, useEffect } from "react";
 import {
   ReactFlow,
   Controls,
@@ -88,18 +88,11 @@ function AiWorkflowLab({ savedState }) {
     [hasExecuted]
   );
 
-    // 🔁 Add this new handler
-  const onConnect = useCallback(
-    (params) => {
-      console.log("🔗 New edge created:", params);
-      setEdges((eds) => {
-        const updatedEdges = addEdge(params, eds);
-        saveWindowContentState('aiWorkflowLab', { nodes, edges: updatedEdges });
-        return updatedEdges;
-      });
-    },
-    [nodes, saveWindowContentState]
-  );
+  // 🔁 Add this new handler
+  const onConnect = useCallback((params) => {
+    console.log("🔗 New edge created:", params);
+    setEdges((eds) => addEdge(params, eds));
+  }, []);
 
 
   const onNodesChange = useCallback(
@@ -118,23 +111,15 @@ function AiWorkflowLab({ savedState }) {
           }
         }
 
-        saveWindowContentState('aiWorkflowLab', { nodes: updatedNodes, edges });
         return updatedNodes;
       });
     },
-    [checkOverlapAndTrigger, saveWindowContentState, edges]
+    [checkOverlapAndTrigger]
   );
 
-  const onEdgesChange = useCallback(
-    (changes) => {
-      setEdges((eds) => {
-        const updatedEdges = applyEdgeChanges(changes, eds);
-        saveWindowContentState('aiWorkflowLab', { nodes, edges: updatedEdges });
-        return updatedEdges;
-      });
-    },
-    [nodes, saveWindowContentState]
-  );
+  const onEdgesChange = useCallback((changes) => {
+    setEdges((eds) => applyEdgeChanges(changes, eds));
+  }, []);
 
   const handleAddNode = useCallback(
     (type) => {
@@ -155,15 +140,15 @@ function AiWorkflowLab({ savedState }) {
         },
       };
 
-      setNodes((prevNodes) => {
-        const updated = [...prevNodes, newNode];
-        saveWindowContentState('aiWorkflowLab', { nodes: updated, edges });
-        return updated;
-      });
+      setNodes((prevNodes) => [...prevNodes, newNode]);
       setClicked(false);
     },
-    [coords, setClicked, edges, saveWindowContentState]
+    [coords, setClicked]
   );
+
+  useEffect(() => {
+    saveWindowContentState('aiWorkflowLab', { nodes, edges });
+  }, [nodes, edges, saveWindowContentState]);
 
   const renderedNodes = nodes.map((node) => ({
     ...node,

@@ -22,31 +22,26 @@ if (!chartData || !chartData.labels || !chartData.datasets) {
 
 
   const options = {
-    responsive: true,
-    maintainAspectRatio: false,
-    layout: {
-    padding: {
-      top: 20,
-      bottom: 30,     // ✅ extra breathing room
-      left: 10,
-      right: 10
-    }
-  },
-    plugins: { legend: { display: true }, tooltip: { enabled: true } },
-    animation: {
-      onComplete: () => {
-        const chart = chartRef.current;
-        if (chart) {
-          const ctx = chart.ctx;
-          ctx.save();
-          ctx.globalCompositeOperation = 'destination-over';
-          ctx.fillStyle = '#ffffff';
-          ctx.fillRect(0, 0, chart.width, chart.height);
-          ctx.restore();
-        }
-      },
+  responsive: true,
+  maintainAspectRatio: false,   // Must be false!
+  aspectRatio: undefined,       // Allows full flexible height
+  layout: { padding: 10 },
+  plugins: { legend: { display: true }, tooltip: { enabled: true } },
+  animation: {
+    onComplete: () => {
+      const chart = chartRef.current;
+      if (chart) {
+        const ctx = chart.ctx;
+        ctx.save();
+        ctx.globalCompositeOperation = 'destination-over';
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, chart.width, chart.height);
+        ctx.restore();
+      }
     },
-  };
+  },
+};
+
 
   return (
     <div
