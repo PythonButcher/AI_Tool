@@ -2,15 +2,27 @@ import React, { useEffect, useState, useMemo } from "react";
 import axios from "axios";
 import ChartComponentAI from "./chart_components/ChartComponentAI";
 import { getDynamicColors } from "../utils/ChartStyles";
+import { useWindowContext } from '../context/WindowContext';
 import "./css/DataStoryPanel.css";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
-export default function DataStoryPanel({ uploadedData, cleanedData, model }) {
-  const [story, setStory] = useState(null);
+
+export default function DataStoryPanel({ uploadedData, cleanedData, model, savedState }) {
+  const { saveWindowContentState } = useWindowContext();
+  const [story, setStory] = useState(savedState || null);  // ✅ initialize from savedState
   const [error, setError] = useState(null);
 
+  console.log("📘 story model in DataStoryPanel:", model);
+  
   useEffect(() => {
+    // ✅ Hydrate from savedState if available and story hasn't been set yet
+    if (savedState && !story) {
+      setStory(savedState);
+      return;
+    }
+
+    // ✅ Skip if story already exists or no data to fetch from
     if (story || !(uploadedData || cleanedData)) return;
 
     (async () => {
@@ -24,19 +36,26 @@ export default function DataStoryPanel({ uploadedData, cleanedData, model }) {
 
         const { data } = await axios.post(`${API_URL}${route}`, {
           cleanedData,
-          uploadedData: payload
+          uploadedData: payload,
         });
 
         setStory({
-          sections : data.sections  || [],
-          charts   : data.charts    || [],
+          sections: data.sections || [],
+          charts: data.charts || [],
         });
       } catch (e) {
         console.error("Storyboard fetch failed:", e);
         setError("AI failed to generate a storyboard.");
       }
     })();
-  }, [story, uploadedData, cleanedData]);
+  }, [story, uploadedData, cleanedData, savedState, model]);
+
+  // DataStoryPanel.jsx
+  useEffect(() => {
+    if (story) {
+      saveWindowContentState('storyPanel', story);
+    }
+  }, [story, saveWindowContentState]);
 
   const chartConfigs = useMemo(() => {
     if (!story) return [];

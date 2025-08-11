@@ -1,3 +1,4 @@
+// File: App.jsx
 import React, { useState, useCallback, useEffect, useContext } from 'react';
 import MenuBar from './components/MenuBar';
 import CanvasContainer from './components/CanvasContainer';
@@ -10,7 +11,7 @@ import { transformToChartData } from './utils/chartDataUtils';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import AIChat from './components/ai_ml_components/AIChat';
 import { DataContext } from './context/DataContext';
-import DataStoryPanel from './components/DataStoryPanel';
+// ⛔️ Removed: import DataStoryPanel from './components/DataStoryPanel';
 import DataFilterPanel from './components/DataFilterPanel';
 import './App.css';
 
@@ -41,7 +42,6 @@ function App() {
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
   );
 
-
   // AI charting state (separate from standard)
   const [aiChartData, setAiChartData] = useState(null);
   const [aiChartType, setAiChartType] = useState('Bar');
@@ -68,8 +68,6 @@ function App() {
   const [showStoryPanel, setShowStoryPanel] = useState(false);
   const [outputWindows, setOutputWindows] = useState([]);
 
-  
-
   useEffect(() => {
     if (uploadedData) {
       setShowChartWindow(true);
@@ -81,9 +79,9 @@ function App() {
     console.log("Sidebar render cleanedData:", uploadedData);
   }, [uploadedData]);
   
-useEffect(() => {
-  console.log("📉 Filtered data:", openDataFilter);
-}, [openDataFilter]);
+  useEffect(() => {
+    console.log("📉 Filtered data:", openDataFilter);
+  }, [openDataFilter]);
 
   // Notify when AI report has been generated
   useEffect(() => {
@@ -91,7 +89,6 @@ useEffect(() => {
       setAiReportReady(true);
     }
   }, [pipelineResults, setAiReportReady]);
-
 
   useEffect(() => {
     console.log("📊 showAIChart state changed:", showAIChart);
@@ -221,10 +218,9 @@ useEffect(() => {
   }, []);
 
   const handleStoryModelChange = (newModel) => {
-  console.log("Switching story model to:", newModel);
-  setStoryModel(newModel);
-};
-
+    console.log("Switching story model to:", newModel);
+    setStoryModel(newModel);
+  };
 
   const handleFieldDrop = useCallback(
     (axis, field) => {
@@ -280,7 +276,7 @@ useEffect(() => {
 
   return (
     <ThemeProvider theme={theme}>
-        <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+      <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
         <div className="app-container">
           {/* Sidebar with actions and data cleaning */}
           <SideBar
@@ -337,59 +333,60 @@ useEffect(() => {
 
             {/* Canvas Container wraps multiple display components */}
             {showCanvasContainer && (
-                <CanvasContainer
-                  showAiWorkflow={showAiWorkflow}  // ✅ Pass state down
-                  setShowAiWorkflow={setShowAiWorkflow}
-                  uploadedData={uploadedData || null}
-                  showDataPreview={showDataPreview}
-                  previewMode={previewMode}              
-                  setPreviewMode={setPreviewMode}
-                  setShowDataPreview={setShowDataPreview}
-                  handleClosePreview={handleClosePreview}
-                  handleCloseCanvas={handleCloseCanvas}
-                  cleanedData={cleanedData}
-                  selectedChartType={selectedChartType}
-                  handleCloseChartWindow={handleCloseChartWindow}
-                  showChartWindow={showChartWindow}
-                  showAIChart={showAIChart}
-                  setShowAIChart={setShowAIChart}
-                  setAiChartType = {setAiChartType}
-                  aiChartData={aiChartData}
-                  aiChartType={aiChartType}
-                  showCanvasMinimized={showCanvasMinimized}
-                  setShowCanvasMinimized={setShowCanvasMinimized}
-                  handleCanvasMinimize={handleCanvasMinimize}
-                  chartMapping={chartMapping}                // ✅ NEW
-                  storyData={storyData}
-                  setStoryData={setStoryData}
-                  showStoryPanel={showStoryPanel}
-                  setShowStoryPanel={setShowStoryPanel}
-                  setAiChartData={setAiChartData}
-                  chartData={chartData} // ✅ ADD THIS
-                  showWhiteBoard={showWhiteBoard}
-                  setShowWhiteBoard={setShowWhiteBoard}
-                  pipelineResults={pipelineResults} 
-                  setPipelineResults={setPipelineResults}
-                  outputWindows={outputWindows}
-                  setOutputWindows={setOutputWindows}
-                  showAiReport={showAiReport}
-                  onCloseAiReport={handleAiReportClose}
-                  >
-                    
-                  {/* Dataset information displayed within the CanvasContainer */}
-                 <DatasetInfo selectedStat={selectedStat} />
-                  {/* Render the AI-generated story panel if requested */}
-                  {showStoryPanel && (
+              <CanvasContainer
+                showAiWorkflow={showAiWorkflow}  // ✅ Pass state down
+                setShowAiWorkflow={setShowAiWorkflow}
+                uploadedData={uploadedData || null}
+                showDataPreview={showDataPreview}
+                previewMode={previewMode}              
+                setPreviewMode={setPreviewMode}
+                setShowDataPreview={setShowDataPreview}
+                handleClosePreview={handleClosePreview}
+                handleCloseCanvas={handleCloseCanvas}
+                cleanedData={cleanedData}
+                selectedChartType={selectedChartType}
+                handleCloseChartWindow={handleCloseChartWindow}
+                showChartWindow={showChartWindow}
+                showAIChart={showAIChart}
+                setShowAIChart={setShowAIChart}
+                setAiChartType = {setAiChartType}
+                aiChartData={aiChartData}
+                aiChartType={aiChartType}
+                showCanvasMinimized={showCanvasMinimized}
+                setShowCanvasMinimized={setShowCanvasMinimized}
+                handleCanvasMinimize={handleCanvasMinimize}
+                chartMapping={chartMapping}                // ✅ NEW
+                storyData={storyData}
+                setStoryData={setStoryData}
+                showStoryPanel={showStoryPanel}
+                setShowStoryPanel={setShowStoryPanel}
+                setAiChartData={setAiChartData}
+                chartData={chartData} // ✅ ADD THIS
+                showWhiteBoard={showWhiteBoard}
+                setShowWhiteBoard={setShowWhiteBoard}
+                pipelineResults={pipelineResults} 
+                setPipelineResults={setPipelineResults}
+                outputWindows={outputWindows}
+                setOutputWindows={setOutputWindows}
+                showAiReport={showAiReport}
+                onCloseAiReport={handleAiReportClose}
+              >
+                {/* ⬇️ Keep other children that should render inside the Data Preview window */}
+                <DatasetInfo selectedStat={selectedStat} />
+
+                {/* ⛔️ Removed: duplicate DataStoryPanel child render */}
+                {/*
+                {showStoryPanel && (
                   <DataStoryPanel
                     uploadedData={uploadedData}
-                    cleanedData={cleanedData} // optional if used
+                    cleanedData={cleanedData}
                     model={storyModel}
                   />
                 )}
-                </CanvasContainer>
-                                
-                )}
-              </div>
+                */}
+              </CanvasContainer>
+            )}
+          </div>
 
           {/* AI Chat component for interacting with AI */}
           <AIChat
@@ -399,7 +396,7 @@ useEffect(() => {
           />
           
         </div>
-        </DndContext>
+      </DndContext>
     </ThemeProvider>
   );
 }
