@@ -11,11 +11,28 @@ const WhiteBoard = ({ savedScene }) => {
   const lastSceneRef = useRef(savedScene ? JSON.stringify(savedScene) : null);
   const [scene, setScene] = useState(savedScene || null);
 
-  const initialData = {
-    appState: {
-      viewBackgroundColor: "#add8e6",
-    },
-  };
+  const LIGHT_BG = "#fafafa";
+  const DARK_BG = "#1e1e1e";
+  const getPreferredBg = () =>
+    window.matchMedia &&
+    window.matchMedia("(prefers-color-scheme: dark)").matches
+      ? DARK_BG
+      : LIGHT_BG;
+  const [bgColor, setBgColor] = useState(getPreferredBg());
+
+  const initialData = savedScene
+    ? {
+        ...savedScene,
+        appState: {
+          ...(savedScene.appState || {}),
+          viewBackgroundColor: bgColor,
+        },
+      }
+    : {
+        appState: {
+          viewBackgroundColor: bgColor,
+        },
+      };
 
   const handleChange = useCallback((elements, appState) => {
     const snapshot = { elements, appState };
@@ -32,9 +49,30 @@ const WhiteBoard = ({ savedScene }) => {
     }
   }, [scene, saveWindowContentState]);
 
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    const handleSchemeChange = (e) => {
+      const color = e.matches ? DARK_BG : LIGHT_BG;
+      setBgColor(color);
+      if (excalidrawRef.current) {
+        const appState = {
+          ...excalidrawRef.current.getAppState(),
+          viewBackgroundColor: color,
+        };
+        excalidrawRef.current.updateScene({ appState });
+      }
+    };
+    mq.addEventListener("change", handleSchemeChange);
+    return () => mq.removeEventListener("change", handleSchemeChange);
+  }, []);
+
   const handleClear = () => {
     if (excalidrawRef.current) {
-      excalidrawRef.current.updateScene({ elements: [] });
+      const appState = {
+        ...excalidrawRef.current.getAppState(),
+        viewBackgroundColor: bgColor,
+      };
+      excalidrawRef.current.updateScene({ elements: [], appState });
     }
   };
 
@@ -75,9 +113,13 @@ const WhiteBoard = ({ savedScene }) => {
         const json = JSON.parse(text);
 
         if (excalidrawRef.current) {
+          const appState = {
+            ...(json.appState || {}),
+            viewBackgroundColor: bgColor,
+          };
           excalidrawRef.current.updateScene({
             elements: json.elements || [],
-            appState: json.appState || {},
+            appState,
           });
         }
       } catch (err) {
@@ -121,7 +163,7 @@ const WhiteBoard = ({ savedScene }) => {
       <div className="wb-canvas">
         <Excalidraw
           ref={excalidrawRef}
-          initialData={savedScene || initialData}
+          initialData={initialData}
           onChange={handleChange}
         />
       </div>
