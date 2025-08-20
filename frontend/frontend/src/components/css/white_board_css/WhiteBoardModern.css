@@ -1,0 +1,35 @@
+.whiteboard-modern {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+}
+
+.whiteboard-modern .wb-toolbar {
+  display: flex;
+  gap: 8px;
+  padding: 8px 12px;
+  background-color: #1e1e1e;
+  border-radius: 6px;
+  margin-bottom: 8px;
+  align-items: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.whiteboard-modern .wb-toolbar button {
+  background-color: #2c2c2c;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.whiteboard-modern .wb-toolbar button:hover {
+  background-color: #3a3a3a;
+}
+
+.whiteboard-modern .wb-canvas {
+  flex: 1;
+}
