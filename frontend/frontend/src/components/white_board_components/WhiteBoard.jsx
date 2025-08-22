@@ -11,26 +11,17 @@ const WhiteBoard = ({ savedScene }) => {
   const lastSceneRef = useRef(savedScene ? JSON.stringify(savedScene) : null);
   const [scene, setScene] = useState(savedScene || null);
 
-  const LIGHT_BG = "#fafafa";
-  const DARK_BG = "#1e1e1e";
-  const getPreferredBg = () =>
-    window.matchMedia &&
-    window.matchMedia("(prefers-color-scheme: dark)").matches
-      ? DARK_BG
-      : LIGHT_BG;
-  const [bgColor, setBgColor] = useState(getPreferredBg());
-
   const initialData = savedScene
     ? {
         ...savedScene,
         appState: {
           ...(savedScene.appState || {}),
-          viewBackgroundColor: bgColor,
+          viewBackgroundColor: "transparent",
         },
       }
     : {
         appState: {
-          viewBackgroundColor: bgColor,
+          viewBackgroundColor: "transparent",
         },
       };
 
@@ -49,28 +40,11 @@ const WhiteBoard = ({ savedScene }) => {
     }
   }, [scene, saveWindowContentState]);
 
-  useEffect(() => {
-    const mq = window.matchMedia("(prefers-color-scheme: dark)");
-    const handleSchemeChange = (e) => {
-      const color = e.matches ? DARK_BG : LIGHT_BG;
-      setBgColor(color);
-      if (excalidrawRef.current) {
-        const appState = {
-          ...excalidrawRef.current.getAppState(),
-          viewBackgroundColor: color,
-        };
-        excalidrawRef.current.updateScene({ appState });
-      }
-    };
-    mq.addEventListener("change", handleSchemeChange);
-    return () => mq.removeEventListener("change", handleSchemeChange);
-  }, []);
-
   const handleClear = () => {
     if (excalidrawRef.current) {
       const appState = {
         ...excalidrawRef.current.getAppState(),
-        viewBackgroundColor: bgColor,
+        viewBackgroundColor: "transparent",
       };
       excalidrawRef.current.updateScene({ elements: [], appState });
     }
@@ -115,7 +89,7 @@ const WhiteBoard = ({ savedScene }) => {
         if (excalidrawRef.current) {
           const appState = {
             ...(json.appState || {}),
-            viewBackgroundColor: bgColor,
+            viewBackgroundColor: "transparent",
           };
           excalidrawRef.current.updateScene({
             elements: json.elements || [],
