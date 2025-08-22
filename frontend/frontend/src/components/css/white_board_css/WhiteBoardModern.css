@@ -5,30 +5,30 @@
   width: 100%;
 
   /* light theme defaults */
-  --toolbar-bg: #f9f8f6;
-  --toolbar-border: #e5e1da;
+  --toolbar-bg: rgba(255, 255, 255, 0.9);
+  --toolbar-border: #d8d6d0;
   --toolbar-button-bg: #ffffff;
-  --toolbar-button-hover-bg: #f0ede9;
-  --toolbar-button-text: #2e2e2e;
-  --toolbar-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  --canvas-bg: #fdfbf7;
-  --canvas-border: #e5e1da;
-  --canvas-dot-color: #ebe5dd;
-  --canvas-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  --toolbar-button-hover-bg: #f3f2ef;
+  --toolbar-button-text: #2d2d2d;
+  --toolbar-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  --canvas-bg: #fefdfb;
+  --canvas-border: #e3e0da;
+  --canvas-dot-color: #e1e0db;
+  --canvas-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
 }
 
 @media (prefers-color-scheme: dark) {
   .whiteboard-modern {
-    --toolbar-bg: #2b313d;
-    --toolbar-border: #3a404f;
-    --toolbar-button-bg: #353b49;
-    --toolbar-button-hover-bg: #414858;
-    --toolbar-button-text: #f3f4f6;
-    --toolbar-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
-    --canvas-bg: #1f2530;
-    --canvas-border: #3a404f;
-    --canvas-dot-color: #2c3342;
-    --canvas-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+    --toolbar-bg: rgba(44, 54, 70, 0.75);
+    --toolbar-border: rgba(255, 255, 255, 0.08);
+    --toolbar-button-bg: rgba(55, 65, 80, 0.9);
+    --toolbar-button-hover-bg: rgba(65, 75, 90, 0.9);
+    --toolbar-button-text: #e5e7eb;
+    --toolbar-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+    --canvas-bg: #1e2533;
+    --canvas-border: #2a3342;
+    --canvas-dot-color: #4b5567;
+    --canvas-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
   }
 }
 
@@ -42,6 +42,7 @@
   margin-bottom: 8px;
   align-items: center;
   box-shadow: var(--toolbar-shadow);
+  backdrop-filter: blur(6px);
 }
 
 .whiteboard-modern .wb-toolbar button {
@@ -71,4 +72,12 @@
   border-radius: 8px;
   overflow: hidden;
   box-shadow: var(--canvas-shadow);
+}
+
+.whiteboard-modern .excalidraw {
+  background-color: transparent !important;
+}
+
+.whiteboard-modern .excalidraw canvas {
+  background-color: transparent !important;
 }

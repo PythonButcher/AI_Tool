@@ -57,6 +57,7 @@ const WhiteBoard = ({ savedScene }) => {
         const appState = {
           ...excalidrawRef.current.getAppState(),
           theme: nextTheme,
+          viewBackgroundColor: "transparent",
         };
         excalidrawRef.current.updateScene({ appState });
       }
