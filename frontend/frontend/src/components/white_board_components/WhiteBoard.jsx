@@ -11,17 +11,25 @@ const WhiteBoard = ({ savedScene }) => {
   const lastSceneRef = useRef(savedScene ? JSON.stringify(savedScene) : null);
   const [scene, setScene] = useState(savedScene || null);
 
+  const getPreferredTheme = () =>
+    window.matchMedia("(prefers-color-scheme: dark)").matches
+      ? "dark"
+      : "light";
+  const [theme, setTheme] = useState(getPreferredTheme());
+
   const initialData = savedScene
     ? {
         ...savedScene,
         appState: {
           ...(savedScene.appState || {}),
           viewBackgroundColor: "transparent",
+          theme,
         },
       }
     : {
         appState: {
           viewBackgroundColor: "transparent",
+          theme,
         },
       };
 
@@ -39,6 +47,23 @@ const WhiteBoard = ({ savedScene }) => {
       saveWindowContentState("whiteBoard", scene);
     }
   }, [scene, saveWindowContentState]);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    const handleThemeChange = () => {
+      const nextTheme = mediaQuery.matches ? "dark" : "light";
+      setTheme(nextTheme);
+      if (excalidrawRef.current) {
+        const appState = {
+          ...excalidrawRef.current.getAppState(),
+          theme: nextTheme,
+        };
+        excalidrawRef.current.updateScene({ appState });
+      }
+    };
+    mediaQuery.addEventListener("change", handleThemeChange);
+    return () => mediaQuery.removeEventListener("change", handleThemeChange);
+  }, []);
 
   const handleClear = () => {
     if (excalidrawRef.current) {
@@ -87,9 +112,11 @@ const WhiteBoard = ({ savedScene }) => {
         const json = JSON.parse(text);
 
         if (excalidrawRef.current) {
+          const currentTheme = excalidrawRef.current.getAppState().theme;
           const appState = {
             ...(json.appState || {}),
             viewBackgroundColor: "transparent",
+            theme: currentTheme,
           };
           excalidrawRef.current.updateScene({
             elements: json.elements || [],
