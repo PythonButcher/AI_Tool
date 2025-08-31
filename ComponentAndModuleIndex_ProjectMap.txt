@@ -1,4 +1,8 @@
 AI_Tool/
+├── .codex                       # Codex include/exclude configuration
+├── .codexrc                     # Codex runtime settings
+├── .gitignore                   # Git ignore rules
+├── ComponentAndModuleIndex_ProjectMap.txt  # project structure overview
 ├── GEMINI.md
 ├── README.md
 ├── backend_logs.txt
@@ -35,6 +39,7 @@ AI_Tool/
     ├── package.json              # dependencies for top‑level frontend utilities
     ├── package-lock.json
     └── frontend/
+        ├── .gitignore            # React app ignore rules
         ├── README.md
         ├── package.json          # React app dependencies and scripts
         ├── package-lock.json
@@ -49,18 +54,22 @@ AI_Tool/
             ├── context/
             │   ├── ContextMenu.jsx        # context menu wrapper component
             │   ├── ContextMenu.styles.jsx # styling for context menu
-            │   └── DataContext.jsx        # global React context provider
+            │   ├── DataContext.jsx        # global React context provider
+            │   └── WindowContext.jsx      # manages window state and layout
             ├── hooks/
             │   └── useContextMenu.jsx     # custom hook for context menu logic
             ├── utils/
             │   ├── ChartStyles.jsx        # dynamic color helpers for charts
             │   ├── DragDrop.jsx           # generic drag‑and‑drop area
             │   ├── DropZone.jsx           # UI component for assigning axes
+            │   ├── OutsideClickWrapper.jsx # detects clicks outside wrapped elements
             │   ├── chartDataUtils.jsx     # converts data to chart.js format
             │   ├── chartRoleConfig.jsx    # mapping of chart roles to fields
             │   ├── filterUtils.jsx        # data filtering helpers
             │   ├── previewChartUtils.jsx  # utilities for chart previews
-            │   └── workflow_output_router.jsx  # manages workflow output windows
+            │   ├── workflow_output_router.jsx  # manages workflow output windows
+            │   └── sketch/
+            │       └── SketchParser.js    # parses Excalidraw scenes into workflow graphs
             └── components/
                 ├── APiDataForm.jsx        # fetches external API data
                 ├── CanvasContainer.jsx    # layout container for chart and tools
@@ -73,6 +82,7 @@ AI_Tool/
                 ├── FileExport.jsx         # export buttons for cleaned data
                 ├── FileUpload.jsx         # handles file selection/upload
                 ├── MenuBar.jsx            # top menu with navigation and actions
+                ├── MinimizedDock.jsx      # dock displaying minimized windows
                 ├── SearchBar.jsx          # dataset search input
                 ├── SideBar.jsx            # side panel with workflow buttons
                 ├── ai_ml_components/
@@ -99,7 +109,7 @@ AI_Tool/
                 ├── white_board_components/
                 │   ├── WhiteBoard.jsx         # Excalidraw whiteboard canvas
                 │   └── WhiteBoardToolbar.jsx  # toolbar for whiteboard
-                └── workflow_lab_components/
+                ├── workflow_lab_components/
                     ├── AIPipeline.jsx            # orchestrates AI workflow steps
                     ├── AIReporter.jsx            # summarises workflow results
                     ├── AiCommandBlock.jsx        # command block for workflow
@@ -120,6 +130,7 @@ AI_Tool/
                     ├── FileExport.css
                     ├── FileUpload.css
                     ├── MenuBar.css
+                    ├── MinimizedDock.css
                     ├── SearchBar.css
                     ├── SideBar.css
                     ├── ai_ml_css/AIChat.css
