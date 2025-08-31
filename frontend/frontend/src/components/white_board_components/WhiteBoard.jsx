@@ -19,7 +19,7 @@ const Whiteboard = ({ savedScene }) => {
     appState: {
       viewBackgroundColor: theme === "light" ? "#f5f5f5" : "#1a1a1a",
       gridMode: true,
-      gridSize: 20,
+      gridSize: 2,
     },
   };
 
