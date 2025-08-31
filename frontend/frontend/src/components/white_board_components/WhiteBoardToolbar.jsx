@@ -1,7 +1,7 @@
 // WhiteboardToolbar.jsx
 import React from "react";
 
-const WhiteboardToolbar = ({ excalidrawRef, onCompileSketch }) => {
+const WhiteboardToolbar = ({ excalidrawRef, onCompileSketch, onThemeChange, theme }) => {
   const handleClear = () => {
     if (excalidrawRef.current) {
       excalidrawRef.current.updateScene({ elements: [] });
@@ -111,6 +111,15 @@ const handleLoadScene = () => {
         onMouseOut={(e) => (e.currentTarget.style.backgroundColor = "#2c2c2c")}
       >
         ⚙️ Compile Sketch → Pipeline
+      </button>
+
+      <button
+        onClick={onThemeChange}
+        style={{ ...btnStyle }}
+        onMouseOver={(e) => (e.currentTarget.style.backgroundColor = "#3a3a3a")}
+        onMouseOut={(e) => (e.currentTarget.style.backgroundColor = "#2c2c2c")}
+      >
+        {theme === "light" ? "🌙" : "☀️"}
       </button>
 
 
