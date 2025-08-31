@@ -13,10 +13,13 @@ const Whiteboard = ({ savedScene }) => {
   const { saveWindowContentState } = useWindowContext();
   const lastSceneRef = useRef(savedScene ? JSON.stringify(savedScene) : null);
   const [scene, setScene] = useState(savedScene || null);
+  const [theme, setTheme] = useState("light");
 
   const initialData = {
     appState: {
-      viewBackgroundColor: "#add8e6",
+      viewBackgroundColor: theme === "light" ? "#f5f5f5" : "#1a1a1a",
+      gridMode: true,
+      gridSize: 20,
     },
   };
 
@@ -63,17 +66,30 @@ const Whiteboard = ({ savedScene }) => {
     }
   };
 
+  const handleThemeChange = () => {
+    const newTheme = theme === "light" ? "dark" : "light";
+    setTheme(newTheme);
+    excalidrawRef.current.updateScene({
+      appState: {
+        viewBackgroundColor: newTheme === "light" ? "#f5f5f5" : "#1a1a1a",
+      },
+    });
+  };
+
   return (
     <div style={{ height: "100%", width: "100%", display: "flex", flexDirection: "column" }}>
       <WhiteboardToolbar
         excalidrawRef={excalidrawRef}
         onCompileSketch={handleCompileSketch} // ✅ Pass to toolbar
+        onThemeChange={handleThemeChange}
+        theme={theme}
       />
       <div style={{ flex: 1 }}>
         <Excalidraw
           ref={excalidrawRef}
           initialData={savedScene || initialData}
           onChange={handleChange}
+          theme={theme}
         />
       </div>
     </div>
