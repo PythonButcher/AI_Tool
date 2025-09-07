@@ -167,16 +167,34 @@ function App() {
   }, [setUploadedData, setFullData, setCleanedData]);
 
   const handleApiData = (data) => {
+    const rows = Array.isArray(data)
+      ? data
+      : Array.isArray(data?.data_preview)
+      ? data.data_preview
+      : typeof data?.data_preview === 'string'
+      ? JSON.parse(data.data_preview)
+      : [];
+
     setUploadedData({
-      data_preview: Array.isArray(data) ? data : [data], // ✅ Ensures correct format
+      data_preview: rows, // ✅ Ensures correct format
     });
+    setFullData(rows);      // ✅ Provide full dataset
+    setCleanedData(rows);   // ✅ Keep sidebar fields in sync
     setShowDataPreview(true);  // ✅ Triggers preview window
   };
 
   const handleDatabaseData = (data) => {
+    const rows = Array.isArray(data?.data_preview)
+      ? data.data_preview
+      : typeof data?.data_preview === 'string'
+      ? JSON.parse(data.data_preview)
+      : [];
+
     setUploadedData({
-      data_preview: Array.isArray(data?.data_preview) ? data.data_preview : []
+      data_preview: rows,
     });
+    setFullData(rows);      // ✅ Provide full dataset
+    setCleanedData(rows);   // ✅ Keep sidebar fields in sync
     setShowDataPreview(true);
   };
   
@@ -192,7 +210,7 @@ function App() {
   }, []);
 
   const handleCloseRawViewer = useCallback(() => {
-    setShowRawViewer(true);
+    setShowRawViewer(false);
   }, []);
 
   const handleCloseCanvas = useCallback(() => {

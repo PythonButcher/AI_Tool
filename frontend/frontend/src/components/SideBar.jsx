@@ -35,13 +35,6 @@ const SideBar = ({ onButtonClick, onDataCleaned,
   const [showDataViewerOptions, setShowDataViewerOptions] = useState(false)
                
                   
-  console.log('cleanedData in SideBar:', cleanedData);
-  console.log("Type of cleanedData:", typeof cleanedData);
-  if (!cleanedData) {
-    console.warn("cleanedData is NULL or UNDEFINED in SideBar.");
-    console.log('AI Models available:', storyModel)
-    console.log('Here are the data viewer options: ', showDataViewerOptions)
-}
   // Toggles DataCleaningForm visibility
   const handleDataCleaningClick = () => {
     setShowCleaningForm((prev) => !prev);
@@ -94,7 +87,6 @@ const SideBar = ({ onButtonClick, onDataCleaned,
     ? Object.keys(parsedDataPreview[0])
     : [];
 
-console.log("Extracted fields:", fields);
 
   return (
     <div className="sidebar-container">
@@ -132,7 +124,6 @@ console.log("Extracted fields:", fields);
         onClick={() => {
           setShowRawViewer(true);        // new feature
           setShowDataViewerOptions(false);
-          console.log('clicked raw → calling', setShowRawViewer(true))
         }}
       >
         <BiSpreadsheet className="sidebar-button-icon" />

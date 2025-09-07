@@ -319,19 +319,8 @@ const { fullData } = useContext(DataContext);
         })()
       : null;
 
-  // ⬇️ Prereqs inside CanvasContainer component body (near other hooks/state):
-// const { fullData } = useContext(DataContext);   // make sure DataContext is imported
-// props expected: showRawViewer (bool), handleCloseRawViewer (fn)
-console.log('[Raw Guard] showRawViewer:', showRawViewer);
-console.log('[Raw Guard] fullData length:', Array.isArray(fullData) ? fullData.length : 'not array');
-console.log('[Raw Guard] minimized:', minimizedWindows['rawViewer']);
-
 const rawDataElement =
-  showRawViewer &&
-  Array.isArray(fullData) &&
-  fullData.length > 0 &&
-  !minimizedWindows['rawViewer']
-  
+  showRawViewer && !minimizedWindows['rawViewer']
     ? (() => {
         const saved = getWindowState('rawViewer');
         const layout = registerLayout(
@@ -389,7 +378,10 @@ const rawDataElement =
             >
               {/* Prefer a paginated viewer to avoid freezing on large datasets */}
               {/* If you created RawDataViewer, use it: */}
-              <RawDataViewer rows={fullData} pageSize={500} /> 
+              <RawDataViewer
+                rows={Array.isArray(fullData) ? fullData : []}
+                pageSize={500}
+              />
 
             </div>
           </div>
