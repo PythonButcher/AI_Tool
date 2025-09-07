@@ -1,5 +1,5 @@
 // File: CanvasContainer.jsx
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useContext } from 'react';
 import './css/CanvasContainer.css';
 import { Responsive, WidthProvider } from 'react-grid-layout';
 import 'react-grid-layout/css/styles.css';
@@ -22,6 +22,8 @@ import { useActiveDataset } from '../context/DataContext';
 import AIReporter from './workflow_lab_components/AIReporter';
 import { getWorkflowWindows } from '../utils/workflow_output_router';
 import { useWindowContext } from '../context/WindowContext';
+import { DataContext } from '../context/DataContext';
+import RawDataViewer from './viewing_components/RawDataViewer';
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
@@ -30,11 +32,9 @@ function CanvasContainer({
   uploadedData,
   showDataPreview,
   handleClosePreview,
-  // handleCloseCanvas,                 // removed: not used here
   cleanedData,
   selectedChartType,
   handleCloseChartWindow,
-  // handleCloseStoryBoard,            // removed: not used here
   showChartWindow,
   chartData,
   aiChartData,
@@ -45,9 +45,6 @@ function CanvasContainer({
   setShowAIChart,
   showAiWorkflow,
   setShowAiWorkflow,
-  // showCanvasMinimized,              // removed: not used here
-  // setShowCanvasMinimized,           // removed: not used here
-  // handleCanvasMinimize,             // removed: not used here
   chartMapping,
   previewMode,
   setPreviewMode,
@@ -55,10 +52,11 @@ function CanvasContainer({
   setShowWhiteBoard,
   pipelineResults,
   setPipelineResults,
-  // setOutputWindows,                 // removed: not used here
   showAiReport,
   onCloseAiReport,
   storyModel,
+  showRawViewer,
+  handleCloseRawViewer,
 }) {
   const {
     minimizedWindows, minimizeWindow,
@@ -69,6 +67,9 @@ function CanvasContainer({
   const [zIndices, setZIndices] = useState({});
   const zCounter = useRef(1);
   const layoutRef = useRef([]);
+ 
+const { fullData } = useContext(DataContext);
+
 
   const bringToFront = (id) => {
     setZIndices((prev) => ({ ...prev, [id]: ++zCounter.current }));
@@ -318,6 +319,85 @@ function CanvasContainer({
         })()
       : null;
 
+  // ⬇️ Prereqs inside CanvasContainer component body (near other hooks/state):
+// const { fullData } = useContext(DataContext);   // make sure DataContext is imported
+// props expected: showRawViewer (bool), handleCloseRawViewer (fn)
+console.log('[Raw Guard] showRawViewer:', showRawViewer);
+console.log('[Raw Guard] fullData length:', Array.isArray(fullData) ? fullData.length : 'not array');
+console.log('[Raw Guard] minimized:', minimizedWindows['rawViewer']);
+
+const rawDataElement =
+  showRawViewer &&
+  Array.isArray(fullData) &&
+  fullData.length > 0 &&
+  !minimizedWindows['rawViewer']
+  
+    ? (() => {
+        const saved = getWindowState('rawViewer');
+        const layout = registerLayout(
+          'rawViewer',
+          {
+            ...(saved || {
+              x: 0,
+              y: 16,
+              w: 10,
+              h: 16,
+              minW: 3,
+              minH: 6,
+              resizeHandles: ['se', 'e', 's'],
+            }),
+            static: isLocked('rawViewer'),
+          },
+          'preview'
+        );
+
+        return (
+          <div
+            key="rawViewer"
+            className="grid-item"
+            data-grid={layout}
+            onMouseDown={() => bringToFront('rawViewer')}
+            style={{
+              backgroundColor: '#fff',
+              border: '2px solid #ccc',
+              borderRadius: '6px',
+              overflow: 'hidden',
+              zIndex: zIndices['rawViewer'] || 1,
+            }}
+          >
+            <div
+              className="window-header drag-handle"
+              onDoubleClick={() => snapToFit('rawViewer')}
+            >
+              <span className="header-title">📜 Raw Data (All Rows)</span>
+              <div className="header-button-group">
+                <MinimizeButton
+                  onClick={() => minimizeWindow('rawViewer', 'Raw Data')}
+                />
+                <MaximizeButton windowId="rawViewer" />
+                <CloseButton onClick={handleCloseRawViewer} />
+              </div>
+            </div>
+
+            <div
+              className="window-content"
+              style={{
+                padding: '10px',
+                height: 'calc(100% - 40px)',
+                overflow: 'auto',
+              }}
+            >
+              {/* Prefer a paginated viewer to avoid freezing on large datasets */}
+              {/* If you created RawDataViewer, use it: */}
+              <RawDataViewer rows={fullData} pageSize={500} /> 
+
+            </div>
+          </div>
+        );
+      })()
+    : null;
+
+
   const aiChartElement =
     showAIChart && !minimizedWindows['aiChartWindow']
       ? (() => {
@@ -549,6 +629,7 @@ function CanvasContainer({
         >
           {workflowElements}
           {dataPreviewElement}
+          {rawDataElement}
           {aiChartElement}
           {workflowLabElement}
           {whiteBoardElement}

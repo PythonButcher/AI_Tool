@@ -54,6 +54,7 @@ function App() {
   const [xAxis, setXAxis] = useState(null);
   const [yAxis, setYAxis] = useState(null);
   const [showDataPreview, setShowDataPreview] = useState(false);
+  const [showRawViewer, setShowRawViewer] = useState(false);
   const [showCanvasContainer, setShowCanvasContainer] = useState(true);
   const [showDataVisual, setShowDataVisual] = useState(false);
   const [selectedChartType, setSelectedChartType] = useState(null);
@@ -78,6 +79,10 @@ function App() {
   useEffect(() => {
     console.log("Sidebar render cleanedData:", uploadedData);
   }, [uploadedData]);
+
+  useEffect(() => {
+    console.log("App render raw data viewer:", showRawViewer);
+  }, [showRawViewer]);
   
   useEffect(() => {
     console.log("📉 Filtered data:", openDataFilter);
@@ -186,6 +191,10 @@ function App() {
     setShowDataPreview(false);
   }, []);
 
+  const handleCloseRawViewer = useCallback(() => {
+    setShowRawViewer(true);
+  }, []);
+
   const handleCloseCanvas = useCallback(() => {
     setShowCanvasContainer(false);
   }, []);
@@ -221,6 +230,11 @@ function App() {
     console.log("Switching story model to:", newModel);
     setStoryModel(newModel);
   };
+
+  // const handleDataViewerChange = (newViewer) => {
+  //   console.log("Switching my data viewer to:", newViewer);
+  //   setShowRawViewer(newViewer);
+  // };
 
   const handleFieldDrop = useCallback(
     (axis, field) => {
@@ -287,6 +301,7 @@ function App() {
             showAiWorkflow={showAiWorkflow}
             setShowAiWorkflow={setShowAiWorkflow}
             setShowDataPreview={setShowDataPreview}
+            setShowRawViewer={setShowRawViewer}
             setStoryData={setStoryData}
             setShowStoryPanel={setShowStoryPanel}
             showWhiteBoard={showWhiteBoard}
@@ -370,6 +385,9 @@ function App() {
                 setOutputWindows={setOutputWindows}
                 showAiReport={showAiReport}
                 onCloseAiReport={handleAiReportClose}
+                showRawViewer={showRawViewer}
+                handleCloseRawViewer={handleCloseRawViewer}
+            
               >
                 {/* ⬇️ Keep other children that should render inside the Data Preview window */}
                 <DatasetInfo selectedStat={selectedStat} />

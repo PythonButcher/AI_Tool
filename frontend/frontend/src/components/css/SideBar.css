@@ -205,3 +205,17 @@
 .sidebar-subbutton:hover::after {
   opacity: 1;
 }
+
+.data-choice-menu {
+  position: absolute;
+  left: 50px; /* to the right of the icon */
+  top: 15%;   /* vertically center on the icon */
+  display: flex;
+  flex-direction: column;
+  background-color: #f9f9f9;
+  padding: 6px;
+  border-radius: 8px;
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.1);
+  z-index: 999;
+
+}
