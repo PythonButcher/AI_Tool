@@ -192,7 +192,7 @@ function App() {
   }, []);
 
   const handleCloseRawViewer = useCallback(() => {
-    setShowRawViewer(true);
+    setShowRawViewer(false);
   }, []);
 
   const handleCloseCanvas = useCallback(() => {

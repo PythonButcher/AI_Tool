@@ -319,13 +319,6 @@ const { fullData } = useContext(DataContext);
         })()
       : null;
 
-  // ⬇️ Prereqs inside CanvasContainer component body (near other hooks/state):
-// const { fullData } = useContext(DataContext);   // make sure DataContext is imported
-// props expected: showRawViewer (bool), handleCloseRawViewer (fn)
-console.log('[Raw Guard] showRawViewer:', showRawViewer);
-console.log('[Raw Guard] fullData length:', Array.isArray(fullData) ? fullData.length : 'not array');
-console.log('[Raw Guard] minimized:', minimizedWindows['rawViewer']);
-
 const rawDataElement =
   showRawViewer &&
   Array.isArray(fullData) &&

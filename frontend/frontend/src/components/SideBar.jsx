@@ -132,7 +132,6 @@ console.log("Extracted fields:", fields);
         onClick={() => {
           setShowRawViewer(true);        // new feature
           setShowDataViewerOptions(false);
-          console.log('clicked raw → calling', setShowRawViewer(true))
         }}
       >
         <BiSpreadsheet className="sidebar-button-icon" />
