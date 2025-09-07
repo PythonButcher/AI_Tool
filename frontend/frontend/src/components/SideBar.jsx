@@ -19,6 +19,7 @@ import './css/SideBar.css';
 import DataCleaningForm from './DataCleaningForm';
 import FileExport from './FileExport';
 import FieldsPanel from './FieldsPanel';
+import { useWindowContext } from '../context/WindowContext';
 
 
 
@@ -33,6 +34,7 @@ const SideBar = ({ onButtonClick, onDataCleaned,
   const [showFieldsPanel, setShowFieldsPanel] = useState(false); // Toggle for FieldsPanel
   const [showModelOptions, setShowModelOptions] = useState(false);
   const [showDataViewerOptions, setShowDataViewerOptions] = useState(false)
+  const { restoreWindow } = useWindowContext();
                
                   
   // Toggles DataCleaningForm visibility
@@ -123,6 +125,7 @@ const SideBar = ({ onButtonClick, onDataCleaned,
         data-tooltip="Raw data"
         onClick={() => {
           setShowRawViewer(true);        // new feature
+          restoreWindow && restoreWindow('rawViewer');
           setShowDataViewerOptions(false);
         }}
       >

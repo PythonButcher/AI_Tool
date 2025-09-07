@@ -17,5 +17,5 @@ body {
   padding: 0px;
   width: calc(120% - 90px); /* Adjust for sidebar */
   margin-left: 0px; /* Spacing to center main content */
-  overflow-y: hidden;
+  overflow-y: auto; /* Allow scrolling so off-screen windows become visible */
 }
