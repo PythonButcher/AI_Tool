@@ -11,31 +11,32 @@ import {
   FaPen,
 } from 'react-icons/fa';
 import { FcWorkflow } from "react-icons/fc";
+import { AiOutlineEye } from "react-icons/ai";
+import { BiSpreadsheet } from "react-icons/bi";
 import { SiGooglegemini } from "react-icons/si";
 import { PiOpenAiLogo } from "react-icons/pi";
 import './css/SideBar.css';
 import DataCleaningForm from './DataCleaningForm';
 import FileExport from './FileExport';
 import FieldsPanel from './FieldsPanel';
+import { useWindowContext } from '../context/WindowContext';
+
 
 
 const SideBar = ({ onButtonClick, onDataCleaned, 
-                   cleanedData, setShowDataPreview, 
+                   cleanedData, setShowDataPreview, setShowRawViewer,
                    setStoryData,setShowAiWorkflow,
                    setShowStoryPanel, setShowWhiteBoard,
                    storyModel, onStoryModelChange }) => {
   const [showCleaningForm, setShowCleaningForm] = useState(false);
   const [showExportDropdown, setShowExportDropdown] = useState(false);
+//  const [showDataViewerDropdown, setShowDataViewerDropdown] = useState(false);
   const [showFieldsPanel, setShowFieldsPanel] = useState(false); // Toggle for FieldsPanel
   const [showModelOptions, setShowModelOptions] = useState(false);
+  const [showDataViewerOptions, setShowDataViewerOptions] = useState(false)
+  const { restoreWindow } = useWindowContext();
                
                   
-  console.log('cleanedData in SideBar:', cleanedData);
-  console.log("Type of cleanedData:", typeof cleanedData);
-  if (!cleanedData) {
-    console.warn("cleanedData is NULL or UNDEFINED in SideBar.");
-    console.log('AI Models available:', storyModel)
-}
   // Toggles DataCleaningForm visibility
   const handleDataCleaningClick = () => {
     setShowCleaningForm((prev) => !prev);
@@ -51,6 +52,11 @@ const SideBar = ({ onButtonClick, onDataCleaned,
   const toggleExportDropdown = () => {
     setShowExportDropdown((prev) => !prev);
   };
+
+  // Toggles the DataView dropdown visibility
+  //const toggleDataViewerDropdown = () => {
+   // setShowDataViewerDropdown((prev) => !prev);
+//  };
 
   // Toggles FieldsPanel visibility
   const toggleFieldsPanel = () => {
@@ -83,19 +89,52 @@ const SideBar = ({ onButtonClick, onDataCleaned,
     ? Object.keys(parsedDataPreview[0])
     : [];
 
-console.log("Extracted fields:", fields);
 
   return (
     <div className="sidebar-container">
 
-     {/* DatasetInfo Button */}
-        <div
-          className="sidebar-button"
-          data-tooltip="Data Summary"
-          onClick={() => setShowDataPreview(true)}
-        >
-          <FaTable className="sidebar-button-icon" />
-        </div>
+
+{/* Data Viewer Button */}
+<div
+  className="sidebar-button"
+  data-tooltip="Data Viewer"
+  aria-haspopup="menu"
+  aria-expanded={showDataViewerOptions}
+  onClick={() => setShowDataViewerOptions(prev => !prev)}
+>
+  <FaTable className="sidebar-button-icon" />
+</div>
+
+{/* Data Viewer Options Submenu */}
+{showDataViewerOptions && (
+  <OutsideClickWrapper onOutsideClick={() => setShowDataViewerOptions(false)}>
+    <div className="data-choice-menu">
+      <div
+        className="sidebar-subbutton"
+        data-tooltip="Data Preview"
+        onClick={() => {
+          setShowDataPreview(true);      // existing feature
+          setShowDataViewerOptions(false);
+        }}
+      >
+        <AiOutlineEye className="sidebar-button-icon" />
+      </div>
+
+      <div
+        className="sidebar-subbutton"
+        data-tooltip="Raw data"
+        onClick={() => {
+          setShowRawViewer(true);        // new feature
+          restoreWindow && restoreWindow('rawViewer');
+          setShowDataViewerOptions(false);
+        }}
+      >
+        <BiSpreadsheet className="sidebar-button-icon" />
+      </div>
+    </div>
+  </OutsideClickWrapper>
+)}
+
 
       {/* Data Cleaning Button */}
       <div
