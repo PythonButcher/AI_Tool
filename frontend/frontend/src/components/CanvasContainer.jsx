@@ -69,6 +69,7 @@ function CanvasContainer({
   const layoutRef = useRef([]);
  
 const { fullData } = useContext(DataContext);
+console.log("✅ CanvasContainer fullData length:", fullData?.length || 0); // (optional debug)
 
 
   const bringToFront = (id) => {
@@ -379,7 +380,7 @@ const rawDataElement =
               {/* Prefer a paginated viewer to avoid freezing on large datasets */}
               {/* If you created RawDataViewer, use it: */}
               <RawDataViewer
-                rows={Array.isArray(fullData) ? fullData : []}
+                rows={fullData || []}
                 pageSize={500}
               />
 

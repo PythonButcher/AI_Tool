@@ -28,12 +28,22 @@ const theme = createTheme({
 });
 
 function App() {
-  const { uploadedData, setUploadedData, setFullData, pipelineResults, setPipelineResults, aiReportReady, setAiReportReady, showAiReport, setShowAiReport } = useContext(DataContext);
+const {
+  uploadedData, setUploadedData,
+  fullData, setFullData,
+  cleanedData, setCleanedData,
+  pipelineResults, setPipelineResults,
+  aiReportReady, setAiReportReady,
+  showAiReport, setShowAiReport
+} = useContext(DataContext);
+
+
+
   console.log("App.jsx received uploadedData:", uploadedData);
 
   // Standard charting state
   const [selectedStat, setSelectedStat] = useState(null);
-  const [cleanedData, setCleanedData] = useState(null);
+  // const [cleanedData, setCleanedData] = useState(null);
   const [chartData, setChartData] = useState(null);
   //const [chartType, setChartType] = useState('Bar');
   const [chartMapping, setChartMapping] = useState({});   // { 'X-Axis': 'Region', 'Y-Axis': 'Sales' }
@@ -152,19 +162,40 @@ function App() {
     }
   }, [xAxis, yAxis]);
 
-  const handleFileUpload = useCallback((raw) => {
-    // raw is whatever the backend returns
-    setUploadedData(raw);                       // preview for UI
-    const allRows =
-      Array.isArray(raw)                  ? raw
-      : Array.isArray(raw?.data_preview)  ? raw.data_preview
-      : typeof raw?.data_preview === 'string'
-        ? JSON.parse(raw.data_preview)
-        : [];
-    setFullData(allRows);                     // store full data
-    setCleanedData(allRows);                  // initialize cleanedData for charting
-    setShowDataPreview(true);
-  }, [setUploadedData, setFullData, setCleanedData]);
+const handleFileUpload = useCallback((raw) => {
+  console.log("App.jsx received uploadedData:", raw);
+  setUploadedData(raw);
+
+  let rows = [];
+
+  try {
+    const preview = raw?.data_preview;
+
+    if (Array.isArray(preview)) {
+      rows = preview;
+    } else if (typeof preview === "string") {
+      const parsed = JSON.parse(preview);
+
+      if (Array.isArray(parsed)) {
+        rows = parsed;
+      } else if (typeof parsed === "string") {
+        // handle double-encoded JSON
+        rows = JSON.parse(parsed);
+      }
+    }
+
+    console.log("🚨 setFullData received rows:", rows);
+    console.log("🚨 setFullData received row count:", rows.length);
+  } catch (err) {
+    console.error("❌ Failed to parse data_preview", err);
+    rows = [];
+  }
+
+  setFullData(rows);
+  setCleanedData(rows);
+  setShowDataPreview(true);
+}, [setUploadedData, setFullData, setCleanedData]);
+
 
   const handleApiData = (data) => {
     const rows = Array.isArray(data)
