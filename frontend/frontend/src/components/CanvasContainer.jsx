@@ -70,6 +70,11 @@ function CanvasContainer({
  
 const { fullData } = useContext(DataContext);
 console.log("✅ CanvasContainer fullData length:", fullData?.length || 0); // (optional debug)
+console.log("🧨 FULLDATA RAW VALUE:", fullData);
+console.log("🧨 FULLDATA TYPE:", typeof fullData);
+console.log("🧨 FULLDATA isArray:", Array.isArray(fullData));
+console.log("🧨 FULLDATA LENGTH:", fullData?.length);
+
 
 
   const bringToFront = (id) => {

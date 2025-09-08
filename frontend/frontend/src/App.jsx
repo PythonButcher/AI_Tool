@@ -184,8 +184,10 @@ const handleFileUpload = useCallback((raw) => {
       }
     }
 
-    console.log("🚨 setFullData received rows:", rows);
-    console.log("🚨 setFullData received row count:", rows.length);
+    console.log("📤 Sending to setFullData:", rows);
+    console.log("📤 typeof rows:", typeof rows);
+    console.log("📤 Array.isArray(rows):", Array.isArray(rows));
+    console.log("📤 rows.length:", rows?.length);
   } catch (err) {
     console.error("❌ Failed to parse data_preview", err);
     rows = [];
