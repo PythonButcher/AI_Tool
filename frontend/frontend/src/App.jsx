@@ -11,6 +11,7 @@ import { transformToChartData } from './utils/chartDataUtils';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import AIChat from './components/ai_ml_components/AIChat';
 import { DataContext } from './context/DataContext';
+import useLoadRawData from './hooks/useLoadRawData';
 // ⛔️ Removed: import DataStoryPanel from './components/DataStoryPanel';
 import DataFilterPanel from './components/DataFilterPanel';
 import './App.css';
@@ -28,12 +29,22 @@ const theme = createTheme({
 });
 
 function App() {
-  const { uploadedData, setUploadedData, setFullData, pipelineResults, setPipelineResults, aiReportReady, setAiReportReady, showAiReport, setShowAiReport } = useContext(DataContext);
+const {
+  uploadedData, setUploadedData,
+  fullData, setFullData,
+  cleanedData, setCleanedData,
+  pipelineResults, setPipelineResults,
+  aiReportReady, setAiReportReady,
+  showAiReport, setShowAiReport
+} = useContext(DataContext);
+
+
+
   console.log("App.jsx received uploadedData:", uploadedData);
 
   // Standard charting state
   const [selectedStat, setSelectedStat] = useState(null);
-  const [cleanedData, setCleanedData] = useState(null);
+  // const [cleanedData, setCleanedData] = useState(null);
   const [chartData, setChartData] = useState(null);
   //const [chartType, setChartType] = useState('Bar');
   const [chartMapping, setChartMapping] = useState({});   // { 'X-Axis': 'Region', 'Y-Axis': 'Sales' }
@@ -68,6 +79,10 @@ function App() {
   const [storyModel, setStoryModel] = useState('openai');
   const [showStoryPanel, setShowStoryPanel] = useState(false);
   const [outputWindows, setOutputWindows] = useState([]);
+  const [rawUploadFile, setRawUploadFile] = useState(null);
+
+  // 🔁 Auto-load fullData for RawDataViewer when viewer is opened
+ useLoadRawData(showRawViewer, rawUploadFile, setFullData);
 
   useEffect(() => {
     if (uploadedData) {
@@ -152,19 +167,27 @@ function App() {
     }
   }, [xAxis, yAxis]);
 
-  const handleFileUpload = useCallback((raw) => {
-    // raw is whatever the backend returns
-    setUploadedData(raw);                       // preview for UI
-    const allRows =
-      Array.isArray(raw)                  ? raw
-      : Array.isArray(raw?.data_preview)  ? raw.data_preview
-      : typeof raw?.data_preview === 'string'
-        ? JSON.parse(raw.data_preview)
-        : [];
-    setFullData(allRows);                     // store full data
-    setCleanedData(allRows);                  // initialize cleanedData for charting
-    setShowDataPreview(true);
-  }, [setUploadedData, setFullData, setCleanedData]);
+// App.jsx — update inside handleFileUpload (carefully scoped)
+const handleFileUpload = useCallback((raw, file = null) => {
+  // Safely parse the data preview (5–100 rows for UI)
+  const previewRows = typeof raw?.data_preview === 'string'
+    ? JSON.parse(raw.data_preview)
+    : Array.isArray(raw?.data_preview)
+      ? raw.data_preview
+      : [];
+
+  // 🧠 Do not extract full dataset here — raw data is now isolated and loaded separately via /api/raw_upload
+
+  // ✅ Assign preview and fullData separately
+  setUploadedData({ data_preview: previewRows });  // don't break chart/preview features
+  setFullData(null);                               // defer full dataset loading to RawDataViewer
+  setCleanedData(previewRows);                     // initial state for cleaning/exports
+  setShowDataPreview(true);                        // toggle preview window
+
+  // ✅ Store the original file for raw viewer to upload later
+  if (file) setRawUploadFile(file);
+}, [setUploadedData, setFullData, setCleanedData]);
+
 
   const handleApiData = (data) => {
     const rows = Array.isArray(data)

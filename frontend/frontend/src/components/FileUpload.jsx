@@ -6,7 +6,7 @@ import { useContext } from 'react';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
-function FileUpload({ label = "Upload a File:", onUploadComplete, allowedExtensions = ['csv', 'xls', 'xlsx', 'json', 'pdf', 'geojson'] }) {
+function FileUpload({ label = "Upload a File:", onUploadComplete, allowedExtensions = ['csv', 'xls', 'xlsx', 'json', 'pdf', 'geojson'], onFileUploadSuccess }) {
   const { setUploadedData } = useContext(DataContext);
   const [file, setFile] = useState(null);
   const [error, setError] = useState(null);
@@ -46,7 +46,9 @@ function FileUpload({ label = "Upload a File:", onUploadComplete, allowedExtensi
       });
 
       setUploadedData(response.data);
-
+      if (onFileUploadSuccess) {
+        onFileUploadSuccess(response.data, file);
+      }
       if (onUploadComplete) {
         onUploadComplete();
       }
