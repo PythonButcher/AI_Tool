@@ -2,7 +2,8 @@ import sys
 import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from flask import Flask
+from flask import Flask, jsonify
+from werkzeug.exceptions import RequestEntityTooLarge
 from flask_cors import CORS
 from backend.routes.upload import upload_bp
 from backend.routes.api_fetch import api_fetch_bp
@@ -21,7 +22,10 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 def create_app():
     app = Flask(__name__)
 
-    # Apply CORS globally to all routes
+    # ✅ Limit uploads to 100 MB (adjust as needed)
+    app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  
+
+    # Apply CORS globally
     CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}})
 
     # Register blueprints
@@ -37,15 +41,18 @@ def create_app():
     app.register_blueprint(ai_storyboard_openai)
     app.register_blueprint(raw_data_bp)
 
-
     @app.route('/', methods=['GET'])
-    
     def home():
         return "Welcome to the AI Data Visualization Tool Backend!"
     print("ai_logic.py LOADED AND ACTIVE")
 
-    
-    
+    # ✅ Custom handler for large uploads
+    @app.errorhandler(RequestEntityTooLarge)
+    def handle_file_too_large(e):
+        return jsonify({
+            "error": "File too large",
+            "message": f"Maximum upload size is {app.config['MAX_CONTENT_LENGTH'] // (1024*1024)} MB"
+        }), 413
 
     return app
 
