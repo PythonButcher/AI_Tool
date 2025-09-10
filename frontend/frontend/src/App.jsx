@@ -11,6 +11,7 @@ import { transformToChartData } from './utils/chartDataUtils';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import AIChat from './components/ai_ml_components/AIChat';
 import { DataContext } from './context/DataContext';
+import useLoadRawData from './hooks/useLoadRawData';
 // ⛔️ Removed: import DataStoryPanel from './components/DataStoryPanel';
 import DataFilterPanel from './components/DataFilterPanel';
 import './App.css';
@@ -78,6 +79,10 @@ const {
   const [storyModel, setStoryModel] = useState('openai');
   const [showStoryPanel, setShowStoryPanel] = useState(false);
   const [outputWindows, setOutputWindows] = useState([]);
+  const [rawUploadFile, setRawUploadFile] = useState(null);
+
+  // 🔁 Auto-load fullData for RawDataViewer when viewer is opened
+ useLoadRawData(showRawViewer, rawUploadFile, setFullData);
 
   useEffect(() => {
     if (uploadedData) {
@@ -162,40 +167,25 @@ const {
     }
   }, [xAxis, yAxis]);
 
-const handleFileUpload = useCallback((raw) => {
-  console.log("App.jsx received uploadedData:", raw);
-  setUploadedData(raw);
+// App.jsx — update inside handleFileUpload (carefully scoped)
+const handleFileUpload = useCallback((raw, file = null) => {
+  // Safely parse the data preview (5–100 rows for UI)
+  const previewRows = typeof raw?.data_preview === 'string'
+    ? JSON.parse(raw.data_preview)
+    : Array.isArray(raw?.data_preview)
+      ? raw.data_preview
+      : [];
 
-  let rows = [];
+  // 🧠 Do not extract full dataset here — raw data is now isolated and loaded separately via /api/raw_upload
 
-  try {
-    const preview = raw?.data_preview;
+  // ✅ Assign preview and fullData separately
+  setUploadedData({ data_preview: previewRows });  // don't break chart/preview features
+  setFullData(null);                               // defer full dataset loading to RawDataViewer
+  setCleanedData(previewRows);                     // initial state for cleaning/exports
+  setShowDataPreview(true);                        // toggle preview window
 
-    if (Array.isArray(preview)) {
-      rows = preview;
-    } else if (typeof preview === "string") {
-      const parsed = JSON.parse(preview);
-
-      if (Array.isArray(parsed)) {
-        rows = parsed;
-      } else if (typeof parsed === "string") {
-        // handle double-encoded JSON
-        rows = JSON.parse(parsed);
-      }
-    }
-
-    console.log("📤 Sending to setFullData:", rows);
-    console.log("📤 typeof rows:", typeof rows);
-    console.log("📤 Array.isArray(rows):", Array.isArray(rows));
-    console.log("📤 rows.length:", rows?.length);
-  } catch (err) {
-    console.error("❌ Failed to parse data_preview", err);
-    rows = [];
-  }
-
-  setFullData(rows);
-  setCleanedData(rows);
-  setShowDataPreview(true);
+  // ✅ Store the original file for raw viewer to upload later
+  if (file) setRawUploadFile(file);
 }, [setUploadedData, setFullData, setCleanedData]);
 
 

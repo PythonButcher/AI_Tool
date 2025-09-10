@@ -37,6 +37,7 @@ def upload_file():
         numeric_summary = df.select_dtypes(include='number').sum().to_dict()
         categorical_summary = df.select_dtypes(exclude='number').apply(lambda x: x.value_counts().to_dict()).to_dict()
         data_preview = df.head().to_json(orient='records')
+         
 
         return jsonify({
             "message": f"File '{file.filename}' uploaded successfully!",

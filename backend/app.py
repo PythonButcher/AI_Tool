@@ -14,7 +14,7 @@ from backend.services.ai_storyboard_gemini import ai_storyboard_gemini
 from backend.services.ai_storyboard_openai import ai_storyboard_openai
 from backend.services.ai_logic import ai_bp
 from backend.services.ai_logic_gemini import ai_gemini_bp
-
+from backend.routes.raw_data import raw_data_bp
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
@@ -35,6 +35,7 @@ def create_app():
     app.register_blueprint(sql_fetch_bp)
     app.register_blueprint(ai_storyboard_gemini)
     app.register_blueprint(ai_storyboard_openai)
+    app.register_blueprint(raw_data_bp)
 
 
     @app.route('/', methods=['GET'])

@@ -47,7 +47,7 @@ function FileUpload({ label = "Upload a File:", onUploadComplete, allowedExtensi
 
       setUploadedData(response.data);
       if (onFileUploadSuccess) {
-        onFileUploadSuccess(response.data);
+        onFileUploadSuccess(response.data, file);
       }
       if (onUploadComplete) {
         onUploadComplete();
