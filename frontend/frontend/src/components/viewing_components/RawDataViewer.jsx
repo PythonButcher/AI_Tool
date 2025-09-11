@@ -26,6 +26,7 @@ export default function RawDataViewer({
 }) {
   const [page, setPage] = useState(Math.max(1, initialPage));
   const [pageSize, setPageSize] = useState(pageSizeProp);
+  const buttonStyle = { padding: "2px 6px" };
 
   const totalRows = Array.isArray(rows) ? rows.length : 0;
   const totalPages = Math.max(1, Math.ceil(totalRows / pageSize));
@@ -96,16 +97,27 @@ export default function RawDataViewer({
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <button onClick={() => goto(1)} disabled={page === 1} aria-label="First page">
+          <button
+            style={buttonStyle}
+            onClick={() => goto(1)}
+            disabled={page === 1}
+            aria-label="First page"
+          >
             First
           </button>
-          <button onClick={() => goto(page - 1)} disabled={page === 1} aria-label="Previous page">
+          <button
+            style={buttonStyle}
+            onClick={() => goto(page - 1)}
+            disabled={page === 1}
+            aria-label="Previous page"
+          >
             Prev
           </button>
           <span>
             Page {page} / {totalPages}
           </span>
           <button
+            style={buttonStyle}
             onClick={() => goto(page + 1)}
             disabled={page === totalPages}
             aria-label="Next page"
@@ -113,11 +125,40 @@ export default function RawDataViewer({
             Next
           </button>
           <button
+            style={buttonStyle}
             onClick={() => goto(totalPages)}
             disabled={page === totalPages}
             aria-label="Last page"
           >
             Last
+          </button>
+          <button
+            style={buttonStyle}
+            onClick={() => {}}
+            aria-label="Download CSV"
+          >
+            Download CSV
+          </button>
+          <button
+            style={buttonStyle}
+            onClick={() => {}}
+            aria-label="Filter data"
+          >
+            Filter Data
+          </button>
+          <button
+            style={buttonStyle}
+            onClick={() => {}}
+            aria-label="Highlight duplicate rows"
+          >
+            Highlight Duplicates
+          </button>
+          <button
+            style={buttonStyle}
+            onClick={() => {}}
+            aria-label="Summary statistics"
+          >
+            Summary Stats
           </button>
         </div>
 
@@ -225,16 +266,27 @@ export default function RawDataViewer({
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <button onClick={() => goto(1)} disabled={page === 1} aria-label="First page">
+          <button
+            style={buttonStyle}
+            onClick={() => goto(1)}
+            disabled={page === 1}
+            aria-label="First page"
+          >
             First
           </button>
-          <button onClick={() => goto(page - 1)} disabled={page === 1} aria-label="Previous page">
+          <button
+            style={buttonStyle}
+            onClick={() => goto(page - 1)}
+            disabled={page === 1}
+            aria-label="Previous page"
+          >
             Prev
           </button>
           <span>
             Page {page} / {totalPages}
           </span>
           <button
+            style={buttonStyle}
             onClick={() => goto(page + 1)}
             disabled={page === totalPages}
             aria-label="Next page"
@@ -242,11 +294,40 @@ export default function RawDataViewer({
             Next
           </button>
           <button
+            style={buttonStyle}
             onClick={() => goto(totalPages)}
             disabled={page === totalPages}
             aria-label="Last page"
           >
             Last
+          </button>
+          <button
+            style={buttonStyle}
+            onClick={() => {}}
+            aria-label="Download CSV"
+          >
+            Download CSV
+          </button>
+          <button
+            style={buttonStyle}
+            onClick={() => {}}
+            aria-label="Filter data"
+          >
+            Filter Data
+          </button>
+          <button
+            style={buttonStyle}
+            onClick={() => {}}
+            aria-label="Highlight duplicate rows"
+          >
+            Highlight Duplicates
+          </button>
+          <button
+            style={buttonStyle}
+            onClick={() => {}}
+            aria-label="Summary statistics"
+          >
+            Summary Stats
           </button>
         </div>
         <span style={{ marginLeft: "auto", fontSize: 12 }}>
