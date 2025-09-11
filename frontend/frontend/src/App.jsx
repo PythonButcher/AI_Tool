@@ -1,16 +1,18 @@
+// File: App.jsx
 import React, { useState, useCallback, useEffect, useContext } from 'react';
 import MenuBar from './components/MenuBar';
 import CanvasContainer from './components/CanvasContainer';
 import DatasetInfo from './components/DatasetInfo';
-import { DndContext } from '@dnd-kit/core';
 import SideBar from './components/SideBar';
+import { DndContext, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import DataCleaningForm from './components/DataCleaningForm';
 import DataVisualizations from './components/chart_components/DataVisualization';
 import { transformToChartData } from './utils/chartDataUtils';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import AIChat from './components/ai_ml_components/AIChat';
 import { DataContext } from './context/DataContext';
-import DataStoryPanel from './components/DataStoryPanel';
+import useLoadRawData from './hooks/useLoadRawData';
+// ⛔️ Removed: import DataStoryPanel from './components/DataStoryPanel';
 import DataFilterPanel from './components/DataFilterPanel';
 import './App.css';
 
@@ -27,16 +29,29 @@ const theme = createTheme({
 });
 
 function App() {
-  const { uploadedData, setUploadedData, setFullData, pipelineResults, setPipelineResults} = useContext(DataContext);
+const {
+  uploadedData, setUploadedData,
+  fullData, setFullData,
+  cleanedData, setCleanedData,
+  pipelineResults, setPipelineResults,
+  aiReportReady, setAiReportReady,
+  showAiReport, setShowAiReport
+} = useContext(DataContext);
+
+
+
   console.log("App.jsx received uploadedData:", uploadedData);
 
   // Standard charting state
   const [selectedStat, setSelectedStat] = useState(null);
-  const [cleanedData, setCleanedData] = useState(null);
+  // const [cleanedData, setCleanedData] = useState(null);
   const [chartData, setChartData] = useState(null);
-  const [chartType, setChartType] = useState('Bar');
-  const [chartMapping, setChartMapping] = useState({});   // { 'X‑Axis': 'Region', 'Y‑Axis': 'Sales' }
+  //const [chartType, setChartType] = useState('Bar');
+  const [chartMapping, setChartMapping] = useState({});   // { 'X-Axis': 'Region', 'Y-Axis': 'Sales' }
 
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+  );
 
   // AI charting state (separate from standard)
   const [aiChartData, setAiChartData] = useState(null);
@@ -50,6 +65,7 @@ function App() {
   const [xAxis, setXAxis] = useState(null);
   const [yAxis, setYAxis] = useState(null);
   const [showDataPreview, setShowDataPreview] = useState(false);
+  const [showRawViewer, setShowRawViewer] = useState(false);
   const [showCanvasContainer, setShowCanvasContainer] = useState(true);
   const [showDataVisual, setShowDataVisual] = useState(false);
   const [selectedChartType, setSelectedChartType] = useState(null);
@@ -60,10 +76,13 @@ function App() {
   const [showCanvasMinimized, setShowCanvasMinimized] = useState(false);
   const [previewMode, setPreviewMode] = useState('table'); // "table" or "json"
   const [storyData, setStoryData] = useState(undefined);
+  const [storyModel, setStoryModel] = useState('openai');
   const [showStoryPanel, setShowStoryPanel] = useState(false);
   const [outputWindows, setOutputWindows] = useState([]);
+  const [rawUploadFile, setRawUploadFile] = useState(null);
 
-  
+  // 🔁 Auto-load fullData for RawDataViewer when viewer is opened
+ useLoadRawData(showRawViewer, rawUploadFile, setFullData);
 
   useEffect(() => {
     if (uploadedData) {
@@ -75,11 +94,21 @@ function App() {
   useEffect(() => {
     console.log("Sidebar render cleanedData:", uploadedData);
   }, [uploadedData]);
+
+  useEffect(() => {
+    console.log("App render raw data viewer:", showRawViewer);
+  }, [showRawViewer]);
   
   useEffect(() => {
-  console.log("📉 Filtered data:", openDataFilter);
-}, [openDataFilter]);
+    console.log("📉 Filtered data:", openDataFilter);
+  }, [openDataFilter]);
 
+  // Notify when AI report has been generated
+  useEffect(() => {
+    if (pipelineResults?.ai_report?.status === 'success') {
+      setAiReportReady(true);
+    }
+  }, [pipelineResults, setAiReportReady]);
 
   useEffect(() => {
     console.log("📊 showAIChart state changed:", showAIChart);
@@ -87,7 +116,11 @@ function App() {
 
   // Standard chartData transformation (NOT AI)
   useEffect(() => {
-    if (!cleanedData || Object.keys(chartMapping).length === 0) {
+    if (
+      !cleanedData ||
+      !chartMapping['X-Axis'] ||
+      !chartMapping['Y-Axis']
+    ) {
       console.warn('Missing dependencies for chartData transformation.');
       return;
     }
@@ -123,7 +156,7 @@ function App() {
 
     const transformed = transformToChartData(newData, {
       labelField: xAxis || 'defaultLabel',
-      dataField: yAxis || 'defaultData',
+      dataFields: [yAxis || 'defaultData'],
     });
     if (transformed) {
       setChartData(transformed);
@@ -134,30 +167,57 @@ function App() {
     }
   }, [xAxis, yAxis]);
 
-   const handleFileUpload = useCallback((raw) => {
-    // raw is whatever the backend returns
-    setUploadedData(raw);                       // preview for UI
-    const allRows =
-      Array.isArray(raw)                 ? raw
-      : Array.isArray(raw?.data_preview) ? raw.data_preview
-      : typeof raw?.data_preview === 'string'
-        ? JSON.parse(raw.data_preview)
-        : [];
-    setFullData(allRows);                       // <— NEW
-    setShowDataPreview(true);
-  }, [setUploadedData, setFullData]);
+// App.jsx — update inside handleFileUpload (carefully scoped)
+const handleFileUpload = useCallback((raw, file = null) => {
+  // Safely parse the data preview (5–100 rows for UI)
+  const previewRows = typeof raw?.data_preview === 'string'
+    ? JSON.parse(raw.data_preview)
+    : Array.isArray(raw?.data_preview)
+      ? raw.data_preview
+      : [];
+
+  // 🧠 Do not extract full dataset here — raw data is now isolated and loaded separately via /api/raw_upload
+
+  // ✅ Assign preview and fullData separately
+  setUploadedData({ data_preview: previewRows });  // don't break chart/preview features
+  setFullData(null);                               // defer full dataset loading to RawDataViewer
+  setCleanedData(previewRows);                     // initial state for cleaning/exports
+  setShowDataPreview(true);                        // toggle preview window
+
+  // ✅ Store the original file for raw viewer to upload later
+  if (file) setRawUploadFile(file);
+}, [setUploadedData, setFullData, setCleanedData]);
+
 
   const handleApiData = (data) => {
+    const rows = Array.isArray(data)
+      ? data
+      : Array.isArray(data?.data_preview)
+      ? data.data_preview
+      : typeof data?.data_preview === 'string'
+      ? JSON.parse(data.data_preview)
+      : [];
+
     setUploadedData({
-      data_preview: Array.isArray(data) ? data : [data], // ✅ Ensures correct format
+      data_preview: rows, // ✅ Ensures correct format
     });
+    setFullData(rows);      // ✅ Provide full dataset
+    setCleanedData(rows);   // ✅ Keep sidebar fields in sync
     setShowDataPreview(true);  // ✅ Triggers preview window
   };
 
   const handleDatabaseData = (data) => {
+    const rows = Array.isArray(data?.data_preview)
+      ? data.data_preview
+      : typeof data?.data_preview === 'string'
+      ? JSON.parse(data.data_preview)
+      : [];
+
     setUploadedData({
-      data_preview: Array.isArray(data?.data_preview) ? data.data_preview : []
+      data_preview: rows,
     });
+    setFullData(rows);      // ✅ Provide full dataset
+    setCleanedData(rows);   // ✅ Keep sidebar fields in sync
     setShowDataPreview(true);
   };
   
@@ -172,12 +232,26 @@ function App() {
     setShowDataPreview(false);
   }, []);
 
+  const handleCloseRawViewer = useCallback(() => {
+    setShowRawViewer(false);
+  }, []);
+
   const handleCloseCanvas = useCallback(() => {
     setShowCanvasContainer(false);
   }, []);
 
   const handleCanvasMinimize = useCallback(() => {
     setShowCanvasMinimized(prev => !prev);
+  }, []);
+
+  const handleAiReportOpen = useCallback(() => {
+    setShowAiReport(true);
+    setAiReportReady(false);
+  }, []);
+
+  const handleAiReportClose = useCallback(() => {
+    setShowAiReport(false);
+    setAiReportReady(false);
   }, []);
   
 
@@ -193,30 +267,71 @@ function App() {
     setShowChartWindow(false);
   }, []);
 
-  const handleDragEnd = useCallback((event) => {
-    const { active, over } = event;
-    console.log("Dragged field ID:", active?.id);
-    console.log("Drop target ID:", over?.id);
+  const handleStoryModelChange = (newModel) => {
+    console.log("Switching story model to:", newModel);
+    setStoryModel(newModel);
+  };
 
-    if (!over) {
-      console.warn('No valid drop target.');
-      return;
+  // const handleDataViewerChange = (newViewer) => {
+  //   console.log("Switching my data viewer to:", newViewer);
+  //   setShowRawViewer(newViewer);
+  // };
+
+  const handleFieldDrop = useCallback(
+    (axis, field) => {
+      setChartMapping((prev) => {
+        const updated = { ...prev };
+        if (axis === 'x') {
+          setXAxis(field);
+          updated['X-Axis'] = field;
+        } else if (axis === 'y') {
+          setYAxis(field);
+          updated['Y-Axis'] = field;
+        }
+
+        if (
+          cleanedData &&
+          updated['X-Axis'] &&
+          updated['Y-Axis']
+        ) {
+          const transformed = transformToChartData(cleanedData, {
+            labelField: updated['X-Axis'],
+            dataFields: [updated['Y-Axis']],
+          });
+          setChartData(transformed);
+        }
+
+        return updated;
+      });
+    },
+    [cleanedData]
+  );
+
+  // Handle drag end events, mapping dropped field to the correct axis
+  const handleDragEnd = useCallback(({ active, over }) => {
+    // Only handle drops on valid targets when dragging a field
+    if (!over || active.data?.current?.type !== 'field') return;
+    const fieldName = active.data.current.field;
+
+    // Prefer droppable metadata but fall back to id parsing
+    let axis = over.data?.current?.axis;
+    if (!axis) {
+      const id = over.id?.toString().toLowerCase();
+      if (id?.includes('x')) axis = 'x';
+      else if (id?.includes('y')) axis = 'y';
     }
 
-    const draggedField = active.id;
-    const dropTarget = over.id;
-    if (dropTarget === 'x-axis') {
-      setXAxis(draggedField);
-      console.log('Updated xAxis:', draggedField);
-    } else if (dropTarget === 'y-axis') {
-      setYAxis(draggedField);
-      console.log('Updated yAxis:', draggedField);
+    if (axis === 'x') {
+      handleFieldDrop('x', fieldName);
+    } else if (axis === 'y') {
+      handleFieldDrop('y', fieldName);
     }
-  }, []);
+  }, [handleFieldDrop]);
+
 
   return (
     <ThemeProvider theme={theme}>
-      <DndContext onDragEnd={handleDragEnd}>
+      <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
         <div className="app-container">
           {/* Sidebar with actions and data cleaning */}
           <SideBar
@@ -227,10 +342,12 @@ function App() {
             showAiWorkflow={showAiWorkflow}
             setShowAiWorkflow={setShowAiWorkflow}
             setShowDataPreview={setShowDataPreview}
+            setShowRawViewer={setShowRawViewer}
             setStoryData={setStoryData}
             setShowStoryPanel={setShowStoryPanel}
             showWhiteBoard={showWhiteBoard}
             setShowWhiteBoard={setShowWhiteBoard}
+            onStoryModelChange={handleStoryModelChange} // new model selection
           />
 
           <div className="main-content">
@@ -243,7 +360,8 @@ function App() {
               handleApiData={handleApiData}
               handleDatabaseData={handleDatabaseData}
               setOpenDataFilter={setOpenDataFilter}
-          
+              aiReportReady={aiReportReady}
+              onAiReportClick={handleAiReportOpen}
             />
 
             <DataFilterPanel openDataFilter={openDataFilter} setOpenDataFilter={setOpenDataFilter} />
@@ -271,60 +389,63 @@ function App() {
 
             {/* Canvas Container wraps multiple display components */}
             {showCanvasContainer && (
-                <CanvasContainer
-                  showAiWorkflow={showAiWorkflow}  // ✅ Pass state down
-                  setShowAiWorkflow={setShowAiWorkflow}
-                  uploadedData={uploadedData || null}
-                  showDataPreview={showDataPreview}
-                  previewMode={previewMode}              
-                  setPreviewMode={setPreviewMode}
-                  setShowDataPreview={setShowDataPreview}
-                  handleClosePreview={handleClosePreview}
-                  handleCloseCanvas={handleCloseCanvas}
-                  cleanedData={cleanedData}
-                  selectedChartType={selectedChartType}
-                  handleCloseChartWindow={handleCloseChartWindow}
-                  showChartWindow={showChartWindow}
-                  xAxis={xAxis}
-                  yAxis={yAxis}
-                  setXAxis={setXAxis}
-                  setYAxis={setYAxis}
-                  showAIChart={showAIChart}
-                  setShowAIChart={setShowAIChart}
-                  setAiChartType = {setAiChartType}
-                  aiChartData={aiChartData}
-                  aiChartType={aiChartType}
-                  showCanvasMinimized={showCanvasMinimized}
-                  setShowCanvasMinimized={setShowCanvasMinimized}
-                  handleCanvasMinimize={handleCanvasMinimize}
-                  chartMapping={chartMapping}                // ✅ NEW
-                  setChartMapping={setChartMapping}
-                  storyData={storyData}
-                  setStoryData={setStoryData}
-                  showStoryPanel={showStoryPanel}
-                  setShowStoryPanel={setShowStoryPanel}
-                  setAiChartData={setAiChartData}
-                  showWhiteBoard={showWhiteBoard}
-                  setShowWhiteBoard={setShowWhiteBoard}
-                  pipelineResults={pipelineResults} 
-                  setPipelineResults={setPipelineResults}
-                  outputWindows={outputWindows}
-                  setOutputWindows={setOutputWindows}      
-                  >
-                    
-                  {/* Dataset information displayed within the CanvasContainer */}
-                 <DatasetInfo selectedStat={selectedStat} />
-                  {/* Render the AI-generated story panel if requested */}
-                  {showStoryPanel && (
+              <CanvasContainer
+                showAiWorkflow={showAiWorkflow}  // ✅ Pass state down
+                setShowAiWorkflow={setShowAiWorkflow}
+                uploadedData={uploadedData || null}
+                showDataPreview={showDataPreview}
+                previewMode={previewMode}              
+                setPreviewMode={setPreviewMode}
+                setShowDataPreview={setShowDataPreview}
+                handleClosePreview={handleClosePreview}
+                handleCloseCanvas={handleCloseCanvas}
+                cleanedData={cleanedData}
+                selectedChartType={selectedChartType}
+                handleCloseChartWindow={handleCloseChartWindow}
+                showChartWindow={showChartWindow}
+                showAIChart={showAIChart}
+                setShowAIChart={setShowAIChart}
+                setAiChartType = {setAiChartType}
+                aiChartData={aiChartData}
+                aiChartType={aiChartType}
+                showCanvasMinimized={showCanvasMinimized}
+                setShowCanvasMinimized={setShowCanvasMinimized}
+                handleCanvasMinimize={handleCanvasMinimize}
+                chartMapping={chartMapping}                // ✅ NEW
+                storyData={storyData}
+                setStoryData={setStoryData}
+                showStoryPanel={showStoryPanel}
+                setShowStoryPanel={setShowStoryPanel}
+                setAiChartData={setAiChartData}
+                chartData={chartData} // ✅ ADD THIS
+                showWhiteBoard={showWhiteBoard}
+                setShowWhiteBoard={setShowWhiteBoard}
+                pipelineResults={pipelineResults} 
+                setPipelineResults={setPipelineResults}
+                outputWindows={outputWindows}
+                setOutputWindows={setOutputWindows}
+                showAiReport={showAiReport}
+                onCloseAiReport={handleAiReportClose}
+                showRawViewer={showRawViewer}
+                handleCloseRawViewer={handleCloseRawViewer}
+            
+              >
+                {/* ⬇️ Keep other children that should render inside the Data Preview window */}
+                <DatasetInfo selectedStat={selectedStat} />
+
+                {/* ⛔️ Removed: duplicate DataStoryPanel child render */}
+                {/*
+                {showStoryPanel && (
                   <DataStoryPanel
                     uploadedData={uploadedData}
-                    cleanedData={cleanedData} // optional if used
+                    cleanedData={cleanedData}
+                    model={storyModel}
                   />
                 )}
-                </CanvasContainer>
-                                
-                )}
-              </div>
+                */}
+              </CanvasContainer>
+            )}
+          </div>
 
           {/* AI Chat component for interacting with AI */}
           <AIChat

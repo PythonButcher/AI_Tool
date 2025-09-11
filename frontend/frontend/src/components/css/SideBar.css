@@ -118,6 +118,13 @@
     z-index: 10;
     width: 150px;
 }
+.export-dropdown {          /* get rid of this block altogether, this just hides it
+  background: transparent;  /* remove white box */
+  border: none;             /* if any border exists */
+  box-shadow: none;         /* remove shadow if present */
+  padding: 0;               /* optional if spacing causes the box */
+}
+
 
 .export-dropdown button {
     display: block;
@@ -136,4 +143,79 @@
     background-color: #f0f0f0;
     color: #000;
 }
+.sidebar-storyboard-wrapper {
+  position: relative;
+}
 
+.model-choice-menu {
+  position: absolute;
+  left: 50px; /* to the right of the icon */
+  top: 50%;   /* vertically center on the icon */
+  transform: translateY(-50%); /* ensure perfect center alignment */
+  display: flex;
+  flex-direction: column;
+  background-color: #f9f9f9;
+  padding: 6px;
+  border-radius: 8px;
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.1);
+  z-index: 999;
+}
+
+.sidebar-subbutton {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  margin: 4px 0;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background-color 0.2s;
+}
+
+.sidebar-subbutton:hover {
+  background-color: #e6e6e6;
+}
+
+.sidebar-subbutton .sidebar-button-icon {
+  font-size: 20px;
+  margin-right: 8px;
+}
+
+.sidebar-subbutton[data-tooltip] {
+  position: relative;
+}
+
+.sidebar-subbutton[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: 40px;
+  top: 50%;
+  transform: translateY(-50%);
+  background-color: #333;
+  color: #fff;
+  padding: 4px 8px;
+  font-size: 12px;
+  border-radius: 4px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  z-index: 1000;
+}
+
+.sidebar-subbutton:hover::after {
+  opacity: 1;
+}
+
+.data-choice-menu {
+  position: absolute;
+  left: 50px; /* to the right of the icon */
+  top: 15%;   /* vertically center on the icon */
+  display: flex;
+  flex-direction: column;
+  background-color: #f9f9f9;
+  padding: 6px;
+  border-radius: 8px;
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.1);
+  z-index: 999;
+
+}

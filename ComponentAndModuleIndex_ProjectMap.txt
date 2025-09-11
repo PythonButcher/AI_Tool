@@ -1,0 +1,150 @@
+AI_Tool/
+├── .codex                       # Codex include/exclude configuration
+├── .codexrc                     # Codex runtime settings
+├── .gitignore                   # Git ignore rules
+├── ComponentAndModuleIndex_ProjectMap.txt  # project structure overview
+├── GEMINI.md
+├── README.md
+├── backend_logs.txt
+├── dev-test.txt
+├── logs.txt
+├── python                        # empty placeholder file
+├── requirements.txt              # Python dependency list
+├── backend/
+│   ├── __init__.py               # empty initializer for Flask package
+│   ├── app.py                    # creates Flask app and registers blueprints
+│   ├── backOGbackend.txt         # older prototype of backend routes
+│   ├── global_state.py           # holds uploaded and cleaned dataframes
+│   ├── requirements.txt          # dependency list for backend
+│   ├── python                    # empty placeholder file
+│   ├── routes/
+│   │   ├── __init__.py           # empty blueprint package file
+│   │   ├── analysis.py           # routes for statistics on uploaded data
+│   │   ├── api_fetch.py          # fetches and flattens external API data
+│   │   ├── cleaning.py           # basic data cleaning endpoints
+│   │   ├── export.py             # exports cleaned data to CSV/Excel/PDF
+│   │   ├── sql_fetch.py          # connects to Postgres and previews tables
+│   │   └── upload.py             # handles file upload and preview
+│   ├── services/
+│   │   ├── ai_logic.py           # OpenAI integration for chat and commands
+│   │   ├── ai_logic_gemini.py    # Google Gemini version of AI logic
+│   │   ├── ai_storyboard_gemini.py  # Gemini-based storyboard generator
+│   │   ├── ai_storyboard_openai.py  # OpenAI-based storyboard generator
+│   │   ├── data_processing.py    # empty placeholder module
+│   │   └── ml_logic.py           # empty placeholder module
+│   ├── utils/
+│   │   └── helpers.py            # empty helper module
+│   └── venv/                     # local Python virtual environment
+└── frontend/
+    ├── package.json              # dependencies for top‑level frontend utilities
+    ├── package-lock.json
+    └── frontend/
+        ├── .gitignore            # React app ignore rules
+        ├── README.md
+        ├── package.json          # React app dependencies and scripts
+        ├── package-lock.json
+        ├── public/               # static assets (icons, html, manifest, etc.)
+        └── src/
+            ├── App.css
+            ├── App.jsx           # main React component coordinating the UI
+            ├── index.css
+            ├── index.js          # React entry point
+            ├── notes.txt
+            ├── prettierrc.json   # prettier formatting rules
+            ├── context/
+            │   ├── ContextMenu.jsx        # context menu wrapper component
+            │   ├── ContextMenu.styles.jsx # styling for context menu
+            │   ├── DataContext.jsx        # global React context provider
+            │   └── WindowContext.jsx      # manages window state and layout
+            ├── hooks/
+            │   └── useContextMenu.jsx     # custom hook for context menu logic
+            ├── utils/
+            │   ├── ChartStyles.jsx        # dynamic color helpers for charts
+            │   ├── DragDrop.jsx           # generic drag‑and‑drop area
+            │   ├── DropZone.jsx           # UI component for assigning axes
+            │   ├── OutsideClickWrapper.jsx # detects clicks outside wrapped elements
+            │   ├── chartDataUtils.jsx     # converts data to chart.js format
+            │   ├── chartRoleConfig.jsx    # mapping of chart roles to fields
+            │   ├── filterUtils.jsx        # data filtering helpers
+            │   ├── previewChartUtils.jsx  # utilities for chart previews
+            │   ├── workflow_output_router.jsx  # manages workflow output windows
+            │   └── sketch/
+            │       └── SketchParser.js    # parses Excalidraw scenes into workflow graphs
+            └── components/
+                ├── APiDataForm.jsx        # fetches external API data
+                ├── CanvasContainer.jsx    # layout container for chart and tools
+                ├── CategoricalStats.jsx   # shows category statistics
+                ├── DataCleaningForm.jsx   # form for cleaning operations
+                ├── DataFilterPanel.jsx    # panel for filtering dataset
+                ├── DataStoryPanel.jsx     # displays AI‑generated story content
+                ├── DatasetInfo.jsx        # fetches data info and stats
+                ├── FieldsPanel.jsx        # lists dataset fields for charting
+                ├── FileExport.jsx         # export buttons for cleaned data
+                ├── FileUpload.jsx         # handles file selection/upload
+                ├── MenuBar.jsx            # top menu with navigation and actions
+                ├── MinimizedDock.jsx      # dock displaying minimized windows
+                ├── SearchBar.jsx          # dataset search input
+                ├── SideBar.jsx            # side panel with workflow buttons
+                ├── ai_ml_components/
+                │   ├── AICharts.jsx       # generates AI‑recommended charts
+                │   └── AIChat.jsx         # chat interface for AI assistant
+                ├── button_components/
+                │   ├── CleanedButton.jsx  # toggles cleaned data display
+                │   ├── CloseButton.jsx    # generic close button
+                │   ├── MaximizeButton.jsx # maximizes panels
+                │   └── MinimizeButton.jsx # minimizes panels
+                ├── chart_components/
+                │   ├── ChartComponent.jsx     # renders manual charts
+                │   ├── ChartComponentAI.jsx   # renders AI‑generated charts
+                │   ├── ChartToolbar.jsx       # toolbar for chart actions
+                │   ├── DataVisualization.jsx  # list of chart type options
+                │   └── RolesPanel.jsx         # assign dataset roles to axes
+                ├── database_components/
+                │   ├── DatabaseConnectForm.jsx # form to enter DB credentials
+                │   └── TableListDropdown.jsx   # dropdown of DB tables
+                ├── viewing_components/
+                │   ├── DataTablePreview.jsx   # table preview of dataset
+                │   ├── JsonDataPreview.jsx    # JSON view of dataset
+                │   └── PreviewModeSelector.jsx # toggle preview format
+                ├── white_board_components/
+                │   ├── WhiteBoard.jsx         # Excalidraw whiteboard canvas
+                │   └── WhiteBoardToolbar.jsx  # toolbar for whiteboard
+                ├── workflow_lab_components/
+                    ├── AIPipeline.jsx            # orchestrates AI workflow steps
+                    ├── AIReporter.jsx            # summarises workflow results
+                    ├── AiCommandBlock.jsx        # command block for workflow
+                    ├── AiWorkLabNodeSizer.jsx    # sizing helper for workflow nodes
+                    ├── AiWorkflowLab.jsx         # UI for building AI pipelines
+                    ├── CleanSuggestionsModal.jsx # modal for AI cleaning suggestions
+                    └── DropZoneNode.jsx          # drop‑zone node for workflows
+                └── css/
+                    ├── AIReporter.css
+                    ├── APiDataForm.css
+                    ├── CanvasContainer.css
+                    ├── CategoricalStats.css
+                    ├── DataCleaningForm.css
+                    ├── DataStoryPanel.css
+                    ├── DatasetInfo.css
+                    ├── DragDrop.css
+                    ├── FieldsPanel.css
+                    ├── FileExport.css
+                    ├── FileUpload.css
+                    ├── MenuBar.css
+                    ├── MinimizedDock.css
+                    ├── SearchBar.css
+                    ├── SideBar.css
+                    ├── ai_ml_css/AIChat.css
+                    ├── button_css/CleanedButton.css
+                    ├── button_css/CloseButton.css
+                    ├── button_css/MaximizeButton.css
+                    ├── button_css/MinimizeButton.css
+                    ├── chart_css/ChartComponent.css
+                    ├── chart_css/DataVisualizations.css
+                    ├── chart_css/RolesPanel.css
+                    ├── db_css/DatabaseConnectForm.css
+                    ├── viewing_css/PreviewModeSelector.css
+                    ├── workflow_lab_css/AiCommandBlock.css
+                    ├── workflow_lab_css/AiMenuContext.css
+                    ├── workflow_lab_css/AiWorkflowLab.css
+                    ├── workflow_lab_css/AiWorkflowLabDropZone.css
+                    └── workflow_lab_css/CleanSuggestionsModal.css

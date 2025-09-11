@@ -6,7 +6,7 @@
   justify-content: space-between;
   align-items: center;
   height: 58px;
-  padding: 0 16px;
+  padding: 0 13px;
   background-color: #b0b0b0; /* Nintendo grey */
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -28,8 +28,8 @@
 .menu-bar-left,
 .menu-bar-right {
   display: flex;
-  align-items: center;
-  gap: 20px;
+  align-items: right;
+  gap: 10px;
 }
 
 /* ──────────────────────────────────────────────────────────
@@ -40,7 +40,7 @@
 }
 
 .menu-button {
-  padding: 7px 16px;
+  padding: 7px 13px;
   background-color: #4d4d4d;
   color: #f0f0f0;
   border: none;
@@ -51,11 +51,11 @@
   transition: background-color 0.2s ease, transform 0.2s ease;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .menu-button:hover {
-  background-color: #3a3a3a;
+  background-color: #6a4949;
   transform: translateY(-1px);
 }
 
@@ -150,4 +150,32 @@
 .data-preview-toggle-button:active {
   background-color: #404040;
   transform: translateY(1px);
+}
+
+/* Notification icon for AI report */
+.ai-report-notification {
+  position: relative;
+}
+
+.ai-report-icon {
+  animation: flash 1s infinite;
+  color: #d9534f;
+}
+
+@keyframes flash {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.ai-report-popup {
+  position: absolute;
+  top: 30px;
+  left: -10px;
+  background: #ffffff;
+  border: 1px solid #cccccc;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  z-index: 1000;
 }

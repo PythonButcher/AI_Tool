@@ -5,12 +5,12 @@ import FileUpload from './FileUpload';
 import ApiDataForm from './APiDataForm';
 import DatabaseConnectForm from './database_components/DatabaseConnectForm';
 import DragDrop from '../utils/DragDrop';
-import { FaUpload, FaChartBar, FaServer, FaDatabase, FaRedoAlt, FaFilter } from 'react-icons/fa';
+import { FaUpload, FaChartBar, FaServer, FaDatabase, FaRedoAlt, FaFilter, FaFileAlt } from 'react-icons/fa';
 import { DataContext } from '../context/DataContext';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
-function MenuBar({ onStatsSelect, handleApiData, handleDatabaseData, setOpenDataFilter}) {
+function MenuBar({ onFileUploadSuccess, onStatsSelect, handleApiData, handleDatabaseData, setOpenDataFilter, aiReportReady, onAiReportClick }) {
   const [activeDropdown, setActiveDropdown] = useState(null);
   const { setUploadedData } = useContext(DataContext);
 
@@ -53,6 +53,9 @@ function MenuBar({ onStatsSelect, handleApiData, handleDatabaseData, setOpenData
       const response = await axios.post(`${API_URL}/api/upload`, formData);
       console.log('Backend response:', response.data);
       setUploadedData(response.data);
+      if (onFileUploadSuccess) {
+        onFileUploadSuccess(response.data);
+      }
       setActiveDropdown(null);
     } catch (error) {
       console.error('File upload error:', error);
@@ -79,7 +82,11 @@ function MenuBar({ onStatsSelect, handleApiData, handleDatabaseData, setOpenData
           </button>
           {activeDropdown === 'upload' && (
             <div className="menu-dropdown">
-              <FileUpload label="Select a File to Upload:" onUploadComplete={() => setActiveDropdown(null)} />
+              <FileUpload
+                label="Select a File to Upload:"
+                onUploadComplete={() => setActiveDropdown(null)}
+                onFileUploadSuccess={onFileUploadSuccess}
+              />
               <DragDrop onFilesSelected={handleFileUpload} width="100%" height="200px" />
             </div>
           )}
@@ -140,6 +147,17 @@ function MenuBar({ onStatsSelect, handleApiData, handleDatabaseData, setOpenData
             </div>
           )}
         </div>
+
+        {aiReportReady && (
+          <div className="ai-report-notification">
+            <FaFileAlt
+              className="menu-icon-only ai-report-icon"
+              title="AI Report Ready"
+              onClick={onAiReportClick}
+            />
+            <div className="ai-report-popup">AI Report is ready</div>
+          </div>
+        )}
 
         {/* Reset App */}
         <FaRedoAlt

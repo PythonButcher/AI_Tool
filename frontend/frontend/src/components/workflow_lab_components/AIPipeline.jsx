@@ -2,13 +2,15 @@
 
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import CleanSuggestionsModal from './CleanSuggestionsModal';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 // This invisible controller manages the AI workflow execution lifecycle
-const AIPipeline = ({ nodes, dataset, onResults }) => {
+const AIPipeline = ({ nodes, dataset, onResults, onDataCleaned }) => {
   const [results, setResults] = useState({});
   const [isRunning, setIsRunning] = useState(false);
+  const [pendingClean, setPendingClean] = useState(null);
 
   // Function exposed globally to run the current pipeline on demand
   const runWorkflow = async () => {
@@ -30,17 +32,53 @@ const AIPipeline = ({ nodes, dataset, onResults }) => {
       setResults({ ...newResults });
 
       try {
-        const response = await axios.post(`${API_URL}/ai_cmd`, {
-          command,
-          dataset,
-        });
+        let response;
+        // Special handling for the /clean command
+        if (command === '/clean') {
+          // First request: get suggestions
+          const suggest = await axios.post(`${API_URL}/ai_cmd`, {
+            command,
+            dataset,
+          });
+
+          let instructions = '';
+          if (suggest.data && suggest.data.suggestions) {
+            instructions = await new Promise((resolve) => {
+              setPendingClean({ suggestions: suggest.data.suggestions, resolve });
+            });
+          }
+
+          if (!instructions) {
+            newResults[nodeId] = { status: 'skipped', result: suggest.data };
+            setResults({ ...newResults });
+            continue;
+          }
+
+          response = await axios.post(`${API_URL}/ai_cmd`, {
+            command,
+            dataset,
+            instructions,
+          });
+
+          if (onDataCleaned && response.data.cleaned_data) {
+            onDataCleaned(response.data.cleaned_data);
+            console.log('✅ Cleaned data updated in the global context.');
+          }
+        } else {
+          // Handle all other AI commands
+          response = await axios.post(`${API_URL}/ai_cmd`, {
+            command,
+            dataset,
+          });
+        }
 
         newResults[nodeId] = {
           status: 'success',
           result: response.data,
         };
-        console.log(`🧪 Result from /${command}:`, response.data);
+        console.log(`🧪 Result from ${command}:`, response.data);
         console.log(`✅ Node ${nodeId} (${command}) complete.`);
+
       } catch (error) {
         newResults[nodeId] = {
           status: 'error',
@@ -94,9 +132,25 @@ const AIPipeline = ({ nodes, dataset, onResults }) => {
   useEffect(() => {
     window.runAIPipeline = runWorkflow;
     return () => delete window.runAIPipeline;
-  }, [nodes, dataset]);
+  }, [nodes, dataset, onDataCleaned]);
 
-  return null;
+  return (
+    <>
+      {pendingClean && (
+        <CleanSuggestionsModal
+          suggestions={pendingClean.suggestions}
+          onApply={(inst) => {
+            pendingClean.resolve(inst);
+            setPendingClean(null);
+          }}
+          onSkip={() => {
+            pendingClean.resolve(null);
+            setPendingClean(null);
+          }}
+        />
+      )}
+    </>
+  );
 };
 
 export default AIPipeline;

@@ -1,6 +1,6 @@
 // 📂 AiWorkflowLab.jsx — cleaned and fixed DropZone behavior with working hover
 
-import { useState, useCallback, useContext, useRef } from "react";
+import { useState, useCallback, useContext, useRef, useEffect } from "react";
 import {
   ReactFlow,
   Controls,
@@ -19,6 +19,7 @@ import ContextMenu from "../../context/ContextMenu";
 import { DataContext } from "../../context/DataContext";
 import AIPipeline from './AIPipeline';
 import DropZoneNode from './DropZoneNode';
+import { useWindowContext } from "../../context/WindowContext";
 
 const initialNodes = [
   {
@@ -34,11 +35,93 @@ const initialNodes = [
 
 const initialEdges = [];
 
-function AiWorkflowLab() {
-  const { uploadedData, cleanedData, pipelineResults, setPipelineResults } = useContext(DataContext);
-  const [nodes, setNodes] = useState(initialNodes);
-  const [edges, setEdges] = useState(initialEdges);
+function AiWorkflowLab({ savedState }) {
+  const { uploadedData, cleanedData, pipelineResults, setPipelineResults, setCleanedData } = useContext(DataContext);
+  const { saveWindowContentState } = useWindowContext();
+  const [nodes, setNodes] = useState(savedState?.nodes || initialNodes);
+  const [edges, setEdges] = useState(savedState?.edges || initialEdges);
   const [hasExecuted, setHasExecuted] = useState(false);
+
+   // --- NEW: helper to map spec node.type -> AiCommandBlocks entry + node data
+  const mapSpecTypeToBlockKey = useCallback((t) => {
+    const type = String(t || "").toUpperCase();
+    // Adjust these keys to match your AiCommandBlocks keys exactly
+    switch (type) {
+      case "SUMMARY": return "summary";   // maps to AiCommandBlocks.summary
+      case "CHARTS": return "charts";     // maps to AiCommandBlocks.charts
+      case "INSIGHTS": return "insights"; // maps to AiCommandBlocks.insights
+      case "CLEAN": return "clean";       // maps to AiCommandBlocks.clean
+      case "EXECUTE": return "execute";   // maps to AiCommandBlocks.execute
+      default: return null;               // falls back to CUSTOM
+    }
+  }, []);
+
+  // --- NEW: Build a React Flow node from a WorkflowSpec node
+  const buildRfNodeFromSpec = useCallback((specNode) => {
+    const blockKey = mapSpecTypeToBlockKey(specNode.type);
+    const block = blockKey ? AiCommandBlocks[blockKey] : null;
+
+    const label = block?.display || specNode.label || specNode.type || "Custom";
+    const command = block?.command || `/${(specNode.type || "custom").toLowerCase()}`;
+
+    return {
+      id: specNode.id || `node-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,
+      type: "AiWorkLabNodeSizer",
+      position: specNode.position || { x: 200, y: 200 },
+      data: {
+        icon: block?.icon || null,
+        label,
+        command,
+        // We’ll keep params so downstream nodes/pipeline can use them
+        params: specNode.params || {},
+      },
+    };
+  }, [mapSpecTypeToBlockKey]);
+
+  // --- NEW: Importer — replace current graph with compiled spec
+  const importWorkflowSpec = useCallback((spec, opts = {}) => {
+    try {
+      if (!spec || !Array.isArray(spec.nodes)) {
+        console.warn("⚠️ importWorkflowSpec: invalid spec", spec);
+        return;
+      }
+
+      // Build RF nodes from spec (plus keep the dropzone node at the end)
+      const rfNodes = spec.nodes.map(buildRfNodeFromSpec);
+      const rfEdges = (spec.edges || []).map(e => ({
+        id: e.id || `edge-${Math.random().toString(36).slice(2,7)}`,
+        source: e.source,
+        target: e.target,
+        type: "default",
+      }));
+
+      // Always include the non-deletable Drop Zone
+      const dropZone = initialNodes[0];
+      const nextNodes = [...rfNodes, dropZone];
+
+      setNodes(nextNodes);
+      setEdges(rfEdges);
+
+      console.log("✅ Imported workflow spec:", { nodes: nextNodes, edges: rfEdges });
+
+      if (opts.autoRun && typeof window.runAIPipeline === "function") {
+        // slight defer to ensure ReactFlow has committed the new graph
+        setTimeout(() => window.runAIPipeline(), 50);
+      }
+    } catch (err) {
+      console.error("❌ importWorkflowSpec failed:", err);
+    }
+  }, [buildRfNodeFromSpec]);
+
+  // --- NEW: Expose imperative API on window (like your run hook)
+  useEffect(() => {
+    window.importWorkflowSpec = importWorkflowSpec;
+    return () => {
+      if (window.importWorkflowSpec === importWorkflowSpec) {
+        delete window.importWorkflowSpec;
+      }
+    };
+  }, [importWorkflowSpec]);
 
   const workflowRef = useRef(null);
   const { clicked, coords, setClicked } = useContextMenu(workflowRef);
@@ -86,14 +169,11 @@ function AiWorkflowLab() {
     [hasExecuted]
   );
 
-    // 🔁 Add this new handler
-  const onConnect = useCallback(
-    (params) => {
-      console.log("🔗 New edge created:", params);
-      setEdges((eds) => addEdge(params, eds));
-    },
-    []
-  );
+  // 🔁 Add this new handler
+  const onConnect = useCallback((params) => {
+    console.log("🔗 New edge created:", params);
+    setEdges((eds) => addEdge(params, eds));
+  }, []);
 
 
   const onNodesChange = useCallback(
@@ -118,10 +198,9 @@ function AiWorkflowLab() {
     [checkOverlapAndTrigger]
   );
 
-  const onEdgesChange = useCallback(
-    (changes) => setEdges((eds) => applyEdgeChanges(changes, eds)),
-    []
-  );
+  const onEdgesChange = useCallback((changes) => {
+    setEdges((eds) => applyEdgeChanges(changes, eds));
+  }, []);
 
   const handleAddNode = useCallback(
     (type) => {
@@ -148,6 +227,10 @@ function AiWorkflowLab() {
     [coords, setClicked]
   );
 
+  useEffect(() => {
+    saveWindowContentState('aiWorkflowLab', { nodes, edges });
+  }, [nodes, edges, saveWindowContentState]);
+
   const renderedNodes = nodes.map((node) => ({
     ...node,
     data: {
@@ -169,7 +252,7 @@ function AiWorkflowLab() {
         edges={edges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
-        onConnect={onConnect}                      
+        onConnect={onConnect}
         fitView
         nodeTypes={{
           AiWorkLabNodeSizer: AiWorkLabNodeSizer,
@@ -196,6 +279,7 @@ function AiWorkflowLab() {
         nodes={nodes}
         dataset={cleanedData || uploadedData}
         onResults={setPipelineResults}
+        onDataCleaned={setCleanedData}
       />
     </div>
   );

@@ -1,7 +1,7 @@
 // WhiteboardToolbar.jsx
 import React from "react";
 
-const WhiteboardToolbar = ({ excalidrawRef }) => {
+const WhiteboardToolbar = ({ excalidrawRef, onCompileSketch, onThemeChange, theme }) => {
   const handleClear = () => {
     if (excalidrawRef.current) {
       excalidrawRef.current.updateScene({ elements: [] });
@@ -75,16 +75,7 @@ const handleLoadScene = () => {
     >
       <button
         onClick={handleClear}
-        style={{
-          backgroundColor: "#2c2c2c",
-          color: "#fff",
-          border: "none",
-          borderRadius: "4px",
-          padding: "6px 12px",
-          cursor: "pointer",
-          fontSize: "14px",
-          transition: "background 0.2s ease",
-        }}
+        style={{ ...btnStyle }}
         onMouseOver={(e) => (e.currentTarget.style.backgroundColor = "#3a3a3a")}
         onMouseOut={(e) => (e.currentTarget.style.backgroundColor = "#2c2c2c")}
       >
@@ -93,15 +84,7 @@ const handleLoadScene = () => {
 
       <button
         onClick={handleSaveScene}
-        style={{
-            backgroundColor: "#2c2c2c",
-            color: "#fff",
-            border: "none",
-            borderRadius: "4px",
-            padding: "6px 12px",
-            cursor: "pointer",
-            fontSize: "14px",
-        }}
+        style={{ ...btnStyle }}
         onMouseOver={(e) => (e.currentTarget.style.backgroundColor = "#3a3a3a")}
         onMouseOut={(e) => (e.currentTarget.style.backgroundColor = "#2c2c2c")}
         >
@@ -110,26 +93,50 @@ const handleLoadScene = () => {
 
         <button
         onClick={handleLoadScene}
-        style={{
-            backgroundColor: "#2c2c2c",
-            color: "#fff",
-            border: "none",
-            borderRadius: "4px",
-            padding: "6px 12px",
-            cursor: "pointer",
-            fontSize: "14px",
-        }}
+        style={{ ...btnStyle }}
         onMouseOver={(e) => (e.currentTarget.style.backgroundColor = "#3a3a3a")}
         onMouseOut={(e) => (e.currentTarget.style.backgroundColor = "#2c2c2c")}
         >
         📂 Load Scene
         </button>
 
+        {/* ✅ New Button */}
+      <button
+        onClick={() => {
+          console.log("🧠 Compile Sketch clicked");
+          if (onCompileSketch) onCompileSketch();
+        }}
+        style={{ ...btnStyle }}
+        onMouseOver={(e) => (e.currentTarget.style.backgroundColor = "#3a3a3a")}
+        onMouseOut={(e) => (e.currentTarget.style.backgroundColor = "#2c2c2c")}
+      >
+        ⚙️ Compile Sketch → Pipeline
+      </button>
+
+      <button
+        onClick={onThemeChange}
+        style={{ ...btnStyle }}
+        onMouseOver={(e) => (e.currentTarget.style.backgroundColor = "#3a3a3a")}
+        onMouseOut={(e) => (e.currentTarget.style.backgroundColor = "#2c2c2c")}
+      >
+        {theme === "light" ? "🌙" : "☀️"}
+      </button>
+
 
 
       {/* Add future buttons here with same style */}
     </div>
   );
+};
+
+const btnStyle = {
+backgroundColor: "#2c2c2c",
+color: "#fff",
+border: "none",
+borderRadius: "4px",
+padding: "6px 12px",
+cursor: "pointer",
+fontSize: "14px",
 };
 
 export default WhiteboardToolbar;

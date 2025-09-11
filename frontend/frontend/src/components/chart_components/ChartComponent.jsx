@@ -22,27 +22,38 @@ if (!chartData || !chartData.labels || !chartData.datasets) {
 
 
   const options = {
-    responsive: true,
-    maintainAspectRatio: false,
-    layout: { padding: 10 },
-    plugins: { legend: { display: true }, tooltip: { enabled: true } },
-    animation: {
-      onComplete: () => {
-        const chart = chartRef.current;
-        if (chart) {
-          const ctx = chart.ctx;
-          ctx.save();
-          ctx.globalCompositeOperation = 'destination-over';
-          ctx.fillStyle = '#ffffff';
-          ctx.fillRect(0, 0, chart.width, chart.height);
-          ctx.restore();
-        }
-      },
+  responsive: true,
+  maintainAspectRatio: false,   // Must be false!
+  aspectRatio: undefined,       // Allows full flexible height
+  layout: { padding: 10 },
+  plugins: { legend: { display: true }, tooltip: { enabled: true } },
+  animation: {
+    onComplete: () => {
+      const chart = chartRef.current;
+      if (chart) {
+        const ctx = chart.ctx;
+        ctx.save();
+        ctx.globalCompositeOperation = 'destination-over';
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, chart.width, chart.height);
+        ctx.restore();
+      }
     },
-  };
+  },
+};
+
 
   return (
-    <div style={{ width: "100%", height: "100%", position: "relative" }}>
+    <div
+      style={{
+        width: "100%",
+        height: "calc(95% - 8px)", // ✅ leave room for toolbar
+        position: "relative",
+        paddingBottom: "12px",       // ✅ prevent axis cutoffs
+        boxSizing: "border-box",     // ✅ account for padding
+      }}
+    >
+
       <ChartToolbar chartRef={chartRef} />
       {chartType === "Bar" && <Bar ref={chartRef} data={chartData} options={options} />}
       {chartType === "Line" && <Line ref={chartRef} data={chartData} options={options} />}
