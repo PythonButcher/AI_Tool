@@ -20,6 +20,7 @@ import { DataContext } from "../../context/DataContext";
 import AIPipeline from './AIPipeline';
 import DropZoneNode from './DropZoneNode';
 import { useWindowContext } from "../../context/WindowContext";
+import { FiDownload, FiUpload } from "react-icons/fi";
 
 const initialNodes = [
   {
@@ -63,6 +64,7 @@ function AiWorkflowLab({ savedState }) {
 
     const label = block?.display || specNode.label || specNode.type || "Custom";
     const command = block?.command || `/${(specNode.type || "custom").toLowerCase()}`;
+    const params = specNode.params && typeof specNode.params === "object" ? specNode.params : {};
 
     return {
       id: specNode.id || `node-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,
@@ -73,7 +75,8 @@ function AiWorkflowLab({ savedState }) {
         label,
         command,
         // We’ll keep params so downstream nodes/pipeline can use them
-        params: specNode.params || {},
+        params,
+        commandType: blockKey || (typeof specNode.type === "string" ? specNode.type.toLowerCase() : null),
       },
     };
   }, [mapSpecTypeToBlockKey]);
@@ -124,7 +127,144 @@ function AiWorkflowLab({ savedState }) {
   }, [importWorkflowSpec]);
 
   const workflowRef = useRef(null);
+  const fileInputRef = useRef(null);
   const { clicked, coords, setClicked } = useContextMenu(workflowRef);
+
+  const deriveCommandType = useCallback((node) => {
+    const explicitType = node?.data?.commandType;
+    if (explicitType) {
+      return explicitType;
+    }
+
+    const command = node?.data?.command;
+    if (!command) {
+      return null;
+    }
+
+    const matchedKey = Object.keys(AiCommandBlocks).find(
+      (key) => AiCommandBlocks[key].command === command
+    );
+
+    if (matchedKey) {
+      return matchedKey;
+    }
+
+    if (command.startsWith("/")) {
+      return command.slice(1);
+    }
+
+    return command;
+  }, []);
+
+  const exportWorkflowSpec = useCallback(() => {
+    const workflowNodes = nodes
+      .filter((node) => node.id !== "dropzone-node")
+      .map((node) => {
+        const params = node.data?.params && typeof node.data.params === "object"
+          ? node.data.params
+          : {};
+
+        const type = deriveCommandType(node);
+
+        const specNode = {
+          id: node.id,
+          type: typeof type === "string" ? type : null,
+          label: node.data?.label,
+          icon: node.data?.icon,
+          params,
+          position: node.position,
+        };
+
+        if (!specNode.type) {
+          delete specNode.type;
+        }
+
+        if (!specNode.icon) {
+          delete specNode.icon;
+        }
+
+        if (!specNode.label) {
+          delete specNode.label;
+        }
+
+        return specNode;
+      });
+
+    const workflowEdges = edges.map((edge) => ({
+      id: edge.id,
+      source: edge.source,
+      target: edge.target,
+    }));
+
+    return { nodes: workflowNodes, edges: workflowEdges };
+  }, [deriveCommandType, edges, nodes]);
+
+  const triggerDownload = useCallback((spec) => {
+    try {
+      const json = JSON.stringify(spec, null, 2);
+      const blob = new Blob([json], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const timestamp = new Date()
+        .toISOString()
+        .replace(/[:T]/g, "-")
+        .split(".")[0];
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `workflow-${timestamp}.json`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("❌ Failed to export workflow spec", err);
+    }
+  }, []);
+
+  const handleSaveWorkflow = useCallback(() => {
+    const spec = exportWorkflowSpec();
+    triggerDownload(spec);
+  }, [exportWorkflowSpec, triggerDownload]);
+
+  const handleLoadWorkflowClick = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
+
+  const handleWorkflowFileChange = useCallback(
+    (event) => {
+      const file = event.target.files && event.target.files[0];
+      if (!file) {
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const text = e.target?.result;
+          const parsed = JSON.parse(text);
+
+          if (!parsed || !Array.isArray(parsed.nodes) || !Array.isArray(parsed.edges)) {
+            console.warn("⚠️ Invalid workflow file: missing nodes or edges", parsed);
+            alert("Unable to load workflow: the file is missing nodes or edges.");
+            return;
+          }
+
+          setPipelineResults({});
+          setHasExecuted(false);
+          importWorkflowSpec(parsed);
+        } catch (error) {
+          console.error("❌ Failed to load workflow file", error);
+          alert("Unable to load workflow: the file is not valid JSON.");
+        } finally {
+          if (fileInputRef.current) {
+            fileInputRef.current.value = "";
+          }
+        }
+      };
+
+      reader.readAsText(file);
+    },
+    [importWorkflowSpec, setPipelineResults]
+  );
 
   const handleExecuteDrop = async () => {
     console.log("🚀 Execute node dropped! Triggering AIPipeline...");
@@ -214,6 +354,8 @@ function AiWorkflowLab({ savedState }) {
           icon: command.icon,
           label: command.display,
           command: command.command,
+          params: {},
+          commandType: type,
         },
         position: {
           x: coords.x - 100,
@@ -247,6 +389,23 @@ function AiWorkflowLab({ savedState }) {
       className="ai-workflow-lab-container"
       style={{ width: "100%", height: "100%", position: "relative", zIndex: 2 }}
     >
+      <div className="workflow-lab-toolbar">
+        <button type="button" className="workflow-toolbar-button" onClick={handleSaveWorkflow}>
+          <FiDownload aria-hidden="true" />
+          <span>Save Workflow</span>
+        </button>
+        <button type="button" className="workflow-toolbar-button" onClick={handleLoadWorkflowClick}>
+          <FiUpload aria-hidden="true" />
+          <span>Load Workflow</span>
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="application/json,.json"
+          className="workflow-toolbar-file-input"
+          onChange={handleWorkflowFileChange}
+        />
+      </div>
       <ReactFlow
         nodes={renderedNodes}
         edges={edges}
