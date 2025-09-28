@@ -80,7 +80,7 @@ def ai_response():
 
         # Call OpenAI API with the conversation history as messages
         completion = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-5-nano",
             messages=conversation_history,
             max_tokens=500,
             temperature=0.7,
