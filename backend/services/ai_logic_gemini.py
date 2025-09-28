@@ -5,19 +5,18 @@ import textwrap  # For dedenting multi-line strings
 import google.generativeai as genai # Import Google Generative AI library
 
 # Configure the Google Generative AI library with API key from environment variable
-api_key = os.getenv("GEMINI_API_KEY")  # Ensure this says GEMINI_API_KEY
+api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
 if not api_key:
     # Make sure the error message also reflects the correct variable name
-    raise ValueError("GEMINI_API_KEY is not set in the environment variables.")
+    raise ValueError("Neither GEMINI_API_KEY nor GOOGLE_API_KEY is set in the environment variables.")
 genai.configure(api_key=api_key)
 
 # Define Flask Blueprint for AI-related routes
 ai_gemini_bp = Blueprint("ai_gemini_bp", __name__)
 
 # --- Model Configuration ---
-# Choose a Gemini model. 'gemini-1.5-flash' is often a good balance of speed and capability.
-# You could also use 'gemini-pro'.
-GEMINI_MODEL_NAME = 'gemini-2.5-flash-lite' # Or 'gemini-pro'
+# Choose a Gemini model. 'gemini-pro' is a widely available general-purpose model.
+GEMINI_MODEL_NAME = 'gemini-2.5-flash'
 # Generation configuration for Gemini (maps roughly to OpenAI parameters)
 # Note: Direct equivalents for frequency_penalty/presence_penalty aren't standard.
 # Safety settings can be added if needed.
