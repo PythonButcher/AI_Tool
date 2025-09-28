@@ -182,7 +182,7 @@ def ai_command():
             try:
                 current_app.logger.debug("Sending request to OpenAI for chart recommendation...")
                 completion = client.chat.completions.create(
-                    model="gpt-4o-mini",
+                    model="gpt-5-nano-2025-08-07",
                     messages=[{"role": "system", "content": prompt}],
                     response_format={"type": "json_object"},
                     max_tokens=1024 # Increased for safety
