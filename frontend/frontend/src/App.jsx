@@ -426,9 +426,10 @@ const handleFileUpload = useCallback((raw, file = null) => {
                 setOutputWindows={setOutputWindows}
                 showAiReport={showAiReport}
                 onCloseAiReport={handleAiReportClose}
+                storyModel={storyModel}
                 showRawViewer={showRawViewer}
                 handleCloseRawViewer={handleCloseRawViewer}
-            
+
               >
                 {/* ⬇️ Keep other children that should render inside the Data Preview window */}
                 <DatasetInfo selectedStat={selectedStat} />
