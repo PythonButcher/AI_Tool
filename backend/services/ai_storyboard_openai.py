@@ -36,7 +36,7 @@ def summarise_schema(rows, limit=50):
 
 def openai_call(prompt):
     resp = openai.chat.completions.create(
-        model="gpt-5-mini",
+        model="gpt-4.1",
         messages=[{"role": "user", "content": prompt}],
         temperature=0.7,
         top_p=1.0,
