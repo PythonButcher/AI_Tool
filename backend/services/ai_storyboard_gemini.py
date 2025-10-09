@@ -12,7 +12,7 @@ _gemini_api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
 if not _gemini_api_key:
     raise ValueError("Neither GEMINI_API_KEY nor GOOGLE_API_KEY is set for Gemini storyboard support.")
 genai.configure(api_key=_gemini_api_key)
-gemini = genai.GenerativeModel("gemini-pro")
+gemini = genai.GenerativeModel("gemini-1.5-flash")
 # ─── Helpers ────────────────────────────────────────────────────────────────
 def normalise_dataset(payload):
     if isinstance(payload, str):
@@ -37,13 +37,20 @@ def summarise_schema(rows, limit=50):
     return field_types
 
 def gemini_call(prompt):
-    resp = gemini.generate_content(
-        prompt,
-        generation_config={"temperature": 0.7, "top_p": 1.0, "max_output_tokens": 1100},
-    )
-    if not resp or not getattr(resp, "text", None):
-        raise RuntimeError("Empty response from Gemini")
-    return resp.text.strip()
+    try:
+        resp = gemini.generate_content(
+            prompt,
+            generation_config={"temperature": 0.7, "top_p": 1.0, "max_output_tokens": 1100, "response_mime_type": "application/json"},
+        )
+        if not resp or not getattr(resp, "text", None):
+            # Adding more detailed error logging
+            print(f"Gemini API response was empty or invalid. Response: {resp}")
+            raise RuntimeError("Empty response from Gemini")
+        return resp.text.strip()
+    except Exception as e:
+        # Log the full error from the Gemini API
+        print(f"Gemini API call failed: {e}")
+        raise
 
 # ─── Route ───────────────────────────────────────────────────────────────────
 @ai_storyboard_gemini.route("/api/storyboard-gemini", methods=["POST"])
@@ -57,7 +64,7 @@ def storyboard():
         rows = normalise_dataset(dataset)
         schema_summary = summarise_schema(rows)
 
-        prompt = textwrap.dedent(f"""
+        prompt = textwrap.dedent(f'''
         You are a senior BI analyst. 
         1️⃣ Analyse the *schema* and *sample rows* below.  
         2️⃣ Produce a JSON **only** object with EXACTLY:
@@ -81,12 +88,14 @@ def storyboard():
 
         ── SAMPLE ROWS (≤50) ──
         {json.dumps(rows[:50], separators=(',', ':'))}
-        """)
+        ''')
 
         raw = gemini_call(prompt)
 
         # strip any stray code fences
-        if raw.startswith("```"):
+        if raw.startswith("```json"):
+            raw = raw.strip("```json").strip()
+        elif raw.startswith("```"):
             raw = "\n".join(l for l in raw.splitlines() if not l.startswith("```"))
 
         result = json.loads(raw)
@@ -100,4 +109,6 @@ def storyboard():
         return jsonify(result), 200
 
     except Exception as e:
+        # More specific error logging
+        print(f"Error in storyboard route: {e}")
         return jsonify({"error": f"Server failure: {e}"}), 500
