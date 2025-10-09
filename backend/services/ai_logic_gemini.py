@@ -16,7 +16,7 @@ ai_gemini_bp = Blueprint("ai_gemini_bp", __name__)
 
 # --- Model Configuration ---
 # Choose a Gemini model. 'gemini-pro' is a widely available general-purpose model.
-GEMINI_MODEL_NAME = 'gemini-1.5-flash'
+GEMINI_MODEL_NAME = 'gemini-2.0-flash'
 # Generation configuration for Gemini (maps roughly to OpenAI parameters)
 # Note: Direct equivalents for frequency_penalty/presence_penalty aren't standard.
 # Safety settings can be added if needed.

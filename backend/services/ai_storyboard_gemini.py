@@ -12,7 +12,7 @@ _gemini_api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
 if not _gemini_api_key:
     raise ValueError("Neither GEMINI_API_KEY nor GOOGLE_API_KEY is set for Gemini storyboard support.")
 genai.configure(api_key=_gemini_api_key)
-gemini = genai.GenerativeModel("gemini-1.5-flash")
+gemini = genai.GenerativeModel("gemini-2.0-flash")
 # ─── Helpers ────────────────────────────────────────────────────────────────
 def normalise_dataset(payload):
     if isinstance(payload, str):
