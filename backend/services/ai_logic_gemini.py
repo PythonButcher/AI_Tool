@@ -196,8 +196,190 @@ def ai_response():
         return jsonify({"error": f"An unexpected error occurred: {str(e)}"}), 500
 
 
+
+def generate_chart_from_natural_language(query: str):
+    """
+    Analyzes a natural language query to generate a Chart.js configuration.
+
+    Args:
+        query: The natural language query from the user.
+
+    Returns:
+        A dictionary containing the Chart.js configuration or an error message.
+    """
+    from backend.global_state import get_uploaded_df
+    import pandas as pd
+
+    df = get_uploaded_df()
+    if df is None:
+        return {"error": "No data available. Please upload a file first."}
+
+    # Get column names and data types
+    column_details = {col: str(dtype) for col, dtype in df.dtypes.items()}
+
+    prompt = textwrap.dedent(f"""
+    You are an expert data analyst. Your task is to convert a user's natural language query into a chart configuration.
+
+    Analyze the user's query and the available data columns to determine the best way to visualize the data.
+
+    **User Query:** "{query}"
+
+    **Available Columns:**
+    {json.dumps(column_details, indent=2)}
+
+    **Instructions:**
+    1.  **Choose the best chart type:** Select one from 'bar', 'line', 'pie', 'scatter', 'doughnut'.
+    2.  **Identify the columns:**
+        *   `x_column`: The column for the x-axis (labels).
+        *   `y_column`: The column for the y-axis (values). For scatter plots, this is the y-value.
+        *   `group_by_column` (optional): The column to group by for aggregations (e.g., for bar or pie charts).
+    3.  **Determine the aggregation type:** If needed, choose an aggregation method. Common options are 'sum', 'count', 'mean', 'none'.
+    4.  **Provide labels:** Create a descriptive `title`, `x_axis_label`, and `y_axis_label`.
+
+    **Return a JSON object with the following structure:**
+    {{
+      "chartType": "...",
+      "x_column": "...",
+      "y_column": "...",
+      "aggregation": "...",
+      "group_by_column": "...",
+      "title": "...",
+      "x_axis_label": "...",
+      "y_axis_label": "..."
+    }}
+
+    **Example:**
+    If the query is "Show me the total sales for each product", the output might be:
+    {{
+      "chartType": "bar",
+      "x_column": "product",
+      "y_column": "sales",
+      "aggregation": "sum",
+      "group_by_column": "product",
+      "title": "Total Sales by Product",
+      "x_axis_label": "Product",
+      "y_axis_label": "Total Sales"
+    }}
+    """)
+
+    try:
+        response = gemini_model.generate_content(
+            prompt,
+            generation_config=GENERATION_CONFIG_JSON
+        )
+
+        if not response.candidates or not hasattr(response, 'text') or not response.text:
+            return {{"error": "Failed to get a valid response from the AI."}}
+
+        ai_config = json.loads(response.text)
+
+        chart_type = ai_config.get("chartType")
+        x_column = ai_config.get("x_column")
+        y_column = ai_config.get("y_column")
+        aggregation = ai_config.get("aggregation")
+        group_by_column = ai_config.get("group_by_column")
+        title = ai_config.get("title")
+        x_axis_label = ai_config.get("x_axis_label")
+        y_axis_label = ai_config.get("y_axis_label")
+
+        # --- Data Processing ---
+        labels = []
+        datasets = []
+
+        if aggregation == 'count':
+            if group_by_column:
+                data = df.groupby(group_by_column).size().reset_index(name='count')
+                labels = data[group_by_column].tolist()
+                values = data['count'].tolist()
+                dataset = {{
+                    "label": title,
+                    "data": values,
+                }}
+                datasets.append(dataset)
+        elif aggregation == 'sum':
+            if group_by_column and y_column:
+                data = df.groupby(group_by_column)[y_column].sum().reset_index()
+                labels = data[group_by_column].tolist()
+                values = data[y_column].tolist()
+                dataset = {{
+                    "label": f"Sum of {y_column}",
+                    "data": values,
+                }}
+                datasets.append(dataset)
+        elif aggregation == 'mean':
+            if group_by_column and y_column:
+                data = df.groupby(group_by_column)[y_column].mean().reset_index()
+                labels = data[group_by_column].tolist()
+                values = data[y_column].tolist()
+                dataset = {{
+                    "label": f"Average of {y_column}",
+                    "data": values,
+                }}
+                datasets.append(dataset)
+        else: # No aggregation or scatter
+            if x_column and y_column:
+                if chart_type == 'scatter':
+                    # For scatter, data is an array of {x, y} points
+                    points = df[[x_column, y_column]].to_dict('records')
+                    dataset = {{
+                        "label": f"{y_column} vs {x_column}",
+                        "data": points,
+                    }}
+                    datasets.append(dataset)
+                else:
+                    labels = df[x_column].tolist()
+                    values = df[y_column].tolist()
+                    dataset = {{
+                        "label": y_column,
+                        "data": values,
+                    }}
+                    datasets.append(dataset)
+
+
+        # --- Chart.js Configuration ---
+        chart_js_config = {{
+            "type": chart_type,
+            "data": {{
+                "labels": labels,
+                "datasets": datasets
+            }},
+            "options": {{
+                "responsive": True,
+                "plugins": {{
+                    "legend": {{
+                        "position": 'top',
+                    }},
+                    "title": {{
+                        "display": True,
+                        "text": title
+                    }}
+                }},
+                "scales": {{
+                    "x": {{
+                        "title": {{
+                            "display": True,
+                            "text": x_axis_label
+                        }}
+                    }},
+                    "y": {{
+                        "title": {{
+                            "display": True,
+                            "text": y_axis_label
+                        }}
+                    }}
+                }}
+            }}
+        }}
+
+        return chart_js_config
+
+    except Exception as e:
+        current_app.logger.error(f"Error in generate_chart_from_natural_language: {str(e)}")
+        return {{"error": f"An error occurred: {str(e)}"}}
+
 @ai_gemini_bp.route("/ai_cmd", methods=["POST"])
 def ai_command():
+
     """
     Route to handle AI commands using Gemini.
     Expects JSON payload with 'command' and 'dataset'.

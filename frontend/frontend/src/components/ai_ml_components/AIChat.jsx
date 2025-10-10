@@ -12,35 +12,7 @@ const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 
 
-// Chart formatting utility
-const formatChartData = (chartResponse) => {
-  const labels = chartResponse.chartData.map(item => {
-    if (typeof item === "object") {
-      const labelKey = Object.keys(item).find(k => k.toLowerCase() !== "value") || "label";
-      return String(item[labelKey]);
-    }
-    return String(item);
-  });
 
-  const data = chartResponse.chartData.map(item =>
-    typeof item === "object" && "value" in item
-      ? Number(item.value) || 0
-      : Number(item) || 0
-  );
-
-  const colors = getDynamicColors(labels.length);
-
-  return {
-    labels,
-    datasets: [{
-      label: chartResponse.chartType || "AI-Generated Chart",
-      data,
-      backgroundColor: colors.map(c => c.backgroundColor),
-      borderColor: colors.map(c => c.borderColor),
-      borderWidth: 1,
-    }]
-  };
-};
 
 function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
   const { uploadedData, cleanedData, setCleanedData } = useContext(DataContext);
@@ -97,60 +69,37 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
       { role: "user", content: userInput }
     ];
 
-    let responseText;
+    if (AICommands.isCommand(userInput)) {
+      if (userInput.startsWith("/clean")) {
+        const parts = userInput.split(" ");
+        const instructions = parts.length > 1 ? parts.slice(1).join(" ") : null;
+        const result = await handleUserCommand("/clean", datasetContext, instructions);
 
-    if (AICommands.isCommand(userInput) && userInput.startsWith("/charts")) {
-      const aiChartResponse = await handleUserCommand("/charts", datasetContext);
-
-      if (!aiChartResponse || !Array.isArray(aiChartResponse.chartData)) {
-        setError("AI failed to generate valid chart data.");
-        setLoading(false);
-        return;
-      }
-
-      const formattedChartData = formatChartData(aiChartResponse);
-      setAiChartType(formattedChartData.datasets[0]?.label || "Bar Chart");
-      setAiChartData(formattedChartData);
-      setShowAIChart(true);
-      setLoading(false);
-      return;
-    }
-
-    if (AICommands.isCommand(userInput) && userInput.startsWith("/clean")) {
-      const parts = userInput.split(" ");
-      const instructions = parts.length > 1 ? parts.slice(1).join(" ") : null;
-      const result = await handleUserCommand("/clean", datasetContext, instructions);
-
-      if (instructions) {
-        if (!result || !Array.isArray(result)) {
-          setError("AI failed to generate valid cleaned data.");
-          setLoading(false);
-          return;
+        if (instructions) {
+          if (!result || !Array.isArray(result)) {
+            setError("AI failed to generate valid cleaned data.");
+            setLoading(false);
+            return;
+          }
+          setCleanedData(result);
+          setAwaitingCleanInstructions(false);
+          responseText = "The data has been cleaned successfully.";
+        } else {
+          responseText = result || "No suggestions returned.";
+          setAwaitingCleanInstructions(true);
         }
-        setCleanedData(result);
-        setAwaitingCleanInstructions(false);
-        responseText = "The data has been cleaned successfully.";
       } else {
-        responseText = result || "No suggestions returned.";
-        setAwaitingCleanInstructions(true);
+        responseText = await handleUserCommand(userInput.split(" ")[0], datasetContext);
       }
-    } else if (awaitingCleanInstructions) {
-      const result = await handleUserCommand("/clean", datasetContext, userInput);
-      if (result && Array.isArray(result)) {
-        setCleanedData(result);
-        responseText = "The data has been cleaned successfully.";
-      } else {
-        responseText = typeof result === 'string' ? result : "Unable to clean data.";
-      }
-      setAwaitingCleanInstructions(false);
-    } else if (AICommands.isCommand(userInput)) {
-      responseText = await handleUserCommand(userInput.split(" ")[0], datasetContext);
     } else {
       try {
-        const response = await axios.post(`${API_URL}/ai`, { conversation_history });
-        responseText = response.data.reply;
+        const response = await axios.post(`${API_URL}/api/natural-language-chart`, { query: userInput });
+        setAiChartType(response.data.type);
+        setAiChartData(response.data);
+        setShowAIChart(true);
+        responseText = `Here is a ${response.data.type} chart for your query.`;
       } catch (error) {
-        console.error("AIChat API Error:", error);
+        console.error("AI Chat API Error:", error);
         responseText = "⚠ Unable to get response from AI.";
       }
     }
