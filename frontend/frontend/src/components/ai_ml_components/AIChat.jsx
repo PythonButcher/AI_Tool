@@ -10,6 +10,33 @@ import { getDynamicColors } from '../../utils/ChartStyles';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
+const CHART_INTENT_KEYWORDS = [
+  'plot',
+  'chart',
+  'graph',
+  'visualize',
+  'visualise',
+  'distribution',
+  'trend',
+  'over time',
+  'compare',
+  'versus',
+  'vs',
+  'breakdown',
+  'share',
+  'percentage',
+  'line chart',
+  'bar chart',
+  'pie chart',
+  'scatter',
+];
+
+const isVisualizationRequest = (text) => {
+  if (!text) return false;
+  const lower = text.toLowerCase();
+  return CHART_INTENT_KEYWORDS.some((keyword) => lower.includes(keyword));
+};
+
 
 
 // Chart formatting utility
@@ -77,6 +104,19 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
     }
   };
 
+  const attemptNaturalLanguageChart = async (query, dataset) => {
+    try {
+      const response = await axios.post(`${API_URL}/ai_nl_chart`, {
+        query,
+        dataset,
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Natural-language chart error:', error);
+      return null;
+    }
+  };
+
   const handleSendMessage = async () => {
     if (!userInput.trim()) return;
 
@@ -90,14 +130,41 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
       return;
     }
 
+    let responseText;
+    let handledChart = false;
+
+    if (!AICommands.isCommand(userInput) && isVisualizationRequest(userInput)) {
+      const chartResult = await attemptNaturalLanguageChart(userInput, datasetContext);
+      if (chartResult?.chartType && chartResult?.chartData) {
+        setAiChartType(chartResult.chartType);
+        setAiChartData(chartResult.chartData);
+        setShowAIChart(true);
+        responseText = chartResult.explanation || `Generated a ${chartResult.chartType} chart.`;
+        handledChart = true;
+      } else if (chartResult?.error) {
+        responseText = chartResult.error;
+        handledChart = true;
+      }
+    }
+
+    if (handledChart) {
+      setUserMessages(prev => [
+        ...prev,
+        { role: "user", content: userInput },
+        { role: "assistant", content: responseText }
+      ]);
+
+      setUserInput('');
+      setLoading(false);
+      return;
+    }
+
     const conversation_history = [
       { role: "system", content: "You are an AI assistant for data analysis. Only answer questions about the provided dataset concisely, like Captain Jean-Luc Picard." },
       { role: "system", content: `Dataset: ${JSON.stringify(datasetContext)}` },
       ...userMessages.slice(-5),
       { role: "user", content: userInput }
     ];
-
-    let responseText;
 
     if (AICommands.isCommand(userInput) && userInput.startsWith("/charts")) {
       const aiChartResponse = await handleUserCommand("/charts", datasetContext);
