@@ -54,6 +54,7 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
 
     setLoading(true);
     setError(null);
+    let responseText;
 
     const datasetContext = cleanedData || uploadedData;
     if (!datasetContext) {
