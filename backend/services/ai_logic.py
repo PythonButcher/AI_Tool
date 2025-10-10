@@ -80,7 +80,7 @@ def ai_response():
 
         # Call OpenAI API with the conversation history as messages
         completion = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-4.1",
             messages=conversation_history,
             max_tokens=500,
             temperature=0.7,
@@ -182,7 +182,7 @@ def ai_command():
             try:
                 current_app.logger.debug("Sending request to OpenAI for chart recommendation...")
                 completion = client.chat.completions.create(
-                    model="gpt-4o-mini",
+                    model="gpt-4.1",
                     messages=[{"role": "system", "content": prompt}],
                     response_format={"type": "json_object"},
                     max_tokens=1024 # Increased for safety
@@ -224,7 +224,7 @@ def ai_command():
                 )
 
                 completion = client.chat.completions.create(
-                    model="gpt-4o-mini",
+                    model="gpt-4.1",
                     messages=[{"role": "system", "content": prompt}],
                     max_tokens=300
                 )
@@ -249,7 +249,7 @@ def ai_command():
             try:
                 current_app.logger.debug("🧠 Sending request to OpenAI for data cleaning (JSON mode)...")
                 completion = client.chat.completions.create(
-                    model="gpt-4o-mini",
+                    model="gpt-4.1",
                     messages=[{"role": "system", "content": prompt}],
                     response_format={"type": "json_object"},
                     max_tokens=4096
@@ -290,7 +290,7 @@ def ai_command():
                 return jsonify(prompt)
 
             completion = client.chat.completions.create(
-                model="gpt-4o-mini",
+                model="gpt-4.1",
                 messages=[{"role": "system", "content": prompt}],
                 max_tokens=300
             )
