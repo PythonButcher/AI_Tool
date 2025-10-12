@@ -1,6 +1,7 @@
 """Utility functions that power the natural language chart builder used by the AI chat."""
 from __future__ import annotations
 
+import json
 import re
 import difflib
 import textwrap
@@ -30,19 +31,40 @@ class QueryInterpretation(Dict[str, Any]):
 
 def extract_dataset(dataset_obj: Any) -> List[Dict[str, Any]]:
     """Normalize incoming dataset payloads into a list of records."""
-    if isinstance(dataset_obj, dict) and "data_preview" in dataset_obj:
-        preview = dataset_obj["data_preview"]
-        if isinstance(preview, str):
-            try:
-                import json
 
-                return json.loads(preview)
-            except json.JSONDecodeError:
-                return []
-        if isinstance(preview, list):
-            return preview
+    if dataset_obj is None:
+        return []
+
+    if isinstance(dataset_obj, str):
+        try:
+            parsed = json.loads(dataset_obj)
+        except json.JSONDecodeError:
+            return []
+        return extract_dataset(parsed)
+
     if isinstance(dataset_obj, list):
-        return dataset_obj
+        # Frontend state frequently stores the preview rows as a plain list.
+        if all(isinstance(row, dict) for row in dataset_obj):
+            return dataset_obj
+        return []
+
+    if isinstance(dataset_obj, dict):
+        # Direct preview payload {"data_preview": [...]}
+        if "data_preview" in dataset_obj:
+            return extract_dataset(dataset_obj["data_preview"])
+
+        # Some callers forward the cleaned/uploaded wrapper objects untouched.
+        for key in ("cleanedData", "uploadedData", "rows", "data", "preview"):
+            if key in dataset_obj:
+                extracted = extract_dataset(dataset_obj[key])
+                if extracted:
+                    return extracted
+
+        # Occurs when previews are serialised as {"0": {...}, "1": {...}}
+        values = list(dataset_obj.values())
+        if values and all(isinstance(value, dict) for value in values):
+            return values
+
     return []
 
 
@@ -269,21 +291,65 @@ def _detect_explicit_chart_type(query: str) -> Optional[str]:
     return None
 
 
-def _choose_chart_type(query: str, fields: Dict[str, Optional[str]]) -> str:
+def _choose_chart_type(
+    query: str, fields: Dict[str, Optional[str]], columns: Sequence[Dict[str, Any]]
+) -> str:
     explicit = _detect_explicit_chart_type(query)
     if explicit:
         return explicit
 
-    if fields.get("time"):
+    query_lower = query.lower()
+    has_time = bool(fields.get("time"))
+    has_category = bool(fields.get("category"))
+    has_value = bool(fields.get("value"))
+    has_secondary = bool(fields.get("secondary_value"))
+
+    time_keywords = ["over time", "trend", "timeline", "by month", "by year", "monthly", "weekly", "daily"]
+    share_keywords = ["share", "percentage", "percent", "portion", "breakdown"]
+    scatter_keywords = ["scatter", "versus", "vs", "against"]
+
+    if has_secondary or any(keyword in query_lower for keyword in scatter_keywords):
+        if has_value and has_secondary:
+            return "Scatter"
+
+    if has_time and has_value and (
+        any(keyword in query_lower for keyword in time_keywords) or not has_category
+    ):
         return "Line"
 
-    if fields.get("category") and fields.get("value"):
+    category_cardinality: Optional[int] = None
+    if has_category:
+        category_meta = next(
+            (col for col in columns if col["name"] == fields.get("category")),
+            None,
+        )
+        if category_meta:
+            category_cardinality = len(
+                {
+                    str(value)
+                    for value in category_meta.get("values", [])
+                    if value not in (None, "")
+                }
+            )
+
+    if has_category and has_value and any(keyword in query_lower for keyword in share_keywords):
+        if category_cardinality is None or category_cardinality <= 8:
+            return "Pie"
+
+    if has_category and not has_value and any(keyword in query_lower for keyword in share_keywords):
+        if category_cardinality is None or category_cardinality <= 8:
+            return "Pie"
+
+    if has_category and has_value:
         return "Bar"
 
-    if fields.get("category") and not fields.get("value"):
+    if has_time and has_value:
+        return "Line"
+
+    if has_category and not has_value:
         return "Bar"
 
-    if fields.get("value") and fields.get("secondary_value"):
+    if has_value and has_secondary:
         return "Scatter"
 
     return "Bar"
@@ -363,6 +429,7 @@ def _apply_filters(dataset: Sequence[Dict[str, Any]], filters: Sequence[Dict[str
 
 def interpret_nl_query(query: str, columns: Sequence[Dict[str, Any]]) -> QueryInterpretation:
     directives = _parse_directives(query)
+    query_lower = query.lower()
     match_details = _score_columns(query, columns)
 
     value_field: Optional[str] = None
@@ -371,7 +438,9 @@ def interpret_nl_query(query: str, columns: Sequence[Dict[str, Any]]) -> QueryIn
     secondary_value: Optional[str] = None
 
     if "value" in directives:
-        value_field = _resolve_column(directives["value"][0], columns)
+        value_hint = directives["value"][0].strip()
+        if value_hint.lower() not in {"count", "records", "rows"}:
+            value_field = _resolve_column(value_hint, columns)
     if "dimension" in directives:
         category_field = _resolve_column(directives["dimension"][0], columns)
     if "time" in directives:
@@ -384,47 +453,88 @@ def interpret_nl_query(query: str, columns: Sequence[Dict[str, Any]]) -> QueryIn
     numeric_candidates = [col["name"] for col in columns if col["type"] == "numeric"]
     categorical_candidates = [col["name"] for col in columns if col["type"] == "categorical"]
 
-    def _best_match(candidates: Sequence[str]) -> Optional[str]:
-        best = (0.0, None)
+    def _best_match(candidates: Sequence[str], min_score: float = 0.0) -> Optional[str]:
+        best_name: Optional[str] = None
+        best_score = min_score
         for name in candidates:
-            detail = match_details.get(name, {"score": 0.0})
-            if detail["score"] > best[0]:
-                best = (detail["score"], name)
-        return best[1]
+            score = match_details.get(name, {"score": 0.0})["score"]
+            if score > best_score:
+                best_name = name
+                best_score = score
+        return best_name
 
     if not value_field:
-        value_field = _best_match(numeric_candidates)
-    if not category_field:
-        category_field = _best_match(categorical_candidates)
-    if not time_field:
-        time_field = _best_match(temporal_candidates)
+        value_field = _best_match(numeric_candidates, 0.1)
+        if not value_field and len(numeric_candidates) == 1:
+            value_field = numeric_candidates[0]
 
-    # If the query emphasises time-based words, prefer the time field as dimension.
-    if any(keyword in query.lower() for keyword in ["over time", "trend", "timeline", "by month", "by year"]):
-        if time_field:
+    if not category_field:
+        category_field = _best_match(categorical_candidates, 0.1)
+        if not category_field and len(categorical_candidates) == 1:
+            category_field = categorical_candidates[0]
+
+    time_keywords = [
+        "over time",
+        "trend",
+        "timeline",
+        "by month",
+        "by year",
+        "monthly",
+        "weekly",
+        "daily",
+    ]
+    mentions_time = any(keyword in query_lower for keyword in time_keywords)
+
+    if not time_field:
+        time_field = _best_match(temporal_candidates, 0.1)
+        if not time_field and mentions_time and temporal_candidates:
+            time_field = temporal_candidates[0]
+
+    grouping_keywords = [" by ", " per ", " versus ", " vs ", " against "]
+    if mentions_time and time_field and "dimension" not in directives:
+        if not any(keyword in query_lower for keyword in grouping_keywords):
             category_field = None
 
-    # Detect requests involving two numeric fields.
-    if " vs " in query.lower() or " versus " in query.lower():
-        parts = re.split(r"versus|vs", query, flags=re.IGNORECASE)
-        if len(parts) >= 2:
-            left = _resolve_column(parts[0], columns)
-            right = _resolve_column(parts[1], columns)
-            numeric_matches = [
-                match
-                for match in [left, right]
-                if match and match in {col["name"] for col in columns if col["type"] == "numeric"}
-            ]
-            if len(numeric_matches) >= 2:
-                value_field, secondary_value = numeric_matches[:2]
+    if category_field and time_field and category_field == time_field:
+        category_field = None
+
+    scatter_keywords = {"scatter", "versus", "vs", "against"}
+    scatter_requested = any(keyword in query_lower for keyword in scatter_keywords)
+
+    if scatter_requested:
+        numeric_scores = sorted(
+            (
+                (match_details.get(name, {"score": 0.0})["score"], name)
+                for name in numeric_candidates
+            ),
+            reverse=True,
+        )
+        ranked_numeric = [name for score, name in numeric_scores if score > 0]
+        if len(ranked_numeric) >= 2:
+            if not value_field:
+                value_field = ranked_numeric[0]
+            if not secondary_value or secondary_value == value_field:
+                secondary_value = ranked_numeric[1]
+        elif len(numeric_candidates) >= 2:
+            if not value_field:
+                value_field = numeric_candidates[0]
+            if not secondary_value or secondary_value == value_field:
+                secondary_value = numeric_candidates[1]
+
+    if secondary_value == value_field:
+        secondary_value = None
 
     explicit_chart = _detect_explicit_chart_type(query)
-    chart_type = _choose_chart_type(query, {
-        "value": value_field,
-        "secondary_value": secondary_value,
-        "category": category_field,
-        "time": time_field,
-    })
+    chart_type = _choose_chart_type(
+        query,
+        {
+            "value": value_field,
+            "secondary_value": secondary_value,
+            "category": category_field,
+            "time": time_field,
+        },
+        columns,
+    )
     if explicit_chart:
         chart_type = explicit_chart
 
