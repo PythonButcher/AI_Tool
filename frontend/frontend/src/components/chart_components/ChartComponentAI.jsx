@@ -1,4 +1,4 @@
-import React, { useRef, useMemo } from 'react';
+import React, { useRef } from 'react';
 import { Bar, Line, Pie, Doughnut, Scatter } from 'react-chartjs-2';
 import ChartToolbar from './ChartToolbar';
 import {
@@ -45,7 +45,7 @@ function ChartComponentAI({ normalizedChartType = 'Bar', aiChartData }) {
     legendConfig.display !== undefined ? legendConfig.display : datasetCount > 1;
   const legendPosition = legendConfig.position || 'top';
 
-  const baseScales = useMemo(() => {
+  const baseScales = (() => {
     if (normalizedChartType === 'Pie' || normalizedChartType === 'Doughnut') {
       return null;
     }
@@ -65,7 +65,7 @@ function ChartComponentAI({ normalizedChartType = 'Bar', aiChartData }) {
         title: yTitle,
       },
     };
-  }, [normalizedChartType, axisLabels.x, axisLabels.y, meta.xScaleType, meta.beginAtZero]);
+  })();
 
   const options = {
     responsive: true,
@@ -97,7 +97,7 @@ function ChartComponentAI({ normalizedChartType = 'Bar', aiChartData }) {
     },
   };
 
-  const resolvedOptions = useMemo(() => {
+  const resolvedOptions = (() => {
     if (normalizedChartType === 'Scatter') {
       const xTitle = axisLabels.x
         ? { display: true, text: axisLabels.x }
@@ -114,7 +114,7 @@ function ChartComponentAI({ normalizedChartType = 'Bar', aiChartData }) {
       };
     }
     return options;
-  }, [normalizedChartType, options, axisLabels.x, axisLabels.y]);
+  })();
 
   const renderType = normalizedChartType === 'Histogram' ? 'Bar' : normalizedChartType;
 
