@@ -38,6 +38,7 @@ function ChartComponentAI({ normalizedChartType = 'Bar', aiChartData }) {
   }
 
   const meta = aiChartData.meta || {};
+  const resolvedChartType = meta.chartType || normalizedChartType || 'Bar';
   const axisLabels = meta.axisLabels || {};
   const legendConfig = meta.legend || {};
   const datasetCount = (aiChartData.datasets && aiChartData.datasets.length) || 0;
@@ -46,7 +47,7 @@ function ChartComponentAI({ normalizedChartType = 'Bar', aiChartData }) {
   const legendPosition = legendConfig.position || 'top';
 
   const baseScales = (() => {
-    if (normalizedChartType === 'Pie' || normalizedChartType === 'Doughnut') {
+    if (resolvedChartType === 'Pie' || resolvedChartType === 'Doughnut') {
       return null;
     }
     const xTitle = axisLabels.x
@@ -80,8 +81,11 @@ function ChartComponentAI({ normalizedChartType = 'Bar', aiChartData }) {
         color: 'white', // fallback if we use a plugin, optional
       },
     },
+    interaction: {
+      mode: 'index',
+      intersect: false,
+    },
     ...(baseScales ? { scales: baseScales } : {}),
-    // 🔥 Custom hook to fill background
     animation: {
       onComplete: () => {
         const chart = chartRef.current;
@@ -98,7 +102,7 @@ function ChartComponentAI({ normalizedChartType = 'Bar', aiChartData }) {
   };
 
   const resolvedOptions = (() => {
-    if (normalizedChartType === 'Scatter') {
+    if (resolvedChartType === 'Scatter') {
       const xTitle = axisLabels.x
         ? { display: true, text: axisLabels.x }
         : undefined;
@@ -116,7 +120,7 @@ function ChartComponentAI({ normalizedChartType = 'Bar', aiChartData }) {
     return options;
   })();
 
-  const renderType = normalizedChartType === 'Histogram' ? 'Bar' : normalizedChartType;
+  const renderType = resolvedChartType === 'Histogram' ? 'Bar' : resolvedChartType;
 
   return (
     <div style={{ width: "80%", height: "80%", margin: "auto", position: "relative" }}>
