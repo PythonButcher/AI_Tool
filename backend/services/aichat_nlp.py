@@ -89,7 +89,9 @@ def _safe_float(value: Any) -> Optional[float]:
     return None
 
 
-def _is_temporal_column(name: str, values: Sequence[Any]) -> bool:
+def _temporal_score(name: str, values: Sequence[Any]) -> float:
+    """Return a confidence score (0-1) that a column is temporal."""
+
     lowered = name.lower()
     temporal_keywords = [
         "date",
@@ -101,23 +103,64 @@ def _is_temporal_column(name: str, values: Sequence[Any]) -> bool:
         "quarter",
         "timestamp",
     ]
+
+    score = 0.0
     if any(keyword in lowered for keyword in temporal_keywords):
-        return True
+        score += 0.4
+
     parsed = 0
     total = 0
-    for value in values[:50]:
+    numeric_years = 0
+    iso_like = 0
+
+    iso_pattern = re.compile(r"^\d{4}[-/](?:\d{1,2})(?:[-/]\d{1,2})?$")
+
+    for value in values[:200]:
         if value in (None, ""):
             continue
+
         total += 1
+
+        if isinstance(value, datetime):
+            parsed += 1
+            continue
+
+        if hasattr(value, "to_pydatetime"):
+            try:
+                value = value.to_pydatetime()
+                if isinstance(value, datetime):
+                    parsed += 1
+                    continue
+            except Exception:  # pragma: no cover - very defensive
+                pass
+
+        text = str(value).strip()
+        if not text:
+            continue
+
         try:
-            date_parser.parse(str(value))
+            date_parser.parse(text)
             parsed += 1
         except (ValueError, TypeError, OverflowError):
-            continue
-    return total > 0 and parsed / total >= 0.5
+            numeric_value = _safe_float(text)
+            if numeric_value is not None and 1800 <= numeric_value <= 2200 and float(numeric_value).is_integer():
+                numeric_years += 1
+            if iso_pattern.match(text):
+                iso_like += 1
+
+    if total:
+        score += 0.6 * (parsed / total)
+        score += 0.25 * (numeric_years / total)
+        score += 0.15 * (iso_like / total)
+
+    return min(score, 1.0)
 
 
-def _is_numeric_column(values: Sequence[Any]) -> bool:
+def _is_temporal_column(name: str, values: Sequence[Any]) -> bool:
+    return _temporal_score(name, values) >= 0.6
+
+
+def _numeric_ratio(values: Sequence[Any]) -> float:
     numeric = 0
     total = 0
     for value in values[:200]:
@@ -126,27 +169,51 @@ def _is_numeric_column(values: Sequence[Any]) -> bool:
         total += 1
         if _safe_float(value) is not None:
             numeric += 1
-    return total > 0 and numeric / total >= 0.6
+    if not total:
+        return 0.0
+    return numeric / total
+
+
+def _is_numeric_column(values: Sequence[Any]) -> bool:
+    return _numeric_ratio(values) >= 0.6
 
 
 def analyse_columns(dataset: Sequence[Dict[str, Any]]) -> List[Dict[str, Any]]:
     if not dataset:
         return []
+
     columns: List[Dict[str, Any]] = []
-    sample_record = dataset[0]
-    for name in sample_record.keys():
+    seen = set()
+    ordered_names: List[str] = []
+    for row in dataset:
+        for key in row.keys():
+            if key not in seen:
+                seen.add(key)
+                ordered_names.append(key)
+
+    for name in ordered_names:
         values = [row.get(name) for row in dataset]
-        if _is_temporal_column(name, values):
+        temporal_confidence = _temporal_score(name, values)
+        numeric_confidence = _numeric_ratio(values)
+        non_null_values = [value for value in values if value not in (None, "")]
+        unique_values = {str(value) for value in non_null_values}
+
+        if temporal_confidence >= 0.6:
             inferred_type = "temporal"
-        elif _is_numeric_column(values):
+        elif numeric_confidence >= 0.6:
             inferred_type = "numeric"
         else:
             inferred_type = "categorical"
+
         columns.append(
             {
                 "name": name,
                 "type": inferred_type,
                 "values": values,
+                "nonNullCount": len(non_null_values),
+                "uniqueCount": len(unique_values),
+                "numericRatio": numeric_confidence,
+                "temporalScore": temporal_confidence,
             }
         )
     return columns
@@ -271,10 +338,16 @@ def _extract_dimension_from_query(query: str, columns: Sequence[Dict[str, Any]])
 
 def _detect_explicit_chart_type(query: str) -> Optional[str]:
     lowered = query.lower()
+    if "over time" in lowered or "over-time" in lowered or "time series" in lowered or "timeseries" in lowered:
+        return "Line"
     chart_map = {
-        "bar": "Bar",
-        "column": "Bar",
         "line": "Line",
+        "line chart": "Line",
+        "line graph": "Line",
+        "bar": "Bar",
+        "bar chart": "Bar",
+        "bar graph": "Bar",
+        "column": "Bar",
         "trend": "Line",
         "timeline": "Line",
         "pie": "Pie",
@@ -312,10 +385,11 @@ def _choose_chart_type(
         if has_value and has_secondary:
             return "Scatter"
 
-    if has_time and has_value and (
-        any(keyword in query_lower for keyword in time_keywords) or not has_category
-    ):
-        return "Line"
+    if has_time:
+        if has_value or not has_category:
+            return "Line"
+        if any(keyword in query_lower for keyword in time_keywords):
+            return "Line"
 
     category_cardinality: Optional[int] = None
     if has_category:
@@ -324,13 +398,15 @@ def _choose_chart_type(
             None,
         )
         if category_meta:
-            category_cardinality = len(
-                {
-                    str(value)
-                    for value in category_meta.get("values", [])
-                    if value not in (None, "")
-                }
-            )
+            category_cardinality = category_meta.get("uniqueCount")
+            if category_cardinality is None:
+                category_cardinality = len(
+                    {
+                        str(value)
+                        for value in category_meta.get("values", [])
+                        if value not in (None, "")
+                    }
+                )
 
     if has_category and has_value and any(keyword in query_lower for keyword in share_keywords):
         if category_cardinality is None or category_cardinality <= 8:
@@ -343,7 +419,7 @@ def _choose_chart_type(
     if has_category and has_value:
         return "Bar"
 
-    if has_time and has_value:
+    if has_time:
         return "Line"
 
     if has_category and not has_value:
@@ -431,11 +507,14 @@ def interpret_nl_query(query: str, columns: Sequence[Dict[str, Any]]) -> QueryIn
     directives = _parse_directives(query)
     query_lower = query.lower()
     match_details = _score_columns(query, columns)
+    explicit_chart = _detect_explicit_chart_type(query)
 
     value_field: Optional[str] = None
     category_field: Optional[str] = None
     time_field: Optional[str] = None
     secondary_value: Optional[str] = None
+
+    column_lookup = {col["name"]: col for col in columns}
 
     if "value" in directives:
         value_hint = directives["value"][0].strip()
@@ -452,6 +531,17 @@ def interpret_nl_query(query: str, columns: Sequence[Dict[str, Any]]) -> QueryIn
     temporal_candidates = [col["name"] for col in columns if col["type"] == "temporal"]
     numeric_candidates = [col["name"] for col in columns if col["type"] == "numeric"]
     categorical_candidates = [col["name"] for col in columns if col["type"] == "categorical"]
+    ranked_temporal = [
+        name
+        for _, name in sorted(
+            (
+                (col.get("temporalScore", 0.0), col["name"])
+                for col in columns
+            ),
+            reverse=True,
+        )
+        if name
+    ]
 
     def _best_match(candidates: Sequence[str], min_score: float = 0.0) -> Optional[str]:
         best_name: Optional[str] = None
@@ -490,6 +580,29 @@ def interpret_nl_query(query: str, columns: Sequence[Dict[str, Any]]) -> QueryIn
         if not time_field and mentions_time and temporal_candidates:
             time_field = temporal_candidates[0]
 
+    explicit_line_requested = (
+        explicit_chart == "Line"
+        or "over time" in query_lower
+        or "over-time" in query_lower
+        or "time series" in query_lower
+        or "timeseries" in query_lower
+    )
+
+    if explicit_line_requested and not time_field:
+        for name in ranked_temporal:
+            if name and name != value_field:
+                candidate_meta = column_lookup.get(name, {})
+                if candidate_meta.get("temporalScore", 0.0) > 0:
+                    time_field = name
+                    break
+        if not time_field and ranked_temporal:
+            fallback_name = ranked_temporal[0]
+            if fallback_name:
+                time_field = fallback_name
+        if not time_field and category_field:
+            time_field = category_field
+            category_field = None
+
     grouping_keywords = [" by ", " per ", " versus ", " vs ", " against "]
     if mentions_time and time_field and "dimension" not in directives:
         if not any(keyword in query_lower for keyword in grouping_keywords):
@@ -497,6 +610,16 @@ def interpret_nl_query(query: str, columns: Sequence[Dict[str, Any]]) -> QueryIn
 
     if category_field and time_field and category_field == time_field:
         category_field = None
+
+    if time_field and value_field and value_field == time_field:
+        alternative_numeric = next(
+            (name for name in numeric_candidates if name != time_field),
+            None,
+        )
+        if alternative_numeric:
+            value_field = alternative_numeric
+        else:
+            value_field = None
 
     scatter_keywords = {"scatter", "versus", "vs", "against"}
     scatter_requested = any(keyword in query_lower for keyword in scatter_keywords)
@@ -521,10 +644,9 @@ def interpret_nl_query(query: str, columns: Sequence[Dict[str, Any]]) -> QueryIn
             if not secondary_value or secondary_value == value_field:
                 secondary_value = numeric_candidates[1]
 
-    if secondary_value == value_field:
+    if secondary_value == value_field or (time_field and secondary_value == time_field):
         secondary_value = None
 
-    explicit_chart = _detect_explicit_chart_type(query)
     chart_type = _choose_chart_type(
         query,
         {
@@ -597,6 +719,61 @@ def _build_chart_data(chart_type: str, dataset: Sequence[Dict[str, Any]], fields
 
     explanation_parts: List[str] = []
 
+    def _finalize_chart(
+        chart_payload: Dict[str, Any],
+        *,
+        axis_x: Optional[str] = None,
+        axis_y: Optional[str] = None,
+        series_field: Optional[str] = None,
+        series_values: Optional[Sequence[Any]] = None,
+        legend: Optional[bool] = None,
+        legend_position: Optional[str] = None,
+        sorted_labels: bool = False,
+    ) -> Dict[str, Any]:
+        base_meta = {
+            "chartType": chart_type,
+            "fields": {
+                "value": value_field,
+                "secondaryValue": secondary_value,
+                "category": category_field,
+                "time": time_field,
+            },
+            "sortedLabels": bool(sorted_labels),
+        }
+
+        axis_labels: Dict[str, str] = {}
+        if axis_x:
+            axis_labels["x"] = axis_x
+        if axis_y:
+            axis_labels["y"] = axis_y
+        if axis_labels:
+            base_meta["axisLabels"] = axis_labels
+
+        if series_field:
+            series_meta: Dict[str, Any] = {"field": series_field}
+            if series_values is not None:
+                series_meta["values"] = list(series_values)
+            base_meta["series"] = series_meta
+
+        if legend is None:
+            if chart_type in {"Pie", "Doughnut"}:
+                legend = True
+            elif chart_type == "Scatter":
+                legend = False
+            else:
+                legend = len(chart_payload.get("datasets", [])) > 1
+
+        base_meta["legend"] = {"display": bool(legend)}
+        if legend_position:
+            base_meta["legend"]["position"] = legend_position
+
+        combined_meta = dict(chart_payload.get("meta", {}))
+        combined_meta.update(base_meta)
+
+        finalized = dict(chart_payload)
+        finalized["meta"] = combined_meta
+        return finalized
+
     if chart_type == "Scatter" and value_field and secondary_value:
         explanation_parts.append(f"{secondary_value} versus {value_field}")
         points = []
@@ -622,6 +799,12 @@ def _build_chart_data(chart_type: str, dataset: Sequence[Dict[str, Any]], fields
                 }
             ],
         }
+        chart_data = _finalize_chart(
+            chart_data,
+            axis_x=value_field,
+            axis_y=secondary_value,
+            legend=False,
+        )
         return chart_data, ", ".join(explanation_parts)
 
     if chart_type == "Line" and time_field:
@@ -669,10 +852,12 @@ def _build_chart_data(chart_type: str, dataset: Sequence[Dict[str, Any]], fields
                         "Value",
                     )
                 ]
+            series_names = [str(category) for category in limited_categories]
         else:
             limited_categories = [
                 next(iter(time_buckets[sorted_labels[0]]["values"].keys()), "Value")
             ]
+            series_names = None
 
         datasets = []
         for category in limited_categories:
@@ -685,7 +870,18 @@ def _build_chart_data(chart_type: str, dataset: Sequence[Dict[str, Any]], fields
                 }
             )
 
-        chart_data = {"labels": sorted_labels, "datasets": datasets}
+        chart_data = {
+            "labels": sorted_labels,
+            "datasets": datasets,
+        }
+        chart_data = _finalize_chart(
+            chart_data,
+            axis_x=time_field,
+            axis_y=value_field or "Count",
+            series_field=category_field,
+            series_values=series_names,
+            sorted_labels=True,
+        )
         return chart_data, ", ".join(explanation_parts)
 
     if chart_type in {"Pie", "Doughnut"} and category_field:
@@ -705,8 +901,9 @@ def _build_chart_data(chart_type: str, dataset: Sequence[Dict[str, Any]], fields
             return None, "No measurable values found for the requested fields."
 
         labels = _limit_categories(totals)
+        label_strings = [str(label) for label in labels]
         chart_data = {
-            "labels": [str(label) for label in labels],
+            "labels": label_strings,
             "datasets": [
                 {
                     "label": value_field or "Count",
@@ -714,6 +911,13 @@ def _build_chart_data(chart_type: str, dataset: Sequence[Dict[str, Any]], fields
                 }
             ],
         }
+        chart_data = _finalize_chart(
+            chart_data,
+            series_field=category_field,
+            series_values=label_strings,
+            legend=True,
+            legend_position="right",
+        )
         return chart_data, ", ".join(explanation_parts)
 
     explanation_parts.append(
@@ -744,6 +948,11 @@ def _build_chart_data(chart_type: str, dataset: Sequence[Dict[str, Any]], fields
                 }
             ],
         }
+        chart_data = _finalize_chart(
+            chart_data,
+            axis_x=category_field,
+            axis_y=value_field or "Count",
+        )
         return chart_data, ", ".join(explanation_parts)
 
     if time_field:
@@ -769,6 +978,12 @@ def _build_chart_data(chart_type: str, dataset: Sequence[Dict[str, Any]], fields
                 }
             ],
         }
+        chart_data = _finalize_chart(
+            chart_data,
+            axis_x=time_field,
+            axis_y=value_field or "Count",
+            sorted_labels=True,
+        )
         return chart_data, ", ".join(explanation_parts)
 
     if value_field:
@@ -803,6 +1018,12 @@ def _build_chart_data(chart_type: str, dataset: Sequence[Dict[str, Any]], fields
             ],
         }
         explanation_parts = [f"distribution of {value_field}"]
+        chart_data = _finalize_chart(
+            chart_data,
+            axis_x=value_field,
+            axis_y="Frequency",
+            legend=False,
+        )
         return chart_data, ", ".join(explanation_parts)
 
     return None, "Unable to determine appropriate fields for charting."
