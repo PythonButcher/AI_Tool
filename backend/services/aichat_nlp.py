@@ -285,6 +285,7 @@ def _parse_directives(query: str) -> Dict[str, List[str]]:
 
 def _score_columns(query: str, columns: Sequence[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
     tokens = _normalize(query).split()
+    normalized_query = _normalize(query)
     quoted = {
         _normalize(match)
         for match in re.findall(r"\"([^\"]+)\"|'([^']+)'", query)
@@ -302,6 +303,21 @@ def _score_columns(query: str, columns: Sequence[Dict[str, Any]]) -> Dict[str, D
         if normalized_name in quoted:
             score += 6.0
             reasons.append("explicitly quoted in query")
+
+        if normalized_name and normalized_query:
+            haystack = f" {normalized_query} "
+            needle = f" {normalized_name} "
+            if needle in haystack:
+                score += 8.0
+                reasons.append("exact column phrase mentioned")
+
+        direct_phrase = re.search(
+            rf"(?i)(?<!\w){re.escape(name)}(?!\w)",
+            query,
+        )
+        if direct_phrase:
+            score += 4.0
+            reasons.append("column referenced verbatim")
 
         direct_tokens = [token for token in tokens if token in col_tokens]
         for token in direct_tokens:
@@ -395,6 +411,45 @@ def _detect_explicit_chart_type(query: str) -> Optional[str]:
         if keyword in lowered:
             return chart
     return None
+
+
+def _find_mentioned_columns(query: str, columns: Sequence[Dict[str, Any]]) -> List[str]:
+    mentions: List[Tuple[int, str]] = []
+    normalized_query = _normalize(query)
+
+    for column in columns:
+        name = column["name"]
+        normalized_name = _normalize(name)
+        position: Optional[int] = None
+
+        if name:
+            direct_match = re.search(
+                rf"(?i)(?<!\w){re.escape(name)}(?!\w)",
+                query,
+            )
+            if direct_match:
+                position = direct_match.start()
+
+        if position is None and normalized_name and normalized_query:
+            haystack = f" {normalized_query} "
+            needle = f" {normalized_name} "
+            idx = haystack.find(needle)
+            if idx != -1:
+                position = idx
+
+        if position is not None:
+            mentions.append((position, name))
+
+    mentions.sort(key=lambda item: item[0])
+
+    ordered_names: List[str] = []
+    seen: set[str] = set()
+    for _, name in mentions:
+        if name not in seen:
+            seen.add(name)
+            ordered_names.append(name)
+
+    return ordered_names
 
 
 def _choose_chart_type(
@@ -548,6 +603,7 @@ def interpret_nl_query(query: str, columns: Sequence[Dict[str, Any]]) -> QueryIn
     secondary_value: Optional[str] = None
 
     column_lookup = {col["name"]: col for col in columns}
+    mentioned_columns = _find_mentioned_columns(query, columns)
 
     if "value" in directives:
         value_hint = directives["value"][0].strip()
@@ -577,6 +633,11 @@ def interpret_nl_query(query: str, columns: Sequence[Dict[str, Any]]) -> QueryIn
     ]
 
     def _best_match(candidates: Sequence[str], min_score: float = 0.0) -> Optional[str]:
+        for mentioned in mentioned_columns:
+            if mentioned in candidates:
+                mentioned_score = match_details.get(mentioned, {"score": 0.0})["score"]
+                if mentioned_score >= min_score or min_score == 0.0:
+                    return mentioned
         best_name: Optional[str] = None
         best_score = min_score
         for name in candidates:
@@ -585,6 +646,18 @@ def interpret_nl_query(query: str, columns: Sequence[Dict[str, Any]]) -> QueryIn
                 best_name = name
                 best_score = score
         return best_name
+
+    for name in mentioned_columns:
+        meta = column_lookup.get(name, {})
+        col_type = meta.get("type")
+        if col_type == "temporal" and not time_field:
+            time_field = name
+            continue
+        if col_type == "numeric" and not value_field:
+            value_field = name
+            continue
+        if col_type == "categorical" and not category_field:
+            category_field = name
 
     if not value_field:
         value_field = _best_match(numeric_candidates, 0.1)
