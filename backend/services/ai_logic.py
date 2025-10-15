@@ -1,8 +1,16 @@
 import json
-from flask import Blueprint, request, jsonify, current_app
 import os
 import textwrap  # For dedenting multi-line strings
+from flask import Blueprint, request, jsonify, current_app
 from openai import OpenAI
+
+from .aichat_nlp import (
+    NLP_QUERY_FORMAT,
+    analyse_columns,
+    build_chart_response,
+    extract_dataset,
+    interpret_nl_query,
+)
 
 # Initialize OpenAI client with API key from environment variable
 api_key = os.getenv("OPENAI_API_KEY")
@@ -305,3 +313,78 @@ def ai_command():
     except Exception as e:
         current_app.logger.error(f"Error in /ai_cmd: {str(e)}", exc_info=True)
         return jsonify({"error": f"An unexpected error occurred: {str(e)}"}), 500
+
+
+@ai_bp.route("/ai_nl_chart", methods=["POST"])
+def ai_nl_chart():
+    try:
+        payload = request.json or {}
+        query = payload.get("query", "").strip()
+        dataset_obj = payload.get("dataset")
+
+        if not query:
+            return jsonify({
+                "error": "A natural language query is required.",
+                "usageFormat": NLP_QUERY_FORMAT,
+            }), 400
+
+        dataset = extract_dataset(dataset_obj)
+        if not dataset or not isinstance(dataset, list):
+            return jsonify({
+                "error": "A valid dataset is required to build a chart.",
+                "usageFormat": NLP_QUERY_FORMAT,
+            }), 400
+
+        columns = analyse_columns(dataset)
+        if not columns:
+            return jsonify({
+                "error": "Unable to inspect dataset columns.",
+                "usageFormat": NLP_QUERY_FORMAT,
+            }), 400
+
+        interpretation = interpret_nl_query(query, columns)
+        chart_data, explanation, _ = build_chart_response(dataset, interpretation)
+
+        if chart_data is None:
+            return jsonify({
+                "intent": interpretation.get("intent"),
+                "error": explanation or "Could not generate a chart for the given request.",
+                "fieldsUsed": {
+                    key: value
+                    for key, value in (interpretation.get("fields") or {}).items()
+                    if value
+                },
+                "fieldMatches": interpretation.get("matchDetails", []),
+                "filtersApplied": interpretation.get("filters", []),
+                "usageFormat": NLP_QUERY_FORMAT,
+            }), 422
+
+        readable_fields = {
+            key: value
+            for key, value in (interpretation.get("fields") or {}).items()
+            if value
+        }
+
+        chart_type = interpretation.get("chart_type", "Bar")
+        if explanation:
+            message = f"Here is a {chart_type.lower()} chart showing {explanation}."
+        else:
+            message = f"Here is a {chart_type.lower()} chart derived from the dataset."
+
+        return jsonify({
+            "intent": interpretation.get("intent"),
+            "chartType": chart_type,
+            "chartData": chart_data,
+            "explanation": message,
+            "fieldsUsed": readable_fields,
+            "fieldMatches": interpretation.get("matchDetails", []),
+            "filtersApplied": interpretation.get("filters", []),
+            "usageFormat": NLP_QUERY_FORMAT,
+        })
+
+    except Exception as exc:
+        current_app.logger.error("Error in /ai_nl_chart: %s", exc, exc_info=True)
+        return jsonify({
+            "error": f"Failed to generate chart: {exc}",
+            "usageFormat": NLP_QUERY_FORMAT,
+        }), 500
