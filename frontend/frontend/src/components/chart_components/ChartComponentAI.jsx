@@ -37,6 +37,37 @@ function ChartComponentAI({ normalizedChartType = 'Bar', aiChartData }) {
     return <div style={{ padding: "20px", textAlign: "center" }}>Chart data is incomplete.</div>;
   }
 
+  const meta = aiChartData.meta || {};
+  const resolvedChartType = meta.chartType || normalizedChartType || 'Bar';
+  const axisLabels = meta.axisLabels || {};
+  const legendConfig = meta.legend || {};
+  const datasetCount = (aiChartData.datasets && aiChartData.datasets.length) || 0;
+  const showLegend =
+    legendConfig.display !== undefined ? legendConfig.display : datasetCount > 1;
+  const legendPosition = legendConfig.position || 'top';
+
+  const baseScales = (() => {
+    if (resolvedChartType === 'Pie' || resolvedChartType === 'Doughnut') {
+      return null;
+    }
+    const xTitle = axisLabels.x
+      ? { display: true, text: axisLabels.x }
+      : undefined;
+    const yTitle = axisLabels.y
+      ? { display: true, text: axisLabels.y }
+      : undefined;
+    return {
+      x: {
+        type: meta.xScaleType || 'category',
+        title: xTitle,
+      },
+      y: {
+        beginAtZero: meta.beginAtZero !== undefined ? meta.beginAtZero : true,
+        title: yTitle,
+      },
+    };
+  })();
+
   const options = {
     responsive: true,
     maintainAspectRatio: false,
@@ -44,13 +75,17 @@ function ChartComponentAI({ normalizedChartType = 'Bar', aiChartData }) {
       padding: 10,
     },
     plugins: {
-      legend: { display: true },
+      legend: { display: showLegend, position: legendPosition },
       tooltip: { enabled: true },
       backgroundColor: {
         color: 'white', // fallback if we use a plugin, optional
       },
     },
-    // 🔥 Custom hook to fill background
+    interaction: {
+      mode: 'index',
+      intersect: false,
+    },
+    ...(baseScales ? { scales: baseScales } : {}),
     animation: {
       onComplete: () => {
         const chart = chartRef.current;
@@ -66,33 +101,43 @@ function ChartComponentAI({ normalizedChartType = 'Bar', aiChartData }) {
     },
   };
 
-  const resolvedOptions =
-    normalizedChartType === 'Scatter'
-      ? {
-          ...options,
-          scales: {
-            x: { type: 'linear', position: 'bottom' },
-            y: { type: 'linear' },
-          },
-        }
-      : options;
-  
+  const resolvedOptions = (() => {
+    if (resolvedChartType === 'Scatter') {
+      const xTitle = axisLabels.x
+        ? { display: true, text: axisLabels.x }
+        : undefined;
+      const yTitle = axisLabels.y
+        ? { display: true, text: axisLabels.y }
+        : undefined;
+      return {
+        ...options,
+        scales: {
+          x: { type: 'linear', position: 'bottom', title: xTitle },
+          y: { type: 'linear', title: yTitle },
+        },
+      };
+    }
+    return options;
+  })();
+
+  const renderType = resolvedChartType === 'Histogram' ? 'Bar' : resolvedChartType;
+
   return (
     <div style={{ width: "80%", height: "80%", margin: "auto", position: "relative" }}>
       <ChartToolbar chartRef={chartRef} />
-      {normalizedChartType === "Bar" && (
+      {renderType === "Bar" && (
         <Bar ref={chartRef} data={aiChartData} options={resolvedOptions} />
       )}
-      {normalizedChartType === "Line" && (
+      {renderType === "Line" && (
         <Line ref={chartRef} data={aiChartData} options={resolvedOptions} />
       )}
-      {normalizedChartType === "Pie" && (
+      {renderType === "Pie" && (
         <Pie ref={chartRef} data={aiChartData} options={resolvedOptions} />
       )}
-      {normalizedChartType === "Doughnut" && (
+      {renderType === "Doughnut" && (
         <Doughnut ref={chartRef} data={aiChartData} options={resolvedOptions} />
       )}
-      {normalizedChartType === "Scatter" && (
+      {renderType === "Scatter" && (
         <Scatter ref={chartRef} data={aiChartData} options={resolvedOptions} />
       )}
     </div>

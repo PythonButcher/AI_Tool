@@ -1,13 +1,16 @@
 import json
-import re
-import difflib
-from collections import Counter, defaultdict
-from datetime import datetime
-from dateutil import parser as date_parser
-from flask import Blueprint, request, jsonify, current_app
 import os
 import textwrap  # For dedenting multi-line strings
+from flask import Blueprint, request, jsonify, current_app
 from openai import OpenAI
+
+from .aichat_nlp import (
+    NLP_QUERY_FORMAT,
+    analyse_columns,
+    build_chart_response,
+    extract_dataset,
+    interpret_nl_query,
+)
 
 # Initialize OpenAI client with API key from environment variable
 api_key = os.getenv("OPENAI_API_KEY")
@@ -312,474 +315,6 @@ def ai_command():
         return jsonify({"error": f"An unexpected error occurred: {str(e)}"}), 500
 
 
-def _extract_dataset(dataset_obj):
-    """Normalize incoming dataset payloads into a list of records."""
-    if isinstance(dataset_obj, dict) and "data_preview" in dataset_obj:
-        preview = dataset_obj["data_preview"]
-        if isinstance(preview, str):
-            try:
-                return json.loads(preview)
-            except json.JSONDecodeError:
-                return []
-        if isinstance(preview, list):
-            return preview
-    if isinstance(dataset_obj, list):
-        return dataset_obj
-    return []
-
-
-def _safe_float(value):
-    """Attempt to convert a value to float, returning None on failure."""
-    if value is None:
-        return None
-    if isinstance(value, (int, float)):
-        return float(value)
-    if isinstance(value, str):
-        cleaned = value.strip()
-        if not cleaned:
-            return None
-        cleaned = cleaned.replace(",", "")
-        match = re.search(r"-?\d+(?:\.\d+)?", cleaned)
-        if not match:
-            return None
-        try:
-            return float(match.group())
-        except ValueError:
-            return None
-    return None
-
-
-def _is_temporal_column(name, values):
-    lowered = name.lower()
-    temporal_keywords = [
-        "date",
-        "time",
-        "year",
-        "month",
-        "day",
-        "week",
-        "quarter",
-        "timestamp",
-    ]
-    if any(keyword in lowered for keyword in temporal_keywords):
-        return True
-    parsed = 0
-    total = 0
-    for value in values[:50]:
-        if value in (None, ""):
-            continue
-        total += 1
-        try:
-            date_parser.parse(str(value))
-            parsed += 1
-        except (ValueError, TypeError, OverflowError):
-            continue
-    return total > 0 and parsed / total >= 0.5
-
-
-def _is_numeric_column(values):
-    numeric = 0
-    total = 0
-    for value in values[:200]:
-        if value in (None, ""):
-            continue
-        total += 1
-        if _safe_float(value) is not None:
-            numeric += 1
-    return total > 0 and numeric / total >= 0.6
-
-
-def _analyse_columns(dataset):
-    if not dataset:
-        return []
-    columns = []
-    sample_record = dataset[0]
-    for name in sample_record.keys():
-        values = [row.get(name) for row in dataset]
-        if _is_temporal_column(name, values):
-            inferred_type = "temporal"
-        elif _is_numeric_column(values):
-            inferred_type = "numeric"
-        else:
-            inferred_type = "categorical"
-        columns.append(
-            {
-                "name": name,
-                "type": inferred_type,
-                "values": values,
-            }
-        )
-    return columns
-
-
-def _detect_visual_intent(query):
-    lowered = query.lower()
-    visual_keywords = [
-        "plot",
-        "chart",
-        "graph",
-        "visualize",
-        "visualise",
-        "show",
-        "display",
-        "trend",
-        "over time",
-        "distribution",
-        "breakdown",
-        "compare",
-    ]
-    if any(keyword in lowered for keyword in visual_keywords):
-        return "visualize"
-    if "filter" in lowered or "subset" in lowered:
-        return "filter"
-    if "average" in lowered or "sum" in lowered or "total" in lowered:
-        return "summarize"
-    return "chat"
-
-
-def _tokenize_query(query):
-    return re.findall(r"\b\w+\b", query.lower())
-
-
-def _match_columns(query, columns):
-    tokens = _tokenize_query(query)
-    matched_scores = {}
-    for column in columns:
-        name = column["name"]
-        lowered_name = name.lower()
-        score = 0.0
-        if lowered_name in query.lower():
-            score += 5.0
-        for token in tokens:
-            if token in lowered_name:
-                score += 2.0
-            else:
-                similarity = difflib.SequenceMatcher(None, token, lowered_name).ratio()
-                if similarity >= 0.75:
-                    score += similarity
-        matched_scores[name] = score
-    return matched_scores
-
-
-def _select_fields(query, columns):
-    matches = _match_columns(query, columns)
-    numeric_columns = [c for c in columns if c["type"] == "numeric"]
-    categorical_columns = [c for c in columns if c["type"] == "categorical"]
-    temporal_columns = [c for c in columns if c["type"] == "temporal"]
-
-    def _sorted_subset(columns_subset):
-        return sorted(
-            columns_subset,
-            key=lambda col: (matches.get(col["name"], 0), col["name"]),
-            reverse=True,
-        )
-
-    sorted_numeric = _sorted_subset(numeric_columns)
-    sorted_categorical = _sorted_subset(categorical_columns)
-    sorted_temporal = _sorted_subset(temporal_columns)
-
-    best_numeric = sorted_numeric[0]["name"] if sorted_numeric else None
-    secondary_numeric = sorted_numeric[1]["name"] if len(sorted_numeric) > 1 else None
-    best_categorical = sorted_categorical[0]["name"] if sorted_categorical else None
-    best_temporal = sorted_temporal[0]["name"] if sorted_temporal else None
-
-    tokens = _tokenize_query(query)
-    if "by" in tokens:
-        by_index = tokens.index("by")
-        if by_index + 1 < len(tokens):
-            target = tokens[by_index + 1]
-            for column in categorical_columns:
-                if target in column["name"].lower():
-                    best_categorical = column["name"]
-                    break
-
-    if any(token in {"vs", "versus", "against"} for token in tokens) and secondary_numeric:
-        # Encourage keeping two numeric fields for scatter-style questions
-        pass
-
-    return {
-        "value": best_numeric,
-        "secondary_value": secondary_numeric,
-        "category": best_categorical,
-        "time": best_temporal,
-        "matches": matches,
-    }
-
-
-def _choose_chart_type(query, fields):
-    lowered = query.lower()
-    if "scatter" in lowered and fields.get("value") and fields.get("secondary_value"):
-        return "Scatter"
-    if "pie" in lowered or "share" in lowered or "percentage" in lowered:
-        return "Pie"
-    if "doughnut" in lowered:
-        return "Doughnut"
-    if "trend" in lowered or "over time" in lowered or "timeline" in lowered:
-        return "Line"
-    if fields.get("time"):
-        return "Line"
-    if "distribution" in lowered:
-        return "Bar"
-    if (
-        "compare" in lowered
-        or "comparison" in lowered
-        or "versus" in lowered
-        or "vs" in lowered
-    ) and fields.get("secondary_value"):
-        return "Scatter"
-    if "compare" in lowered or "comparison" in lowered or "versus" in lowered or "vs" in lowered:
-        return "Bar"
-    return "Bar"
-
-
-def _format_time_value(value):
-    if value in (None, ""):
-        return None, None
-    if isinstance(value, (int, float)):
-        return str(value), float(value)
-    text = str(value).strip()
-    if not text:
-        return None, None
-    try:
-        parsed = date_parser.parse(text)
-        return parsed.strftime("%Y-%m-%d"), parsed
-    except (ValueError, TypeError, OverflowError):
-        return text, text.lower()
-
-
-def _limit_categories(category_totals, limit=10):
-    if len(category_totals) <= limit:
-        return list(category_totals.keys())
-    most_common = Counter(category_totals).most_common(limit)
-    return [item[0] for item in most_common]
-
-
-def _build_chart_data(chart_type, dataset, fields):
-    value_field = fields.get("value")
-    secondary_value = fields.get("secondary_value")
-    category_field = fields.get("category")
-    time_field = fields.get("time")
-
-    if not dataset:
-        return None, "No data available to build a chart."
-
-    explanation_parts = []
-
-    if chart_type == "Scatter" and value_field and secondary_value:
-        explanation_parts.append(
-            f"{secondary_value} versus {value_field}"
-        )
-        points = []
-        for row in dataset:
-            x_val = _safe_float(row.get(value_field))
-            y_val = _safe_float(row.get(secondary_value))
-            if x_val is None or y_val is None:
-                continue
-            points.append({"x": x_val, "y": y_val})
-
-        if not points:
-            return None, "Not enough numeric values to build a scatter plot."
-
-        chart_data = {
-            "labels": [],
-            "datasets": [
-                {
-                    "label": f"{secondary_value} vs {value_field}",
-                    "data": points,
-                    "backgroundColor": "rgba(75, 192, 192, 0.6)",
-                    "pointRadius": 4,
-                    "showLine": False,
-                }
-            ],
-        }
-        return chart_data, ", ".join(explanation_parts)
-
-    if chart_type == "Line" and time_field:
-        explanation_parts.append(f"trends in {value_field or 'records'} over {time_field}")
-        time_buckets = {}
-        category_totals = defaultdict(float)
-        for row in dataset:
-            label, sort_key = _format_time_value(row.get(time_field))
-            if label is None:
-                continue
-            if label not in time_buckets:
-                time_buckets[label] = {"sort": sort_key, "values": defaultdict(float)}
-            if category_field:
-                category_value = row.get(category_field, "Other")
-                if value_field:
-                    numeric = _safe_float(row.get(value_field))
-                    if numeric is not None:
-                        time_buckets[label]["values"][category_value] += numeric
-                        category_totals[category_value] += numeric
-                else:
-                    time_buckets[label]["values"][category_value] += 1
-                    category_totals[category_value] += 1
-            else:
-                if value_field:
-                    numeric = _safe_float(row.get(value_field))
-                    if numeric is not None:
-                        time_buckets[label]["values"]["Value"] += numeric
-                else:
-                    time_buckets[label]["values"]["Count"] += 1
-
-        sorted_labels = sorted(
-            time_buckets.keys(),
-            key=lambda lbl: (0 if isinstance(time_buckets[lbl]["sort"], datetime) else 1, time_buckets[lbl]["sort"]),
-        )
-
-        if not sorted_labels:
-            return None, "Unable to interpret the requested time field."
-
-        if category_field:
-            limited_categories = _limit_categories(category_totals) if category_totals else []
-            if not limited_categories:
-                limited_categories = [
-                    next(
-                        iter(time_buckets[sorted_labels[0]]["values"].keys()),
-                        "Value",
-                    )
-                ]
-        else:
-            limited_categories = [
-                next(iter(time_buckets[sorted_labels[0]]["values"].keys()), "Value")
-            ]
-
-        datasets = []
-        for category in limited_categories:
-            datasets.append(
-                {
-                    "label": str(category),
-                    "data": [time_buckets[label]["values"].get(category, 0) for label in sorted_labels],
-                    "tension": 0.3,
-                    "fill": False,
-                }
-            )
-
-        chart_data = {"labels": sorted_labels, "datasets": datasets}
-        return chart_data, ", ".join(explanation_parts)
-
-    if chart_type in {"Pie", "Doughnut"} and category_field:
-        explanation_parts.append(f"the share of {value_field or 'records'} by {category_field}")
-        totals = defaultdict(float)
-        for row in dataset:
-            category_value = row.get(category_field, "Other")
-            if value_field:
-                numeric = _safe_float(row.get(value_field))
-                if numeric is None:
-                    continue
-                totals[category_value] += numeric
-            else:
-                totals[category_value] += 1
-
-        if not totals:
-            return None, "No measurable values found for the requested fields."
-
-        labels = _limit_categories(totals)
-        chart_data = {
-            "labels": [str(label) for label in labels],
-            "datasets": [
-                {
-                    "label": value_field or "Count",
-                    "data": [totals[label] for label in labels],
-                }
-            ],
-        }
-        return chart_data, ", ".join(explanation_parts)
-
-    # Default to Bar chart logic
-    explanation_parts.append(
-        f"{value_field or 'record counts'} by {category_field or (time_field or 'observations')}"
-    )
-
-    if category_field:
-        totals = defaultdict(float)
-        for row in dataset:
-            category_value = row.get(category_field, "Other")
-            if value_field:
-                numeric = _safe_float(row.get(value_field))
-                if numeric is None:
-                    continue
-                totals[category_value] += numeric
-            else:
-                totals[category_value] += 1
-        if not totals:
-            return None, "No measurable values found for the requested fields."
-        labels = _limit_categories(totals)
-        data_values = [totals[label] for label in labels]
-        chart_data = {
-            "labels": [str(label) for label in labels],
-            "datasets": [
-                {
-                    "label": value_field or "Count",
-                    "data": data_values,
-                }
-            ],
-        }
-        return chart_data, ", ".join(explanation_parts)
-
-    if time_field:
-        buckets = defaultdict(float)
-        for row in dataset:
-            label, sort_key = _format_time_value(row.get(time_field))
-            if label is None:
-                continue
-            value = 1 if value_field is None else _safe_float(row.get(value_field)) or 0
-            buckets[label] += value
-        if not buckets:
-            return None, "Unable to build a chart with the requested fields."
-        sorted_labels = sorted(
-            buckets.keys(),
-            key=lambda lbl: (0 if isinstance(_format_time_value(lbl)[1], datetime) else 1, _format_time_value(lbl)[1]),
-        )
-        chart_data = {
-            "labels": sorted_labels,
-            "datasets": [
-                {
-                    "label": value_field or "Count",
-                    "data": [buckets[label] for label in sorted_labels],
-                }
-            ],
-        }
-        return chart_data, ", ".join(explanation_parts)
-
-    # Histogram fallback for numeric-only queries
-    if value_field:
-        values = [
-            _safe_float(row.get(value_field))
-            for row in dataset
-            if _safe_float(row.get(value_field)) is not None
-        ]
-        if not values:
-            return None, "No numeric values available for the requested field."
-        values.sort()
-        bins = min(10, max(3, int(len(values) ** 0.5)))
-        min_val, max_val = values[0], values[-1]
-        if min_val == max_val:
-            labels = [str(min_val)]
-            frequencies = [len(values)]
-        else:
-            step = (max_val - min_val) / bins
-            edges = [min_val + i * step for i in range(bins + 1)]
-            frequencies = [0] * bins
-            for value in values:
-                index = min(int((value - min_val) / step), bins - 1)
-                frequencies[index] += 1
-            labels = [f"{round(edges[i], 2)}–{round(edges[i + 1], 2)}" for i in range(bins)]
-        chart_data = {
-            "labels": labels,
-            "datasets": [
-                {
-                    "label": value_field,
-                    "data": frequencies,
-                }
-            ],
-        }
-        explanation_parts = [f"distribution of {value_field}"]
-        return chart_data, ", ".join(explanation_parts)
-
-    return None, "Unable to determine appropriate fields for charting."
-
-
 @ai_bp.route("/ai_nl_chart", methods=["POST"])
 def ai_nl_chart():
     try:
@@ -788,46 +323,68 @@ def ai_nl_chart():
         dataset_obj = payload.get("dataset")
 
         if not query:
-            return jsonify({"error": "A natural language query is required."}), 400
+            return jsonify({
+                "error": "A natural language query is required.",
+                "usageFormat": NLP_QUERY_FORMAT,
+            }), 400
 
-        dataset = _extract_dataset(dataset_obj)
+        dataset = extract_dataset(dataset_obj)
         if not dataset or not isinstance(dataset, list):
-            return jsonify({"error": "A valid dataset is required to build a chart."}), 400
+            return jsonify({
+                "error": "A valid dataset is required to build a chart.",
+                "usageFormat": NLP_QUERY_FORMAT,
+            }), 400
 
-        columns = _analyse_columns(dataset)
+        columns = analyse_columns(dataset)
         if not columns:
-            return jsonify({"error": "Unable to inspect dataset columns."}), 400
+            return jsonify({
+                "error": "Unable to inspect dataset columns.",
+                "usageFormat": NLP_QUERY_FORMAT,
+            }), 400
 
-        intent = _detect_visual_intent(query)
-        fields = _select_fields(query, columns)
-        chart_type = _choose_chart_type(query, fields)
-        chart_data, explanation = _build_chart_data(chart_type, dataset, fields)
+        interpretation = interpret_nl_query(query, columns)
+        chart_data, explanation, _ = build_chart_response(dataset, interpretation)
 
         if chart_data is None:
             return jsonify({
-                "intent": intent,
+                "intent": interpretation.get("intent"),
                 "error": explanation or "Could not generate a chart for the given request.",
+                "fieldsUsed": {
+                    key: value
+                    for key, value in (interpretation.get("fields") or {}).items()
+                    if value
+                },
+                "fieldMatches": interpretation.get("matchDetails", []),
+                "filtersApplied": interpretation.get("filters", []),
+                "usageFormat": NLP_QUERY_FORMAT,
             }), 422
 
         readable_fields = {
-            key: value for key, value in fields.items() if key != "matches"
+            key: value
+            for key, value in (interpretation.get("fields") or {}).items()
+            if value
         }
 
+        chart_type = interpretation.get("chart_type", "Bar")
         if explanation:
             message = f"Here is a {chart_type.lower()} chart showing {explanation}."
         else:
             message = f"Here is a {chart_type.lower()} chart derived from the dataset."
 
-        return jsonify(
-            {
-                "intent": intent,
-                "chartType": chart_type,
-                "chartData": chart_data,
-                "explanation": message,
-                "fieldsUsed": readable_fields,
-            }
-        )
+        return jsonify({
+            "intent": interpretation.get("intent"),
+            "chartType": chart_type,
+            "chartData": chart_data,
+            "explanation": message,
+            "fieldsUsed": readable_fields,
+            "fieldMatches": interpretation.get("matchDetails", []),
+            "filtersApplied": interpretation.get("filters", []),
+            "usageFormat": NLP_QUERY_FORMAT,
+        })
 
     except Exception as exc:
         current_app.logger.error("Error in /ai_nl_chart: %s", exc, exc_info=True)
-        return jsonify({"error": f"Failed to generate chart: {exc}"}), 500
+        return jsonify({
+            "error": f"Failed to generate chart: {exc}",
+            "usageFormat": NLP_QUERY_FORMAT,
+        }), 500

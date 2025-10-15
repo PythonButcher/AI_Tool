@@ -25,6 +25,7 @@ function AICharts({ aiChartType, aiChartData }) {
     if (t === 'pie chart')       return 'Pie';
     if (t === 'doughnut chart')  return 'Doughnut';
     if (t === 'scatter chart' || t === 'scatter plot') return 'Scatter';
+    if (t === 'histogram' || t === 'histogram chart') return 'Histogram';
     return aiChartType;          // fall-through to whatever the LLM sent
   }, [aiChartType]);
 
