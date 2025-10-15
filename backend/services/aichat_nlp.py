@@ -455,11 +455,23 @@ def _find_mentioned_columns(query: str, columns: Sequence[Dict[str, Any]]) -> Li
 def _choose_chart_type(
     query: str, fields: Dict[str, Optional[str]], columns: Sequence[Dict[str, Any]]
 ) -> str:
+    query_lower = query.lower()
+    explicit_phrases = {
+        "bar chart": "Bar",
+        "line chart": "Line",
+        "pie chart": "Pie",
+        "doughnut chart": "Doughnut",
+        "scatter plot": "Scatter",
+        "histogram": "Histogram",
+    }
+    for phrase, chart in explicit_phrases.items():
+        if phrase in query_lower:
+            return chart  # explicit chart type always wins
+
     explicit = _detect_explicit_chart_type(query)
     if explicit:
         return explicit
 
-    query_lower = query.lower()
     has_time = bool(fields.get("time"))
     has_category = bool(fields.get("category"))
     has_value = bool(fields.get("value"))
