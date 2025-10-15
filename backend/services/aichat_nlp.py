@@ -286,11 +286,12 @@ def _parse_directives(query: str) -> Dict[str, List[str]]:
 def _score_columns(query: str, columns: Sequence[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
     tokens = _normalize(query).split()
     normalized_query = _normalize(query)
-    quoted = {
-        _normalize(match)
-        for match in re.findall(r"\"([^\"]+)\"|'([^']+)'", query)
-        if match
-    }
+    quoted_phrases: set[str] = set()
+    for double, single in re.findall(r"\"([^\"]+)\"|'([^']+)'", query):
+        phrase = double or single
+        normalized_phrase = _normalize(phrase)
+        if normalized_phrase:
+            quoted_phrases.add(normalized_phrase)
 
     match_details: Dict[str, Dict[str, Any]] = {}
     for column in columns:
@@ -300,35 +301,34 @@ def _score_columns(query: str, columns: Sequence[Dict[str, Any]]) -> Dict[str, D
         score = 0.0
         reasons: List[str] = []
 
-        if normalized_name in quoted:
-            score += 6.0
+        # Priority order: quoted > exact > token > fuzzy
+        if normalized_name in quoted_phrases:
+            score += 50.0
             reasons.append("explicitly quoted in query")
 
         if normalized_name and normalized_query:
             haystack = f" {normalized_query} "
             needle = f" {normalized_name} "
             if needle in haystack:
-                score += 8.0
+                score += 15.0
                 reasons.append("exact column phrase mentioned")
+
+        if normalized_name and any(token == normalized_name for token in tokens):
+            score += 12.0
+            reasons.append("exact column name mentioned")
 
         direct_phrase = re.search(
             rf"(?i)(?<!\w){re.escape(name)}(?!\w)",
             query,
         )
         if direct_phrase:
-            score += 4.0
+            score += 10.0
             reasons.append("column referenced verbatim")
 
         direct_tokens = [token for token in tokens if token in col_tokens]
         for token in direct_tokens:
-            score += 3.0
+            score += 4.0
             reasons.append(f"matched token '{token}'")
-
-        if tokens:
-            for token in tokens:
-                if token == normalized_name:
-                    score += 5.0
-                    reasons.append("exact column name mentioned")
 
         if not direct_tokens:
             for token in tokens:
@@ -336,8 +336,11 @@ def _score_columns(query: str, columns: Sequence[Dict[str, Any]]) -> Dict[str, D
                     continue
                 similarity = difflib.SequenceMatcher(None, token, normalized_name).ratio()
                 if similarity >= 0.8:
-                    score += similarity
-                    reasons.append(f"fuzzy matched token '{token}' ({similarity:.2f})")
+                    fuzzy_score = min(1.5, similarity * 1.5)
+                    score += fuzzy_score
+                    reasons.append(
+                        f"fuzzy matched token '{token}' ({similarity:.2f})"
+                    )
 
         if not reasons and normalized_name:
             if any(token in normalized_name for token in tokens):
@@ -349,19 +352,42 @@ def _score_columns(query: str, columns: Sequence[Dict[str, Any]]) -> Dict[str, D
 
 
 def _resolve_column(label: str, columns: Sequence[Dict[str, Any]]) -> Optional[str]:
-    normalized_label = _normalize(label)
-    best_match: Tuple[float, Optional[str]] = (0.0, None)
+    normalized_label = _normalize(label.strip("'\""))
+    if not normalized_label:
+        return None
+
+    # Priority order: quoted > exact > token > fuzzy
+    for column in columns:
+        if normalized_label == _normalize(column["name"]):
+            return column["name"]
+
+    label_tokens = [token for token in normalized_label.split() if token]
+    if label_tokens:
+        best_token_match: Tuple[float, Optional[str]] = (0.0, None)
+        for column in columns:
+            normalized_name = _normalize(column["name"])
+            if not normalized_name:
+                continue
+            name_tokens = normalized_name.split()
+            overlap = sum(1 for token in label_tokens if token in name_tokens)
+            if overlap:
+                score = overlap / max(len(label_tokens), len(name_tokens))
+                if score > best_token_match[0]:
+                    best_token_match = (score, column["name"])
+        if best_token_match[1]:
+            return best_token_match[1]
+
+    best_fuzzy: Tuple[float, Optional[str]] = (0.0, None)
     for column in columns:
         normalized_name = _normalize(column["name"])
-        if normalized_label == normalized_name:
-            return column["name"]
-        if normalized_label in normalized_name or normalized_name in normalized_label:
-            score = len(normalized_label)
-        else:
-            score = difflib.SequenceMatcher(None, normalized_label, normalized_name).ratio()
-        if score > best_match[0]:
-            best_match = (score, column["name"])
-    return best_match[1]
+        if not normalized_name:
+            continue
+        similarity = difflib.SequenceMatcher(
+            None, normalized_label, normalized_name
+        ).ratio()
+        if similarity > best_fuzzy[0]:
+            best_fuzzy = (similarity, column["name"])
+    return best_fuzzy[1]
 
 
 def _resolve_field_from_tokens(tokens: Iterable[str], columns: Sequence[Dict[str, Any]]) -> Optional[str]:
