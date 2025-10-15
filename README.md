@@ -86,6 +86,19 @@ ai_logic.py handles AI commands such as:
 
 /charts: Recommends the best chart type based on dataset structure.
 
+Natural Language Charting
+
+For the AI chat to interpret visualization requests accurately, follow this structure when typing a query:
+
+```
+Chart: <Bar|Line|Pie|Doughnut|Scatter|Histogram>
+Value: <numeric column or COUNT>
+Dimension: <category or time column>
+Filter: <column> <operator> <value>  # optional, repeatable
+```
+
+**Copy-ready example:** `Chart: Bar; Value: Revenue; Dimension: Region; Filter: Year = 2023`
+
 Installation
 
 Backend Setup (Flask)
