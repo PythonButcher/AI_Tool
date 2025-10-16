@@ -1,9 +1,11 @@
 """Utility functions that power the natural language chart builder used by the AI chat."""
 from __future__ import annotations
 
+# --------------------------------------------------------------------
+# Updated imports for refactored NLP Engine (deterministic version)
+# --------------------------------------------------------------------
 from .nlp_engine.chart_builder import (
     COLOR_PALETTE,
-    _aggregate_time_series,
     _build_chart_data,
     _limit_categories,
     _palette_color,
@@ -37,6 +39,7 @@ from .nlp_engine.nlp_interpreter import (
     interpret_nl_query,
 )
 from .nlp_engine.temporal_utils import (
+    _aggregate_time_series,         # ✅ moved here — this fixes your ImportError
     _classify_temporal_value,
     _ensure_datetime_from_info,
     _format_time_bucket,
