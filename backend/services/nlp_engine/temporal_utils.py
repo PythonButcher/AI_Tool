@@ -1,180 +1,189 @@
-"""Temporal parsing helpers for the NLP chart engine."""
-from __future__ import annotations
+"""
+Temporal utility functions for deterministic time handling.
+Handles parsing, classification, normalization, and formatting
+of dates/times for use in chart generation.
+"""
 
-import re
-from collections import Counter
-from datetime import datetime
-from typing import Any, Dict, Optional, Sequence, Tuple
+import datetime
+from typing import Any, Dict, List, Optional, Tuple, Union
 
-from dateutil import parser as date_parser
-
-_QUARTER_PATTERN = re.compile(r"(?i)(?:q([1-4])|([1-4])q)")
-_YEAR_PATTERN = re.compile(r"^(18|19|20|21)\d{2}$")
-_YEAR_MONTH_PATTERN = re.compile(
-    r"^(?:(?:19|20|21)\d{2}[-/](0?[1-9]|1[0-2])|(0?[1-9]|1[0-2])[-/](?:19|20|21)\d{2})$"
-)
-_MONTH_NAME_PATTERN = re.compile(
-    r"^(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\s+(?:19|20|21)\d{2}$",
-    re.IGNORECASE,
-)
-_TIME_PATTERN = re.compile(r"\d{1,2}:\d{2}")
-
-
-def _classify_temporal_value(value: Any) -> Tuple[Optional[str], Optional[Dict[str, Any]]]:
-    if value in (None, ""):
-        return None, None
-
-    if isinstance(value, datetime):
-        classification = (
-            "datetime"
-            if any((value.hour, value.minute, value.second, value.microsecond))
-            else "date"
-        )
-        return classification, {"datetime": value}
-
-    if isinstance(value, (int, float)):
-        numeric = float(value)
-        if numeric.is_integer() and 1800 <= int(numeric) <= 2200:
-            year = int(numeric)
-            return "year", {"year": year}
-
-    text = str(value).strip()
-    if not text:
-        return None, None
-
-    upper_text = text.upper()
-    quarter_match = _QUARTER_PATTERN.search(upper_text)
-    if quarter_match:
-        quarter_str = quarter_match.group(1) or quarter_match.group(2)
-        year_match = re.search(r"(18|19|20|21)\d{2}", upper_text)
-        if year_match:
-            year = int(year_match.group())
-            quarter = int(quarter_str)
-            return "quarter", {"year": year, "quarter": quarter}
-
-    if _YEAR_PATTERN.match(text):
-        year = int(text)
-        return "year", {"year": year}
-
-    if _YEAR_MONTH_PATTERN.match(text):
-        parts = re.split(r"[-/]", text)
-        if len(parts) == 2:
-            first, second = parts
-            if len(first) == 4:
-                year, month = int(first), int(second)
-            else:
-                year, month = int(second), int(first)
-            return "month", {"year": year, "month": month}
-
-    if _MONTH_NAME_PATTERN.match(text):
-        month_name, year_part = text.split()
-        month_lookup = {
-            "JAN": 1,
-            "FEB": 2,
-            "MAR": 3,
-            "APR": 4,
-            "MAY": 5,
-            "JUN": 6,
-            "JUL": 7,
-            "AUG": 8,
-            "SEP": 9,
-            "SEPT": 9,
-            "OCT": 10,
-            "NOV": 11,
-            "DEC": 12,
-        }
-        month = month_lookup.get(month_name[:3].upper())
-        if month:
-            return "month", {"year": int(year_part), "month": month}
-
-    try:
-        parsed = date_parser.parse(text)
-    except (ValueError, TypeError, OverflowError):
-        return None, None
-
-    has_time_component = bool(_TIME_PATTERN.search(text)) or any(
-        (parsed.hour, parsed.minute, parsed.second, parsed.microsecond)
-    )
-    classification = "datetime" if has_time_component else "date"
-    return classification, {"datetime": parsed}
-
-
-def _infer_temporal_granularity(values: Sequence[Any]) -> str:
-    counts: Counter[str] = Counter()
-    for value in values:
-        classification, _ = _classify_temporal_value(value)
-        if classification:
-            counts[classification] += 1
-
-    if not counts:
-        return "date"
-
-    bucket_scores = {
-        "year": counts.get("year", 0),
-        "quarter": counts.get("quarter", 0),
-        "month": counts.get("month", 0) + counts.get("datetime", 0),
-        "date": counts.get("date", 0),
-    }
-
-    preference = {"year": 0, "quarter": 1, "month": 2, "date": 3}
-    granularity = max(
-        bucket_scores.items(),
-        key=lambda item: (item[1], -preference[item[0]]),
-    )[0]
-
-    return granularity
-
-
-def _ensure_datetime_from_info(classification: str, info: Dict[str, Any]) -> Optional[datetime]:
-    if not info:
+# --------------------------------------------------------------------
+# Core safe parsing function
+# --------------------------------------------------------------------
+def _parse_date_safe(value: Any) -> Optional[datetime.datetime]:
+    """
+    Attempt to parse a date from various input formats.
+    Returns None if parsing fails.
+    """
+    if value is None:
         return None
-    if classification in {"date", "datetime"}:
-        return info.get("datetime")
-    if classification == "month":
-        return datetime(info["year"], info["month"], 1)
-    if classification == "quarter":
-        month = (info["quarter"] - 1) * 3 + 1
-        return datetime(info["year"], month, 1)
-    if classification == "year":
-        return datetime(info["year"], 1, 1)
+    if isinstance(value, datetime.datetime):
+        return value
+    if isinstance(value, datetime.date):
+        return datetime.datetime(value.year, value.month, value.day)
+    if not isinstance(value, str):
+        return None
+
+    # Common date formats to check
+    formats = [
+        "%Y-%m-%d",
+        "%Y/%m/%d",
+        "%Y-%m",
+        "%Y/%m",
+        "%Y",
+        "%b %Y",
+        "%B %Y",
+        "%Y %b",
+        "%Y %B",
+        "%d-%b-%Y",
+        "%d-%B-%Y",
+        "%m/%d/%Y",
+        "%d/%m/%Y",
+    ]
+    for fmt in formats:
+        try:
+            return datetime.datetime.strptime(value.strip(), fmt)
+        except Exception:
+            continue
     return None
 
 
-def _format_time_bucket(value: Any, granularity: str) -> Tuple[Optional[str], Any]:
-    classification, info = _classify_temporal_value(value)
-    if not classification:
-        return None, None
+# --------------------------------------------------------------------
+# Classification
+# --------------------------------------------------------------------
+def _classify_temporal_value(value: Any) -> Optional[str]:
+    """
+    Classify a temporal value into 'year', 'quarter', 'month', or 'date'.
+    Returns None if no valid classification is found.
+    """
+    dt = _parse_date_safe(value)
+    if not dt:
+        return None
 
-    dt = _ensure_datetime_from_info(classification, info)
+    # Heuristic classification based on precision
+    if dt.day != 1:
+        return "date"
+    if dt.month != 1:
+        return "month"
+    if dt.month in (1, 4, 7, 10):
+        return "quarter"
+    return "year"
+
+
+# --------------------------------------------------------------------
+# Granularity inference
+# --------------------------------------------------------------------
+def _infer_temporal_granularity(values: List[Any]) -> Optional[str]:
+    """
+    Infer the overall granularity from a list of temporal values.
+    Chooses the most specific consistent level (year < month < date).
+    """
+    detected = {"year": 0, "quarter": 0, "month": 0, "date": 0}
+    for v in values:
+        t = _classify_temporal_value(v)
+        if t:
+            detected[t] += 1
+
+    if not any(detected.values()):
+        return None
+
+    # Pick the finest granularity that exists
+    for level in ("date", "month", "quarter", "year"):
+        if detected[level] > 0:
+            return level
+    return "date"
+
+
+# --------------------------------------------------------------------
+# Date normalization (main entry for builder)
+# --------------------------------------------------------------------
+def _ensure_datetime_from_info(value: Any) -> Optional[datetime.datetime]:
+    """
+    Convert an input value into a datetime object deterministically.
+    Compatible with all builder/aggregator logic.
+    """
+    return _parse_date_safe(value)
+
+
+# --------------------------------------------------------------------
+# Time bucket formatting (for consistent labels)
+# --------------------------------------------------------------------
+def _format_time_bucket(dt: datetime.datetime, granularity: str = "date") -> str:
+    """
+    Format datetime objects into uniform string buckets:
+      - Year: "2025"
+      - Quarter: "2025-Q1"
+      - Month: "2025-01"
+      - Date: "2025-01-31"
+    """
+    if not isinstance(dt, datetime.datetime):
+        return str(dt)
 
     if granularity == "year":
-        if classification == "year" and info:
-            year = info["year"]
-        elif dt:
-            year = dt.year
-        else:
-            return None, None
-        return str(year), year
-
+        return dt.strftime("%Y")
     if granularity == "quarter":
-        if classification == "quarter" and info:
-            year = info["year"]
-            quarter = info["quarter"]
-        elif dt:
-            year = dt.year
-            quarter = ((dt.month - 1) // 3) + 1
-        else:
-            return None, None
-        return f"{year}-Q{quarter}", (year, quarter)
-
+        q = (dt.month - 1) // 3 + 1
+        return f"{dt.year}-Q{q}"
     if granularity == "month":
-        if dt:
-            return f"{dt.year}-{dt.month:02d}", (dt.year, dt.month)
-        if classification == "quarter" and info:
-            month = (info["quarter"] - 1) * 3 + 1
-            return f"{info['year']}-{month:02d}", (info["year"], month)
-        return None, None
+        return dt.strftime("%Y-%m")
+    return dt.strftime("%Y-%m-%d")
 
-    if dt:
-        return dt.strftime("%Y-%m-%d"), dt
-    return None, None
+
+# --------------------------------------------------------------------
+# Aggregation utility for grouping data by time bucket
+# --------------------------------------------------------------------
+def _aggregate_time_series(
+    dataset: List[Dict[str, Any]],
+    time_field: str,
+    value_field: str,
+    aggregation: str = "sum"
+) -> Dict[str, float]:
+    """
+    Deterministically aggregate time series data into buckets based on
+    detected granularity. Returns a mapping {bucket_label: aggregated_value}.
+    """
+    from .chart_builder import _aggregate  # local import to avoid circular ref
+
+    # Extract valid date/value pairs
+    valid_pairs: List[Tuple[datetime.datetime, float]] = []
+    for row in dataset:
+        date_obj = _ensure_datetime_from_info(row.get(time_field))
+        value = row.get(value_field)
+        if date_obj and isinstance(value, (int, float)):
+            valid_pairs.append((date_obj, value))
+
+    if not valid_pairs:
+        return {}
+
+    # Detect consistent granularity
+    granularity = _infer_temporal_granularity([d for d, _ in valid_pairs]) or "date"
+
+    # Group and aggregate
+    buckets: Dict[str, List[float]] = {}
+    for dt, val in valid_pairs:
+        label = _format_time_bucket(dt, granularity)
+        buckets.setdefault(label, []).append(val)
+
+    aggregated = {label: _aggregate(vals, aggregation) for label, vals in buckets.items()}
+
+    # Sort ascending by chronological order of labels
+    sorted_aggregated = dict(sorted(aggregated.items(), key=lambda kv: kv[0]))
+    return sorted_aggregated
+
+
+# --------------------------------------------------------------------
+# Temporal confidence scoring (for interpreter)
+# --------------------------------------------------------------------
+def _temporal_score(value: Any) -> float:
+    """
+    Assign a numeric confidence score that a given value is temporal.
+    Used by NLP interpreter to rank candidate time fields.
+    """
+    if isinstance(value, (datetime.date, datetime.datetime)):
+        return 1.0
+    if isinstance(value, (int, float)) and 1900 <= value <= 2100:
+        return 0.8
+    if isinstance(value, str):
+        dt = _parse_date_safe(value)
+        return 0.9 if dt else 0.0
+    return 0.0
