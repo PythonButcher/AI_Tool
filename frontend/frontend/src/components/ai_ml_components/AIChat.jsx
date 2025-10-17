@@ -70,7 +70,7 @@ const formatChartData = (chartResponse) => {
 };
 
 function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
-  const { uploadedData, cleanedData, setCleanedData } = useContext(DataContext);
+  const { uploadedData, fullData, cleanedData, filteredData, setCleanedData } = useContext(DataContext);
   const [showChat, setShowChat] = useState(false);
   const [userMessages, setUserMessages] = useState([]);
   const [userInput, setUserInput] = useState('');
@@ -123,7 +123,7 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
     setLoading(true);
     setError(null);
 
-    const datasetContext = cleanedData || uploadedData;
+    const datasetContext = filteredData || cleanedData || fullData || uploadedData;
     if (!datasetContext) {
       setError("No dataset found. Please upload data first.");
       setLoading(false);
