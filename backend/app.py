@@ -15,6 +15,7 @@ from backend.services.ai_storyboard_gemini import ai_storyboard_gemini
 from backend.services.ai_storyboard_openai import ai_storyboard_openai
 from backend.services.ai_logic import ai_bp
 from backend.services.ai_logic_gemini import ai_gemini_bp
+from backend.services.nlp_routes import nlp_bp
 from backend.routes.raw_data import raw_data_bp
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -34,6 +35,7 @@ def create_app():
     app.register_blueprint(cleaning_bp)
     app.register_blueprint(export_bp)
     app.register_blueprint(ai_bp)
+    app.register_blueprint(nlp_bp)
     app.register_blueprint(api_fetch_bp)
     app.register_blueprint(ai_gemini_bp)
     app.register_blueprint(sql_fetch_bp)
