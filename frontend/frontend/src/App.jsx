@@ -180,7 +180,7 @@ const handleFileUpload = useCallback((raw, file = null) => {
 
   // ✅ Assign preview and fullData separately
   setUploadedData({ data_preview: previewRows });  // don't break chart/preview features
-  setFullData(null);                               // defer full dataset loading to RawDataViewer
+  setFullData(previewRows);                        // ensure downstream tools (AI chat/NLP) have access
   setCleanedData(previewRows);                     // initial state for cleaning/exports
   setShowDataPreview(true);                        // toggle preview window
 

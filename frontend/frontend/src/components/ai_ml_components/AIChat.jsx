@@ -70,7 +70,7 @@ const formatChartData = (chartResponse) => {
 };
 
 function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
-  const { uploadedData, cleanedData, setCleanedData } = useContext(DataContext);
+  const { uploadedData, cleanedData, fullData, setCleanedData } = useContext(DataContext);
   const [showChat, setShowChat] = useState(false);
   const [userMessages, setUserMessages] = useState([]);
   const [userInput, setUserInput] = useState('');
@@ -104,16 +104,30 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
     }
   };
 
+  const resolveDatasetForNlp = () => {
+    if (Array.isArray(cleanedData) && cleanedData.length > 0) return cleanedData;
+    if (Array.isArray(fullData) && fullData.length > 0) return fullData;
+    if (Array.isArray(uploadedData?.data_preview) && uploadedData.data_preview.length > 0) {
+      return uploadedData.data_preview;
+    }
+    if (Array.isArray(uploadedData) && uploadedData.length > 0) return uploadedData;
+    return null;
+  };
+
   const attemptNaturalLanguageChart = async (query, dataset) => {
     try {
       const response = await axios.post(`${API_URL}/api/nlp/chart`, {
         query,
         dataset,
       });
-      return response.data;
+      return { success: true, data: response.data };
     } catch (error) {
       console.error('Natural-language chart error:', error);
-      return null;
+      const backendMessage = error.response?.data?.error || error.response?.data?.message;
+      return {
+        success: false,
+        error: backendMessage || 'Unable to generate a chart from the current dataset.',
+      };
     }
   };
 
@@ -123,9 +137,9 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
     setLoading(true);
     setError(null);
 
-    const datasetContext = cleanedData || uploadedData;
-    if (!datasetContext) {
-      setError("No dataset found. Please upload data first.");
+    const datasetContext = resolveDatasetForNlp();
+    if (!Array.isArray(datasetContext) || datasetContext.length === 0) {
+      setError('No dataset loaded—upload data first.');
       setLoading(false);
       return;
     }
@@ -135,14 +149,22 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
 
     if (!AICommands.isCommand(userInput) && isVisualizationRequest(userInput)) {
       const chartResult = await attemptNaturalLanguageChart(userInput, datasetContext);
-      if (chartResult?.chartType && chartResult?.chartData) {
-        setAiChartType(chartResult.chartType);
-        setAiChartData(chartResult.chartData);
+      if (chartResult.success) {
+        const chartPayload = chartResult.data;
+        if (!chartPayload?.chartType || !chartPayload?.chartData) {
+          setError('Chart response missing required fields.');
+          setLoading(false);
+          return;
+        }
+        setAiChartType(chartPayload.chartType);
+        setAiChartData(chartPayload.chartData);
         setShowAIChart(true);
-        responseText = chartResult.explanation || `Generated a ${chartResult.chartType} chart.`;
+        responseText = chartPayload.explanation || `Generated a ${chartPayload.chartType} chart.`;
         handledChart = true;
-      } else if (chartResult?.error) {
-        responseText = chartResult.error;
+      } else {
+        const message = chartResult.error || 'Unable to generate chart.';
+        setError(message);
+        responseText = message;
         handledChart = true;
       }
     }
