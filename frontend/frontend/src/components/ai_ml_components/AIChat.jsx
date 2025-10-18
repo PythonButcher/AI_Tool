@@ -106,7 +106,7 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
 
   const attemptNaturalLanguageChart = async (query, dataset) => {
     try {
-      const response = await axios.post(`${API_URL}/ai_nl_chart`, {
+      const response = await axios.post(`${API_URL}/api/nlp/chart`, {
         query,
         dataset,
       });
