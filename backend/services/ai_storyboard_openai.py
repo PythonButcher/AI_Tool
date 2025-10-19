@@ -36,7 +36,7 @@ def summarise_schema(rows, limit=50):
 
 def openai_call(prompt):
     resp = openai.chat.completions.create(
-        model="gpt-4o",
+        model="gpt-4.1",
         messages=[{"role": "user", "content": prompt}],
         temperature=0.7,
         top_p=1.0,
@@ -47,7 +47,7 @@ def openai_call(prompt):
     return resp.choices[0].message.content.strip()
 
 # ─── Route ───────────────────────────────────────────────────────────────────
-@ai_storyboard_openai.route("/api/storyboard", methods=["POST"])
+@ai_storyboard_openai.route("/api/storyboard-openai", methods=["POST"])
 def storyboard():
     try:
         body = request.get_json(silent=True) or {}

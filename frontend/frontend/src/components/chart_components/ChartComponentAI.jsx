@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { Bar, Line, Pie } from 'react-chartjs-2';
+import { Bar, Line, Pie, Doughnut, Scatter } from 'react-chartjs-2';
 import ChartToolbar from './ChartToolbar';
 import {
   Chart as ChartJS,
@@ -8,6 +8,7 @@ import {
   BarElement,
   BarController,
   LineElement,
+  LineController,
   PointElement,
   ArcElement,
   Tooltip,
@@ -21,6 +22,7 @@ ChartJS.register(
   BarElement,
   BarController,
   LineElement,
+  LineController,
   PointElement,
   ArcElement,
   Tooltip,
@@ -30,10 +32,41 @@ ChartJS.register(
 function ChartComponentAI({ normalizedChartType = 'Bar', aiChartData }) {
   const chartRef = useRef(null);
 
-  if (!aiChartData || !aiChartData.labels || !aiChartData.datasets) {
+  if (!aiChartData || !aiChartData.datasets) {
     console.warn("⚠ Chart data is missing required properties.", aiChartData);
     return <div style={{ padding: "20px", textAlign: "center" }}>Chart data is incomplete.</div>;
   }
+
+  const meta = aiChartData.meta || {};
+  const resolvedChartType = meta.chartType || normalizedChartType || 'Bar';
+  const axisLabels = meta.axisLabels || {};
+  const legendConfig = meta.legend || {};
+  const datasetCount = (aiChartData.datasets && aiChartData.datasets.length) || 0;
+  const showLegend =
+    legendConfig.display !== undefined ? legendConfig.display : datasetCount > 1;
+  const legendPosition = legendConfig.position || 'top';
+
+  const baseScales = (() => {
+    if (resolvedChartType === 'Pie' || resolvedChartType === 'Doughnut') {
+      return null;
+    }
+    const xTitle = axisLabels.x
+      ? { display: true, text: axisLabels.x }
+      : undefined;
+    const yTitle = axisLabels.y
+      ? { display: true, text: axisLabels.y }
+      : undefined;
+    return {
+      x: {
+        type: meta.xScaleType || 'category',
+        title: xTitle,
+      },
+      y: {
+        beginAtZero: meta.beginAtZero !== undefined ? meta.beginAtZero : true,
+        title: yTitle,
+      },
+    };
+  })();
 
   const options = {
     responsive: true,
@@ -42,13 +75,17 @@ function ChartComponentAI({ normalizedChartType = 'Bar', aiChartData }) {
       padding: 10,
     },
     plugins: {
-      legend: { display: true },
+      legend: { display: showLegend, position: legendPosition },
       tooltip: { enabled: true },
       backgroundColor: {
         color: 'white', // fallback if we use a plugin, optional
       },
     },
-    // 🔥 Custom hook to fill background
+    interaction: {
+      mode: 'index',
+      intersect: false,
+    },
+    ...(baseScales ? { scales: baseScales } : {}),
     animation: {
       onComplete: () => {
         const chart = chartRef.current;
@@ -63,18 +100,45 @@ function ChartComponentAI({ normalizedChartType = 'Bar', aiChartData }) {
       },
     },
   };
-  
+
+  const resolvedOptions = (() => {
+    if (resolvedChartType === 'Scatter') {
+      const xTitle = axisLabels.x
+        ? { display: true, text: axisLabels.x }
+        : undefined;
+      const yTitle = axisLabels.y
+        ? { display: true, text: axisLabels.y }
+        : undefined;
+      return {
+        ...options,
+        scales: {
+          x: { type: 'linear', position: 'bottom', title: xTitle },
+          y: { type: 'linear', title: yTitle },
+        },
+      };
+    }
+    return options;
+  })();
+
+  const renderType = resolvedChartType === 'Histogram' ? 'Bar' : resolvedChartType;
+
   return (
     <div style={{ width: "80%", height: "80%", margin: "auto", position: "relative" }}>
       <ChartToolbar chartRef={chartRef} />
-      {normalizedChartType === "Bar" && (
-        <Bar ref={chartRef} data={aiChartData} options={options} />
+      {renderType === "Bar" && (
+        <Bar ref={chartRef} data={aiChartData} options={resolvedOptions} />
       )}
-      {normalizedChartType === "Line" && (
-        <Line ref={chartRef} data={aiChartData} options={options} />
+      {renderType === "Line" && (
+        <Line ref={chartRef} data={aiChartData} options={resolvedOptions} />
       )}
-      {normalizedChartType === "Pie" && (
-        <Pie ref={chartRef} data={aiChartData} options={options} />
+      {renderType === "Pie" && (
+        <Pie ref={chartRef} data={aiChartData} options={resolvedOptions} />
+      )}
+      {renderType === "Doughnut" && (
+        <Doughnut ref={chartRef} data={aiChartData} options={resolvedOptions} />
+      )}
+      {renderType === "Scatter" && (
+        <Scatter ref={chartRef} data={aiChartData} options={resolvedOptions} />
       )}
     </div>
   );

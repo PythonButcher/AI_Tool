@@ -32,7 +32,7 @@ export default function DataStoryPanel({ uploadedData, cleanedData, model, saved
             ? JSON.parse((cleanedData || uploadedData).data_preview)
             : (cleanedData || uploadedData);
 
-        const route = model === 'gemini' ? '/api/storyboard-gemini' : '/api/storyboard';
+        const route = model === 'gemini' ? '/api/storyboard-gemini' : '/api/storyboard-openai';
 
         const { data } = await axios.post(`${API_URL}${route}`, {
           cleanedData,
