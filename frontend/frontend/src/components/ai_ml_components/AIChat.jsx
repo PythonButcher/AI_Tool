@@ -70,7 +70,7 @@ const formatChartData = (chartResponse) => {
 };
 
 function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
-  const { uploadedData, cleanedData, fullData, setCleanedData } = useContext(DataContext);
+  const { cleanedData, fullData, setCleanedData } = useContext(DataContext);
   const [showChat, setShowChat] = useState(false);
   const [userMessages, setUserMessages] = useState([]);
   const [userInput, setUserInput] = useState('');
@@ -107,10 +107,6 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
   const resolveDatasetForNlp = () => {
     if (Array.isArray(cleanedData) && cleanedData.length > 0) return cleanedData;
     if (Array.isArray(fullData) && fullData.length > 0) return fullData;
-    if (Array.isArray(uploadedData?.data_preview) && uploadedData.data_preview.length > 0) {
-      return uploadedData.data_preview;
-    }
-    if (Array.isArray(uploadedData) && uploadedData.length > 0) return uploadedData;
     return null;
   };
 
@@ -120,10 +116,15 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
         query,
         dataset,
       });
+      console.log('AIChat /api/nlp/chart status:', response.status);
       return { success: true, data: response.data };
     } catch (error) {
-      console.error('Natural-language chart error:', error);
+      const status = error.response?.status;
       const backendMessage = error.response?.data?.error || error.response?.data?.message;
+      if (status) {
+        console.error('AIChat /api/nlp/chart failed with status:', status);
+      }
+      console.error('Natural-language chart error:', backendMessage || error.message);
       return {
         success: false,
         error: backendMessage || 'Unable to generate a chart from the current dataset.',
@@ -148,6 +149,7 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
     let handledChart = false;
 
     if (!AICommands.isCommand(userInput) && isVisualizationRequest(userInput)) {
+      console.log('AIChat sending dataset rows:', datasetContext.length);
       const chartResult = await attemptNaturalLanguageChart(userInput, datasetContext);
       if (chartResult.success) {
         const chartPayload = chartResult.data;
@@ -159,6 +161,7 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
         setAiChartType(chartPayload.chartType);
         setAiChartData(chartPayload.chartData);
         setShowAIChart(true);
+        console.log('AIChat chart rendered:', chartPayload.chartType);
         responseText = chartPayload.explanation || `Generated a ${chartPayload.chartType} chart.`;
         handledChart = true;
       } else {
