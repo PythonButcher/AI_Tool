@@ -9,7 +9,6 @@ from .nlp_engine.chart_builder import (
     _build_chart_data,
     _limit_categories,
     _palette_color,
-    _value_axis_label,
     build_chart_response,
 )
 from .nlp_engine.nlp_extraction import (
@@ -74,7 +73,6 @@ __all__ = [
     "_safe_float",
     "_score_columns",
     "_temporal_score",
-    "_value_axis_label",
     "analyse_columns",
     "build_chart_response",
     "extract_dataset",
