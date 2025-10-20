@@ -1,4 +1,4 @@
-"""Query parsing and scoring logic for the NLP chart engine."""
+"""Query parsing and scoring logic for the NLP chart engine (deterministic refactor)."""
 from __future__ import annotations
 
 import difflib
@@ -8,6 +8,9 @@ from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
 from .nlp_extraction import _safe_float
 
+# --------------------------------------------------------------------
+# User-facing guidance (left intact)
+# --------------------------------------------------------------------
 NLP_QUERY_FORMAT = textwrap.dedent(
     """
     Recommended natural language structure:
@@ -25,6 +28,9 @@ class QueryInterpretation(Dict[str, Any]):
     """Typed dictionary describing how the NLP parser understood the query."""
 
 
+# --------------------------------------------------------------------
+# Intent & normalization helpers (unchanged behavior)
+# --------------------------------------------------------------------
 def _detect_visual_intent(query: str) -> str:
     lowered = query.lower()
     visual_keywords = [
@@ -66,6 +72,11 @@ def _parse_directives(query: str) -> Dict[str, List[str]]:
     return directives
 
 
+# --------------------------------------------------------------------
+# Deterministic column scoring
+#  - Precedence: quoted > exact phrase > exact name token > verbatim > token overlap > fuzzy.
+#  - Fuzzy is capped very low to avoid overpowering exact matches.
+# --------------------------------------------------------------------
 def _score_columns(query: str, columns: Sequence[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
     tokens = _normalize(query).split()
     normalized_query = _normalize(query)
@@ -84,10 +95,12 @@ def _score_columns(query: str, columns: Sequence[Dict[str, Any]]) -> Dict[str, D
         score = 0.0
         reasons: List[str] = []
 
+        # Highest priority: explicit quoted reference to the exact column name
         if normalized_name in quoted_phrases:
             score += 50.0
             reasons.append("explicitly quoted in query")
 
+        # Exact phrase match inside the normalized query text
         if normalized_name and normalized_query:
             haystack = f" {normalized_query} "
             needle = f" {normalized_name} "
@@ -95,10 +108,12 @@ def _score_columns(query: str, columns: Sequence[Dict[str, Any]]) -> Dict[str, D
                 score += 15.0
                 reasons.append("exact column phrase mentioned")
 
+        # Exact token equals the entire normalized name
         if normalized_name and any(token == normalized_name for token in tokens):
             score += 12.0
             reasons.append("exact column name mentioned")
 
+        # Verbatim (case-sensitive) literal hit in the original query string
         direct_phrase = re.search(
             rf"(?i)(?<!\w){re.escape(name)}(?!\w)",
             query,
@@ -107,41 +122,47 @@ def _score_columns(query: str, columns: Sequence[Dict[str, Any]]) -> Dict[str, D
             score += 10.0
             reasons.append("column referenced verbatim")
 
+        # Token overlap (deterministic, small nudge)
         direct_tokens = [token for token in tokens if token in col_tokens]
         for token in direct_tokens:
             score += 4.0
             reasons.append(f"matched token '{token}'")
 
+        # Very low-weight fuzzy match (never outweighs explicit/phrase/name/token)
         if not direct_tokens:
             for token in tokens:
                 if not token:
                     continue
                 similarity = difflib.SequenceMatcher(None, token, normalized_name).ratio()
                 if similarity >= 0.8:
-                    fuzzy_score = min(1.5, similarity * 1.5)
+                    fuzzy_score = min(1.0, similarity)  # tighter cap than before
                     score += fuzzy_score
-                    reasons.append(
-                        f"fuzzy matched token '{token}' ({similarity:.2f})"
-                    )
+                    reasons.append(f"fuzzy matched token '{token}' ({similarity:.2f})")
 
+        # Partial overlap as last resort
         if not reasons and normalized_name:
             if any(token in normalized_name for token in tokens):
-                score += 0.5
+                score += 0.25
                 reasons.append("partial token overlap")
 
         match_details[name] = {"score": score, "reasons": reasons}
     return match_details
 
 
+# --------------------------------------------------------------------
+# Deterministic resolution: exact > token overlap > fuzzy; no randomness.
+# --------------------------------------------------------------------
 def _resolve_column(label: str, columns: Sequence[Dict[str, Any]]) -> Optional[str]:
     normalized_label = _normalize(label.strip("'\""))
     if not normalized_label:
         return None
 
+    # Exact normalized name match
     for column in columns:
         if normalized_label == _normalize(column["name"]):
             return column["name"]
 
+    # Token-overlap ratio
     label_tokens = [token for token in normalized_label.split() if token]
     if label_tokens:
         best_token_match: Tuple[float, Optional[str]] = (0.0, None)
@@ -158,14 +179,13 @@ def _resolve_column(label: str, columns: Sequence[Dict[str, Any]]) -> Optional[s
         if best_token_match[1]:
             return best_token_match[1]
 
+    # Low-impact fuzzy backup
     best_fuzzy: Tuple[float, Optional[str]] = (0.0, None)
     for column in columns:
         normalized_name = _normalize(column["name"])
         if not normalized_name:
             continue
-        similarity = difflib.SequenceMatcher(
-            None, normalized_label, normalized_name
-        ).ratio()
+        similarity = difflib.SequenceMatcher(None, normalized_label, normalized_name).ratio()
         if similarity > best_fuzzy[0]:
             best_fuzzy = (similarity, column["name"])
     return best_fuzzy[1]
@@ -196,6 +216,9 @@ def _extract_dimension_from_query(
     return None
 
 
+# --------------------------------------------------------------------
+# Explicit chart-type detection: explicit keywords ALWAYS win.
+# --------------------------------------------------------------------
 def _detect_explicit_chart_type(query: str) -> Optional[str]:
     lowered = query.lower()
     if (
@@ -238,6 +261,7 @@ def _find_mentioned_columns(query: str, columns: Sequence[Dict[str, Any]]) -> Li
         normalized_name = _normalize(name)
         position: Optional[int] = None
 
+        # Verbatim hit
         if name:
             direct_match = re.search(
                 rf"(?i)(?<!\w){re.escape(name)}(?!\w)",
@@ -246,6 +270,7 @@ def _find_mentioned_columns(query: str, columns: Sequence[Dict[str, Any]]) -> Li
             if direct_match:
                 position = direct_match.start()
 
+        # Exact normalized phrase hit
         if position is None and normalized_name and normalized_query:
             haystack = f" {normalized_query} "
             needle = f" {normalized_name} "
@@ -268,10 +293,19 @@ def _find_mentioned_columns(query: str, columns: Sequence[Dict[str, Any]]) -> Li
     return ordered_names
 
 
+# --------------------------------------------------------------------
+# Deterministic chart-type choice:
+#  - Explicit request always wins.
+#  - If any time field exists (and no explicit type), prefer Line (your rule).
+#  - Otherwise, Bar when category+value, Pie for "share/percentage" with low cardinality,
+#    Scatter when two numeric values are present or "versus/vs/against" is used.
+# --------------------------------------------------------------------
 def _choose_chart_type(
     query: str, fields: Dict[str, Optional[str]], columns: Sequence[Dict[str, Any]]
 ) -> str:
     query_lower = query.lower()
+
+    # Hard override: explicit phrases have absolute priority
     explicit_phrases = {
         "bar chart": "Bar",
         "line chart": "Line",
@@ -306,16 +340,16 @@ def _choose_chart_type(
     share_keywords = ["share", "percentage", "percent", "portion", "breakdown"]
     scatter_keywords = ["scatter", "versus", "vs", "against"]
 
+    # Scatter when explicitly implied or two numeric values identified
     if has_secondary or any(keyword in query_lower for keyword in scatter_keywords):
         if has_value and has_secondary:
             return "Scatter"
 
+    # Prefer Line if any time field is present (per your directive)
     if has_time:
-        if has_value or not has_category:
-            return "Line"
-        if any(keyword in query_lower for keyword in time_keywords):
-            return "Line"
+        return "Line"
 
+    # Pie when "share" semantics and manageable category cardinality
     category_cardinality: Optional[int] = None
     if has_category:
         category_meta = next(
@@ -333,29 +367,26 @@ def _choose_chart_type(
                     }
                 )
 
-    if has_category and has_value and any(keyword in query_lower for keyword in share_keywords):
+    if has_category and (has_value or not has_value) and any(
+        keyword in query_lower for keyword in share_keywords
+    ):
         if category_cardinality is None or category_cardinality <= 8:
             return "Pie"
 
-    if has_category and not has_value and any(keyword in query_lower for keyword in share_keywords):
-        if category_cardinality is None or category_cardinality <= 8:
-            return "Pie"
-
+    # Default deterministic fallbacks
     if has_category and has_value:
         return "Bar"
-
-    if has_time:
-        return "Line"
-
     if has_category and not has_value:
         return "Bar"
-
     if has_value and has_secondary:
         return "Scatter"
 
     return "Bar"
 
 
+# --------------------------------------------------------------------
+# Filters (kept intact, deterministic)
+# --------------------------------------------------------------------
 def _parse_filters(
     filter_texts: Sequence[str], columns: Sequence[Dict[str, Any]]
 ) -> List[Dict[str, Any]]:
@@ -432,6 +463,12 @@ def _apply_filters(
     return filtered
 
 
+# --------------------------------------------------------------------
+# Main entry: deterministic interpretation
+#  - Honors explicit chart type.
+#  - Prefers time -> Line.
+#  - Resolves fields using stable scoring; avoids random fuzzy outcomes.
+# --------------------------------------------------------------------
 def interpret_nl_query(
     query: str, columns: Sequence[Dict[str, Any]]
 ) -> QueryInterpretation:
@@ -448,6 +485,7 @@ def interpret_nl_query(
     column_lookup = {col["name"]: col for col in columns}
     mentioned_columns = _find_mentioned_columns(query, columns)
 
+    # Directive hints (exact > token > fuzzy)
     if "value" in directives:
         value_hint = directives["value"][0].strip()
         if value_hint.lower() not in {"count", "records", "rows"}:
@@ -457,6 +495,7 @@ def interpret_nl_query(
     if "time" in directives:
         time_field = _resolve_column(directives["time"][0], columns)
 
+    # Dimension via "by/per/versus/vs"
     if not category_field:
         category_field = _extract_dimension_from_query(query, columns)
 
@@ -466,21 +505,21 @@ def interpret_nl_query(
     ranked_temporal = [
         name
         for _, name in sorted(
-            (
-                (col.get("temporalScore", 0.0), col["name"])
-                for col in columns
-            ),
+            ((col.get("temporalScore", 0.0), col["name"]) for col in columns),
             reverse=True,
         )
         if name
     ]
 
+    # Helper: best scored candidate among a type set (deterministic by score then appearance)
     def _best_match(candidates: Sequence[str], min_score: float = 0.0) -> Optional[str]:
+        # Prefer columns explicitly mentioned in the query (in textual order)
         for mentioned in mentioned_columns:
             if mentioned in candidates:
                 mentioned_score = match_details.get(mentioned, {"score": 0.0})["score"]
                 if mentioned_score >= min_score or min_score == 0.0:
                     return mentioned
+        # Otherwise highest score, tie broken by dataset order
         best_name: Optional[str] = None
         best_score = min_score
         for name in candidates:
@@ -490,6 +529,7 @@ def interpret_nl_query(
                 best_score = score
         return best_name
 
+    # Assign fields from explicit mentions first (in order of appearance)
     for name in mentioned_columns:
         meta = column_lookup.get(name, {})
         col_type = meta.get("type")
@@ -502,6 +542,7 @@ def interpret_nl_query(
         if col_type == "categorical" and not category_field:
             category_field = name
 
+    # Fill missing fields deterministically
     if not value_field:
         value_field = _best_match(numeric_candidates, 0.1)
         if not value_field and len(numeric_candidates) == 1:
@@ -529,6 +570,7 @@ def interpret_nl_query(
         if not time_field and mentions_time and temporal_candidates:
             time_field = temporal_candidates[0]
 
+    # If a line/time was explicitly requested but no time field resolved, pick highest temporal score
     explicit_line_requested = (
         explicit_chart == "Line"
         or "over time" in query_lower
@@ -536,7 +578,6 @@ def interpret_nl_query(
         or "time series" in query_lower
         or "timeseries" in query_lower
     )
-
     if explicit_line_requested and not time_field:
         for name in ranked_temporal:
             if name and name != value_field:
@@ -545,40 +586,31 @@ def interpret_nl_query(
                     time_field = name
                     break
         if not time_field and ranked_temporal:
-            fallback_name = ranked_temporal[0]
-            if fallback_name:
-                time_field = fallback_name
+            time_field = ranked_temporal[0]
         if not time_field and category_field:
+            # As a last resort, treat the dimension as time for a line chart
             time_field = category_field
             category_field = None
 
+    # If the query implies time but the user didn't say "by <dimension>", drop category to avoid double-grouping
     grouping_keywords = [" by ", " per ", " versus ", " vs ", " against "]
     if mentions_time and time_field and "dimension" not in directives:
         if not any(keyword in query_lower for keyword in grouping_keywords):
             category_field = None
 
+    # Ensure fields are not self-conflicting
     if category_field and time_field and category_field == time_field:
         category_field = None
-
     if time_field and value_field and value_field == time_field:
-        alternative_numeric = next(
-            (name for name in numeric_candidates if name != time_field),
-            None,
-        )
-        if alternative_numeric:
-            value_field = alternative_numeric
-        else:
-            value_field = None
+        alternative_numeric = next((name for name in numeric_candidates if name != time_field), None)
+        value_field = alternative_numeric
 
+    # Scatter detection: choose two numeric axes deterministically
     scatter_keywords = {"scatter", "versus", "vs", "against"}
     scatter_requested = any(keyword in query_lower for keyword in scatter_keywords)
-
     if scatter_requested:
         numeric_scores = sorted(
-            (
-                (match_details.get(name, {"score": 0.0})["score"], name)
-                for name in numeric_candidates
-            ),
+            ((match_details.get(name, {"score": 0.0})["score"], name) for name in numeric_candidates),
             reverse=True,
         )
         ranked_numeric = [name for score, name in numeric_scores if score > 0]
@@ -596,6 +628,7 @@ def interpret_nl_query(
     if secondary_value == value_field or (time_field and secondary_value == time_field):
         secondary_value = None
 
+    # Final deterministic chart type
     chart_type = _choose_chart_type(
         query,
         {
@@ -607,10 +640,11 @@ def interpret_nl_query(
         columns,
     )
     if explicit_chart:
-        chart_type = explicit_chart
+        chart_type = explicit_chart  # explicit always wins
 
     filters = _parse_filters(directives.get("filter", []), columns)
 
+    # Output structure consumed by downstream builder
     interpretation: QueryInterpretation = QueryInterpretation(
         intent=_detect_visual_intent(query),
         chart_type=chart_type,
