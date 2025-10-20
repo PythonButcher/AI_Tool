@@ -11,7 +11,9 @@ export const DataProvider = ({ children }) => {
   const [aiReportReady, setAiReportReady] = useState(false); // flag when report finished
   const [showAiReport, setShowAiReport] = useState(false);
 
-  useEffect(() => console.log('📦 fullData rows:', fullData?.length || 0), [fullData]);
+  useEffect(() => {
+    console.log('DataContext fullData rows:', Array.isArray(fullData) ? fullData.length : 0);
+  }, [fullData]);
 
   const value = useMemo(() => ({
     uploadedData,  setUploadedData,
