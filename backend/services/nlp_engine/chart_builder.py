@@ -1,497 +1,287 @@
-"""Chart construction and aggregation utilities for the NLP chart engine."""
-from __future__ import annotations
+"""
+Chart construction and aggregation logic for the AI chart engine (deterministic refactor).
+Supports multiple aggregations, top-N limiting, and chronological sorting.
+"""
 
-from collections import Counter, defaultdict
+import math
+from collections import defaultdict
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
-from .nlp_extraction import _safe_float
-from .nlp_interpreter import QueryInterpretation, _apply_filters
-from .temporal_utils import _format_time_bucket, _infer_temporal_granularity
+from .temporal_utils import _ensure_datetime_from_info
 
+# --------------------------------------------------------------------
+# Deterministic color palette for categories and datasets
+# --------------------------------------------------------------------
 COLOR_PALETTE = [
-    "#3366CC",
-    "#DC3912",
-    "#FF9900",
-    "#109618",
-    "#990099",
-    "#0099C6",
-    "#DD4477",
-    "#66AA00",
-    "#B82E2E",
-    "#316395",
-    "#994499",
-    "#22AA99",
-    "#AAAA11",
-    "#6633CC",
-    "#E67300",
+    "#4e79a7", "#f28e2b", "#e15759", "#76b7b2", "#59a14f",
+    "#edc949", "#af7aa1", "#ff9da7", "#9c755f", "#bab0ab"
 ]
 
 
-def _limit_categories(category_totals: Dict[Any, float], limit: int = 10) -> List[Any]:
-    if len(category_totals) <= limit:
-        return list(category_totals.keys())
-    most_common = Counter(category_totals).most_common(limit)
-    return [item[0] for item in most_common]
+def _palette_color(label: str) -> str:
+    """Deterministic color assignment using hashing across the fixed palette."""
+    return COLOR_PALETTE[hash(label) % len(COLOR_PALETTE)]
 
 
-def _palette_color(index: int) -> str:
-    if not COLOR_PALETTE:
-        return "#3366CC"
-    return COLOR_PALETTE[index % len(COLOR_PALETTE)]
+# --------------------------------------------------------------------
+# Aggregation utilities
+# --------------------------------------------------------------------
+def _aggregate(values: List[float], method: str = "sum") -> float:
+    """Apply deterministic aggregation method."""
+    if not values:
+        return 0.0
+    method = method.lower()
+    if method in ("sum", "total"):
+        return sum(values)
+    if method in ("average", "mean"):
+        return sum(values) / len(values)
+    if method == "count":
+        return len(values)
+    if method == "min":
+        return min(values)
+    if method == "max":
+        return max(values)
+    # Safe fallback
+    return sum(values)
 
 
-def _aggregate_time_series(
-    dataset: Sequence[Dict[str, Any]],
-    *,
-    time_field: str,
-    granularity: str,
-    category_field: Optional[str],
-    value_field: Optional[str],
-) -> Tuple[Dict[str, Dict[str, Any]], Dict[Any, float]]:
-    time_buckets: Dict[str, Dict[str, Any]] = {}
-    category_totals: Dict[Any, float] = defaultdict(float)
+# --------------------------------------------------------------------
+# Category limiting (default: Top N by aggregated value)
+# --------------------------------------------------------------------
+def _limit_categories(
+    aggregated: Dict[str, float],
+    top_n: int = 10,
+    show_all: bool = False
+) -> Tuple[Dict[str, float], Dict[str, Any]]:
+    """
+    Limit to top N categories by aggregated value unless show_all=True.
+    Returns (limited_dict, meta_info).
+    """
+    if show_all:
+        return aggregated, {"limited": False, "totalCategories": len(aggregated), "topN": None}
 
-    value_key = value_field or "Count"
-
-    for row in dataset:
-        label, sort_key = _format_time_bucket(row.get(time_field), granularity)
-        if label is None:
-            continue
-        if label not in time_buckets:
-            time_buckets[label] = {"sort": sort_key, "values": defaultdict(float)}
-
-        if category_field:
-            category_value = row.get(category_field, "Other")
-            if value_field:
-                numeric = _safe_float(row.get(value_field))
-                if numeric is None:
-                    continue
-                time_buckets[label]["values"][category_value] += numeric
-                category_totals[category_value] += numeric
-            else:
-                time_buckets[label]["values"][category_value] += 1
-                category_totals[category_value] += 1
-        else:
-            if value_field:
-                numeric = _safe_float(row.get(value_field))
-                if numeric is None:
-                    continue
-                time_buckets[label]["values"].setdefault(value_key, 0.0)
-                time_buckets[label]["values"][value_key] += numeric
-            else:
-                time_buckets[label]["values"].setdefault(value_key, 0)
-                time_buckets[label]["values"][value_key] += 1
-
-    return time_buckets, category_totals
+    sorted_items = sorted(aggregated.items(), key=lambda x: x[1], reverse=True)
+    limited = dict(sorted_items[:top_n])
+    meta = {
+        "limited": True,
+        "totalCategories": len(aggregated),
+        "topN": top_n,
+    }
+    return limited, meta
 
 
-def _value_axis_label(value_field: Optional[str], aggregation: str = "Sum") -> str:
-    if not value_field:
-        return "Record Count"
-    return f"{aggregation} of {value_field}"
+# --------------------------------------------------------------------
+# Histogram binning (10 equal-width bins)
+# --------------------------------------------------------------------
+def _auto_bin_numeric(values: List[float], bins: int = 10) -> Tuple[List[str], List[float]]:
+    """Auto-bin numeric data into approximately 10 equal-width bins."""
+    if not values:
+        return [], []
+    vmin, vmax = min(values), max(values)
+    if vmin == vmax:
+        return [str(vmin)], [len(values)]
+    width = (vmax - vmin) / bins
+    bins_data = [0 for _ in range(bins)]
+    edges = [vmin + i * width for i in range(bins + 1)]
+    for v in values:
+        idx = min(int((v - vmin) / width), bins - 1)
+        bins_data[idx] += 1
+    labels = [f"{round(edges[i], 2)}–{round(edges[i+1], 2)}" for i in range(bins)]
+    return labels, bins_data
 
 
+# --------------------------------------------------------------------
+# Chart data construction
+# --------------------------------------------------------------------
 def _build_chart_data(
-    chart_type: str, dataset: Sequence[Dict[str, Any]], fields: Dict[str, Optional[str]]
-):
+    dataset: Sequence[Dict[str, Any]],
+    chart_type: str,
+    fields: Dict[str, Optional[str]],
+    aggregation: str = "sum",
+    show_all: bool = False
+) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+    """
+    Build deterministic Chart.js-compatible data and metadata.
+    """
     value_field = fields.get("value")
-    secondary_value = fields.get("secondary_value")
     category_field = fields.get("category")
     time_field = fields.get("time")
+    secondary_value = fields.get("secondary_value")
 
-    if not dataset:
-        return None, "No data available to build a chart."
+    # Aggregation-aware Y label
+    y_label = f"{aggregation.title()} of {value_field}" if value_field else "Value"
+    x_label = category_field or time_field or "Category"
 
-    explanation_parts: List[str] = []
+    aggregated: Dict[str, float] = {}
 
-    def _finalize_chart(
-        chart_payload: Dict[str, Any],
-        *,
-        axis_x: Optional[str] = None,
-        axis_y: Optional[str] = None,
-        series_field: Optional[str] = None,
-        series_values: Optional[Sequence[Any]] = None,
-        legend: Optional[bool] = None,
-        legend_position: Optional[str] = None,
-        sorted_labels: bool = False,
-        time_granularity: Optional[str] = None,
-        x_scale_type: Optional[str] = None,
-        begin_at_zero: Optional[bool] = None,
-    ) -> Dict[str, Any]:
-        base_meta = {
-            "chartType": chart_type,
-            "fields": {
-                "value": value_field,
-                "secondaryValue": secondary_value,
-                "category": category_field,
-                "time": time_field,
-            },
-            "sortedLabels": bool(sorted_labels),
-        }
-
-        axis_labels: Dict[str, str] = {}
-        if axis_x:
-            axis_labels["x"] = axis_x
-        if axis_y:
-            axis_labels["y"] = axis_y
-        if axis_labels:
-            base_meta["axisLabels"] = axis_labels
-
-        if series_field:
-            series_meta: Dict[str, Any] = {"field": series_field}
-            if series_values is not None:
-                series_meta["values"] = list(series_values)
-            base_meta["series"] = series_meta
-
-        if time_granularity:
-            base_meta["timeGranularity"] = time_granularity
-
-        if x_scale_type:
-            base_meta["xScaleType"] = x_scale_type
-
-        if begin_at_zero is not None:
-            base_meta["beginAtZero"] = begin_at_zero
-
-        if legend is None:
-            if chart_type in {"Pie", "Doughnut"}:
-                legend = True
-            elif chart_type == "Scatter":
-                legend = False
-            else:
-                legend = len(chart_payload.get("datasets", [])) > 1
-
-        base_meta["legend"] = {"display": bool(legend)}
-        if legend_position:
-            base_meta["legend"]["position"] = legend_position
-
-        combined_meta = dict(chart_payload.get("meta", {}))
-        combined_meta.update(base_meta)
-
-        finalized = dict(chart_payload)
-        finalized["meta"] = combined_meta
-        return finalized
-
-    if chart_type == "Scatter" and value_field and secondary_value:
-        explanation_parts.append(f"scatter of {secondary_value} versus {value_field}")
-        points = []
+    # ----------------------------------------------------------------
+    # Line / Time-based charts
+    # ----------------------------------------------------------------
+    if chart_type == "Line" and time_field and value_field:
+        time_to_values = defaultdict(list)
         for row in dataset:
-            x_val = _safe_float(row.get(value_field))
-            y_val = _safe_float(row.get(secondary_value))
-            if x_val is None or y_val is None:
-                continue
-            points.append({"x": x_val, "y": y_val})
+            tval = _ensure_datetime_from_info(row.get(time_field))
+            val = row.get(value_field)
+            if tval is not None and isinstance(val, (int, float)):
+                time_to_values[tval].append(val)
 
-        if not points:
-            return None, "Not enough numeric values to build a scatter plot."
-
-        chart_data = {
-            "labels": [],
-            "datasets": [
-                {
-                    "label": f"{secondary_value} vs {value_field}",
-                    "data": points,
-                    "backgroundColor": _palette_color(0),
-                    "borderColor": _palette_color(0),
-                    "pointRadius": 4,
-                    "showLine": False,
-                }
-            ],
-        }
-        chart_data = _finalize_chart(
-            chart_data,
-            axis_x=value_field or "Value",
-            axis_y=secondary_value or "Comparison",
-            legend=False,
-            x_scale_type="linear",
-            begin_at_zero=False,
+        # Aggregate and sort chronologically (ascending)
+        sorted_pairs = sorted(
+            ((t, _aggregate(vals, aggregation)) for t, vals in time_to_values.items()),
+            key=lambda x: x[0]
         )
-        return chart_data, ", ".join(explanation_parts)
+        labels = [t.strftime("%Y-%m-%d") for t, _ in sorted_pairs]
+        data_points = [v for _, v in sorted_pairs]
 
-    if chart_type == "Line" and time_field:
-        time_values = [row.get(time_field) for row in dataset]
-        granularity = _infer_temporal_granularity(time_values)
-        time_buckets, category_totals = _aggregate_time_series(
-            dataset,
-            time_field=time_field,
-            granularity=granularity,
-            category_field=category_field,
-            value_field=value_field,
-        )
-
-        if not time_buckets:
-            return None, "Unable to interpret the requested time field."
-
-        sorted_labels = sorted(
-            time_buckets.keys(),
-            key=lambda lbl: time_buckets[lbl]["sort"],
-        )
-
-        if granularity == "date" and len(sorted_labels) > 60:
-            granularity = "month"
-            time_buckets, category_totals = _aggregate_time_series(
-                dataset,
-                time_field=time_field,
-                granularity=granularity,
-                category_field=category_field,
-                value_field=value_field,
-            )
-            sorted_labels = sorted(
-                time_buckets.keys(),
-                key=lambda lbl: time_buckets[lbl]["sort"],
-            )
-
-        if not sorted_labels:
-            return None, "Unable to interpret the requested time field."
-
-        if category_field:
-            limited_categories = _limit_categories(category_totals) if category_totals else []
-            if not limited_categories:
-                limited_categories = list(time_buckets[sorted_labels[0]]["values"].keys())
-            series_names = [str(category) for category in limited_categories]
-        else:
-            value_key = value_field or "Count"
-            limited_categories = [value_key]
-            series_names = None
-
-        datasets = []
-        for index, category in enumerate(limited_categories):
-            datasets.append(
-                {
-                    "label": str(category),
-                    "data": [time_buckets[label]["values"].get(category, 0) for label in sorted_labels],
-                    "tension": 0.35,
-                    "fill": False,
-                    "borderColor": _palette_color(index),
-                    "backgroundColor": _palette_color(index),
-                    "pointRadius": 3,
-                }
-            )
-
-        granularity_label = {
-            "year": "Year",
-            "quarter": "Quarter",
-            "month": "Month",
-            "date": "Day",
-        }.get(granularity, "Time")
-
-        axis_x_label = (
-            f"{time_field} ({granularity_label})" if time_field else granularity_label
-        )
-        axis_y_label = _value_axis_label(value_field)
-        explanation_parts.append(f"{axis_y_label.lower()} across {axis_x_label.lower()}")
-
-        chart_data = {
-            "labels": sorted_labels,
-            "datasets": datasets,
-        }
-        chart_data = _finalize_chart(
-            chart_data,
-            axis_x=axis_x_label,
-            axis_y=axis_y_label,
-            series_field=category_field,
-            series_values=series_names,
-            sorted_labels=True,
-            time_granularity=granularity,
-            x_scale_type="category",
-            begin_at_zero=True,
-        )
-        return chart_data, ", ".join(explanation_parts)
-
-    if chart_type in {"Pie", "Doughnut"} and category_field:
-        totals: Dict[Any, float] = defaultdict(float)
-        for row in dataset:
-            category_value = row.get(category_field, "Other")
-            if value_field:
-                numeric = _safe_float(row.get(value_field))
-                if numeric is None:
-                    continue
-                totals[category_value] += numeric
-            else:
-                totals[category_value] += 1
-
-        if not totals:
-            return None, "No measurable values found for the requested fields."
-
-        labels = _limit_categories(totals)
-        label_strings = [str(label) for label in labels]
-        axis_y_label = _value_axis_label(value_field)
-        explanation_parts.append(f"{axis_y_label.lower()} by {category_field}")
-
-        colors = [_palette_color(idx) for idx in range(len(label_strings))]
-        chart_data = {
-            "labels": label_strings,
-            "datasets": [
-                {
-                    "label": axis_y_label,
-                    "data": [totals[label] for label in labels],
-                    "backgroundColor": colors,
-                    "hoverBackgroundColor": colors,
-                }
-            ],
-        }
-        chart_data = _finalize_chart(
-            chart_data,
-            series_field=category_field,
-            series_values=label_strings,
-            legend=True,
-            legend_position="right",
-        )
-        return chart_data, ", ".join(explanation_parts)
-
-    if category_field:
-        totals = defaultdict(float)
-        for row in dataset:
-            category_value = row.get(category_field, "Other")
-            if value_field:
-                numeric = _safe_float(row.get(value_field))
-                if numeric is None:
-                    continue
-                totals[category_value] += numeric
-            else:
-                totals[category_value] += 1
-
-        if not totals:
-            return None, "No measurable values found for the requested fields."
-
-        labels = _limit_categories(totals)
-        data_values = [totals[label] for label in labels]
-        label_strings = [str(label) for label in labels]
-        axis_y_label = _value_axis_label(value_field)
-        explanation_parts.append(f"{axis_y_label.lower()} by {category_field}")
-
-        colors = [_palette_color(idx) for idx in range(len(label_strings))]
-        chart_data = {
-            "labels": label_strings,
-            "datasets": [
-                {
-                    "label": axis_y_label,
-                    "data": data_values,
-                    "backgroundColor": colors,
-                    "borderColor": colors,
-                    "borderWidth": 1,
-                }
-            ],
-        }
-        chart_data = _finalize_chart(
-            chart_data,
-            axis_x=category_field,
-            axis_y=axis_y_label,
-            begin_at_zero=True,
-        )
-        return chart_data, ", ".join(explanation_parts)
-
-    if time_field:
-        time_values = [row.get(time_field) for row in dataset]
-        granularity = _infer_temporal_granularity(time_values)
-        time_buckets, _ = _aggregate_time_series(
-            dataset,
-            time_field=time_field,
-            granularity=granularity,
-            category_field=None,
-            value_field=value_field,
-        )
-
-        if not time_buckets:
-            return None, "Unable to build a chart with the requested fields."
-
-        sorted_labels = sorted(
-            time_buckets.keys(),
-            key=lambda lbl: time_buckets[lbl]["sort"],
-        )
-
-        granularity_label = {
-            "year": "Year",
-            "quarter": "Quarter",
-            "month": "Month",
-            "date": "Day",
-        }.get(granularity, "Time")
-
-        axis_x_label = (
-            f"{time_field} ({granularity_label})" if time_field else granularity_label
-        )
-        axis_y_label = _value_axis_label(value_field)
-        explanation_parts.append(f"{axis_y_label.lower()} by {axis_x_label.lower()}")
-
-        value_key = value_field or "Count"
-        colors = [_palette_color(idx) for idx in range(len(sorted_labels))]
-        chart_data = {
-            "labels": sorted_labels,
-            "datasets": [
-                {
-                    "label": axis_y_label,
-                    "data": [time_buckets[label]["values"].get(value_key, 0) for label in sorted_labels],
-                    "backgroundColor": colors,
-                    "borderColor": colors,
-                    "borderWidth": 1,
-                }
-            ],
-        }
-        chart_data = _finalize_chart(
-            chart_data,
-            axis_x=axis_x_label,
-            axis_y=axis_y_label,
-            sorted_labels=True,
-            time_granularity=granularity,
-            x_scale_type="category",
-            begin_at_zero=True,
-        )
-        return chart_data, ", ".join(explanation_parts)
-
-    if value_field:
-        values = [
-            _safe_float(row.get(value_field))
-            for row in dataset
-            if _safe_float(row.get(value_field)) is not None
-        ]
-        if not values:
-            return None, "No numeric values available for the requested field."
-        values.sort()
-        bins = min(10, max(3, int(len(values) ** 0.5)))
-        min_val, max_val = values[0], values[-1]
-        if min_val == max_val:
-            labels = [str(min_val)]
-            frequencies = [len(values)]
-        else:
-            step = (max_val - min_val) / bins
-            edges = [min_val + i * step for i in range(bins + 1)]
-            frequencies = [0] * bins
-            for value in values:
-                index = min(int((value - min_val) / step), bins - 1)
-                frequencies[index] += 1
-            labels = [f"{round(edges[i], 2)}–{round(edges[i + 1], 2)}" for i in range(bins)]
-        axis_y_label = "Frequency"
-        explanation_parts = [f"distribution of {value_field}"]
         chart_data = {
             "labels": labels,
-            "datasets": [
-                {
-                    "label": value_field,
-                    "data": frequencies,
-                    "backgroundColor": _palette_color(0),
-                    "borderColor": _palette_color(0),
-                    "borderWidth": 1,
-                }
-            ],
+            "datasets": [{
+                "label": y_label,
+                "data": data_points,
+                "borderColor": _palette_color(y_label),
+                "fill": False,
+                "tension": 0.3
+            }]
         }
-        chart_data = _finalize_chart(
-            chart_data,
-            axis_x=value_field,
-            axis_y=axis_y_label,
-            legend=False,
-            begin_at_zero=True,
-        )
-        return chart_data, ", ".join(explanation_parts)
+        meta = {"xLabel": x_label, "yLabel": y_label, "type": "Line", "sorted": True}
+        return chart_data, meta
 
-    return None, "Unable to determine appropriate fields for charting."
+    # ----------------------------------------------------------------
+    # Histogram (auto-bin)
+    # ----------------------------------------------------------------
+    if chart_type == "Histogram" and value_field:
+        numeric_values = [float(row.get(value_field)) for row in dataset if isinstance(row.get(value_field), (int, float))]
+        labels, bin_counts = _auto_bin_numeric(numeric_values, bins=10)
+
+        chart_data = {
+            "labels": labels,
+            "datasets": [{
+                "label": f"Frequency of {value_field}",
+                "data": bin_counts,
+                "backgroundColor": _palette_color(value_field)
+            }]
+        }
+        meta = {"xLabel": f"{value_field} (binned)", "yLabel": "Frequency", "type": "Histogram"}
+        return chart_data, meta
+
+    # ----------------------------------------------------------------
+    # Scatter plots
+    # ----------------------------------------------------------------
+    if chart_type == "Scatter" and value_field and secondary_value:
+        points = []
+        for row in dataset:
+            x_val = row.get(value_field)
+            y_val = row.get(secondary_value)
+            if isinstance(x_val, (int, float)) and isinstance(y_val, (int, float)):
+                points.append({"x": x_val, "y": y_val})
+        chart_data = {
+            "datasets": [{
+                "label": f"{secondary_value} vs {value_field}",
+                "data": points,
+                "backgroundColor": _palette_color(f"{value_field}_{secondary_value}")
+            }]
+        }
+        meta = {"xLabel": value_field, "yLabel": secondary_value, "type": "Scatter"}
+        return chart_data, meta
+
+    # ----------------------------------------------------------------
+    # Pie / Doughnut charts (top N by aggregated value)
+    # ----------------------------------------------------------------
+    if chart_type in ("Pie", "Doughnut") and category_field and value_field:
+        cat_to_values = defaultdict(list)
+        for row in dataset:
+            cat = str(row.get(category_field))
+            val = row.get(value_field)
+            if cat and isinstance(val, (int, float)):
+                cat_to_values[cat].append(val)
+
+        aggregated = {c: _aggregate(vals, aggregation) for c, vals in cat_to_values.items()}
+        limited, limit_meta = _limit_categories(aggregated, top_n=10, show_all=show_all)
+        labels = list(limited.keys())
+        data_points = list(limited.values())
+
+        chart_data = {
+            "labels": labels,
+            "datasets": [{
+                "data": data_points,
+                "backgroundColor": [_palette_color(label) for label in labels]
+            }]
+        }
+        meta = {
+            "xLabel": category_field,
+            "yLabel": y_label,
+            "type": chart_type,
+            **limit_meta
+        }
+        return chart_data, meta
+
+    # ----------------------------------------------------------------
+    # Bar and default categorical charts
+    # ----------------------------------------------------------------
+    if category_field and value_field:
+        cat_to_values = defaultdict(list)
+        for row in dataset:
+            cat = str(row.get(category_field))
+            val = row.get(value_field)
+            if cat and isinstance(val, (int, float)):
+                cat_to_values[cat].append(val)
+
+        aggregated = {c: _aggregate(vals, aggregation) for c, vals in cat_to_values.items()}
+        limited, limit_meta = _limit_categories(aggregated, top_n=10, show_all=show_all)
+
+        labels = list(limited.keys())
+        data_points = list(limited.values())
+
+        chart_data = {
+            "labels": labels,
+            "datasets": [{
+                "label": y_label,
+                "data": data_points,
+                "backgroundColor": [_palette_color(label) for label in labels]
+            }]
+        }
+        meta = {
+            "xLabel": x_label,
+            "yLabel": y_label,
+            "type": "Bar" if chart_type != "Line" else "Line",
+            **limit_meta
+        }
+        return chart_data, meta
+
+    # ----------------------------------------------------------------
+    # Fallback when structure is incomplete
+    # ----------------------------------------------------------------
+    chart_data = {"labels": [], "datasets": []}
+    meta = {"xLabel": x_label, "yLabel": y_label, "type": chart_type, "note": "No valid data"}
+    return chart_data, meta
 
 
+# --------------------------------------------------------------------
+# Entry point wrapper
+# --------------------------------------------------------------------
 def build_chart_response(
-    dataset: Sequence[Dict[str, Any]], interpretation: QueryInterpretation
-):
-    filtered_dataset = _apply_filters(dataset, interpretation.get("filters", []))
-    chart_data, explanation = _build_chart_data(
-        interpretation.get("chart_type", "Bar"),
-        filtered_dataset,
-        interpretation.get("fields", {}),
+    dataset: Sequence[Dict[str, Any]],
+    interpretation: Dict[str, Any],
+    aggregation: str = "sum",
+    show_all: bool = False
+) -> Dict[str, Any]:
+    """
+    Main entry point combining interpreted query with dataset to produce
+    Chart.js-ready configuration.
+    """
+    chart_type = interpretation.get("chart_type", "Bar")
+    fields = interpretation.get("fields", {})
+
+    chart_data, meta = _build_chart_data(
+        dataset,
+        chart_type=chart_type,
+        fields=fields,
+        aggregation=aggregation,
+        show_all=show_all
     )
-    return chart_data, explanation, filtered_dataset
+
+    return {
+        "chartType": chart_type,
+        "chartData": chart_data,
+        "meta": meta
+    }

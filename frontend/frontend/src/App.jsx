@@ -169,22 +169,22 @@ const {
 
 // App.jsx — update inside handleFileUpload (carefully scoped)
 const handleFileUpload = useCallback((raw, file = null) => {
-  // Safely parse the data preview (5–100 rows for UI)
   const previewRows = typeof raw?.data_preview === 'string'
     ? JSON.parse(raw.data_preview)
     : Array.isArray(raw?.data_preview)
       ? raw.data_preview
       : [];
 
-  // 🧠 Do not extract full dataset here — raw data is now isolated and loaded separately via /api/raw_upload
+  const datasetRows = Array.isArray(raw?.raw_data)
+    ? raw.raw_data
+    : previewRows;
 
-  // ✅ Assign preview and fullData separately
-  setUploadedData({ data_preview: previewRows });  // don't break chart/preview features
-  setFullData(null);                               // defer full dataset loading to RawDataViewer
-  setCleanedData(previewRows);                     // initial state for cleaning/exports
-  setShowDataPreview(true);                        // toggle preview window
+  setUploadedData({ data_preview: previewRows });
+  setFullData(datasetRows);
+  setCleanedData(datasetRows);
+  console.log('App.jsx storing fullData rows:', Array.isArray(datasetRows) ? datasetRows.length : 0);
+  setShowDataPreview(true);
 
-  // ✅ Store the original file for raw viewer to upload later
   if (file) setRawUploadFile(file);
 }, [setUploadedData, setFullData, setCleanedData]);
 
@@ -201,9 +201,10 @@ const handleFileUpload = useCallback((raw, file = null) => {
     setUploadedData({
       data_preview: rows, // ✅ Ensures correct format
     });
-    setFullData(rows);      // ✅ Provide full dataset
-    setCleanedData(rows);   // ✅ Keep sidebar fields in sync
-    setShowDataPreview(true);  // ✅ Triggers preview window
+    setFullData(rows);
+    setCleanedData(rows);
+    console.log('App.jsx storing fullData rows:', Array.isArray(rows) ? rows.length : 0);
+    setShowDataPreview(true);
   };
 
   const handleDatabaseData = (data) => {
@@ -216,8 +217,9 @@ const handleFileUpload = useCallback((raw, file = null) => {
     setUploadedData({
       data_preview: rows,
     });
-    setFullData(rows);      // ✅ Provide full dataset
-    setCleanedData(rows);   // ✅ Keep sidebar fields in sync
+    setFullData(rows);
+    setCleanedData(rows);
+    console.log('App.jsx storing fullData rows:', Array.isArray(rows) ? rows.length : 0);
     setShowDataPreview(true);
   };
   
