@@ -28,6 +28,20 @@ const theme = createTheme({
   },
 });
 
+const parseRecords = (source) => {
+  if (!source) return [];
+  if (Array.isArray(source)) return source;
+  if (typeof source === 'string') {
+    try {
+      return JSON.parse(source);
+    } catch (err) {
+      console.error('Failed to parse dataset payload:', err);
+      return [];
+    }
+  }
+  return [];
+};
+
 function App() {
 const {
   uploadedData, setUploadedData,
@@ -169,20 +183,14 @@ const {
 
 // App.jsx — update inside handleFileUpload (carefully scoped)
 const handleFileUpload = useCallback((raw, file = null) => {
-  const previewRows = typeof raw?.data_preview === 'string'
-    ? JSON.parse(raw.data_preview)
-    : Array.isArray(raw?.data_preview)
-      ? raw.data_preview
-      : [];
-
-  const datasetRows = Array.isArray(raw?.raw_data)
-    ? raw.raw_data
-    : previewRows;
+  const previewRows = parseRecords(raw?.data_preview).slice(0, 5);
+  const datasetRows = parseRecords(raw?.full_data ?? raw?.raw_data);
+  const finalDataset = datasetRows.length ? datasetRows : previewRows;
 
   setUploadedData({ data_preview: previewRows });
-  setFullData(datasetRows);
-  setCleanedData(datasetRows);
-  console.log('App.jsx storing fullData rows:', Array.isArray(datasetRows) ? datasetRows.length : 0);
+  setFullData(finalDataset);
+  setCleanedData(finalDataset);
+  console.log('App.jsx storing fullData rows:', Array.isArray(finalDataset) ? finalDataset.length : 0);
   setShowDataPreview(true);
 
   if (file) setRawUploadFile(file);
@@ -190,36 +198,27 @@ const handleFileUpload = useCallback((raw, file = null) => {
 
 
   const handleApiData = (data) => {
-    const rows = Array.isArray(data)
-      ? data
-      : Array.isArray(data?.data_preview)
-      ? data.data_preview
-      : typeof data?.data_preview === 'string'
-      ? JSON.parse(data.data_preview)
-      : [];
+    const previewSource = Array.isArray(data) ? data : parseRecords(data?.data_preview);
+    const previewRows = previewSource.slice(0, 5);
+    const datasetRows = parseRecords(data?.full_data ?? data?.raw_data);
+    const finalDataset = datasetRows.length ? datasetRows : previewRows;
 
-    setUploadedData({
-      data_preview: rows, // ✅ Ensures correct format
-    });
-    setFullData(rows);
-    setCleanedData(rows);
-    console.log('App.jsx storing fullData rows:', Array.isArray(rows) ? rows.length : 0);
+    setUploadedData({ data_preview: previewRows });
+    setFullData(finalDataset);
+    setCleanedData(finalDataset);
+    console.log('App.jsx storing fullData rows:', Array.isArray(finalDataset) ? finalDataset.length : 0);
     setShowDataPreview(true);
   };
 
   const handleDatabaseData = (data) => {
-    const rows = Array.isArray(data?.data_preview)
-      ? data.data_preview
-      : typeof data?.data_preview === 'string'
-      ? JSON.parse(data.data_preview)
-      : [];
+    const previewRows = parseRecords(data?.data_preview).slice(0, 5);
+    const datasetRows = parseRecords(data?.full_data ?? data?.raw_data);
+    const finalDataset = datasetRows.length ? datasetRows : previewRows;
 
-    setUploadedData({
-      data_preview: rows,
-    });
-    setFullData(rows);
-    setCleanedData(rows);
-    console.log('App.jsx storing fullData rows:', Array.isArray(rows) ? rows.length : 0);
+    setUploadedData({ data_preview: previewRows });
+    setFullData(finalDataset);
+    setCleanedData(finalDataset);
+    console.log('App.jsx storing fullData rows:', Array.isArray(finalDataset) ? finalDataset.length : 0);
     setShowDataPreview(true);
   };
   

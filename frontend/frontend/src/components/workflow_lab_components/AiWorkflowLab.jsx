@@ -22,6 +22,20 @@ import DropZoneNode from './DropZoneNode';
 import { useWindowContext } from "../../context/WindowContext";
 import { FiDownload, FiUpload } from "react-icons/fi";
 
+const parsePreview = (preview) => {
+  if (!preview) return [];
+  if (Array.isArray(preview)) return preview;
+  if (typeof preview === 'string') {
+    try {
+      return JSON.parse(preview);
+    } catch (err) {
+      console.error('AiWorkflowLab failed to parse dataset preview:', err);
+      return [];
+    }
+  }
+  return [];
+};
+
 const initialNodes = [
   {
     id: 'dropzone-node',
@@ -37,7 +51,7 @@ const initialNodes = [
 const initialEdges = [];
 
 function AiWorkflowLab({ savedState }) {
-  const { uploadedData, cleanedData, pipelineResults, setPipelineResults, setCleanedData } = useContext(DataContext);
+  const { uploadedData, fullData, cleanedData, pipelineResults, setPipelineResults, setCleanedData } = useContext(DataContext);
   const { saveWindowContentState } = useWindowContext();
   const [nodes, setNodes] = useState(savedState?.nodes || initialNodes);
   const [edges, setEdges] = useState(savedState?.edges || initialEdges);
@@ -436,7 +450,7 @@ function AiWorkflowLab({ savedState }) {
 
       <AIPipeline
         nodes={nodes}
-        dataset={cleanedData || uploadedData}
+        dataset={cleanedData || fullData || parsePreview(uploadedData?.data_preview)}
         onResults={setPipelineResults}
         onDataCleaned={setCleanedData}
       />

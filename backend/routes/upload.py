@@ -33,15 +33,17 @@ def upload_file():
         # Save DataFrame to global state
         set_uploaded_df(df)
 
-        # Prepare summaries and preview
+        # Prepare summaries, preview, and full dataset payload
         numeric_summary = df.select_dtypes(include='number').sum().to_dict()
         categorical_summary = df.select_dtypes(exclude='number').apply(lambda x: x.value_counts().to_dict()).to_dict()
         data_preview = df.head().to_json(orient='records')
-         
+        full_data = df.to_dict(orient='records')
+
 
         return jsonify({
             "message": f"File '{file.filename}' uploaded successfully!",
             "data_preview": data_preview,
+            "full_data": full_data,
             "numeric_summary": numeric_summary,
             "categorical_summary": categorical_summary
         }), 200
