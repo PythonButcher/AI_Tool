@@ -56,7 +56,7 @@ def fetch_external_data():
         print(f"✅ API Response Processed: {cleaned_data[:2]}")  # Print only first 2 items to avoid overload
 
         return jsonify({
-            "data_preview": cleaned_data,
+            "data_preview": cleaned_data[:5],
             "full_data": cleaned_data,
         }), 200
     except requests.exceptions.RequestException as e:

@@ -183,7 +183,7 @@ const {
 
 // App.jsx — update inside handleFileUpload (carefully scoped)
 const handleFileUpload = useCallback((raw, file = null) => {
-  const previewRows = parseRecords(raw?.data_preview).slice(0);
+  const previewRows = parseRecords(raw?.data_preview).slice(0, 5);
   const datasetRows = parseRecords(raw?.full_data ?? raw?.raw_data);
   const finalDataset = datasetRows.length ? datasetRows : previewRows;
 
@@ -198,7 +198,8 @@ const handleFileUpload = useCallback((raw, file = null) => {
 
 
   const handleApiData = (data) => {
-    const previewRows = Array.isArray(data) ? data : parseRecords(data?.data_preview);
+    const previewSource = Array.isArray(data) ? data : parseRecords(data?.data_preview);
+    const previewRows = previewSource.slice(0, 5);
     const datasetRows = parseRecords(data?.full_data ?? data?.raw_data);
     const finalDataset = datasetRows.length ? datasetRows : previewRows;
 
@@ -210,7 +211,7 @@ const handleFileUpload = useCallback((raw, file = null) => {
   };
 
   const handleDatabaseData = (data) => {
-    const previewRows = parseRecords(data?.data_preview);
+    const previewRows = parseRecords(data?.data_preview).slice(0, 5);
     const datasetRows = parseRecords(data?.full_data ?? data?.raw_data);
     const finalDataset = datasetRows.length ? datasetRows : previewRows;
 
