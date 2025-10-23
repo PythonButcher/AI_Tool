@@ -45,6 +45,7 @@ body {
 }
 
 .help-overlay-content {
+  position: relative;           /* ✅ makes the close button anchor here */
   background: #fff;
   color: #222;
   padding: 1.5rem 2rem;
@@ -56,15 +57,16 @@ body {
 
 .help-overlay-close {
   position: absolute;
-  top: 15px;
-  right: 20px;
-  font-size: 1.3rem;
+  top: 10px;                    /* ✅ now relative to content box */
+  right: 14px;
+  font-size: 22px;
+  font-weight: bold;
+  color: #444;
   cursor: pointer;
-  color: #333;
+  user-select: none;
   transition: color 0.2s ease;
 }
 
 .help-overlay-close:hover {
   color: #000;
 }
-
