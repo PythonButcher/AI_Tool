@@ -75,7 +75,7 @@ function FileUpload({ label = "Upload a File:", onUploadComplete, allowedExtensi
         className="help-overlay-trigger"
         onClick={() => toggleHelp('fileUpload')}
       >
-        Help
+        ❓
       </button>
     </div>
 
