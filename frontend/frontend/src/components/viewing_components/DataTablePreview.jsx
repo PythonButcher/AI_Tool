@@ -3,7 +3,7 @@ import React from 'react';
 import { useHelpOverlay } from '../../context/HelpOverlayContext';
 
 
-function DataTablePreview({ label = "AI Whitboard:", data }) {
+function DataTablePreview({ label = "Preview Table:", data }) {
 
   const { isHelpVisible, toggleHelp, closeHelp } = useHelpOverlay();
       const helpId = 'dataPreview';

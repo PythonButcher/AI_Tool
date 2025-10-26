@@ -1,4 +1,5 @@
 // 📂 AiWorkflowLab.jsx — cleaned and fixed DropZone behavior with working hover
+import { useHelpOverlay } from '../../context/HelpOverlayContext';
 
 import { useState, useCallback, useContext, useRef, useEffect } from "react";
 import {
@@ -22,6 +23,7 @@ import DropZoneNode from './DropZoneNode';
 import { useWindowContext } from "../../context/WindowContext";
 import { FiDownload, FiUpload } from "react-icons/fi";
 
+
 const parsePreview = (preview) => {
   if (!preview) return [];
   if (Array.isArray(preview)) return preview;
@@ -35,6 +37,7 @@ const parsePreview = (preview) => {
   }
   return [];
 };
+
 
 const initialNodes = [
   {
@@ -50,12 +53,15 @@ const initialNodes = [
 
 const initialEdges = [];
 
-function AiWorkflowLab({ savedState }) {
+function AiWorkflowLab({ label = "AI WorkFlow Lab:", savedState }) {
   const { uploadedData, fullData, cleanedData, pipelineResults, setPipelineResults, setCleanedData } = useContext(DataContext);
   const { saveWindowContentState } = useWindowContext();
   const [nodes, setNodes] = useState(savedState?.nodes || initialNodes);
   const [edges, setEdges] = useState(savedState?.edges || initialEdges);
   const [hasExecuted, setHasExecuted] = useState(false);
+
+  const { isHelpVisible, toggleHelp, closeHelp } = useHelpOverlay();
+      const helpId = 'AiWorkLab';
 
    // --- NEW: helper to map spec node.type -> AiCommandBlocks entry + node data
   const mapSpecTypeToBlockKey = useCallback((t) => {
@@ -398,64 +404,117 @@ function AiWorkflowLab({ savedState }) {
   }));
 
   return (
-    <div
-      ref={workflowRef}
-      className="ai-workflow-lab-container"
-      style={{ width: "100%", height: "100%", position: "relative", zIndex: 2 }}
-    >
-      <div className="workflow-lab-toolbar">
-        <button type="button" className="workflow-toolbar-button" onClick={handleSaveWorkflow}>
-          <FiDownload aria-hidden="true" />
-          <span>Save Workflow</span>
-        </button>
-        <button type="button" className="workflow-toolbar-button" onClick={handleLoadWorkflowClick}>
-          <FiUpload aria-hidden="true" />
-          <span>Load Workflow</span>
-        </button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="application/json,.json"
-          className="workflow-toolbar-file-input"
-          onChange={handleWorkflowFileChange}
-        />
-      </div>
-      <ReactFlow
-        nodes={renderedNodes}
-        edges={edges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onConnect={onConnect}
-        fitView
-        nodeTypes={{
-          AiWorkLabNodeSizer: AiWorkLabNodeSizer,
-          dropZoneNode: DropZoneNode,
-        }}
+  <div
+    ref={workflowRef}
+    className="ai-workflow-lab-container"
+    style={{ width: "100%", height: "100%", position: "relative", zIndex: 2 }}
+  >
+    {/* ✅ Help Overlay (always rendered above everything) */}
+    {isHelpVisible('aiFlow') && (
+      <div
+        className="help-overlay visible"
+        style={{ zIndex: 9999, position: "fixed", top: 0, left: 0 }}
       >
-        <Background />
-        <Controls />
-      </ReactFlow>
+        <div className="help-overlay-content">
+          <span
+            className="help-overlay-close"
+            onClick={() => closeHelp('aiFlow')}
+          >
+            ×
+          </span>
+          <h3>Working with the AI Workflow Lab</h3>
+          <ol>
+            <li>The AI Workflow Lab lets you design, test, and automate full data processing pipelines — from raw ingestion to visualization.</li>
+            <li>Each node or module represents a specific step, such as cleaning, transformation, model inference, or chart generation.</li>
+            <li>You can connect modules visually to define data flow and reuse common operations across multiple datasets.</li>
+            <li>Use AI-assisted suggestions to auto-generate workflow components based on your current dataset and analysis goals.</li>
+            <li>When finished, you can export or run your workflow to generate charts, summaries, or cleaned datasets automatically.</li>
+          </ol>
+          <p>
+            Tip: The AI Workflow Lab is an experimental environment — try different pipeline structures, test AI-driven steps, and refine your data process before locking it into production.
+          </p>
+        </div>
+      </div>
+    )}
 
-      {clicked && (
-        <ContextMenu
-          x={coords.x}
-          y={coords.y}
-          options={Object.keys(AiCommandBlocks).map((key) => ({
-            id: key,
-            label: `Add ${AiCommandBlocks[key].display}`,
-          }))}
-          onSelect={handleAddNode}
-        />
-      )}
+    {/* ✅ Toolbar with Help Button */}
+    <div className="workflow-lab-toolbar">
+      <button
+        type="button"
+        className="workflow-toolbar-button"
+        onClick={handleSaveWorkflow}
+      >
+        <FiDownload aria-hidden="true" />
+        <span>Save Workflow</span>
+      </button>
 
-      <AIPipeline
-        nodes={nodes}
-        dataset={cleanedData || fullData || parsePreview(uploadedData?.data_preview)}
-        onResults={setPipelineResults}
-        onDataCleaned={setCleanedData}
+      <button
+        type="button"
+        className="workflow-toolbar-button"
+        onClick={handleLoadWorkflowClick}
+      >
+        <FiUpload aria-hidden="true" />
+        <span>Load Workflow</span>
+      </button>
+
+      {/* ✅ Help toggle button (must match lowercase 'aiFlow') */}
+      <button
+        type="button"
+        className="help-overlay-trigger"
+        onClick={() => toggleHelp('aiFlow')}
+      >
+        ❓
+      </button>
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="application/json,.json"
+        className="workflow-toolbar-file-input"
+        onChange={handleWorkflowFileChange}
       />
     </div>
-  );
+
+    {/* ✅ ReactFlow Canvas */}
+    <ReactFlow
+      nodes={renderedNodes}
+      edges={edges}
+      onNodesChange={onNodesChange}
+      onEdgesChange={onEdgesChange}
+      onConnect={onConnect}
+      fitView
+      nodeTypes={{
+        AiWorkLabNodeSizer: AiWorkLabNodeSizer,
+        dropZoneNode: DropZoneNode,
+      }}
+    >
+      <Background />
+      <Controls />
+    </ReactFlow>
+
+    {/* ✅ Context Menu */}
+    {clicked && (
+      <ContextMenu
+        x={coords.x}
+        y={coords.y}
+        options={Object.keys(AiCommandBlocks).map((key) => ({
+          id: key,
+          label: `Add ${AiCommandBlocks[key].display}`,
+        }))}
+        onSelect={handleAddNode}
+      />
+    )}
+
+    {/* ✅ Pipeline Runner */}
+    <AIPipeline
+      nodes={nodes}
+      dataset={cleanedData || fullData || parsePreview(uploadedData?.data_preview)}
+      onResults={setPipelineResults}
+      onDataCleaned={setCleanedData}
+    />
+  </div>
+);
 }
+
 
 export default AiWorkflowLab;
