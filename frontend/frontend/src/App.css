@@ -19,3 +19,86 @@ body {
   margin-left: 0px; /* Spacing to center main content */
   overflow-y: auto; /* Allow scrolling so off-screen windows become visible */
 }
+
+/* ───────────────────────────────
+   Help Overlay (global)
+─────────────────────────────── */
+.help-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  /* Darker overlay for better contrast */
+  background-color: rgba(0, 0, 0, 0.6);
+  /* Adds a modern blur effect to the background */
+  backdrop-filter: blur(4px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.25s ease, visibility 0.25s ease;
+}
+
+.help-overlay.visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+.help-overlay-content {
+  position: relative;
+  background: #FFFFFF;
+  /* Slightly softer text color */
+  color: #333333;
+  padding: 1.5rem 2rem;
+  /* Sharper, more modern border radius */
+  border-radius: 10px;
+  width: 500px;
+  max-width: 80%;
+  /* Softer, more modern shadow */
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  /* Adds a clean, defined edge */
+  border: 1px solid #E0E0E0;
+  /* Adds a subtle zoom-in animation */
+  transform: scale(0.95);
+  transition: transform 0.25s ease;
+}
+
+.help-overlay.visible .help-overlay-content {
+  transform: scale(1);
+}
+
+.help-overlay-close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  /* Softer, less prominent color */
+  color: #888;
+  cursor: pointer;
+  user-select: none;
+  
+  /* Style as a proper circular button */
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: transparent;
+  
+  /* Use a proper 'x' character */
+  font-size: 24px;
+  font-weight: 400;
+  line-height: 1;
+
+  transition: all 0.2s ease;
+}
+
+.help-overlay-close:hover {
+  color: #111;
+  background-color: #F0F0F0;
+  /* Adds a nice micro-interaction */
+  transform: rotate(90deg);
+}
