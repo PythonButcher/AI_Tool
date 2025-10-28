@@ -1,22 +1,40 @@
 // src/components/AIPipeline.jsx
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import CleanSuggestionsModal from './CleanSuggestionsModal';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 // This invisible controller manages the AI workflow execution lifecycle
+const normaliseDataset = (data) => {
+  if (!data) return [];
+  if (Array.isArray(data)) return data;
+  if (typeof data === 'string') {
+    try {
+      return JSON.parse(data);
+    } catch (err) {
+      console.error('AIPipeline failed to parse dataset string:', err);
+      return [];
+    }
+  }
+  if (Array.isArray(data?.data)) return data.data;
+  if (Array.isArray(data?.data_preview)) return data.data_preview;
+  return [];
+};
+
 const AIPipeline = ({ nodes, dataset, onResults, onDataCleaned }) => {
   const [results, setResults] = useState({});
   const [isRunning, setIsRunning] = useState(false);
   const [pendingClean, setPendingClean] = useState(null);
+  const resolvedDataset = useMemo(() => normaliseDataset(dataset), [dataset]);
 
   // Function exposed globally to run the current pipeline on demand
   const runWorkflow = async () => {
     if (isRunning) return;
     console.log("🚀 Starting AI pipeline execution...");
     setIsRunning(true);
+    console.log('AIPipeline dataset row count:', Array.isArray(resolvedDataset) ? resolvedDataset.length : 0);
 
     const commandBlocks = nodes
       .filter(node => node.data?.command && node.type !== 'dropZoneNode')
@@ -38,7 +56,7 @@ const AIPipeline = ({ nodes, dataset, onResults, onDataCleaned }) => {
           // First request: get suggestions
           const suggest = await axios.post(`${API_URL}/ai_cmd`, {
             command,
-            dataset,
+            dataset: resolvedDataset,
           });
 
           let instructions = '';
@@ -56,7 +74,7 @@ const AIPipeline = ({ nodes, dataset, onResults, onDataCleaned }) => {
 
           response = await axios.post(`${API_URL}/ai_cmd`, {
             command,
-            dataset,
+            dataset: resolvedDataset,
             instructions,
           });
 
@@ -68,7 +86,7 @@ const AIPipeline = ({ nodes, dataset, onResults, onDataCleaned }) => {
           // Handle all other AI commands
           response = await axios.post(`${API_URL}/ai_cmd`, {
             command,
-            dataset,
+            dataset: resolvedDataset,
           });
         }
 
@@ -132,7 +150,7 @@ const AIPipeline = ({ nodes, dataset, onResults, onDataCleaned }) => {
   useEffect(() => {
     window.runAIPipeline = runWorkflow;
     return () => delete window.runAIPipeline;
-  }, [nodes, dataset, onDataCleaned]);
+  }, [nodes, resolvedDataset, onDataCleaned]);
 
   return (
     <>
