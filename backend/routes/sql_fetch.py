@@ -106,7 +106,8 @@ def get_table_preview(table_name, limit=100, config=None):
             cursor.execute(query, (limit,))
             rows = cursor.fetchall()
         conn.close()
-        return {'data_preview': rows}, 200
+        preview_rows = rows[:5] if isinstance(rows, list) else rows
+        return {'data_preview': preview_rows, 'full_data': rows}, 200
     except Exception as e:
         print(f"❌ Error previewing table '{table_name}': {e}")
         return {'error': f'Failed to preview table: {e}'}, 500

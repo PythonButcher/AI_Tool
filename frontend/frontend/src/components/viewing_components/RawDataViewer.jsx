@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useCallback } from "react";
+import { useHelpOverlay } from '../../context/HelpOverlayContext';
 
 /**
  * RawDataViewer
@@ -18,6 +19,7 @@ import React, { useMemo, useState, useCallback } from "react";
  * - No global mutations. Purely presentational.
  */
 export default function RawDataViewer({
+  label = "Raw Table:",
   rows = [],
   pageSize: pageSizeProp = 500,
   pageSizeOptions = [100, 250, 500, 1000],
@@ -30,6 +32,9 @@ export default function RawDataViewer({
 
   const totalRows = Array.isArray(rows) ? rows.length : 0;
   const totalPages = Math.max(1, Math.ceil(totalRows / pageSize));
+
+  const { isHelpVisible, toggleHelp, closeHelp } = useHelpOverlay();
+    const helpId = 'rawViewer';
 
   // Build stable column list (union of keys in the first non-empty row, expanding up to 1000 rows)
   const columns = useMemo(() => {
@@ -84,9 +89,8 @@ export default function RawDataViewer({
   if (!totalRows) {
     return <div style={{ padding: 8 }}>No data available.</div>;
   }
-
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>     
       {/* Controls (top) */}
       <div
         style={{
@@ -94,7 +98,9 @@ export default function RawDataViewer({
           alignItems: "center",
           gap: 8,
           flexWrap: "wrap",
+          
         }}
+        
       >
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <button
@@ -179,6 +185,13 @@ export default function RawDataViewer({
             ))}
           </select>
         </div>
+        <button
+        type="button"
+        className="help-overlay-trigger"
+        onClick={() => toggleHelp('rawViewer')}
+      >
+        ❓
+      </button>
 
         <span style={{ marginLeft: "auto", fontSize: 12 }}>
           {totalRows.toLocaleString()} rows
@@ -254,8 +267,30 @@ export default function RawDataViewer({
             ))}
           </tbody>
         </table>
+        {isHelpVisible('rawViewer') && (
+        <div className="help-overlay visible">
+          <div className="help-overlay-content">
+            <span
+              className="help-overlay-close"
+              onClick={() => closeHelp('rawViewer')}
+            >
+              ×
+            </span>
+            <h3>Exploring the Full Dataset</h3>
+            <ol>
+              <li>This view displays your entire dataset — every record and column, not just a preview sample.</li>
+              <li>Scroll horizontally and vertically to explore large tables. Use your browser’s find feature (Ctrl + F or ⌘ + F) to quickly locate values or column names.</li>
+              <li>Column headers show all detected fields as loaded from the source file or database.</li>
+              <li>Use this view to validate that all rows were imported correctly before performing any cleaning or transformations.</li>
+              <li>For faster performance with very large files, consider working in the Data Preview window instead.</li>
+            </ol>
+            <p>
+              Tip: The Raw Data Viewer is read-only — you can’t edit directly here. Use the cleaning tools or AI Workflow to modify and save updated versions of your dataset.
+            </p>
+          </div>
+        </div>
+      )}
       </div>
-
       {/* Controls (bottom) — duplicate for convenience */}
       <div
         style={{
