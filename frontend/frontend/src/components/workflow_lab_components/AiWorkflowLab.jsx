@@ -59,6 +59,7 @@ function AiWorkflowLab({ label = "AI WorkFlow Lab:", savedState }) {
   const [nodes, setNodes] = useState(savedState?.nodes || initialNodes);
   const [edges, setEdges] = useState(savedState?.edges || initialEdges);
   const [hasExecuted, setHasExecuted] = useState(false);
+  const [isHighlighted, setIsHighlighted] = useState(false);
 
   const { isHelpVisible, toggleHelp, closeHelp } = useHelpOverlay();
       const helpId = 'AiWorkLab';
@@ -69,6 +70,7 @@ function AiWorkflowLab({ label = "AI WorkFlow Lab:", savedState }) {
     // Adjust these keys to match your AiCommandBlocks keys exactly
     switch (type) {
       case "SUMMARY": return "summary";   // maps to AiCommandBlocks.summary
+      case "OUTLIERS": return "outliers"; // maps to AiCommandBlocks.outliers
       case "CHARTS": return "charts";     // maps to AiCommandBlocks.charts
       case "INSIGHTS": return "insights"; // maps to AiCommandBlocks.insights
       case "CLEAN": return "clean";       // maps to AiCommandBlocks.clean
@@ -145,6 +147,21 @@ function AiWorkflowLab({ label = "AI WorkFlow Lab:", savedState }) {
       }
     };
   }, [importWorkflowSpec]);
+
+  useEffect(() => {
+    let timeoutId;
+    const handleAutopilotReady = () => {
+      setIsHighlighted(true);
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => setIsHighlighted(false), 1800);
+    };
+
+    window.addEventListener('autopilot-workflow-ready', handleAutopilotReady);
+    return () => {
+      window.removeEventListener('autopilot-workflow-ready', handleAutopilotReady);
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, []);
 
   const workflowRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -406,7 +423,7 @@ function AiWorkflowLab({ label = "AI WorkFlow Lab:", savedState }) {
   return (
   <div
     ref={workflowRef}
-    className="ai-workflow-lab-container"
+    className={`ai-workflow-lab-container${isHighlighted ? ' autopilot-highlight' : ''}`}
     style={{ width: "100%", height: "100%", position: "relative", zIndex: 2 }}
   >
     {/* ✅ Help Overlay (always rendered above everything) */}
