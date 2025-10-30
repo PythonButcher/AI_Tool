@@ -15,6 +15,40 @@
   transition: background-color 0.2s ease, color 0.2s ease;
 }
 
+.header-button.autopilot-button {
+  background-color: rgba(99, 102, 241, 0.12);
+  color: #303f9f;
+}
+
+.header-button.autopilot-button:hover {
+  background-color: rgba(99, 102, 241, 0.22);
+  color: #1a237e;
+}
+
+.header-button.autopilot-button.running {
+  background-color: rgba(99, 102, 241, 0.18);
+  color: #1a237e;
+  cursor: progress;
+}
+
+.header-button.autopilot-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.autopilot-spinner {
+  animation: autopilot-spin 0.8s linear infinite;
+}
+
+@keyframes autopilot-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .header-button:hover {
   background-color: rgba(0, 0, 0, 0.08);
   color: #111;

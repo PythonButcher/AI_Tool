@@ -21,7 +21,7 @@ const asText = (val) =>
   typeof val === "string" ? val : (val && val.reply) || "";
 
 // AIReporter.jsx
-const AIReporter = ({ summary, insights, execution, chartType, chartData }) => {
+const AIReporter = ({ summary, outliers, insights, execution, chartType, chartData }) => {
   const reportRef = useRef(null);
 
   const handleExportPDF = async () => {
@@ -63,6 +63,7 @@ const AIReporter = ({ summary, insights, execution, chartType, chartData }) => {
       </h1>
 
       {summary   && <Section title="📄 Summary"          content={asText(summary)}   />}
+      {outliers  && <Section title="⚠️ Outliers"         content={asText(outliers)}  />}
       {insights  && <Section title="💡 Insights"         content={asText(insights)}  />}
      
           {chartType && chartData && (

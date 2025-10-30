@@ -35,6 +35,28 @@ def generate_insights(dataset):
     # Provide key insights prompt using the first 10 entries of the dataset
     return f"Provide key insights from this dataset:\n\n{json.dumps(dataset[:10], indent=2)}"
 
+@register_command("/outliers")
+def generate_outliers(dataset):
+    sample = dataset[:25] if dataset else []
+    prompt = textwrap.dedent(
+        f"""
+        You are an elite data analyst focused on anomaly detection.
+        Review the dataset sample below and describe the most notable outliers or irregular patterns.
+
+        Requirements:
+        • Identify extreme numeric values, sudden spikes, or unusual trends.
+        • Highlight rare categorical values or combinations that appear anomalous.
+        • Call out any suspicious missing-data patterns or schema inconsistencies.
+        • Explain why each item is unusual and what action a business analyst should consider next.
+
+        Present the findings as a short, well-structured narrative with bullet points when useful.
+
+        Dataset sample:
+        {json.dumps(sample, indent=2)}
+        """
+    )
+    return prompt
+
 @register_command("/clean")
 def generate_cleaned_data(dataset):
     return f"Clean this dataset. Handle missing values, correct data types, and remove duplicates. Return the cleaned dataset as a JSON object:\n\n{json.dumps(dataset[:20], indent=2)}"

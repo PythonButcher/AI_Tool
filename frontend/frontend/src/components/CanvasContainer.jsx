@@ -12,6 +12,7 @@ import RolesPanel from './chart_components/RolesPanel';
 import ChartComponent from './chart_components/ChartComponent';
 import { FaLock, FaLockOpen } from 'react-icons/fa';
 import AICharts from './ai_ml_components/AICharts';
+import AiAutopilot from './ai_ml_components/AiAutopilot';
 import AiWorkflowLab from './workflow_lab_components/AiWorkflowLab';
 import PreviewModeSelector from './viewing_components/PreviewModeSelector';
 import DataTablePreview from './viewing_components/DataTablePreview';
@@ -250,6 +251,7 @@ console.log("🧨 FULLDATA LENGTH:", fullData?.length);
             {win.type === 'report' && (
               <AIReporter
                 summary={win.content.summary}
+                outliers={win.content.outliers}
                 insights={win.content.insights}
                 execution={win.content.execution}
                 chartType={win.content.chartType}
@@ -288,6 +290,7 @@ console.log("🧨 FULLDATA LENGTH:", fullData?.length);
               <div className="window-header drag-handle" onDoubleClick={() => snapToFit('dataPreview')}>
                 <span className="header-title">📄 Data Preview</span>
                 <div className="header-button-group">
+                  <AiAutopilot setShowAiWorkflow={setShowAiWorkflow} />
                   <MinimizeButton onClick={() => minimizeWindow('dataPreview', 'Data Preview')} />
                   <MaximizeButton windowId="dataPreview" />
                   <CloseButton onClick={handleClosePreview} />
@@ -366,6 +369,7 @@ const rawDataElement =
             >
               <span className="header-title">📜 Raw Data (All Rows)</span>
               <div className="header-button-group">
+                <AiAutopilot setShowAiWorkflow={setShowAiWorkflow} />
                 <MinimizeButton
                   onClick={() => minimizeWindow('rawViewer', 'Raw Data')}
                 />
