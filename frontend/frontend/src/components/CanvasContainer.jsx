@@ -369,6 +369,7 @@ const rawDataElement =
             >
               <span className="header-title">📜 Raw Data (All Rows)</span>
               <div className="header-button-group">
+                <AiAutopilot setShowAiWorkflow={setShowAiWorkflow} />
                 <MinimizeButton
                   onClick={() => minimizeWindow('rawViewer', 'Raw Data')}
                 />
