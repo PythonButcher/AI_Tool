@@ -77,6 +77,7 @@ const AiAutopilot = ({ setShowAiWorkflow }) => {
       const spec = response.data;
 
       if (!spec || !Array.isArray(spec.nodes)) {
+        console.log(' These', spec, 'nodes are present')
         throw new Error('Autopilot returned an invalid workflow specification.');
       }
 
