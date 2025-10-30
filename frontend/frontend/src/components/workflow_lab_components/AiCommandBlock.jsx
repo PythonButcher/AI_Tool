@@ -1,6 +1,6 @@
 // AiCommandBlock.jsx
 
-import { FaChartBar, FaBrain, FaLightbulb, FaRocket, FaBroom } from "react-icons/fa";
+import { FaChartBar, FaBrain, FaLightbulb, FaRocket, FaBroom, FaExclamationTriangle } from "react-icons/fa";
 
 // Defines all available AI command blocks for the workflow system
 export const AiCommandBlocks = {
@@ -12,6 +12,15 @@ export const AiCommandBlocks = {
     action: "fetch_summary",
     params: ["dataset"],
     icon: FaBrain,
+  },
+  outliers: {
+    id: "cmd-outliers",
+    command: "/outliers",
+    display: "Outliers",
+    description: "Detects anomalies in the dataset.",
+    action: "detect_outliers",
+    params: ["dataset"],
+    icon: FaExclamationTriangle,
   },
   charts: {
     id: "cmd-charts",
