@@ -2,7 +2,7 @@ import sys
 import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from werkzeug.exceptions import RequestEntityTooLarge
 from flask_cors import CORS
 from backend.routes.upload import upload_bp
@@ -17,6 +17,7 @@ from backend.services.ai_logic import ai_bp
 from backend.services.ai_logic_gemini import ai_gemini_bp
 from backend.services.nlp_routes import nlp_bp
 from backend.routes.raw_data import raw_data_bp
+from backend.services.autopilot_routes import autopilot_bp
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
@@ -26,8 +27,40 @@ def create_app():
     # ✅ Limit uploads to 100 MB (adjust as needed)
     app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  
 
-    # Apply CORS globally
-    CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}})
+    # Apply CORS to API routes and ensure preflight headers are present
+    app.config["CORS_HEADERS"] = "Content-Type, Authorization"
+    CORS(
+        app,
+        resources={r"/api/*": {"origins": "http://localhost:3000"}},
+    )
+
+    @app.before_request
+    def ensure_preflight_responses():
+        if request.method == "OPTIONS" and request.path.startswith("/api/"):
+            response = app.make_default_options_response()
+            allow_headers = request.headers.get(
+                "Access-Control-Request-Headers", app.config["CORS_HEADERS"]
+            )
+            allow_methods = request.headers.get(
+                "Access-Control-Request-Method", "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+            )
+            response.headers["Access-Control-Allow-Origin"] = "http://localhost:3000"
+            response.headers["Access-Control-Allow-Headers"] = allow_headers
+            response.headers["Access-Control-Allow-Methods"] = allow_methods
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+            return response
+
+    @app.after_request
+    def apply_cors_headers(response):
+        if request.path.startswith("/api/"):
+            response.headers.setdefault("Access-Control-Allow-Origin", "http://localhost:3000")
+            response.headers.setdefault("Access-Control-Allow-Headers", app.config["CORS_HEADERS"])
+            response.headers.setdefault(
+                "Access-Control-Allow-Methods",
+                "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+            )
+            response.headers.setdefault("Access-Control-Allow-Credentials", "true")
+        return response
 
     # Register blueprints
     app.register_blueprint(upload_bp)
@@ -42,6 +75,7 @@ def create_app():
     app.register_blueprint(ai_storyboard_gemini)
     app.register_blueprint(ai_storyboard_openai)
     app.register_blueprint(raw_data_bp)
+    app.register_blueprint(autopilot_bp)
 
     @app.route('/', methods=['GET'])
     def home():

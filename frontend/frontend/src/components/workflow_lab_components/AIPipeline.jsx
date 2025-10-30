@@ -115,6 +115,7 @@ const AIPipeline = ({ nodes, dataset, onResults, onDataCleaned }) => {
       if (data.status !== 'success') continue;
       const cmd = nodes.find(n => n.id === nodeId)?.data?.command?.replace('/', '');
       if (cmd === 'summary')  aiReport.summary   = data.result;
+      if (cmd === 'outliers') aiReport.outliers  = data.result;
       if (cmd === 'insights') aiReport.insights  = data.result;
       if (cmd === 'execute')  aiReport.execution = data.result;
       if (cmd === 'charts') {
