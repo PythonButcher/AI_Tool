@@ -89,8 +89,8 @@ const AiAutopilot = ({ setShowAiWorkflow }) => {
       }
       openWindow?.('aiWorkflowLab');
       restoreWindow?.('aiWorkflowLab');
-
       waitForWorkflowImport(spec);
+      
     } catch (error) {
       console.error('❌ AiAutopilot failed:', error);
       setErrorMessage(error.message || 'Unable to start Autopilot.');
