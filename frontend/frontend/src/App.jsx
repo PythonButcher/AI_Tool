@@ -222,7 +222,8 @@ const handleFileUpload = useCallback((raw, file = null) => {
     console.log('App.jsx storing fullData rows:', Array.isArray(finalDataset) ? finalDataset.length : 0);
     setShowDataPreview(true);
   };
-  
+
+
 
   const handleSidebarButtonClick = useCallback((action) => {
     if (action === 'visualize') {
@@ -273,11 +274,8 @@ const handleFileUpload = useCallback((raw, file = null) => {
     console.log("Switching story model to:", newModel);
     setStoryModel(newModel);
   };
-
-  // const handleDataViewerChange = (newViewer) => {
-  //   console.log("Switching my data viewer to:", newViewer);
-  //   setShowRawViewer(newViewer);
-  // };
+  
+ 
 
   const handleFieldDrop = useCallback(
     (axis, field) => {

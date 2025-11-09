@@ -18,6 +18,7 @@ from backend.services.ai_logic_gemini import ai_gemini_bp
 from backend.services.nlp_routes import nlp_bp
 from backend.routes.raw_data import raw_data_bp
 from backend.services.autopilot_routes import autopilot_bp
+from backend.routes.datahub_routes import datahub_bp
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
@@ -44,6 +45,7 @@ def create_app():
     app.register_blueprint(ai_storyboard_openai)
     app.register_blueprint(raw_data_bp)
     app.register_blueprint(autopilot_bp)
+    app.register_blueprint(datahub_bp)
 
     @app.route('/', methods=['GET'])
     def home():

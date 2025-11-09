@@ -5,12 +5,16 @@ import FileUpload from './FileUpload';
 import ApiDataForm from './APiDataForm';
 import DatabaseConnectForm from './database_components/DatabaseConnectForm';
 import DragDrop from '../utils/DragDrop';
+import DataHubWindow from './database_components/DataHubWindow';
 import { FaUpload, FaChartBar, FaServer, FaDatabase, FaRedoAlt, FaFilter, FaFileAlt } from 'react-icons/fa';
+import { TbCloudDataConnection } from "react-icons/tb";
 import { DataContext } from '../context/DataContext';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
-function MenuBar({ onFileUploadSuccess, onStatsSelect, handleApiData, handleDatabaseData, setOpenDataFilter, aiReportReady, onAiReportClick }) {
+function MenuBar({ onFileUploadSuccess,  onStatsSelect, 
+                  handleApiData, handleDatabaseData, setOpenDataFilter, 
+                  aiReportReady, onAiReportClick }) {
   const [activeDropdown, setActiveDropdown] = useState(null);
   const { setUploadedData } = useContext(DataContext);
 
@@ -18,12 +22,14 @@ function MenuBar({ onFileUploadSuccess, onStatsSelect, handleApiData, handleData
   const statsRef = useRef(null);
   const apiRef = useRef(null);
   const dbRef = useRef(null);
+  const dbHubRef = useRef(null);
 
   const dropdownRefs = useMemo(() => ({
     upload: uploadRef,
     stats: statsRef,
     api: apiRef,
-    db: dbRef
+    db: dbRef,
+    hub: dbHubRef
   }), []);
 
   useEffect(() => {
@@ -88,6 +94,22 @@ function MenuBar({ onFileUploadSuccess, onStatsSelect, handleApiData, handleData
                 onFileUploadSuccess={onFileUploadSuccess}
               />
               <DragDrop onFilesSelected={handleFileUpload} width="100%" height="200px" />
+            </div>
+          )}
+        </div>
+
+         {/* Datahub Button */}
+        <div className="menu-button-container" ref={dbHubRef}>
+          <button
+            className="menu-button"
+            onClick={() => setActiveDropdown(prev => prev === 'open' ? null : 'open')}
+          >
+            <TbCloudDataConnection className="menu-icon" />
+            Open Hub
+          </button>
+          {activeDropdown === 'open' && (
+            <div className="menu-dropdown">
+              <DataHubWindow  />
             </div>
           )}
         </div>

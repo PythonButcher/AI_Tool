@@ -1,25 +1,12 @@
---might need this version workflowlab -- canvascontainer
+Backend create datahub db table (most likely this):
 
-  {/* Workflow Lab */}
-          {showAiWorkflow && !minimizedWindows['aiWorkflowLab'] && (() => {
-            // ⬇️ get previously saved layout for this window
-            const saved = getWindowState('aiWorkflowLab');
-            // fallback default if never saved
-            const layout = saved || { x: 0, y: 0, w: 10, h: 27.5, minW: 2, minH: 2, resizeHandles: ['se', 'e', 's'], static: true };
-            return (
-            <div key="aiWorkflowLab" className="grid-item" data-grid={layout}
-              style={{ backgroundColor: '#f4f4f4', border: '2px solid #ccc', borderRadius: '6px', overflow: 'hidden' }}>
-              <div className="window-header drag-handle">
-                <span className="header-title">AI Workflow Lab</span>
-                <div className="header-button-group">
-                  <MinimizeButton onClick={() => minimizeWindow('aiWorkflowLab', 'AI Workflow')} />
-                  <MaximizeButton windowId="aiWorkflowLab" />
-                  <CloseButton onClick={() => setShowAiWorkflow(false)} />
-                </div>
-              </div>
-              <div className="uploaded-data-preview workflow-content">
-                <AiWorkflowLab />
-              </div>
-            </div>
-           );
-           })()}
+  CREATE TABLE datahub_datasets (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    path TEXT NOT NULL,
+    uploadedAt TEXT,
+    numRows INTEGER,
+    numCols INTEGER,
+    schema_json TEXT,
+    preview_json TEXT
+);
