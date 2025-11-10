@@ -11,6 +11,7 @@ import { transformToChartData } from './utils/chartDataUtils';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import AIChat from './components/ai_ml_components/AIChat';
 import { DataContext } from './context/DataContext';
+import { WarehouseProvider } from './context/WarehouseContext';
 import { HelpOverlayProvider } from './context/HelpOverlayContext';
 import useLoadRawData from './hooks/useLoadRawData';
 // ⛔️ Removed: import DataStoryPanel from './components/DataStoryPanel';
@@ -330,8 +331,9 @@ const handleFileUpload = useCallback((raw, file = null) => {
 
 
   return (
-    <HelpOverlayProvider>
-    <ThemeProvider theme={theme}>
+    <WarehouseProvider>
+      <HelpOverlayProvider>
+        <ThemeProvider theme={theme}>
       <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
         <div className="app-container">
           {/* Sidebar with actions and data cleaning */}
@@ -460,6 +462,7 @@ const handleFileUpload = useCallback((raw, file = null) => {
       </DndContext>
     </ThemeProvider>
     </HelpOverlayProvider>
+  </WarehouseProvider>
   );
 }
 

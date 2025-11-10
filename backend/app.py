@@ -20,6 +20,7 @@ from backend.routes.raw_data import raw_data_bp
 from backend.services.autopilot_routes import autopilot_bp
 from backend.routes.datahub_routes import datahub_bp
 
+
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 def create_app():

@@ -1,10 +1,14 @@
 import React, { useRef, useCallback, useEffect } from 'react';
 import axios from 'axios';
+import { WarehouseContext } from '../../context/WarehouseContext';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 function DataHubWindow() {
   const hasLogged = useRef(false);
+  const { datasets, setDatasets, isLoading, setIsLoading, error, setError } =
+  useContext(WarehouseContext);
+
 
   const handleDataHub = useCallback(() => {
     if (!hasLogged.current) {
