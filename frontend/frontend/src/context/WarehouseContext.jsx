@@ -4,11 +4,7 @@ export const WarehouseContext = createContext(null);
 
 export const WarehouseProvider = ({ children }) => {
   // --- State ---
-  const [datasets, setDatasets] = useState([
-    // example entry showing required structure
-    // remove this sample later if you want it to start empty
-    { id: "sample-001", name: "example_dataset.csv", path: "/uploads/example_dataset.csv" },
-  ]);
+  const [datasets, setDatasets] = useState([]);
 
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -27,8 +23,9 @@ export const WarehouseProvider = ({ children }) => {
     setDatasets((prev) => prev.filter((ds) => ds.id !== id));
   }, []);
 
-  const refreshDatasets = useCallback(() => {
-    console.log("🔄 DataHub refresh placeholder — backend integration coming later.");
+  const refreshDatasets = useCallback((nextDatasets) => {
+    if (!Array.isArray(nextDatasets)) return;
+    setDatasets(nextDatasets);
   }, []);
 
   const clearError = useCallback(() => {
@@ -41,14 +38,24 @@ export const WarehouseProvider = ({ children }) => {
       datasets,          // [{ id, name, path }]
       addDataset,        // adds new dataset
       removeDataset,     // removes dataset by id
-      refreshDatasets,   // placeholder for future backend sync
+      refreshDatasets,   // replace entire dataset array
       error,             // error message if any
       clearError,        // clears error
       isLoading,         // for async states later
       setIsLoading,      // expose control if needed
       setError,          // expose setter if needed
+      setDatasets,       // expose setter for backend sync
     }),
-    [datasets, error, isLoading, addDataset, removeDataset, refreshDatasets, clearError]
+    [
+      datasets,
+      error,
+      isLoading,
+      addDataset,
+      removeDataset,
+      refreshDatasets,
+      clearError,
+      setDatasets,
+    ]
   );
 
   // --- Return Provider ---
