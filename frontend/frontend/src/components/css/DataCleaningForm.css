@@ -16,15 +16,17 @@
   
   /* Main form styling */
   .data-cleaning-form {
-    background-color: #fdf9f9;
-    border-radius: 8px;
-    box-shadow: 1px 4px 12px rgba(157, 155, 155, 0.2);
+    background-color: #111827;
+    border-radius: 12px;
+    box-shadow: 0 16px 32px rgba(0, 0, 0, 0.45);
     width: 80%;
     max-width: 700px;
     max-height: 80vh;
     overflow-y: visible;
     padding: 20px;
     position: relative;
+    border: 1px solid #1f2937;
+    color: #f9fafb;
   }
   
   /* Close button styling */
@@ -35,7 +37,7 @@
     background: transparent;
     border: none;
     font-size: 2rem;
-    color: #5a5a5a;
+    color: #9ca3af;
     cursor: pointer;
   }
   
@@ -43,7 +45,7 @@
   
   /* Error message */
   .error-message {
-    color: red;
+    color: #f87171;
     margin-bottom: 15px;
     font-weight: bold;
     text-align: center;
@@ -53,36 +55,44 @@
   .data-cleaning-dropdown-container {
     margin-bottom: 20px;
     text-align: center;
+    color: #f9fafb;
   }
   
   .data-cleaning-dropdown-container label {
     font-weight: bold;
     margin-right: 10px;
+    color: #f9fafb;
   }
   
   #cleaning-task-select {
     padding: 8px;
     font-size: 1rem;
     border-radius: 4px;
-    border: 1px solid #959292;
+    border: 1px solid #374151;
+    background-color: #1f2937;
+    color: #f9fafb;
   }
   
   /* Input container */
   .input-container {
     margin-bottom: 20px;
     text-align: center;
+    color: #f9fafb;
   }
   
   .input-container label {
     font-weight: bold;
     margin-right: 10px;
+    color: #f9fafb;
   }
   
   #fill-value {
     padding: 8px;
     font-size: 1rem;
     border-radius: 4px;
-    border: 1px solid #959292;
+    border: 1px solid #374151;
+    background-color: #1f2937;
+    color: #f9fafb;
   }
   
   /* Submit button */
@@ -92,15 +102,16 @@
     margin-top: 10px;
     padding: 10px 20px;
     font-size: 1rem;
-    background-color: #5a5a5a;
+    background-color: #2563eb;
     color: #ffffff;
     border: none;
-    border-radius: 4px;
+    border-radius: 6px;
     cursor: pointer;
+    transition: background-color 0.2s ease, box-shadow 0.2s ease;
   }
-  
+
   .submit-button:disabled {
-    background-color: #ccc;
+    background-color: #1f2937;
     cursor: not-allowed;
   }
   
@@ -108,12 +119,14 @@
   .stats-container {
     margin-top: 20px;
     text-align: left;
+    color: #f9fafb;
   }
   
   .stats-container h3 {
     text-align: center;
     font-weight: bold;
     margin-bottom: 10px;
+    color: #f9fafb;
   }
   
   .uploaded-data-preview {
@@ -124,17 +137,18 @@
     width: 100%;
     border-collapse: collapse;
     font-size: 0.9rem;
+    color: #f9fafb;
   }
-  
+
   .data-table th,
   .data-table td {
-    border: 1px solid #a09d9d;
+    border: 1px solid #1f2937;
     padding: 8px;
     text-align: left;
   }
-  
+
   .data-table th {
-    background-color: #f5f5f5;
+    background-color: #111827;
     font-weight: bold;
   }
   
@@ -143,7 +157,7 @@
     margin-top: 20px;
     text-align: center;
     font-size: 1rem;
-    color: #555;
+    color: #9ca3af;
   }
   
   /* Responsive design */

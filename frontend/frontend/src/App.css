@@ -2,13 +2,14 @@
 body {
   margin: 0;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background-color: #f4f4f4;
+  background-color: #0f172a;
+  color: #f9fafb;
 }
 
 .app-container {
   display: flex;
-  background-color: #f6f8fa;
-  color: #1f2937;
+  background-color: #111827;
+  color: #f9fafb;
   min-height: 100vh;
 }
 
@@ -47,20 +48,21 @@ body {
   visibility: visible;
 }
 
+
 .help-overlay-content {
   position: relative;
-  background: #FFFFFF;
+  background: #1f2937;
   /* Slightly softer text color */
-  color: #333333;
+  color: #f9fafb;
   padding: 1.5rem 2rem;
   /* Sharper, more modern border radius */
   border-radius: 10px;
   width: 500px;
   max-width: 80%;
   /* Softer, more modern shadow */
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
   /* Adds a clean, defined edge */
-  border: 1px solid #E0E0E0;
+  border: 1px solid #374151;
   /* Adds a subtle zoom-in animation */
   transform: scale(0.95);
   transition: transform 0.25s ease;
@@ -75,10 +77,10 @@ body {
   top: 0.75rem;
   right: 0.75rem;
   /* Softer, less prominent color */
-  color: #888;
+  color: #9ca3af;
   cursor: pointer;
   user-select: none;
-  
+
   /* Style as a proper circular button */
   width: 32px;
   height: 32px;
@@ -87,7 +89,7 @@ body {
   align-items: center;
   justify-content: center;
   background-color: transparent;
-  
+
   /* Use a proper 'x' character */
   font-size: 24px;
   font-weight: 400;
@@ -97,8 +99,8 @@ body {
 }
 
 .help-overlay-close:hover {
-  color: #111;
-  background-color: #F0F0F0;
+  color: #f9fafb;
+  background-color: #2563eb33;
   /* Adds a nice micro-interaction */
   transform: rotate(90deg);
 }

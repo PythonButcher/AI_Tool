@@ -1,16 +1,17 @@
 .export-report-button {
-    background-color: #b0b0b0; /* Nintendo grey */
+    background-color: #2563eb; /* Nintendo grey */
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    color: #333;
-    border: 1px solid #888;
+    color: #ffffff;
+    border: 1px solid #2563eb;
     padding: 10px 20px;
     cursor: pointer;
     border-radius: 4px;
     transition: background-color 0.3s ease, transform 0.2s ease;
+    box-shadow: 0 12px 24px rgba(37, 99, 235, 0.35);
 }
 
 .export-report-button:hover {
-    background-color: #999;
+    background-color: #1d4ed8;
     transform: scale(1.05);
 }
 
@@ -26,20 +27,20 @@
   font-size: 18px;
   font-weight: 600;
   margin-bottom: 8px;
-  color: #333;
+  color: #f9fafb;
   flex-shrink: 0;
 }
 
 .section-content {
   flex-grow: 1;
-  background: #fff;
-  border: 1px solid #ddd;
+  background: #111827;
+  border: 1px solid #1f2937;
   border-radius: 8px;
   padding: 16px;
   white-space: pre-wrap;
   font-size: 14px;
-  color: #555;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  color: #d1d5db;
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.35);
   overflow: auto;
 }
 

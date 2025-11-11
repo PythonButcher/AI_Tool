@@ -1,7 +1,7 @@
 .header-button {
-  background-color: lightcoral;
-  color: #555;
-  border: none;
+  background-color: #1f2937;
+  color: #f9fafb;
+  border: 1px solid #1f2937;
   cursor: pointer;
   padding: 0;
   font-size: 1.1rem;
@@ -16,18 +16,18 @@
 }
 
 .header-button.autopilot-button {
-  background-color: rgba(99, 102, 241, 0.12);
-  color: #303f9f;
+  background-color: rgba(37, 99, 235, 0.15);
+  color: #bfdbfe;
 }
 
 .header-button.autopilot-button:hover {
-  background-color: rgba(99, 102, 241, 0.22);
-  color: #1a237e;
+  background-color: rgba(37, 99, 235, 0.25);
+  color: #f9fafb;
 }
 
 .header-button.autopilot-button.running {
-  background-color: rgba(99, 102, 241, 0.18);
-  color: #1a237e;
+  background-color: rgba(37, 99, 235, 0.3);
+  color: #f9fafb;
   cursor: progress;
 }
 
@@ -50,17 +50,17 @@
 }
 
 .header-button:hover {
-  background-color: rgba(0, 0, 0, 0.08);
-  color: #111;
+  background-color: #ef4444;
+  color: #ffffff;
 }
 
 .header-button:focus {
   outline: none;
-  box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.4);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.4);
 }
 
 .header-button:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.4);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.4);
 }
 

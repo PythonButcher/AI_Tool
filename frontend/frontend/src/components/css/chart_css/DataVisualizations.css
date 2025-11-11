@@ -1,14 +1,17 @@
 /* General Styling */
 .data-visuals {
   font-family: 'Roboto', Arial, sans-serif;
+  color: #f9fafb;
+  background-color: #0f172a;
 }
 
 /* Dialog Container */
 .dialog-container {
   padding: 20px;
-  background-color: #ffffff;
+  background-color: #111827;
   border-radius: 10px;
-  box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.1);
+  box-shadow: 0px 16px 32px rgba(0, 0, 0, 0.45);
+  border: 1px solid #1f2937;
 }
 
 /* Header Section */
@@ -17,14 +20,14 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
-  border-bottom: 1px solid #ddd;
+  border-bottom: 1px solid #1f2937;
   padding-bottom: 10px;
 }
 
 .dialog-header h6 {
   font-size: 1.5rem;
   font-weight: 600;
-  color: #333333;
+  color: #f9fafb;
 }
 
 .dialog-close-btn {
@@ -32,12 +35,12 @@
   border: none;
   cursor: pointer;
   font-size: 1.5rem;
-  color: #888888;
+  color: #9ca3af;
   transition: color 0.3s ease;
 }
 
 .dialog-close-btn:hover {
-  color: #d32f2f;
+  color: #f87171;
 }
 
 /* Grid Layout for Chart Thumbnails */
@@ -48,42 +51,44 @@
   justify-content: center;
   cursor: pointer;
   padding: 15px;
-  border: 1px solid #eee;
+  border: 1px solid #1f2937;
   border-radius: 8px;
-  background: #f9f9f9;
-  transition: box-shadow 0.3s ease, transform 0.2s ease;
+  background: #1f2937;
+  transition: box-shadow 0.3s ease, transform 0.2s ease, border-color 0.3s ease;
   text-align: center;
-  box-shadow: 0px 2px 6px rgba(0, 0, 0, 0.08);
+  box-shadow: 0px 10px 24px rgba(0, 0, 0, 0.35);
+  color: #f9fafb;
 }
 
 .chart-thumbnail:hover {
-  box-shadow: 0px 8px 15px rgba(0, 0, 0, 0.2);
+  box-shadow: 0px 16px 32px rgba(37, 99, 235, 0.35);
   transform: translateY(-5px);
-  background: #ffffff;
+  background: #111827;
+  border-color: #2563eb;
 }
 
 .chart-thumbnail .chart-thumbnail-label {
   margin-top: 10px;
   font-size: 1rem;
   font-weight: 500;
-  color: #444;
+  color: #d1d5db;
 }
 
 .chart-thumbnail .chart-thumbnail-label:hover {
-  color: #1976d2; /* Accent color for hover effect */
+  color: #60a5fa; /* Accent color for hover effect */
 }
 
 /* Modal Footer */
 .dialog-actions {
-  border-top: 1px solid #ddd;
+  border-top: 1px solid #1f2937;
   padding: 15px;
   display: flex;
   justify-content: flex-end;
-  background-color: #fafafa;
+  background-color: #111827;
 }
 
 .dialog-actions button {
-  background: #1779db;
+  background: #2563eb;
   color: #ffffff;
   padding: 8px 16px;
   border: none;
@@ -95,5 +100,5 @@
 }
 
 .dialog-actions button:hover {
-  background: #155fa0;
+  background: #1d4ed8;
 }

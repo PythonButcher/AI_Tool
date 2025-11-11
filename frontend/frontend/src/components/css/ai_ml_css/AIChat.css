@@ -3,20 +3,21 @@
     position: fixed;
     bottom: 20px;
     right: 20px;
-    background-color: #007bff;
+    background-color: #2563eb;
     color: white;
     border-radius: 50%;
     padding: 15px;
-    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+    box-shadow: 0px 10px 24px rgba(37, 99, 235, 0.35);
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: background-color 0.3s ease-in-out;
+    transition: background-color 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
   }
-  
+
   .chat-icon:hover {
-    background-color: #0056b3;
+    background-color: #1d4ed8;
+    box-shadow: 0px 14px 32px rgba(29, 78, 216, 0.4);
   }
   
   /* Chat Panel (Modern Sliding UI) */
@@ -26,9 +27,9 @@
     right: -360px; /* Slide it off-screen initially */
     width: 340px;
     height: calc(100% - 80px); /* Fill below the menu bar */
-    background-color: #fff;
-    box-shadow: -2px 0 8px rgba(0, 0, 0, 0.2);
-    border-left: 2px solid #ccc;
+    background-color: #111827;
+    box-shadow: -4px 0 16px rgba(0, 0, 0, 0.4);
+    border-left: 1px solid #1f2937;
     z-index: 1500;
     transition: right 0.3s ease-in-out;
     display: flex;
@@ -40,13 +41,14 @@
   }
   
   .chat-header {
-    background-color: #3a3a3a;
-    color: white;
+    background-color: #1f2937;
+    color: #f9fafb;
     padding: 12px 16px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     font-weight: bold;
+    border-bottom: 1px solid #1f2937;
   }
   
   
@@ -55,7 +57,7 @@
     background: none;
     border: none;
     font-size: 20px;
-    color: white;
+    color: #f9fafb;
     cursor: pointer;
   }
   
@@ -66,6 +68,8 @@
     overflow-y: auto;
     display: flex;
     flex-direction: column;
+    background-color: #111827;
+    gap: 8px;
   }
   
   /* Chat Messages */
@@ -75,17 +79,18 @@
     margin-bottom: 10px;
     border-radius: 15px;
     word-wrap: break-word;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.25);
   }
-  
+
   .chat-message.user {
-    background-color: #909396;
-    color: white;
+    background-color: #2563eb;
+    color: #ffffff;
     align-self: flex-end;
   }
-  
+
   .chat-message.assistant {
-    background-color: #e1e1e1;
-    color: black;
+    background-color: #1f2937;
+    color: #f9fafb;
     align-self: flex-start;
   }
   
@@ -94,8 +99,8 @@
     display: flex;
     gap: 10px;
     padding: 15px;
-    background-color: white;
-    border-top: 1px solid #ddd;
+    background-color: #111827;
+    border-top: 1px solid #1f2937;
   }
 
 
@@ -103,8 +108,8 @@
 .tooltip-text {
   visibility: hidden;
   width: 120px;
-  background-color: #333;
-  color: #fff;
+  background-color: #1f2937;
+  color: #f9fafb;
   text-align: center;
   border-radius: 4px;
   padding: 5px 0;
@@ -115,6 +120,7 @@
   transform: translateX(-50%);
   opacity: 0;
   transition: opacity 0.3s ease;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
 }
 
 /* Tooltip styling for button hover */
@@ -122,13 +128,13 @@
   content: attr(data-tooltip);
   position: absolute;
   right: 60px; /* Align tooltip to the right of the button */
-  background-color: #360b0b;
-  color: #fff;
+  background-color: #1f2937;
+  color: #f9fafb;
   padding: 5px 10px;
   border-radius: 4px;
   font-size: 0.8em;
   white-space: nowrap;
-  box-shadow: 0px 0px 5px rgba(180, 174, 174, 0.3);
+  box-shadow: 0px 8px 16px rgba(0, 0, 0, 0.35);
   z-index: 10;
   opacity: 1;
   transition: opacity 0.3s ease;
@@ -138,8 +144,8 @@
 .tooltip-text {
   visibility: hidden;
   width: 120px;
-  background-color: #333;
-  color: #fff;
+  background-color: #1f2937;
+  color: #f9fafb;
   text-align: center;
   border-radius: 4px;
   padding: 5px 0;
@@ -150,6 +156,7 @@
   transform: translateX(-50%);
   opacity: 0;
   transition: opacity 0.3s ease;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
 }
 
 .sidebar-button:hover .tooltip-text {

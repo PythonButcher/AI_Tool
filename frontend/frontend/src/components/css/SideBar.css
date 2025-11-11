@@ -27,34 +27,23 @@
     height: 50px;
     margin: 10px 0;
     position: relative;
-    transition: transform 0.2s ease;
+    transition: transform 0.2s ease, color 0.2s ease;
+    color: #9ca3af;
 }
 
 .sidebar-button:hover {
     transform: scale(1.15);
     cursor: pointer;
+    color: #f9fafb;
 }
 
-/* Distinct colors for each icon */
-.sidebar-button:nth-child(1) .sidebar-button-icon {
-    color: #ff6347; /* Tomato */
-}
-.sidebar-button:nth-child(2) .sidebar-button-icon {
-    color: #4682b4; /* SteelBlue */
-}
-.sidebar-button:nth-child(3) .sidebar-button-icon {
-    color: #32cd32; /* LimeGreen */
-}
-.sidebar-button:nth-child(4) .sidebar-button-icon {
-    color: #daa520; /* GoldenRod */
-}
-.sidebar-button:nth-child(5) .sidebar-button-icon {
-    color: #6a5acd; /* SlateBlue */
+.sidebar-button .sidebar-button-icon {
+    color: inherit;
+    transition: color 0.2s ease;
 }
 
-/* Fields Panel Toggle Button */
-.sidebar-button:nth-child(6) .sidebar-button-icon {
-    color: #20b2aa; /* LightSeaGreen */
+.sidebar-button:hover .sidebar-button-icon {
+    color: #2563eb;
 }
 
 /* Tooltip styling for button hover */
@@ -62,13 +51,13 @@
     content: attr(data-tooltip);
     position: absolute;
     left: 60px; /* Align tooltip to the right of the button */
-    background-color: #535252;
-    color: #fff;
+    background-color: #1f2937;
+    color: #f9fafb;
     padding: 5px 10px;
     border-radius: 4px;
     font-size: 0.8em;
     white-space: nowrap;
-    box-shadow: 0px 0px 5px rgba(180, 174, 174, 0.3);
+    box-shadow: 0px 10px 20px rgba(0, 0, 0, 0.4);
     z-index: 10;
     opacity: 1;
     transition: opacity 0.3s ease;
@@ -86,8 +75,8 @@
 .tooltip-text {
     visibility: hidden;
     width: 120px;
-    background-color: #333;
-    color: #fff;
+    background-color: #1f2937;
+    color: #f9fafb;
     text-align: center;
     border-radius: 4px;
     padding: 5px 0;
@@ -111,18 +100,13 @@
     top: 100%;
     left: 120%; /* Shift it more to the right */
     transform: translateX(0); /* Remove centering adjustment */
-    background-color: #ffffff;
-    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
-    border-radius: 6px;
+    background-color: #111827;
+    box-shadow: 0px 16px 32px rgba(0, 0, 0, 0.45);
+    border-radius: 8px;
     padding: 10px 0;
     z-index: 10;
     width: 150px;
-}
-.export-dropdown {          /* get rid of this block altogether, this just hides it
-  background: transparent;  /* remove white box */
-  border: none;             /* if any border exists */
-  box-shadow: none;         /* remove shadow if present */
-  padding: 0;               /* optional if spacing causes the box */
+    border: 1px solid #1f2937;
 }
 
 
@@ -133,15 +117,15 @@
     padding: 10px 15px;
     background: none;
     border: none;
-    color: #333;
+    color: #f9fafb;
     font-size: 14px;
     cursor: pointer;
     transition: background-color 0.3s ease;
 }
 
 .export-dropdown button:hover {
-    background-color: #f0f0f0;
-    color: #000;
+    background-color: rgba(37, 99, 235, 0.15);
+    color: #bfdbfe;
 }
 .sidebar-storyboard-wrapper {
   position: relative;
@@ -154,10 +138,11 @@
   transform: translateY(-50%); /* ensure perfect center alignment */
   display: flex;
   flex-direction: column;
-  background-color: #f9f9f9;
+  background-color: #111827;
   padding: 6px;
   border-radius: 8px;
-  box-shadow: 0 0 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.45);
+  border: 1px solid #1f2937;
   z-index: 999;
 }
 
@@ -168,11 +153,12 @@
   margin: 4px 0;
   cursor: pointer;
   border-radius: 6px;
-  transition: background-color 0.2s;
+  transition: background-color 0.2s, color 0.2s;
+  color: #f9fafb;
 }
 
 .sidebar-subbutton:hover {
-  background-color: #e6e6e6;
+  background-color: rgba(37, 99, 235, 0.15);
 }
 
 .sidebar-subbutton .sidebar-button-icon {
@@ -190,8 +176,8 @@
   left: 40px;
   top: 50%;
   transform: translateY(-50%);
-  background-color: #333;
-  color: #fff;
+  background-color: #1f2937;
+  color: #f9fafb;
   padding: 4px 8px;
   font-size: 12px;
   border-radius: 4px;
@@ -212,10 +198,11 @@
   top: 15%;   /* vertically center on the icon */
   display: flex;
   flex-direction: column;
-  background-color: #f9f9f9;
+  background-color: #111827;
   padding: 6px;
   border-radius: 8px;
-  box-shadow: 0 0 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.45);
+  border: 1px solid #1f2937;
   z-index: 999;
 
 }

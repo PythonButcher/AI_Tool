@@ -10,9 +10,11 @@
   max-height: 80vh; /* Constrain height to viewport */
   overflow-y: auto; /* Scroll if content overflows */
   padding: 20px;
-  background-color: #ffffff;
-  border-radius: 8px;
-  box-shadow: 1px 4px 12px rgba(157, 155, 155, 0.2);
+  background-color: #111827;
+  border-radius: 12px;
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.45);
+  border: 1px solid #1f2937;
+  color: #f9fafb;
   z-index: 1000; /* Ensure it stays on top */
 }
 
@@ -20,7 +22,7 @@
 
 /* Styling for error message */
 .error-message {
-  color: red;
+  color: #f87171;
   margin-bottom: 15px;
   font-weight: bold;
   text-align: center;
@@ -30,6 +32,7 @@
 .dropdown-container {
   margin-bottom: 20px;
   text-align: center;
+  color: #f9fafb;
 }
 
 .categorical-dropdown-container {
@@ -46,19 +49,23 @@
 .dropdown-container label {
   font-weight: bold;
   margin-right: 10px;
+  color: #f9fafb;
 }
 
 #categorical-column-select {
   padding: 8px;
   font-size: 1rem;
   border-radius: 4px;
-  border: 1px solid #959292;
+  border: 1px solid #374151;
+  background-color: #1f2937;
+  color: #f9fafb;
 }
 
 /* Search bar styling */
 .search-bar-container {
   text-align: center;
   margin-bottom: 15px;
+  color: #f9fafb;
 }
 
 .search-input {
@@ -66,14 +73,17 @@
   max-width: 400px; /* Limit width for better readability */
   padding: 8px;
   font-size: 1rem;
-  border: 1px solid #ccc;
+  border: 1px solid #374151;
   border-radius: 4px;
+  background-color: #1f2937;
+  color: #f9fafb;
 }
 
 /* Stats container for Mode and Frequency Distribution */
 .stats-container {
   margin-top: 20px;
   text-align: left; /* Left-align content within the container */
+  color: #f9fafb;
 }
 
 /* Styling for mode section */
@@ -91,6 +101,7 @@
   text-align: center;
   font-weight: bold;
   margin-bottom: 10px;
+  color: #f9fafb;
 }
 
 .frequency-table {
@@ -98,17 +109,18 @@
   margin: 0 auto;
   border-collapse: collapse;
   font-size: 1rem;
+  color: #f9fafb;
 }
 
 .frequency-table th,
 .frequency-table td {
-  border: 1px solid #a09d9d;
+  border: 1px solid #1f2937;
   padding: 10px;
   text-align: left;
 }
 
 .frequency-table th {
-  background-color: #f5f5f5;
+  background-color: #111827;
   font-weight: bold;
 }
 

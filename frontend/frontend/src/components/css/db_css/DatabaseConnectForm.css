@@ -3,12 +3,14 @@
 /* Container */
 .db-form-wrapper {
   padding: 1.5rem;
-  background: var(--color-surface, #ffffff);
+  background: var(--color-surface, #111827);
   border-radius: 1rem;
-  box-shadow: 0 2px 14px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.45);
   max-width: 380px;
   margin: 0 auto;
   font-family: 'Inter', sans-serif;
+  color: #f9fafb;
+  border: 1px solid #1f2937;
 }
 
 /* Form */
@@ -22,7 +24,7 @@
   margin-bottom: 0.5rem;
   font-size: 1.25rem;
   font-weight: 600;
-  color: var(--color-text-primary, #333);
+  color: var(--color-text-primary, #f9fafb);
   text-align: center;
 }
 
@@ -34,21 +36,23 @@
 .db-form__label {
   margin-bottom: 0.25rem;
   font-size: 0.85rem;
-  color: var(--color-text-secondary, #555);
+  color: var(--color-text-secondary, #d1d5db);
 }
 
 .db-form__input {
   padding: 0.55rem 0.75rem;
-  border: 1px solid #d0d5dd;
+  border: 1px solid #374151;
   border-radius: 0.5rem;
   font-size: 0.9rem;
   transition: border-color 0.2s ease;
+  background-color: #1f2937;
+  color: #f9fafb;
 }
 
 .db-form__input:focus {
   outline: none;
   border-color: var(--color-accent, #3b82f6);
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.35);
 }
 
 /* Button */
@@ -64,7 +68,8 @@
 }
 
 .db-form__button[disabled] {
-  background: #94a3b8;
+  background: #1f2937;
+  color: #9ca3af;
   cursor: default;
 }
 
@@ -76,8 +81,8 @@
 .db-form__error {
   margin-top: 0.75rem;
   padding: 0.6rem 0.9rem;
-  background: #fee2e2;
-  color: #b91c1c;
+  background: #1f1b1b;
+  color: #f87171;
   border-radius: 0.5rem;
   font-size: 0.85rem;
 }
@@ -93,12 +98,14 @@
 
 .table-dropdown__label {
   font-size: 0.88rem;
-  color: var(--color-text-secondary, #555);
+  color: var(--color-text-secondary, #d1d5db);
 }
 
 .table-dropdown__select {
   padding: 0.55rem 0.75rem;
-  border: 1px solid #d0d5dd;
+  border: 1px solid #374151;
   border-radius: 0.5rem;
   font-size: 0.9rem;
+  background-color: #1f2937;
+  color: #f9fafb;
 }

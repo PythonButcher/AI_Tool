@@ -3,11 +3,12 @@
 ──────────────────────────────────────────────────────────────────────────────*/
 
 :root {
-  --nt-red:        #e60012;
-  --nt-gray-light: #f4f4f4;
-  --nt-gray-dark:  #404040;
+  --nt-red:        #ef4444;
+  --nt-gray-light: #111827;
+  --nt-gray-dark:  #9ca3af;
+  --nt-accent:     #2563eb;
   --nt-radius:     16px;
-  --nt-shadow:     0 4px 10px rgba(162, 155, 155, 0.855);
+  --nt-shadow:     0 16px 32px rgba(0, 0, 0, 0.45);
   --font-pixel:    "Press Start 2P", system-ui, sans-serif;
   --font-body:     "Inter", "Segoe UI", sans-serif;
   --font-size:     20;
@@ -21,12 +22,13 @@
   height: 100%;
   padding: 12px 15px;
   background: var(--nt-gray-light);
-  border-top: 4px solid var(--nt-red);
+  border-top: 4px solid var(--nt-accent);
   box-shadow: var(--nt-shadow);
   border-radius: var(--nt-radius);
   font-family: var(--font-body);
   box-sizing: border-box;
   min-height: 0; /* allows flex children to shrink properly */
+  color: #f9fafb;
 }
 
 /* ── Chart Column (Left) ───────────────────────────────────────────────────── */
@@ -43,12 +45,13 @@
   flex: 1 1 auto;
   display: flex;
   flex-direction: column;
-  background: #fff;
+  background: #1f2937;
   border-radius: var(--nt-radius);
   box-shadow: var(--nt-shadow);
   padding: 10px;
   min-height: 0;        /* critical for flexbox layouts */
   height: auto;
+  color: #f9fafb;
 }
 
 .chart-wrapper canvas {
@@ -73,13 +76,14 @@
   display: flex;
   flex-direction: column;
   overflow-y: auto;
-  background: #fff;
+  background: #1f2937;
   font-weight: bold;
   border-radius: var(--nt-radius);
-  box-shadow: 0 0 10px rgba(59, 237, 112, 0.5);
+  box-shadow: 0 0 24px rgba(37, 99, 235, 0.25);
   padding: 24px 32px;
   box-sizing: border-box;
   min-height: 0; /* ensures proper flex scroll */
+  color: #f9fafb;
 }
 
 .story-panel-no-data {
@@ -90,13 +94,13 @@
   justify-content: center;
   align-items: center;
   overflow-y: auto;
-  background: #ffe6e6;
-  border: 2px solid #d32f2f;
-  color: #b71c1c;
+  background: #1f1b1b;
+  border: 2px solid #ef4444;
+  color: #f87171;
   font-weight: bold;
   font-size: 1.2rem;
   border-radius: var(--nt-radius);
-  box-shadow: 0 0 10px rgba(211, 47, 47, 0.5);
+  box-shadow: 0 0 18px rgba(239, 68, 68, 0.35);
   padding: 24px 32px;
   box-sizing: border-box;
 }
@@ -118,7 +122,7 @@
 .panel-header .divider {
   flex: 1;
   height: 1px;
-  background: var(--nt-red);
+  background: var(--nt-accent);
   opacity: .5;
 }
 
@@ -126,14 +130,14 @@
 .story-section h4 {
   font-family: var(--font-pixel);
   font-size: 18px;
-  color: var(--nt-accent);
+  color: #60a5fa;
   margin: 20px 0 6px;
 }
 .story-section p {
   font-size: 16px;
   line-height: 1.55;
   margin: 0;
-  color: var(--nt-gray-dark);
+  color: #d1d5db;
 }
 
 /* ── Scrollbars (Subtle) ───────────────────────────────────────────────────── */

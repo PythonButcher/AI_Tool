@@ -5,24 +5,24 @@
     right: 20px;
     width: 240px;
     height: 120px;
-    border: 2px dashed #888;
+    border: 2px dashed #374151;
     border-radius: 12px;
     position: absolute;
-    z-index: 1; 
-    background: rgba(255, 255, 255, 0.85);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    z-index: 1;
+    background: rgba(17, 24, 39, 0.9);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
     transition: all 0.3s ease;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: grab;
-    
+
   }
-  
+
   .execute-zone-container:hover {
-    border-color: #4a90e2;
-    background: rgba(240, 248, 255, 0.95); /* light blue tint */
-    box-shadow: 0 4px 12px rgba(14, 13, 13, 0.3);
+    border-color: #2563eb;
+    background: rgba(37, 99, 235, 0.1); /* light blue tint */
+    box-shadow: 0 16px 32px rgba(14, 13, 13, 0.45);
     position: absolute;
     transform: scale(1.02);
   }
@@ -32,11 +32,11 @@
     text-align: center;
     font-weight: 600;
     font-size: 16px;
-    color: #333;
+    color: #f9fafb;
     margin: 0;
     padding: 10px;
     display: flex;
-    z-index: 0; 
+    z-index: 0;
     align-items: center;
     gap: 8px;
     font-family: 'Segoe UI', 'Roboto', sans-serif;
@@ -45,7 +45,7 @@
   /* Optional: style for the 🚀 or icon */
   .execute-logo {
     font-size: 22px;
-    color: #4a90e2;
+    color: #60a5fa;
     transition: transform 0.3s ease;
   }
   
@@ -59,11 +59,11 @@
     position: absolute;
     bottom: 150px;
     right: 20px;
-    background: #4a90e2;
-    color: white;
+    background: #2563eb;
+    color: #ffffff;
     padding: 10px 14px;
     border-radius: 8px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    box-shadow: 0 12px 24px rgba(0,0,0,0.4);
     font-size: 14px;
     font-weight: 500;
     animation: fadeinout 2s ease forwards;

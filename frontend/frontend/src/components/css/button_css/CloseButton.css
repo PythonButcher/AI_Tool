@@ -6,9 +6,9 @@
   /* left: 890px; */
 
   /* Styling */
-  background-color: lightcoral; /* Keeping exactly as provided in reference */
-  color: #555;                   /* Slightly softer icon/text color */
-  border: none;
+  background-color: #1f2937; /* Keeping exactly as provided in reference */
+  color: #f9fafb;                   /* Slightly softer icon/text color */
+  border: 1px solid #1f2937;
   cursor: pointer;
   padding: 0;                   /* Remove padding if icon fills the space */
   font-size: 1.1rem;            /* Adjust based on the icon/symbol used ('—') */
@@ -24,19 +24,19 @@
 
 /* Hover effect (Identical to reference)*/
 .styled-close-btn:hover {
-  background-color: rgba(0, 0, 0, 0.08); /* Subtle background on hover */
-  color: #111;                   /* Darker color on hover */
+  background-color: #ef4444; /* Subtle background on hover */
+  color: #ffffff;                   /* Darker color on hover */
   /* transform: scale(1.05); */ /* Consider removing scale for cleaner look */
 }
 
 /* Focus effect for accessibility (Identical to reference) */
 .styled-close-btn:focus {
   outline: none; /* Remove default outline */
-  box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.4); /* Subtle focus ring */
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.4); /* Subtle focus ring */
 }
 
 /* Optional: Style for when focus is visible (Identical to reference) */
 .styled-close-btn:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.4);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.4);
 }

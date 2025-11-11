@@ -14,15 +14,15 @@
 
 .sidebar-button-icon {
   font-size: 24px;
-  color: #333;
-  
+  color: #9ca3af;
+
 }
 
 .tooltip-text {
   visibility: hidden;
   width: 140px;
-  background-color: #333;
-  color: #fff;
+  background-color: #1f2937;
+  color: #f9fafb;
   text-align: center;
   border-radius: 6px;
   padding: 5px 0;
@@ -62,13 +62,17 @@
   top: 50%; /* Center vertically */
   left: 50%; /* Center horizontally */
   transform: translate(-50%, -50%); /* Adjust positioning to be truly centered */
+  background-color: #111827;
+  border: 1px solid #1f2937;
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.45);
+  color: #f9fafb;
 }
 
 
 .upload-title {
   font-weight: bold;
   margin-bottom: 10px;
-  color: #4a5568;
+  color: #f9fafb;
 }
 
 .file-input {
@@ -81,7 +85,7 @@
   display: block;
   width: 100%;
   padding: 10px;
-  background-color: #718096;
+  background-color: #2563eb;
   color: #fff;
   border: none;
   border-radius: 5px;
@@ -90,11 +94,11 @@
 }
 
 .upload-button:hover {
-  background-color: #4a5568;
+  background-color: #1d4ed8;
 }
 
 .error-message {
-  color: red;
+  color: #f87171;
   text-align: center;
 }
 
@@ -102,7 +106,7 @@
   display: block;
   width: 100%;
   padding: 10px;
-  background-color: #718096;
+  background-color: #2563eb;
   color: #fff;
   border: none;
   border-radius: 5px;
@@ -112,5 +116,5 @@
 }
 
 .browse-btn:hover {
-  background-color: #4a5568;
+  background-color: #1d4ed8;
 }
