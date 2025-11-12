@@ -8,27 +8,17 @@ import { DndContext, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import DataCleaningForm from './components/DataCleaningForm';
 import DataVisualizations from './components/chart_components/DataVisualization';
 import { transformToChartData } from './utils/chartDataUtils';
-import { createTheme, ThemeProvider } from '@mui/material/styles';
 import AIChat from './components/ai_ml_components/AIChat';
 import { DataContext } from './context/DataContext';
+import { ThemeContext } from './context/ThemeContext';
 import { WarehouseProvider } from './context/WarehouseContext';
 import { HelpOverlayProvider } from './context/HelpOverlayContext';
 import useLoadRawData from './hooks/useLoadRawData';
 // ⛔️ Removed: import DataStoryPanel from './components/DataStoryPanel';
 import DataFilterPanel from './components/DataFilterPanel';
 import './App.css';
+import { ThemeProvider } from './context/ThemeContext';
 
-// Define a custom theme using Material-UI's theming capability
-const theme = createTheme({
-  palette: {
-    primary: {
-      main: '#b0b0b0', // Nintendo grey
-    },
-    secondary: {
-      main: '#5a5a5a', // Darker grey
-    },
-  },
-});
 
 const parseRecords = (source) => {
   if (!source) return [];
@@ -331,9 +321,9 @@ const handleFileUpload = useCallback((raw, file = null) => {
 
 
   return (
+    <ThemeProvider> 
     <WarehouseProvider>
-      <HelpOverlayProvider>
-        <ThemeProvider theme={theme}>
+      <HelpOverlayProvider>    
       <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
         <div className="app-container">
           {/* Sidebar with actions and data cleaning */}
@@ -460,9 +450,9 @@ const handleFileUpload = useCallback((raw, file = null) => {
           
         </div>
       </DndContext>
-    </ThemeProvider>
     </HelpOverlayProvider>
   </WarehouseProvider>
+  </ThemeProvider>
   );
 }
 

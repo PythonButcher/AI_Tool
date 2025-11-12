@@ -122,6 +122,22 @@
   background-color: rgba(0, 0, 0, 0.1);
 }
 
+.theme-toggle-btn {
+  size: 12;
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 5px;
+  transition: color 0.2s ease-in-out;
+}
+
+.theme-toggle-btn:hover {
+  color: var(--accent-blue);
+}
+
+
 /* ──────────────────────────────────────────────────────────
    DATA PREVIEW BUTTON (Optional Component)
 ────────────────────────────────────────────────────────── */
@@ -179,3 +195,4 @@
   white-space: nowrap;
   z-index: 1000;
 }
+
