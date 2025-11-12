@@ -2,13 +2,14 @@
 body {
   margin: 0;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background-color: #f4f4f4;
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
 }
 
 .app-container {
   display: flex;
-  background-color: #f6f8fa;
-  color: #1f2937;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
   min-height: 100vh;
 }
 
@@ -30,7 +31,7 @@ body {
   width: 100vw;
   height: 100vh;
   /* Darker overlay for better contrast */
-  background-color: rgba(0, 0, 0, 0.6);
+  background-color: var(--overlay-strong);
   /* Adds a modern blur effect to the background */
   backdrop-filter: blur(4px);
   display: flex;
@@ -39,7 +40,8 @@ body {
   z-index: 9999;
   opacity: 0;
   visibility: hidden;
-  transition: opacity 0.25s ease, visibility 0.25s ease;
+  transition: opacity 0.25s ease, visibility 0.25s ease,
+    background-color 0.3s ease;
 }
 
 .help-overlay.visible {
@@ -49,21 +51,22 @@ body {
 
 .help-overlay-content {
   position: relative;
-  background: #FFFFFF;
+  background: var(--bg-primary);
   /* Slightly softer text color */
-  color: #333333;
+  color: var(--text-primary);
   padding: 1.5rem 2rem;
   /* Sharper, more modern border radius */
   border-radius: 10px;
   width: 500px;
   max-width: 80%;
   /* Softer, more modern shadow */
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 8px 32px var(--shadow-color-strong);
   /* Adds a clean, defined edge */
-  border: 1px solid #E0E0E0;
+  border: 1px solid var(--border-color);
   /* Adds a subtle zoom-in animation */
   transform: scale(0.95);
-  transition: transform 0.25s ease;
+  transition: transform 0.25s ease, background-color 0.3s ease,
+    color 0.3s ease, border-color 0.3s ease;
 }
 
 .help-overlay.visible .help-overlay-content {
@@ -75,7 +78,7 @@ body {
   top: 0.75rem;
   right: 0.75rem;
   /* Softer, less prominent color */
-  color: #888;
+  color: var(--text-secondary);
   cursor: pointer;
   user-select: none;
   
@@ -93,12 +96,13 @@ body {
   font-weight: 400;
   line-height: 1;
 
-  transition: all 0.2s ease;
+  transition: all 0.2s ease, background-color 0.3s ease,
+    color 0.3s ease, border-color 0.3s ease;
 }
 
 .help-overlay-close:hover {
-  color: #111;
-  background-color: #F0F0F0;
+  color: var(--text-primary);
+  background-color: var(--bg-secondary);
   /* Adds a nice micro-interaction */
   transform: rotate(90deg);
 }

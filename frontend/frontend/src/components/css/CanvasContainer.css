@@ -3,25 +3,26 @@
   width: 100%;
   height: 100%;
   position: relative;
-  background-color: #f7f9fc; /* Light background for a clean look */
+  background-color: var(--bg-secondary);
   padding: 10px;
 }
 
 /* Grid Item Styling */
 .grid-item {
-  background-color: #ffffff; /* Clean white background */
-  border: 1px solid #d1d9e0; /* Light border for subtle separation */
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border-color);
   border-radius: 8px; /* Rounded corners for a modern look */
-  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1); /* Subtle shadow for depth */
+  box-shadow: 0px 4px 8px var(--shadow-color);
   overflow: hidden; /* Prevent content overflow */
   display: flex;
   flex-direction: column; /* Ensure contents stack properly */
-  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease,
+    background-color 0.3s ease, color 0.3s ease;
 }
 
 .grid-item:hover {
-  box-shadow: 0px 6px 12px rgba(0, 0, 0, 0.15);
-  border-color: #b0c4de;
+  box-shadow: 0px 6px 12px var(--shadow-color-strong);
+  border-color: var(--accent-blue-soft);
 }
 
 .react-grid-item {
@@ -30,10 +31,10 @@
 
 /* Grid Item Styling */
 .workflow-lab {
-  background-color: #ffffff; /* Clean white background */
-  border: 1px solid #d1d9e0; /* Light border for subtle separation */
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border-color);
   border-radius: 8px; /* Rounded corners for a modern look */
-  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1); /* Subtle shadow for depth */
+  box-shadow: 0px 4px 8px var(--shadow-color);
   overflow: hidden; /* Prevent content overflow */
   display: flex;
   flex-direction: column; /* Ensure contents stack properly */
@@ -46,7 +47,7 @@
   flex-grow: 1; /* Allow table to fill remaining space */
   overflow: auto; /* Enable scrolling for large tables */
   padding: 10px;
-  background-color: #f9f9f9; /* Slight grey for table background */
+  background-color: var(--bg-secondary);
 }
 
 /* Data Table Styling */
@@ -55,48 +56,49 @@
   border-collapse: collapse;
   font-size: 0.9rem;
   text-align: left;
-  background-color: #ffffff; /* Ensure table contrasts with container */
+  background-color: var(--bg-primary);
 }
 
 .data-table th {
-  background-color: #f1f1f1;
-  color: #333333;
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
   font-weight: bold;
   padding: 8px 12px;
-  border-bottom: 2px solid #d1d9e0;
+  border-bottom: 2px solid var(--border-color);
   text-align: left;
 }
 
 .data-table td {
   padding: 8px 12px;
-  border-bottom: 1px solid #eeeeee;
+  border-bottom: 1px solid var(--border-color);
 }
 
 /* Hover Effect for Table Rows */
 .data-table tr:hover {
-  background-color: #f5f7fa; /* Subtle hover effect */
+  background-color: var(--bg-secondary);
 }
 
 /* Close Button Styling */
 .preview-header .close-button {
   background: none;
   border: none;
-  color: #ffffff;
+  color: var(--text-on-accent);
   font-size: 1.2rem;
   cursor: pointer;
-  transition: color 0.2s;
+  transition: color 0.2s, background-color 0.3s ease,
+    border-color 0.3s ease;
 }
 
 .preview-header .close-button:hover {
-  color: #ffcdd2; /* Lighter red for hover effect */
-  
+  color: var(--accent-red-soft);
+
 }
 
 /* Resizable Grid Item Handles */
 .react-resizable-handle {
   width: 10px;
   height: 10px;
-  background: #e63946;
+  background: var(--accent-red);
   border-radius: 50%;
   cursor: se-resize;
   position: absolute;
@@ -104,7 +106,8 @@
   right: 0;
   z-index: 10;
   opacity: 0;
-  transition: opacity 0.2s ease, background 0.2s ease;
+  transition: opacity 0.2s ease, background 0.2s ease,
+    color 0.3s ease;
 }
 
 .grid-item:hover .react-resizable-handle {
@@ -112,7 +115,7 @@
 }
 
 .react-resizable-handle:hover {
-  background: #ff8a80;
+  background: var(--accent-red-soft);
 }
 
 /* Responsive Design */
@@ -132,31 +135,32 @@
 
 .drop-zone {
   flex: 1;
-  border: 2px dashed gray;
+  border: 2px dashed var(--border-color);
   margin: 0 10px;
   padding: 10px;
   text-align: center;
-  transition: background-color 0.3s;
+  transition: background-color 0.3s, color 0.3s ease,
+    border-color 0.3s ease;
 }
 
 .drop-zone:hover {
-  background-color: lightyellow;
+  background-color: var(--accent-yellow-soft);
 }
 
 .drop-zone.active {
-  background-color: lightgreen;
+  background-color: var(--accent-green-soft);
 }
 
 .workflow-maximize-button {
   position: absolute;
   top: 10px;
   left: 880px;
-  background: #1976d2;
-  color: white;
+  background: var(--accent-blue);
+  color: var(--text-on-accent);
   border: none;
   cursor: pointer;
   font-size: 1.5rem;
-  width: 36px; 
+  width: 36px;
   height: 36px;
   border-radius: 8px; /* Rounded corners */
   display: flex;
@@ -164,11 +168,12 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  transition: background-color 0.3s ease, transform 0.2s ease;
+  transition: background-color 0.3s ease, transform 0.2s ease,
+    color 0.3s ease;
 }
 
 .workflow-maximize-button:hover {
-  color: #c5c2c2;
+  color: var(--text-secondary);
 }
 
 .workflow-content {
@@ -185,16 +190,16 @@
   align-items: center;      /* Align items vertically */
   width: 100%;
   padding: 8px 12px;        /* Adjust padding as needed */
-  background-color: #ffffff;
-  border-bottom: 1px solid #e0e0e0;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  background-color: var(--bg-primary);
+  border-bottom: 1px solid var(--border-color);
+  box-shadow: 0 1px 2px var(--shadow-color);
   cursor: move;
   user-select: none;
   box-sizing: border-box;
   }
 
 .window-header:hover {
-  background-color: #f0f0f0;
+  background-color: var(--bg-secondary);
 }
 
 /* Styles for the title text */
@@ -202,7 +207,7 @@
   font-family: system-ui, sans-serif; /* Or your preferred font */
   font-size: 0.9rem;
   font-weight: 500;
-  color: #333;
+  color: var(--text-primary);
   margin-right: 12px;       /* Space between title and buttons */
   white-space: nowrap;      /* Prevent wrapping */
   overflow: hidden;         /* Hide overflow */

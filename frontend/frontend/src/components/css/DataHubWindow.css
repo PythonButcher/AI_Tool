@@ -2,10 +2,10 @@
   min-width: 320px;
   max-width: 480px;
   padding: 16px;
-  background: #111827;
-  color: #f9fafb;
+  background: var(--bg-primary);
+  color: var(--text-primary);
   border-radius: 8px;
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 8px 16px var(--shadow-color-strong);
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -25,8 +25,8 @@
 
 .refresh-btn {
   padding: 6px 12px;
-  background: #2563eb;
-  color: #ffffff;
+  background: var(--accent-blue);
+  color: var(--text-on-accent);
   border: none;
   border-radius: 4px;
   cursor: pointer;
@@ -34,7 +34,7 @@
 }
 
 .refresh-btn:disabled {
-  background: #1f2937;
+  background: var(--bg-secondary);
   cursor: not-allowed;
 }
 
@@ -58,19 +58,19 @@
   flex: 1;
   padding: 8px;
   border-radius: 4px;
-  border: 1px solid #374151;
-  background: #1f2937;
-  color: #f9fafb;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
 }
 
 .datahub-search input::placeholder {
-  color: #9ca3af;
+  color: var(--text-secondary);
 }
 
 .datahub-search button {
   padding: 6px 12px;
-  background: #2563eb;
-  color: #ffffff;
+  background: var(--accent-blue);
+  color: var(--text-on-accent);
   border: none;
   border-radius: 4px;
   cursor: pointer;
@@ -78,7 +78,7 @@
 }
 
 .datahub-search button:disabled {
-  background: #1f2937;
+  background: var(--bg-secondary);
   cursor: not-allowed;
 }
 
@@ -87,25 +87,25 @@
 }
 
 .status.loading {
-  color: #60a5fa;
+  color: var(--accent-blue);
 }
 
 .status.error {
-  color: #f87171;
+  color: var(--accent-red);
 }
 
 .status.success {
-  color: #34d399;
+  color: var(--accent-green);
 }
 
 .status.empty {
-  color: #9ca3af;
+  color: var(--text-secondary);
 }
 
 .datahub-table-wrapper {
   max-height: 200px;
   overflow-y: auto;
-  border: 1px solid #1f2937;
+  border: 1px solid var(--border-color);
   border-radius: 6px;
 }
 
@@ -116,7 +116,7 @@
 }
 
 .datahub-table thead {
-  background: #1f2937;
+  background: var(--bg-secondary);
   position: sticky;
   top: 0;
   z-index: 1;
@@ -126,7 +126,7 @@
 .datahub-table td {
   padding: 8px;
   text-align: left;
-  border-bottom: 1px solid #1f2937;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .datahub-table .truncate {
@@ -145,12 +145,12 @@
 }
 
 .datahub-table button.danger {
-  background: #ef4444;
-  color: #ffffff;
+  background: var(--accent-red);
+  color: var(--text-on-accent);
 }
 
 .datahub-table button.danger:disabled {
-  background: #7f1d1d;
+  background: var(--accent-red-soft);
   cursor: not-allowed;
 }
 
@@ -175,9 +175,9 @@
 .datahub-form input {
   padding: 8px;
   border-radius: 4px;
-  border: 1px solid #374151;
-  background: #1f2937;
-  color: #f9fafb;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
 }
 
 .datahub-form input:disabled {
@@ -199,12 +199,12 @@
 }
 
 .form-actions .primary {
-  background: #10b981;
-  color: #0f172a;
+  background: var(--accent-green);
+  color: var(--text-on-accent);
 }
 
 .form-actions button:disabled {
-  background: #1f2937;
-  color: #6b7280;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
   cursor: not-allowed;
 }
