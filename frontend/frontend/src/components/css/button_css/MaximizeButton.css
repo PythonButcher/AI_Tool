@@ -1,6 +1,6 @@
 .header-button {
-  background-color: lightcoral;
-  color: #555;
+  background-color: var(--accent-red-soft);
+  color: var(--text-on-accent);
   border: none;
   cursor: pointer;
   padding: 0;
@@ -12,22 +12,23 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background-color 0.2s ease, color 0.2s ease;
+  transition: background-color 0.2s ease, color 0.2s ease,
+    border-color 0.3s ease;
 }
 
 .header-button.autopilot-button {
-  background-color: rgba(99, 102, 241, 0.12);
-  color: #303f9f;
+  background-color: var(--accent-blue-soft);
+  color: var(--accent-blue);
 }
 
 .header-button.autopilot-button:hover {
-  background-color: rgba(99, 102, 241, 0.22);
-  color: #1a237e;
+  background-color: var(--accent-blue-strong);
+  color: var(--text-on-accent);
 }
 
 .header-button.autopilot-button.running {
-  background-color: rgba(99, 102, 241, 0.18);
-  color: #1a237e;
+  background-color: var(--accent-blue-glow);
+  color: var(--text-on-accent);
   cursor: progress;
 }
 
@@ -50,17 +51,17 @@
 }
 
 .header-button:hover {
-  background-color: rgba(0, 0, 0, 0.08);
-  color: #111;
+  background-color: var(--shadow-color-soft);
+  color: var(--text-primary);
 }
 
 .header-button:focus {
   outline: none;
-  box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.4);
+  box-shadow: 0 0 0 2px var(--accent-blue-soft);
 }
 
 .header-button:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.4);
+  box-shadow: 0 0 0 2px var(--accent-blue-soft);
 }
 

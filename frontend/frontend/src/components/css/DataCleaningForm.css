@@ -7,7 +7,7 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.5); /* Dimmed background */
+    background-color: var(--overlay-color);
     display: flex;
     justify-content: center;
     align-items: center;
@@ -16,9 +16,9 @@
   
   /* Main form styling */
   .data-cleaning-form {
-    background-color: #fdf9f9;
+    background-color: var(--bg-primary);
     border-radius: 8px;
-    box-shadow: 1px 4px 12px rgba(157, 155, 155, 0.2);
+    box-shadow: 1px 4px 12px var(--shadow-color);
     width: 80%;
     max-width: 700px;
     max-height: 80vh;
@@ -35,7 +35,7 @@
     background: transparent;
     border: none;
     font-size: 2rem;
-    color: #5a5a5a;
+    color: var(--text-secondary);
     cursor: pointer;
   }
   
@@ -43,7 +43,7 @@
   
   /* Error message */
   .error-message {
-    color: red;
+    color: var(--accent-red);
     margin-bottom: 15px;
     font-weight: bold;
     text-align: center;
@@ -64,7 +64,7 @@
     padding: 8px;
     font-size: 1rem;
     border-radius: 4px;
-    border: 1px solid #959292;
+    border: 1px solid var(--border-color);
   }
   
   /* Input container */
@@ -82,7 +82,7 @@
     padding: 8px;
     font-size: 1rem;
     border-radius: 4px;
-    border: 1px solid #959292;
+    border: 1px solid var(--border-color);
   }
   
   /* Submit button */
@@ -92,15 +92,15 @@
     margin-top: 10px;
     padding: 10px 20px;
     font-size: 1rem;
-    background-color: #5a5a5a;
-    color: #ffffff;
+    background-color: var(--text-secondary);
+    color: var(--text-on-accent);
     border: none;
     border-radius: 4px;
     cursor: pointer;
   }
-  
+
   .submit-button:disabled {
-    background-color: #ccc;
+    background-color: var(--border-color);
     cursor: not-allowed;
   }
   
@@ -128,13 +128,13 @@
   
   .data-table th,
   .data-table td {
-    border: 1px solid #a09d9d;
+    border: 1px solid var(--border-color);
     padding: 8px;
     text-align: left;
   }
-  
+
   .data-table th {
-    background-color: #f5f5f5;
+    background-color: var(--bg-secondary);
     font-weight: bold;
   }
   
@@ -143,7 +143,7 @@
     margin-top: 20px;
     text-align: center;
     font-size: 1rem;
-    color: #555;
+    color: var(--text-secondary);
   }
   
   /* Responsive design */

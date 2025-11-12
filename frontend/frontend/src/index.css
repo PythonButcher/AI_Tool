@@ -3,10 +3,20 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  transition: background-color 0.3s ease, color 0.3s ease,
+    border-color 0.3s ease;
+}
+
+*::before,
+*::after {
+  transition: background-color 0.3s ease, color 0.3s ease,
+    border-color 0.3s ease;
 }
 
 html, body, #root {
   height: 100%;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
 }
 
 /* themes.css */
@@ -22,6 +32,26 @@ html, body, #root {
   --accent-green: #10b981;
   --accent-red: #ef4444;
   --shadow-color: rgba(0, 0, 0, 0.1);
+  --shadow-color-soft: rgba(0, 0, 0, 0.05);
+  --shadow-color-strong: rgba(0, 0, 0, 0.2);
+  --overlay-color: rgba(0, 0, 0, 0.5);
+  --overlay-strong: rgba(0, 0, 0, 0.6);
+  --glass-overlay-soft: rgba(255, 255, 255, 0.3);
+  --glass-overlay-medium: rgba(255, 255, 255, 0.5);
+  --glass-overlay-strong: rgba(255, 255, 255, 0.85);
+  --glass-overlay-bold: rgba(255, 255, 255, 0.95);
+  --accent-blue-soft: rgba(37, 99, 235, 0.2);
+  --accent-blue-glow: rgba(37, 99, 235, 0.45);
+  --accent-blue-strong: rgba(37, 99, 235, 0.55);
+  --accent-green-soft: rgba(16, 185, 129, 0.2);
+  --accent-green-glow: rgba(16, 185, 129, 0.5);
+  --accent-red-soft: rgba(239, 68, 68, 0.3);
+  --accent-red-glow: rgba(239, 68, 68, 0.5);
+  --accent-yellow-soft: rgba(255, 255, 0, 0.2);
+  --accent-white-soft: rgba(255, 255, 255, 0.15);
+  --accent-white-medium: rgba(255, 255, 255, 0.2);
+  --accent-white-strong: rgba(255, 255, 255, 0.5);
+  --text-on-accent: #ffffff;
 }
 
 [data-theme='dark'] {
@@ -34,5 +64,25 @@ html, body, #root {
   --accent-green: #10b981;
   --accent-red: #ef4444;
   --shadow-color: rgba(0, 0, 0, 0.35);
+  --shadow-color-soft: rgba(0, 0, 0, 0.2);
+  --shadow-color-strong: rgba(0, 0, 0, 0.5);
+  --overlay-color: rgba(0, 0, 0, 0.6);
+  --overlay-strong: rgba(0, 0, 0, 0.75);
+  --glass-overlay-soft: rgba(17, 24, 39, 0.4);
+  --glass-overlay-medium: rgba(17, 24, 39, 0.55);
+  --glass-overlay-strong: rgba(17, 24, 39, 0.85);
+  --glass-overlay-bold: rgba(17, 24, 39, 0.92);
+  --accent-blue-soft: rgba(59, 130, 246, 0.25);
+  --accent-blue-glow: rgba(59, 130, 246, 0.5);
+  --accent-blue-strong: rgba(59, 130, 246, 0.6);
+  --accent-green-soft: rgba(16, 185, 129, 0.25);
+  --accent-green-glow: rgba(16, 185, 129, 0.55);
+  --accent-red-soft: rgba(239, 68, 68, 0.35);
+  --accent-red-glow: rgba(239, 68, 68, 0.55);
+  --accent-yellow-soft: rgba(250, 204, 21, 0.25);
+  --accent-white-soft: rgba(249, 250, 251, 0.2);
+  --accent-white-medium: rgba(249, 250, 251, 0.3);
+  --accent-white-strong: rgba(249, 250, 251, 0.55);
+  --text-on-accent: #f9fafb;
 }
 
