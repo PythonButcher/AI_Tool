@@ -37,24 +37,24 @@
 
 /* Distinct colors for each icon */
 .sidebar-button:nth-child(1) .sidebar-button-icon {
-    color: #ff6347; /* Tomato */
+    color: var(--accent-red); /* Tomato */
 }
 .sidebar-button:nth-child(2) .sidebar-button-icon {
-    color: #4682b4; /* SteelBlue */
+    color: var(--accent-blue); /* SteelBlue */
 }
 .sidebar-button:nth-child(3) .sidebar-button-icon {
-    color: #32cd32; /* LimeGreen */
+    color: var(--accent-green); /* LimeGreen */
 }
 .sidebar-button:nth-child(4) .sidebar-button-icon {
-    color: #daa520; /* GoldenRod */
+    color: var(--accent-green); /* GoldenRod */
 }
 .sidebar-button:nth-child(5) .sidebar-button-icon {
-    color: #6a5acd; /* SlateBlue */
+    color: var(--accent-blue); /* SlateBlue */
 }
 
 /* Fields Panel Toggle Button */
 .sidebar-button:nth-child(6) .sidebar-button-icon {
-    color: #20b2aa; /* LightSeaGreen */
+    color: var(--accent-green); /* LightSeaGreen */
 }
 
 /* Tooltip styling for button hover */
@@ -62,13 +62,13 @@
     content: attr(data-tooltip);
     position: absolute;
     left: 60px; /* Align tooltip to the right of the button */
-    background-color: #535252;
-    color: #fff;
+    background-color: var(--text-secondary);
+    color: var(--text-on-accent);
     padding: 5px 10px;
     border-radius: 4px;
     font-size: 0.8em;
     white-space: nowrap;
-    box-shadow: 0px 0px 5px rgba(180, 174, 174, 0.3);
+    box-shadow: 0px 0px 5px var(--shadow-color);
     z-index: 10;
     opacity: 1;
     transition: opacity 0.3s ease;
@@ -86,8 +86,8 @@
 .tooltip-text {
     visibility: hidden;
     width: 120px;
-    background-color: #333;
-    color: #fff;
+    background-color: var(--text-primary);
+    color: var(--text-on-accent);
     text-align: center;
     border-radius: 4px;
     padding: 5px 0;
@@ -111,8 +111,8 @@
     top: 100%;
     left: 120%; /* Shift it more to the right */
     transform: translateX(0); /* Remove centering adjustment */
-    background-color: #ffffff;
-    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+    background-color: var(--bg-primary);
+    box-shadow: 0px 4px 8px var(--shadow-color-strong);
     border-radius: 6px;
     padding: 10px 0;
     z-index: 10;
@@ -133,15 +133,15 @@
     padding: 10px 15px;
     background: none;
     border: none;
-    color: #333;
+    color: var(--text-primary);
     font-size: 14px;
     cursor: pointer;
     transition: background-color 0.3s ease;
 }
 
 .export-dropdown button:hover {
-    background-color: #f0f0f0;
-    color: #000;
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
 }
 .sidebar-storyboard-wrapper {
   position: relative;
@@ -154,10 +154,10 @@
   transform: translateY(-50%); /* ensure perfect center alignment */
   display: flex;
   flex-direction: column;
-  background-color: #f9f9f9;
+  background-color: var(--bg-secondary);
   padding: 6px;
   border-radius: 8px;
-  box-shadow: 0 0 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 0 8px var(--shadow-color);
   z-index: 999;
 }
 
@@ -172,7 +172,7 @@
 }
 
 .sidebar-subbutton:hover {
-  background-color: #e6e6e6;
+  background-color: var(--border-color);
 }
 
 .sidebar-subbutton .sidebar-button-icon {
@@ -190,8 +190,8 @@
   left: 40px;
   top: 50%;
   transform: translateY(-50%);
-  background-color: #333;
-  color: #fff;
+  background-color: var(--text-primary);
+  color: var(--text-on-accent);
   padding: 4px 8px;
   font-size: 12px;
   border-radius: 4px;
@@ -212,10 +212,10 @@
   top: 15%;   /* vertically center on the icon */
   display: flex;
   flex-direction: column;
-  background-color: #f9f9f9;
+  background-color: var(--bg-secondary);
   padding: 6px;
   border-radius: 8px;
-  box-shadow: 0 0 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 0 8px var(--shadow-color);
   z-index: 999;
 
 }

@@ -1,15 +1,15 @@
 .numbers-list-container {
   padding: 20px;
-  background-color: #fff;
+  background-color: var(--bg-primary);
   border-radius: 4px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px var(--shadow-color);
 }
 
 .title {
   font-size: 1.5rem;
   font-weight: 600;
   margin-bottom: 15px;
-  color: #333;
+  color: var(--text-primary);
 }
 
 .loading-message,
@@ -19,7 +19,7 @@
 }
 
 .error-message {
-  color: #d9534f;
+  color: var(--accent-red);
 }
 
 .data-preview-container,
@@ -33,16 +33,16 @@
   font-size: 1.2rem;
   font-weight: 600;
   margin-bottom: 10px;
-  color: #333;
+  color: var(--text-primary);
 }
 
 .data-preview-content,
 .stat-data-content {
-  background-color: #f8f8f8;
+  background-color: var(--bg-secondary);
   padding: 15px;
   border-radius: 4px;
   overflow-x: auto;
   font-family: monospace;
   font-size: 0.9rem;
-  color: #444;
+  color: var(--text-secondary);
 }

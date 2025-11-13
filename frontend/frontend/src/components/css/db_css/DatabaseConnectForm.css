@@ -3,9 +3,9 @@
 /* Container */
 .db-form-wrapper {
   padding: 1.5rem;
-  background: var(--color-surface, #ffffff);
+  background: var(--color-surface, var(--bg-primary));
   border-radius: 1rem;
-  box-shadow: 0 2px 14px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 14px var(--shadow-color);
   max-width: 380px;
   margin: 0 auto;
   font-family: 'Inter', sans-serif;
@@ -22,7 +22,7 @@
   margin-bottom: 0.5rem;
   font-size: 1.25rem;
   font-weight: 600;
-  color: var(--color-text-primary, #333);
+  color: var(--color-text-primary, var(--text-primary));
   text-align: center;
 }
 
@@ -34,50 +34,52 @@
 .db-form__label {
   margin-bottom: 0.25rem;
   font-size: 0.85rem;
-  color: var(--color-text-secondary, #555);
+  color: var(--color-text-secondary, var(--text-secondary));
 }
 
 .db-form__input {
   padding: 0.55rem 0.75rem;
-  border: 1px solid #d0d5dd;
+  border: 1px solid var(--border-color);
   border-radius: 0.5rem;
   font-size: 0.9rem;
-  transition: border-color 0.2s ease;
+  transition: border-color 0.2s ease, background-color 0.3s ease,
+    color 0.3s ease;
 }
 
 .db-form__input:focus {
   outline: none;
-  border-color: var(--color-accent, #3b82f6);
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+  border-color: var(--color-accent, var(--accent-blue));
+  box-shadow: 0 0 0 2px var(--accent-blue-soft);
 }
 
 /* Button */
 .db-form__button {
   padding: 0.65rem 1rem;
-  background: var(--color-accent, #3b82f6);
-  color: #fff;
+  background: var(--color-accent, var(--accent-blue));
+  color: var(--text-on-accent);
   font-weight: 500;
   border: none;
   border-radius: 0.5rem;
   cursor: pointer;
-  transition: background 0.2s ease;
+  transition: background 0.2s ease, color 0.3s ease,
+    border-color 0.3s ease;
 }
 
 .db-form__button[disabled] {
-  background: #94a3b8;
+  background: var(--text-secondary);
   cursor: default;
 }
 
 .db-form__button:not([disabled]):hover {
-  background: #2563eb;
+  background: var(--accent-blue);
 }
 
 /* Error banner */
 .db-form__error {
   margin-top: 0.75rem;
   padding: 0.6rem 0.9rem;
-  background: #fee2e2;
-  color: #b91c1c;
+  background: var(--accent-red-soft);
+  color: var(--accent-red);
   border-radius: 0.5rem;
   font-size: 0.85rem;
 }
@@ -93,12 +95,12 @@
 
 .table-dropdown__label {
   font-size: 0.88rem;
-  color: var(--color-text-secondary, #555);
+  color: var(--color-text-secondary, var(--text-secondary));
 }
 
 .table-dropdown__select {
   padding: 0.55rem 0.75rem;
-  border: 1px solid #d0d5dd;
+  border: 1px solid var(--border-color);
   border-radius: 0.5rem;
   font-size: 0.9rem;
 }

@@ -14,9 +14,9 @@
     padding: 8px 16px;
     font-size: 0.9rem;
     font-weight: 600;
-    color: #333;
-    background-color: #f2f2f2;
-    border: 2px solid #ccc;
+    color: var(--text-primary);
+    background-color: var(--bg-secondary);
+    border: 2px solid var(--border-color);
     border-radius: 8px;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -25,15 +25,15 @@
   
   /* Hover and active feel */
   .preview-mode-selector button:hover {
-    background-color: #e0e0e0;
-    border-color: #999;
+    background-color: var(--border-color);
+    border-color: var(--text-secondary);
   }
   
   /* When a button is selected */
   .preview-mode-selector button.active {
-    background-color: #3b82f6; /* Matching your accent blue */
-    color: white;
-    border-color: #2563eb;
+    background-color: var(--accent-blue); /* Matching your accent blue */
+    color: var(--text-on-accent);
+    border-color: var(--accent-blue);
   }
   
   /* Smooth pressed effect */

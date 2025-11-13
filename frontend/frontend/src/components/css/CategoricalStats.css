@@ -10,9 +10,9 @@
   max-height: 80vh; /* Constrain height to viewport */
   overflow-y: auto; /* Scroll if content overflows */
   padding: 20px;
-  background-color: #ffffff;
+  background-color: var(--bg-primary);
   border-radius: 8px;
-  box-shadow: 1px 4px 12px rgba(157, 155, 155, 0.2);
+  box-shadow: 1px 4px 12px var(--shadow-color);
   z-index: 1000; /* Ensure it stays on top */
 }
 
@@ -20,7 +20,7 @@
 
 /* Styling for error message */
 .error-message {
-  color: red;
+  color: var(--accent-red);
   margin-bottom: 15px;
   font-weight: bold;
   text-align: center;
@@ -52,7 +52,7 @@
   padding: 8px;
   font-size: 1rem;
   border-radius: 4px;
-  border: 1px solid #959292;
+  border: 1px solid var(--border-color);
 }
 
 /* Search bar styling */
@@ -66,7 +66,7 @@
   max-width: 400px; /* Limit width for better readability */
   padding: 8px;
   font-size: 1rem;
-  border: 1px solid #ccc;
+  border: 1px solid var(--border-color);
   border-radius: 4px;
 }
 
@@ -102,13 +102,13 @@
 
 .frequency-table th,
 .frequency-table td {
-  border: 1px solid #a09d9d;
+  border: 1px solid var(--border-color);
   padding: 10px;
   text-align: left;
 }
 
 .frequency-table th {
-  background-color: #f5f5f5;
+  background-color: var(--bg-secondary);
   font-weight: bold;
 }
 
