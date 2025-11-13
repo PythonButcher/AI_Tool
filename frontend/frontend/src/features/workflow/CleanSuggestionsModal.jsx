@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import CloseButton from '../components/buttons/CloseButton';
+import CloseButton from '../../components/buttons/CloseButton';
 import './CleanSuggestionsModal.css';
 
 const parseSuggestions = (text) => {

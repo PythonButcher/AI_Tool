@@ -1,6 +1,6 @@
 // src/components/preview_components/DataTablePreview.jsx
 import React from 'react';
-import { useHelpOverlay } from '../context/HelpOverlayContext';
+import { useHelpOverlay } from '../../context/HelpOverlayContext';
 
 
 function DataTablePreview({ label = "Preview Table:", data }) {

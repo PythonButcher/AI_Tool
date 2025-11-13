@@ -1,6 +1,6 @@
 import React, { useCallback, useContext, useMemo, useState } from "react";
 import axios from "axios";
-import { WarehouseContext } from "../context/WarehouseContext";
+import { WarehouseContext } from "../../context/WarehouseContext";
 import "./DataHubWindow.css";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";

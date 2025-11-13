@@ -3,11 +3,11 @@ import React, { useRef, useCallback, useState, useEffect } from "react";
 import { Excalidraw } from "@excalidraw/excalidraw";
 import "@excalidraw/excalidraw/index.css";
 import WhiteboardToolbar from "./WhiteBoardToolbar";
-import { useWindowContext } from "../context/WindowContext";
-import { useHelpOverlay } from '../context/HelpOverlayContext';
+import { useWindowContext } from "../../context/WindowContext";
+import { useHelpOverlay } from '../../context/HelpOverlayContext';
 
 // ✅ Import our parser
-import { parseSketch } from "../utils/sketch/SketchParser";
+import { parseSketch } from "../../utils/sketch/SketchParser";
 
 const Whiteboard = ({ label = "AI Whitboard:", savedScene }) => {
   const excalidrawRef = useRef(null);

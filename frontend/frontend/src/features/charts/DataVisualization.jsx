@@ -7,8 +7,8 @@ import {
 } from '@mui/material';
 import { FaChartBar, FaChartLine, FaChartPie, FaChartArea } from 'react-icons/fa';
 import { FcDoughnutChart } from "react-icons/fc";
-import CloseButton from '../components/buttons/CloseButton';
-import CleanedButton from '../components/buttons/CleanedButton';
+import CloseButton from '../../components/buttons/CloseButton';
+import CleanedButton from '../../components/buttons/CleanedButton';
 import './DataVisualizations.css'; // Import the premium CSS
 
 const chartTypes = [

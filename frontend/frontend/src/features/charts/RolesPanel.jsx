@@ -1,7 +1,7 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import DropZone from '../utils/DropZone';
-import { chartRoles } from '../utils/chartRoleConfig';
+import DropZone from '../../utils/DropZone';
+import { chartRoles } from '../../utils/chartRoleConfig';
 import './RolesPanel.css';
 
 /**

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo } from 'react';
 import ChartComponentAI from '../charts/ChartComponentAI';
 import PropTypes from 'prop-types';
-import { getDynamicColors } from '../utils/ChartStyles';
+import { getDynamicColors } from '../../utils/ChartStyles';
 
 /**
  * Renders an AI-generated chart.

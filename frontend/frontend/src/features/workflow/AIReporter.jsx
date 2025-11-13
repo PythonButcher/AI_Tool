@@ -1,6 +1,6 @@
 // src/components/workflow_lab_components/AIReporter.jsx
 import React, { useRef } from "react";
-import AICharts from "../ai_modules/AICharts";
+import AICharts from "../ai/AICharts";
 import { jsPDF } from "jspdf";
 import html2canvas from "html2canvas";
 import "./AIReporter.css";

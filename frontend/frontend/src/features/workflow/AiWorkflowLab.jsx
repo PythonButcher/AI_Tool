@@ -1,5 +1,5 @@
 // 📂 AiWorkflowLab.jsx — cleaned and fixed DropZone behavior with working hover
-import { useHelpOverlay } from '../context/HelpOverlayContext';
+import { useHelpOverlay } from '../../context/HelpOverlayContext';
 
 import { useState, useCallback, useContext, useRef, useEffect } from "react";
 import {
@@ -15,12 +15,12 @@ import "./AiWorkflowLab.css";
 import "./AiWorkflowLabDropZone.css";
 import { AiCommandBlocks } from "./AiCommandBlock";
 import AiWorkLabNodeSizer from "./AiWorkLabNodeSizer";
-import { useContextMenu } from "../hooks/useContextMenu";
-import ContextMenu from "../context/ContextMenu";
-import { DataContext } from "../context/DataContext";
+import { useContextMenu } from "../../hooks/useContextMenu";
+import ContextMenu from "../../context/ContextMenu";
+import { DataContext } from "../../context/DataContext";
 import AIPipeline from './AIPipeline';
 import DropZoneNode from './DropZoneNode';
-import { useWindowContext } from "../context/WindowContext";
+import { useWindowContext } from "../../context/WindowContext";
 import { FiDownload, FiUpload } from "react-icons/fi";
 
 

@@ -2,8 +2,8 @@ import React, { useCallback, useContext, useEffect, useMemo, useState } from 're
 import axios from 'axios';
 import { FaMagic, FaSpinner } from 'react-icons/fa';
 
-import { DataContext } from '../context/DataContext';
-import { useWindowContext } from '../context/WindowContext';
+import { DataContext } from '../../context/DataContext';
+import { useWindowContext } from '../../context/WindowContext';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 

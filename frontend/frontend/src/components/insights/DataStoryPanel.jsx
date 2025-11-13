@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from "react";
 import axios from "axios";
-import ChartComponentAI from "../../charts/ChartComponentAI";
+import ChartComponentAI from "../../features/charts/ChartComponentAI";
 import { getDynamicColors } from "../../utils/ChartStyles";
 import { useWindowContext } from '../../context/WindowContext';
 import "./DataStoryPanel.css";

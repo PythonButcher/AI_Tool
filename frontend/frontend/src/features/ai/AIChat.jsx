@@ -3,9 +3,9 @@ import axios from 'axios';
 import { FaRobot } from "react-icons/fa";
 import './AIChat.css';
 import { TextField, Button } from '@mui/material';
-import { DataContext } from '../context/DataContext';
+import { DataContext } from '../../context/DataContext';
 import { AICommands } from '../workflow/AiCommandBlock';
-import { getDynamicColors } from '../utils/ChartStyles';
+import { getDynamicColors } from '../../utils/ChartStyles';
 
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
