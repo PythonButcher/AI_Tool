@@ -3,7 +3,7 @@ import React, { useState, useRef, useMemo, useContext } from 'react';
 import './CanvasContainer.css';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
-import { Responsive, WidthProvider } from 'react-grid-layout';
+import ReactGridLayout from 'react-grid-layout';
 import CloseButton from '../buttons/CloseButton';
 import MinimizeButton from '../buttons/MinimizeButton';
 import MaximizeButton from '../buttons/MaximizeButton';
@@ -26,7 +26,7 @@ import { useWindowContext } from '../../context/WindowContext';
 import { DataContext } from '../../context/DataContext';
 import RawDataViewer from '../../viewing/RawDataViewer';
 
-const ResponsiveGridLayout = WidthProvider(Responsive);
+const ResponsiveGridLayout = ReactGridLayout.WidthProvider(ReactGridLayout.Responsive);
 
 function CanvasContainer({
   children,
