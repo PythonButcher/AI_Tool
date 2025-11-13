@@ -1,7 +1,7 @@
 # backend/routes/analysis.py
 from flask import Blueprint, jsonify, request
 import io
-from backend.global_state import get_uploaded_df
+from backend.utils.global_state import get_uploaded_df
 
 analysis_bp = Blueprint('analysis_bp', __name__, url_prefix='/api')
 
@@ -36,7 +36,7 @@ def receive_filtered_data():
         if not json_data or 'data_preview' not in json_data:
             return jsonify({"error": "Missing 'data_preview' key"}), 400
 
-        from backend.global_state import set_uploaded_df
+        from backend.utils.global_state import set_uploaded_df
         import pandas as pd
 
         df = pd.DataFrame(json_data['data_preview'])

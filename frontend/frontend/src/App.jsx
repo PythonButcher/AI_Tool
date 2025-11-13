@@ -1,21 +1,21 @@
 // File: App.jsx
 import React, { useState, useCallback, useEffect, useContext } from 'react';
-import MenuBar from './components/MenuBar';
-import CanvasContainer from './components/CanvasContainer';
-import DatasetInfo from './components/DatasetInfo';
-import SideBar from './components/SideBar';
+import MenuBar from './components/layout/MenuBar';
+import CanvasContainer from './components/layout/CanvasContainer';
+import DatasetInfo from './components/insights/DatasetInfo';
+import SideBar from './components/layout/SideBar';
 import { DndContext, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
-import DataCleaningForm from './components/DataCleaningForm';
-import DataVisualizations from './components/chart_components/DataVisualization';
+import DataCleaningForm from './components/data_management/DataCleaningForm';
+import DataVisualizations from './charts/DataVisualization';
 import { transformToChartData } from './utils/chartDataUtils';
-import AIChat from './components/ai_ml_components/AIChat';
+import AIChat from './ai_modules/AIChat';
 import { DataContext } from './context/DataContext';
 import { ThemeContext } from './context/ThemeContext';
 import { WarehouseProvider } from './context/WarehouseContext';
 import { HelpOverlayProvider } from './context/HelpOverlayContext';
 import useLoadRawData from './hooks/useLoadRawData';
 // ⛔️ Removed: import DataStoryPanel from './components/DataStoryPanel';
-import DataFilterPanel from './components/DataFilterPanel';
+import DataFilterPanel from './components/data_management/DataFilterPanel';
 import './App.css';
 import { ThemeProvider } from './context/ThemeContext';
 

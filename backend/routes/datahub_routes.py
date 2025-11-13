@@ -2,7 +2,7 @@ from flask import Blueprint, jsonify, request
 import sqlite3
 import json
 from datetime import datetime
-from backend.backend_db import get_db_connection  # must exist in your project
+from backend.db.backend_db import get_db_connection  # must exist in your project
 
 datahub_bp = Blueprint("datahub_bp", __name__, url_prefix="/api/datahub")
 
