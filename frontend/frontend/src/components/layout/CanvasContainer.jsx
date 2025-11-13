@@ -3,6 +3,7 @@ import React, { useState, useRef, useMemo, useContext } from 'react';
 import './CanvasContainer.css';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
+import { Responsive, WidthProvider } from 'react-grid-layout';
 import CloseButton from '../buttons/CloseButton';
 import MinimizeButton from '../buttons/MinimizeButton';
 import MaximizeButton from '../buttons/MaximizeButton';
