@@ -3,27 +3,28 @@
 }
 
 .clean-button button {
-    background-color: #b0b0b0; /* Nintendo grey */
+    background-color: var(--border-color); /* Nintendo grey */
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    color: #333; /* Darker text for contrast */
-    border: 1px solid #888;
+    color: var(--text-primary); /* Darker text for contrast */
+    border: 1px solid var(--text-secondary);
     padding: 10px 20px;
     cursor: pointer;
     border-radius: 4px;
     margin-right: 10px;
-    transition: background-color 0.3s ease, transform 0.2s ease;
+    transition: background-color 0.3s ease, transform 0.2s ease,
+      color 0.3s ease, border-color 0.3s ease;
 }
 
 .clean-button button:hover {
-    background-color: #999; /* Slightly darker grey on hover */
+    background-color: var(--text-secondary); /* Slightly darker grey on hover */
     transform: scale(1.05); /* Subtle scaling for interaction */
 }
 
 .clean-button input {
     padding: 10px;
-    background-color: #e0e0e0; /* Light grey background for input */
-    border: 1px solid #bbb;
-    color: #333;
+    background-color: var(--border-color); /* Light grey background for input */
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
     border-radius: 4px;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }

@@ -6,8 +6,8 @@
   /* left: 890px; */
 
   /* Styling */
-  background-color: lightcoral; /* Make background transparent by default */
-  color: #555;                 /* Slightly softer icon/text color */
+  background-color: var(--accent-red-soft);
+  color: var(--text-on-accent);
   border: none;
   cursor: pointer;
   padding: 0;                  /* Remove padding if icon fills the space */
@@ -19,24 +19,25 @@
   display: flex;               /* Keep flex for centering content */
   align-items: center;
   justify-content: center;
-  transition: background-color 0.2s ease, color 0.2s ease; /* Smoother transitions */
+  transition: background-color 0.2s ease, color 0.2s ease,
+    border-color 0.3s ease; /* Smoother transitions */
 }
 
 /* Hover effect */
 .styled-minimize-btn:hover {
-  background-color: rgba(0, 0, 0, 0.08); /* Subtle background on hover */
-  color: #111;                 /* Darker color on hover */
+  background-color: var(--shadow-color-soft); /* Subtle background on hover */
+  color: var(--text-primary);                 /* Darker color on hover */
   /* transform: scale(1.05); */ /* Consider removing scale for cleaner look */
 }
 
 /* Focus effect for accessibility */
 .styled-minimize-btn:focus {
   outline: none; /* Remove default outline */
-  box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.4); /* Subtle focus ring */
+  box-shadow: 0 0 0 2px var(--accent-blue-soft); /* Subtle focus ring */
 }
 
 /* Optional: Style for when focus is visible (keyboard navigation) */
 .styled-minimize-btn:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.4);
+  box-shadow: 0 0 0 2px var(--accent-blue-soft);
 }
