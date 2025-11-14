@@ -1,7 +1,7 @@
 # backend/routes/upload.py
 from flask import Blueprint, jsonify, request
 import pandas as pd
-from backend.global_state import set_uploaded_df
+from backend.utils.global_state import set_uploaded_df
 import json
 
 
