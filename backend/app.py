@@ -15,9 +15,9 @@ from backend.services.ai_storyboard_gemini import ai_storyboard_gemini
 from backend.services.ai_storyboard_openai import ai_storyboard_openai
 from backend.services.ai_logic import ai_bp
 from backend.services.ai_logic_gemini import ai_gemini_bp
-from backend.services.nlp_routes import nlp_bp
+from backend.routes.nlp_routes import nlp_bp
 from backend.routes.raw_data import raw_data_bp
-from backend.services.autopilot_routes import autopilot_bp
+from backend.routes.autopilot import autopilot_bp
 from backend.routes.datahub_routes import datahub_bp
 
 

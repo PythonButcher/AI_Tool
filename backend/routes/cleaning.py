@@ -1,5 +1,5 @@
 from flask import Blueprint, jsonify, request
-from backend.global_state import get_uploaded_df, set_cleaned_data
+from backend.utils.global_state import get_uploaded_df, set_cleaned_data
 
 cleaning_bp = Blueprint('cleaning_bp', __name__, url_prefix='/api')
 

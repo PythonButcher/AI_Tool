@@ -1,7 +1,7 @@
 // DragDrop.js
 import React, { useState } from 'react';
 import { AiOutlineCloudUpload } from 'react-icons/ai';
-import '../components/css/DragDrop.css';
+import './DragDrop.css';
 
 const DragDrop = ({ onFilesSelected, width, height }) => {
   const [isDragging, setIsDragging] = useState(false);

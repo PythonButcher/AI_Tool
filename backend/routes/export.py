@@ -2,7 +2,7 @@
 from flask import Blueprint, jsonify, make_response, request
 import io
 import pandas as pd
-from backend.global_state import get_cleaned_data
+from backend.utils.global_state import get_cleaned_data
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
 
