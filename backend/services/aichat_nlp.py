@@ -4,14 +4,14 @@ from __future__ import annotations
 # --------------------------------------------------------------------
 # Updated imports for refactored NLP Engine (deterministic version)
 # --------------------------------------------------------------------
-from .nlp_engine.chart_builder import (
+from backend.nlp_engine.chart_builder import (
     COLOR_PALETTE,
     _build_chart_data,
     _limit_categories,
     _palette_color,
     build_chart_response,
 )
-from .nlp_engine.nlp_extraction import (
+from backend.nlp_engine.nlp_extraction import (
     _is_numeric_column,
     _is_temporal_column,
     _numeric_ratio,
@@ -20,7 +20,7 @@ from .nlp_engine.nlp_extraction import (
     analyse_columns,
     extract_dataset,
 )
-from .nlp_engine.nlp_interpreter import (
+from backend.nlp_engine.nlp_interpreter import (
     NLP_QUERY_FORMAT,
     QueryInterpretation,
     _apply_filters,
@@ -37,7 +37,7 @@ from .nlp_engine.nlp_interpreter import (
     _score_columns,
     interpret_nl_query,
 )
-from .nlp_engine.temporal_utils import (
+from backend.nlp_engine.temporal_utils import (
     _aggregate_time_series,         # ✅ moved here — this fixes your ImportError
     _classify_temporal_value,
     _ensure_datetime_from_info,
