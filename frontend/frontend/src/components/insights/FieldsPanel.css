@@ -1,88 +1,311 @@
-/* Modernized FieldsPanel.css */
+/*
+ * FieldsPanel.css – focused, low-profile treatment for the floating Fields list.
+ * The panel stays movable, theme-aware, and intentionally minimal so the
+ * experience feels utility-first while still exposing schema metadata.
+ */
 
-/* Sidebar and FieldsPanel wrapper */
-.sidebar-container {
-    position: relative; /* Ensures FieldsPanel is positioned relative to this */
+:root,
+[data-theme='dark'] {
+  --field-color-numeric: var(--accent-green);
+  --field-color-temporal: #f59e0b;
+  --field-color-categorical: var(--accent-blue);
 }
 
-/* FieldsPanel beside the sidebar icon */
 .fields-panel {
-    position: relative;
-    top: -20px; /* Adjust to align with the icon's vertical position */
-    left: 150px; /* Position it to the right of the sidebar */
-    background: var(--glass-overlay-strong);
-    backdrop-filter: blur(8px);
-    border: 3px solid var(--accent-white-medium);
-    border-radius: 12px;
-    padding: 18px;
-    width: 250px;
-    max-height: 80vh;
-    overflow-y: visible;
-    font-family: 'Press Start 2P', monospace;
-    color: var(--text-primary);
-    box-shadow: 0px 8px 20px var(--shadow-color-strong);
-    z-index: 1050;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: min(320px, calc(100vw - 40px));
+  max-height: min(70vh, 560px);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border-radius: 14px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  box-shadow: 0 20px 35px var(--shadow-color);
+  overflow: visible;
+  z-index: 1600;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
-/* FieldsPanel header styling */
+.fields-panel.is-moving {
+  box-shadow: 0 28px 60px var(--shadow-color-strong);
+  border-color: var(--accent-blue);
+}
+
+.fields-panel-empty {
+  justify-content: center;
+  align-items: flex-start;
+  gap: 8px;
+}
+
 .fields-panel-header {
-    font-size: 1rem;
-    text-align: center;
-    color: var(--accent-green);
-    margin-bottom: 12px;
-    text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-color);
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
 }
 
-/* Fields list styling */
-.fields-panel-item {
-    background: linear-gradient(145deg, var(--bg-secondary), var(--border-color));
-    color: var(--text-on-accent);
-    padding: 10px;
-    border: 2px solid var(--accent-white-soft);
-    border-radius: 6px;
-    font-size: 0.85rem;
-    text-align: center;
-    cursor: grab;
-    transition: transform 0.2s, background 0.3s, box-shadow 0.3s,
-      color 0.3s, border-color 0.3s;
+.fields-panel.is-moving .fields-panel-header {
+  cursor: grabbing;
 }
 
-.fields-panel-item:hover {
-    background: linear-gradient(145deg, var(--text-secondary), var(--bg-secondary));
-    transform: scale(1.05);
-    color: var(--accent-green);
-    box-shadow: 0px 4px 10px var(--accent-green-soft);
+.fields-panel-grip {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  font-size: 1rem;
 }
 
-/* Active (dragging) state */
-.fields-panel-item:active {
-    cursor: grabbing;
-    background: linear-gradient(145deg, var(--bg-secondary), var(--bg-primary));
-    border-color: var(--accent-red);
-    box-shadow: 0px 4px 12px var(--accent-red-soft);
+.fields-panel-title {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
 
-/* Scrollbar */
-.fields-panel::-webkit-scrollbar {
-    width: 8px;
-    background-color: var(--glass-overlay-medium);
-    border-radius: 8px;
+.fields-panel-title h3 {
+  font-size: 0.95rem;
+  margin: 0;
+  color: var(--text-primary);
 }
 
-.fields-panel::-webkit-scrollbar-thumb {
-    background: var(--accent-white-soft);
-    border-radius: 8px;
+.fields-panel-title span {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  text-transform: none;
+  letter-spacing: 0;
 }
 
-.fields-panel::-webkit-scrollbar-thumb:hover {
-    background: var(--accent-white-strong);
+.fields-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
 }
 
-/* Dragging Effect */
-.fields-panel-item.dragging {
-    opacity: 0.6;
-    cursor: grabbing;
-    background: var(--bg-secondary);
-    border-color: var(--accent-red);
-    transform: scale(1.02);
+.fields-search:focus-within {
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 2px var(--accent-blue-soft);
+}
+
+.fields-search input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  outline: none;
+}
+
+.fields-search-icon {
+  font-size: 1rem;
+}
+
+.fields-panel-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.fields-panel-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.fields-panel-body::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: var(--border-color);
+}
+
+.field-group + .field-group {
+  padding-top: 6px;
+  border-top: 1px solid var(--border-color);
+}
+
+.field-group-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 2px 0;
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.field-group-toggle:hover .group-title {
+  color: var(--accent-blue);
+}
+
+.group-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  background: var(--bg-secondary);
+}
+
+.group-icon.numeric {
+  color: var(--field-color-numeric);
+}
+
+.group-icon.temporal {
+  color: var(--field-color-temporal);
+}
+
+.group-icon.categorical {
+  color: var(--field-color-categorical);
+}
+
+.group-copy {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.group-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.group-description {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.group-count {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.field-group-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 0 4px;
+  max-height: 500px;
+  transition: max-height 0.25s ease, opacity 0.2s ease;
+}
+
+.field-group-list.is-collapsed {
+  max-height: 0;
+  opacity: 0;
+  pointer-events: none;
+  padding: 0;
+}
+
+.field-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: grab;
+  font-size: 0.9rem;
+  transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.field-row:hover {
+  background: var(--bg-secondary);
+  border-color: var(--border-color);
+}
+
+.field-row.is-dragging,
+.field-row-overlay {
+  border-color: var(--accent-blue);
+  background: var(--accent-blue-soft);
+  box-shadow: 0 10px 25px var(--shadow-color-soft);
+  cursor: grabbing;
+}
+
+.field-type-marker {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--text-secondary);
+}
+
+.field-type-marker.numeric {
+  background: var(--field-color-numeric);
+}
+
+.field-type-marker.temporal {
+  background: var(--field-color-temporal);
+}
+
+.field-type-marker.categorical {
+  background: var(--field-color-categorical);
+}
+
+.field-row-label {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.field-row-pill {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 2px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+}
+
+.field-row-overlay {
+  width: max-content;
+}
+
+.fields-panel-empty-message,
+.fields-empty-state {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  padding: 10px 0;
+}
+
+.fields-empty-state {
+  text-align: center;
+}
+
+@media (max-width: 768px) {
+  .fields-panel {
+    width: calc(100vw - 24px);
+    max-height: calc(100vh - 24px);
+  }
 }

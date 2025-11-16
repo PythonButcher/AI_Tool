@@ -303,6 +303,18 @@ const handleFileUpload = useCallback((raw, file = null) => {
     // Only handle drops on valid targets when dragging a field
     if (!over || active.data?.current?.type !== 'field') return;
     const fieldName = active.data.current.field;
+    const fieldType = active.data.current.fieldType;
+
+    // Enforce compatibility before committing the drop
+    const allowedTypes = over.data?.current?.allowedTypes;
+    if (
+      allowedTypes &&
+      allowedTypes.length > 0 &&
+      fieldType &&
+      !allowedTypes.includes(fieldType)
+    ) {
+      return;
+    }
 
     // Prefer droppable metadata but fall back to id parsing
     let axis = over.data?.current?.axis;
