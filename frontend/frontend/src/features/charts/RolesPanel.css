@@ -1,31 +1,87 @@
 .roles-panel-container {
-    display: flex;
-    flex-direction: row;
-    flex-wrap: wrap;
-    justify-content: flex-start;
-    gap: 16px;
-    padding: 12px 16px;
-    background-color: var(--bg-secondary);
-    border-radius: 8px;
-    border: 1px solid var(--border-color);
-    margin-bottom: 16px;
-  }
-  
-  .role-dropzone-wrapper {
-    flex: 1 1 200px;
-    min-width: 180px;
-    max-width: 240px;
-    background: var(--bg-primary);
-    border: 1px dashed var(--border-color);
-    border-radius: 6px;
-    padding: 10px;
-    box-shadow: 0 1px 3px var(--shadow-color-soft);
-    transition: border-color 0.3s ease-in-out, box-shadow 0.3s ease-in-out,
-      background-color 0.3s ease, color 0.3s ease;
-  }
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 16px;
+  padding: 16px;
+  background-color: rgba(4, 8, 20, 0.8);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  margin-bottom: 16px;
+  backdrop-filter: blur(12px);
+}
 
-  .role-dropzone-wrapper:hover {
-    border-color: var(--accent-blue);
-    box-shadow: 0 2px 8px var(--accent-blue-soft);
-  }
+.role-dropzone-wrapper {
+  flex: 1 1 220px;
+  min-width: 200px;
+  max-width: 260px;
+  border-radius: 12px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease,
+    background 0.2s ease;
+}
+
+.role-dropzone-wrapper:hover {
+  border-color: var(--accent-blue);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.35);
+}
+
+.role-label {
+  display: block;
+  margin-top: 8px;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  letter-spacing: 0.04em;
+}
+
+.drop-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 14px 8px;
+  border-radius: 10px;
+  border: 2px dashed rgba(255, 255, 255, 0.25);
+  min-height: 90px;
+  text-align: center;
+  transition: border-color 0.2s ease, background 0.2s ease,
+    color 0.2s ease, transform 0.2s ease;
+}
+
+.drop-zone-label {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.drop-zone-helper {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.drop-zone.is-over.is-compatible {
+  border-color: var(--accent-green);
+  background: rgba(37, 192, 138, 0.15);
+  transform: translateY(-2px);
+}
+
+.drop-zone.is-over.is-incompatible {
+  border-color: var(--accent-red);
+  background: rgba(229, 72, 77, 0.1);
+  color: var(--accent-red);
+}
+
+.drop-zone.has-field {
+  border-style: solid;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.drop-zone.is-incompatible:not(.is-over) {
+  opacity: 0.6;
+}
   
