@@ -2,7 +2,6 @@ import React, { useMemo, useState, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
-import Paper from '@mui/material/Paper';
 import {
   AiOutlineNumber,
   AiOutlineCalendar,
@@ -79,6 +78,8 @@ const DATA_GROUP_ORDER = ['numeric', 'temporal', 'categorical'];
 
 /**
  * Single draggable entry with metadata, memoised to avoid needless re-renders.
+ * The payload still exposes the richer metadata so downstream drop-zones can
+ * validate compatibility, but the visual treatment is intentionally minimal.
  */
 const DraggableField = React.memo(({ field }) => {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
@@ -96,25 +97,27 @@ const DraggableField = React.memo(({ field }) => {
   };
 
   return (
-    <Paper
+    <div
       ref={setNodeRef}
       style={style}
-      elevation={0}
-      className={`fields-panel-item ${isDragging ? 'dragging' : ''}`}
+      className={`field-row ${isDragging ? 'is-dragging' : ''}`}
       {...listeners}
       {...attributes}
     >
-      <div className="field-item-header">
-        <div className={`field-icon ${field.type}`}>{FIELD_TYPE_META[field.type]?.icon}</div>
-        <div>
-          <div className="field-name">{field.name}</div>
-          <div className="field-type-pill">{field.type}</div>
+      <div className={`field-type-icon ${field.type}`} aria-hidden="true">
+        {FIELD_TYPE_META[field.type]?.icon}
+      </div>
+      <div className="field-row-text">
+        <div className="field-row-name">{field.name}</div>
+        <div className="field-row-meta">
+          <span className="field-row-type">{field.type}</span>
+          <span aria-hidden="true">•</span>
+          <span className="field-row-sample" title={`Sample value: ${field.sample}`}>
+            {field.sample}
+          </span>
         </div>
       </div>
-      <div className="field-sample" title={`Sample value: ${field.sample}`}>
-        Sample: <span>{field.sample}</span>
-      </div>
-    </Paper>
+    </div>
   );
 });
 
@@ -204,17 +207,20 @@ const FieldsPanel = ({ cleanedData }) => {
         <span>{fieldsWithMeta.length} total</span>
       </div>
 
+      {/* Real-time filtering so long lists remain manageable. */}
       <label className="fields-search">
-        <AiOutlineSearch />
+        <AiOutlineSearch className="fields-search-icon" />
         <input
           type="text"
           placeholder="Search fields"
           value={searchTerm}
           onChange={(event) => setSearchTerm(event.target.value)}
+          aria-label="Search fields"
         />
       </label>
 
-      <div className="fields-groups">
+      <div className="fields-panel-body">
+        {/* Minimal group sections mimic the Power BI hierarchy while staying compact. */}
         {DATA_GROUP_ORDER.map((groupKey) => {
           const fields = groupedFields[groupKey];
           if (!fields || fields.length === 0) return null;
@@ -222,28 +228,38 @@ const FieldsPanel = ({ cleanedData }) => {
           const collapsed = collapsedGroups[groupKey];
 
           return (
-            <div className="fields-group" key={groupKey}>
+            <section className="field-group" key={groupKey}>
               <button
                 type="button"
-                className="group-header"
+                className="field-group-toggle"
                 onClick={() => toggleGroup(groupKey)}
                 aria-expanded={!collapsed}
               >
-                <div className={`group-icon ${groupKey}`}>{meta.icon}</div>
-                <div>
-                  <div className="group-title">{meta.label}</div>
-                  <div className="group-description">{meta.description}</div>
+                <span className={`group-icon ${groupKey}`} aria-hidden="true">
+                  {meta.icon}
+                </span>
+                <div className="group-copy">
+                  <p className="group-title">{meta.label}</p>
+                  <p className="group-description">{meta.description}</p>
                 </div>
-                <span className="group-count">{fields.length}</span>
+                <span className="group-count" aria-label={`${fields.length} fields`}>
+                  {fields.length}
+                </span>
               </button>
-              <div className={`group-content ${collapsed ? 'collapsed' : ''}`}>
+
+              <div className={`field-group-list ${collapsed ? 'is-collapsed' : ''}`}>
                 {fields.map((field) => (
                   <DraggableField key={field.name} field={field} />
                 ))}
               </div>
-            </div>
+            </section>
           );
         })}
+
+        {/* Guard to keep the UI communicative when filters remove every field. */}
+        {filteredFields.length === 0 && (
+          <div className="fields-empty-state">No fields match that search.</div>
+        )}
       </div>
     </div>
   );
