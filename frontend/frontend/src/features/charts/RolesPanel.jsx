@@ -22,17 +22,47 @@ function roleToAxis(role) {
   }
 }
 
+const DEFAULT_ALLOWED_BY_AXIS = {
+  x: ['categorical', 'temporal'],
+  y: ['numeric'],
+};
+
+const normalizeRole = (role) => {
+  if (typeof role === 'string') {
+    const axis = roleToAxis(role);
+    return {
+      role,
+      axis,
+      allowedTypes: DEFAULT_ALLOWED_BY_AXIS[axis],
+      helperText: axis === 'y' ? 'Numeric value' : 'Category or date field',
+    };
+  }
+
+  return {
+    ...role,
+    axis: role.axis || roleToAxis(role.role),
+    allowedTypes: role.allowedTypes || DEFAULT_ALLOWED_BY_AXIS[roleToAxis(role.role)],
+  };
+};
+
 function RolesPanel({ chartType, mapping }) {
   if (!chartType || !chartRoles[chartType]) return null;
 
   return (
     <div className="roles-panel-container">
-      {chartRoles[chartType].map((role) => {
-        const axis = roleToAxis(role);
+      {chartRoles[chartType].map((roleConfig) => {
+        const normalized = normalizeRole(roleConfig);
+        const { role, axis, allowedTypes, helperText } = normalized;
         const current = mapping[role] || mapping[axis === 'x' ? 'X-Axis' : 'Y-Axis'];
         return (
           <div className="role-dropzone-wrapper" key={role}>
-            <DropZone axis={axis} currentField={current} />
+            <DropZone
+              axis={axis}
+              currentField={current}
+              allowedTypes={allowedTypes}
+              roleLabel={role}
+              helperText={helperText}
+            />
             <span className="role-label">{role}</span>
           </div>
         );
