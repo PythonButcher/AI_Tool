@@ -29,6 +29,7 @@ const MentionDropdown = ({ query, position, onSelect, onClose, children }) => {
           left: position.left 
         }}
       >
+        <div className="mention-header">Select a dataset</div>
         {/* 1. List Matches */}
         {filteredDatasets.map((ds) => (
           <div

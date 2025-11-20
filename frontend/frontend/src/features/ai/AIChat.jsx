@@ -169,7 +169,7 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
       console.log("3. Opening Menu!"); // If this doesn't print, logic is failing
       setMentionQuery(token);
       setIsMentionOpen(true);
-      setMentionPosition({ top: -220, left: 10 }); 
+      setMentionPosition({ top: -180, left: 10 }); 
     } else {
       setIsMentionOpen(false);
       setMentionQuery(null);
