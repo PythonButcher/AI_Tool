@@ -4,6 +4,8 @@ import { FaRobot } from "react-icons/fa";
 import './AIChat.css';
 import { TextField, Button } from '@mui/material';
 import { DataContext } from '../../context/DataContext';
+import MentionDropdown from '../../components/data_management/MentionDropdown';
+import { detectToken } from '../../utils/mentionUtils'; // Check spelling: detectToken vs dectectToken
 import { AICommands } from '../workflow/AiCommandBlock';
 import { getDynamicColors } from '../../utils/ChartStyles';
 
@@ -77,6 +79,9 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [awaitingCleanInstructions, setAwaitingCleanInstructions] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState(null);
+  const [isMentionOpen, setIsMentionOpen] = useState(false);
+  const [mentionPosition, setMentionPosition] = useState({ top: 0, left: 0 });
 
   const toggleChat = () => setShowChat(prev => !prev);
 
@@ -131,7 +136,48 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
       };
     }
   };
+ // --------------------Mention section '@' of code-----------------------------------------------//
 
+  const handleMentionSelect = (datasetName) => {
+    // 1. Find where the mention started (the last '@')
+    const lastAtIndex = userInput.lastIndexOf('@');
+    
+    // 2. Slice the text: keep everything before '@', add the name, add a space
+    const newText = userInput.substring(0, lastAtIndex) + `@${datasetName} `;
+    
+    // 3. Update state
+    setUserInput(newText);
+    setIsMentionOpen(false); // Close menu
+    
+    // Optional: Focus the input back (requires a Ref, skip for now if too complex)
+  };
+// --------------------Mention section '@' of code-----------------------------------------------//
+
+ const handleInputChange = (e) => {
+    const newValue = e.target.value;
+    const newCursorPos = e.target.selectionStart;
+
+    // --- DEBUG LOGS START ---
+    console.log("1. Typing detected:", newValue);
+    
+    setUserInput(newValue);
+
+    const token = detectToken(newValue, newCursorPos);
+    console.log("2. Detected Token:", token); // Should say "" or "Har" etc.
+
+    if (token !== null) {
+      console.log("3. Opening Menu!"); // If this doesn't print, logic is failing
+      setMentionQuery(token);
+      setIsMentionOpen(true);
+      setMentionPosition({ top: -180, left: 10 }); 
+    } else {
+      setIsMentionOpen(false);
+      setMentionQuery(null);
+    }
+    // --- DEBUG LOGS END ---
+  };
+
+// -----------------------------------------------------------------------------------------//
   const handleSendMessage = async () => {
     if (!userInput.trim()) return;
 
@@ -199,6 +245,7 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
         setLoading(false);
         return;
       }
+    
 
       const formattedChartData = formatChartData(aiChartResponse);
       setAiChartType(formattedChartData.datasets[0]?.label || "Bar Chart");
@@ -257,6 +304,7 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
     setLoading(false);
   };
 
+
   return (
     <>
       <div className="chat-icon" onClick={toggleChat} data-tooltip="AI Chat">
@@ -277,15 +325,30 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
           ))}
         </div>
 
-        <div className="chat-input-container">
+
+       <div className="chat-input-container" style={{ position: 'relative' }}>
+          
+          {/* 1. The Dropdown (Only shows when active) */}
+          {isMentionOpen && (
+            <MentionDropdown
+              query={mentionQuery}
+              position={mentionPosition}
+              onSelect={handleMentionSelect}
+              onClose={() => setIsMentionOpen(false)}
+            />
+          )}
+
+          {/* 2. The Input Field */}
           <TextField
             label="Ask about the data..."
             variant="outlined"
             fullWidth
             value={userInput}
-            onChange={e => setUserInput(e.target.value)}
+            onChange={handleInputChange}
             disabled={loading}
           />
+
+          {/* 3. The Send Button */}
           <Button
             variant="contained"
             color="primary"
@@ -296,6 +359,7 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
           >
             {loading ? "Thinking..." : "Send"}
           </Button>
+        
         </div>
         {error && <div className="error-message">{error}</div>}
       </div>
