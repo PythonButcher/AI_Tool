@@ -6,7 +6,7 @@
  */
 
 
-export const dectectToken = (text, cursorPosition) => {
+export const detectToken = (text, cursorPosition) => {
     const textBeforeCursor = text.substring(0, cursorPosition);
 
     // find the '@' symbol before the cursor

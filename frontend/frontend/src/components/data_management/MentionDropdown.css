@@ -1,7 +1,7 @@
 /* The Dropdown Container */
 .mention-dropdown {
   position: absolute; /* Key: allows us to use top/left from props */
-  z-index: 2000;      /* Sit above everything else */
+  z-index: 100;      /* Sit above everything else */
   background-color: var(--bg-primary, #ffffff);
   border: 1px solid var(--border-color, #ccc);
   border-radius: 8px;

@@ -152,6 +152,32 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
     // Optional: Focus the input back (requires a Ref, skip for now if too complex)
   };
 // --------------------Mention section '@' of code-----------------------------------------------//
+
+ const handleInputChange = (e) => {
+    const newValue = e.target.value;
+    const newCursorPos = e.target.selectionStart;
+
+    // --- DEBUG LOGS START ---
+    console.log("1. Typing detected:", newValue);
+    
+    setUserInput(newValue);
+
+    const token = detectToken(newValue, newCursorPos);
+    console.log("2. Detected Token:", token); // Should say "" or "Har" etc.
+
+    if (token !== null) {
+      console.log("3. Opening Menu!"); // If this doesn't print, logic is failing
+      setMentionQuery(token);
+      setIsMentionOpen(true);
+      setMentionPosition({ top: -220, left: 10 }); 
+    } else {
+      setIsMentionOpen(false);
+      setMentionQuery(null);
+    }
+    // --- DEBUG LOGS END ---
+  };
+
+// -----------------------------------------------------------------------------------------//
   const handleSendMessage = async () => {
     if (!userInput.trim()) return;
 
@@ -278,6 +304,7 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
     setLoading(false);
   };
 
+
   return (
     <>
       <div className="chat-icon" onClick={toggleChat} data-tooltip="AI Chat">
@@ -299,8 +326,9 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
         </div>
 
 
-       <div className="chat-input-container">
-          {/* NEW: The Dropdown */}
+       <div className="chat-input-container" style={{ position: 'relative' }}>
+          
+          {/* 1. The Dropdown (Only shows when active) */}
           {isMentionOpen && (
             <MentionDropdown
               query={mentionQuery}
@@ -309,34 +337,18 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
               onClose={() => setIsMentionOpen(false)}
             />
           )}
-        
-          {/* <TextField
-            label="Ask about the data..."
-            variant="outlined"
-            fullWidth
-            value={userInput}
-            onChange={handleInputChange} 
-            disabled={loading}
-          />
+
+          {/* 2. The Input Field */}
           <TextField
             label="Ask about the data..."
             variant="outlined"
             fullWidth
             value={userInput}
-            onChange={handleInputChange} 
+            onChange={handleInputChange}
             disabled={loading}
           />
-       
-          <TextField
-            label="Ask about the data..."
-            variant="outlined"
-            fullWidth
-            value={userInput}
-            onChange={handleInputChange} 
-            disabled={loading}
-          /> 
-      */}
-         
+
+          {/* 3. The Send Button */}
           <Button
             variant="contained"
             color="primary"
@@ -347,6 +359,7 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
           >
             {loading ? "Thinking..." : "Send"}
           </Button>
+        
         </div>
         {error && <div className="error-message">{error}</div>}
       </div>

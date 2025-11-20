@@ -5,23 +5,21 @@ import './MentionDropdown.css'; // We will add the styles for this below
 const MentionDropdown = ({ query, position, onSelect, onClose, children }) => {
   const { datasets } = useContext(WarehouseContext);
 
-  // 1. Safe check: If no position is provided, we can't render it correctly
+  // DEBUG: See if data is actually loaded in the context
+  console.log("MentionDropdown | Context Datasets:", datasets);
+  console.log("MentionDropdown | Current Query:", query);
+
   if (!position) return null;
 
-  // 2. Filter datasets based on the user's query (case-insensitive)
-  //    e.g. if query is "sal", it finds "SalesData2023"
+  // Filter datasets
   const filteredDatasets = datasets.filter((ds) =>
     ds.name.toLowerCase().includes(query.toLowerCase())
   );
 
-  // 3. If no matches and no children (custom messages), don't render anything
-  if (filteredDatasets.length === 0 && !children) {
-    return null;
-  }
+  // REMOVED THE "Early Return" here so we can see the "Empty" message
 
   return (
     <>
-      {/* Invisible overlay to close menu if user clicks away */}
       <div className="mention-overlay" onClick={onClose} />
 
       <div 
@@ -31,7 +29,7 @@ const MentionDropdown = ({ query, position, onSelect, onClose, children }) => {
           left: position.left 
         }}
       >
-        {/* Render the matching datasets */}
+        {/* 1. List Matches */}
         {filteredDatasets.map((ds) => (
           <div
             key={ds.id}
@@ -43,14 +41,13 @@ const MentionDropdown = ({ query, position, onSelect, onClose, children }) => {
           </div>
         ))}
 
-        {/* Render specific 'children' if passed (e.g. "No results found") */}
+        {/* 2. Show "No results" if list is empty */}
         {filteredDatasets.length === 0 && (
           <div className="mention-empty">
              No datasets found for "{query}"
           </div>
         )}
         
-        {/* Render any other custom children passed from parent */}
         {children}
       </div>
     </>
