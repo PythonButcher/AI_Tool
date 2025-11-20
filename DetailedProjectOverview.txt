@@ -1,0 +1,142 @@
+AI Tool — Detailed Project Map
+=============================
+This document gives a high-detail walkthrough of the repository structure, the intent of each file, and how components fit together. It expands on ComponentAndModuleIndex_ProjectMap.txt with additional relationships and workflow notes.
+
+Top-Level Layout
+----------------
+- README.md — High-level project overview, setup steps, and feature list.
+- GEMINI.md — Notes related to Gemini AI usage (kept for reference alongside OpenAI usage).
+- ComponentAndModuleIndex_ProjectMap.txt — Prior compact structure outline.
+- requirements.txt — Global Python dependencies outside the backend virtual environment.
+- backend_logs.txt / logs.txt — Log snapshots from prior backend runs.
+- dev-test.txt — Scratchpad for development tests.
+- database.db — SQLite database used for lightweight caching/tests at the repo root.
+- python — Placeholder marker for Python-only deployments.
+- backend/ — Flask API service, NLP helpers, and AI orchestration.
+- frontend/ — React application and supporting tooling for the UI.
+
+Backend Structure (backend/)
+----------------------------
+- __init__.py — Marks the backend package.
+- app.py — Factory that creates the Flask app, applies CORS, sets 100 MB upload limit, and registers every blueprint (upload, cleaning, export, NLP, AI logic, SQL/API fetchers, storyboard generators, autopilot, etc.). Defines a simple home route and custom handler for oversized uploads.
+- backOGbackend.txt — Historical prototype of backend endpoints kept for reference.
+- requirements.txt — Backend-specific Python dependencies (mirrors virtualenv needs).
+- python — Placeholder marker file (no runtime logic).
+- venv/ — Local virtual environment captured in the repository; includes activation scripts and installed packages (not used in production workflows).
+
+Database helpers (backend/db/)
+- __init__.py — Package marker.
+- backend_db.py — Helper utilities for interacting with the bundled SQLite database.
+- database.db — Sample SQLite database stored alongside helpers.
+
+NLP engine (backend/nlp_engine/)
+- __init__.py — Package marker.
+- chart_builder.py — Builds chart configurations from parsed natural-language intents.
+- nlp_extraction.py — Extracts structured commands/entities from free-form prompts.
+- nlp_interpreter.py — Orchestrates extraction + builder steps to translate prompts into chart-ready specs.
+- temporal_utils.py — Utilities for working with date/time expressions within NLP flows.
+
+Utility layer (backend/utils/)
+- __init__.py — Package marker (implicit).
+- global_state.py — Stores uploaded/cleaned pandas DataFrames in module-level globals for reuse across routes.
+- helpers.py — Shared utility functions consumed by multiple routes/services.
+
+Service layer (backend/services/)
+- ai_logic.py — OpenAI-backed command router. Registers /summary, /insights, /outliers, /clean, /execute commands and exposes a Flask blueprint used by app.py. Validates OPENAI_API_KEY and builds prompts for dataset analysis.
+- ai_logic_gemini.py — Gemini-powered equivalent blueprint for AI commands.
+- ai_storyboard_gemini.py / ai_storyboard_openai.py — Generate storyboard-style narratives via Gemini or OpenAI; both registered as blueprints in app.py.
+- aichat_nlp.py — Helpers for NLP-driven AI chat interactions.
+- agent_runtime.py — Runtime utilities for orchestrating agent-like behaviors.
+- data_processing.py — Placeholder/stub for shared data preprocessing helpers.
+- function_registry.py — Central registry for mapping AI functions/commands to handlers.
+- ml_logic.py — Machine-learning oriented helper functions (feature extraction/model hooks).
+
+Route blueprints (backend/routes/)
+- __init__.py — Package marker for route blueprints.
+- upload.py — /api/upload route: accepts CSV/Excel/JSON/GeoJSON uploads, loads into pandas, caches via global_state, and returns summaries/previews.
+- analysis.py — Routes that compute dataset statistics and summaries for the frontend.
+- cleaning.py — Endpoints for cleaning operations (null handling/type fixes) and returning cleaned data.
+- export.py — Exports cleaned dataframes to CSV, Excel, or PDF for download.
+- raw_data.py — Serves cached raw data previews stored in global_state for quick reloads.
+- api_fetch.py — Fetches and flattens external API responses into tabular form.
+- sql_fetch.py — Connects to Postgres instances, previews tables, and returns structured data.
+- datahub_routes.py — Coordinates with data hubs/databases for ingestion and metadata handling.
+- nlp_routes.py — NLP-specific routes that pipe prompts through the nlp_engine to produce chart specs or structured intents.
+- autopilot.py — Background autopilot endpoints that trigger AI-driven workflows (charting/reporting) without manual steps.
+
+Frontend Structure (frontend/)
+------------------------------
+Top-level frontend files
+- package.json / package-lock.json — Tooling dependencies for proxy scripts and shared utilities.
+- node_modules/ — Installed packages for the top-level frontend workspace.
+- frontend/ — Actual React app (create-react-app style) with its own package.json.
+
+React app root (frontend/frontend/)
+- package.json / package-lock.json — React app dependencies and scripts.
+- README.md — CRA-generated README.
+- .gitignore — Frontend ignores.
+- public/ — Static assets (favicon, manifest, logos, HTML shell).
+- src/ — Application source code.
+
+Global src files (frontend/frontend/src/)
+- App.jsx / App.css — Main UI composition. Wires together menus, panels, and feature modules.
+- index.js / index.css — React entry point and global styling.
+- prettierrc.json — Formatting rules for the frontend codebase.
+- notes.txt — Developer scratchpad.
+
+Context providers (frontend/frontend/src/context/)
+- DataContext.jsx — Central data store (uploaded, full, cleaned, filtered datasets) plus AI pipeline results; exposes helper hooks like useActiveDataset/useDatasetMeta.
+- WarehouseContext.jsx — Manages database connection/table state for SQL features.
+- WindowContext.jsx — Tracks open/closed window layouts for modular UI panes.
+- HelpOverlayContext.jsx — Controls onboarding/help overlay visibility.
+- ThemeContext.jsx — Central theme palette/toggle provider.
+- ContextMenu.jsx / ContextMenu.styles.jsx — Context menu state and styling helpers for right-click actions.
+
+Custom hooks (frontend/frontend/src/hooks/)
+- useLoadRawData.jsx — Fetches raw data previews from the backend and injects into DataContext.
+- useContextMenu.jsx — Manages context menu positioning and visibility for arbitrary components.
+
+UI components (frontend/frontend/src/components/)
+- buttons/ (CleanedButton, CloseButton, MaximizeButton, MinimizeButton + CSS) — Reusable window management buttons used across panels.
+- data_management/ — FileUpload/FileExport for ingest/export; DataCleaningForm and DataFilterPanel for cleaning/filtering; SearchBar for quick field search.
+- insights/ — DatasetInfo (fetches stats), CategoricalStats, DataStoryPanel, and FieldsPanel for inspecting schema and AI-generated narratives.
+- layout/ — CanvasContainer orchestrates primary pane layout; MenuBar handles uploads/stats navigation; SideBar hosts feature toggles; MinimizedDock manages minimized windows.
+
+Feature modules (frontend/frontend/src/features/)
+- ai/ — AIChat (assistant UI wired to backend AI endpoints), AICharts (AI-driven visualization selection), AiAutopilot (runs automated workflows).
+- api/ — APiDataForm for configuring external API fetch jobs.
+- charts/ — ChartComponent (manual chart builder), ChartComponentAI (AI-suggested charts), RolesPanel (drag-and-drop role assignment), ChartToolbar, DataVisualization (chart type selector), DataVisualizations.css for styling.
+- database/ — DatabaseConnectForm for SQL credentials, DataHubWindow for browsing database content, TableListDropdown for choosing tables.
+- viewing/ — PreviewModeSelector, DataTablePreview, JsonDataPreview, RawDataViewer for viewing datasets in multiple modes.
+- workflow/ — AiWorkflowLab, AiCommandBlock, AIReporter, CleanSuggestionsModal, AiWorkLabNodeSizer, AiWorkflowLabDropZone, AiMenuContext.css for building AI-driven pipelines with draggable blocks and reporting outputs.
+- whiteboard/ — WhiteBoard and WhiteBoardToolbar for freeform sketching/notes.
+
+Utilities (frontend/frontend/src/utils/)
+- DragDrop.jsx / DragDrop.css — Shared drag-and-drop behaviors used by chart roles and workflow nodes.
+- DropZone.jsx — Generic drop zone component for assigning fields or blocks.
+- OutsideClickWrapper.jsx — Helper to detect clicks outside a component.
+- filterUtils.jsx — Filtering helpers for dataset subsets.
+- chartDataUtils.jsx — Converts dataset slices into chart.js-friendly series.
+- chartRoleConfig.jsx — Configuration for role-based chart inputs (X/Y axes, categories, etc.).
+- previewChartUtils.jsx — Helpers for chart previews before committing configurations.
+- workflow_output_router.jsx — Routes AI workflow outputs to the correct UI consumer.
+- ChartStyles.jsx — Shared style tokens for chart components.
+- sketch/SketchParser.js — Parses whiteboard sketches into structured elements.
+
+View helpers (frontend/frontend/src/components/layout & features) interoperate with contexts:
+- MenuBar and FileUpload tie into DataContext to push uploaded files and stats into global state.
+- DataContext data flows feed ChartComponent/AIChat/DataTablePreview to ensure consistent datasets across manual and AI-driven workflows.
+- WarehouseContext feeds database components (DatabaseConnectForm, DataHubWindow) while useLoadRawData leverages backend/raw_data endpoints.
+
+Other assets
+- public/* — favicon.ico, manifest.json, index.html, logo PNGs for CRA defaults.
+- frontend/python — Placeholder mirroring backend/python for parity.
+
+Cross-Cutting Relationships
+---------------------------
+- Backend app.py registers every blueprint; upload.py sets global_state data consumed by analysis/cleaning/export routes and by NLP/AI services for downstream processing.
+- ai_logic.py and ai_logic_gemini.py expose blueprints consumed by frontend AIChat/AiAutopilot components to generate summaries, insights, and charts.
+- nlp_routes.py works with nlp_engine modules to translate natural language into chart specs consumed by ChartComponentAI and RolesPanel.
+- DataContext.jsx aggregates uploaded/cleaned/filtered datasets so multiple UI modules (charts, viewers, workflow blocks) stay in sync.
+- Workflow and chart utilities (DragDrop, chartRoleConfig, workflow_output_router) underpin drag-and-drop experiences shared by AIWorkflowLab and manual chart builders.
+
