@@ -139,7 +139,7 @@
 .form-field input,
 .form-field select,
 .form-field textarea {
-  background: #0f1224;
+  background: var(--bg-secondary, #f9fafb);
   color: var(--text-primary, #e8ecff);
   border: 1px solid var(--border-color, #24273a);
   border-radius: 8px;
@@ -165,7 +165,7 @@
 }
 
 .field-array-row button {
-  background: #1b1f38;
+  background: var(--bg-secondary, #f9fafb);
   border: 1px solid var(--border-color, #24273a);
   color: var(--text-primary, #e8ecff);
   border-radius: 6px;
@@ -191,7 +191,7 @@
 
 .form-actions button {
   border: 1px solid var(--border-color, #24273a);
-  background: #1b1f38;
+  background: var(--bg-secondary, #f9fafb);
   color: var(--text-primary, #e8ecff);
   padding: 10px 14px;
   border-radius: 10px;
@@ -254,7 +254,7 @@
 }
 
 .step-actions button {
-  background: #1b1f38;
+  background: var(--bg-secondary, #f9fafb);
   border: 1px solid var(--border-color, #24273a);
   color: var(--text-primary, #e8ecff);
   padding: 6px 8px;
