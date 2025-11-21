@@ -119,10 +119,10 @@ const TRANSFORM_LIBRARY = [
             name: 'keep',
             type: 'select',
             label: 'Keep',
-            options: [
+              options: [
               { label: 'First', value: 'first' },
               { label: 'Last', value: 'last' },
-              { label: 'None', value: False },
+              { label: 'None', value: false },
             ],
             defaultValue: 'first',
           },
