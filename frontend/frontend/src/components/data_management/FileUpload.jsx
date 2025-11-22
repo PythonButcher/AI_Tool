@@ -175,85 +175,85 @@ function FileUpload({
               </button>
             </div>
 
-            {activeTab === 'upload' && (
-              <div className="tab-content upload-tab">
-                <div
-                  className={`drop-zone ${dragActive ? 'drag-active' : ''}`}
-                  onDrop={handleDrop}
-                  onDragOver={handleDragOver}
-                  onDragLeave={handleDragLeave}
-                >
-                  <div className="drop-inner">
-                    <FaCloudUploadAlt className="drop-icon" />
-                    <div className="drop-copy">
-                      <p className="drop-title">Drag & Drop your file</p>
-                      <p className="drop-subtitle">Supported formats: {allowedExtensions.join(', ')}</p>
-                    </div>
-                    <div className="drop-actions">
-                      <input
-                        ref={hiddenFileInput}
-                        className="file-input"
-                        type="file"
-                        onChange={handleFileChange}
-                      />
-                      <button
-                        type="button"
-                        className="ghost-button"
-                        onClick={() => hiddenFileInput.current?.click()}
-                      >
-                        Browse Files
-                      </button>
-                      {file && (
-                        <span className="file-chip">
-                          <FaCheckCircle className="file-chip-icon" />
-                          {file.name}
-                        </span>
-                      )}
+            <div className="tab-panels">
+              {activeTab === 'upload' ? (
+                <div className="tab-content upload-tab">
+                  <div
+                    className={`drop-zone ${dragActive ? 'drag-active' : ''}`}
+                    onDrop={handleDrop}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                  >
+                    <div className="drop-inner">
+                      <FaCloudUploadAlt className="drop-icon" />
+                      <div className="drop-copy">
+                        <p className="drop-title">Drag & Drop your file</p>
+                        <p className="drop-subtitle">Supported formats: {allowedExtensions.join(', ')}</p>
+                      </div>
+                      <div className="drop-actions">
+                        <input
+                          ref={hiddenFileInput}
+                          className="file-input"
+                          type="file"
+                          onChange={handleFileChange}
+                        />
+                        <button
+                          type="button"
+                          className="ghost-button"
+                          onClick={() => hiddenFileInput.current?.click()}
+                        >
+                          Browse Files
+                        </button>
+                        {file && (
+                          <span className="file-chip">
+                            <FaCheckCircle className="file-chip-icon" />
+                            {file.name}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {error && <p className="error-message">{error}</p>}
+                  {error && <p className="error-message">{error}</p>}
 
-                {file && !error && (
-                  <button
-                    className="upload-button"
-                    onClick={handleFileUpload}
-                    disabled={isUploading}
-                  >
-                    {isUploading ? 'Uploading...' : 'Upload File'}
-                  </button>
-                )}
-              </div>
-            )}
-
-            {activeTab === 'search' && (
-              <div className="tab-content search-tab">
-                <div className="search-bar">
-                  <FaSearch className="search-icon" />
-                  <input
-                    type="text"
-                    placeholder="Search Data Hub datasets"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
-                </div>
-                <div className="dataset-list">
-                  {filteredDatasets.map((ds) => (
-                    <div key={ds.id} className="dataset-card">
-                      <div>
-                        <p className="dataset-name">{ds.name}</p>
-                        <p className="dataset-path">{ds.path}</p>
-                      </div>
-                      <button className="ghost-button">Open</button>
-                    </div>
-                  ))}
-                  {filteredDatasets.length === 0 && (
-                    <p className="empty-state">No datasets match your search.</p>
+                  {file && !error && (
+                    <button
+                      className="upload-button"
+                      onClick={handleFileUpload}
+                      disabled={isUploading}
+                    >
+                      {isUploading ? 'Uploading...' : 'Upload File'}
+                    </button>
                   )}
                 </div>
-              </div>
-            )}
+              ) : (
+                <div className="tab-content search-tab">
+                  <div className="search-bar">
+                    <FaSearch className="search-icon" />
+                    <input
+                      type="text"
+                      placeholder="Search Data Hub datasets"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                  </div>
+                  <div className="dataset-list">
+                    {filteredDatasets.map((ds) => (
+                      <div key={ds.id} className="dataset-card">
+                        <div>
+                          <p className="dataset-name">{ds.name}</p>
+                          <p className="dataset-path">{ds.path}</p>
+                        </div>
+                        <button className="ghost-button">Open</button>
+                      </div>
+                    ))}
+                    {filteredDatasets.length === 0 && (
+                      <p className="empty-state">No datasets match your search.</p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           {isHelpVisible(helpId) && (

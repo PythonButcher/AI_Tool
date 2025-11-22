@@ -123,6 +123,11 @@
   border: 1px solid var(--border-color, #1f2235);
 }
 
+.tab-panels {
+  display: flex;
+  flex-direction: column;
+}
+
 .tab {
   padding: 10px;
   border: none;
