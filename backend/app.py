@@ -9,6 +9,7 @@ from backend.routes.upload import upload_bp
 from backend.routes.api_fetch import api_fetch_bp
 from backend.routes.analysis import analysis_bp
 from backend.routes.cleaning import cleaning_bp
+from backend.routes.manual_cleaning import manual_cleaning_bp
 from backend.routes.export import export_bp
 from backend.routes.sql_fetch import sql_fetch_bp
 from backend.services.ai_storyboard_gemini import ai_storyboard_gemini
@@ -36,6 +37,7 @@ def create_app():
     app.register_blueprint(upload_bp)
     app.register_blueprint(analysis_bp)
     app.register_blueprint(cleaning_bp)
+    app.register_blueprint(manual_cleaning_bp)
     app.register_blueprint(export_bp)
     app.register_blueprint(ai_bp)
     app.register_blueprint(nlp_bp)
