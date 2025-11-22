@@ -4,7 +4,6 @@ import axios from 'axios';
 import FileUpload from '../data_management/FileUpload';
 import ApiDataForm from '../../features/api/APiDataForm';
 import DatabaseConnectForm from '../../features/database/DatabaseConnectForm';
-import DragDrop from '../../utils/DragDrop';
 import DataHubWindow from '../../features/database/DataHubWindow';
 import { FaUpload, FaChartBar, FaServer, FaDatabase, FaRedoAlt, FaFilter, FaFileAlt, FaSun, FaMoon } from 'react-icons/fa';
 import { TbCloudDataConnection } from "react-icons/tb";
@@ -98,7 +97,6 @@ function MenuBar({ onFileUploadSuccess,  onStatsSelect,
                 onUploadComplete={() => setActiveDropdown(null)}
                 onFileUploadSuccess={onFileUploadSuccess}
               />
-              <DragDrop onFilesSelected={handleFileUpload} width="100%" height="200px" />
             </div>
           )}
         </div>
