@@ -1,5 +1,7 @@
 import React, { createContext, useState, useEffect, useMemo, useContext } from 'react';
 
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+
 export const DataContext = createContext();
 
 export const DataProvider = ({ children }) => {
@@ -15,10 +17,15 @@ export const DataProvider = ({ children }) => {
   const [anomalies, setAnomalies] = useState([]);
   const [isDetecting, setIsDetecting] = useState(false);
 
+  // Reset anomalies whenever a new dataset is loaded
+  useEffect(() => {
+    setAnomalies([]);
+  }, [uploadedData, fullData]);
+
   const detectAnomalies = async () => {
     setIsDetecting(true);
     try {
-      const response = await fetch('http://localhost:5000/api/analyze/outliers', {
+      const response = await fetch(`${API_URL}/api/outliers`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

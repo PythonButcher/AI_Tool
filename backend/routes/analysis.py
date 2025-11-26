@@ -116,20 +116,18 @@ def get_stats():
         return jsonify({"error": f"Error calculating statistics: {str(e)}"}), 500
 
 
-@analysis_bp.route('/outliers', methods=['POST'])
-def get_outliers():
+def _run_outlier_detection():
+    """Shared helper for anomaly detection endpoints."""
     uploaded_df = get_uploaded_df()
     if uploaded_df is None:
         return jsonify({"error": "No file has been uploaded yet"}), 400
 
     try:
-        # Get contamination from request body, default to 0.05
         data = request.get_json() or {}
-        contamination = data.get('contamination', 0.05)
+        contamination = float(data.get('contamination', 0.05))
 
-        # Detect anomalies
         outlier_indices = detect_anomalies(uploaded_df, contamination=contamination)
-        
+
         return jsonify({
             "success": True,
             "outlier_indices": outlier_indices,
@@ -140,3 +138,14 @@ def get_outliers():
         return jsonify({"error": str(ve)}), 400
     except Exception as e:
         return jsonify({"error": f"Error detecting outliers: {str(e)}"}), 500
+
+
+@analysis_bp.route('/outliers', methods=['POST'])
+def get_outliers():
+    return _run_outlier_detection()
+
+
+@analysis_bp.route('/analyze/outliers', methods=['POST'])
+def get_outliers_legacy():
+    """Backward-compatible route for older frontend paths."""
+    return _run_outlier_detection()
