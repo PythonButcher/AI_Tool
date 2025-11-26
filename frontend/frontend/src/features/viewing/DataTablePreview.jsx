@@ -38,7 +38,7 @@ function DataTablePreview({ label = "Preview Table:", data }) {
         </thead>
         <tbody>
           {data.map((row, idx) => (
-            <tr key={idx} style={{ backgroundColor: anomalies.includes(idx) ? 'rgba(255, 0, 0, 0.1)' : 'inherit' }}>
+            <tr key={idx} style={{ backgroundColor: anomalies.includes(idx) ? '#ffebee' : 'inherit' }}>
               {columns.map((col) => (
                 <td key={col}>
                   {typeof row[col] === 'object' ? JSON.stringify(row[col]) : row[col]}
