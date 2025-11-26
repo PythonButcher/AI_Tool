@@ -2,7 +2,7 @@ import React, { useState, useContext } from 'react';
 import axios from 'axios';
 import { FaRobot } from "react-icons/fa";
 import './AIChat.css';
-import { TextField, Button } from '@mui/material';
+import { TextField, Button, Select, MenuItem, FormControl, InputLabel } from '@mui/material';
 import { DataContext } from '../../context/DataContext';
 import MentionDropdown from '../../components/data_management/MentionDropdown';
 import { detectToken } from '../../utils/mentionUtils'; // Check spelling: detectToken vs dectectToken
@@ -82,12 +82,13 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
   const [mentionQuery, setMentionQuery] = useState(null);
   const [isMentionOpen, setIsMentionOpen] = useState(false);
   const [mentionPosition, setMentionPosition] = useState({ top: 0, left: 0 });
+  const [modelProvider, setModelProvider] = useState('openai');
 
   const toggleChat = () => setShowChat(prev => !prev);
 
   const handleUserCommand = async (command, dataset, instructions = null) => {
     try {
-      const payload = { command, dataset };
+      const payload = { command, dataset, model_provider: modelProvider };
       if (instructions) payload.instructions = instructions;
       const response = await axios.post(`${API_URL}/ai_cmd`, payload);
       if (command === "/charts") {
@@ -120,6 +121,7 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
       const response = await axios.post(`${API_URL}/api/nlp/chart`, {
         query,
         dataset,
+        model_provider: modelProvider,
       });
       console.log('AIChat /api/nlp/chart status:', response.status);
       return { success: true, data: response.data };
@@ -136,30 +138,30 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
       };
     }
   };
- // --------------------Mention section '@' of code-----------------------------------------------//
+  // --------------------Mention section '@' of code-----------------------------------------------//
 
   const handleMentionSelect = (datasetName) => {
     // 1. Find where the mention started (the last '@')
     const lastAtIndex = userInput.lastIndexOf('@');
-    
+
     // 2. Slice the text: keep everything before '@', add the name, add a space
     const newText = userInput.substring(0, lastAtIndex) + `@${datasetName} `;
-    
+
     // 3. Update state
     setUserInput(newText);
     setIsMentionOpen(false); // Close menu
-    
+
     // Optional: Focus the input back (requires a Ref, skip for now if too complex)
   };
-// --------------------Mention section '@' of code-----------------------------------------------//
+  // --------------------Mention section '@' of code-----------------------------------------------//
 
- const handleInputChange = (e) => {
+  const handleInputChange = (e) => {
     const newValue = e.target.value;
     const newCursorPos = e.target.selectionStart;
 
     // --- DEBUG LOGS START ---
     console.log("1. Typing detected:", newValue);
-    
+
     setUserInput(newValue);
 
     const token = detectToken(newValue, newCursorPos);
@@ -169,7 +171,7 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
       console.log("3. Opening Menu!"); // If this doesn't print, logic is failing
       setMentionQuery(token);
       setIsMentionOpen(true);
-      setMentionPosition({ top: -180, left: 10 }); 
+      setMentionPosition({ top: -180, left: 10 });
     } else {
       setIsMentionOpen(false);
       setMentionQuery(null);
@@ -177,7 +179,7 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
     // --- DEBUG LOGS END ---
   };
 
-// -----------------------------------------------------------------------------------------//
+  // -----------------------------------------------------------------------------------------//
   const handleSendMessage = async () => {
     if (!userInput.trim()) return;
 
@@ -245,7 +247,7 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
         setLoading(false);
         return;
       }
-    
+
 
       const formattedChartData = formatChartData(aiChartResponse);
       setAiChartType(formattedChartData.datasets[0]?.label || "Bar Chart");
@@ -286,7 +288,7 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
       responseText = await handleUserCommand(userInput.split(" ")[0], datasetContext);
     } else {
       try {
-        const response = await axios.post(`${API_URL}/ai`, { conversation_history });
+        const response = await axios.post(`${API_URL}/ai`, { conversation_history, model_provider: modelProvider });
         responseText = response.data.reply;
       } catch (error) {
         console.error("AIChat API Error:", error);
@@ -318,6 +320,23 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
         </div>
 
         <div className="chat-body">
+          <div style={{ padding: '10px', borderBottom: '1px solid #eee' }}>
+            <FormControl fullWidth size="small" variant="outlined">
+              <InputLabel id="model-provider-label">Model Provider</InputLabel>
+              <Select
+                labelId="model-provider-label"
+                id="model-provider-select"
+                value={modelProvider}
+                label="Model Provider"
+                onChange={(e) => setModelProvider(e.target.value)}
+                sx={{ color: 'black', '.MuiOutlinedInput-notchedOutline': { borderColor: '#ccc' } }}
+                MenuProps={{ sx: { zIndex: 2000 } }}
+              >
+                <MenuItem value="openai">OpenAI (GPT-4)</MenuItem>
+                <MenuItem value="gemini">Google Gemini</MenuItem>
+              </Select>
+            </FormControl>
+          </div>
           {userMessages.map((message, idx) => (
             <div key={idx} className={`chat-message ${message.role}`}>
               {message.content}
@@ -326,8 +345,8 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
         </div>
 
 
-       <div className="chat-input-container" style={{ position: 'relative' }}>
-          
+        <div className="chat-input-container" style={{ position: 'relative' }}>
+
           {/* 1. The Dropdown (Only shows when active) */}
           {isMentionOpen && (
             <MentionDropdown
@@ -359,7 +378,7 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
           >
             {loading ? "Thinking..." : "Send"}
           </Button>
-        
+
         </div>
         {error && <div className="error-message">{error}</div>}
       </div>

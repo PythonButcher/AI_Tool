@@ -2,6 +2,7 @@
 from flask import Blueprint, jsonify, request
 import io
 from backend.utils.global_state import get_uploaded_df
+from backend.services.ml_logic import detect_anomalies
 
 analysis_bp = Blueprint('analysis_bp', __name__, url_prefix='/api')
 
@@ -113,3 +114,29 @@ def get_stats():
 
     except Exception as e:
         return jsonify({"error": f"Error calculating statistics: {str(e)}"}), 500
+
+
+@analysis_bp.route('/outliers', methods=['POST'])
+def get_outliers():
+    uploaded_df = get_uploaded_df()
+    if uploaded_df is None:
+        return jsonify({"error": "No file has been uploaded yet"}), 400
+
+    try:
+        # Get contamination from request body, default to 0.05
+        data = request.get_json() or {}
+        contamination = data.get('contamination', 0.05)
+
+        # Detect anomalies
+        outlier_indices = detect_anomalies(uploaded_df, contamination=contamination)
+        
+        return jsonify({
+            "success": True,
+            "outlier_indices": outlier_indices,
+            "count": len(outlier_indices)
+        }), 200
+
+    except ValueError as ve:
+        return jsonify({"error": str(ve)}), 400
+    except Exception as e:
+        return jsonify({"error": f"Error detecting outliers: {str(e)}"}), 500

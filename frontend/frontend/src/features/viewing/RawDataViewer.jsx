@@ -1,5 +1,6 @@
-import React, { useMemo, useState, useCallback } from "react";
+import React, { useMemo, useState, useCallback, useContext } from "react";
 import { useHelpOverlay } from '../../context/HelpOverlayContext';
+import { DataContext } from '../../context/DataContext';
 
 /**
  * RawDataViewer
@@ -34,7 +35,44 @@ export default function RawDataViewer({
   const totalPages = Math.max(1, Math.ceil(totalRows / pageSize));
 
   const { isHelpVisible, toggleHelp, closeHelp } = useHelpOverlay();
-    const helpId = 'rawViewer';
+  const { activeDatasetId } = useContext(DataContext);
+  const [anomalies, setAnomalies] = useState([]);
+  const [isDetecting, setIsDetecting] = useState(false);
+
+  const helpId = 'rawViewer';
+
+  const detectAnomalies = async () => {
+    if (!activeDatasetId) {
+      alert("No active dataset found.");
+      return;
+    }
+
+    setIsDetecting(true);
+    try {
+      const response = await fetch('http://localhost:5000/api/analyze/outliers', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ dataset_id: activeDatasetId }),
+      });
+
+      const result = await response.json();
+      if (response.ok) {
+        setAnomalies(result.outlier_indices || []);
+        if (result.count === 0) {
+          alert("No anomalies detected.");
+        }
+      } else {
+        alert(`Error: ${result.error}`);
+      }
+    } catch (error) {
+      console.error("Error detecting anomalies:", error);
+      alert("Failed to detect anomalies.");
+    } finally {
+      setIsDetecting(false);
+    }
+  };
 
   // Build stable column list (union of keys in the first non-empty row, expanding up to 1000 rows)
   const columns = useMemo(() => {
@@ -90,7 +128,7 @@ export default function RawDataViewer({
     return <div style={{ padding: 8 }}>No data available.</div>;
   }
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>     
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
       {/* Controls (top) */}
       <div
         style={{
@@ -98,9 +136,9 @@ export default function RawDataViewer({
           alignItems: "center",
           gap: 8,
           flexWrap: "wrap",
-          
+
         }}
-        
+
       >
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <button
@@ -140,31 +178,58 @@ export default function RawDataViewer({
           </button>
           <button
             style={buttonStyle}
-            onClick={() => {}}
+            onClick={() => { }}
             aria-label="Download CSV"
           >
             Download CSV
           </button>
           <button
             style={buttonStyle}
-            onClick={() => {}}
+            onClick={() => { }}
             aria-label="Filter data"
           >
             Filter Data
           </button>
           <button
             style={buttonStyle}
-            onClick={() => {}}
+            onClick={() => { }}
             aria-label="Highlight duplicate rows"
           >
             Highlight Duplicates
           </button>
           <button
             style={buttonStyle}
-            onClick={() => {}}
+            onClick={() => { }}
             aria-label="Summary statistics"
           >
             Summary Stats
+          </button>
+          <button
+            onClick={detectAnomalies}
+            disabled={isDetecting}
+            style={{
+              backgroundColor: 'var(--border-color)',
+              fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+              color: 'var(--text-primary)',
+              border: '1px solid var(--text-secondary)',
+              padding: '2px 6px',
+              cursor: 'pointer',
+              borderRadius: '4px',
+              transition: 'background-color 0.3s ease, transform 0.2s ease',
+              opacity: isDetecting ? 0.7 : 1
+            }}
+            onMouseOver={(e) => {
+              if (!isDetecting) {
+                e.currentTarget.style.backgroundColor = 'var(--text-secondary)';
+                e.currentTarget.style.transform = 'scale(1.05)';
+              }
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--border-color)';
+              e.currentTarget.style.transform = 'scale(1)';
+            }}
+          >
+            {isDetecting ? 'Detecting...' : 'Detect Anomalies'}
           </button>
         </div>
 
@@ -186,12 +251,12 @@ export default function RawDataViewer({
           </select>
         </div>
         <button
-        type="button"
-        className="help-overlay-trigger"
-        onClick={() => toggleHelp('rawViewer')}
-      >
-        ❓
-      </button>
+          type="button"
+          className="help-overlay-trigger"
+          onClick={() => toggleHelp('rawViewer')}
+        >
+          ❓
+        </button>
 
         <span style={{ marginLeft: "auto", fontSize: 12 }}>
           {totalRows.toLocaleString()} rows
@@ -238,15 +303,15 @@ export default function RawDataViewer({
           </thead>
           <tbody>
             {pageRows.map((row, rIdx) => (
-              <tr key={rIdx}>
+              <tr key={rIdx} style={{ backgroundColor: anomalies.includes(pageStart + rIdx) ? 'rgba(255, 0, 0, 0.1)' : 'inherit' }}>
                 {columns.map((col) => {
                   const val = row?.[col];
                   const text =
                     val == null
                       ? ""
                       : typeof val === "object"
-                      ? JSON.stringify(val)
-                      : String(val);
+                        ? JSON.stringify(val)
+                        : String(val);
                   return (
                     <td
                       key={col}
@@ -268,28 +333,28 @@ export default function RawDataViewer({
           </tbody>
         </table>
         {isHelpVisible('rawViewer') && (
-        <div className="help-overlay visible">
-          <div className="help-overlay-content">
-            <span
-              className="help-overlay-close"
-              onClick={() => closeHelp('rawViewer')}
-            >
-              ×
-            </span>
-            <h3>Exploring the Full Dataset</h3>
-            <ol>
-              <li>This view displays your entire dataset — every record and column, not just a preview sample.</li>
-              <li>Scroll horizontally and vertically to explore large tables. Use your browser’s find feature (Ctrl + F or ⌘ + F) to quickly locate values or column names.</li>
-              <li>Column headers show all detected fields as loaded from the source file or database.</li>
-              <li>Use this view to validate that all rows were imported correctly before performing any cleaning or transformations.</li>
-              <li>For faster performance with very large files, consider working in the Data Preview window instead.</li>
-            </ol>
-            <p>
-              Tip: The Raw Data Viewer is read-only — you can’t edit directly here. Use the cleaning tools or AI Workflow to modify and save updated versions of your dataset.
-            </p>
+          <div className="help-overlay visible">
+            <div className="help-overlay-content">
+              <span
+                className="help-overlay-close"
+                onClick={() => closeHelp('rawViewer')}
+              >
+                ×
+              </span>
+              <h3>Exploring the Full Dataset</h3>
+              <ol>
+                <li>This view displays your entire dataset — every record and column, not just a preview sample.</li>
+                <li>Scroll horizontally and vertically to explore large tables. Use your browser’s find feature (Ctrl + F or ⌘ + F) to quickly locate values or column names.</li>
+                <li>Column headers show all detected fields as loaded from the source file or database.</li>
+                <li>Use this view to validate that all rows were imported correctly before performing any cleaning or transformations.</li>
+                <li>For faster performance with very large files, consider working in the Data Preview window instead.</li>
+              </ol>
+              <p>
+                Tip: The Raw Data Viewer is read-only — you can’t edit directly here. Use the cleaning tools or AI Workflow to modify and save updated versions of your dataset.
+              </p>
+            </div>
           </div>
-        </div>
-      )}
+        )}
       </div>
       {/* Controls (bottom) — duplicate for convenience */}
       <div
@@ -338,28 +403,28 @@ export default function RawDataViewer({
           </button>
           <button
             style={buttonStyle}
-            onClick={() => {}}
+            onClick={() => { }}
             aria-label="Download CSV"
           >
             Download CSV
           </button>
           <button
             style={buttonStyle}
-            onClick={() => {}}
+            onClick={() => { }}
             aria-label="Filter data"
           >
             Filter Data
           </button>
           <button
             style={buttonStyle}
-            onClick={() => {}}
+            onClick={() => { }}
             aria-label="Highlight duplicate rows"
           >
             Highlight Duplicates
           </button>
           <button
             style={buttonStyle}
-            onClick={() => {}}
+            onClick={() => { }}
             aria-label="Summary statistics"
           >
             Summary Stats
