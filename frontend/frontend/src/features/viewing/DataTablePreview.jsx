@@ -21,7 +21,7 @@ function DataTablePreview({ label = "Preview Table:", data }) {
 
   return (
     <div className="data-table-preview">
-      <table className="data-table">
+      <div className="data-table-preview__header" style={{ display: 'flex', justifyContent: 'flex-end' }}>
         <button
           type="button"
           className="help-overlay-trigger"
@@ -29,6 +29,8 @@ function DataTablePreview({ label = "Preview Table:", data }) {
         >
           ❓
         </button>
+      </div>
+      <table className="data-table">
         <thead>
           <tr>
             {columns.map((col) => (
@@ -73,7 +75,7 @@ function DataTablePreview({ label = "Preview Table:", data }) {
           </div>
         )
       }
-    </div >
+    </div>
   );
 }
 
