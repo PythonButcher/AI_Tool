@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useCallback, useContext } from "react";
+import { FaBolt, FaSpinner } from 'react-icons/fa';
 import { useHelpOverlay } from '../../context/HelpOverlayContext';
 import { DataContext } from '../../context/DataContext';
 
@@ -35,44 +36,9 @@ export default function RawDataViewer({
   const totalPages = Math.max(1, Math.ceil(totalRows / pageSize));
 
   const { isHelpVisible, toggleHelp, closeHelp } = useHelpOverlay();
-  const { activeDatasetId } = useContext(DataContext);
-  const [anomalies, setAnomalies] = useState([]);
-  const [isDetecting, setIsDetecting] = useState(false);
+  const { anomalies, detectAnomalies, isDetecting } = useContext(DataContext);
 
   const helpId = 'rawViewer';
-
-  const detectAnomalies = async () => {
-    if (!activeDatasetId) {
-      alert("No active dataset found.");
-      return;
-    }
-
-    setIsDetecting(true);
-    try {
-      const response = await fetch('http://localhost:5000/api/analyze/outliers', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ dataset_id: activeDatasetId }),
-      });
-
-      const result = await response.json();
-      if (response.ok) {
-        setAnomalies(result.outlier_indices || []);
-        if (result.count === 0) {
-          alert("No anomalies detected.");
-        }
-      } else {
-        alert(`Error: ${result.error}`);
-      }
-    } catch (error) {
-      console.error("Error detecting anomalies:", error);
-      alert("Failed to detect anomalies.");
-    } finally {
-      setIsDetecting(false);
-    }
-  };
 
   // Build stable column list (union of keys in the first non-empty row, expanding up to 1000 rows)
   const columns = useMemo(() => {
@@ -207,29 +173,32 @@ export default function RawDataViewer({
           <button
             onClick={detectAnomalies}
             disabled={isDetecting}
+            className={`header-button ${isDetecting ? 'running' : ''}`}
+            title="Detect Anomalies"
             style={{
-              backgroundColor: 'var(--border-color)',
-              fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-              color: 'var(--text-primary)',
-              border: '1px solid var(--text-secondary)',
-              padding: '2px 6px',
+              background: 'transparent',
+              border: 'none',
               cursor: 'pointer',
-              borderRadius: '4px',
-              transition: 'background-color 0.3s ease, transform 0.2s ease',
-              opacity: isDetecting ? 0.7 : 1
+              padding: '4px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'var(--text-primary)',
+              fontSize: '1.2em',
+              transition: 'transform 0.2s ease, color 0.2s ease'
             }}
             onMouseOver={(e) => {
-              if (!isDetecting) {
-                e.currentTarget.style.backgroundColor = 'var(--text-secondary)';
-                e.currentTarget.style.transform = 'scale(1.05)';
-              }
+              if (!isDetecting) e.currentTarget.style.transform = 'scale(1.1)';
             }}
             onMouseOut={(e) => {
-              e.currentTarget.style.backgroundColor = 'var(--border-color)';
               e.currentTarget.style.transform = 'scale(1)';
             }}
           >
-            {isDetecting ? 'Detecting...' : 'Detect Anomalies'}
+            {isDetecting ? (
+              <FaSpinner className="autopilot-spinner" aria-hidden="true" />
+            ) : (
+              <FaBolt aria-hidden="true" />
+            )}
           </button>
         </div>
 
