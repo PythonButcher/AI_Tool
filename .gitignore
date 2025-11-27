@@ -6,3 +6,6 @@ __pycache__/
 .vscode/
 *.log
 /Uploads
+backend/venv/
+venv/
+__pycache__/
