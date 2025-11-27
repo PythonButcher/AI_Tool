@@ -1,5 +1,6 @@
-import React, { useMemo, useState, useCallback } from "react";
+import React, { useMemo, useState, useCallback, useContext } from "react";
 import { useHelpOverlay } from '../../context/HelpOverlayContext';
+import { DataContext } from '../../context/DataContext';
 
 /**
  * RawDataViewer
@@ -29,6 +30,7 @@ export default function RawDataViewer({
   const [page, setPage] = useState(Math.max(1, initialPage));
   const [pageSize, setPageSize] = useState(pageSizeProp);
   const buttonStyle = { padding: "2px 6px" };
+  const { anomalies, detectAnomalies, isDetecting } = useContext(DataContext);
 
   const totalRows = Array.isArray(rows) ? rows.length : 0;
   const totalPages = Math.max(1, Math.ceil(totalRows / pageSize));
@@ -103,6 +105,14 @@ export default function RawDataViewer({
         
       >
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <button
+            style={buttonStyle}
+            onClick={detectAnomalies}
+            disabled={isDetecting}
+            aria-label="Detect outliers"
+          >
+            {isDetecting ? "⏳" : "⚡"}
+          </button>
           <button
             style={buttonStyle}
             onClick={() => goto(1)}
@@ -237,34 +247,41 @@ export default function RawDataViewer({
             </tr>
           </thead>
           <tbody>
-            {pageRows.map((row, rIdx) => (
-              <tr key={rIdx}>
-                {columns.map((col) => {
-                  const val = row?.[col];
-                  const text =
-                    val == null
-                      ? ""
-                      : typeof val === "object"
-                      ? JSON.stringify(val)
-                      : String(val);
-                  return (
-                    <td
-                      key={col}
-                      style={{
-                        padding: "6px 8px",
-                        borderBottom: "1px solid #f2f2f2",
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                      }}
-                      title={text}
-                    >
-                      {text}
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
+            {pageRows.map((row, rIdx) => {
+              const absoluteIndex = pageStart + rIdx;
+              const isAnomaly = anomalies.includes(absoluteIndex);
+              return (
+                <tr
+                  key={rIdx}
+                  style={isAnomaly ? { backgroundColor: "#fff4e6" } : undefined}
+                >
+                  {columns.map((col) => {
+                    const val = row?.[col];
+                    const text =
+                      val == null
+                        ? ""
+                        : typeof val === "object"
+                        ? JSON.stringify(val)
+                        : String(val);
+                    return (
+                      <td
+                        key={col}
+                        style={{
+                          padding: "6px 8px",
+                          borderBottom: "1px solid #f2f2f2",
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }}
+                        title={text}
+                      >
+                        {text}
+                      </td>
+                    );
+                  })}
+                </tr>
+              );
+            })}
           </tbody>
         </table>
         {isHelpVisible('rawViewer') && (
