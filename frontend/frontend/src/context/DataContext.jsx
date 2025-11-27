@@ -1,5 +1,7 @@
 import React, { createContext, useState, useEffect, useMemo, useContext } from 'react';
 
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+
 export const DataContext = createContext();
 
 export const DataProvider = ({ children }) => {
@@ -10,6 +12,40 @@ export const DataProvider = ({ children }) => {
   const [pipelineResults, setPipelineResults] = useState({}); // ✅ NEW: results from AI pipeline
   const [aiReportReady, setAiReportReady] = useState(false); // flag when report finished
   const [showAiReport, setShowAiReport] = useState(false);
+  const [anomalies, setAnomalies] = useState([]);
+  const [isDetecting, setIsDetecting] = useState(false);
+
+  const detectAnomalies = async () => {
+    if (isDetecting) return;
+    setIsDetecting(true);
+    try {
+      const response = await fetch(`${API_URL}/api/outliers`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contamination: 0.02 })
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to detect anomalies');
+      }
+
+      const indices = Array.isArray(data.outlier_indices) ? data.outlier_indices : [];
+      setAnomalies(indices);
+
+      if (indices.length === 0) {
+        alert('No outliers detected.');
+      }
+    } catch (error) {
+      alert(`Failed to detect anomalies: ${error.message}`);
+    } finally {
+      setIsDetecting(false);
+    }
+  };
+
+  useEffect(() => {
+    setAnomalies([]);
+  }, [uploadedData, fullData]);
 
   useEffect(() => {
     console.log('DataContext fullData rows:', Array.isArray(fullData) ? fullData.length : 0);
@@ -23,7 +59,10 @@ export const DataProvider = ({ children }) => {
     pipelineResults, setPipelineResults,
     aiReportReady, setAiReportReady,
     showAiReport,  setShowAiReport,
-  }), [uploadedData, fullData, cleanedData, filteredData, pipelineResults, aiReportReady, showAiReport]);
+    anomalies, setAnomalies,
+    isDetecting, setIsDetecting,
+    detectAnomalies,
+  }), [uploadedData, fullData, cleanedData, filteredData, pipelineResults, aiReportReady, showAiReport, anomalies, isDetecting]);
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 };
