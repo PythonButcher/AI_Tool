@@ -33,23 +33,8 @@ export const detectToken = (text, cursorPosition) => {
 
   return query;
 }
-/**
- * Extracts all mention tokens from a text string.
- * @param {string} text - e.g. "Analyze @Sales2023 and @Marketing_Data"
- * @returns {string[]} - e.g. ["Sales2023", "Marketing_Data"]
- */
-export function extractTokens(text){
-    if (!text) return [];
 
-
-    const matches = text.match(/@(\w+)/g);
-
-    if(!matches) {
-        return []
-    }
-
-    // The match includes the '@' (e.g. "@Sales"), so we slice it off
-    return matches.map(token => token.substring(1));
+export function extractTokens(){
 
 }
 

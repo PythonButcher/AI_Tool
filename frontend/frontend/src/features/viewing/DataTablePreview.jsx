@@ -1,16 +1,12 @@
 // src/components/preview_components/DataTablePreview.jsx
-import React, { useContext } from 'react';
+import React from 'react';
 import { useHelpOverlay } from '../../context/HelpOverlayContext';
-import { DataContext } from '../../context/DataContext';
 
 
 function DataTablePreview({ label = "Preview Table:", data }) {
 
   const { isHelpVisible, toggleHelp, closeHelp } = useHelpOverlay();
-  const { anomalies } = useContext(DataContext);
-
-  const helpId = 'dataPreview';
-
+      const helpId = 'dataPreview';
   if (!Array.isArray(data) || data.length === 0) {
     return <div>No data to display.</div>;
   }
@@ -21,16 +17,14 @@ function DataTablePreview({ label = "Preview Table:", data }) {
 
   return (
     <div className="data-table-preview">
-      <div className="data-table-preview__header" style={{ display: 'flex', justifyContent: 'flex-end' }}>
-        <button
-          type="button"
-          className="help-overlay-trigger"
-          onClick={() => toggleHelp('dataPreview')}
-        >
-          ❓
-        </button>
-      </div>
       <table className="data-table">
+        <button
+        type="button"
+        className="help-overlay-trigger"
+        onClick={() => toggleHelp('dataPreview')}
+      >
+        ❓
+      </button>
         <thead>
           <tr>
             {columns.map((col) => (
@@ -40,7 +34,7 @@ function DataTablePreview({ label = "Preview Table:", data }) {
         </thead>
         <tbody>
           {data.map((row, idx) => (
-            <tr key={idx} style={{ backgroundColor: anomalies.includes(idx) ? '#ffebee' : 'inherit' }}>
+            <tr key={idx}>
               {columns.map((col) => (
                 <td key={col}>
                   {typeof row[col] === 'object' ? JSON.stringify(row[col]) : row[col]}
@@ -50,33 +44,31 @@ function DataTablePreview({ label = "Preview Table:", data }) {
           ))}
         </tbody>
       </table>
-      {/* ✅ Help Overlay */}
-      {
-        isHelpVisible('dataPreview') && (
-          <div className="help-overlay visible">
-            <div className="help-overlay-content">
-              <span
-                className="help-overlay-close"
-                onClick={() => closeHelp('dataPreview')}
-              >
-                ×
-              </span>
-              <h3>Understanding the Data Preview</h3>
-              <ol>
-                <li>The preview shows a limited sample of your dataset — a few rows to help you confirm that your upload loaded correctly.</li>
-                <li>Below the table, you’ll see a summary similar to <code>pandas.DataFrame.info()</code>, listing each column’s data type, number of non-null entries, and any missing values.</li>
-                <li>Use this information to quickly identify data quality issues before cleaning or visualization.</li>
-                <li>Switch between preview modes (table or JSON) to inspect your data from different perspectives.</li>
-              </ol>
-              <p>
-                Tip: The Data Preview is read-only — make adjustments using the cleaning tools or AI commands instead of editing directly here.
-              </p>
-            </div>
-          </div>
-        )
-      }
-    </div>
-  );
+     {/* ✅ Help Overlay */}
+    {isHelpVisible('dataPreview') && (
+      <div className="help-overlay visible">
+        <div className="help-overlay-content">
+          <span
+            className="help-overlay-close"
+            onClick={() => closeHelp('dataPreview')}
+          >
+            ×
+          </span>
+          <h3>Understanding the Data Preview</h3>
+          <ol>
+            <li>The preview shows a limited sample of your dataset — a few rows to help you confirm that your upload loaded correctly.</li>
+            <li>Below the table, you’ll see a summary similar to <code>pandas.DataFrame.info()</code>, listing each column’s data type, number of non-null entries, and any missing values.</li>
+            <li>Use this information to quickly identify data quality issues before cleaning or visualization.</li>
+            <li>Switch between preview modes (table or JSON) to inspect your data from different perspectives.</li>
+          </ol>
+          <p>
+            Tip: The Data Preview is read-only — make adjustments using the cleaning tools or AI commands instead of editing directly here.
+          </p>
+        </div>
+      </div>
+    )}
+  </div>
+);
 }
 
 export default DataTablePreview;

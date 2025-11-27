@@ -28,15 +28,7 @@
     background-color: var(--border-color);
     border-color: var(--text-secondary);
   }
-
-  .preview-mode-selector .icon-button {
-    min-width: 44px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-  }
-
+  
   /* When a button is selected */
   .preview-mode-selector button.active {
     background-color: var(--accent-blue); /* Matching your accent blue */
