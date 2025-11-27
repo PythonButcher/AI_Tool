@@ -1,12 +1,14 @@
 // src/components/preview_components/DataTablePreview.jsx
-import React from 'react';
+import React, { useContext } from 'react';
 import { useHelpOverlay } from '../../context/HelpOverlayContext';
+import { DataContext } from '../../context/DataContext';
 
 
 function DataTablePreview({ label = "Preview Table:", data }) {
 
   const { isHelpVisible, toggleHelp, closeHelp } = useHelpOverlay();
-      const helpId = 'dataPreview';
+  const helpId = 'dataPreview';
+  const { anomalies } = useContext(DataContext);
   if (!Array.isArray(data) || data.length === 0) {
     return <div>No data to display.</div>;
   }
@@ -34,7 +36,10 @@ function DataTablePreview({ label = "Preview Table:", data }) {
         </thead>
         <tbody>
           {data.map((row, idx) => (
-            <tr key={idx}>
+            <tr
+              key={idx}
+              style={anomalies.includes(idx) ? { backgroundColor: '#fff4e6' } : undefined}
+            >
               {columns.map((col) => (
                 <td key={col}>
                   {typeof row[col] === 'object' ? JSON.stringify(row[col]) : row[col]}
