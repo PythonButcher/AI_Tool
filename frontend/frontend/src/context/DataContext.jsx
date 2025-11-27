@@ -22,7 +22,7 @@ export const DataProvider = ({ children }) => {
       const response = await fetch(`${API_URL}/api/outliers`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contamination: 0.05 })
+        body: JSON.stringify({ contamination: 0.02 })
       });
 
       const data = await response.json();

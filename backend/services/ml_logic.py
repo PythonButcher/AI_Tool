@@ -1,5 +1,6 @@
 import pandas as pd
 from sklearn.ensemble import IsolationForest
+from sklearn.preprocessing import StandardScaler
 from typing import Optional, List
 
 
@@ -26,8 +27,15 @@ def detect_anomalies(df: pd.DataFrame, contamination: Optional[float] = None) ->
         mean_values[col] = mean_val
 
     filled_df = numeric_df.fillna(mean_values)
-    model = IsolationForest(contamination=contamination if contamination is not None else 0.05, random_state=42)
-    predictions = model.fit_predict(filled_df)
+
+    scaler = StandardScaler()
+    scaled_values = scaler.fit_transform(filled_df)
+
+    model = IsolationForest(
+        contamination=contamination if contamination is not None else 0.02,
+        random_state=42
+    )
+    predictions = model.fit_predict(scaled_values)
     outlier_indices = filled_df.index[predictions == -1].tolist()
 
     return outlier_indices
