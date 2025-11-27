@@ -7,6 +7,5 @@ __pycache__/
 *.log
 /Uploads
 backend/venv/
-backend/venv
 venv/
 __pycache__/
