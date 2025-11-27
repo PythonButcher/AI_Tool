@@ -1,29 +1,70 @@
 import React, { createContext, useState, useEffect, useMemo, useContext } from 'react';
 
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+
 export const DataContext = createContext();
 
 export const DataProvider = ({ children }) => {
-  const [uploadedData, setUploadedData]   = useState(null);  // preview (≤100 rows)
-  const [fullData,      setFullData]      = useState(null);  // entire table
-  const [cleanedData,   setCleanedData]   = useState(null);
-  const [filteredData,  setFilteredData]  = useState(null);
+  const [uploadedData, setUploadedData] = useState(null);  // preview (≤100 rows)
+  const [fullData, setFullData] = useState(null);  // entire table
+  const [cleanedData, setCleanedData] = useState(null);
+  const [filteredData, setFilteredData] = useState(null);
   const [pipelineResults, setPipelineResults] = useState({}); // ✅ NEW: results from AI pipeline
   const [aiReportReady, setAiReportReady] = useState(false); // flag when report finished
   const [showAiReport, setShowAiReport] = useState(false);
+
+  // Anomaly Detection State
+  const [anomalies, setAnomalies] = useState([]);
+  const [isDetecting, setIsDetecting] = useState(false);
+
+  // Reset anomalies whenever a new dataset is loaded
+  useEffect(() => {
+    setAnomalies([]);
+  }, [uploadedData, fullData]);
+
+  const detectAnomalies = async () => {
+    setIsDetecting(true);
+    try {
+      const response = await fetch(`${API_URL}/api/outliers`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ contamination: 0.05 }),
+      });
+
+      const result = await response.json();
+      if (response.ok) {
+        setAnomalies(result.outlier_indices || []);
+        if (result.count === 0) {
+          alert("No anomalies detected.");
+        }
+      } else {
+        alert(`Error: ${result.error}`);
+      }
+    } catch (error) {
+      console.error("Error detecting anomalies:", error);
+      alert("Failed to detect anomalies.");
+    } finally {
+      setIsDetecting(false);
+    }
+  };
 
   useEffect(() => {
     console.log('DataContext fullData rows:', Array.isArray(fullData) ? fullData.length : 0);
   }, [fullData]);
 
   const value = useMemo(() => ({
-    uploadedData,  setUploadedData,
-    fullData,      setFullData,
-    cleanedData,   setCleanedData,
-    filteredData,  setFilteredData,
+    uploadedData, setUploadedData,
+    fullData, setFullData,
+    cleanedData, setCleanedData,
+    filteredData, setFilteredData,
     pipelineResults, setPipelineResults,
     aiReportReady, setAiReportReady,
-    showAiReport,  setShowAiReport,
-  }), [uploadedData, fullData, cleanedData, filteredData, pipelineResults, aiReportReady, showAiReport]);
+    showAiReport, setShowAiReport,
+    anomalies, setAnomalies,
+    isDetecting, detectAnomalies,
+  }), [uploadedData, fullData, cleanedData, filteredData, pipelineResults, aiReportReady, showAiReport, anomalies, isDetecting]);
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 };

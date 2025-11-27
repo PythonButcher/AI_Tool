@@ -82,12 +82,13 @@ def storyboard():
         • pick chart encodings automatically – e.g. Bar for category vs numeric, Line for date vs numeric, Pie for shares.
         • labels & values MUST be parallel arrays and numeric values must be numbers.
         • NEVER wrap output in markdown or commentary – pure JSON only.
+        • Add clear colors for the different data points.
 
         ── SCHEMA ──
         {json.dumps(schema_summary, separators=(',', ':'))}
 
         ── SAMPLE ROWS (≤50) ──
-        {json.dumps(rows[:50], separators=(',', ':'))}
+        {json.dumps(rows[:300], separators=(',', ':'))}
         ''')
 
         raw = gemini_call(prompt)

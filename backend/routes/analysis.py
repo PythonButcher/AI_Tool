@@ -2,6 +2,7 @@
 from flask import Blueprint, jsonify, request
 import io
 from backend.utils.global_state import get_uploaded_df
+from backend.services.ml_logic import detect_anomalies
 
 analysis_bp = Blueprint('analysis_bp', __name__, url_prefix='/api')
 
@@ -113,3 +114,38 @@ def get_stats():
 
     except Exception as e:
         return jsonify({"error": f"Error calculating statistics: {str(e)}"}), 500
+
+
+def _run_outlier_detection():
+    """Shared helper for anomaly detection endpoints."""
+    uploaded_df = get_uploaded_df()
+    if uploaded_df is None:
+        return jsonify({"error": "No file has been uploaded yet"}), 400
+
+    try:
+        data = request.get_json() or {}
+        contamination = float(data.get('contamination', 0.05))
+
+        outlier_indices = detect_anomalies(uploaded_df, contamination=contamination)
+
+        return jsonify({
+            "success": True,
+            "outlier_indices": outlier_indices,
+            "count": len(outlier_indices)
+        }), 200
+
+    except ValueError as ve:
+        return jsonify({"error": str(ve)}), 400
+    except Exception as e:
+        return jsonify({"error": f"Error detecting outliers: {str(e)}"}), 500
+
+
+@analysis_bp.route('/outliers', methods=['POST'])
+def get_outliers():
+    return _run_outlier_detection()
+
+
+@analysis_bp.route('/analyze/outliers', methods=['POST'])
+def get_outliers_legacy():
+    """Backward-compatible route for older frontend paths."""
+    return _run_outlier_detection()
