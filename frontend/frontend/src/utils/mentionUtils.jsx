@@ -34,9 +34,21 @@ export const detectToken = (text, cursorPosition) => {
   return query;
 }
 
-export function extractTokens(){
+export function extractTokens(text) {
+  if (!text || typeof text !== "string") return [];
 
+  // Match @ followed by 1+ non-whitespace characters
+  // Example: "@sales2024" -> captures "sales2024"
+  const matches = text.match(/@(\S+)/g);
+  if (!matches) return [];
+
+  // Remove '@', dedupe
+  const names = matches.map(m => m.slice(1));
+  return Array.from(new Set(names));
 }
+
+
+
 
 
 export function tokenToDataset() {
