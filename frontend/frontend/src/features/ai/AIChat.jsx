@@ -4,8 +4,9 @@ import { FaRobot } from "react-icons/fa";
 import './AIChat.css';
 import { TextField, Button } from '@mui/material';
 import { DataContext } from '../../context/DataContext';
+import { WarehouseContext } from '../../context/WarehouseContext';
 import MentionDropdown from '../../components/data_management/MentionDropdown';
-import { detectToken } from '../../utils/mentionUtils'; // Check spelling: detectToken vs dectectToken
+import { detectToken, extractTokens } from '../../utils/mentionUtils'; // Check spelling: detectToken vs dectectToken
 import { AICommands } from '../workflow/AiCommandBlock';
 import { getDynamicColors } from '../../utils/ChartStyles';
 
@@ -73,6 +74,7 @@ const formatChartData = (chartResponse) => {
 
 function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
   const { cleanedData, fullData, setCleanedData } = useContext(DataContext);
+  const { datasets } = useContext(WarehouseContext)
   const [showChat, setShowChat] = useState(false);
   const [userMessages, setUserMessages] = useState([]);
   const [userInput, setUserInput] = useState('');
@@ -84,6 +86,8 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
   const [mentionPosition, setMentionPosition] = useState({ top: 0, left: 0 });
 
   const toggleChat = () => setShowChat(prev => !prev);
+
+  console.log("Here are the datasets:", WarehouseContext.Provider)
 
   const handleUserCommand = async (command, dataset, instructions = null) => {
     try {
@@ -181,8 +185,18 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
   const handleSendMessage = async () => {
     if (!userInput.trim()) return;
 
+    const tokens = extractTokens(userInput);
+    console.log("Phase2 | userInput:", userInput);
+    console.log("Phase2 | extracted:", tokens);
+
+    const resolvedDatasets = datasets.filter(ds =>
+      tokens.includes(ds.name)
+    );
+    console.log("Phase3 | resolvedDatasets", resolvedDatasets);
+
     setLoading(true);
     setError(null);
+    
 
     const datasetContext = resolveDatasetForNlp();
     if (!Array.isArray(datasetContext) || datasetContext.length === 0) {
@@ -286,7 +300,7 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
       responseText = await handleUserCommand(userInput.split(" ")[0], datasetContext);
     } else {
       try {
-        const response = await axios.post(`${API_URL}/ai`, { conversation_history });
+        const response = await axios.post(`${API_URL}/ai`, { conversation_history, resolvedDatasets });
         responseText = response.data.reply;
       } catch (error) {
         console.error("AIChat API Error:", error);
