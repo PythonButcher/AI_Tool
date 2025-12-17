@@ -2,7 +2,7 @@ import React, { useState, useContext } from 'react';
 import axios from 'axios';
 import { FaRobot } from "react-icons/fa";
 import './AIChat.css';
-import { TextField, Button } from '@mui/material';
+import { TextField, Button, Paper, Box } from '@mui/material';
 import { DataContext } from '../../context/DataContext';
 import { WarehouseContext } from '../../context/WarehouseContext';
 import MentionDropdown from '../../components/data_management/MentionDropdown';
@@ -340,8 +340,7 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
         </div>
 
 
-       <div className="chat-input-container" style={{ position: 'relative' }}>
-          
+       <Paper className="chat-input-container" elevation={0}>
           {/* 1. The Dropdown (Only shows when active) */}
           {isMentionOpen && (
             <MentionDropdown
@@ -352,29 +351,30 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
             />
           )}
 
-          {/* 2. The Input Field */}
-          <TextField
-            label="Ask about the data..."
-            variant="outlined"
-            fullWidth
-            value={userInput}
-            onChange={handleInputChange}
-            disabled={loading}
-          />
+          <Box className="chat-input-inner">
+            {/* 2. The Input Field */}
+            <TextField
+              label="Ask about the data..."
+              variant="outlined"
+              fullWidth
+              value={userInput}
+              onChange={handleInputChange}
+              disabled={loading}
+            />
 
-          {/* 3. The Send Button */}
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={handleSendMessage}
-            disabled={loading}
-            className="aichat-button"
-            data-tooltip="Send Message"
-          >
-            {loading ? "Thinking..." : "Send"}
-          </Button>
-        
-        </div>
+            {/* 3. The Send Button */}
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={handleSendMessage}
+              disabled={loading}
+              className="aichat-button"
+              data-tooltip="Send Message"
+            >
+              {loading ? "Thinking..." : "Send"}
+            </Button>
+          </Box>
+        </Paper>
         {error && <div className="error-message">{error}</div>}
       </div>
     </>
