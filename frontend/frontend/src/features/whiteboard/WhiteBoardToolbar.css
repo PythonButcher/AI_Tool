@@ -138,6 +138,10 @@
   color: #e5e7eb;
 }
 
+.excalidraw .App-toolbar {
+  display: none !important;
+}
+
 @media (max-width: 1024px) {
   .toolbar-actions {
     justify-content: flex-start;

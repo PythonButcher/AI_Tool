@@ -11,6 +11,8 @@ import {
   FaEraser,
   FaLongArrowAltRight,
   FaSwatchbook,
+  FaHandPaper,
+  FaImage,
 } from "react-icons/fa";
 import { BsDiamond } from "react-icons/bs";
 import { MdLineWeight } from "react-icons/md";
@@ -24,6 +26,7 @@ const WhiteboardToolbar = ({ excalidrawRef, onCompileSketch, onThemeChange, them
 
   const tools = useMemo(
     () => [
+      { type: "hand", label: "Pan", icon: <FaHandPaper /> },
       { type: "selection", label: "Select", icon: <FaMousePointer /> },
       { type: "freedraw", label: "Pencil", icon: <FaPenFancy /> },
       { type: "line", label: "Line", icon: <FaMinus /> },
@@ -34,6 +37,7 @@ const WhiteboardToolbar = ({ excalidrawRef, onCompileSketch, onThemeChange, them
       { type: "text", label: "Text", icon: <FaFont /> },
       { type: "highlighter", label: "Highlighter", icon: <FaHighlighter /> },
       { type: "eraser", label: "Eraser", icon: <FaEraser /> },
+      { type: "image", label: "Image", icon: <FaImage /> },
     ],
     []
   );
