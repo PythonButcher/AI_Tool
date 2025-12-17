@@ -9,7 +9,7 @@ import { useHelpOverlay } from '../../context/HelpOverlayContext';
 // ✅ Import our parser
 import { parseSketch } from "../../utils/sketch/SketchParser";
 
-const Whiteboard = ({ label = "AI Whitboard:", savedScene }) => {
+const Whiteboard = ({ label = "AI Whiteboard:", savedScene }) => {
   const excalidrawRef = useRef(null);
   const { saveWindowContentState } = useWindowContext();
   const lastSceneRef = useRef(savedScene ? JSON.stringify(savedScene) : null);
