@@ -25,6 +25,7 @@ html, body, #root {
   /* Light theme (default) */
   --bg-primary: #ffffff;
   --bg-secondary: #f9fafb;
+  --menu-bar-surface: #eef1f5;
   --text-primary: #111827;
   --text-secondary: #374151;
   --border-color: #d1d5db;
@@ -85,4 +86,3 @@ html, body, #root {
   --accent-white-strong: rgba(249, 250, 251, 0.55);
   --text-on-accent: #f9fafb;
 }
-

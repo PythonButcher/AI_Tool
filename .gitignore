@@ -1,11 +1,109 @@
+# =========================
+# Node / React
+# =========================
 node_modules/
-.env
-.DS_Store
+.pnp/
+.pnp.js
+
+# Build output
+build/
+dist/
+
+# Vite / CRA / bundlers
+.vite/
+.parcel-cache/
+.cache/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ESLint / tooling
+.eslintcache
+
+# =========================
+# Python / Flask
+# =========================
 __pycache__/
-*.pyc
-.vscode/
-*.log
-/Uploads
-backend/venv/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtual environments
 venv/
-__pycache__/
+.venv/
+env/
+ENV/
+
+# Python build artifacts
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Flask
+instance/
+.flaskenv
+
+# =========================
+# Environment variables / Secrets
+# =========================
+.env
+.env.*
+!.env.example
+
+# API keys / credentials
+*.key
+*.pem
+*.crt
+
+# =========================
+# AI / Data / Runtime Artifacts
+# =========================
+# Uploaded or generated data
+uploads/
+data/
+*.csv
+*.xlsx
+*.jsonl
+
+# Model artifacts / caches
+models/
+checkpoints/
+wandb/
+mlruns/
+
+# =========================
+# Coverage / Testing
+# =========================
+coverage/
+.pytest_cache/
+htmlcov/
+
+# =========================
+# OS / Editor / IDE
+# =========================
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# VS Code
+.vscode/
+!.vscode/extensions.json
+
+# JetBrains
+.idea/
+*.iml
+
+# =========================
+# Misc
+# =========================
+*.log
+*.tmp
+*.swp
+*.bak
+
+# Local-only config
+.local/
