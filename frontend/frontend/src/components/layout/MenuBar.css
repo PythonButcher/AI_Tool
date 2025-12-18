@@ -18,7 +18,7 @@
 
 [data-theme='startrek'] .menu-bar {
   position: relative;
-  padding: 16px 22px;
+  padding: 12px 18px;
   border: none;
   border-radius: 0;
   box-shadow: none;
@@ -28,7 +28,11 @@
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, var(--rail-amber) 0 24%, var(--rail-purple) 24% 42%, var(--rail-blue) 42% 58%, var(--rail-muted) 58% 100%);
+  background: linear-gradient(90deg,
+    var(--rail-amber) 0 220px,
+    var(--rail-purple) 220px 370px,
+    var(--rail-blue) 370px 520px,
+    var(--rail-muted) 520px 100%);
   border-radius: 0 0 28px 0;
   z-index: 0;
 }
@@ -58,6 +62,19 @@
   font-family: var(--font-family-display);
   letter-spacing: 0.06em;
   z-index: 1;
+  padding: 8px 16px;
+  min-width: 210px;
+  text-align: left;
+  position: relative;
+}
+
+[data-theme='startrek'] .menu-title::before {
+  content: "";
+  position: absolute;
+  inset: -8px -12px;
+  background: var(--rail-amber);
+  border-radius: 0 0 22px 0;
+  z-index: -1;
 }
 
 .menu-actions {
@@ -66,6 +83,10 @@
   justify-content: space-between;
   gap: 18px;
   flex: 1;
+}
+
+[data-theme='startrek'] .menu-actions {
+  gap: 10px;
 }
 
 /* ──────────────────────────────────────────────────────────
@@ -78,12 +99,42 @@
   gap: 10px;
 }
 
+[data-theme='startrek'] .menu-bar-left {
+  gap: 14px;
+}
+
+[data-theme='startrek'] .menu-bar-right {
+  gap: 10px;
+  margin-left: auto;
+}
+
 /* ──────────────────────────────────────────────────────────
    PRIMARY BUTTONS (e.g. Upload, DB, Stats)
 ────────────────────────────────────────────────────────── */
 .menu-button-container {
   position: relative;
 }
+
+[data-theme='startrek'] .menu-bar-left .menu-button-container:nth-child(1) { width: 170px; }
+[data-theme='startrek'] .menu-bar-left .menu-button-container:nth-child(2) { width: 150px; }
+[data-theme='startrek'] .menu-bar-left .menu-button-container:nth-child(3) { width: 150px; }
+[data-theme='startrek'] .menu-bar-left .menu-button-container:nth-child(4) { width: 150px; }
+
+[data-theme='startrek'] .menu-button-container::before {
+  content: "";
+  position: absolute;
+  inset: -6px -10px;
+  border-radius: 18px;
+  background: var(--rail-muted);
+  opacity: 0.85;
+  z-index: 0;
+  pointer-events: none;
+}
+
+[data-theme='startrek'] .menu-bar-left .menu-button-container:nth-child(1)::before { background: var(--rail-purple); }
+[data-theme='startrek'] .menu-bar-left .menu-button-container:nth-child(2)::before { background: var(--rail-blue); }
+[data-theme='startrek'] .menu-bar-left .menu-button-container:nth-child(3)::before { background: var(--rail-muted); }
+[data-theme='startrek'] .menu-bar-left .menu-button-container:nth-child(4)::before { background: var(--rail-muted); }
 
 .menu-button,
 .menu-icon-btn,
@@ -198,6 +249,22 @@
 .dropdown-content button:hover,
 .dropdown-content div:hover {
   background-color: var(--bg-secondary);
+}
+
+[data-theme='startrek'] .menu-dropdown {
+  border: 2px solid var(--rail-muted);
+  border-radius: 16px 0 16px 16px;
+  background: linear-gradient(180deg, var(--rail-amber) 0 20%, var(--bg-secondary) 20% 100%);
+  box-shadow: 0 12px 28px var(--shadow-color-strong);
+}
+
+[data-theme='startrek'] .dropdown-content button {
+  font-family: var(--font-family-display);
+  letter-spacing: 0.06em;
+  color: var(--text-primary);
+}
+[data-theme='startrek'] .dropdown-content button:hover {
+  background: var(--accent-yellow-soft);
 }
 
 [data-theme='startrek'] .menu-dropdown {
