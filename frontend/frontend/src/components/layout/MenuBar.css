@@ -90,34 +90,30 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-}
-
-[data-theme='startrek'] .menu-bar-left .menu-button-container:nth-child(1) { width: 170px; }
-[data-theme='startrek'] .menu-bar-left .menu-button-container:nth-child(2) { width: 150px; }
-[data-theme='startrek'] .menu-bar-left .menu-button-container:nth-child(3) { width: 150px; }
-[data-theme='startrek'] .menu-bar-left .menu-button-container:nth-child(4) { width: 150px; }
-
-[data-theme='startrek'] .menu-button-container::before {
-  display: none;
-}
-
-[data-theme='startrek'] .menu-bar-left .menu-button-container:nth-child(1) {
-  background: var(--rail-purple);
-}
-[data-theme='startrek'] .menu-bar-left .menu-button-container:nth-child(2) {
-  background: var(--rail-blue);
-}
-[data-theme='startrek'] .menu-bar-left .menu-button-container:nth-child(3),
-[data-theme='startrek'] .menu-bar-left .menu-button-container:nth-child(4) {
-  background: var(--rail-muted);
-}
-
-[data-theme='startrek'] .menu-button-container {
+  width: fit-content;
+  min-width: 120px;
   padding: 6px 10px;
   border-radius: 18px;
   box-shadow: inset 0 -4px 0 var(--rail-muted);
   border: 2px solid var(--rail-muted);
+  background: transparent;
 }
+
+[data-theme='startrek'] .menu-button-container::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 18px;
+  opacity: 0.95;
+  z-index: 0;
+  pointer-events: none;
+  background: var(--rail-muted);
+}
+
+[data-theme='startrek'] .menu-bar-left .menu-button-container:nth-child(1)::before { background: var(--rail-purple); }
+[data-theme='startrek'] .menu-bar-left .menu-button-container:nth-child(2)::before { background: var(--rail-blue); }
+[data-theme='startrek'] .menu-bar-left .menu-button-container:nth-child(3)::before { background: var(--rail-muted); }
+[data-theme='startrek'] .menu-bar-left .menu-button-container:nth-child(4)::before { background: var(--rail-muted); }
 
 .menu-button,
 .menu-icon-btn,
