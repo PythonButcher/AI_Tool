@@ -13,9 +13,9 @@ import { ThemeContext } from '../../context/ThemeContext';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
-function MenuBar({ onFileUploadSuccess,  onStatsSelect, 
-                  handleApiData, handleDatabaseData, setOpenDataFilter, 
-                  aiReportReady, onAiReportClick }) {
+function MenuBar({ onFileUploadSuccess, onStatsSelect,
+  handleApiData, handleDatabaseData, setOpenDataFilter,
+  aiReportReady, onAiReportClick }) {
   const [activeDropdown, setActiveDropdown] = useState(null);
   const { setUploadedData } = useContext(DataContext);
   const { theme, toggleTheme } = useContext(ThemeContext);
@@ -158,11 +158,13 @@ function MenuBar({ onFileUploadSuccess,  onStatsSelect,
         <div className="menu-bar-right">
           {/* Stats Icon with Dropdown */}
           <div className="menu-button-container" ref={statsRef}>
-            <FaChartBar
-              className="menu-icon-only"
+            <button
+              className="menu-icon-btn"
               title="Statistics"
               onClick={() => setActiveDropdown(prev => prev === 'stats' ? null : 'stats')}
-            />
+            >
+              <FaChartBar />
+            </button>
             {activeDropdown === 'stats' && (
               <div className="menu-dropdown">
                 <div className="dropdown-content">
@@ -176,31 +178,37 @@ function MenuBar({ onFileUploadSuccess,  onStatsSelect,
 
           {aiReportReady && (
             <div className="ai-report-notification">
-              <FaFileAlt
-                className="menu-icon-only ai-report-icon"
+              <button
+                className="menu-icon-btn ai-report-icon"
                 title="AI Report Ready"
                 onClick={onAiReportClick}
-              />
+              >
+                <FaFileAlt />
+              </button>
               <div className="ai-report-popup">AI Report is ready</div>
             </div>
           )}
 
           {/* Reset App */}
-          <FaRedoAlt
-            className="menu-icon-only"
+          <button
+            className="menu-icon-btn"
             title="Reset Application"
             onClick={handleReset}
-          />
+          >
+            <FaRedoAlt />
+          </button>
 
           {/* Filter Slicer Trigger */}
-          <FaFilter
-            className="menu-icon-only"
+          <button
+            className="menu-icon-btn"
             title="Open Filter Panel"
-            onClick={() => setOpenDataFilter(true)}  // placeholder
-          />
+            onClick={() => setOpenDataFilter(true)}
+          >
+            <FaFilter />
+          </button>
 
           <button
-            className="menu-icon-only theme-toggle-btn"
+            className="menu-icon-btn theme-toggle-btn"
             title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
             onClick={toggleTheme}
             ref={themeRef}
