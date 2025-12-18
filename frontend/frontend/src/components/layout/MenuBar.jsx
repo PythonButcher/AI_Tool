@@ -79,132 +79,136 @@ function MenuBar({ onFileUploadSuccess,  onStatsSelect,
     <div className="menu-bar">
       <div className="menu-title">AI Data Visualization Tool</div>
 
-      {/* ───── LEFT SECTION: Primary Button Clusters ───── */}
-      <div className="menu-bar-left">
-        {/* Upload File Dropdown */}
-        <div className="menu-button-container" ref={uploadRef}>
-          <button
-            className="menu-button"
-            onClick={() => setActiveDropdown(prev => prev === 'upload' ? null : 'upload')}
-          >
-            <FaUpload className="menu-icon" />
-            Upload File
-          </button>
-          {activeDropdown === 'upload' && (
-            <div className="menu-dropdown">
-              <FileUpload
-                label="Select a File to Upload:"
-                onUploadComplete={() => setActiveDropdown(null)}
-                onFileUploadSuccess={onFileUploadSuccess}
-              />
-            </div>
-          )}
-        </div>
-
-         {/* Datahub Button */}
-        <div className="menu-button-container" ref={dbHubRef}>
-          <button
-            className="menu-button"
-            onClick={() => setActiveDropdown(prev => prev === 'open' ? null : 'open')}
-          >
-            <TbCloudDataConnection className="menu-icon" />
-            Open Hub
-          </button>
-          {activeDropdown === 'open' && (
-            <div className="menu-dropdown">
-              <DataHubWindow  />
-            </div>
-          )}
-        </div>
-
-        {/* API Dropdown */}
-        <div className="menu-button-container" ref={apiRef}>
-          <button
-            className="menu-button"
-            onClick={() => setActiveDropdown(prev => prev === 'api' ? null : 'api')}
-          >
-            <FaServer className="menu-icon" />
-            Connect API
-          </button>
-          {activeDropdown === 'api' && (
-            <div className="menu-dropdown">
-              <ApiDataForm handleApiData={handleApiData} />
-            </div>
-          )}
-        </div>
-
-        {/* Database Dropdown */}
-        <div className="menu-button-container" ref={dbRef}>
-          <button
-            className="menu-button"
-            onClick={() => setActiveDropdown(prev => prev === 'db' ? null : 'db')}
-          >
-            <FaDatabase className="menu-icon" />
-            Connect DB
-          </button>
-          {activeDropdown === 'db' && (
-            <div className="menu-dropdown">
-              <DatabaseConnectForm
-                handleDatabaseData={handleDatabaseData}
-                onClose={() => setActiveDropdown(null)}
-              />
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* ───── RIGHT SECTION: Icon-Only Tools ───── */}
-      <div className="menu-bar-right">
-        {/* Stats Icon with Dropdown */}
-        <div className="menu-button-container" ref={statsRef}>
-          <FaChartBar
-            className="menu-icon-only"
-            title="Statistics"
-            onClick={() => setActiveDropdown(prev => prev === 'stats' ? null : 'stats')}
-          />
-          {activeDropdown === 'stats' && (
-            <div className="menu-dropdown">
-              <div className="dropdown-content">
-                <button onClick={() => onStatsSelect('mean')}>Mean</button>
-                <button onClick={() => onStatsSelect('median')}>Median</button>
-                <button onClick={() => onStatsSelect('mode')}>Mode</button>
+      <div className="menu-actions">
+        {/* ───── LEFT SECTION: Primary Button Clusters ───── */}
+        <div className="menu-bar-left">
+          {/* Upload File Dropdown */}
+          <div className="menu-button-container" ref={uploadRef}>
+            <button
+              className="menu-button"
+              onClick={() => setActiveDropdown(prev => prev === 'upload' ? null : 'upload')}
+            >
+              <FaUpload className="menu-icon" />
+              Upload File
+            </button>
+            {activeDropdown === 'upload' && (
+              <div className="menu-dropdown">
+                <FileUpload
+                  label="Select a File to Upload:"
+                  onUploadComplete={() => setActiveDropdown(null)}
+                  onFileUploadSuccess={onFileUploadSuccess}
+                />
               </div>
-            </div>
-          )}
+            )}
+          </div>
+
+          {/* Datahub Button */}
+          <div className="menu-button-container" ref={dbHubRef}>
+            <button
+              className="menu-button"
+              onClick={() => setActiveDropdown(prev => prev === 'open' ? null : 'open')}
+            >
+              <TbCloudDataConnection className="menu-icon" />
+              Open Hub
+            </button>
+            {activeDropdown === 'open' && (
+              <div className="menu-dropdown">
+                <DataHubWindow />
+              </div>
+            )}
+          </div>
+
+          {/* API Dropdown */}
+          <div className="menu-button-container" ref={apiRef}>
+            <button
+              className="menu-button"
+              onClick={() => setActiveDropdown(prev => prev === 'api' ? null : 'api')}
+            >
+              <FaServer className="menu-icon" />
+              Connect API
+            </button>
+            {activeDropdown === 'api' && (
+              <div className="menu-dropdown">
+                <ApiDataForm handleApiData={handleApiData} />
+              </div>
+            )}
+          </div>
+
+          {/* Database Dropdown */}
+          <div className="menu-button-container" ref={dbRef}>
+            <button
+              className="menu-button"
+              onClick={() => setActiveDropdown(prev => prev === 'db' ? null : 'db')}
+            >
+              <FaDatabase className="menu-icon" />
+              Connect DB
+            </button>
+            {activeDropdown === 'db' && (
+              <div className="menu-dropdown">
+                <DatabaseConnectForm
+                  handleDatabaseData={handleDatabaseData}
+                  onClose={() => setActiveDropdown(null)}
+                />
+              </div>
+            )}
+          </div>
         </div>
 
-        {aiReportReady && (
-          <div className="ai-report-notification">
-            <FaFileAlt
-              className="menu-icon-only ai-report-icon"
-              title="AI Report Ready"
-              onClick={onAiReportClick}
+        {/* ───── RIGHT SECTION: Icon-Only Tools ───── */}
+        <div className="menu-bar-right">
+          {/* Stats Icon with Dropdown */}
+          <div className="menu-button-container" ref={statsRef}>
+            <FaChartBar
+              className="menu-icon-only"
+              title="Statistics"
+              onClick={() => setActiveDropdown(prev => prev === 'stats' ? null : 'stats')}
             />
-            <div className="ai-report-popup">AI Report is ready</div>
+            {activeDropdown === 'stats' && (
+              <div className="menu-dropdown">
+                <div className="dropdown-content">
+                  <button onClick={() => onStatsSelect('mean')}>Mean</button>
+                  <button onClick={() => onStatsSelect('median')}>Median</button>
+                  <button onClick={() => onStatsSelect('mode')}>Mode</button>
+                </div>
+              </div>
+            )}
           </div>
-        )}
 
-        {/* Reset App */}
-        <FaRedoAlt
-          className="menu-icon-only"
-          title="Reset Application"
-          onClick={handleReset}
-        />
+          {aiReportReady && (
+            <div className="ai-report-notification">
+              <FaFileAlt
+                className="menu-icon-only ai-report-icon"
+                title="AI Report Ready"
+                onClick={onAiReportClick}
+              />
+              <div className="ai-report-popup">AI Report is ready</div>
+            </div>
+          )}
 
-        {/* Filter Slicer Trigger */}
-        <FaFilter
-          className="menu-icon-only"
-          title="Open Filter Panel"
-          onClick={() => setOpenDataFilter(true)}  // placeholder
-        />
+          {/* Reset App */}
+          <FaRedoAlt
+            className="menu-icon-only"
+            title="Reset Application"
+            onClick={handleReset}
+          />
+
+          {/* Filter Slicer Trigger */}
+          <FaFilter
+            className="menu-icon-only"
+            title="Open Filter Panel"
+            onClick={() => setOpenDataFilter(true)}  // placeholder
+          />
+
+          <button
+            className="menu-icon-only theme-toggle-btn"
+            title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+            onClick={toggleTheme}
+            ref={themeRef}
+          >
+            {theme === 'dark' ? <FaSun /> : <FaMoon />}
+          </button>
+        </div>
       </div>
-      <button
-        className="menu-icon-only theme-toggle-btn"
-        title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-        onClick={toggleTheme}
-      >
-        {theme === 'dark' ? <FaSun /> : <FaMoon />}
-  </button>
     </div>
   );
 }
