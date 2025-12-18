@@ -1,14 +1,18 @@
 /* ──────────────────────────────────────────────────────────
    MENU BAR: Layout and Base Appearance
 ────────────────────────────────────────────────────────── */
+[data-theme='dark'] .menu-bar {
+  background-color: var(--bg-primary);
+}
+
 .menu-bar {
   display: flex;
   align-items: center;
   gap: 16px;
   padding: 12px 18px;
-  background-color: var(--bg-primary);
+  background-color: var(--menu-bar-surface, var(--bg-primary));
   border-bottom: 1px solid var(--border-color);
-  box-shadow: 0 10px 30px var(--shadow-color-soft);
+  box-shadow: 0 12px 24px var(--shadow-color-soft);
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
@@ -52,12 +56,12 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  height: 40px;
+  height: 38px;
   padding: 0 12px;
   background-color: var(--bg-secondary);
   color: var(--text-primary);
   border: 1px solid transparent;
-  border-radius: 10px;
+  border-radius: 9px;
   font-size: 0.98rem;
   font-weight: 600;
   cursor: pointer;
@@ -71,7 +75,8 @@
 
 .menu-button:hover {
   background-color: var(--accent-blue-soft);
-  box-shadow: 0 10px 30px var(--shadow-color-soft);
+  border-color: var(--border-color);
+  box-shadow: 0 8px 18px var(--shadow-color-soft);
   transform: translateY(-1px);
 }
 
@@ -137,19 +142,22 @@
    ICON-ONLY BUTTONS (Right-Aligned)
 ────────────────────────────────────────────────────────── */
 .menu-icon-only {
-  font-size: 1.2rem;
-  width: 40px;
+  font-size: 1.1rem;
+  width: 36px;
+  height: 36px;
   padding: 0;
   color: var(--text-secondary);
 }
 
 .menu-icon-only:hover {
   background-color: var(--accent-blue-soft);
+  border-color: var(--border-color);
   color: var(--text-primary);
 }
 
 .theme-toggle-btn {
-  width: 42px;
+  width: 36px;
+  height: 36px;
 }
 
 .theme-toggle-btn:hover {
