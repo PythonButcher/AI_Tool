@@ -13,7 +13,13 @@
   background-color: var(--menu-bar-surface, var(--bg-primary));
   border-bottom: 1px solid var(--border-color);
   box-shadow: 0 8px 20px var(--shadow-color-soft);
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: var(--font-family-base);
+}
+
+[data-theme='startrek'] .menu-bar {
+  border-bottom: 2px solid var(--accent-yellow);
+  border-left: 6px solid var(--accent-blue);
+  border-radius: 0 0 12px 0;
 }
 
 /* Logo Title */
@@ -22,6 +28,11 @@
   font-weight: 700;
   color: var(--text-primary);
   white-space: nowrap;
+}
+
+[data-theme='startrek'] .menu-title {
+  font-family: var(--font-family-display);
+  letter-spacing: 0.06em;
 }
 
 .menu-actions {

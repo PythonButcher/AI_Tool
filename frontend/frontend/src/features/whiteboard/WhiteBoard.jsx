@@ -1,10 +1,12 @@
 // File: WhiteBoard.jsx
-import React, { useRef, useCallback, useState, useEffect } from "react";
+import React, { useRef, useCallback, useState, useEffect, useContext, useMemo } from "react";
 import { Excalidraw } from "@excalidraw/excalidraw";
 import "@excalidraw/excalidraw/index.css";
 import WhiteboardToolbar from "./WhiteBoardToolbar";
 import { useWindowContext } from "../../context/WindowContext";
 import { useHelpOverlay } from '../../context/HelpOverlayContext';
+import { ThemeContext } from "../../context/ThemeContext";
+import { getCssVariable } from "../../utils/theme";
 
 // ✅ Import our parser
 import { parseSketch } from "../../utils/sketch/SketchParser";
@@ -14,18 +16,21 @@ const Whiteboard = ({ label = "AI Whiteboard:", savedScene }) => {
   const { saveWindowContentState } = useWindowContext();
   const lastSceneRef = useRef(savedScene ? JSON.stringify(savedScene) : null);
   const [scene, setScene] = useState(savedScene || null);
-  const [theme, setTheme] = useState("light");
+  const { theme, toggleTheme } = useContext(ThemeContext);
+  const [canvasBackground, setCanvasBackground] = useState(() =>
+    getCssVariable("--bg-secondary", "var(--bg-secondary)")
+  );
 
    const { isHelpVisible, toggleHelp, closeHelp } = useHelpOverlay();
     const helpId = 'whiteBoard';
 
-  const initialData = {
+  const initialData = useMemo(() => ({
     appState: {
-      viewBackgroundColor: theme === "light" ? "#f5f5f5" : "#1a1a1a",
+      viewBackgroundColor: canvasBackground,
       gridMode: true,
       gridSize: 2,
     },
-  };
+  }), [canvasBackground]);
 
   const handleChange = useCallback((elements, appState) => {
     const snapshot = { elements, appState };
@@ -70,15 +75,20 @@ const Whiteboard = ({ label = "AI Whiteboard:", savedScene }) => {
     }
   };
 
-  const handleThemeChange = () => {
-    const newTheme = theme === "light" ? "dark" : "light";
-    setTheme(newTheme);
-    excalidrawRef.current.updateScene({
-      appState: {
-        viewBackgroundColor: newTheme === "light" ? "#f5f5f5" : "#1a1a1a",
-      },
-    });
-  };
+  useEffect(() => {
+    const nextBackground = getCssVariable(
+      "--bg-secondary",
+      theme === "light" ? "var(--bg-secondary)" : "var(--bg-secondary)"
+    );
+    setCanvasBackground(nextBackground);
+    if (excalidrawRef.current) {
+      excalidrawRef.current.updateScene({
+        appState: {
+          viewBackgroundColor: nextBackground,
+        },
+      });
+    }
+  }, [theme]);
 
   return (
   <div style={{ height: "100%", width: "100%", display: "flex", flexDirection: "column" }}>
@@ -88,17 +98,17 @@ const Whiteboard = ({ label = "AI Whiteboard:", savedScene }) => {
       <button
         type="button"
         className="help-overlay-trigger"
-        onClick={() => toggleHelp('whiteBoard')}
+        onClick={() => toggleHelp(helpId)}
       >
         ❓
       </button>
     </div>
 
-    <WhiteboardToolbar
-      excalidrawRef={excalidrawRef}
-      onCompileSketch={handleCompileSketch}
-      onThemeChange={handleThemeChange}
-      theme={theme}
+      <WhiteboardToolbar
+        excalidrawRef={excalidrawRef}
+        onCompileSketch={handleCompileSketch}
+        onThemeChange={toggleTheme}
+        theme={theme}
     />
 
     <div style={{ flex: 1 }}>
@@ -106,17 +116,17 @@ const Whiteboard = ({ label = "AI Whiteboard:", savedScene }) => {
         ref={excalidrawRef}
         initialData={savedScene || initialData}
         onChange={handleChange}
-        theme={theme}
+        theme={theme === "light" ? "light" : "dark"}
       />
     </div>
 
     {/* ✅ Help Overlay */}
-    {isHelpVisible('whiteBoard') && (
+    {isHelpVisible(helpId) && (
       <div className="help-overlay visible">
         <div className="help-overlay-content">
           <span
             className="help-overlay-close"
-            onClick={() => closeHelp('whiteBoard')}
+            onClick={() => closeHelp(helpId)}
           >
             ×
           </span>

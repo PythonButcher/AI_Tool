@@ -36,7 +36,7 @@ export default function RawDataViewer({
   const totalPages = Math.max(1, Math.ceil(totalRows / pageSize));
 
   const { isHelpVisible, toggleHelp, closeHelp } = useHelpOverlay();
-    const helpId = 'rawViewer';
+  const helpId = 'rawViewer';
 
   // Build stable column list (union of keys in the first non-empty row, expanding up to 1000 rows)
   const columns = useMemo(() => {
@@ -198,7 +198,7 @@ export default function RawDataViewer({
         <button
         type="button"
         className="help-overlay-trigger"
-        onClick={() => toggleHelp('rawViewer')}
+        onClick={() => toggleHelp(helpId)}
       >
         ❓
       </button>
@@ -212,7 +212,7 @@ export default function RawDataViewer({
       <div
         style={{
           overflow: "auto",
-          border: "1px solid #ddd",
+          border: "1px solid var(--border-color)",
           borderRadius: 6,
           maxWidth: "100%",
         }}
@@ -225,14 +225,14 @@ export default function RawDataViewer({
             fontSize: 12,
           }}
         >
-          <thead style={{ position: "sticky", top: 0, background: "#fafafa", zIndex: 1 }}>
+          <thead style={{ position: "sticky", top: 0, background: "var(--bg-secondary)", zIndex: 1 }}>
             <tr>
               {columns.map((col) => (
                 <th
                   key={col}
                   style={{
                     textAlign: "left",
-                    borderBottom: "1px solid #eee",
+                    borderBottom: "1px solid var(--border-color)",
                     padding: "6px 8px",
                     fontWeight: 600,
                     whiteSpace: "nowrap",
@@ -253,7 +253,7 @@ export default function RawDataViewer({
               return (
                 <tr
                   key={rIdx}
-                  style={isAnomaly ? { backgroundColor: "#fff4e6" } : undefined}
+                  style={isAnomaly ? { backgroundColor: "var(--accent-yellow-soft)" } : undefined}
                 >
                   {columns.map((col) => {
                     const val = row?.[col];
@@ -268,7 +268,7 @@ export default function RawDataViewer({
                         key={col}
                         style={{
                           padding: "6px 8px",
-                          borderBottom: "1px solid #f2f2f2",
+                          borderBottom: "1px solid var(--border-color)",
                           whiteSpace: "nowrap",
                           overflow: "hidden",
                           textOverflow: "ellipsis",
@@ -284,12 +284,12 @@ export default function RawDataViewer({
             })}
           </tbody>
         </table>
-        {isHelpVisible('rawViewer') && (
+        {isHelpVisible(helpId) && (
         <div className="help-overlay visible">
           <div className="help-overlay-content">
             <span
               className="help-overlay-close"
-              onClick={() => closeHelp('rawViewer')}
+              onClick={() => closeHelp(helpId)}
             >
               ×
             </span>

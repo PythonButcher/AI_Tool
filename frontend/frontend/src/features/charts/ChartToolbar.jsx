@@ -32,19 +32,19 @@ export default function ChartToolbar({ chartRef }) {
     justifyContent: 'center',
     gap: '15px',
     padding: '10px 20px',
-    backgroundColor: '#ffffff',
-    boxShadow: '0 3px 8px rgba(0,0,0,0.1)',
+    backgroundColor: 'var(--bg-primary)',
+    boxShadow: '0 3px 8px var(--shadow-color-soft)',
     borderRadius: '8px',
-    border: '1px solid #e0e0e0',
-    fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+    border: '1px solid var(--border-color)',
+    fontFamily: 'var(--font-family-base)',
   };
 
   const buttonStyle = {
     display: 'flex',
     alignItems: 'center',
     gap: '5px',
-    backgroundColor: '#f3f4f6',
-    color: '#374151',
+    backgroundColor: 'var(--bg-secondary)',
+    color: 'var(--text-secondary)',
     padding: '6px 12px',
     borderRadius: '6px',
     cursor: 'pointer',
@@ -61,8 +61,8 @@ export default function ChartToolbar({ chartRef }) {
         <button 
         style={{
             ...buttonStyle,
-            backgroundColor: '#f3f4f6',
-            border: '1px solid #d1d5db',
+            backgroundColor: 'var(--bg-secondary)',
+            border: '1px solid var(--border-color)',
             borderRadius: '6px',
             padding: '6px 12px',
             display: 'flex',
@@ -85,10 +85,10 @@ export default function ChartToolbar({ chartRef }) {
             document.body.removeChild(link);
         }}
         onMouseOver={(e) => {
-            e.currentTarget.style.backgroundColor = '#e5e7eb'; // Light gray on hover
+            e.currentTarget.style.backgroundColor = 'var(--accent-white-soft)'; // Light gray on hover
         }}
         onMouseOut={(e) => {
-            e.currentTarget.style.backgroundColor = '#f3f4f6'; // Reset
+            e.currentTarget.style.backgroundColor = 'var(--bg-secondary)'; // Reset
         }}
         >
         <FaImage style={{ opacity: 0.85 }} />

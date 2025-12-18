@@ -6,19 +6,28 @@
   border-radius: 10px;
   margin-bottom: 10px;
   align-items: center;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
-  border: 1px solid rgba(0, 0, 0, 0.04);
+  box-shadow: 0 6px 18px var(--shadow-color-soft);
+  border: 1px solid var(--border-color);
+  background: linear-gradient(135deg, var(--bg-secondary), var(--menu-bar-surface, var(--bg-primary)));
+  color: var(--text-primary);
 }
 
 .whiteboard-toolbar.light {
-  background: linear-gradient(135deg, #f9fafb, #eef2ff);
-  color: #0f172a;
+  background: linear-gradient(135deg, var(--bg-secondary), var(--menu-bar-surface, var(--bg-primary)));
+  color: var(--text-primary);
 }
 
 .whiteboard-toolbar.dark {
-  background: linear-gradient(135deg, #111827, #1f2937);
-  color: #e5e7eb;
-  border-color: rgba(255, 255, 255, 0.08);
+  background: linear-gradient(135deg, var(--bg-primary), var(--bg-secondary));
+  color: var(--text-primary);
+  border-color: var(--border-color);
+}
+
+[data-theme='startrek'] .whiteboard-toolbar {
+  border-radius: 14px;
+  border-left: 8px solid var(--accent-yellow);
+  background: linear-gradient(135deg, var(--bg-primary), var(--bg-secondary));
+  color: var(--text-primary);
 }
 
 .toolbar-section {
@@ -43,9 +52,9 @@
 }
 
 .tool-button {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: inherit;
+  background: var(--glass-overlay-soft);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
   border-radius: 8px;
   padding: 8px 10px;
   display: inline-flex;
@@ -58,15 +67,15 @@
 .tool-button:hover,
 .tool-button:focus-visible {
   transform: translateY(-1px);
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 10px 20px var(--shadow-color-soft);
   outline: none;
 }
 
 .tool-button.active {
-  background: linear-gradient(135deg, #6366f1, #2563eb);
-  color: #f8fafc;
-  border-color: rgba(37, 99, 235, 0.35);
-  box-shadow: 0 10px 20px rgba(37, 99, 235, 0.35);
+  background: linear-gradient(135deg, var(--accent-blue), var(--accent-blue-strong, var(--accent-blue)));
+  color: var(--text-on-accent);
+  border-color: var(--accent-blue-soft);
+  box-shadow: 0 10px 20px var(--accent-blue-glow);
 }
 
 .tool-label {
@@ -78,7 +87,7 @@
   flex-direction: column;
   gap: 6px;
   font-size: 12px;
-  color: inherit;
+  color: var(--text-primary);
   min-width: 90px;
 }
 
@@ -93,7 +102,7 @@
   width: 44px;
   height: 34px;
   padding: 0;
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   background: transparent;
   cursor: pointer;
@@ -102,20 +111,20 @@
 .style-controls select {
   padding: 6px 10px;
   border-radius: 8px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  background: rgba(255, 255, 255, 0.7);
-  color: inherit;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
   min-width: 88px;
 }
 
 .whiteboard-toolbar.dark .style-controls select {
-  background: rgba(17, 24, 39, 0.7);
-  border-color: rgba(255, 255, 255, 0.08);
+  background: var(--bg-secondary);
+  border-color: var(--border-color);
 }
 
 .action-button {
-  background: linear-gradient(135deg, #2563eb, #1d4ed8);
-  color: #f8fafc;
+  background: linear-gradient(135deg, var(--accent-blue), var(--accent-blue-strong, var(--accent-blue)));
+  color: var(--text-on-accent);
   border: none;
   border-radius: 8px;
   padding: 8px 12px;
@@ -128,14 +137,14 @@
 .action-button:hover,
 .action-button:focus-visible {
   transform: translateY(-1px);
-  box-shadow: 0 12px 24px rgba(37, 99, 235, 0.3);
+  box-shadow: 0 12px 24px var(--accent-blue-glow);
   outline: none;
   background-position: 100% 0;
 }
 
 .whiteboard-toolbar.dark .action-button {
-  background: linear-gradient(135deg, #4f46e5, #0ea5e9);
-  color: #e5e7eb;
+  background: linear-gradient(135deg, var(--accent-blue), var(--accent-blue-strong, var(--accent-blue)));
+  color: var(--text-on-accent);
 }
 
 .excalidraw .App-toolbar {

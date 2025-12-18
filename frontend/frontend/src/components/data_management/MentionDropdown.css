@@ -2,10 +2,10 @@
 .mention-dropdown {
   position: absolute;
   z-index: 2000;
-  background-color: white;
-  border: 1px solid #e0e0e0;
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 14px var(--shadow-color-soft);
   width: 250px;
   max-height: 220px;
   overflow-y: auto;
@@ -17,13 +17,13 @@
 .mention-header {
   padding: 8px 12px;
   font-size: 0.75rem;
-  color: #666;
-  border-bottom: 1px solid #eee;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-color);
   text-transform: uppercase;
   font-weight: 600;
   position: sticky;
   top: 0;
-  background-color: white;
+  background-color: var(--bg-primary);
 }
 
 /* Individual Items */
@@ -33,13 +33,13 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  color: #333;
+  color: var(--text-primary);
   transition: background-color 0.15s ease-in-out;
   font-size: 0.9rem;
 }
 
 .mention-item:hover {
-  background-color: #f5f5f5;
+  background-color: var(--accent-white-soft);
 }
 
 .mention-icon {
@@ -48,7 +48,7 @@
 
 .mention-empty {
   padding: 12px;
-  color: #888;
+  color: var(--text-secondary);
   font-size: 0.85rem;
   text-align: center;
 }

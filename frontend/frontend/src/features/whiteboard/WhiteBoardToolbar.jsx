@@ -1,5 +1,5 @@
 // WhiteboardToolbar.jsx
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import {
   FaMousePointer,
   FaPenFancy,
@@ -17,12 +17,22 @@ import {
 import { BsDiamond } from "react-icons/bs";
 import { MdLineWeight } from "react-icons/md";
 import "./WhiteBoardToolbar.css";
+import { getCssVariable } from "../../utils/theme";
 
 const WhiteboardToolbar = ({ excalidrawRef, onCompileSketch, onThemeChange, theme }) => {
-  const [strokeColor, setStrokeColor] = useState("#0f172a");
-  const [fillColor, setFillColor] = useState("#e0e7ff");
+  const [strokeColor, setStrokeColor] = useState(() =>
+    getCssVariable("--text-primary", "var(--text-primary)")
+  );
+  const [fillColor, setFillColor] = useState(() =>
+    getCssVariable("--accent-blue", "var(--accent-blue)")
+  );
   const [strokeWidth, setStrokeWidth] = useState(2);
   const [activeTool, setActiveTool] = useState("selection");
+
+  useEffect(() => {
+    setStrokeColor(getCssVariable("--text-primary", "var(--text-primary)"));
+    setFillColor(getCssVariable("--accent-blue", "var(--accent-blue)"));
+  }, [theme]);
 
   const tools = useMemo(
     () => [
@@ -65,8 +75,8 @@ const WhiteboardToolbar = ({ excalidrawRef, onCompileSketch, onThemeChange, them
     };
 
     if (isHighlighter) {
-      nextAppState.currentItemStrokeColor = "rgba(250, 204, 21, 0.9)";
-      nextAppState.currentItemBackgroundColor = "rgba(250, 204, 21, 0.2)";
+      nextAppState.currentItemStrokeColor = getCssVariable("--accent-yellow", "var(--accent-yellow)");
+      nextAppState.currentItemBackgroundColor = getCssVariable("--accent-yellow-soft", "var(--accent-yellow-soft)");
       nextAppState.currentItemOpacity = 60;
     } else {
       nextAppState.currentItemOpacity = 100;
@@ -150,8 +160,10 @@ const WhiteboardToolbar = ({ excalidrawRef, onCompileSketch, onThemeChange, them
     updateStyleState({ currentItemStrokeWidth: value });
   };
 
+  const toneClass = theme === "light" ? "light" : "dark";
+
   return (
-    <div className={`whiteboard-toolbar ${theme === "dark" ? "dark" : "light"}`} role="toolbar" aria-label="Whiteboard toolbar">
+    <div className={`whiteboard-toolbar ${toneClass}`} role="toolbar" aria-label="Whiteboard toolbar">
       <div className="toolbar-section tool-buttons" aria-label="Drawing tools">
         {tools.map((tool) => (
           <button
@@ -221,15 +233,15 @@ const WhiteboardToolbar = ({ excalidrawRef, onCompileSketch, onThemeChange, them
           className="action-button"
           onClick={() => {
             if (onCompileSketch) onCompileSketch();
-          }}
-        >
-          ⚙️ Compile Sketch → Pipeline
-        </button>
-        <button type="button" className="action-button" onClick={onThemeChange} aria-label="Toggle theme">
-          {theme === "light" ? "🌙" : "☀️"}
-        </button>
-      </div>
-    </div>
+      }}
+    >
+      ⚙️ Compile Sketch → Pipeline
+    </button>
+    <button type="button" className="action-button" onClick={onThemeChange} aria-label="Toggle theme">
+          {theme === "light" ? "🌙" : theme === "dark" ? "🖖" : "🚀"}
+    </button>
+  </div>
+</div>
   );
 };
 

@@ -16,13 +16,13 @@ const DropZoneNode = ({ data }) => {
   return (
     <div
       style={{
-        backgroundColor: hovering ? 'rgba(173, 216, 230, 0.5)' : '#ffffff',
+        backgroundColor: hovering ? 'var(--accent-blue-soft)' : 'var(--bg-primary)',
         padding: '12px 16px',
-        border: '2px dashed #aaa',
+        border: '2px dashed var(--border-color)',
         borderRadius: '6px',
         width: '240px',
         textAlign: 'center',
-        boxShadow: hovering ? '0 0 6px 2px rgba(0, 128, 255, 0.4)' : 'none',
+        boxShadow: hovering ? `0 0 6px 2px var(--accent-blue-glow)` : 'none',
         transition: 'all 0.2s ease-in-out',
         fontWeight: 'bold',
         fontSize: '14px',

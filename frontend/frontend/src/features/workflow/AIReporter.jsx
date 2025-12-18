@@ -48,13 +48,13 @@ const AIReporter = ({ summary, outliers, insights, execution, chartType, chartDa
     <div
       ref={reportRef}
       style={{
-        background: "#f9f9f9",
-        border: "1px solid #ccc",
+        background: "var(--bg-primary)",
+        border: "1px solid var(--border-color)",
         borderRadius: "16px",
         padding: "32px",
         maxWidth: "960px",
         margin: "0 auto",
-        boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+        boxShadow: "0 2px 8px var(--shadow-color-soft)",
       }}
     >
       

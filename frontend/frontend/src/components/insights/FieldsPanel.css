@@ -7,7 +7,7 @@
 :root,
 [data-theme='dark'] {
   --field-color-numeric: var(--accent-green);
-  --field-color-temporal: #f59e0b;
+  --field-color-temporal: var(--accent-yellow);
   --field-color-categorical: var(--accent-blue);
 }
 

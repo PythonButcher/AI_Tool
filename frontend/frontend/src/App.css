@@ -1,7 +1,7 @@
 /* App.css */
 body {
   margin: 0;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: var(--font-family-base);
   background-color: var(--bg-secondary);
   color: var(--text-primary);
 }
@@ -11,6 +11,24 @@ body {
   background-color: var(--bg-primary);
   color: var(--text-primary);
   min-height: 100vh;
+}
+
+[data-theme='startrek'] .app-container,
+[data-theme='startrek'] .grid-item {
+  border-radius: 14px;
+}
+
+[data-theme='startrek'] h1,
+[data-theme='startrek'] h2,
+[data-theme='startrek'] h3,
+[data-theme='startrek'] .header-title {
+  font-family: var(--font-family-display);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+[data-theme='startrek'] .window-header {
+  border-left: 8px solid var(--accent-yellow);
 }
 
 

@@ -1,6 +1,7 @@
 import React, { useRef } from 'react';
 import { Bar, Line, Pie, Doughnut, Scatter } from 'react-chartjs-2';
 import ChartToolbar from './ChartToolbar';
+import { getCssVariable } from '../../utils/theme';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -31,6 +32,7 @@ ChartJS.register(
 
 function ChartComponentAI({ normalizedChartType = 'Bar', aiChartData }) {
   const chartRef = useRef(null);
+  const exportBackground = getCssVariable('--bg-primary', 'var(--bg-primary)');
 
   if (!aiChartData || !aiChartData.datasets) {
     console.warn("⚠ Chart data is missing required properties.", aiChartData);
@@ -78,7 +80,7 @@ function ChartComponentAI({ normalizedChartType = 'Bar', aiChartData }) {
       legend: { display: showLegend, position: legendPosition },
       tooltip: { enabled: true },
       backgroundColor: {
-        color: 'white', // fallback if we use a plugin, optional
+        color: exportBackground, // fallback if we use a plugin, optional
       },
     },
     interaction: {
@@ -93,7 +95,7 @@ function ChartComponentAI({ normalizedChartType = 'Bar', aiChartData }) {
           const ctx = chart.ctx;
           ctx.save();
           ctx.globalCompositeOperation = 'destination-over';
-          ctx.fillStyle = '#ffffff'; // white background
+          ctx.fillStyle = exportBackground;
           ctx.fillRect(0, 0, chart.width, chart.height);
           ctx.restore();
         }

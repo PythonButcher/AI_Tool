@@ -5,9 +5,9 @@
   justify-content: flex-start;
   gap: 16px;
   padding: 16px;
-  background-color: rgba(4, 8, 20, 0.8);
+  background-color: var(--glass-overlay-medium);
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border-color);
   margin-bottom: 16px;
   backdrop-filter: blur(12px);
 }
@@ -18,16 +18,16 @@
   max-width: 260px;
   border-radius: 12px;
   padding: 12px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+  background: var(--glass-overlay-soft);
+  border: 1px solid var(--border-color);
+  box-shadow: 0 8px 20px var(--shadow-color);
   transition: border-color 0.2s ease, box-shadow 0.2s ease,
     background 0.2s ease;
 }
 
 .role-dropzone-wrapper:hover {
   border-color: var(--accent-blue);
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 12px 24px var(--shadow-color-strong);
 }
 
 .role-label {
@@ -47,7 +47,7 @@
   gap: 6px;
   padding: 14px 8px;
   border-radius: 10px;
-  border: 2px dashed rgba(255, 255, 255, 0.25);
+  border: 2px dashed var(--border-color);
   min-height: 90px;
   text-align: center;
   transition: border-color 0.2s ease, background 0.2s ease,
@@ -66,19 +66,19 @@
 
 .drop-zone.is-over.is-compatible {
   border-color: var(--accent-green);
-  background: rgba(37, 192, 138, 0.15);
+  background: var(--accent-green-soft);
   transform: translateY(-2px);
 }
 
 .drop-zone.is-over.is-incompatible {
   border-color: var(--accent-red);
-  background: rgba(229, 72, 77, 0.1);
+  background: var(--accent-red-soft);
   color: var(--accent-red);
 }
 
 .drop-zone.has-field {
   border-style: solid;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--accent-white-soft);
 }
 
 .drop-zone.is-incompatible:not(.is-over) {

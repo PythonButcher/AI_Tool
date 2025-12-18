@@ -9,7 +9,7 @@ function JsonDataPreview({ data }) {
         data={data}
         expandLevel={2}
         onCopy={(copyData) => console.log('Copied JSON:', copyData)}
-        style={{ fontSize: '14px', color: '#383838' }}
+        style={{ fontSize: '14px', color: 'var(--text-secondary)' }}
       />
     </div>
   );

@@ -1,4 +1,5 @@
 // utils/previewChartUtils.js
+import { getCssVariable } from "./theme";
 
 /**
  * transformPreviewData(uploadedData)
@@ -50,7 +51,9 @@ export function transformPreviewData(uploadedData) {
         {
           label: `Preview of ${dataField}`,
           data: values,
-          backgroundColor: 'rgba(75,192,192,0.6)',
+          backgroundColor: getCssVariable('--accent-blue-soft', 'rgba(59, 130, 246, 0.25)'),
+          borderColor: getCssVariable('--accent-blue', '#3b82f6'),
+          borderWidth: 1,
         },
       ],
     };

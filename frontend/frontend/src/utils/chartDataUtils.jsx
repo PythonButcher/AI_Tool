@@ -2,6 +2,8 @@
  * Aggregator helper functions.
  * Each takes an array of numbers and returns a single value.
  */
+import { getDynamicColors } from "./ChartStyles";
+
 const aggregators = {
   sum: (values) => values.reduce((acc, val) => acc + val, 0),
   avg: (values) =>
@@ -74,13 +76,17 @@ export function transformToChartData(
 
   // Aggregate grouped data
   const labels = Object.keys(groupedData);
-  const datasets = chosenDataFields.map((field) => ({
-    label: field,
-    data: labels.map((label) => chosenAggregator(groupedData[label][field] || [])),
-    backgroundColor: "rgba(75,192,192,0.4)", // Example: teal background
-    borderColor: "rgba(75,192,192,1)", // Example: teal border
-    borderWidth: 1,
-  }));
+  const palette = getDynamicColors(chosenDataFields.length);
+  const datasets = chosenDataFields.map((field, index) => {
+    const colors = palette[index] || palette[0];
+    return {
+      label: field,
+      data: labels.map((label) => chosenAggregator(groupedData[label][field] || [])),
+      backgroundColor: colors.backgroundColor,
+      borderColor: colors.borderColor,
+      borderWidth: 1,
+    };
+  });
 
   // Sort labels and datasets if needed
   if (sortBy === "label") {

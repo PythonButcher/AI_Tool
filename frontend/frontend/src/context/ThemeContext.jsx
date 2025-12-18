@@ -3,9 +3,12 @@ import React, { createContext, useState, useEffect } from 'react';
 export const ThemeContext = createContext();
 
 export const ThemeProvider = ({ children }) => {
-  const [theme, setTheme] = useState(() =>
-    localStorage.getItem("theme") || "dark"
-  );
+  const themeOrder = ["light", "dark", "startrek"];
+
+  const [theme, setTheme] = useState(() => {
+    const storedTheme = localStorage.getItem("theme");
+    return themeOrder.includes(storedTheme) ? storedTheme : "dark";
+  });
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
@@ -13,7 +16,11 @@ export const ThemeProvider = ({ children }) => {
   }, [theme]);
 
   const toggleTheme = () => {
-    setTheme(prev => (prev === "light" ? "dark" : "light"));
+    setTheme((prev) => {
+      const currentIndex = themeOrder.indexOf(prev);
+      const nextIndex = currentIndex === -1 ? 1 : (currentIndex + 1) % themeOrder.length;
+      return themeOrder[nextIndex];
+    });
   };
 
   return (

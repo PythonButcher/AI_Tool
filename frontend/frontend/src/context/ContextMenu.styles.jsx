@@ -2,13 +2,13 @@ import styled from 'styled-components';
 
 // Simple theme for Windows/macOS-like styling
 const theme = {
-  background: 'rgba(255, 255, 255, 0.85)',  // Light, with some transparency
-  border: 'rgba(150, 150, 150, 0.25)',      // Subtle border
-  shadow: 'rgba(0, 0, 0, 0.2)',             // Moderate drop shadow
-  text: '#2b2b2b',                          // Dark text
-  hoverBackground: 'rgba(0, 0, 0, 0.06)',   // Slight gray overlay on hover
-  headerColor: '#666',
-  divider: 'rgba(0, 0, 0, 0.1)',
+  background: 'var(--glass-overlay-bold)',
+  border: 'var(--border-color)',
+  shadow: 'var(--shadow-color-soft)',
+  text: 'var(--text-primary)',
+  hoverBackground: 'var(--accent-white-soft)',
+  headerColor: 'var(--text-secondary)',
+  divider: 'var(--border-color)',
 };
 
 export const Container = styled.div`

@@ -280,8 +280,8 @@ console.log("🧨 FULLDATA LENGTH:", fullData?.length);
               data-grid={layout}
               onMouseDown={() => bringToFront('dataPreview')}
               style={{
-                backgroundColor: '#f4f4f4',
-                border: '2px solid #ccc',
+                backgroundColor: 'var(--bg-primary)',
+                border: '2px solid var(--border-color)',
                 borderRadius: '6px',
                 overflow: 'hidden',
                 zIndex: zIndices['dataPreview'] || 1,
@@ -302,13 +302,13 @@ console.log("🧨 FULLDATA LENGTH:", fullData?.length);
                 {previewMode === 'json' && (
                   <div
                     style={{
-                      backgroundColor: '#F8F8F2',
+                      backgroundColor: 'var(--bg-secondary)',
                       borderRadius: '12px',
                       padding: '16px',
-                      boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.2)',
-                      fontFamily: '"Press Start 2P", cursive',
-                      color: '#282828',
-                      border: '3px solid #E60012',
+                      boxShadow: '0px 4px 8px var(--shadow-color)',
+                      fontFamily: 'var(--font-family-display)',
+                      color: 'var(--text-primary)',
+                      border: '3px solid var(--accent-red)',
                       maxHeight: '400px',
                       overflowY: 'auto',
                     }}
@@ -317,7 +317,7 @@ console.log("🧨 FULLDATA LENGTH:", fullData?.length);
                       data={previewData}
                       expandLevel={2}
                       onCopy={(copyData) => console.log('Copied data:', copyData)}
-                      style={{ fontSize: '14px', color: '#383838' }}
+                      style={{ fontSize: '14px', color: 'var(--text-secondary)' }}
                     />
                   </div>
                 )}
@@ -352,16 +352,16 @@ const rawDataElement =
         return (
           <div
             key="rawViewer"
-            className="grid-item"
-            data-grid={layout}
-            onMouseDown={() => bringToFront('rawViewer')}
-            style={{
-              backgroundColor: '#fff',
-              border: '2px solid #ccc',
-              borderRadius: '6px',
-              overflow: 'hidden',
-              zIndex: zIndices['rawViewer'] || 1,
-            }}
+              className="grid-item"
+              data-grid={layout}
+              onMouseDown={() => bringToFront('rawViewer')}
+              style={{
+                backgroundColor: 'var(--bg-primary)',
+                border: '2px solid var(--border-color)',
+                borderRadius: '6px',
+                overflow: 'hidden',
+                zIndex: zIndices['rawViewer'] || 1,
+              }}
           >
             <div
               className="window-header drag-handle"
@@ -451,7 +451,7 @@ const rawDataElement =
               className="grid-item"
               data-grid={finalLayout}
               onMouseDown={() => bringToFront('aiWorkflowLab')}
-              style={{ backgroundColor: '#f4f4f4', border: '2px solid #ccc', borderRadius: '6px', overflow: 'hidden', zIndex: zIndices['aiWorkflowLab'] || 1 }}
+              style={{ backgroundColor: 'var(--bg-primary)', border: '2px solid var(--border-color)', borderRadius: '6px', overflow: 'hidden', zIndex: zIndices['aiWorkflowLab'] || 1 }}
             >
               <div className="window-header drag-handle" onDoubleClick={() => snapToFit('aiWorkflowLab')}>
                 <span className="header-title">AI Workflow Lab</span>
@@ -538,7 +538,7 @@ const rawDataElement =
                 minWidth: '150px',
                 minHeight: '150px',
                 overflow: 'hidden',
-                backgroundColor: '#fff',
+                backgroundColor: 'var(--bg-primary)',
                 borderRadius: '8px',
                 zIndex: zIndices['chartWindow'] || 5,
               }}
@@ -573,7 +573,7 @@ const rawDataElement =
               className="grid-item"
               data-grid={layout}
               onMouseDown={() => bringToFront('storyPanel')}
-              style={{ backgroundColor: '#f4f4f4', border: '2px solid #ccc', borderRadius: '6px', overflow: 'hidden', zIndex: zIndices['storyPanel'] || 1 }}
+              style={{ backgroundColor: 'var(--bg-primary)', border: '2px solid var(--border-color)', borderRadius: '6px', overflow: 'hidden', zIndex: zIndices['storyPanel'] || 1 }}
             >
               <div className="window-header drag-handle" onDoubleClick={() => snapToFit('storyPanel')}>
                 <span className="header-title">📖 Data Story</span>

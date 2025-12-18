@@ -49,7 +49,7 @@ function DataTablePreview({ label = "Preview Table:", data }) {
           {data.map((row, idx) => (
             <tr
               key={idx}
-              style={anomalies.includes(idx) ? { backgroundColor: '#fff4e6' } : undefined}
+              style={anomalies.includes(idx) ? { backgroundColor: 'var(--accent-yellow-soft)' } : undefined}
             >
               {columns.map((col) => (
                 <td key={col}>

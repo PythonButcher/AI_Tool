@@ -7,7 +7,7 @@ const AiWorkLabNodeSizer = ({ data, selected }) => {
   return (
     <>
       <NodeResizer
-        color="#444"
+        color="var(--text-secondary)"
         isVisible={selected}
         minWidth={120}
         minHeight={60}
@@ -16,7 +16,7 @@ const AiWorkLabNodeSizer = ({ data, selected }) => {
           width: 10,
           height: 10,
           borderRadius: '2px',
-          backgroundColor: '#555',
+          backgroundColor: 'var(--text-secondary)',
         }}
       />
 
@@ -42,23 +42,23 @@ const AiWorkLabNodeSizer = ({ data, selected }) => {
           justifyContent: 'center',
           padding: '14px',
           borderRadius: '10px',
-          border: '1.5px solid #aaa',
-          backgroundColor: '#fefefe',
+          border: '1.5px solid var(--border-color)',
+          backgroundColor: 'var(--bg-primary)',
           boxShadow: selected
-            ? '0 0 0 2px #4a90e2'
-            : '0 2px 6px rgba(0, 0, 0, 0.12)',
-          fontFamily: 'Segoe UI, sans-serif',
+            ? `0 0 0 2px var(--accent-blue)`
+            : '0 2px 6px var(--shadow-color-soft)',
+          fontFamily: 'var(--font-family-base)',
           fontSize: '14px',
-          color: '#222',
+          color: 'var(--text-primary)',
           textAlign: 'center',
           cursor: 'grab',
           position: 'relative',
           minWidth: '130px',
         }}
       >
-        {Icon && <Icon size={24} style={{ color: '#444', marginBottom: '6px' }} />}
+        {Icon && <Icon size={24} style={{ color: 'var(--text-secondary)', marginBottom: '6px' }} />}
         <div style={{ fontWeight: 600 }}>{data.label}</div>
-        <div style={{ fontSize: '12px', marginTop: '4px', color: '#666' }}>
+        <div style={{ fontSize: '12px', marginTop: '4px', color: 'var(--text-secondary)' }}>
           {data.status === 'pending' && '⏳ Running...'}
           {data.status === 'success' && '✅ Done'}
           {data.status === 'error' && '❌ Error'}

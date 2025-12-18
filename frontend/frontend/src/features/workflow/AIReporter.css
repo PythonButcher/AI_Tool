@@ -1,6 +1,6 @@
 .export-report-button {
     background-color: var(--text-secondary);
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-family: var(--font-family-base);
     color: var(--text-on-accent);
     border: 1px solid var(--border-color);
     padding: 10px 20px;
@@ -43,4 +43,3 @@
   box-shadow: 0 1px 3px var(--shadow-color);
   overflow: auto;
 }
-

@@ -1,4 +1,6 @@
 /* index.css */
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600&family=Rajdhani:wght@500;700&display=swap');
+
 * {
   margin: 0;
   padding: 0;
@@ -19,10 +21,10 @@ html, body, #root {
   color: var(--text-primary);
 }
 
-/* themes.css */
-
 :root {
   /* Light theme (default) */
+  --font-family-base: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  --font-family-display: 'Orbitron', 'Rajdhani', 'Eurostile', 'Segoe UI', sans-serif;
   --bg-primary: #ffffff;
   --bg-secondary: #f9fafb;
   --menu-bar-surface: #eef1f5;
@@ -32,6 +34,8 @@ html, body, #root {
   --accent-blue: #2563eb;
   --accent-green: #10b981;
   --accent-red: #ef4444;
+  --accent-yellow: #f59e0b;
+  --accent: #2563eb;
   --shadow-color: rgba(0, 0, 0, 0.1);
   --shadow-color-soft: rgba(0, 0, 0, 0.05);
   --shadow-color-strong: rgba(0, 0, 0, 0.2);
@@ -48,7 +52,8 @@ html, body, #root {
   --accent-green-glow: rgba(16, 185, 129, 0.5);
   --accent-red-soft: rgba(239, 68, 68, 0.3);
   --accent-red-glow: rgba(239, 68, 68, 0.5);
-  --accent-yellow-soft: rgba(255, 255, 0, 0.2);
+  --accent-yellow-soft: rgba(245, 158, 11, 0.25);
+  --accent-yellow-glow: rgba(245, 158, 11, 0.45);
   --accent-white-soft: rgba(255, 255, 255, 0.15);
   --accent-white-medium: rgba(255, 255, 255, 0.2);
   --accent-white-strong: rgba(255, 255, 255, 0.5);
@@ -56,14 +61,19 @@ html, body, #root {
 }
 
 [data-theme='dark'] {
+  --font-family-base: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  --font-family-display: 'Orbitron', 'Rajdhani', 'Eurostile', 'Segoe UI', sans-serif;
   --bg-primary: #111827;
   --bg-secondary: #1f2937;
+  --menu-bar-surface: #141a26;
   --text-primary: #f9fafb;
   --text-secondary: #9ca3af;
   --border-color: #374151;
   --accent-blue: #3b82f6;
   --accent-green: #10b981;
   --accent-red: #ef4444;
+  --accent-yellow: #fbbf24;
+  --accent: #3b82f6;
   --shadow-color: rgba(0, 0, 0, 0.35);
   --shadow-color-soft: rgba(0, 0, 0, 0.2);
   --shadow-color-strong: rgba(0, 0, 0, 0.5);
@@ -80,9 +90,48 @@ html, body, #root {
   --accent-green-glow: rgba(16, 185, 129, 0.55);
   --accent-red-soft: rgba(239, 68, 68, 0.35);
   --accent-red-glow: rgba(239, 68, 68, 0.55);
-  --accent-yellow-soft: rgba(250, 204, 21, 0.25);
+  --accent-yellow-soft: rgba(251, 191, 36, 0.25);
+  --accent-yellow-glow: rgba(251, 191, 36, 0.45);
   --accent-white-soft: rgba(249, 250, 251, 0.2);
   --accent-white-medium: rgba(249, 250, 251, 0.3);
   --accent-white-strong: rgba(249, 250, 251, 0.55);
   --text-on-accent: #f9fafb;
+}
+
+[data-theme='startrek'] {
+  --font-family-base: 'Orbitron', 'Rajdhani', 'Eurostile', 'Segoe UI', sans-serif;
+  --font-family-display: 'Orbitron', 'Rajdhani', 'Eurostile', 'Segoe UI', sans-serif;
+  --bg-primary: #0b0b0f;
+  --bg-secondary: #1f1f27;
+  --menu-bar-surface: #2b2b34;
+  --text-primary: #f7e4c7;
+  --text-secondary: #c7c3d9;
+  --border-color: #3c3c48;
+  --accent-blue: #4aa1c4;
+  --accent-green: #c19ad8;
+  --accent-red: #e58987;
+  --accent-yellow: #e6b800;
+  --accent: #4aa1c4;
+  --shadow-color: rgba(0, 0, 0, 0.28);
+  --shadow-color-soft: rgba(0, 0, 0, 0.18);
+  --shadow-color-strong: rgba(0, 0, 0, 0.36);
+  --overlay-color: rgba(12, 12, 20, 0.7);
+  --overlay-strong: rgba(12, 12, 20, 0.82);
+  --glass-overlay-soft: rgba(43, 43, 52, 0.4);
+  --glass-overlay-medium: rgba(43, 43, 52, 0.55);
+  --glass-overlay-strong: rgba(43, 43, 52, 0.8);
+  --glass-overlay-bold: rgba(43, 43, 52, 0.9);
+  --accent-blue-soft: rgba(74, 161, 196, 0.28);
+  --accent-blue-glow: rgba(74, 161, 196, 0.48);
+  --accent-blue-strong: rgba(74, 161, 196, 0.62);
+  --accent-green-soft: rgba(193, 154, 216, 0.26);
+  --accent-green-glow: rgba(193, 154, 216, 0.48);
+  --accent-red-soft: rgba(229, 137, 135, 0.3);
+  --accent-red-glow: rgba(229, 137, 135, 0.5);
+  --accent-yellow-soft: rgba(230, 184, 0, 0.28);
+  --accent-yellow-glow: rgba(230, 184, 0, 0.46);
+  --accent-white-soft: rgba(247, 228, 199, 0.2);
+  --accent-white-medium: rgba(247, 228, 199, 0.28);
+  --accent-white-strong: rgba(247, 228, 199, 0.52);
+  --text-on-accent: #0c0c14;
 }

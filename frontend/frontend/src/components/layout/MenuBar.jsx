@@ -213,7 +213,7 @@ function MenuBar({ onFileUploadSuccess, onStatsSelect,
               title="Change Theme"
               onClick={() => setActiveDropdown(prev => prev === 'theme' ? null : 'theme')}
             >
-              {theme === 'dark' ? <FaMoon /> : theme === 'light' ? <FaSun /> : <FaSpaceShuttle />}
+              {theme === 'startrek' ? <FaSpaceShuttle /> : theme === 'dark' ? <FaMoon /> : <FaSun />}
             </button>
             {activeDropdown === 'theme' && (
               <div className="menu-dropdown right-aligned">

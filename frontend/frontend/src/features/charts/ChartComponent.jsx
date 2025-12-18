@@ -2,6 +2,7 @@
 import React, { useRef } from 'react';
 import { Bar, Line, Pie, Doughnut, Scatter } from 'react-chartjs-2';
 import ChartToolbar from './ChartToolbar';
+import { getCssVariable } from '../../utils/theme';
 import {
   Chart as ChartJS, CategoryScale, LinearScale,
   BarElement, BarController, LineElement,
@@ -15,6 +16,7 @@ ChartJS.register(
 
 function ChartComponent({ chartType = 'Bar', chartData, mapping }) {
   const chartRef = useRef(null);
+  const exportBackground = getCssVariable('--bg-primary', 'var(--bg-primary)');
 
 if (!chartData || !chartData.labels || !chartData.datasets) {
   return <div style={{ padding: "20px", textAlign: "center" }}>Chart data is incomplete.</div>;
@@ -30,16 +32,16 @@ if (!chartData || !chartData.labels || !chartData.datasets) {
   animation: {
     onComplete: () => {
       const chart = chartRef.current;
-      if (chart) {
-        const ctx = chart.ctx;
-        ctx.save();
-        ctx.globalCompositeOperation = 'destination-over';
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, chart.width, chart.height);
-        ctx.restore();
-      }
+        if (chart) {
+          const ctx = chart.ctx;
+          ctx.save();
+          ctx.globalCompositeOperation = 'destination-over';
+          ctx.fillStyle = exportBackground;
+          ctx.fillRect(0, 0, chart.width, chart.height);
+          ctx.restore();
+        }
+      },
     },
-  },
 };
 
 
