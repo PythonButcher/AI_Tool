@@ -5,7 +5,7 @@ import FileUpload from '../data_management/FileUpload';
 import ApiDataForm from '../../features/api/APiDataForm';
 import DatabaseConnectForm from '../../features/database/DatabaseConnectForm';
 import DataHubWindow from '../../features/database/DataHubWindow';
-import { FaUpload, FaChartBar, FaServer, FaDatabase, FaRedoAlt, FaFilter, FaFileAlt, FaSun, FaMoon } from 'react-icons/fa';
+import { FaUpload, FaChartBar, FaServer, FaDatabase, FaRedoAlt, FaFilter, FaFileAlt, FaSun, FaMoon, FaSpaceShuttle } from 'react-icons/fa';
 import { TbCloudDataConnection } from "react-icons/tb";
 import { DataContext } from '../../context/DataContext';
 import { ThemeContext } from '../../context/ThemeContext';
@@ -18,7 +18,7 @@ function MenuBar({ onFileUploadSuccess, onStatsSelect,
   aiReportReady, onAiReportClick }) {
   const [activeDropdown, setActiveDropdown] = useState(null);
   const { setUploadedData } = useContext(DataContext);
-  const { theme, toggleTheme } = useContext(ThemeContext);
+  const { theme, setTheme } = useContext(ThemeContext);
 
   const uploadRef = useRef(null);
   const statsRef = useRef(null);
@@ -207,14 +207,30 @@ function MenuBar({ onFileUploadSuccess, onStatsSelect,
             <FaFilter />
           </button>
 
-          <button
-            className="menu-icon-btn theme-toggle-btn"
-            title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-            onClick={toggleTheme}
-            ref={themeRef}
-          >
-            {theme === 'dark' ? <FaSun /> : <FaMoon />}
-          </button>
+          <div className="menu-button-container" ref={themeRef}>
+            <button
+              className="menu-icon-btn theme-toggle-btn"
+              title="Change Theme"
+              onClick={() => setActiveDropdown(prev => prev === 'theme' ? null : 'theme')}
+            >
+              {theme === 'dark' ? <FaMoon /> : theme === 'light' ? <FaSun /> : <FaSpaceShuttle />}
+            </button>
+            {activeDropdown === 'theme' && (
+              <div className="menu-dropdown right-aligned">
+                <div className="dropdown-content">
+                  <button onClick={() => { setTheme('light'); setActiveDropdown(null); }}>
+                    <FaSun style={{ marginRight: '8px' }} /> Light Mode
+                  </button>
+                  <button onClick={() => { setTheme('dark'); setActiveDropdown(null); }}>
+                    <FaMoon style={{ marginRight: '8px' }} /> Dark Mode
+                  </button>
+                  <button onClick={() => { setTheme('startrek'); setActiveDropdown(null); }}>
+                    <FaSpaceShuttle style={{ marginRight: '8px' }} /> Star Trek
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
