@@ -23,6 +23,12 @@
   flex-direction: column;
 }
 
+[data-theme='startrek'] .section-container {
+  border-radius: 16px;
+  overflow: hidden;
+  border: 2px solid var(--rail-muted);
+}
+
 .section-title {
   font-size: 18px;
   font-weight: 600;
@@ -42,4 +48,11 @@
   color: var(--text-secondary);
   box-shadow: 0 1px 3px var(--shadow-color);
   overflow: auto;
+}
+
+[data-theme='startrek'] .section-content {
+  border-radius: 0;
+  border-left: 12px solid var(--accent-yellow);
+  box-shadow: none;
+  background: linear-gradient(90deg, var(--accent-yellow-soft) 0 18%, var(--bg-primary) 18% 100%);
 }

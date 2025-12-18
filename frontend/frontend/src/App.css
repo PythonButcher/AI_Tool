@@ -15,7 +15,9 @@ body {
 
 [data-theme='startrek'] .app-container,
 [data-theme='startrek'] .grid-item {
-  border-radius: 14px;
+  border-radius: 18px;
+  background: var(--bg-secondary);
+  border: 2px solid var(--rail-muted);
 }
 
 [data-theme='startrek'] h1,
@@ -28,7 +30,34 @@ body {
 }
 
 [data-theme='startrek'] .window-header {
-  border-left: 8px solid var(--accent-yellow);
+  position: relative;
+  border-left: 12px solid var(--accent-yellow);
+  border-radius: 0 0 14px 14px;
+}
+
+[data-theme='startrek'] .window-header::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, var(--accent-yellow) 0%, var(--rail-amber) 50%, var(--rail-muted) 100%);
+  opacity: 0.12;
+  pointer-events: none;
+  border-radius: 0 0 14px 14px;
+}
+
+[data-theme='startrek'] button,
+[data-theme='startrek'] input,
+[data-theme='startrek'] select,
+[data-theme='startrek'] textarea {
+  border-radius: 14px;
+  border: 2px solid var(--rail-muted);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+[data-theme='startrek'] .menu-dropdown button,
+[data-theme='startrek'] .dropdown-content button {
+  border: none;
 }
 
 

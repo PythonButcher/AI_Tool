@@ -17,9 +17,33 @@
 }
 
 [data-theme='startrek'] .menu-bar {
-  border-bottom: 2px solid var(--accent-yellow);
-  border-left: 6px solid var(--accent-blue);
-  border-radius: 0 0 12px 0;
+  position: relative;
+  padding: 16px 22px;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+[data-theme='startrek'] .menu-bar::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, var(--rail-amber) 0 24%, var(--rail-purple) 24% 42%, var(--rail-blue) 42% 58%, var(--rail-muted) 58% 100%);
+  border-radius: 0 0 28px 0;
+  z-index: 0;
+}
+
+[data-theme='startrek'] .menu-bar::after {
+  content: "";
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  width: 180px;
+  height: 14px;
+  background: var(--bg-primary);
+  border-radius: 14px;
+  opacity: 0.75;
+  z-index: 0;
 }
 
 /* Logo Title */
@@ -33,6 +57,7 @@
 [data-theme='startrek'] .menu-title {
   font-family: var(--font-family-display);
   letter-spacing: 0.06em;
+  z-index: 1;
 }
 
 .menu-actions {
@@ -78,6 +103,8 @@
   cursor: pointer;
   transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.2s ease, transform 0.15s ease, border-color 0.15s ease;
   box-shadow: none;
+  position: relative;
+  z-index: 1;
 }
 
 .menu-button {
@@ -106,6 +133,25 @@
 
 .menu-button:hover .menu-icon {
   color: var(--text-primary);
+}
+
+[data-theme='startrek'] .menu-button,
+[data-theme='startrek'] .menu-icon-btn,
+[data-theme='startrek'] .theme-toggle-btn {
+  background: var(--accent-yellow-soft);
+  border-radius: 18px;
+  border: 2px solid var(--rail-muted);
+  color: var(--text-primary);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  box-shadow: inset 0 -3px 0 var(--rail-muted);
+}
+
+[data-theme='startrek'] .menu-button:hover,
+[data-theme='startrek'] .menu-icon-btn:hover,
+[data-theme='startrek'] .theme-toggle-btn:hover {
+  background: var(--accent-blue-soft);
+  border-color: var(--accent-blue);
 }
 
 /* ──────────────────────────────────────────────────────────
@@ -152,6 +198,22 @@
 .dropdown-content button:hover,
 .dropdown-content div:hover {
   background-color: var(--bg-secondary);
+}
+
+[data-theme='startrek'] .menu-dropdown {
+  border: 2px solid var(--rail-muted);
+  border-radius: 16px 0 16px 16px;
+  background: linear-gradient(180deg, var(--rail-amber) 0 20%, var(--bg-secondary) 20% 100%);
+  box-shadow: 0 12px 28px var(--shadow-color-strong);
+}
+
+[data-theme='startrek'] .dropdown-content button {
+  font-family: var(--font-family-display);
+  letter-spacing: 0.06em;
+  color: var(--text-primary);
+}
+[data-theme='startrek'] .dropdown-content button:hover {
+  background: var(--accent-yellow-soft);
 }
 
 /* ──────────────────────────────────────────────────────────

@@ -1,5 +1,5 @@
 /* index.css */
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600&family=Rajdhani:wght@500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600&family=Rajdhani:wght@500;700&family=Barlow+Condensed:wght@500;700&display=swap');
 
 * {
   margin: 0;
@@ -24,7 +24,7 @@ html, body, #root {
 :root {
   /* Light theme (default) */
   --font-family-base: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  --font-family-display: 'Orbitron', 'Rajdhani', 'Eurostile', 'Segoe UI', sans-serif;
+  --font-family-display: 'Orbitron', 'Rajdhani', 'Barlow Condensed', 'Eurostile', 'Segoe UI', sans-serif;
   --bg-primary: #ffffff;
   --bg-secondary: #f9fafb;
   --menu-bar-surface: #eef1f5;
@@ -62,7 +62,7 @@ html, body, #root {
 
 [data-theme='dark'] {
   --font-family-base: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  --font-family-display: 'Orbitron', 'Rajdhani', 'Eurostile', 'Segoe UI', sans-serif;
+  --font-family-display: 'Orbitron', 'Rajdhani', 'Barlow Condensed', 'Eurostile', 'Segoe UI', sans-serif;
   --bg-primary: #111827;
   --bg-secondary: #1f2937;
   --menu-bar-surface: #141a26;
@@ -99,39 +99,52 @@ html, body, #root {
 }
 
 [data-theme='startrek'] {
-  --font-family-base: 'Orbitron', 'Rajdhani', 'Eurostile', 'Segoe UI', sans-serif;
-  --font-family-display: 'Orbitron', 'Rajdhani', 'Eurostile', 'Segoe UI', sans-serif;
-  --bg-primary: #0b0b0f;
-  --bg-secondary: #1f1f27;
-  --menu-bar-surface: #2b2b34;
+  --font-family-base: 'Rajdhani', 'Barlow Condensed', 'Orbitron', 'Eurostile', 'Segoe UI', sans-serif;
+  --font-family-display: 'Orbitron', 'Barlow Condensed', 'Rajdhani', 'Eurostile', 'Segoe UI', sans-serif;
+  --bg-primary: #050509;
+  --bg-secondary: #0f0f17;
+  --menu-bar-surface: #1b1b24;
   --text-primary: #f7e4c7;
-  --text-secondary: #c7c3d9;
-  --border-color: #3c3c48;
-  --accent-blue: #4aa1c4;
+  --text-secondary: #d8cdd9;
+  --border-color: #3d3d48;
+  --accent-blue: #5fb1d8;
   --accent-green: #c19ad8;
   --accent-red: #e58987;
-  --accent-yellow: #e6b800;
-  --accent: #4aa1c4;
-  --shadow-color: rgba(0, 0, 0, 0.28);
-  --shadow-color-soft: rgba(0, 0, 0, 0.18);
-  --shadow-color-strong: rgba(0, 0, 0, 0.36);
-  --overlay-color: rgba(12, 12, 20, 0.7);
-  --overlay-strong: rgba(12, 12, 20, 0.82);
-  --glass-overlay-soft: rgba(43, 43, 52, 0.4);
-  --glass-overlay-medium: rgba(43, 43, 52, 0.55);
-  --glass-overlay-strong: rgba(43, 43, 52, 0.8);
-  --glass-overlay-bold: rgba(43, 43, 52, 0.9);
-  --accent-blue-soft: rgba(74, 161, 196, 0.28);
-  --accent-blue-glow: rgba(74, 161, 196, 0.48);
-  --accent-blue-strong: rgba(74, 161, 196, 0.62);
-  --accent-green-soft: rgba(193, 154, 216, 0.26);
+  --accent-yellow: #f2a33c;
+  --accent: #f2a33c;
+  --rail-amber: #f7b34c;
+  --rail-purple: #c8a0d8;
+  --rail-blue: #7cc7e8;
+  --rail-muted: #2c2c38;
+  --shadow-color: rgba(0, 0, 0, 0.2);
+  --shadow-color-soft: rgba(0, 0, 0, 0.14);
+  --shadow-color-strong: rgba(0, 0, 0, 0.28);
+  --overlay-color: rgba(7, 7, 12, 0.7);
+  --overlay-strong: rgba(7, 7, 12, 0.82);
+  --glass-overlay-soft: rgba(32, 32, 40, 0.4);
+  --glass-overlay-medium: rgba(32, 32, 40, 0.55);
+  --glass-overlay-strong: rgba(32, 32, 40, 0.78);
+  --glass-overlay-bold: rgba(32, 32, 40, 0.9);
+  --accent-blue-soft: rgba(95, 177, 216, 0.32);
+  --accent-blue-glow: rgba(95, 177, 216, 0.52);
+  --accent-blue-strong: rgba(95, 177, 216, 0.68);
+  --accent-green-soft: rgba(193, 154, 216, 0.28);
   --accent-green-glow: rgba(193, 154, 216, 0.48);
-  --accent-red-soft: rgba(229, 137, 135, 0.3);
-  --accent-red-glow: rgba(229, 137, 135, 0.5);
-  --accent-yellow-soft: rgba(230, 184, 0, 0.28);
-  --accent-yellow-glow: rgba(230, 184, 0, 0.46);
-  --accent-white-soft: rgba(247, 228, 199, 0.2);
-  --accent-white-medium: rgba(247, 228, 199, 0.28);
-  --accent-white-strong: rgba(247, 228, 199, 0.52);
-  --text-on-accent: #0c0c14;
+  --accent-red-soft: rgba(229, 137, 135, 0.32);
+  --accent-red-glow: rgba(229, 137, 135, 0.52);
+  --accent-yellow-soft: rgba(242, 163, 60, 0.32);
+  --accent-yellow-glow: rgba(242, 163, 60, 0.52);
+  --accent-white-soft: rgba(247, 228, 199, 0.22);
+  --accent-white-medium: rgba(247, 228, 199, 0.32);
+  --accent-white-strong: rgba(247, 228, 199, 0.55);
+  --text-on-accent: #0b0b10;
+}
+
+[data-theme='startrek'] body,
+[data-theme='startrek'] button,
+[data-theme='startrek'] input,
+[data-theme='startrek'] select,
+[data-theme='startrek'] textarea {
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }

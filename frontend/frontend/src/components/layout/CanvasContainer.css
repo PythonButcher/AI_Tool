@@ -7,6 +7,11 @@
   padding: 10px;
 }
 
+[data-theme='startrek'] .canvas-container {
+  padding: 16px 18px;
+  background: radial-gradient(circle at 20% 20%, rgba(242, 163, 60, 0.08), transparent 35%), radial-gradient(circle at 80% 10%, rgba(193, 154, 216, 0.08), transparent 32%), var(--bg-secondary);
+}
+
 /* Grid Item Styling */
 .grid-item {
   background-color: var(--bg-primary);
@@ -18,6 +23,38 @@
   flex-direction: column; /* Ensure contents stack properly */
   transition: box-shadow 0.2s ease, border-color 0.2s ease,
     background-color 0.3s ease, color 0.3s ease;
+}
+
+[data-theme='startrek'] .grid-item {
+  border-radius: 18px;
+  border: 2px solid var(--rail-muted);
+  box-shadow: inset 0 0 0 2px var(--bg-secondary);
+  position: relative;
+  overflow: hidden;
+}
+
+[data-theme='startrek'] .grid-item::before {
+  content: "";
+  position: absolute;
+  left: -12px;
+  top: 0;
+  width: 24px;
+  height: 100%;
+  background: linear-gradient(180deg, var(--rail-amber) 0 35%, var(--rail-purple) 35% 70%, var(--rail-blue) 70% 100%);
+  border-radius: 18px;
+  opacity: 0.9;
+}
+
+[data-theme='startrek'] .grid-item::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 40px;
+  height: 18px;
+  background: var(--rail-muted);
+  border-radius: 0 0 0 18px;
+  opacity: 0.7;
 }
 
 .grid-item:hover {
@@ -73,6 +110,11 @@
   border-bottom: 1px solid var(--border-color);
 }
 
+[data-theme='startrek'] .data-table th {
+  border-bottom-width: 3px;
+  text-transform: uppercase;
+}
+
 /* Hover Effect for Table Rows */
 .data-table tr:hover {
   background-color: var(--bg-secondary);
@@ -92,6 +134,12 @@
 .preview-header .close-button:hover {
   color: var(--accent-red-soft);
 
+}
+
+[data-theme='startrek'] .preview-header {
+  background: linear-gradient(90deg, var(--rail-amber) 0 40%, var(--rail-muted) 40% 100%);
+  border-bottom: 2px solid var(--rail-muted);
+  text-transform: uppercase;
 }
 
 /* Resizable Grid Item Handles */
@@ -197,6 +245,14 @@
   user-select: none;
   box-sizing: border-box;
   }
+
+[data-theme='startrek'] .window-header {
+  border-bottom: 2px solid var(--rail-muted);
+  background: linear-gradient(90deg, var(--rail-amber) 0 28%, var(--bg-primary) 28% 100%);
+  min-height: 52px;
+  border-radius: 0 0 16px 16px;
+  letter-spacing: 0.06em;
+}
 
 .window-header:hover {
   background-color: var(--bg-secondary);
