@@ -18,36 +18,12 @@
 
 [data-theme='startrek'] .menu-bar {
   position: relative;
-  padding: 12px 18px;
+  padding: 10px 14px;
   border: none;
   border-radius: 0;
   box-shadow: none;
-}
-
-[data-theme='startrek'] .menu-bar::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(90deg,
-    var(--rail-amber) 0 220px,
-    var(--rail-purple) 220px 370px,
-    var(--rail-blue) 370px 520px,
-    var(--rail-muted) 520px 100%);
-  border-radius: 0 0 28px 0;
-  z-index: 0;
-}
-
-[data-theme='startrek'] .menu-bar::after {
-  content: "";
-  position: absolute;
-  top: 8px;
-  right: 12px;
-  width: 180px;
-  height: 14px;
-  background: var(--bg-primary);
-  border-radius: 14px;
-  opacity: 0.75;
-  z-index: 0;
+  background: transparent;
+  gap: 12px;
 }
 
 /* Logo Title */
@@ -62,19 +38,13 @@
   font-family: var(--font-family-display);
   letter-spacing: 0.06em;
   z-index: 1;
-  padding: 8px 16px;
-  min-width: 210px;
+  padding: 10px 18px;
+  min-width: 200px;
   text-align: left;
   position: relative;
-}
-
-[data-theme='startrek'] .menu-title::before {
-  content: "";
-  position: absolute;
-  inset: -8px -12px;
   background: var(--rail-amber);
-  border-radius: 0 0 22px 0;
-  z-index: -1;
+  border-radius: 0 0 22px 8px;
+  box-shadow: inset 0 -4px 0 var(--rail-muted), 0 0 0 2px var(--rail-muted);
 }
 
 .menu-actions {
@@ -86,7 +56,8 @@
 }
 
 [data-theme='startrek'] .menu-actions {
-  gap: 10px;
+  gap: 12px;
+  align-items: center;
 }
 
 /* ──────────────────────────────────────────────────────────
@@ -100,11 +71,11 @@
 }
 
 [data-theme='startrek'] .menu-bar-left {
-  gap: 14px;
+  gap: 12px;
 }
 
 [data-theme='startrek'] .menu-bar-right {
-  gap: 10px;
+  gap: 12px;
   margin-left: auto;
 }
 
@@ -115,26 +86,38 @@
   position: relative;
 }
 
+[data-theme='startrek'] .menu-button-container {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 [data-theme='startrek'] .menu-bar-left .menu-button-container:nth-child(1) { width: 170px; }
 [data-theme='startrek'] .menu-bar-left .menu-button-container:nth-child(2) { width: 150px; }
 [data-theme='startrek'] .menu-bar-left .menu-button-container:nth-child(3) { width: 150px; }
 [data-theme='startrek'] .menu-bar-left .menu-button-container:nth-child(4) { width: 150px; }
 
 [data-theme='startrek'] .menu-button-container::before {
-  content: "";
-  position: absolute;
-  inset: -6px -10px;
-  border-radius: 18px;
-  background: var(--rail-muted);
-  opacity: 0.85;
-  z-index: 0;
-  pointer-events: none;
+  display: none;
 }
 
-[data-theme='startrek'] .menu-bar-left .menu-button-container:nth-child(1)::before { background: var(--rail-purple); }
-[data-theme='startrek'] .menu-bar-left .menu-button-container:nth-child(2)::before { background: var(--rail-blue); }
-[data-theme='startrek'] .menu-bar-left .menu-button-container:nth-child(3)::before { background: var(--rail-muted); }
-[data-theme='startrek'] .menu-bar-left .menu-button-container:nth-child(4)::before { background: var(--rail-muted); }
+[data-theme='startrek'] .menu-bar-left .menu-button-container:nth-child(1) {
+  background: var(--rail-purple);
+}
+[data-theme='startrek'] .menu-bar-left .menu-button-container:nth-child(2) {
+  background: var(--rail-blue);
+}
+[data-theme='startrek'] .menu-bar-left .menu-button-container:nth-child(3),
+[data-theme='startrek'] .menu-bar-left .menu-button-container:nth-child(4) {
+  background: var(--rail-muted);
+}
+
+[data-theme='startrek'] .menu-button-container {
+  padding: 6px 10px;
+  border-radius: 18px;
+  box-shadow: inset 0 -4px 0 var(--rail-muted);
+  border: 2px solid var(--rail-muted);
+}
 
 .menu-button,
 .menu-icon-btn,
@@ -189,20 +172,19 @@
 [data-theme='startrek'] .menu-button,
 [data-theme='startrek'] .menu-icon-btn,
 [data-theme='startrek'] .theme-toggle-btn {
-  background: var(--accent-yellow-soft);
-  border-radius: 18px;
-  border: 2px solid var(--rail-muted);
+  background: transparent;
+  border-radius: 12px;
+  border: none;
   color: var(--text-primary);
   font-weight: 700;
   letter-spacing: 0.08em;
-  box-shadow: inset 0 -3px 0 var(--rail-muted);
+  box-shadow: none;
 }
 
 [data-theme='startrek'] .menu-button:hover,
 [data-theme='startrek'] .menu-icon-btn:hover,
 [data-theme='startrek'] .theme-toggle-btn:hover {
-  background: var(--accent-blue-soft);
-  border-color: var(--accent-blue);
+  background: transparent;
 }
 
 /* ──────────────────────────────────────────────────────────
