@@ -1,4 +1,3 @@
-```javascript
 import React, { useContext, useMemo } from 'react';
 import { createTheme, ThemeProvider as MuiThemeProvider } from '@mui/material/styles';
 import { CssBaseline } from '@mui/material';
@@ -33,19 +32,19 @@ export const MuiThemeContext = ({ children }) => {
           },
           divider: '#27272a',   // --border-color
         } : {
-           // LIGHT THEME PALETTE (Standard Defaults with brand accent)
-           primary: {
-             main: '#3b82f6',
-           },
-           background: {
-             default: '#ffffff',
-             paper: '#f9fafb',
-           },
-           text: {
-             primary: '#111827',
-             secondary: '#374151',
-           },
-           divider: '#d1d5db',
+          // LIGHT THEME PALETTE (Standard Defaults with brand accent)
+          primary: {
+            main: '#3b82f6',
+          },
+          background: {
+            default: '#ffffff',
+            paper: '#f9fafb',
+          },
+          text: {
+            primary: '#111827',
+            secondary: '#374151',
+          },
+          divider: '#d1d5db',
         }),
       },
       typography: {
@@ -87,10 +86,10 @@ export const MuiThemeContext = ({ children }) => {
                 },
               },
               '& .MuiInputLabel-root': {
-                 color: isDark ? '#a1a1aa' : '#374151',
+                color: isDark ? '#a1a1aa' : '#374151',
               },
               '& .MuiInputBase-input': {
-                 color: isDark ? '#e4e4e7' : '#111827',
+                color: isDark ? '#e4e4e7' : '#111827',
               },
             },
           },
@@ -106,4 +105,3 @@ export const MuiThemeContext = ({ children }) => {
     </MuiThemeProvider>
   );
 };
-```
