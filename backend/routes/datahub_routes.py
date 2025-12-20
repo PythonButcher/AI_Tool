@@ -121,3 +121,90 @@ def delete_dataset(dataset_id):
         return jsonify({'error': 'Dataset not found'}), 404
 
     return jsonify({'message': 'Dataset deleted successfully'}), 200
+
+
+# -----------------------------
+# POST /api/datahub/fetch_rows
+# -----------------------------
+@datahub_bp.route('/fetch_rows', methods=['POST'])
+def fetch_dataset_rows():
+    """
+    Accepts { "dataset_ids": ["id_1", "id_2"] }
+    Returns { "datasets": { "id_1": [...records], "id_2": [...records] } }
+    """
+    try:
+        data = request.get_json(force=True)
+        dataset_ids = data.get("dataset_ids", [])
+        
+        if not dataset_ids:
+            return jsonify({'datasets': {}}), 200
+
+        # 1. Resolve IDs to paths
+        conn = get_db_connection()
+        conn.row_factory = sqlite3.Row
+        
+        # Safe way to query multiple IDs
+        placeholders = ','.join('?' for _ in dataset_ids)
+        query = f'SELECT id, path FROM datahub_datasets WHERE id IN ({placeholders})'
+        rows = conn.execute(query, dataset_ids).fetchall()
+        conn.close()
+
+        # Create map of id -> path
+        id_to_path = { row['id']: row['path'] for row in rows }
+
+        results = {}
+        import pandas as pd # Import locally to avoid circle if helper used, though standard import is fine
+
+        for d_id in dataset_ids:
+            path = id_to_path.get(d_id)
+            if not path:
+                results[d_id] = {"error": "Dataset not found in warehouse"}
+                continue
+            
+            # 2. Load data (Reuse logic similar to raw_upload)
+            try:
+                # Basic file reading logic - can be extracted to a helper if needed
+                # Remove potential surrounding quotes from the path string
+                path = path.strip('"').strip("'")
+                lower_path = path.lower()
+                if lower_path.endswith('.csv'):
+                    df = pd.read_csv(path)
+                elif lower_path.endswith(('.xls', '.xlsx')):
+                    df = pd.read_excel(path)
+                elif lower_path.endswith('.json'):
+                    df = pd.read_json(path)
+                elif lower_path.endswith('.geojson'):
+                    with open(path, 'r') as f:
+                        geojson_obj = json.load(f)
+                    df = pd.json_normalize(geojson_obj['features'])
+                else:
+                    results[d_id] = {"error": "Unsupported file format"}
+                    continue
+                
+                # Convert to dict
+                # Limit to 100 rows for now to prevent token overflow, can be adjusted
+                # Or we can send everything and let the AI logic truncate.
+                # User constraint: "Avoid sending unnecessary data to the AI; if datasets are large, propose summarization or truncation strategies."
+                # Strategy: We'll send first 100 rows + summary stats if larger? 
+                # For now, let's just send the head(100) to be safe and responsive.
+                
+                MAX_ROWS = 100
+                truncated = False
+                if len(df) > MAX_ROWS:
+                    df = df.head(MAX_ROWS)
+                    truncated = True
+                
+                records = df.to_dict(orient="records")
+                results[d_id] = {
+                    "data": records,
+                    "truncated": truncated,
+                    "row_count": len(records) # count of what we are sending
+                }
+
+            except Exception as e:
+                results[d_id] = {"error": f"Failed to read file: {str(e)}"}
+
+        return jsonify({'datasets': results}), 200
+
+    except Exception as e:
+        return jsonify({'error': f"Internal error fetching rows: {str(e)}"}), 500
