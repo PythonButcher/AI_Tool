@@ -13,7 +13,9 @@
     border-color 0.3s ease;
 }
 
-html, body, #root {
+html,
+body,
+#root {
   height: 100%;
   background-color: var(--bg-primary);
   color: var(--text-primary);
@@ -56,33 +58,55 @@ html, body, #root {
 }
 
 [data-theme='dark'] {
-  --bg-primary: #111827;
-  --bg-secondary: #1f2937;
-  --text-primary: #f9fafb;
-  --text-secondary: #9ca3af;
-  --border-color: #374151;
+  /* Base Backgrounds - Neutral Black/Charcoal */
+  --bg-primary: #18191c;
+  /* Unified Base (Matches Menu Bar) */
+  --bg-secondary: #25262b;
+  /* Elevated Surfaces (Cards/Panels) */
+  --menu-bar-surface: var(--bg-primary);
+  /* Ensures perfect match */
+
+  /* Text - High contrast, no blue tint */
+  --text-primary: #e4e4e7;
+  /* Soft off-white */
+  --text-secondary: #a1a1aa;
+  /* Neutral muted gray */
+  --text-on-accent: #ffffff;
+  /* White text on colored buttons */
+
+  /* Borders & Dividers */
+  --border-color: #27272a;
+  /* Subtle neutral border */
+
+  /* Accents - Retained but restrained */
   --accent-blue: #3b82f6;
   --accent-green: #10b981;
   --accent-red: #ef4444;
-  --shadow-color: rgba(0, 0, 0, 0.35);
+
+  /* Shadows & Overlays - Pure black based */
+  --shadow-color: rgba(0, 0, 0, 0.4);
   --shadow-color-soft: rgba(0, 0, 0, 0.2);
-  --shadow-color-strong: rgba(0, 0, 0, 0.5);
-  --overlay-color: rgba(0, 0, 0, 0.6);
-  --overlay-strong: rgba(0, 0, 0, 0.75);
-  --glass-overlay-soft: rgba(17, 24, 39, 0.4);
-  --glass-overlay-medium: rgba(17, 24, 39, 0.55);
-  --glass-overlay-strong: rgba(17, 24, 39, 0.85);
-  --glass-overlay-bold: rgba(17, 24, 39, 0.92);
-  --accent-blue-soft: rgba(59, 130, 246, 0.25);
-  --accent-blue-glow: rgba(59, 130, 246, 0.5);
-  --accent-blue-strong: rgba(59, 130, 246, 0.6);
-  --accent-green-soft: rgba(16, 185, 129, 0.25);
-  --accent-green-glow: rgba(16, 185, 129, 0.55);
-  --accent-red-soft: rgba(239, 68, 68, 0.35);
-  --accent-red-glow: rgba(239, 68, 68, 0.55);
-  --accent-yellow-soft: rgba(250, 204, 21, 0.25);
-  --accent-white-soft: rgba(249, 250, 251, 0.2);
-  --accent-white-medium: rgba(249, 250, 251, 0.3);
-  --accent-white-strong: rgba(249, 250, 251, 0.55);
-  --text-on-accent: #f9fafb;
+  --shadow-color-strong: rgba(0, 0, 0, 0.6);
+  --overlay-color: rgba(0, 0, 0, 0.7);
+  --overlay-strong: rgba(0, 0, 0, 0.85);
+
+  /* Glass Effects - Neutral */
+  --glass-overlay-soft: rgba(14, 14, 16, 0.5);
+  --glass-overlay-medium: rgba(14, 14, 16, 0.7);
+  --glass-overlay-strong: rgba(14, 14, 16, 0.9);
+  --glass-overlay-bold: rgba(14, 14, 16, 0.95);
+
+  /* Soft Accent Tint Backgrounds - Extremely Subtle */
+  --accent-blue-soft: rgba(59, 130, 246, 0.1);
+  /* Very faint blue tint */
+  --accent-blue-glow: rgba(59, 130, 246, 0.3);
+  --accent-blue-strong: rgba(59, 130, 246, 0.5);
+  --accent-green-soft: rgba(16, 185, 129, 0.1);
+  --accent-green-glow: rgba(16, 185, 129, 0.3);
+  --accent-red-soft: rgba(239, 68, 68, 0.1);
+  --accent-red-glow: rgba(239, 68, 68, 0.3);
+  --accent-yellow-soft: rgba(250, 204, 21, 0.1);
+  --accent-white-soft: rgba(255, 255, 255, 0.05);
+  --accent-white-medium: rgba(255, 255, 255, 0.1);
+  --accent-white-strong: rgba(255, 255, 255, 0.2);
 }

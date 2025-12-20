@@ -10,14 +10,14 @@ import DataVisualizations from './features/charts/DataVisualization';
 import { transformToChartData } from './utils/chartDataUtils';
 import AIChat from './features/ai/AIChat';
 import { DataContext } from './context/DataContext';
-import { ThemeContext } from './context/ThemeContext';
+import { ThemeContext, ThemeProvider } from './context/ThemeContext';
 import { WarehouseProvider } from './context/WarehouseContext';
 import { HelpOverlayProvider } from './context/HelpOverlayContext';
 import useLoadRawData from './hooks/useLoadRawData';
 // ⛔️ Removed: import DataStoryPanel from './components/DataStoryPanel';
 import DataFilterPanel from './components/data_management/DataFilterPanel';
 import './App.css';
-import { ThemeProvider } from './context/ThemeContext';
+import { MuiThemeContext } from './context/MuiThemeContext';
 
 
 const parseRecords = (source) => {
@@ -35,14 +35,14 @@ const parseRecords = (source) => {
 };
 
 function App() {
-const {
-  uploadedData, setUploadedData,
-  fullData, setFullData,
-  cleanedData, setCleanedData,
-  pipelineResults, setPipelineResults,
-  aiReportReady, setAiReportReady,
-  showAiReport, setShowAiReport
-} = useContext(DataContext);
+  const {
+    uploadedData, setUploadedData,
+    fullData, setFullData,
+    cleanedData, setCleanedData,
+    pipelineResults, setPipelineResults,
+    aiReportReady, setAiReportReady,
+    showAiReport, setShowAiReport
+  } = useContext(DataContext);
 
 
 
@@ -88,7 +88,7 @@ const {
   const [rawUploadFile, setRawUploadFile] = useState(null);
 
   // 🔁 Auto-load fullData for RawDataViewer when viewer is opened
- useLoadRawData(showRawViewer, rawUploadFile, setFullData);
+  useLoadRawData(showRawViewer, rawUploadFile, setFullData);
 
   useEffect(() => {
     if (uploadedData) {
@@ -104,7 +104,7 @@ const {
   useEffect(() => {
     console.log("App render raw data viewer:", showRawViewer);
   }, [showRawViewer]);
-  
+
   useEffect(() => {
     console.log("📉 Filtered data:", openDataFilter);
   }, [openDataFilter]);
@@ -130,19 +130,19 @@ const {
       console.warn('Missing dependencies for chartData transformation.');
       return;
     }
-  
+
     const transformed = transformToChartData(cleanedData, {
       labelField: chartMapping['X-Axis'] || chartMapping['Category'],
       dataFields: [chartMapping['Y-Axis'] || chartMapping['Value']],
     });
-  
+
     if (transformed) {
       setChartData(transformed);
     } else {
       setChartData(null);
     }
   }, [cleanedData, chartMapping]);
-  
+
 
   const closeCleaningForm = () => setShowCleaningForm(false);
 
@@ -173,20 +173,20 @@ const {
     }
   }, [xAxis, yAxis]);
 
-// App.jsx — update inside handleFileUpload (carefully scoped)
-const handleFileUpload = useCallback((raw, file = null) => {
-  const previewRows = parseRecords(raw?.data_preview).slice(0, 5);
-  const datasetRows = parseRecords(raw?.full_data ?? raw?.raw_data);
-  const finalDataset = datasetRows.length ? datasetRows : previewRows;
+  // App.jsx — update inside handleFileUpload (carefully scoped)
+  const handleFileUpload = useCallback((raw, file = null) => {
+    const previewRows = parseRecords(raw?.data_preview).slice(0, 5);
+    const datasetRows = parseRecords(raw?.full_data ?? raw?.raw_data);
+    const finalDataset = datasetRows.length ? datasetRows : previewRows;
 
-  setUploadedData({ data_preview: previewRows });
-  setFullData(finalDataset);
-  setCleanedData(finalDataset);
-  console.log('App.jsx storing fullData rows:', Array.isArray(finalDataset) ? finalDataset.length : 0);
-  setShowDataPreview(true);
+    setUploadedData({ data_preview: previewRows });
+    setFullData(finalDataset);
+    setCleanedData(finalDataset);
+    console.log('App.jsx storing fullData rows:', Array.isArray(finalDataset) ? finalDataset.length : 0);
+    setShowDataPreview(true);
 
-  if (file) setRawUploadFile(file);
-}, [setUploadedData, setFullData, setCleanedData]);
+    if (file) setRawUploadFile(file);
+  }, [setUploadedData, setFullData, setCleanedData]);
 
 
   const handleApiData = (data) => {
@@ -247,7 +247,7 @@ const handleFileUpload = useCallback((raw, file = null) => {
     setShowAiReport(false);
     setAiReportReady(false);
   }, []);
-  
+
 
   const handleChartSelection = useCallback((chartType) => {
     console.log('Chart type selected:', chartType);
@@ -265,8 +265,8 @@ const handleFileUpload = useCallback((raw, file = null) => {
     console.log("Switching story model to:", newModel);
     setStoryModel(newModel);
   };
-  
- 
+
+
 
   const handleFieldDrop = useCallback(
     (axis, field) => {
@@ -333,114 +333,115 @@ const handleFileUpload = useCallback((raw, file = null) => {
 
 
   return (
-    <ThemeProvider> 
-    <WarehouseProvider>
-      <HelpOverlayProvider>    
-      <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
-        <div className="app-container">
-          {/* Sidebar with actions and data cleaning */}
-          <SideBar
-            onButtonClick={handleSidebarButtonClick}
-            onDataCleaned={handleDataCleaned}
-            uploadedData={uploadedData}
-            cleanedData={cleanedData}
-            showAiWorkflow={showAiWorkflow}
-            setShowAiWorkflow={setShowAiWorkflow}
-            setShowDataPreview={setShowDataPreview}
-            setShowRawViewer={setShowRawViewer}
-            setStoryData={setStoryData}
-            setShowStoryPanel={setShowStoryPanel}
-            showWhiteBoard={showWhiteBoard}
-            setShowWhiteBoard={setShowWhiteBoard}
-            onStoryModelChange={handleStoryModelChange} // new model selection
-          />
+    <ThemeProvider>
+      <MuiThemeContext>
+        <WarehouseProvider>
+          <HelpOverlayProvider>
+            <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+              <div className="app-container">
+                {/* Sidebar with actions and data cleaning */}
+                <SideBar
+                  onButtonClick={handleSidebarButtonClick}
+                  onDataCleaned={handleDataCleaned}
+                  uploadedData={uploadedData}
+                  cleanedData={cleanedData}
+                  showAiWorkflow={showAiWorkflow}
+                  setShowAiWorkflow={setShowAiWorkflow}
+                  setShowDataPreview={setShowDataPreview}
+                  setShowRawViewer={setShowRawViewer}
+                  setStoryData={setStoryData}
+                  setShowStoryPanel={setShowStoryPanel}
+                  showWhiteBoard={showWhiteBoard}
+                  setShowWhiteBoard={setShowWhiteBoard}
+                  onStoryModelChange={handleStoryModelChange} // new model selection
+                />
 
-          <div className="main-content">
-            {/* Top menu bar with file upload and statistics selection */}
-            <MenuBar
-              onFileUploadSuccess={handleFileUpload}
-              onStatsSelect={handleStatsSelect}
-              showDataPreview={showDataPreview}
-              setShowDataPreview={setShowDataPreview}
-              handleApiData={handleApiData}
-              handleDatabaseData={handleDatabaseData}
-              setOpenDataFilter={setOpenDataFilter}
-              aiReportReady={aiReportReady}
-              onAiReportClick={handleAiReportOpen}
-            />
+                <div className="main-content">
+                  {/* Top menu bar with file upload and statistics selection */}
+                  <MenuBar
+                    onFileUploadSuccess={handleFileUpload}
+                    onStatsSelect={handleStatsSelect}
+                    showDataPreview={showDataPreview}
+                    setShowDataPreview={setShowDataPreview}
+                    handleApiData={handleApiData}
+                    handleDatabaseData={handleDatabaseData}
+                    setOpenDataFilter={setOpenDataFilter}
+                    aiReportReady={aiReportReady}
+                    onAiReportClick={handleAiReportOpen}
+                  />
 
-            <DataFilterPanel openDataFilter={openDataFilter} setOpenDataFilter={setOpenDataFilter} />
+                  <DataFilterPanel openDataFilter={openDataFilter} setOpenDataFilter={setOpenDataFilter} />
 
-            {/* Data Visualization Component (conditionally rendered) */}
-            {showDataVisual && (
-              <DataVisualizations
-                onDataCleaned={cleanedData}
-                setShowDataVisual={setShowDataVisual}
-                setCleanedData={setCleanedData}
-                uploadedData={uploadedData}
-                onSelectChart={handleChartSelection}
-              />
-            )}
-        
-            {/* Data Cleaning Form */}
-            {showCleaningForm && (
-              <DataCleaningForm
-                uploadedData={uploadedData}
-                setCleanedData={setCleanedData}
-                setShowDataPreview={setShowDataPreview}
-                closeForm={closeCleaningForm}
-              />
-            )}
+                  {/* Data Visualization Component (conditionally rendered) */}
+                  {showDataVisual && (
+                    <DataVisualizations
+                      onDataCleaned={cleanedData}
+                      setShowDataVisual={setShowDataVisual}
+                      setCleanedData={setCleanedData}
+                      uploadedData={uploadedData}
+                      onSelectChart={handleChartSelection}
+                    />
+                  )}
 
-            {/* Canvas Container wraps multiple display components */}
-            {showCanvasContainer && (
-              <CanvasContainer
-                showAiWorkflow={showAiWorkflow}  // ✅ Pass state down
-                setShowAiWorkflow={setShowAiWorkflow}
-                uploadedData={uploadedData || null}
-                showDataPreview={showDataPreview}
-                previewMode={previewMode}              
-                setPreviewMode={setPreviewMode}
-                setShowDataPreview={setShowDataPreview}
-                handleClosePreview={handleClosePreview}
-                handleCloseCanvas={handleCloseCanvas}
-                cleanedData={cleanedData}
-                selectedChartType={selectedChartType}
-                handleCloseChartWindow={handleCloseChartWindow}
-                showChartWindow={showChartWindow}
-                showAIChart={showAIChart}
-                setShowAIChart={setShowAIChart}
-                setAiChartType = {setAiChartType}
-                aiChartData={aiChartData}
-                aiChartType={aiChartType}
-                showCanvasMinimized={showCanvasMinimized}
-                setShowCanvasMinimized={setShowCanvasMinimized}
-                handleCanvasMinimize={handleCanvasMinimize}
-                chartMapping={chartMapping}                // ✅ NEW
-                storyData={storyData}
-                setStoryData={setStoryData}
-                showStoryPanel={showStoryPanel}
-                setShowStoryPanel={setShowStoryPanel}
-                setAiChartData={setAiChartData}
-                chartData={chartData} // ✅ ADD THIS
-                showWhiteBoard={showWhiteBoard}
-                setShowWhiteBoard={setShowWhiteBoard}
-                pipelineResults={pipelineResults} 
-                setPipelineResults={setPipelineResults}
-                outputWindows={outputWindows}
-                setOutputWindows={setOutputWindows}
-                showAiReport={showAiReport}
-                onCloseAiReport={handleAiReportClose}
-                storyModel={storyModel}
-                showRawViewer={showRawViewer}
-                handleCloseRawViewer={handleCloseRawViewer}
+                  {/* Data Cleaning Form */}
+                  {showCleaningForm && (
+                    <DataCleaningForm
+                      uploadedData={uploadedData}
+                      setCleanedData={setCleanedData}
+                      setShowDataPreview={setShowDataPreview}
+                      closeForm={closeCleaningForm}
+                    />
+                  )}
 
-              >
-                {/* ⬇️ Keep other children that should render inside the Data Preview window */}
-                <DatasetInfo selectedStat={selectedStat} />
+                  {/* Canvas Container wraps multiple display components */}
+                  {showCanvasContainer && (
+                    <CanvasContainer
+                      showAiWorkflow={showAiWorkflow}  // ✅ Pass state down
+                      setShowAiWorkflow={setShowAiWorkflow}
+                      uploadedData={uploadedData || null}
+                      showDataPreview={showDataPreview}
+                      previewMode={previewMode}
+                      setPreviewMode={setPreviewMode}
+                      setShowDataPreview={setShowDataPreview}
+                      handleClosePreview={handleClosePreview}
+                      handleCloseCanvas={handleCloseCanvas}
+                      cleanedData={cleanedData}
+                      selectedChartType={selectedChartType}
+                      handleCloseChartWindow={handleCloseChartWindow}
+                      showChartWindow={showChartWindow}
+                      showAIChart={showAIChart}
+                      setShowAIChart={setShowAIChart}
+                      setAiChartType={setAiChartType}
+                      aiChartData={aiChartData}
+                      aiChartType={aiChartType}
+                      showCanvasMinimized={showCanvasMinimized}
+                      setShowCanvasMinimized={setShowCanvasMinimized}
+                      handleCanvasMinimize={handleCanvasMinimize}
+                      chartMapping={chartMapping}                // ✅ NEW
+                      storyData={storyData}
+                      setStoryData={setStoryData}
+                      showStoryPanel={showStoryPanel}
+                      setShowStoryPanel={setShowStoryPanel}
+                      setAiChartData={setAiChartData}
+                      chartData={chartData} // ✅ ADD THIS
+                      showWhiteBoard={showWhiteBoard}
+                      setShowWhiteBoard={setShowWhiteBoard}
+                      pipelineResults={pipelineResults}
+                      setPipelineResults={setPipelineResults}
+                      outputWindows={outputWindows}
+                      setOutputWindows={setOutputWindows}
+                      showAiReport={showAiReport}
+                      onCloseAiReport={handleAiReportClose}
+                      storyModel={storyModel}
+                      showRawViewer={showRawViewer}
+                      handleCloseRawViewer={handleCloseRawViewer}
 
-                {/* ⛔️ Removed: duplicate DataStoryPanel child render */}
-                {/*
+                    >
+                      {/* ⬇️ Keep other children that should render inside the Data Preview window */}
+                      <DatasetInfo selectedStat={selectedStat} />
+
+                      {/* ⛔️ Removed: duplicate DataStoryPanel child render */}
+                      {/*
                 {showStoryPanel && (
                   <DataStoryPanel
                     uploadedData={uploadedData}
@@ -449,22 +450,23 @@ const handleFileUpload = useCallback((raw, file = null) => {
                   />
                 )}
                 */}
-              </CanvasContainer>
-            )}
-          </div>
+                    </CanvasContainer>
+                  )}
+                </div>
 
-          {/* AI Chat component for interacting with AI */}
-          <AIChat
-            setShowAIChart={setShowAIChart}
-            setAiChartType={setAiChartType}
-            setAiChartData={setAiChartData}
-          />
-          
-        </div>
-      </DndContext>
-    </HelpOverlayProvider>
-  </WarehouseProvider>
-  </ThemeProvider>
+                {/* AI Chat component for interacting with AI */}
+                <AIChat
+                  setShowAIChart={setShowAIChart}
+                  setAiChartType={setAiChartType}
+                  setAiChartData={setAiChartData}
+                />
+
+              </div>
+            </DndContext>
+          </HelpOverlayProvider>
+        </WarehouseProvider>
+      </MuiThemeContext>
+    </ThemeProvider>
   );
 }
 
