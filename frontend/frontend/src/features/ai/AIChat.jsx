@@ -84,6 +84,9 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
   const [mentionQuery, setMentionQuery] = useState(null);
   const [isMentionOpen, setIsMentionOpen] = useState(false);
   const [mentionPosition, setMentionPosition] = useState({ top: 0, left: 0 });
+  const [mentionStartIndex, setMentionStartIndex] = useState(-1);
+
+  const inputRef = React.useRef(null);
 
   const toggleChat = () => setShowChat(prev => !prev);
 
@@ -140,48 +143,71 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
       };
     }
   };
- // --------------------Mention section '@' of code-----------------------------------------------//
+  // --------------------Mention section '@' of code-----------------------------------------------//
 
   const handleMentionSelect = (datasetName) => {
-    // 1. Find where the mention started (the last '@')
-    const lastAtIndex = userInput.lastIndexOf('@');
-    
-    // 2. Slice the text: keep everything before '@', add the name, add a space
-    const newText = userInput.substring(0, lastAtIndex) + `@${datasetName} `;
-    
+    // 1. Use stored start index if available, else fallback
+    let startIdx = mentionStartIndex;
+    if (startIdx === -1) {
+      startIdx = userInput.lastIndexOf('@');
+    }
+
+    // 2. Safe replacement
+    const before = userInput.substring(0, startIdx);
+    const afterStart = userInput.substring(startIdx + 1);
+
+    // Find if there is a space after the @ token
+    const spaceIndex = afterStart.search(/\s/);
+    const endIdx = spaceIndex === -1 ? userInput.length : (startIdx + 1 + spaceIndex);
+    const after = userInput.substring(endIdx);
+
+    // Insert new token with space
+    const newText = `${before}@${datasetName} ${after}`;
+
     // 3. Update state
     setUserInput(newText);
-    setIsMentionOpen(false); // Close menu
-    
-    // Optional: Focus the input back (requires a Ref, skip for now if too complex)
-  };
-// --------------------Mention section '@' of code-----------------------------------------------//
+    setIsMentionOpen(false);
+    setMentionStartIndex(-1);
 
- const handleInputChange = (e) => {
+    // 4. Restore Focus
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
+  };
+  // --------------------Mention section '@' of code-----------------------------------------------//
+
+  const handleInputChange = (e) => {
     const newValue = e.target.value;
     const newCursorPos = e.target.selectionStart;
 
     // --- DEBUG LOGS START ---
     console.log("1. Typing detected:", newValue);
-    
+
     setUserInput(newValue);
 
     const token = detectToken(newValue, newCursorPos);
     console.log("2. Detected Token:", token); // Should say "" or "Har" etc.
 
     if (token !== null) {
-      console.log("3. Opening Menu!"); // If this doesn't print, logic is failing
+      console.log("3. Opening Menu!");
       setMentionQuery(token);
       setIsMentionOpen(true);
-      setMentionPosition({ top: -180, left: 10 }); 
+
+      // Calculate start index of the current token
+      const textBefore = newValue.substring(0, newCursorPos);
+      const atIndex = textBefore.lastIndexOf('@');
+      setMentionStartIndex(atIndex);
+
+      setMentionPosition({ top: -180, left: 10 });
     } else {
       setIsMentionOpen(false);
       setMentionQuery(null);
+      setMentionStartIndex(-1);
     }
     // --- DEBUG LOGS END ---
   };
 
-// -----------------------------------------------------------------------------------------//
+  // -----------------------------------------------------------------------------------------//
   const handleSendMessage = async () => {
     if (!userInput.trim()) return;
 
@@ -196,11 +222,55 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
 
     setLoading(true);
     setError(null);
-    
+
+    // --- NEW: Fetch actual data for mentions ---
+    let additionalContext = "";
+    if (resolvedDatasets.length > 0) {
+      try {
+        const datasetIds = resolvedDatasets.map(ds => ds.id);
+        const fetchResp = await axios.post(`${API_URL}/api/datahub/fetch_rows`, { dataset_ids: datasetIds });
+
+        const fetchedData = fetchResp.data.datasets || {};
+        const dataContexts = [];
+
+        resolvedDatasets.forEach(ds => {
+          const fileData = fetchedData[ds.id];
+          if (fileData && !fileData.error && fileData.data) {
+            const rowInfo = fileData.truncated
+              ? `(Showing first ${fileData.row_count} rows)`
+              : `(${fileData.row_count} rows)`;
+
+            dataContexts.push(
+              `DATASET: "${ds.name}" ${rowInfo}\nCONTENT:\n${JSON.stringify(fileData.data)}`
+            );
+          } else if (fileData && fileData.error) {
+            console.warn(`Failed to fetch ${ds.name}: ${fileData.error}`);
+          }
+        });
+
+        if (dataContexts.length > 0) {
+          additionalContext = `\nYou have access to the following user-selected datasets. Use them to answer the user's request.\n\n${dataContexts.join('\n\n')}\n\n`;
+        }
+
+      } catch (err) {
+        console.error("Error fetching dataset rows:", err);
+        setError("Failed to retrieve referenced dataset content.");
+        setLoading(false);
+        return;
+      }
+    }
+    // -------------------------------------------
 
     const datasetContext = resolveDatasetForNlp();
-    if (!Array.isArray(datasetContext) || datasetContext.length === 0) {
-      setError('No dataset loaded—upload data first.');
+    // Use the fetched data context if available, otherwise fall back to global context
+    // Ideally we merge them or prioritize mentioned data.
+    // If user explicitly mentions data, we should probably prioritize that context.
+
+    // For now, if mentions exist, we might NOT fail if global context is missing?
+    // The original logic checks:
+    if ((!Array.isArray(datasetContext) || datasetContext.length === 0) && resolvedDatasets.length === 0) {
+      // Only error if BOTH are missing
+      setError('No dataset loaded—upload data or mention a dataset (e.g. @Sales).');
       setLoading(false);
       return;
     }
@@ -244,9 +314,26 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
       return;
     }
 
+    // If we have resolved datasets but no global context, try to use the first resolved dataset for commands
+    // This allows "@Sales /charts" to work even if Sales isn't globally loaded.
+    let effectiveDatasetContext = datasetContext;
+    if ((!effectiveDatasetContext || effectiveDatasetContext.length === 0) && resolvedDatasets.length === 1 && additionalContext) {
+      // We need to grab the data from the fetch response again or store it better.
+      // Since we constructed additionalContext string, we might not have the raw object handy in this scope 
+      // without extraction or wider scope variable. 
+      // Let's rely on standard chat for multi-dataset analysis for now to keep it safe.
+      // But for single dataset, it would be nice.
+
+      // Actually, let's keep it simple: The AI Chat (/ai) is the main target for "analyze together".
+      // Commands (/charts) might be strictly for loaded data unless we refactor more.
+      // User "The goal is to allow users to reference ... inside an AI chat message ... and have the AI receive ... the actual dataset contents"
+      // This implies the main chat flow.
+    }
+
     const conversation_history = [
       { role: "system", content: "You are an AI assistant for data analysis. Only answer questions about the provided dataset concisely, like Captain Jean-Luc Picard." },
-      { role: "system", content: `Dataset: ${JSON.stringify(datasetContext)}` },
+      { role: "system", content: `Dataset: ${JSON.stringify(effectiveDatasetContext)}` },
+      { role: "system", content: additionalContext }, // <--- INJECTED CONTEXT
       ...userMessages.slice(-5),
       { role: "user", content: userInput }
     ];
@@ -259,7 +346,7 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
         setLoading(false);
         return;
       }
-    
+
 
       const formattedChartData = formatChartData(aiChartResponse);
       setAiChartType(formattedChartData.datasets[0]?.label || "Bar Chart");
@@ -340,7 +427,7 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
         </div>
 
 
-       <Paper className="chat-input-container" elevation={0}>
+        <Paper className="chat-input-container" elevation={0}>
           {/* 1. The Dropdown (Only shows when active) */}
           {isMentionOpen && (
             <MentionDropdown
@@ -354,6 +441,7 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
           <Box className="chat-input-inner">
             {/* 2. The Input Field */}
             <TextField
+              inputRef={inputRef}
               label="Ask about the data..."
               variant="outlined"
               fullWidth

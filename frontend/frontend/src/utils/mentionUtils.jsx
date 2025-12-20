@@ -7,26 +7,26 @@
 
 
 export const detectToken = (text, cursorPosition) => {
-    const textBeforeCursor = text.substring(0, cursorPosition);
+  const textBeforeCursor = text.substring(0, cursorPosition);
 
-    // find the '@' symbol before the cursor
-    const lastAtIndex = textBeforeCursor.lastIndexOf('@');
+  // find the '@' symbol before the cursor
+  const lastAtIndex = textBeforeCursor.lastIndexOf('@');
 
-    // If no '@' was found, were not in a mention
-    if(lastAtIndex === -1) {
-        return null;
-    }
-    // Make space before '@' is a space or start of text
-    const charBeforeAt = textBeforeCursor[lastAtIndex - 1];
-    if(lastAtIndex > 0 && charBeforeAt && charBeforeAt.trim() !== '') {
-        return null;
-    }
-    // Get text from '@' to cursor. Potential Token.
-    const query = textBeforeCursor.substring(lastAtIndex + 1);
-    // Check if the query contains *any* whitespace (space, tab, newline)
-    const hasBreakingChar = /\s/.test(query);
+  // If no '@' was found, were not in a mention
+  if (lastAtIndex === -1) {
+    return null;
+  }
+  // Make space before '@' is a space or start of text
+  const charBeforeAt = textBeforeCursor[lastAtIndex - 1];
+  if (lastAtIndex > 0 && charBeforeAt && charBeforeAt.trim() !== '') {
+    return null;
+  }
+  // Get text from '@' to cursor. Potential Token.
+  const query = textBeforeCursor.substring(lastAtIndex + 1);
+  // Check if the query contains *any* whitespace (space, tab, newline)
+  const hasBreakingChar = /\s/.test(query);
 
-    if (hasBreakingChar) {
+  if (hasBreakingChar) {
     // The user typed "@bob smith". The active mention is broken.
     return null;
   }
@@ -37,9 +37,11 @@ export const detectToken = (text, cursorPosition) => {
 export function extractTokens(text) {
   if (!text || typeof text !== "string") return [];
 
-  // Match @ followed by 1+ non-whitespace characters
-  // Example: "@sales2024" -> captures "sales2024"
-  const matches = text.match(/@(\S+)/g);
+  // Match @ followed by valid dataset name characters (alphanumeric, underscores)
+  // Stops at punctuation, spaces, or end of string.
+  // Example: "Compare @Sales_2023, and @Marketing." -> captures "Sales_2023", "Marketing"
+  const matches = text.match(/@([a-zA-Z0-9_]+)/g);
+
   if (!matches) return [];
 
   // Remove '@', dedupe
@@ -51,7 +53,11 @@ export function extractTokens(text) {
 
 
 
-export function tokenToDataset() {
+export function tokenToDataset(tokens, datasets) {
+  // 1. Validate inputs
+  if (!Array.isArray(tokens) || !Array.isArray(datasets)) {
+    return [];
+  }
 
 }
 
