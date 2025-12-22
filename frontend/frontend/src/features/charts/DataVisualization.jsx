@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useWindowContext } from '../../context/WindowContext';
 import {
   Dialog,
   Grid2,
@@ -19,12 +20,13 @@ const chartTypes = [
   { type: 'Doughnut', Icon: FcDoughnutChart }
 ];
 
-function DataVisualizations({ onDataCleaned, setShowDataVisual, onSelectChart, uploadedData, setCleanedData }) {
+function DataVisualizations({ onDataCleaned, setShowDataVisual, uploadedData, setCleanedData, onSelectChart }) {
   const [errorMessage, setErrorMessage] = useState(null);
+  const { addChart } = useWindowContext();
 
   // Validate onDataCleaned
   useEffect(() => {
-    if (!onDataCleaned ) {
+    if (!onDataCleaned) {
       setErrorMessage('Please have cleaned data available to visualize.');
     } else {
       setErrorMessage(null);
@@ -36,7 +38,13 @@ function DataVisualizations({ onDataCleaned, setShowDataVisual, onSelectChart, u
       alert("No cleaned data available. Please clean your data or click 'Data Is Clean'.");
       return;
     }
-    onSelectChart(chartType);
+
+    // NEW: Add a new chart window via context
+    addChart({ type: chartType });
+
+    // Legacy support (optional, can be removed if App.jsx is fully cleaned)
+    if (onSelectChart) onSelectChart(chartType);
+
     setShowDataVisual(false); // Close the modal after selection
   };
 
@@ -67,7 +75,7 @@ function DataVisualizations({ onDataCleaned, setShowDataVisual, onSelectChart, u
               <CleanedButton
                 uploadedData={uploadedData}
                 setCleanedData={setCleanedData}
- 
+
               />
             </div>
           )}
