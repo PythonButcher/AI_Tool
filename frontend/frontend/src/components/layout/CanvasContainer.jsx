@@ -570,8 +570,8 @@ function CanvasContainer({
             <SmartChartWindow
               id={chart.id}
               data={cleanedData || uploadedData} // Pass active data
-              initialType={chart.type}
-              initialMapping={chart.mapping}
+              type={chart.type}
+              mapping={chart.mapping}
               isLocked={isLocked(chart.id)}
             />
           </div>
