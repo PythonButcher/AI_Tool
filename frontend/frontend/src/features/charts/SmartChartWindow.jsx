@@ -4,6 +4,7 @@ import ChartComponent from './ChartComponent';
 import { transformToChartData } from '../../utils/chartDataUtils';
 import { TbChartBar, TbChartDots, TbChartLine, TbChartPie, TbChartDonut } from 'react-icons/tb';
 import { IoAddCircleOutline } from 'react-icons/io5';
+import { useWindowContext } from '../../context/WindowContext';
 
 /**
  * A self-contained "Smart" window that manages a single chart's state.
@@ -12,14 +13,13 @@ import { IoAddCircleOutline } from 'react-icons/io5';
 const SmartChartWindow = ({
     id,
     data,
-    initialType = 'Bar',
-    initialMapping = {},
+    type = 'Bar',
+    mapping = {},
     onRemove,
     isLocked
 }) => {
-    const [chartType, setChartType] = useState(initialType);
-    const [mapping, setMapping] = useState(initialMapping); // { 'X-Axis': 'field', 'Y-Axis': 'field', ... }
     const [isGlobalDragging, setIsGlobalDragging] = useState(false);
+    const { updateChart } = useWindowContext();
 
     // Monitor global drag state to reveal drop zones
     useDndMonitor({
@@ -36,12 +36,9 @@ const SmartChartWindow = ({
         },
     });
 
-    const handleDrop = useCallback((axis, fieldName) => {
-        setMapping((prev) => ({
-            ...prev,
-            [axis]: fieldName,
-        }));
-    }, []);
+    const handleChartTypeChange = useCallback((nextType) => {
+        updateChart(id, { type: nextType });
+    }, [id, updateChart]);
 
     // Compute chart data locally for this specific window
     const chartData = useMemo(() => {
@@ -116,13 +113,13 @@ const SmartChartWindow = ({
                 ].map(t => (
                     <button
                         key={t.type}
-                        onClick={() => setChartType(t.type)}
-                        className={chartType === t.type ? 'active' : ''}
+                        onClick={() => handleChartTypeChange(t.type)}
+                        className={type === t.type ? 'active' : ''}
                         style={{
                             padding: '6px',
                             border: 'none',
-                            background: chartType === t.type ? '#e8f0fe' : 'transparent',
-                            color: chartType === t.type ? '#1a73e8' : '#666',
+                            background: type === t.type ? '#e8f0fe' : 'transparent',
+                            color: type === t.type ? '#1a73e8' : '#666',
                             borderRadius: '4px',
                             cursor: 'pointer',
                             display: 'flex'
@@ -134,7 +131,7 @@ const SmartChartWindow = ({
                 ))}
             </div>
             <div style={{ fontSize: '0.8rem', color: '#888' }}>
-                {isEmpty ? 'Draft' : `${chartType} Chart`}
+                {isEmpty ? 'Draft' : `${type} Chart`}
             </div>
         </div>
     );
@@ -154,7 +151,7 @@ const SmartChartWindow = ({
             <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
                 {/* Actual Chart */}
                 {!isEmpty && (
-                    <ChartComponent chartType={chartType} chartData={chartData} />
+                    <ChartComponent chartType={type} chartData={chartData} />
                 )}
 
                 {/* Empty State / Call to Action */}
