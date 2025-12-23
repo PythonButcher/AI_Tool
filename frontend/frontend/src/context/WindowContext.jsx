@@ -11,6 +11,7 @@ export const WindowContext = createContext();
 
 export const WindowProvider = ({ children }) => {
   const [openWindows, setOpenWindows] = useState([]);
+  const [charts, setCharts] = useState([]); // [{ id, type, mapping }]
   const [minimizedWindows, setMinimizedWindows] = useState({});
   const [windowStates, setWindowStates] = useState({});
   const [lockedWindows, setLockedWindows] = useState({});
@@ -20,6 +21,23 @@ export const WindowProvider = ({ children }) => {
 
   const openWindow = (id) => {
     setOpenWindows((prev) => (prev.includes(id) ? prev : [...prev, id]));
+  };
+
+  const addChart = (chartConfig) => {
+    const newId = `chart-${Date.now()}`;
+    const chart = { id: newId, type: 'Bar', mapping: {}, ...chartConfig };
+    setCharts(prev => [...prev, chart]);
+    openWindow(newId);
+    return newId;
+  };
+
+  const removeChart = (id) => {
+    setCharts(prev => prev.filter(c => c.id !== id));
+    closeWindow(id);
+  };
+
+  const updateChart = (id, updates) => {
+    setCharts(prev => prev.map(c => c.id === id ? { ...c, ...updates } : c));
   };
 
   useEffect(() => {
@@ -39,7 +57,7 @@ export const WindowProvider = ({ children }) => {
 
   const saveWindowState = (id, layout) => {
     setWindowStates(prev => ({ ...prev, [id]: layout }));
-};
+  };
 
   const getWindowState = (id) => windowStates[id] || null;
 
@@ -53,8 +71,8 @@ export const WindowProvider = ({ children }) => {
   );
 
   const toggleLock = (id) => {
-  setLockedWindows(prev => ({ ...prev, [id]: !prev[id] }));
-};
+    setLockedWindows(prev => ({ ...prev, [id]: !prev[id] }));
+  };
 
   const isLocked = (id) => !!lockedWindows[id];
 
@@ -106,8 +124,12 @@ export const WindowProvider = ({ children }) => {
       isLocked,
       saveWindowContentState,
       getWindowContentState,
+      charts,
+      addChart,
+      removeChart,
+      updateChart
     }),
-    [openWindows, minimizedWindows, windowStates, lockedWindows, windowContentStates]
+    [openWindows, minimizedWindows, windowStates, lockedWindows, windowContentStates, charts]
   );
 
   return <WindowContext.Provider value={value}>{children}</WindowContext.Provider>;

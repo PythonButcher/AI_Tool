@@ -16,50 +16,53 @@ ChartJS.register(
 function ChartComponent({ chartType = 'Bar', chartData, mapping }) {
   const chartRef = useRef(null);
 
-if (!chartData || !chartData.labels || !chartData.datasets) {
-  return <div style={{ padding: "20px", textAlign: "center" }}>Chart data is incomplete.</div>;
-}
+  if (!chartData || !chartData.labels || !chartData.datasets) {
+    return <div style={{ padding: "20px", textAlign: "center" }}>Chart data is incomplete.</div>;
+  }
 
 
   const options = {
-  responsive: true,
-  maintainAspectRatio: false,   // Must be false!
-  aspectRatio: undefined,       // Allows full flexible height
-  layout: { padding: 10 },
-  plugins: { legend: { display: true }, tooltip: { enabled: true } },
-  animation: {
-    onComplete: () => {
-      const chart = chartRef.current;
-      if (chart) {
-        const ctx = chart.ctx;
-        ctx.save();
-        ctx.globalCompositeOperation = 'destination-over';
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, chart.width, chart.height);
-        ctx.restore();
-      }
+    responsive: true,
+    maintainAspectRatio: false,   // Must be false!
+    aspectRatio: undefined,       // Allows full flexible height
+    layout: { padding: 10 },
+    plugins: { legend: { display: true }, tooltip: { enabled: true } },
+    animation: {
+      onComplete: () => {
+        const chart = chartRef.current;
+        if (chart) {
+          const ctx = chart.ctx;
+          ctx.save();
+          ctx.globalCompositeOperation = 'destination-over';
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, chart.width, chart.height);
+          ctx.restore();
+        }
+      },
     },
-  },
-};
+  };
 
 
   return (
     <div
       style={{
         width: "100%",
-        height: "calc(95% - 8px)", // ✅ leave room for toolbar
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
         position: "relative",
-        paddingBottom: "12px",       // ✅ prevent axis cutoffs
-        boxSizing: "border-box",     // ✅ account for padding
+        boxSizing: "border-box",
+        overflow: "hidden"
       }}
     >
-
       <ChartToolbar chartRef={chartRef} />
-      {chartType === "Bar" && <Bar ref={chartRef} data={chartData} options={options} />}
-      {chartType === "Line" && <Line ref={chartRef} data={chartData} options={options} />}
-      {chartType === "Pie" && <Pie ref={chartRef} data={chartData} options={options} />}
-      {chartType === "Doughnut" && <Doughnut ref={chartRef} data={chartData} options={options} />}
-      {chartType === "Scatter" && <Scatter ref={chartRef} data={chartData} options={options} />}
+      <div style={{ flex: 1, minHeight: 0, position: "relative" }}>
+        {chartType === "Bar" && <Bar ref={chartRef} data={chartData} options={options} />}
+        {chartType === "Line" && <Line ref={chartRef} data={chartData} options={options} />}
+        {chartType === "Pie" && <Pie ref={chartRef} data={chartData} options={options} />}
+        {chartType === "Doughnut" && <Doughnut ref={chartRef} data={chartData} options={options} />}
+        {chartType === "Scatter" && <Scatter ref={chartRef} data={chartData} options={options} />}
+      </div>
     </div>
   );
 }
