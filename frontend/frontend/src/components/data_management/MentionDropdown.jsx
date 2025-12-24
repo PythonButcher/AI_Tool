@@ -2,7 +2,7 @@ import React, { useContext } from 'react';
 import { WarehouseContext } from '../../context/WarehouseContext';
 import './MentionDropdown.css'; // We will add the styles for this below
 
-const MentionDropdown = ({ query, position, onSelect, onClose, children }) => {
+const MentionDropdown = ({ query, position, onSelect, onClose, highlightedIndex, onHighlight, children }) => {
   const { datasets } = useContext(WarehouseContext);
 
   // DEBUG: See if data is actually loaded in the context
@@ -31,12 +31,15 @@ const MentionDropdown = ({ query, position, onSelect, onClose, children }) => {
       >
         <div className="mention-header">Select a dataset</div>
         {/* 1. List Matches */}
-        {filteredDatasets.map((ds) => (
-          <div
-            key={ds.id}
-            className="mention-item"
-            onClick={() => onSelect(ds.name)}
+       {filteredDatasets.map((ds, index) => (
+        <div
+          key={ds.id}
+          className={`mention-item ${index === highlightedIndex ? "active" : ""}`}
+          onClick={() => onSelect(ds.name)}
+          /* ADD THIS: Update the index when the mouse moves over an item */
+          onMouseEnter={() => onHighlight(index)}
           >
+          
             <span className="mention-icon">🗄️</span>
             {ds.name}
           </div>
