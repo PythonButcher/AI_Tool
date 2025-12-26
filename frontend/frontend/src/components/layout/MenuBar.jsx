@@ -15,7 +15,7 @@ const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 function MenuBar({ onFileUploadSuccess, onStatsSelect,
   handleApiData, handleDatabaseData, setOpenDataFilter,
-  aiReportReady, onAiReportClick }) {
+  aiReportReady, onAiReportClick, onSnowToggle, isSnowing }) {
   const [activeDropdown, setActiveDropdown] = useState(null);
   const { setUploadedData } = useContext(DataContext);
   const { theme, toggleTheme } = useContext(ThemeContext);
@@ -215,6 +215,16 @@ function MenuBar({ onFileUploadSuccess, onStatsSelect,
           >
             {theme === 'dark' ? <FaSun /> : <FaMoon />}
           </button>
+          {/* Only show the Snow Toggle if in Dark Mode */}
+        {theme === 'dark' && (
+          <button 
+            className={`menu-icon-btn ${isSnowing ? 'active' : ''}`}
+            title="Let it snow!"
+            onClick={onSnowToggle}
+          >
+            ❄️
+          </button>
+          )}
         </div>
       </div>
     </div>

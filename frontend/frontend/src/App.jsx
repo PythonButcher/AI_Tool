@@ -19,6 +19,7 @@ import DataFilterPanel from './components/data_management/DataFilterPanel';
 import './App.css';
 import { MuiThemeContext } from './context/MuiThemeContext';
 import { WindowProvider, useWindowContext } from './context/WindowContext';
+import Snowfall from 'react-snowfall';
 
 
 const parseRecords = (source) => {
@@ -45,6 +46,9 @@ function AppContent() {
     aiReportReady, setAiReportReady,
     showAiReport, setShowAiReport
   } = useContext(DataContext);
+
+  const { theme } = useContext(ThemeContext); // Access existing theme state
+  const [isSnowing, setIsSnowing] = useState(false); // New state to control the feature
 
   const { charts, updateChart } = useWindowContext(); // ✅ Consuming Context
 
@@ -200,7 +204,21 @@ function AppContent() {
 
   return (
     <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
-      <div className="app-container">
+    <div className="app-container">
+      {/* ❄️ Let it Snow Feature Integration */}
+      {theme === 'dark' && isSnowing && (
+        <Snowfall 
+          color="#ffffff" 
+          snowflakeCount={200}
+          style={{
+            position: 'fixed',
+            width: '100vw',
+            height: '100vh',
+            zIndex: 1000, 
+            pointerEvents: 'none' // Ensures snow doesn't block UI interactions
+          }} 
+        />
+      )}
         <SideBar
           onButtonClick={handleSidebarButtonClick}
           onDataCleaned={handleDataCleaned}
@@ -228,6 +246,8 @@ function AppContent() {
             setOpenDataFilter={setOpenDataFilter}
             aiReportReady={aiReportReady}
             onAiReportClick={handleAiReportOpen}
+            onSnowToggle={() => setIsSnowing(prev => !prev)}
+            isSnowing={isSnowing}
           />
 
           <DataFilterPanel openDataFilter={openDataFilter} setOpenDataFilter={setOpenDataFilter} />
