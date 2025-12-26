@@ -34,14 +34,15 @@
   align-items: center;
   gap: 10px;
   color: #333;
-  transition: background-color 0.15s ease-in-out;
+  transition: background-color 0.1s ease-in-out; /* Faster transition feels more responsive */
   font-size: 0.9rem;
 }
 
-.mention-item:hover {
+/* Keep ONLY the active class for both mouse and keys */
+.mention-item.active {
   background-color: #f5f5f5;
+  color: #333;
 }
-
 .mention-icon {
   font-size: 1.1rem;
 }
@@ -63,4 +64,5 @@
   z-index: 1999; /* Just below the dropdown */
   background: transparent;
 }
+
   
