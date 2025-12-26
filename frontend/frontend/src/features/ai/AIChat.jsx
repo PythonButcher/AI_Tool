@@ -85,6 +85,7 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
   const [isMentionOpen, setIsMentionOpen] = useState(false);
   const [mentionPosition, setMentionPosition] = useState({ top: 0, left: 0 });
   const [mentionStartIndex, setMentionStartIndex] = useState(-1);
+  const [highlightedIndex, setHighlightedIndex] = useState(0);
 
   const inputRef = React.useRef(null);
 
@@ -207,6 +208,7 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
     // --- DEBUG LOGS END ---
   };
 
+  
   // -----------------------------------------------------------------------------------------//
   const handleSendMessage = async () => {
     if (!userInput.trim()) return;
@@ -214,6 +216,8 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
     const tokens = extractTokens(userInput);
     console.log("Phase2 | userInput:", userInput);
     console.log("Phase2 | extracted:", tokens);
+
+  
 
     const resolvedDatasets = datasets.filter(ds =>
       tokens.includes(ds.name)
@@ -259,7 +263,7 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
         return;
       }
     }
-    // -------------------------------------------
+  // -----------------------------------------------------------------------------------------//
 
     const datasetContext = resolveDatasetForNlp();
     // Use the fetched data context if available, otherwise fall back to global context
@@ -313,6 +317,7 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
       setLoading(false);
       return;
     }
+
 
     // If we have resolved datasets but no global context, try to use the first resolved dataset for commands
     // This allows "@Sales /charts" to work even if Sales isn't globally loaded.
@@ -405,6 +410,36 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
     setLoading(false);
   };
 
+  const handleKeyDown = (e) => {
+  // Only intercept keys if the mention menu is active
+  if (!isMentionOpen) return;
+
+  // Re-calculate the list to know the bounds for navigation
+  const filteredDatasets = datasets.filter((ds) =>
+    ds.name.toLowerCase().includes(mentionQuery?.toLowerCase() || "")
+  );
+
+  if (filteredDatasets.length === 0) return;
+
+  if (e.key === 'ArrowDown') {
+    e.preventDefault(); // Stop cursor from moving in the text field
+    setHighlightedIndex(prev => (prev < filteredDatasets.length - 1 ? prev + 1 : prev));
+  } 
+  else if (e.key === 'ArrowUp') {
+    e.preventDefault(); // Stop cursor from moving in the text field
+    setHighlightedIndex(prev => (prev > 0 ? prev - 1 : prev));
+  } 
+  else if (e.key === 'Enter') {
+    e.preventDefault(); // Stop a newline from being added
+    // Use your existing select handler
+    handleMentionSelect(filteredDatasets[highlightedIndex].name);
+    setHighlightedIndex(0); // Reset for next time
+  }
+  else if (e.key === 'Escape') {
+    setIsMentionOpen(false);
+  }
+  };
+
 
   return (
     <>
@@ -413,6 +448,7 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
       </div>
 
       <div className={`chat-panel ${showChat ? "open" : ""}`}>
+        
         <div className="chat-header">
           <span>AI Data Assistant</span>
           <button className="close-button" onClick={toggleChat}>✕</button>
@@ -435,6 +471,9 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
               position={mentionPosition}
               onSelect={handleMentionSelect}
               onClose={() => setIsMentionOpen(false)}
+              highlightedIndex={highlightedIndex}
+              onHighlight={setHighlightedIndex}
+              
             />
           )}
 
@@ -442,6 +481,7 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
             {/* 2. The Input Field */}
             <TextField
               inputRef={inputRef}
+              onKeyDown={handleKeyDown}
               label="Ask about the data..."
               variant="outlined"
               fullWidth
