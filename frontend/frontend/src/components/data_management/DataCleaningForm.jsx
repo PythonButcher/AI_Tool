@@ -1,5 +1,28 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
+import {
+  MdCallSplit,
+  MdContentCut,
+  MdControlPointDuplicate,
+  MdDataObject,
+  MdDeleteSweep,
+  MdEditNote,
+  MdEvent,
+  MdFilterList,
+  MdGroups,
+  MdMergeType,
+  MdNorth,
+  MdPivotTableChart,
+  MdSort,
+  MdSwapHoriz,
+  MdTableRows,
+  MdTextFields,
+  MdVerticalAlignBottom,
+  MdVerticalAlignTop,
+  MdViewWeek,
+  MdWaterDrop,
+  MdSouth,
+} from 'react-icons/md';
 import './DataCleaningForm.css';
 import CloseButton from '../buttons/CloseButton';
 import FileExport from './FileExport';
@@ -299,6 +322,37 @@ const getTransformLookup = () => {
 };
 
 const transformLookup = getTransformLookup();
+
+const CATEGORY_ICONS = {
+  Text: MdTextFields,
+  'Missing & Rows': MdDeleteSweep,
+  'Columns & Types': MdViewWeek,
+  'Sorting & Shaping': MdSort,
+};
+
+const TRANSFORM_ICON_MAP = {
+  trim_whitespace: MdContentCut,
+  change_case: MdTextFields,
+  replace_values: MdSwapHoriz,
+  replace_nulls: MdWaterDrop,
+  remove_nulls: MdDeleteSweep,
+  filter_rows: MdFilterList,
+  remove_top_rows: MdVerticalAlignTop,
+  remove_bottom_rows: MdVerticalAlignBottom,
+  keep_top_rows: MdNorth,
+  keep_bottom_rows: MdSouth,
+  remove_duplicates: MdControlPointDuplicate,
+  convert_type: MdDataObject,
+  split_column: MdCallSplit,
+  merge_columns: MdMergeType,
+  extract_date_component: MdEvent,
+  rename_columns: MdEditNote,
+  reorder_columns: MdViewWeek,
+  sort_rows: MdSort,
+  group_by: MdGroups,
+  pivot: MdPivotTableChart,
+  unpivot: MdTableRows,
+};
 
 const parsePreviewArray = (data) => {
   if (Array.isArray(data)) return data;
@@ -761,38 +815,58 @@ function DataCleaningForm({ closeForm, setShowDataPreview }) {
     }
   };
 
-  const renderTransformList = () => (
-    <div className="transform-list">
-      {TRANSFORM_LIBRARY.map((category) => (
-        <div key={category.category} className="transform-category">
-          <div
-            className={`category-title ${selectedCategory === category.category ? 'active' : ''}`}
-            onClick={() => setSelectedCategory(category.category)}
-          >
-            {category.category}
-          </div>
-          {selectedCategory === category.category && (
-            <div className="transform-options">
-              {category.transforms.map((transform) => (
-                <button
-                  key={transform.type}
-                  className={`transform-button ${selectedTransform === transform.type ? 'selected' : ''}`}
-                  onClick={() => {
-                    setSelectedTransform(transform.type);
-                    setSuccess(null);
-                    setError(null);
-                  }}
-                >
-                  <div className="transform-label">{transform.label}</div>
-                  <div className="transform-description">{transform.description}</div>
-                </button>
-              ))}
-            </div>
-          )}
+  const renderTransformList = () => {
+    const activeCategory = TRANSFORM_LIBRARY.find((cat) => cat.category === selectedCategory);
+
+    return (
+      <div className="transform-toolbar">
+        <div className="category-tabs">
+          {TRANSFORM_LIBRARY.map((category) => {
+            const Icon = CATEGORY_ICONS[category.category] || MdSort;
+            const isActive = selectedCategory === category.category;
+            return (
+              <button
+                key={category.category}
+                className={`category-pill ${isActive ? 'active' : ''}`}
+                onClick={() => setSelectedCategory(category.category)}
+                title={`${category.category} tools`}
+                aria-pressed={isActive}
+              >
+                <Icon size={18} />
+                <span>{category.category}</span>
+              </button>
+            );
+          })}
         </div>
-      ))}
-    </div>
-  );
+
+        <div className="tool-grid">
+          {(activeCategory?.transforms || []).map((transform) => {
+            const Icon = TRANSFORM_ICON_MAP[transform.type] || MdDataObject;
+            const isSelected = selectedTransform === transform.type;
+            return (
+              <button
+                key={transform.type}
+                className={`tool-tile ${isSelected ? 'selected' : ''}`}
+                onClick={() => {
+                  setSelectedTransform(transform.type);
+                  setSuccess(null);
+                  setError(null);
+                }}
+                title={`${transform.label}: ${transform.description}`}
+                aria-label={transform.label}
+                aria-pressed={isSelected}
+              >
+                <span className="tool-icon">
+                  <Icon size={22} />
+                </span>
+                <span className="tool-name">{transform.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
 
   const renderAppliedSteps = () => (
     <div className="applied-steps">
