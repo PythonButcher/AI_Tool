@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect} from 'react';
 import axios from 'axios';
 import { FaRobot } from "react-icons/fa";
 import './AIChat.css';
@@ -34,11 +34,13 @@ const CHART_INTENT_KEYWORDS = [
   'scatter',
 ];
 
+
 const isVisualizationRequest = (text) => {
   if (!text) return false;
   const lower = text.toLowerCase();
   return CHART_INTENT_KEYWORDS.some((keyword) => lower.includes(keyword));
 };
+
 
 
 
@@ -92,6 +94,19 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
   const toggleChat = () => setShowChat(prev => !prev);
 
   console.log("Here are the datasets:", WarehouseContext.Provider)
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      const isOutside = Object.values(toggleChat).every(
+        (ref) => ref.current && !ref.current.contains(event.target)
+      );
+      if (isOutside) {
+        setShowChat(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [toggleChat]);
 
   const handleUserCommand = async (command, dataset, instructions = null) => {
     try {
