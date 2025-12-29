@@ -354,6 +354,50 @@ const TRANSFORM_ICON_MAP = {
   unpivot: MdTableRows,
 };
 
+const ToolCategorySwitcher = ({ categories, activeCategory, onSelect }) => (
+  <div className="category-switcher" role="tablist" aria-label="Cleaning tool categories">
+    {categories.map((category) => {
+      const Icon = CATEGORY_ICONS[category] || MdDataObject;
+      const isActive = category === activeCategory;
+      return (
+        <button
+          key={category}
+          className={`category-chip ${isActive ? 'active' : ''}`}
+          onClick={() => onSelect(category)}
+          role="tab"
+          aria-selected={isActive}
+          data-tooltip={category}
+        >
+          <Icon size={18} />
+          <span className="sr-only">{category}</span>
+        </button>
+      );
+    })}
+  </div>
+);
+
+const ToolRibbon = ({ transforms, selectedTransform, onSelect }) => (
+  <div className="tool-ribbon-grid" role="toolbar" aria-label="Cleaning tools">
+    {transforms.map((transform) => {
+      const Icon = TRANSFORM_ICON_MAP[transform.type] || MdDataObject;
+      const isSelected = selectedTransform === transform.type;
+      return (
+        <button
+          key={transform.type}
+          className={`tool-icon-button ${isSelected ? 'selected' : ''}`}
+          onClick={() => onSelect(transform.type)}
+          aria-pressed={isSelected}
+          aria-label={transform.label}
+          data-tooltip={`${transform.label} • ${transform.description}`}
+        >
+          <Icon size={22} />
+          <span className="sr-only">{transform.label}</span>
+        </button>
+      );
+    })}
+  </div>
+);
+
 const parsePreviewArray = (data) => {
   if (Array.isArray(data)) return data;
   if (data?.data_preview && Array.isArray(data.data_preview)) return data.data_preview;
@@ -393,6 +437,14 @@ function DataCleaningForm({ closeForm, setShowDataPreview }) {
     const source = cleanedData ?? fullData ?? uploadedData;
     return columnListFromData(source);
   }, [cleanedData, fullData, uploadedData]);
+
+  useEffect(() => {
+    const activeCategory = TRANSFORM_LIBRARY.find((c) => c.category === selectedCategory);
+    if (activeCategory && !activeCategory.transforms.some((t) => t.type === selectedTransform)) {
+      const fallback = activeCategory.transforms[0];
+      if (fallback) setSelectedTransform(fallback.type);
+    }
+  }, [selectedCategory, selectedTransform]);
 
   useEffect(() => {
     const activeTransform = transformLookup[selectedTransform];
@@ -815,55 +867,30 @@ function DataCleaningForm({ closeForm, setShowDataPreview }) {
     }
   };
 
-  const renderTransformList = () => {
+  const renderToolRibbon = () => {
     const activeCategory = TRANSFORM_LIBRARY.find((cat) => cat.category === selectedCategory);
 
     return (
-      <div className="transform-toolbar">
-        <div className="category-tabs">
-          {TRANSFORM_LIBRARY.map((category) => {
-            const Icon = CATEGORY_ICONS[category.category] || MdSort;
-            const isActive = selectedCategory === category.category;
-            return (
-              <button
-                key={category.category}
-                className={`category-pill ${isActive ? 'active' : ''}`}
-                onClick={() => setSelectedCategory(category.category)}
-                title={`${category.category} tools`}
-                aria-pressed={isActive}
-              >
-                <Icon size={18} />
-                <span>{category.category}</span>
-              </button>
-            );
-          })}
-        </div>
+      <div className="ribbon-shell">
+        <ToolCategorySwitcher
+          categories={TRANSFORM_LIBRARY.map((c) => c.category)}
+          activeCategory={selectedCategory}
+          onSelect={(category) => {
+            setSelectedCategory(category);
+            setSuccess(null);
+            setError(null);
+          }}
+        />
 
-        <div className="tool-grid">
-          {(activeCategory?.transforms || []).map((transform) => {
-            const Icon = TRANSFORM_ICON_MAP[transform.type] || MdDataObject;
-            const isSelected = selectedTransform === transform.type;
-            return (
-              <button
-                key={transform.type}
-                className={`tool-tile ${isSelected ? 'selected' : ''}`}
-                onClick={() => {
-                  setSelectedTransform(transform.type);
-                  setSuccess(null);
-                  setError(null);
-                }}
-                title={`${transform.label}: ${transform.description}`}
-                aria-label={transform.label}
-                aria-pressed={isSelected}
-              >
-                <span className="tool-icon">
-                  <Icon size={22} />
-                </span>
-                <span className="tool-name">{transform.label}</span>
-              </button>
-            );
-          })}
-        </div>
+        <ToolRibbon
+          transforms={activeCategory?.transforms || []}
+          selectedTransform={selectedTransform}
+          onSelect={(transform) => {
+            setSelectedTransform(transform);
+            setSuccess(null);
+            setError(null);
+          }}
+        />
       </div>
     );
   };
@@ -910,65 +937,68 @@ function DataCleaningForm({ closeForm, setShowDataPreview }) {
         {success && <div className="alert success">{success}</div>}
 
         <div className="manual-cleaning-body">
-          <aside className="manual-cleaning-sidebar">{renderTransformList()}</aside>
-          <section className="manual-cleaning-main">
-            {activeTransform && (
-              <div className="transform-form">
-                <div className="section-title">{activeTransform.label}</div>
-                <p className="muted">{activeTransform.description}</p>
-                <div className="form-grid">
-                  {(activeTransform.fields || []).map((field) => (
-                    <label key={field.name} className="form-field">
-                      <span>{field.label}</span>
-                      {renderField(field)}
-                    </label>
-                  ))}
-                </div>
-                <div className="form-actions">
-                  <button type="button" onClick={addStep} className="primary">
-                    {editingId ? 'Update Step' : 'Add Step'}
-                  </button>
-                  <button type="button" onClick={() => runCleaning(true)} disabled={steps.length === 0 || loading}>
-                    Preview
-                  </button>
-                  <button type="button" className="success" onClick={() => runCleaning(false)} disabled={steps.length === 0 || loading}>
-                    Apply & Save
-                  </button>
-                </div>
-              </div>
-            )}
+          <div className="manual-cleaning-ribbon">{renderToolRibbon()}</div>
 
-            {renderAppliedSteps()}
+          <div className="manual-cleaning-workbench">
+            <section className="manual-cleaning-main">
+              {activeTransform && (
+                <div className="transform-form">
+                  <div className="section-title">{activeTransform.label}</div>
+                  <p className="muted">{activeTransform.description}</p>
+                  <div className="form-grid">
+                    {(activeTransform.fields || []).map((field) => (
+                      <label key={field.name} className="form-field">
+                        <span>{field.label}</span>
+                        {renderField(field)}
+                      </label>
+                    ))}
+                  </div>
+                  <div className="form-actions">
+                    <button type="button" onClick={addStep} className="primary">
+                      {editingId ? 'Update Step' : 'Add Step'}
+                    </button>
+                    <button type="button" onClick={() => runCleaning(true)} disabled={steps.length === 0 || loading}>
+                      Preview
+                    </button>
+                    <button type="button" className="success" onClick={() => runCleaning(false)} disabled={steps.length === 0 || loading}>
+                      Apply & Save
+                    </button>
+                  </div>
+                </div>
+              )}
 
-            <div className="preview-panel">
-              <div className="section-title">Preview (first 100 rows)</div>
-              {previewRows && previewRows.length > 0 ? (
-                <div className="table-wrapper">
-                  <table className="data-table">
-                    <thead>
-                      <tr>
-                        {Object.keys(previewRows[0]).map((key) => (
-                          <th key={key}>{key}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {previewRows.map((row, idx) => (
-                        <tr key={idx}>
+              <div className="preview-panel">
+                <div className="section-title">Preview (first 100 rows)</div>
+                {previewRows && previewRows.length > 0 ? (
+                  <div className="table-wrapper">
+                    <table className="data-table">
+                      <thead>
+                        <tr>
                           {Object.keys(previewRows[0]).map((key) => (
-                            <td key={`${idx}-${key}`}>{row[key]}</td>
+                            <th key={key}>{key}</th>
                           ))}
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <div className="muted">Run a preview to see results.</div>
-              )}
-              {previewRows && previewRows.length > 0 && <FileExport data={previewRows} />}
-            </div>
-          </section>
+                      </thead>
+                      <tbody>
+                        {previewRows.map((row, idx) => (
+                          <tr key={idx}>
+                            {Object.keys(previewRows[0]).map((key) => (
+                              <td key={`${idx}-${key}`}>{row[key]}</td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="muted">Run a preview to see results.</div>
+                )}
+                {previewRows && previewRows.length > 0 && <FileExport data={previewRows} />}
+              </div>
+            </section>
+
+            <aside className="applied-steps-panel">{renderAppliedSteps()}</aside>
+          </div>
         </div>
       </div>
     </div>

@@ -37,103 +37,145 @@
 }
 
 .manual-cleaning-body {
-  display: grid;
-  grid-template-columns: minmax(210px, 260px) 1fr;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
   height: 100%;
   overflow: hidden;
-  gap: 12px;
 }
 
-.manual-cleaning-sidebar {
-  background: var(--bg-secondary, #0c1020);
-  border-right: 1px solid var(--border-color, #24273a);
-  padding: 16px;
-  overflow-y: auto;
+.manual-cleaning-ribbon {
+  padding: 12px 18px 6px;
+  border-bottom: 1px solid var(--border-color, #24273a);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0));
+}
+
+.manual-cleaning-workbench {
+  display: grid;
+  grid-template-columns: 2fr 0.85fr;
+  gap: 12px;
+  padding: 12px 18px 18px;
+  overflow: hidden;
 }
 
 .manual-cleaning-main {
-  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.applied-steps-panel {
+  border-left: 1px solid var(--border-color, #24273a);
+  padding-left: 12px;
   overflow-y: auto;
 }
 
-.transform-toolbar {
+.ribbon-shell {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
-.category-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.category-pill {
+.category-switcher {
   display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
+  gap: 10px;
+}
+
+.category-chip {
+  width: 40px;
+  height: 40px;
   border-radius: 10px;
   border: 1px solid var(--border-color, #24273a);
   background: rgba(255, 255, 255, 0.02);
   color: var(--text-secondary, #9ba7c0);
   cursor: pointer;
-  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition: all 0.15s ease;
 }
 
-.category-pill.active {
+.category-chip.active {
   background: rgba(124, 157, 255, 0.14);
   color: var(--text-primary, #e8ecff);
   border-color: var(--accent, #7c9dff);
+  box-shadow: 0 0 0 1px rgba(124, 157, 255, 0.25);
 }
 
-.tool-grid {
+.tool-ribbon-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(46px, 1fr));
+  gap: 8px;
+  align-items: center;
 }
 
-.tool-tile {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 6px;
-  padding: 10px;
+.tool-icon-button {
+  width: 46px;
+  height: 46px;
   border-radius: 12px;
   border: 1px solid var(--border-color, #24273a);
   background: rgba(255, 255, 255, 0.02);
   color: var(--text-primary, #e8ecff);
-  cursor: pointer;
-  transition: border-color 0.2s ease, transform 0.15s ease, background 0.2s ease;
-  text-align: left;
-}
-
-.tool-tile .tool-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 38px;
-  height: 38px;
-  border-radius: 10px;
-  background: rgba(124, 157, 255, 0.08);
-  color: var(--accent, #7c9dff);
+  cursor: pointer;
+  position: relative;
+  transition: all 0.15s ease;
 }
 
-.tool-tile .tool-name {
-  font-weight: 600;
-  font-size: 0.95rem;
-  line-height: 1.25;
-}
-
-.tool-tile:hover {
+.tool-icon-button:hover {
   border-color: var(--accent, #7c9dff);
   background: rgba(124, 157, 255, 0.08);
   transform: translateY(-1px);
 }
 
-.tool-tile.selected {
+.tool-icon-button.selected {
   border-color: var(--accent, #7c9dff);
-  box-shadow: 0 0 0 1px rgba(124, 157, 255, 0.28);
+  box-shadow: 0 0 0 1px rgba(124, 157, 255, 0.25);
+}
+
+.tool-icon-button::after,
+.category-chip::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: -36px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #0b0d1e;
+  color: var(--text-primary, #e8ecff);
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color, #24273a);
+  white-space: nowrap;
+  font-size: 0.8rem;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.1s ease, transform 0.1s ease;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+}
+
+.tool-icon-button:hover::after,
+.category-chip:hover::after,
+.category-chip.active::after,
+.tool-icon-button.selected::after {
+  opacity: 1;
+  transform: translate(-50%, -2px);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .section-title {
@@ -251,23 +293,51 @@
 .applied-steps {
   border: 1px solid var(--border-color, #24273a);
   border-radius: 12px;
-  padding: 12px;
+  padding: 12px 12px 12px 18px;
   margin-bottom: 18px;
   background: rgba(255, 255, 255, 0.02);
+  position: relative;
+}
+
+.applied-steps::before {
+  content: '';
+  position: absolute;
+  left: 10px;
+  top: 44px;
+  bottom: 12px;
+  width: 2px;
+  background: linear-gradient(180deg, #7c9dff, rgba(124, 157, 255, 0));
+  opacity: 0.6;
 }
 
 .step-card {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px;
+  padding: 10px 10px 10px 14px;
   border: 1px solid var(--border-color, #24273a);
   border-radius: 10px;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  position: relative;
+}
+
+.step-card::before {
+  content: '';
+  position: absolute;
+  left: -11px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid var(--accent, #7c9dff);
+  background: #0b0d1e;
 }
 
 .step-card.editing {
   border-color: var(--accent, #7c9dff);
+  box-shadow: 0 0 0 1px rgba(124, 157, 255, 0.25);
 }
 
 .step-title {
@@ -341,11 +411,16 @@
 }
 
 @media (max-width: 1024px) {
-  .manual-cleaning-body {
+  .manual-cleaning-workbench {
     grid-template-columns: 1fr;
   }
 
-  .manual-cleaning-sidebar {
-    display: none;
+  .applied-steps-panel {
+    border-left: none;
+    padding-left: 0;
+  }
+
+  .manual-cleaning-ribbon {
+    padding: 12px;
   }
 }
