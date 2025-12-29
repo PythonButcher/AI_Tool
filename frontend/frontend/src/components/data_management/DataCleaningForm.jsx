@@ -4,6 +4,12 @@ import './DataCleaningForm.css';
 import CloseButton from '../buttons/CloseButton';
 import FileExport from './FileExport';
 import { DataContext } from '../../context/DataContext';
+import {
+  FaFont, FaEraser, FaFilter, FaExchangeAlt, FaFillDrip, FaTrash,
+  FaArrowUp, FaArrowDown, FaClone, FaHashtag, FaObjectGroup, FaCalendarAlt,
+  FaEdit, FaSortAmountDown, FaTable, FaColumns, FaLayerGroup, FaIndent, FaOutdent
+} from 'react-icons/fa';
+import { MdMergeType, MdSplitscreen } from 'react-icons/md';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
@@ -15,12 +21,14 @@ const TRANSFORM_LIBRARY = [
         type: 'trim_whitespace',
         label: 'Trim Whitespace',
         description: 'Remove leading and trailing spaces.',
+        icon: <FaEraser />,
         fields: [{ name: 'columns', type: 'column-multi', label: 'Columns (optional)' }],
       },
       {
         type: 'change_case',
         label: 'Change Case',
         description: 'Uppercase, lowercase, or title case text.',
+        icon: <FaFont />,
         fields: [
           { name: 'columns', type: 'column-multi', label: 'Columns (optional)' },
           {
@@ -40,6 +48,7 @@ const TRANSFORM_LIBRARY = [
         type: 'replace_values',
         label: 'Replace Values',
         description: 'Swap specific values with new content.',
+        icon: <FaExchangeAlt />,
         fields: [
           { name: 'columns', type: 'column-multi', label: 'Columns (optional)' },
           { name: 'replacements', type: 'replacements', label: 'Value Replacements' },
@@ -54,6 +63,7 @@ const TRANSFORM_LIBRARY = [
         type: 'replace_nulls',
         label: 'Replace Nulls',
         description: 'Fill null values with a strategy or value.',
+        icon: <FaFillDrip />,
         fields: [
           { name: 'columns', type: 'column-multi', label: 'Columns (optional)' },
           {
@@ -77,49 +87,56 @@ const TRANSFORM_LIBRARY = [
         type: 'remove_nulls',
         label: 'Remove Nulls',
         description: 'Drop rows that contain nulls.',
+        icon: <FaTrash />,
         fields: [{ name: 'columns', type: 'column-multi', label: 'Columns (optional)' }],
       },
       {
         type: 'filter_rows',
         label: 'Filter Rows',
         description: 'Keep rows that satisfy conditions.',
+        icon: <FaFilter />,
         fields: [{ name: 'conditions', type: 'conditions', label: 'Conditions' }],
       },
       {
         type: 'remove_top_rows',
-        label: 'Remove Top Rows',
+        label: 'Remove Top',
         description: 'Remove the first N rows.',
+        icon: <FaArrowUp />,
         fields: [{ name: 'count', type: 'number', label: 'Number of rows', defaultValue: 1 }],
       },
       {
         type: 'remove_bottom_rows',
-        label: 'Remove Bottom Rows',
+        label: 'Remove Bottom',
         description: 'Remove the last N rows.',
+        icon: <FaArrowDown />,
         fields: [{ name: 'count', type: 'number', label: 'Number of rows', defaultValue: 1 }],
       },
       {
         type: 'keep_top_rows',
-        label: 'Keep Top Rows',
+        label: 'Keep Top',
         description: 'Keep only the first N rows.',
+        icon: <FaIndent />,
         fields: [{ name: 'count', type: 'number', label: 'Number of rows', defaultValue: 5 }],
       },
       {
         type: 'keep_bottom_rows',
-        label: 'Keep Bottom Rows',
+        label: 'Keep Bottom',
         description: 'Keep only the last N rows.',
+        icon: <FaOutdent />,
         fields: [{ name: 'count', type: 'number', label: 'Number of rows', defaultValue: 5 }],
       },
       {
         type: 'remove_duplicates',
-        label: 'Remove Duplicates',
+        label: 'Remove Dupes',
         description: 'Remove duplicate rows.',
+        icon: <FaClone />,
         fields: [
           { name: 'subset', type: 'column-multi', label: 'Subset columns (optional)' },
           {
             name: 'keep',
             type: 'select',
             label: 'Keep',
-              options: [
+            options: [
               { label: 'First', value: 'first' },
               { label: 'Last', value: 'last' },
               { label: 'None', value: false },
@@ -135,8 +152,9 @@ const TRANSFORM_LIBRARY = [
     transforms: [
       {
         type: 'convert_type',
-        label: 'Convert Data Type',
+        label: 'Data Type',
         description: 'Cast columns to numeric, string, date, or boolean.',
+        icon: <FaHashtag />,
         fields: [
           { name: 'columns', type: 'column-multi', label: 'Columns' },
           {
@@ -159,6 +177,7 @@ const TRANSFORM_LIBRARY = [
         type: 'split_column',
         label: 'Split Column',
         description: 'Split one column into many by delimiter.',
+        icon: <MdSplitscreen />,
         fields: [
           { name: 'column', type: 'column', label: 'Column' },
           { name: 'delimiter', type: 'text', label: 'Delimiter', defaultValue: ' ' },
@@ -170,6 +189,7 @@ const TRANSFORM_LIBRARY = [
         type: 'merge_columns',
         label: 'Merge Columns',
         description: 'Combine multiple columns with a separator.',
+        icon: <MdMergeType />,
         fields: [
           { name: 'columns', type: 'column-multi', label: 'Columns' },
           { name: 'separator', type: 'text', label: 'Separator', defaultValue: ' ' },
@@ -178,8 +198,9 @@ const TRANSFORM_LIBRARY = [
       },
       {
         type: 'extract_date_component',
-        label: 'Date Component',
+        label: 'Date Parts',
         description: 'Create a new column from date parts.',
+        icon: <FaCalendarAlt />,
         fields: [
           { name: 'column', type: 'column', label: 'Date column' },
           {
@@ -200,14 +221,16 @@ const TRANSFORM_LIBRARY = [
       },
       {
         type: 'rename_columns',
-        label: 'Rename Columns',
+        label: 'Rename',
         description: 'Rename one or more columns.',
+        icon: <FaEdit />,
         fields: [{ name: 'mappings', type: 'rename-map', label: 'Column Renames' }],
       },
       {
         type: 'reorder_columns',
-        label: 'Reorder Columns',
+        label: 'Reorder',
         description: 'Arrange columns in a custom order.',
+        icon: <FaColumns />,
         fields: [{ name: 'order', type: 'order-text', label: 'Desired order (comma separated)' }],
       },
     ],
@@ -219,12 +242,14 @@ const TRANSFORM_LIBRARY = [
         type: 'sort_rows',
         label: 'Sort Rows',
         description: 'Sort by one or more columns.',
+        icon: <FaSortAmountDown />,
         fields: [{ name: 'sort_by', type: 'sort-rules', label: 'Sort rules' }],
       },
       {
         type: 'group_by',
-        label: 'Group & Aggregate',
+        label: 'Group By',
         description: 'Group rows and aggregate columns.',
+        icon: <FaObjectGroup />,
         fields: [
           { name: 'group_columns', type: 'column-multi', label: 'Group columns' },
           { name: 'aggregations', type: 'aggregations', label: 'Aggregations' },
@@ -234,6 +259,7 @@ const TRANSFORM_LIBRARY = [
         type: 'pivot',
         label: 'Pivot',
         description: 'Create a pivot table.',
+        icon: <FaTable />,
         fields: [
           { name: 'index', type: 'column-multi', label: 'Index columns' },
           { name: 'columns', type: 'column', label: 'Columns field' },
@@ -255,8 +281,9 @@ const TRANSFORM_LIBRARY = [
       },
       {
         type: 'unpivot',
-        label: 'Unpivot (Melt)',
+        label: 'Unpivot',
         description: 'Unpivot columns into attribute/value rows.',
+        icon: <FaLayerGroup />,
         fields: [
           { name: 'id_vars', type: 'column-multi', label: 'ID columns' },
           { name: 'value_vars', type: 'column-multi', label: 'Value columns' },
@@ -326,8 +353,8 @@ const columnListFromData = (dataset) => {
 function DataCleaningForm({ closeForm, setShowDataPreview }) {
   const { uploadedData, fullData, cleanedData, setCleanedData } = React.useContext(DataContext);
   const [selectedCategory, setSelectedCategory] = useState(TRANSFORM_LIBRARY[0]?.category);
-  const [selectedTransform, setSelectedTransform] = useState(TRANSFORM_LIBRARY[0]?.transforms[0]?.type);
-  const [formValues, setFormValues] = useState(buildDefaultValues(TRANSFORM_LIBRARY[0]?.transforms[0]?.fields));
+  const [selectedTransform, setSelectedTransform] = useState(null); // No default selected initially
+  const [formValues, setFormValues] = useState({});
   const [steps, setSteps] = useState([]);
   const [previewRows, setPreviewRows] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -341,8 +368,12 @@ function DataCleaningForm({ closeForm, setShowDataPreview }) {
   }, [cleanedData, fullData, uploadedData]);
 
   useEffect(() => {
-    const activeTransform = transformLookup[selectedTransform];
-    setFormValues(buildDefaultValues(activeTransform?.fields));
+    if (selectedTransform) {
+      const activeTransform = transformLookup[selectedTransform];
+      setFormValues(buildDefaultValues(activeTransform?.fields));
+    } else {
+      setFormValues({});
+    }
   }, [selectedTransform]);
 
   const handleFieldChange = (name, value) => {
@@ -398,7 +429,8 @@ function DataCleaningForm({ closeForm, setShowDataPreview }) {
   };
 
   const editStep = (step) => {
-    setSelectedCategory(TRANSFORM_LIBRARY.find((c) => c.transforms.some((t) => t.type === step.type))?.category);
+    const category = TRANSFORM_LIBRARY.find((c) => c.transforms.some((t) => t.type === step.type))?.category;
+    if (category) setSelectedCategory(category);
     setSelectedTransform(step.type);
     setFormValues(step.params);
     setEditingId(step.id);
@@ -411,7 +443,7 @@ function DataCleaningForm({ closeForm, setShowDataPreview }) {
     if (editingId === id) {
       setEditingId(null);
       const active = transformLookup[selectedTransform];
-      setFormValues(buildDefaultValues(active?.fields));
+      if (active) setFormValues(buildDefaultValues(active.fields));
     }
   };
 
@@ -448,11 +480,13 @@ function DataCleaningForm({ closeForm, setShowDataPreview }) {
         );
       case 'checkbox':
         return (
-          <input
-            type="checkbox"
-            checked={!!value}
-            onChange={(e) => handleFieldChange(field.name, e.target.checked)}
-          />
+          <div className="checkbox-wrapper">
+            <input
+              type="checkbox"
+              checked={!!value}
+              onChange={(e) => handleFieldChange(field.name, e.target.checked)}
+            />
+          </div>
         );
       case 'select':
         return (
@@ -484,6 +518,7 @@ function DataCleaningForm({ closeForm, setShowDataPreview }) {
               field.name,
               Array.from(e.target.selectedOptions).map((o) => o.value)
             )}
+            className="multi-select"
           >
             {columns.map((col) => (
               <option key={col} value={col}>
@@ -513,17 +548,17 @@ function DataCleaningForm({ closeForm, setShowDataPreview }) {
                   onChange={(e) => handleArrayFieldChange(field.name, idx, 'operator', e.target.value)}
                 >
                   <option value="eq">Equals</option>
-                  <option value="neq">Does not equal</option>
-                  <option value="gt">Greater than</option>
-                  <option value="gte">Greater or equal</option>
-                  <option value="lt">Less than</option>
-                  <option value="lte">Less or equal</option>
+                  <option value="neq">!=</option>
+                  <option value="gt">&gt;</option>
+                  <option value="gte">&gt;=</option>
+                  <option value="lt">&lt;</option>
+                  <option value="lte">&lt;=</option>
                   <option value="contains">Contains</option>
-                  <option value="not_contains">Not contains</option>
-                  <option value="in">In list (comma separated)</option>
-                  <option value="not_in">Not in list</option>
-                  <option value="startswith">Starts with</option>
-                  <option value="endswith">Ends with</option>
+                  <option value="not_contains">!Contain</option>
+                  <option value="in">In</option>
+                  <option value="not_in">Not In</option>
+                  <option value="startswith">Starts</option>
+                  <option value="endswith">Ends</option>
                 </select>
                 <input
                   type="text"
@@ -546,7 +581,7 @@ function DataCleaningForm({ closeForm, setShowDataPreview }) {
               </div>
             ))}
             <button type="button" className="chip" onClick={() => addRowToArrayField(field.name, { column: '', operator: 'eq', value: '' })}>
-              + Add condition
+              + Condition
             </button>
           </div>
         );
@@ -573,7 +608,7 @@ function DataCleaningForm({ closeForm, setShowDataPreview }) {
               </div>
             ))}
             <button type="button" className="chip" onClick={() => addRowToArrayField(field.name, { from: '', to: '' })}>
-              + Add replacement
+              + Replacement
             </button>
           </div>
         );
@@ -605,7 +640,7 @@ function DataCleaningForm({ closeForm, setShowDataPreview }) {
                 </select>
                 <input
                   type="text"
-                  placeholder="Alias (optional)"
+                  placeholder="Alias"
                   value={row.as ?? ''}
                   onChange={(e) => handleArrayFieldChange(field.name, idx, 'as', e.target.value)}
                 />
@@ -615,7 +650,7 @@ function DataCleaningForm({ closeForm, setShowDataPreview }) {
               </div>
             ))}
             <button type="button" className="chip" onClick={() => addRowToArrayField(field.name, { column: '', agg: 'sum', as: '' })}>
-              + Add aggregation
+              + Aggregation
             </button>
           </div>
         );
@@ -639,8 +674,8 @@ function DataCleaningForm({ closeForm, setShowDataPreview }) {
                   value={row.direction || 'asc'}
                   onChange={(e) => handleArrayFieldChange(field.name, idx, 'direction', e.target.value)}
                 >
-                  <option value="asc">Ascending</option>
-                  <option value="desc">Descending</option>
+                  <option value="asc">Asc</option>
+                  <option value="desc">Desc</option>
                 </select>
                 <button type="button" onClick={() => removeRowFromArrayField(field.name, idx)}>
                   ×
@@ -648,7 +683,7 @@ function DataCleaningForm({ closeForm, setShowDataPreview }) {
               </div>
             ))}
             <button type="button" className="chip" onClick={() => addRowToArrayField(field.name, { column: '', direction: 'asc' })}>
-              + Add column sort
+              + Sort Rule
             </button>
           </div>
         );
@@ -661,7 +696,7 @@ function DataCleaningForm({ closeForm, setShowDataPreview }) {
                   value={row.from || ''}
                   onChange={(e) => handleArrayFieldChange(field.name, idx, 'from', e.target.value)}
                 >
-                  <option value="">From column</option>
+                  <option value="">Column</option>
                   {columns.map((col) => (
                     <option key={col} value={col}>
                       {col}
@@ -680,7 +715,7 @@ function DataCleaningForm({ closeForm, setShowDataPreview }) {
               </div>
             ))}
             <button type="button" className="chip" onClick={() => addRowToArrayField(field.name, { from: '', to: '' })}>
-              + Add rename
+              + Rename
             </button>
           </div>
         );
@@ -688,7 +723,7 @@ function DataCleaningForm({ closeForm, setShowDataPreview }) {
         return (
           <textarea
             rows={2}
-            placeholder="Column order, e.g. col1, col2, col3"
+            placeholder="col1, col2, col3..."
             value={value || ''}
             onChange={(e) => handleFieldChange(field.name, e.target.value)}
           />
@@ -761,61 +796,71 @@ function DataCleaningForm({ closeForm, setShowDataPreview }) {
     }
   };
 
-  const renderTransformList = () => (
-    <div className="transform-list">
-      {TRANSFORM_LIBRARY.map((category) => (
-        <div key={category.category} className="transform-category">
-          <div
-            className={`category-title ${selectedCategory === category.category ? 'active' : ''}`}
-            onClick={() => setSelectedCategory(category.category)}
+  const renderRibbon = () => (
+    <div className="cleaning-ribbon-container">
+      {/* Category Tabs */}
+      <div className="ribbon-tabs">
+        {TRANSFORM_LIBRARY.map((category) => (
+          <button
+            key={category.category}
+            className={`ribbon-tab ${selectedCategory === category.category ? 'active' : ''}`}
+            onClick={() => {
+              setSelectedCategory(category.category);
+              // Do not automatically select a tool, keep panel closed until tool click
+              // setSelectedTransform(null); 
+            }}
           >
             {category.category}
-          </div>
-          {selectedCategory === category.category && (
-            <div className="transform-options">
-              {category.transforms.map((transform) => (
-                <button
-                  key={transform.type}
-                  className={`transform-button ${selectedTransform === transform.type ? 'selected' : ''}`}
-                  onClick={() => {
-                    setSelectedTransform(transform.type);
-                    setSuccess(null);
-                    setError(null);
-                  }}
-                >
-                  <div className="transform-label">{transform.label}</div>
-                  <div className="transform-description">{transform.description}</div>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      ))}
+          </button>
+        ))}
+      </div>
+
+      {/* Toolbar Icons for Active Category */}
+      <div className="ribbon-toolbar">
+        {TRANSFORM_LIBRARY.find(c => c.category === selectedCategory)?.transforms.map((transform) => (
+          <button
+            key={transform.type}
+            className={`ribbon-btn ${selectedTransform === transform.type ? 'active' : ''}`}
+            onClick={() => {
+              setSelectedTransform(transform.type);
+              setSuccess(null);
+              setError(null);
+            }}
+            title={`${transform.label} - ${transform.description}`}
+          >
+            <div className="ribbon-icon">{transform.icon}</div>
+            <div className="ribbon-label">{transform.label}</div>
+          </button>
+        ))}
+      </div>
     </div>
   );
 
   const renderAppliedSteps = () => (
-    <div className="applied-steps">
-      <div className="section-title">Applied Steps</div>
-      {steps.length === 0 && <div className="muted">No steps added yet.</div>}
-      {steps.map((step, idx) => (
-        <div key={step.id} className={`step-card ${editingId === step.id ? 'editing' : ''}`}>
-          <div>
-            <div className="step-title">{step.label}</div>
-            <div className="step-caption">{step.type}</div>
+    <div className="applied-steps-panel">
+      <div className="panel-header">Applied Steps</div>
+      <div className="steps-list">
+        {steps.length === 0 && <div className="muted-text">No steps yet.</div>}
+        {steps.map((step, idx) => (
+          <div key={step.id} className={`step-item ${editingId === step.id ? 'editing' : ''}`}>
+             <div className="step-info">
+               <span className="step-number">{idx + 1}</span>
+               <div className="step-details">
+                 <div className="step-name">{step.label}</div>
+                 <div className="step-type">{step.type}</div>
+               </div>
+             </div>
+             <div className="step-controls">
+               <button onClick={() => editStep(step)} title="Edit"><FaEdit /></button>
+               <button onClick={() => deleteStep(step.id)} title="Remove"><FaTrash /></button>
+               <div className="step-arrows">
+                  <button onClick={() => moveStep(idx, -1)} disabled={idx === 0}>↑</button>
+                  <button onClick={() => moveStep(idx, 1)} disabled={idx === steps.length - 1}>↓</button>
+               </div>
+             </div>
           </div>
-          <div className="step-actions">
-            <button type="button" onClick={() => moveStep(idx, -1)} disabled={idx === 0}>
-              ↑
-            </button>
-            <button type="button" onClick={() => moveStep(idx, 1)} disabled={idx === steps.length - 1}>
-              ↓
-            </button>
-            <button type="button" onClick={() => editStep(step)}>Edit</button>
-            <button type="button" onClick={() => deleteStep(step.id)}>Delete</button>
-          </div>
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
   );
 
@@ -825,76 +870,95 @@ function DataCleaningForm({ closeForm, setShowDataPreview }) {
     <div className="cleaning-form-overlay">
       <div className="manual-cleaning-shell">
         <div className="manual-cleaning-header">
-          <div>
-            <h2>Power Cleaning</h2>
-            <p className="muted">Stack rich transformations and preview instantly.</p>
+          <div className="header-title">
+            <h2>Power Query Editor</h2>
+            <p className="subtitle">Visual Data Transformation Interface</p>
           </div>
-          <CloseButton onClick={closeForm} />
+          <div className="header-actions">
+             <button className="preview-trigger" onClick={() => runCleaning(true)} disabled={steps.length === 0 || loading}>
+               Run Preview
+             </button>
+             <button className="apply-trigger" onClick={() => runCleaning(false)} disabled={steps.length === 0 || loading}>
+               Apply All
+             </button>
+             <CloseButton onClick={closeForm} />
+          </div>
         </div>
 
-        {error && <div className="alert error">{error}</div>}
-        {success && <div className="alert success">{success}</div>}
-
         <div className="manual-cleaning-body">
-          <aside className="manual-cleaning-sidebar">{renderTransformList()}</aside>
-          <section className="manual-cleaning-main">
-            {activeTransform && (
-              <div className="transform-form">
-                <div className="section-title">{activeTransform.label}</div>
-                <p className="muted">{activeTransform.description}</p>
-                <div className="form-grid">
-                  {(activeTransform.fields || []).map((field) => (
-                    <label key={field.name} className="form-field">
-                      <span>{field.label}</span>
-                      {renderField(field)}
-                    </label>
-                  ))}
-                </div>
-                <div className="form-actions">
-                  <button type="button" onClick={addStep} className="primary">
+          {/* Top Ribbon */}
+          {renderRibbon()}
+
+          {/* Configuration Panel (Collapsible/Conditional) */}
+          {activeTransform && (
+             <div className="config-panel">
+               <div className="config-header">
+                 <h3>Configure: {activeTransform.label}</h3>
+                 <button className="close-config" onClick={() => { setSelectedTransform(null); setEditingId(null); }}>×</button>
+               </div>
+               <div className="config-content">
+                  <p className="config-desc">{activeTransform.description}</p>
+                  <div className="config-form-grid">
+                    {(activeTransform.fields || []).map((field) => (
+                      <label key={field.name} className="config-field">
+                        <span>{field.label}</span>
+                        {renderField(field)}
+                      </label>
+                    ))}
+                  </div>
+               </div>
+               <div className="config-footer">
+                  <button type="button" onClick={addStep} className="add-step-btn">
                     {editingId ? 'Update Step' : 'Add Step'}
                   </button>
-                  <button type="button" onClick={() => runCleaning(true)} disabled={steps.length === 0 || loading}>
-                    Preview
-                  </button>
-                  <button type="button" className="success" onClick={() => runCleaning(false)} disabled={steps.length === 0 || loading}>
-                    Apply & Save
-                  </button>
-                </div>
-              </div>
-            )}
+               </div>
+             </div>
+          )}
 
-            {renderAppliedSteps()}
+          {/* Messages */}
+          {(error || success) && (
+            <div className={`status-bar ${error ? 'error' : 'success'}`}>
+              {error || success}
+            </div>
+          )}
 
-            <div className="preview-panel">
-              <div className="section-title">Preview (first 100 rows)</div>
-              {previewRows && previewRows.length > 0 ? (
-                <div className="table-wrapper">
-                  <table className="data-table">
-                    <thead>
-                      <tr>
-                        {Object.keys(previewRows[0]).map((key) => (
-                          <th key={key}>{key}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {previewRows.map((row, idx) => (
-                        <tr key={idx}>
+          {/* Main Workspace: applied steps (left/right) + preview (center/bottom) */}
+          <div className="workspace-area">
+             <div className="preview-container">
+                {previewRows && previewRows.length > 0 ? (
+                  <div className="table-scroll">
+                    <table className="preview-table">
+                      <thead>
+                        <tr>
                           {Object.keys(previewRows[0]).map((key) => (
-                            <td key={`${idx}-${key}`}>{row[key]}</td>
+                            <th key={key}>{key}</th>
                           ))}
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <div className="muted">Run a preview to see results.</div>
-              )}
-              {previewRows && previewRows.length > 0 && <FileExport data={previewRows} />}
-            </div>
-          </section>
+                      </thead>
+                      <tbody>
+                        {previewRows.map((row, idx) => (
+                          <tr key={idx}>
+                            {Object.keys(previewRows[0]).map((key) => (
+                              <td key={`${idx}-${key}`}>{row[key]}</td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="empty-state">
+                    <FaTable className="empty-icon" />
+                    <p>Add steps from the ribbon above and click "Run Preview" to see results.</p>
+                  </div>
+                )}
+             </div>
+
+             {/* Right Panel: Applied Steps */}
+             <div className="sidebar-right">
+                {renderAppliedSteps()}
+             </div>
+          </div>
         </div>
       </div>
     </div>
