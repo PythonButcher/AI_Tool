@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect} from 'react';
+import React, { useState, useContext, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { FaRobot } from "react-icons/fa";
 import './AIChat.css';
@@ -89,7 +89,9 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
   const [mentionStartIndex, setMentionStartIndex] = useState(-1);
   const [highlightedIndex, setHighlightedIndex] = useState(0);
 
-  const inputRef = React.useRef(null);
+  const inputRef = useRef(null);
+  const chatPanelRef = useRef(null);
+  const chatIconRef = useRef(null);
 
   const toggleChat = () => setShowChat(prev => !prev);
 
@@ -97,16 +99,25 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
 
   useEffect(() => {
     const handleClickOutside = (event) => {
-      const isOutside = Object.values(toggleChat).every(
-        (ref) => ref.current && !ref.current.contains(event.target)
-      );
-      if (isOutside) {
-        setShowChat(null);
+      if (
+        !showChat ||
+        !chatPanelRef.current ||
+        !chatIconRef.current
+      ) {
+        return;
+      }
+
+      const clickedOutsidePanel = !chatPanelRef.current.contains(event.target);
+      const clickedOutsideIcon = !chatIconRef.current.contains(event.target);
+
+      if (clickedOutsidePanel && clickedOutsideIcon) {
+        setShowChat(false);
       }
     };
+
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [toggleChat]);
+  }, [showChat]);
 
   const handleUserCommand = async (command, dataset, instructions = null) => {
     try {
@@ -458,11 +469,16 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
 
   return (
     <>
-      <div className="chat-icon" onClick={toggleChat} data-tooltip="AI Chat">
+      <div
+        ref={chatIconRef}
+        className="chat-icon"
+        onClick={toggleChat}
+        data-tooltip="AI Chat"
+      >
         <FaRobot size={30} />
       </div>
 
-      <div className={`chat-panel ${showChat ? "open" : ""}`}>
+      <div ref={chatPanelRef} className={`chat-panel ${showChat ? "open" : ""}`}>
         
         <div className="chat-header">
           <span>AI Data Assistant</span>
