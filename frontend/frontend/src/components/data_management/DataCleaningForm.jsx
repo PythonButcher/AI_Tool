@@ -3,6 +3,7 @@ import axios from 'axios';
 import './DataCleaningForm.css';
 import CloseButton from '../buttons/CloseButton';
 import FileExport from './FileExport';
+import MLPrepPanel from './MLPrepPanel';
 import { DataContext } from '../../context/DataContext';
 import {
   FaFont, FaEraser, FaFilter, FaExchangeAlt, FaFillDrip, FaTrash,
@@ -352,6 +353,7 @@ const columnListFromData = (dataset) => {
 
 function DataCleaningForm({ closeForm, setShowDataPreview }) {
   const { uploadedData, fullData, cleanedData, setCleanedData } = React.useContext(DataContext);
+  const [activePanel, setActivePanel] = useState('cleaning');
   const [selectedCategory, setSelectedCategory] = useState(TRANSFORM_LIBRARY[0]?.category);
   const [selectedTransform, setSelectedTransform] = useState(null); // No default selected initially
   const [formValues, setFormValues] = useState({});
@@ -870,95 +872,123 @@ function DataCleaningForm({ closeForm, setShowDataPreview }) {
     <div className="cleaning-form-overlay">
       <div className="manual-cleaning-shell">
         <div className="manual-cleaning-header">
-          <div className="header-title">
-            <h2>Power Query Editor</h2>
-            <p className="subtitle">Visual Data Transformation Interface</p>
+          <div className="header-left">
+            <div className="header-title">
+              <h2>Power Query Editor</h2>
+              <p className="subtitle">Visual Data Transformation Interface</p>
+            </div>
+            <div className="header-tabs">
+              <button
+                type="button"
+                className={`header-tab ${activePanel === 'cleaning' ? 'active' : ''}`}
+                onClick={() => setActivePanel('cleaning')}
+              >
+                Data Cleaning
+              </button>
+              <button
+                type="button"
+                className={`header-tab ${activePanel === 'ml_prep' ? 'active' : ''}`}
+                onClick={() => setActivePanel('ml_prep')}
+              >
+                ML Prep
+              </button>
+            </div>
           </div>
           <div className="header-actions">
-             <button className="preview-trigger" onClick={() => runCleaning(true)} disabled={steps.length === 0 || loading}>
-               Run Preview
-             </button>
-             <button className="apply-trigger" onClick={() => runCleaning(false)} disabled={steps.length === 0 || loading}>
-               Apply All
-             </button>
+             {activePanel === 'cleaning' && (
+               <>
+                 <button className="preview-trigger" onClick={() => runCleaning(true)} disabled={steps.length === 0 || loading}>
+                   Run Preview
+                 </button>
+                 <button className="apply-trigger" onClick={() => runCleaning(false)} disabled={steps.length === 0 || loading}>
+                   Apply All
+                 </button>
+               </>
+             )}
              <CloseButton onClick={closeForm} />
           </div>
         </div>
 
         <div className="manual-cleaning-body">
-          {/* Top Ribbon */}
-          {renderRibbon()}
+          {activePanel === 'cleaning' ? (
+            <>
+              {/* Top Ribbon */}
+              {renderRibbon()}
 
-          {/* Configuration Panel (Collapsible/Conditional) */}
-          {activeTransform && (
-             <div className="config-panel">
-               <div className="config-header">
-                 <h3>Configure: {activeTransform.label}</h3>
-                 <button className="close-config" onClick={() => { setSelectedTransform(null); setEditingId(null); }}>×</button>
-               </div>
-               <div className="config-content">
-                  <p className="config-desc">{activeTransform.description}</p>
-                  <div className="config-form-grid">
-                    {(activeTransform.fields || []).map((field) => (
-                      <label key={field.name} className="config-field">
-                        <span>{field.label}</span>
-                        {renderField(field)}
-                      </label>
-                    ))}
-                  </div>
-               </div>
-               <div className="config-footer">
-                  <button type="button" onClick={addStep} className="add-step-btn">
-                    {editingId ? 'Update Step' : 'Add Step'}
-                  </button>
-               </div>
-             </div>
-          )}
-
-          {/* Messages */}
-          {(error || success) && (
-            <div className={`status-bar ${error ? 'error' : 'success'}`}>
-              {error || success}
-            </div>
-          )}
-
-          {/* Main Workspace: applied steps (left/right) + preview (center/bottom) */}
-          <div className="workspace-area">
-             <div className="preview-container">
-                {previewRows && previewRows.length > 0 ? (
-                  <div className="table-scroll">
-                    <table className="preview-table">
-                      <thead>
-                        <tr>
-                          {Object.keys(previewRows[0]).map((key) => (
-                            <th key={key}>{key}</th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {previewRows.map((row, idx) => (
-                          <tr key={idx}>
-                            {Object.keys(previewRows[0]).map((key) => (
-                              <td key={`${idx}-${key}`}>{row[key]}</td>
-                            ))}
-                          </tr>
+              {/* Configuration Panel (Collapsible/Conditional) */}
+              {activeTransform && (
+                 <div className="config-panel">
+                   <div className="config-header">
+                     <h3>Configure: {activeTransform.label}</h3>
+                     <button className="close-config" onClick={() => { setSelectedTransform(null); setEditingId(null); }}>×</button>
+                   </div>
+                   <div className="config-content">
+                      <p className="config-desc">{activeTransform.description}</p>
+                      <div className="config-form-grid">
+                        {(activeTransform.fields || []).map((field) => (
+                          <label key={field.name} className="config-field">
+                            <span>{field.label}</span>
+                            {renderField(field)}
+                          </label>
                         ))}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : (
-                  <div className="empty-state">
-                    <FaTable className="empty-icon" />
-                    <p>Add steps from the ribbon above and click "Run Preview" to see results.</p>
-                  </div>
-                )}
-             </div>
+                      </div>
+                   </div>
+                   <div className="config-footer">
+                      <button type="button" onClick={addStep} className="add-step-btn">
+                        {editingId ? 'Update Step' : 'Add Step'}
+                      </button>
+                   </div>
+                 </div>
+              )}
 
-             {/* Right Panel: Applied Steps */}
-             <div className="sidebar-right">
-                {renderAppliedSteps()}
-             </div>
-          </div>
+              {/* Messages */}
+              {(error || success) && (
+                <div className={`status-bar ${error ? 'error' : 'success'}`}>
+                  {error || success}
+                </div>
+              )}
+
+              {/* Main Workspace: applied steps (left/right) + preview (center/bottom) */}
+              <div className="workspace-area">
+                 <div className="preview-container">
+                    {previewRows && previewRows.length > 0 ? (
+                      <div className="table-scroll">
+                        <table className="preview-table">
+                          <thead>
+                            <tr>
+                              {Object.keys(previewRows[0]).map((key) => (
+                                <th key={key}>{key}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {previewRows.map((row, idx) => (
+                              <tr key={idx}>
+                                {Object.keys(previewRows[0]).map((key) => (
+                                  <td key={`${idx}-${key}`}>{row[key]}</td>
+                                ))}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <div className="empty-state">
+                        <FaTable className="empty-icon" />
+                        <p>Add steps from the ribbon above and click "Run Preview" to see results.</p>
+                      </div>
+                    )}
+                 </div>
+
+                 {/* Right Panel: Applied Steps */}
+                 <div className="sidebar-right">
+                    {renderAppliedSteps()}
+                 </div>
+              </div>
+            </>
+          ) : (
+            <MLPrepPanel onSwitchToCleaning={() => setActivePanel('cleaning')} />
+          )}
         </div>
       </div>
     </div>
