@@ -18,7 +18,39 @@ const friendlyModelLabel = (modelId, models) => {
   return match?.name || modelId;
 };
 
-function MLPrepPanel({ onSwitchToCleaning }) {
+const ACTION_LABELS = {
+  replace_nulls: 'Replace Nulls',
+  remove_nulls: 'Remove Nulls',
+  convert_type: 'Convert Type',
+  split_column: 'Split Column',
+  merge_columns: 'Merge Columns',
+};
+
+const formatColumns = (columns) => {
+  if (!columns || columns.length === 0) return 'all columns';
+  return columns.join(', ');
+};
+
+const describeSuggestion = (suggestion) => {
+  const actionLabel = ACTION_LABELS[suggestion.action_type] || suggestion.action_type;
+  if (suggestion.action_type === 'replace_nulls') {
+    const strategy = suggestion.params?.strategy || 'value';
+    return `${actionLabel} in ${formatColumns(suggestion.columns)} (strategy: ${strategy}).`;
+  }
+  if (suggestion.action_type === 'convert_type') {
+    const targetType = suggestion.params?.target || 'string';
+    return `${actionLabel} for ${formatColumns(suggestion.columns)} to ${targetType}.`;
+  }
+  return `${actionLabel} on ${formatColumns(suggestion.columns)}.`;
+};
+
+const severityClass = (severity) => {
+  if (severity === 'blocking') return 'blocking';
+  if (severity === 'warning') return 'warning';
+  return 'info';
+};
+
+function MLPrepPanel({ onSwitchToCleaning, onAddFix }) {
   const { cleanedData, fullData, uploadedData } = useContext(DataContext);
   const [models, setModels] = useState([]);
   const [selectedModel, setSelectedModel] = useState('');
@@ -158,11 +190,20 @@ function MLPrepPanel({ onSwitchToCleaning }) {
             {issues.length === 0 ? (
               <p className="muted-text">No issues detected.</p>
             ) : (
-              <ul>
+              <div className="ml-prep-card-grid">
                 {issues.map((issue, idx) => (
-                  <li key={`issue-${idx}`}>{issue}</li>
+                  <div
+                    key={`issue-${idx}`}
+                    className={`ml-prep-card ${severityClass(issue.severity)}`}
+                  >
+                    <div className="ml-prep-card-header">
+                      <span className="ml-prep-card-title">Issue</span>
+                      <span className="ml-prep-card-severity">{issue.severity}</span>
+                    </div>
+                    <p>{issue.message}</p>
+                  </div>
                 ))}
-              </ul>
+              </div>
             )}
           </div>
 
@@ -171,11 +212,28 @@ function MLPrepPanel({ onSwitchToCleaning }) {
             {suggestions.length === 0 ? (
               <p className="muted-text">No suggestions available.</p>
             ) : (
-              <ul>
+              <div className="ml-prep-card-grid">
                 {suggestions.map((suggestion, idx) => (
-                  <li key={`suggestion-${idx}`}>{suggestion}</li>
+                  <div
+                    key={`suggestion-${idx}`}
+                    className={`ml-prep-card ${severityClass(suggestion.severity)}`}
+                  >
+                    <div className="ml-prep-card-header">
+                      <span className="ml-prep-card-title">Proposed Fix</span>
+                      <span className="ml-prep-card-severity">{suggestion.severity}</span>
+                    </div>
+                    <p className="ml-prep-card-reason">{suggestion.reason}</p>
+                    <p className="ml-prep-card-action">{describeSuggestion(suggestion)}</p>
+                    <button
+                      type="button"
+                      className="ml-prep-add-fix"
+                      onClick={() => onAddFix?.(suggestion)}
+                    >
+                      Add Fix to Cleaning Steps
+                    </button>
+                  </div>
                 ))}
-              </ul>
+              </div>
             )}
             <p className="ml-prep-hint">
               Suggestions map to Data Cleaning tools like Replace Nulls, Convert Type,

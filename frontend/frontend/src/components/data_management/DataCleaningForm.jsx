@@ -868,6 +868,31 @@ function DataCleaningForm({ closeForm, setShowDataPreview }) {
 
   const activeTransform = transformLookup[selectedTransform];
 
+  const addMlPrepFix = (suggestion) => {
+    const transform = transformLookup[suggestion.action_type];
+    if (!transform) {
+      setError(`Unsupported ML Prep action: ${suggestion.action_type}`);
+      return;
+    }
+
+    const params = { ...(suggestion.params || {}) };
+    if (suggestion.columns && suggestion.columns.length > 0 && !params.columns) {
+      params.columns = suggestion.columns;
+    }
+
+    setSteps((prev) => [
+      ...prev,
+      {
+        id: `${Date.now()}-${Math.random()}`,
+        type: suggestion.action_type,
+        label: transform.label,
+        params,
+      },
+    ]);
+    setError(null);
+    setSuccess('ML Prep fix added to Applied Steps.');
+  };
+
   return (
     <div className="cleaning-form-overlay">
       <div className="manual-cleaning-shell">
@@ -987,7 +1012,10 @@ function DataCleaningForm({ closeForm, setShowDataPreview }) {
               </div>
             </>
           ) : (
-            <MLPrepPanel onSwitchToCleaning={() => setActivePanel('cleaning')} />
+            <MLPrepPanel
+              onSwitchToCleaning={() => setActivePanel('cleaning')}
+              onAddFix={addMlPrepFix}
+            />
           )}
         </div>
       </div>

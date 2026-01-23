@@ -5,6 +5,7 @@ return actionable feedback before users run ML workflows.
 """
 
 from flask import Blueprint, jsonify, request
+import json
 import pandas as pd
 from backend.utils.global_state import get_cleaned_data, get_uploaded_df
 
@@ -56,9 +57,40 @@ def _column_has_mixed_numeric_text(series: pd.Series) -> bool:
     return numeric_mask.any() and (~numeric_mask).any()
 
 
-def _add_unique(items, new_item):
-    if new_item not in items:
+def _add_unique_suggestion(items, new_item):
+    """Add a suggestion only if it isn't already present."""
+    def _params_key(params):
+        return tuple(
+            sorted(
+                (key, json.dumps(value, sort_keys=True))
+                for key, value in (params or {}).items()
+            )
+        )
+
+    key = (
+        new_item.get("action_type"),
+        tuple(new_item.get("columns") or []),
+        _params_key(new_item.get("params")),
+        new_item.get("reason"),
+        new_item.get("severity"),
+    )
+    existing_keys = {
+        (
+            item.get("action_type"),
+            tuple(item.get("columns") or []),
+            _params_key(item.get("params")),
+            item.get("reason"),
+            item.get("severity"),
+        )
+        for item in items
+    }
+    if key not in existing_keys:
         items.append(new_item)
+
+
+def _build_issue(message: str, severity: str) -> dict:
+    """Standardize issue payloads."""
+    return {"message": message, "severity": severity}
 
 
 def _check_missing_values(df: pd.DataFrame, issues: list, suggestions: list) -> None:
@@ -68,12 +100,21 @@ def _check_missing_values(df: pd.DataFrame, issues: list, suggestions: list) -> 
     for column, count in missing_counts[missing_counts > 0].items():
         percentage = (count / total_rows * 100) if total_rows else 0
         issues.append(
-            f"Column '{column}' contains {percentage:.1f}% missing values ({count} rows)."
+            _build_issue(
+                f"Column '{column}' contains {percentage:.1f}% missing values ({count} rows).",
+                "blocking",
+            )
         )
-    if (missing_counts > 0).any():
-        _add_unique(
+        strategy = "median" if _column_is_numeric(df[column]) else "mode"
+        _add_unique_suggestion(
             suggestions,
-            "Use Replace Nulls or Remove Nulls in Data Cleaning to address missing data.",
+            {
+                "action_type": "replace_nulls",
+                "columns": [column],
+                "params": {"columns": [column], "strategy": strategy},
+                "reason": "Missing values must be handled before training.",
+                "severity": "blocking",
+            },
         )
 
 
@@ -82,13 +123,21 @@ def _check_mixed_types(df: pd.DataFrame, issues: list, suggestions: list) -> Non
     for column in df.columns:
         if _column_has_mixed_numeric_text(df[column]):
             issues.append(
-                f"Column '{column}' contains mixed numeric and text values."
+                _build_issue(
+                    f"Column '{column}' contains mixed numeric and text values.",
+                    "warning",
+                )
             )
-    if any("mixed numeric" in issue for issue in issues):
-        _add_unique(
-            suggestions,
-            "Use Convert Type or Replace Values to normalize mixed-type columns.",
-        )
+            _add_unique_suggestion(
+                suggestions,
+                {
+                    "action_type": "convert_type",
+                    "columns": [column],
+                    "params": {"columns": [column], "target": "numeric"},
+                    "reason": "Mixed-type columns should be normalized to a consistent numeric format.",
+                    "severity": "warning",
+                },
+            )
 
 
 def _check_row_feature_ratio(df: pd.DataFrame, feature_count: int, issues: list, suggestions: list) -> None:
@@ -98,11 +147,10 @@ def _check_row_feature_ratio(df: pd.DataFrame, feature_count: int, issues: list,
     min_rows = feature_count * 5
     if len(df) < min_rows:
         issues.append(
-            f"Dataset has {len(df)} rows for {feature_count} feature columns; aim for at least {min_rows} rows."
-        )
-        _add_unique(
-            suggestions,
-            "Consider collecting more data or reducing the number of feature columns.",
+            _build_issue(
+                f"Dataset has {len(df)} rows for {feature_count} feature columns; aim for at least {min_rows} rows.",
+                "info",
+            )
         )
 
 
@@ -110,23 +158,41 @@ def _check_linear_regression(df: pd.DataFrame, target_column: str, issues: list,
     """Run linear regression readiness checks."""
     if not _column_is_numeric(df[target_column]):
         issues.append(
-            f"Target column '{target_column}' is not fully numeric. Linear regression requires a numeric target."
+            _build_issue(
+                f"Target column '{target_column}' is not fully numeric. Linear regression requires a numeric target.",
+                "blocking",
+            )
         )
-        _add_unique(
+        _add_unique_suggestion(
             suggestions,
-            "Use Convert Type to cast the target column to numeric values.",
+            {
+                "action_type": "convert_type",
+                "columns": [target_column],
+                "params": {"columns": [target_column], "target": "numeric"},
+                "reason": "Linear regression requires a numeric target column.",
+                "severity": "blocking",
+            },
         )
 
     feature_columns = [col for col in df.columns if col != target_column]
     non_numeric_features = [col for col in feature_columns if not _column_is_numeric(df[col])]
     for column in non_numeric_features:
         issues.append(
-            f"Feature column '{column}' is not numeric. Linear regression requires numeric features."
+            _build_issue(
+                f"Feature column '{column}' is not numeric. Linear regression requires numeric features.",
+                "blocking",
+            )
         )
     if non_numeric_features:
-        _add_unique(
+        _add_unique_suggestion(
             suggestions,
-            "Use Convert Type to cast feature columns to numeric values or encode categorical data.",
+            {
+                "action_type": "convert_type",
+                "columns": non_numeric_features,
+                "params": {"columns": non_numeric_features, "target": "numeric"},
+                "reason": "Linear regression requires numeric feature columns.",
+                "severity": "blocking",
+            },
         )
 
 
@@ -136,39 +202,55 @@ def _check_logistic_regression(df: pd.DataFrame, target_column: str, issues: lis
     unique_count = target_series.nunique()
     if unique_count < 2:
         issues.append(
-            f"Target column '{target_column}' has fewer than two distinct values; logistic regression needs categories."
-        )
-        _add_unique(
-            suggestions,
-            "Ensure the target column has at least two classes.",
+            _build_issue(
+                f"Target column '{target_column}' has fewer than two distinct values; logistic regression needs categories.",
+                "blocking",
+            )
         )
     if _column_is_numeric(df[target_column]) and unique_count > 20:
         issues.append(
-            f"Target column '{target_column}' appears continuous ({unique_count} unique values)."
-        )
-        _add_unique(
-            suggestions,
-            "Consider binning the target or switching to linear regression.",
+            _build_issue(
+                f"Target column '{target_column}' appears continuous ({unique_count} unique values).",
+                "warning",
+            )
         )
     if not _column_is_numeric(df[target_column]):
         issues.append(
-            f"Target column '{target_column}' is categorical and should be encoded for logistic regression."
+            _build_issue(
+                f"Target column '{target_column}' is categorical and should be encoded for logistic regression.",
+                "blocking",
+            )
         )
-        _add_unique(
+        _add_unique_suggestion(
             suggestions,
-            "Use Convert Type or label encoding to convert the target column to numeric classes.",
+            {
+                "action_type": "convert_type",
+                "columns": [target_column],
+                "params": {"columns": [target_column], "target": "numeric"},
+                "reason": "Logistic regression requires an encoded numeric target column.",
+                "severity": "blocking",
+            },
         )
 
     feature_columns = [col for col in df.columns if col != target_column]
     categorical_features = [col for col in feature_columns if not _column_is_numeric(df[col])]
     for column in categorical_features:
         issues.append(
-            f"Feature column '{column}' is categorical and should be encoded before logistic regression."
+            _build_issue(
+                f"Feature column '{column}' is categorical and should be encoded before logistic regression.",
+                "blocking",
+            )
         )
     if categorical_features:
-        _add_unique(
+        _add_unique_suggestion(
             suggestions,
-            "One-hot encode categorical feature columns before training logistic regression.",
+            {
+                "action_type": "convert_type",
+                "columns": categorical_features,
+                "params": {"columns": categorical_features, "target": "numeric"},
+                "reason": "Logistic regression expects numeric feature columns.",
+                "severity": "blocking",
+            },
         )
 
 
@@ -177,17 +259,28 @@ def _check_kmeans(df: pd.DataFrame, issues: list, suggestions: list) -> None:
     non_numeric_columns = [col for col in df.columns if not _column_is_numeric(df[col])]
     for column in non_numeric_columns:
         issues.append(
-            f"Column '{column}' is not numeric. K-means requires numeric features."
+            _build_issue(
+                f"Column '{column}' is not numeric. K-means requires numeric features.",
+                "blocking",
+            )
         )
     if non_numeric_columns:
-        _add_unique(
+        _add_unique_suggestion(
             suggestions,
-            "Remove categorical columns or encode them before running k-means.",
+            {
+                "action_type": "convert_type",
+                "columns": non_numeric_columns,
+                "params": {"columns": non_numeric_columns, "target": "numeric"},
+                "reason": "K-means requires numeric feature columns.",
+                "severity": "blocking",
+            },
         )
-        _add_unique(
-            suggestions,
-            "Apply scaling (e.g., min-max normalization) to numeric features before clustering.",
+    issues.append(
+        _build_issue(
+            "Consider scaling numeric features before clustering to reduce feature dominance.",
+            "info",
         )
+    )
 
 
 @ml_prep_bp.route('/models', methods=['GET'])
@@ -232,5 +325,5 @@ def check_dataset_readiness():
     elif model_type == "kmeans":
         _check_kmeans(df, issues, suggestions)
 
-    ready = len(issues) == 0
+    ready = not any(issue.get("severity") == "blocking" for issue in issues)
     return jsonify({"ready": ready, "issues": issues, "suggestions": suggestions}), 200
