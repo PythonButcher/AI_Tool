@@ -2,9 +2,9 @@ import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import './DataCleaningForm.css';
 import CloseButton from '../buttons/CloseButton';
-import FileExport from './FileExport';
 import MLPrepPanel from './MLPrepPanel';
 import { DataContext } from '../../context/DataContext';
+import { useHelpOverlay } from '../../context/HelpOverlayContext';
 import {
   FaFont, FaEraser, FaFilter, FaExchangeAlt, FaFillDrip, FaTrash,
   FaArrowUp, FaArrowDown, FaClone, FaHashtag, FaObjectGroup, FaCalendarAlt,
@@ -363,6 +363,9 @@ function DataCleaningForm({ closeForm, setShowDataPreview }) {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [editingId, setEditingId] = useState(null);
+  const { isHelpVisible, toggleHelp, closeHelp } = useHelpOverlay();
+
+  const helpId = 'dataCleaning';
 
   const columns = useMemo(() => {
     const source = cleanedData ?? fullData ?? uploadedData;
@@ -930,6 +933,13 @@ function DataCleaningForm({ closeForm, setShowDataPreview }) {
                  </button>
                </>
              )}
+             <button
+          type="button"
+          className="help-overlay-trigger"
+          onClick={() => toggleHelp(helpId)}
+        >
+          ❓
+        </button>
              <CloseButton onClick={closeForm} />
           </div>
         </div>
@@ -1008,18 +1018,44 @@ function DataCleaningForm({ closeForm, setShowDataPreview }) {
                  {/* Right Panel: Applied Steps */}
                  <div className="sidebar-right">
                     {renderAppliedSteps()}
-                 </div>
-              </div>
+                 </div>          
+              </div>                     
             </>
-          ) : (
+          ) : (          
             <MLPrepPanel
               onSwitchToCleaning={() => setActivePanel('cleaning')}
               onAddFix={addMlPrepFix}
-            />
+            />           
+          )}
+          {/* ✅ Help Overlay */}
+          {isHelpVisible(helpId) && (
+            <div className="help-overlay visible">
+              <div className="help-overlay-content">
+                <span
+                  className="help-overlay-close"
+                  onClick={() => closeHelp(helpId)}
+                >
+                  ×
+                </span>
+                <h3>Data Cleaning</h3>
+                  <ul>
+                    <li>Use the Data Cleaning tools to fix structural issues in your dataset, such as missing values, incorrect data types, duplicate rows, or malformed columns.</li>
+                    <li>Cleaning steps are added incrementally and can be previewed before being applied, allowing you to safely refine your data without permanent changes.</li>
+                  </ul>
+
+                  <h3>ML Prep</h3>
+                  <ul>
+                    <li>The ML Prep section analyzes your current dataset to determine whether it is suitable for specific machine learning models.</li>
+                    <li>When issues are found, ML Prep suggests concrete cleaning actions that you can add directly to your cleaning workflow.</li>
+                  </ul>
+
+              </div>
+            </div>
           )}
         </div>
-      </div>
+      </div>   
     </div>
+    
   );
 }
 
