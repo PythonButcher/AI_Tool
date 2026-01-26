@@ -1,14 +1,15 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import './DataCleaningForm.css';
-import CloseButton from '../buttons/CloseButton';
 import MLPrepPanel from './MLPrepPanel';
+import DataCleaningHeader from './partials/DataCleaningHeader';
+import DataCleaningPreview from './partials/DataCleaningPreview';
 import { DataContext } from '../../context/DataContext';
 import { useHelpOverlay } from '../../context/HelpOverlayContext';
 import {
   FaFont, FaEraser, FaFilter, FaExchangeAlt, FaFillDrip, FaTrash,
   FaArrowUp, FaArrowDown, FaClone, FaHashtag, FaObjectGroup, FaCalendarAlt,
-  FaEdit, FaSortAmountDown, FaTable, FaColumns, FaLayerGroup, FaIndent, FaOutdent
+  FaEdit, FaSortAmountDown, FaColumns, FaLayerGroup, FaIndent, FaOutdent
 } from 'react-icons/fa';
 import { MdMergeType, MdSplitscreen } from 'react-icons/md';
 
@@ -899,50 +900,17 @@ function DataCleaningForm({ closeForm, setShowDataPreview }) {
   return (
     <div className="cleaning-form-overlay">
       <div className="manual-cleaning-shell">
-        <div className="manual-cleaning-header">
-          <div className="header-left">
-            <div className="header-title">
-              <h2>Power Query Editor</h2>
-              <p className="subtitle">Visual Data Transformation Interface</p>
-            </div>
-            <div className="header-tabs">
-              <button
-                type="button"
-                className={`header-tab ${activePanel === 'cleaning' ? 'active' : ''}`}
-                onClick={() => setActivePanel('cleaning')}
-              >
-                Data Cleaning
-              </button>
-              <button
-                type="button"
-                className={`header-tab ${activePanel === 'ml_prep' ? 'active' : ''}`}
-                onClick={() => setActivePanel('ml_prep')}
-              >
-                ML Prep
-              </button>
-            </div>
-          </div>
-          <div className="header-actions">
-             {activePanel === 'cleaning' && (
-               <>
-                 <button className="preview-trigger" onClick={() => runCleaning(true)} disabled={steps.length === 0 || loading}>
-                   Run Preview
-                 </button>
-                 <button className="apply-trigger" onClick={() => runCleaning(false)} disabled={steps.length === 0 || loading}>
-                   Apply All
-                 </button>
-               </>
-             )}
-             <button
-          type="button"
-          className="help-overlay-trigger"
-          onClick={() => toggleHelp(helpId)}
-        >
-          ❓
-        </button>
-             <CloseButton onClick={closeForm} />
-          </div>
-        </div>
+        <DataCleaningHeader
+          activePanel={activePanel}
+          onChangePanel={setActivePanel}
+          onRunPreview={() => runCleaning(true)}
+          onApplyAll={() => runCleaning(false)}
+          stepsCount={steps.length}
+          loading={loading}
+          onToggleHelp={toggleHelp}
+          helpId={helpId}
+          onClose={closeForm}
+        />
 
         <div className="manual-cleaning-body">
           {activePanel === 'cleaning' ? (
@@ -985,35 +953,7 @@ function DataCleaningForm({ closeForm, setShowDataPreview }) {
 
               {/* Main Workspace: applied steps (left/right) + preview (center/bottom) */}
               <div className="workspace-area">
-                 <div className="preview-container">
-                    {previewRows && previewRows.length > 0 ? (
-                      <div className="table-scroll">
-                        <table className="preview-table">
-                          <thead>
-                            <tr>
-                              {Object.keys(previewRows[0]).map((key) => (
-                                <th key={key}>{key}</th>
-                              ))}
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {previewRows.map((row, idx) => (
-                              <tr key={idx}>
-                                {Object.keys(previewRows[0]).map((key) => (
-                                  <td key={`${idx}-${key}`}>{row[key]}</td>
-                                ))}
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    ) : (
-                      <div className="empty-state">
-                        <FaTable className="empty-icon" />
-                        <p>Add steps from the ribbon above and click "Run Preview" to see results.</p>
-                      </div>
-                    )}
-                 </div>
+                 <DataCleaningPreview previewRows={previewRows} />
 
                  {/* Right Panel: Applied Steps */}
                  <div className="sidebar-right">
