@@ -16,7 +16,7 @@ import { BiSpreadsheet } from "react-icons/bi";
 import { SiGooglegemini } from "react-icons/si";
 import { PiOpenAiLogo } from "react-icons/pi";
 import './SideBar.css';
-import DataCleaningForm from '../data_management/DataCleaningForm';
+import DataCleaningForm from '../data_cleaning/DataCleaningForm';
 import FileExport from '../data_management/FileExport';
 import FieldsPanel from '../insights/FieldsPanel';
 import { useWindowContext } from '../../context/WindowContext';

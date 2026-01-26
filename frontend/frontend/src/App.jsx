@@ -5,7 +5,7 @@ import CanvasContainer from './components/layout/CanvasContainer';
 import DatasetInfo from './components/insights/DatasetInfo';
 import SideBar from './components/layout/SideBar';
 import { DndContext, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
-import DataCleaningForm from './components/data_management/DataCleaningForm';
+import DataCleaningForm from './components/data_cleaning/DataCleaningForm';
 import DataVisualizations from './features/charts/DataVisualization';
 import { transformToChartData } from './utils/chartDataUtils';
 import AIChat from './features/ai/AIChat';

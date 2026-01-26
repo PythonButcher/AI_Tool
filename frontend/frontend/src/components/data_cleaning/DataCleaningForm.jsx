@@ -1,8 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import './DataCleaningForm.css';
-import CloseButton from '../buttons/CloseButton';
 import MLPrepPanel from './MLPrepPanel';
+import AppliedStepsPanel from './AppliedStepsPanel';
+import CleaningRibbon from './CleaningRibbon';
+import DataCleaningHeader from './DataCleaningHeader';
+import DataCleaningHelpOverlay from './DataCleaningHelpOverlay';
+import PreviewTable from './PreviewTable';
+import TransformConfigPanel from './TransformConfigPanel';
 import { DataContext } from '../../context/DataContext';
 import { useHelpOverlay } from '../../context/HelpOverlayContext';
 import {
@@ -801,74 +806,6 @@ function DataCleaningForm({ closeForm, setShowDataPreview }) {
     }
   };
 
-  const renderRibbon = () => (
-    <div className="cleaning-ribbon-container">
-      {/* Category Tabs */}
-      <div className="ribbon-tabs">
-        {TRANSFORM_LIBRARY.map((category) => (
-          <button
-            key={category.category}
-            className={`ribbon-tab ${selectedCategory === category.category ? 'active' : ''}`}
-            onClick={() => {
-              setSelectedCategory(category.category);
-              // Do not automatically select a tool, keep panel closed until tool click
-              // setSelectedTransform(null); 
-            }}
-          >
-            {category.category}
-          </button>
-        ))}
-      </div>
-
-      {/* Toolbar Icons for Active Category */}
-      <div className="ribbon-toolbar">
-        {TRANSFORM_LIBRARY.find(c => c.category === selectedCategory)?.transforms.map((transform) => (
-          <button
-            key={transform.type}
-            className={`ribbon-btn ${selectedTransform === transform.type ? 'active' : ''}`}
-            onClick={() => {
-              setSelectedTransform(transform.type);
-              setSuccess(null);
-              setError(null);
-            }}
-            title={`${transform.label} - ${transform.description}`}
-          >
-            <div className="ribbon-icon">{transform.icon}</div>
-            <div className="ribbon-label">{transform.label}</div>
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-
-  const renderAppliedSteps = () => (
-    <div className="applied-steps-panel">
-      <div className="panel-header">Applied Steps</div>
-      <div className="steps-list">
-        {steps.length === 0 && <div className="muted-text">No steps yet.</div>}
-        {steps.map((step, idx) => (
-          <div key={step.id} className={`step-item ${editingId === step.id ? 'editing' : ''}`}>
-             <div className="step-info">
-               <span className="step-number">{idx + 1}</span>
-               <div className="step-details">
-                 <div className="step-name">{step.label}</div>
-                 <div className="step-type">{step.type}</div>
-               </div>
-             </div>
-             <div className="step-controls">
-               <button onClick={() => editStep(step)} title="Edit"><FaEdit /></button>
-               <button onClick={() => deleteStep(step.id)} title="Remove"><FaTrash /></button>
-               <div className="step-arrows">
-                  <button onClick={() => moveStep(idx, -1)} disabled={idx === 0}>↑</button>
-                  <button onClick={() => moveStep(idx, 1)} disabled={idx === steps.length - 1}>↓</button>
-               </div>
-             </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-
   const activeTransform = transformLookup[selectedTransform];
 
   const addMlPrepFix = (suggestion) => {
@@ -899,82 +836,41 @@ function DataCleaningForm({ closeForm, setShowDataPreview }) {
   return (
     <div className="cleaning-form-overlay">
       <div className="manual-cleaning-shell">
-        <div className="manual-cleaning-header">
-          <div className="header-left">
-            <div className="header-title">
-              <h2>Power Query Editor</h2>
-              <p className="subtitle">Visual Data Transformation Interface</p>
-            </div>
-            <div className="header-tabs">
-              <button
-                type="button"
-                className={`header-tab ${activePanel === 'cleaning' ? 'active' : ''}`}
-                onClick={() => setActivePanel('cleaning')}
-              >
-                Data Cleaning
-              </button>
-              <button
-                type="button"
-                className={`header-tab ${activePanel === 'ml_prep' ? 'active' : ''}`}
-                onClick={() => setActivePanel('ml_prep')}
-              >
-                ML Prep
-              </button>
-            </div>
-          </div>
-          <div className="header-actions">
-             {activePanel === 'cleaning' && (
-               <>
-                 <button className="preview-trigger" onClick={() => runCleaning(true)} disabled={steps.length === 0 || loading}>
-                   Run Preview
-                 </button>
-                 <button className="apply-trigger" onClick={() => runCleaning(false)} disabled={steps.length === 0 || loading}>
-                   Apply All
-                 </button>
-               </>
-             )}
-             <button
-          type="button"
-          className="help-overlay-trigger"
-          onClick={() => toggleHelp(helpId)}
-        >
-          ❓
-        </button>
-             <CloseButton onClick={closeForm} />
-          </div>
-        </div>
+        {/* Top-level header stays lightweight while state lives in the form. */}
+        <DataCleaningHeader
+          activePanel={activePanel}
+          setActivePanel={setActivePanel}
+          runCleaning={runCleaning}
+          stepsLength={steps.length}
+          loading={loading}
+          toggleHelp={toggleHelp}
+          helpId={helpId}
+          closeForm={closeForm}
+        />
 
         <div className="manual-cleaning-body">
           {activePanel === 'cleaning' ? (
             <>
               {/* Top Ribbon */}
-              {renderRibbon()}
+              <CleaningRibbon
+                transformLibrary={TRANSFORM_LIBRARY}
+                selectedCategory={selectedCategory}
+                setSelectedCategory={setSelectedCategory}
+                selectedTransform={selectedTransform}
+                setSelectedTransform={setSelectedTransform}
+                setSuccess={setSuccess}
+                setError={setError}
+              />
 
               {/* Configuration Panel (Collapsible/Conditional) */}
-              {activeTransform && (
-                 <div className="config-panel">
-                   <div className="config-header">
-                     <h3>Configure: {activeTransform.label}</h3>
-                     <button className="close-config" onClick={() => { setSelectedTransform(null); setEditingId(null); }}>×</button>
-                   </div>
-                   <div className="config-content">
-                      <p className="config-desc">{activeTransform.description}</p>
-                      <div className="config-form-grid">
-                        {(activeTransform.fields || []).map((field) => (
-                          <label key={field.name} className="config-field">
-                            <span>{field.label}</span>
-                            {renderField(field)}
-                          </label>
-                        ))}
-                      </div>
-                   </div>
-                   <div className="config-footer">
-                      <button type="button" onClick={addStep} className="add-step-btn">
-                        {editingId ? 'Update Step' : 'Add Step'}
-                      </button>
-                   </div>
-                 </div>
-              )}
+              <TransformConfigPanel
+                activeTransform={activeTransform}
+                renderField={renderField}
+                addStep={addStep}
+                editingId={editingId}
+                setSelectedTransform={setSelectedTransform}
+                setEditingId={setEditingId}
+              />
 
               {/* Messages */}
               {(error || success) && (
@@ -985,39 +881,17 @@ function DataCleaningForm({ closeForm, setShowDataPreview }) {
 
               {/* Main Workspace: applied steps (left/right) + preview (center/bottom) */}
               <div className="workspace-area">
-                 <div className="preview-container">
-                    {previewRows && previewRows.length > 0 ? (
-                      <div className="table-scroll">
-                        <table className="preview-table">
-                          <thead>
-                            <tr>
-                              {Object.keys(previewRows[0]).map((key) => (
-                                <th key={key}>{key}</th>
-                              ))}
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {previewRows.map((row, idx) => (
-                              <tr key={idx}>
-                                {Object.keys(previewRows[0]).map((key) => (
-                                  <td key={`${idx}-${key}`}>{row[key]}</td>
-                                ))}
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    ) : (
-                      <div className="empty-state">
-                        <FaTable className="empty-icon" />
-                        <p>Add steps from the ribbon above and click "Run Preview" to see results.</p>
-                      </div>
-                    )}
-                 </div>
+                <PreviewTable previewRows={previewRows} />
 
                  {/* Right Panel: Applied Steps */}
                  <div className="sidebar-right">
-                    {renderAppliedSteps()}
+                  <AppliedStepsPanel
+                    steps={steps}
+                    editingId={editingId}
+                    editStep={editStep}
+                    deleteStep={deleteStep}
+                    moveStep={moveStep}
+                  />
                  </div>          
               </div>                     
             </>
@@ -1028,30 +902,11 @@ function DataCleaningForm({ closeForm, setShowDataPreview }) {
             />           
           )}
           {/* ✅ Help Overlay */}
-          {isHelpVisible(helpId) && (
-            <div className="help-overlay visible">
-              <div className="help-overlay-content">
-                <span
-                  className="help-overlay-close"
-                  onClick={() => closeHelp(helpId)}
-                >
-                  ×
-                </span>
-                <h3>Data Cleaning</h3>
-                  <ul>
-                    <li>Use the Data Cleaning tools to fix structural issues in your dataset, such as missing values, incorrect data types, duplicate rows, or malformed columns.</li>
-                    <li>Cleaning steps are added incrementally and can be previewed before being applied, allowing you to safely refine your data without permanent changes.</li>
-                  </ul>
-
-                  <h3>ML Prep</h3>
-                  <ul>
-                    <li>The ML Prep section analyzes your current dataset to determine whether it is suitable for specific machine learning models.</li>
-                    <li>When issues are found, ML Prep suggests concrete cleaning actions that you can add directly to your cleaning workflow.</li>
-                  </ul>
-
-              </div>
-            </div>
-          )}
+          <DataCleaningHelpOverlay
+            isHelpVisible={isHelpVisible}
+            helpId={helpId}
+            closeHelp={closeHelp}
+          />
         </div>
       </div>   
     </div>
