@@ -20,6 +20,7 @@ from backend.routes.nlp_routes import nlp_bp
 from backend.routes.raw_data import raw_data_bp
 from backend.routes.autopilot import autopilot_bp
 from backend.routes.datahub_routes import datahub_bp
+from backend.routes.ml_prep import ml_prep_bp
 
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -49,6 +50,7 @@ def create_app():
     app.register_blueprint(raw_data_bp)
     app.register_blueprint(autopilot_bp)
     app.register_blueprint(datahub_bp)
+    app.register_blueprint(ml_prep_bp)
 
     @app.route('/', methods=['GET'])
     def home():
