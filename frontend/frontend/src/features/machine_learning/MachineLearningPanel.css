@@ -16,3 +16,56 @@
   color: var(--text-secondary);
   font-size: 14px;
 }
+
+.machine-learning-setup {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 8px;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.machine-learning-setup h3 {
+  margin: 0;
+  font-size: 15px;
+  color: var(--text-primary);
+}
+
+.machine-learning-setup-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+}
+
+.machine-learning-setup-label {
+  color: var(--text-secondary);
+}
+
+.machine-learning-setup-value {
+  color: var(--text-primary);
+  font-weight: 600;
+  text-align: right;
+}
+
+.machine-learning-setup-note {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.machine-learning-action {
+  margin-top: 16px;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 6px;
+  border: none;
+  background-color: var(--accent-blue);
+  color: var(--text-on-accent);
+  font-size: 14px;
+  font-weight: 600;
+  opacity: 0.6;
+  cursor: not-allowed;
+}

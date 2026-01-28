@@ -116,12 +116,25 @@ function MLPrepPanel({ onSwitchToCleaning, onAddFix }) {
   useEffect(() => {
     if (!result || error) return;
     const modelLabel = friendlyModelLabel(selectedModel, models);
+    const datasetId = uploadedData?.path || uploadedData?.id || uploadedData?.name || null;
     setMlPrepStatus({
       ready: !!result.ready,
       modelId: selectedModel,
       modelLabel,
+      datasetId,
+      requiresTarget: showTargetColumn,
+      targetColumn: showTargetColumn ? targetColumn : null,
     });
-  }, [result, error, selectedModel, models, setMlPrepStatus]);
+  }, [
+    result,
+    error,
+    selectedModel,
+    models,
+    uploadedData,
+    showTargetColumn,
+    targetColumn,
+    setMlPrepStatus,
+  ]);
 
   return (
     <div className="ml-prep-panel">
