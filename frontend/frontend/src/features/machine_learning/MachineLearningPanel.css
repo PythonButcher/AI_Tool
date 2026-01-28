@@ -1,0 +1,18 @@
+.machine-learning-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  color: var(--text-primary);
+}
+
+.machine-learning-panel h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.machine-learning-panel p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+}

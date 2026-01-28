@@ -86,6 +86,7 @@ function AppContent() {
   const [showStoryPanel, setShowStoryPanel] = useState(false);
   const [outputWindows, setOutputWindows] = useState([]);
   const [rawUploadFile, setRawUploadFile] = useState(null);
+  const [showMachineLearning, setShowMachineLearning] = useState(false);
 
   useLoadRawData(showRawViewer, rawUploadFile, setFullData);
 
@@ -233,6 +234,7 @@ function AppContent() {
           showWhiteBoard={showWhiteBoard}
           setShowWhiteBoard={setShowWhiteBoard}
           onStoryModelChange={handleStoryModelChange}
+          setShowMachineLearning={setShowMachineLearning}
         />
 
         <div className="main-content">
@@ -312,6 +314,8 @@ function AppContent() {
               storyModel={storyModel}
               showRawViewer={showRawViewer}
               handleCloseRawViewer={handleCloseRawViewer}
+              showMachineLearning={showMachineLearning}
+              setShowMachineLearning={setShowMachineLearning}
             >
               <DatasetInfo selectedStat={selectedStat} />
             </CanvasContainer>
