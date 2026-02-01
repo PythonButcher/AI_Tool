@@ -14,6 +14,7 @@ export const DataProvider = ({ children }) => {
   const [showAiReport, setShowAiReport] = useState(false);
   const [anomalies, setAnomalies] = useState([]);
   const [isDetecting, setIsDetecting] = useState(false);
+  const [mlPrepStatus, setMlPrepStatus] = useState(null);
 
   const detectAnomalies = async () => {
     if (isDetecting) return;
@@ -45,6 +46,7 @@ export const DataProvider = ({ children }) => {
 
   useEffect(() => {
     setAnomalies([]);
+    setMlPrepStatus(null);
   }, [uploadedData, fullData]);
 
   useEffect(() => {
@@ -62,7 +64,8 @@ export const DataProvider = ({ children }) => {
     anomalies, setAnomalies,
     isDetecting, setIsDetecting,
     detectAnomalies,
-  }), [uploadedData, fullData, cleanedData, filteredData, pipelineResults, aiReportReady, showAiReport, anomalies, isDetecting]);
+    mlPrepStatus, setMlPrepStatus,
+  }), [uploadedData, fullData, cleanedData, filteredData, pipelineResults, aiReportReady, showAiReport, anomalies, isDetecting, mlPrepStatus]);
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 };
