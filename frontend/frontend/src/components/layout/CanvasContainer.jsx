@@ -26,6 +26,7 @@ import { getWorkflowWindows } from '../../utils/workflow_output_router';
 import { useWindowContext } from '../../context/WindowContext';
 import { DataContext } from '../../context/DataContext';
 import RawDataViewer from '../../features/viewing/RawDataViewer';
+import MachineLearningPanel from '../../features/machine_learning/MachineLearningPanel';
 
 const ResponsiveGridLayout = ReactGridLayout.WidthProvider(ReactGridLayout.Responsive);
 
@@ -59,6 +60,8 @@ function CanvasContainer({
   storyModel,
   showRawViewer,
   handleCloseRawViewer,
+  showMachineLearning,
+  setShowMachineLearning,
 }) {
   const {
     minimizedWindows, minimizeWindow,
@@ -623,6 +626,40 @@ function CanvasContainer({
       })()
       : null;
 
+  const machineLearningElement =
+    showMachineLearning && !minimizedWindows['machineLearning']
+      ? (() => {
+        const saved = getWindowState('machineLearning');
+        const layout = registerLayout(
+          'machineLearning',
+          { ...(saved || { x: 2, y: 0, w: 8, h: 16, minW: 4, minH: 6, resizeHandles: ['se', 'e', 's'] }), static: isLocked('machineLearning') },
+          'machine-learning'
+        );
+
+        return (
+          <div
+            key="machineLearning"
+            className="grid-item"
+            data-grid={layout}
+            onMouseDown={() => bringToFront('machineLearning')}
+            style={{ backgroundColor: '#f4f4f4', border: '2px solid #ccc', borderRadius: '6px', overflow: 'hidden', zIndex: zIndices['machineLearning'] || 1 }}
+          >
+            <div className="window-header drag-handle" onDoubleClick={() => snapToFit('machineLearning')}>
+              <span className="header-title">🧠 Machine Learning</span>
+              <div className="header-button-group">
+                <MinimizeButton onClick={() => minimizeWindow('machineLearning', 'Machine Learning')} />
+                <MaximizeButton windowId="machineLearning" />
+                <CloseButton onClick={() => setShowMachineLearning(false)} />
+              </div>
+            </div>
+            <div className="window-content" style={{ height: 'calc(100% - 40px)', overflow: 'auto' }}>
+              <MachineLearningPanel />
+            </div>
+          </div>
+        );
+      })()
+      : null;
+
   layoutRef.current = layoutLg;
 
   return (
@@ -662,6 +699,7 @@ function CanvasContainer({
           {whiteBoardElement}
           {chartElements}
           {storyPanelElement}
+          {machineLearningElement}
         </ResponsiveGridLayout>
         <MinimizedDock />
       </div>

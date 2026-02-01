@@ -57,6 +57,10 @@
     color: var(--accent-green); /* LightSeaGreen */
 }
 
+.sidebar-button:nth-child(7) .sidebar-button-icon {
+    color: var(--accent-blue); /* DodgerBlue */
+}
+
 /* Tooltip styling for button hover */
 .sidebar-button[data-tooltip]:hover::after {
     content: attr(data-tooltip);

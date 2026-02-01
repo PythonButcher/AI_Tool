@@ -9,6 +9,7 @@ import {
   FaColumns,
   FaTable,
   FaPen,
+  FaBrain,
 } from 'react-icons/fa';
 import { FcWorkflow } from "react-icons/fc";
 import { AiOutlineEye } from "react-icons/ai";
@@ -27,7 +28,8 @@ const SideBar = ({ onButtonClick, onDataCleaned,
   cleanedData, setShowDataPreview, setShowRawViewer,
   setStoryData, setShowAiWorkflow,
   setShowStoryPanel, setShowWhiteBoard,
-  storyModel, onStoryModelChange }) => {
+  storyModel, onStoryModelChange,
+  setShowMachineLearning }) => {
   const [showCleaningForm, setShowCleaningForm] = useState(false);
   const [showExportDropdown, setShowExportDropdown] = useState(false);
   //  const [showDataViewerDropdown, setShowDataViewerDropdown] = useState(false);
@@ -210,6 +212,18 @@ const SideBar = ({ onButtonClick, onDataCleaned,
         onClick={handleWhiteBoard}
       >
         <FaPen className="sidebar-button-icon" />
+      </div>
+
+      {/* Machine Learning */}
+      <div
+        className="sidebar-button"
+        data-tooltip="Machine Learning"
+        onClick={() => {
+          setShowMachineLearning(true);
+          restoreWindow && restoreWindow('machineLearning');
+        }}
+      >
+        <FaBrain className="sidebar-button-icon" />
       </div>
 
       {/* Export Data Button */}

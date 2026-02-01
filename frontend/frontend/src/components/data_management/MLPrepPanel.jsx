@@ -51,7 +51,7 @@ const severityClass = (severity) => {
 };
 
 function MLPrepPanel({ onSwitchToCleaning, onAddFix }) {
-  const { cleanedData, fullData, uploadedData } = useContext(DataContext);
+  const { cleanedData, fullData, uploadedData, setMlPrepStatus } = useContext(DataContext);
   const [models, setModels] = useState([]);
   const [selectedModel, setSelectedModel] = useState('');
   const [targetColumn, setTargetColumn] = useState('');
@@ -112,6 +112,29 @@ function MLPrepPanel({ onSwitchToCleaning, onAddFix }) {
   const ready = result?.ready;
   const issues = result?.issues || [];
   const suggestions = result?.suggestions || [];
+
+  useEffect(() => {
+    if (!result || error) return;
+    const modelLabel = friendlyModelLabel(selectedModel, models);
+    const datasetId = uploadedData?.path || uploadedData?.id || uploadedData?.name || null;
+    setMlPrepStatus({
+      ready: !!result.ready,
+      modelId: selectedModel,
+      modelLabel,
+      datasetId,
+      requiresTarget: showTargetColumn,
+      targetColumn: showTargetColumn ? targetColumn : null,
+    });
+  }, [
+    result,
+    error,
+    selectedModel,
+    models,
+    uploadedData,
+    showTargetColumn,
+    targetColumn,
+    setMlPrepStatus,
+  ]);
 
   return (
     <div className="ml-prep-panel">

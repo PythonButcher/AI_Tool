@@ -13,7 +13,7 @@ const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
  *  - General data info (dataset metadata, etc.)
  *  - Statistical data based on a `selectedStat`
  */
-function DatasetInfo({ selectedStat }) {
+function DatasetInfo({ selectedStat, className = '' }) {
   const [dataInfo, setDataInfo] = useState(null);
   const [statData, setStatData] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -89,7 +89,7 @@ function DatasetInfo({ selectedStat }) {
   };
 
   return (
-    <div className="numbers-list-container">
+    <div className={`numbers-list-container ${className}`}>
       <h2 className="title">Dataset Information</h2>
 
       {isLoading && <p className="loading-message">Loading...</p>}
