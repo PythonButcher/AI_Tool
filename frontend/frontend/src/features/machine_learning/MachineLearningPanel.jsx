@@ -1,6 +1,7 @@
 import React, { useContext } from 'react';
 import './MachineLearningPanel.css';
 import { DataContext } from '../../context/DataContext';
+import DatasetInfo from '../../components/insights/DatasetInfo';
 
 const MachineLearningPanel = () => {
   const { mlPrepStatus } = useContext(DataContext);
@@ -47,10 +48,11 @@ const MachineLearningPanel = () => {
             ) : (
               <div className="machine-learning-setup-note">
                 This model does not require a target column.
+                <DatasetInfo className="ml-dataset-info" />
               </div>
             )}
           </div>
-
+          
           <button type="button" className="machine-learning-action" disabled>
             Train Model (Coming Soon)
           </button>
