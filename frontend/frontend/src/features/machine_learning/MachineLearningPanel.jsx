@@ -48,7 +48,7 @@ const MachineLearningPanel = () => {
             ) : (
               <div className="machine-learning-setup-note">
                 This model does not require a target column.
-                <DatasetInfo className="ml-dataset-info" />
+                <DatasetInfo className="ml-compact" />
               </div>
             )}
           </div>

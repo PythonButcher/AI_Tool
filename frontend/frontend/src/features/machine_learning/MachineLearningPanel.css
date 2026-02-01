@@ -76,4 +76,39 @@
   padding: 0;
   border-radius: 0;
 }
+/* ... keep your existing styles at the top ... */
+.numbers-list-container {
+  padding: 20px;
+  background-color: var(--bg-primary);
+  border-radius: 4px;
+  box-shadow: 0 2px 8px var(--shadow-color);
+}
 
+/* ... keep your existing styles at the top ... */
+
+/* 1. The Container: Remove the big white box and shadow */
+.numbers-list-container.ml-compact {
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+  margin-top: 10px;
+}
+
+/* 2. The Title: Make it smaller (14px) */
+.numbers-list-container.ml-compact .title {
+  font-size: 14px;
+  margin-bottom: 5px;
+}
+
+/* 3. The Preview Box (This is the one you asked about!) */
+.numbers-list-container.ml-compact .data-preview-content {
+  padding: 8px;           /* Less padding */
+  font-size: 11px;        /* Smaller text */
+  background: #1e1e1e;    /* Darker background for ML panel */
+  border: 1px solid #444; /* Subtle border */
+}
+
+/* 4. Hide unnecessary sub-titles in compact mode if you want */
+.numbers-list-container.ml-compact .data-preview-title {
+  display: none;
+}
