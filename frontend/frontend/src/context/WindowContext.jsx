@@ -5,7 +5,9 @@ import React, {
   useMemo,
   useEffect,
   useCallback,
+  useRef,
 } from 'react';
+import { DEFAULT_GRID_COLS, resolveWindowLayout } from '../utils/windowLayout';
 
 export const WindowContext = createContext();
 
@@ -16,11 +18,18 @@ export const WindowProvider = ({ children }) => {
   const [windowStates, setWindowStates] = useState({});
   const [lockedWindows, setLockedWindows] = useState({});
   const [windowContentStates, setWindowContentStates] = useState({});
+  const [activeWindowId, setActiveWindowId] = useState(null);
+  const [zIndices, setZIndices] = useState({});
+  const zCounter = useRef(1);
+  const placementOrder = useRef(new Map());
+  const placementCounter = useRef(0);
 
 
 
   const openWindow = (id) => {
     setOpenWindows((prev) => (prev.includes(id) ? prev : [...prev, id]));
+    setActiveWindowId(id);
+    setZIndices((prev) => ({ ...prev, [id]: ++zCounter.current }));
   };
 
   const addChart = (chartConfig) => {
@@ -61,6 +70,31 @@ export const WindowProvider = ({ children }) => {
 
   const getWindowState = (id) => windowStates[id] || null;
 
+  const getPlacementIndex = useCallback((id) => {
+    if (!placementOrder.current.has(id)) {
+      placementOrder.current.set(id, placementCounter.current++);
+    }
+    return placementOrder.current.get(id);
+  }, []);
+
+  const getResolvedLayout = useCallback(
+    (id, fallbackLayout, options = {}) => {
+      const savedLayout = windowStates[id] || null;
+      const placementIndex = getPlacementIndex(id);
+      const layout = resolveWindowLayout({
+        savedLayout,
+        fallbackLayout,
+        placementIndex,
+        cols: options.cols || DEFAULT_GRID_COLS,
+        mode: options.mode || 'cascade',
+        rowStep: options.rowStep,
+        colStep: options.colStep,
+      });
+      return layout;
+    },
+    [getPlacementIndex, windowStates]
+  );
+
   const saveWindowContentState = useCallback((id, data) => {
     setWindowContentStates(prev => ({ ...prev, [id]: data }));
   }, []);
@@ -88,6 +122,14 @@ export const WindowProvider = ({ children }) => {
       delete copy[id];
       return copy;
     });
+    setZIndices((prev) => {
+      const copy = { ...prev };
+      delete copy[id];
+      return copy;
+    });
+    if (activeWindowId === id) {
+      setActiveWindowId(null);
+    }
   };
 
 
@@ -101,12 +143,25 @@ export const WindowProvider = ({ children }) => {
       delete copy[id];
       return copy;
     });
+    setActiveWindowId(id);
+    setZIndices((prev) => ({ ...prev, [id]: ++zCounter.current }));
   };
 
   const maximizeWindow = (id) => {
     // placeholder for future maximize behavior
     restoreWindow(id);
   };
+
+  const focusWindow = useCallback((id) => {
+    if (!id) return;
+    setActiveWindowId(id);
+    setZIndices((prev) => ({ ...prev, [id]: ++zCounter.current }));
+  }, []);
+
+  const getZIndex = useCallback(
+    (id) => zIndices[id] || 1,
+    [zIndices]
+  );
 
 
   const value = useMemo(
@@ -120,8 +175,12 @@ export const WindowProvider = ({ children }) => {
       maximizeWindow,
       saveWindowState,
       getWindowState,
+      getResolvedLayout,
       toggleLock,
       isLocked,
+      activeWindowId,
+      focusWindow,
+      getZIndex,
       saveWindowContentState,
       getWindowContentState,
       charts,
@@ -129,11 +188,21 @@ export const WindowProvider = ({ children }) => {
       removeChart,
       updateChart
     }),
-    [openWindows, minimizedWindows, windowStates, lockedWindows, windowContentStates, charts]
+    [
+      openWindows,
+      minimizedWindows,
+      windowStates,
+      lockedWindows,
+      windowContentStates,
+      charts,
+      activeWindowId,
+      focusWindow,
+      getZIndex,
+      getResolvedLayout,
+    ]
   );
 
   return <WindowContext.Provider value={value}>{children}</WindowContext.Provider>;
 };
 
 export const useWindowContext = () => useContext(WindowContext);
-
