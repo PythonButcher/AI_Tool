@@ -4,7 +4,7 @@ import { useRef, useEffect, useState, useCallback } from 'react';
  * useWindowInteraction
  * 
  * Manages the high-performance drag and resize logic for a single window.
- * Supports "Managed Layout" by negotiating deltas with a parent handler.
+ * Supports cooperative layouts by negotiating deltas with a parent handler.
  */
 export const useWindowInteraction = ({
   id,

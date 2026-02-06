@@ -25,7 +25,7 @@ import MachineLearningPanel from '../../features/machine_learning/MachineLearnin
 /**
  * Modern Desktop-Grade Canvas Container
  * Uses Pointer Events + RAF for 60fps window management.
- * Features: Managed Layout Engine (Cooperative Resizing)
+ * Cooperative resizing is the default layout behavior (no user-facing toggle).
  */
 function CanvasContainer({
   children,
@@ -72,8 +72,7 @@ function CanvasContainer({
   const [containerBounds, setContainerBounds] = useState({ width: 1920, height: 1080 });
   const [focusStack, setFocusStack] = useState([]); // Array of IDs, last is on top
   
-  // Managed Layout Mode Toggle
-  const [isManagedMode, setIsManagedMode] = useState(true);
+  // Managed layout is the default behavior (no user-facing toggle).
 
   // Registry for direct DOM access (High Performance)
   // Map<id, { node: HTMLElement, stateRef: MutableRefObject }>
@@ -139,106 +138,80 @@ function CanvasContainer({
    * Cooperatively resizes neighbor windows when the active window changes size.
    */
   const handleLayoutResize = useCallback((activeId, dx, dy, dir) => {
-    if (!isManagedMode) return { dx, dy };
-
     const activeEntry = windowRegistry.current.get(activeId);
     if (!activeEntry) return { dx, dy };
 
-    const current = activeEntry.stateRef.current; // Current state BEFORE this frame's delta
-    const threshold = 15; // Snapping distance
-    const minSize = 200;
+    const current = activeEntry.stateRef.current; // State BEFORE this frame's delta
+    const SNAP_DISTANCE = 15;
+    const MIN_NEIGHBOR_SIZE = 200;
 
     let allowedDx = dx;
     let allowedDy = dy;
 
-    // Helper: Apply updates to a neighbor directly
+    const overlaps = (startA, endA, startB, endB) => Math.min(endA, endB) - Math.max(startA, startB) > 0;
+    const edgesTouch = (edgeA, edgeB) => Math.abs(edgeA - edgeB) < SNAP_DISTANCE;
+
+    // Apply updates to a neighbor directly (registry avoids React rerenders).
     const updateNeighbor = (id, updates) => {
-        const entry = windowRegistry.current.get(id);
-        if (!entry) return;
-        
-        // Update state ref
-        const newState = { ...entry.stateRef.current, ...updates };
-        entry.stateRef.current = newState;
-        
-        // Update DOM
-        entry.node.style.transform = `translate(${newState.x}px, ${newState.y}px)`;
-        entry.node.style.width = `${newState.w}px`;
-        entry.node.style.height = `${newState.h}px`;
-        
-        // Notify persistence (debounced in real app, but direct for now)
-        saveWindowState(id, { ...newState, isPixel: true });
+      const entry = windowRegistry.current.get(id);
+      if (!entry) return;
+
+      const newState = { ...entry.stateRef.current, ...updates };
+      entry.stateRef.current = newState;
+
+      entry.node.style.transform = `translate(${newState.x}px, ${newState.y}px)`;
+      entry.node.style.width = `${newState.w}px`;
+      entry.node.style.height = `${newState.h}px`;
+
+      // Persist immediately (debounced upstream if needed).
+      saveWindowState(id, { ...newState, isPixel: true });
     };
 
-    // Iterate all windows to find neighbors
+    // Only adjust neighbors that are touching the active edge and overlapping in the other axis.
     windowRegistry.current.forEach((entry, neighborId) => {
-        if (neighborId === activeId) return;
-        const nState = entry.stateRef.current;
+      if (neighborId === activeId) return;
+      const nState = entry.stateRef.current;
 
-        // --- Horizontal Resize (East Edge of Active) ---
-        if (dir.includes('e')) {
-            // Check if Neighbor is to the Right of Active
-            // Condition: Neighbor Left Edge approx equals Active Right Edge
-            const activeRight = current.x + current.w;
-            if (Math.abs(nState.x - activeRight) < threshold) {
-                // Check Vertical Overlap
-                const vOverlap = Math.min(current.y + current.h, nState.y + nState.h) - Math.max(current.y, nState.y);
-                if (vOverlap > 0) {
-                    // Pull/Push Neighbor Left Edge
-                    // If we grow Right (dx > 0), Neighbor shrinks from Left (x += dx, w -= dx)
-                    // If we shrink Left (dx < 0), Neighbor grows to Left (x += dx, w -= dx) -- wait, no.
-                    // If Active grows (+dx), Neighbor starts later (x + dx), width smaller (w - dx).
-                    
-                    const maxShrink = nState.w - minSize;
-                    const validDx = Math.min(dx, maxShrink);
-                    
-                    // If dx is negative (Active shrinking), Neighbor can grow indefinitely (up to Active's min width constraint handled by Active hook)
-                    // But we simply apply the delta.
-                    
-                    // Constrain the 'allowedDx' based on neighbor's ability to shrink
-                    if (dx > 0 && dx > maxShrink) {
-                        allowedDx = Math.min(allowedDx, maxShrink);
-                    }
+      const activeRight = current.x + current.w;
+      const activeBottom = current.y + current.h;
+      const neighborRight = nState.x + nState.w;
+      const neighborBottom = nState.y + nState.h;
 
-                    // Apply to Neighbor
-                    if (allowedDx !== 0) {
-                        updateNeighbor(neighborId, {
-                            x: nState.x + allowedDx,
-                            w: nState.w - allowedDx
-                        });
-                    }
-                }
-            }
+      if (dir.includes('e') && edgesTouch(activeRight, nState.x)) {
+        if (overlaps(current.y, current.y + current.h, nState.y, neighborBottom)) {
+          const maxShrink = nState.w - MIN_NEIGHBOR_SIZE;
+          if (dx > 0 && dx > maxShrink) {
+            allowedDx = Math.min(allowedDx, maxShrink);
+          }
+
+          if (allowedDx !== 0) {
+            updateNeighbor(neighborId, {
+              x: nState.x + allowedDx,
+              w: nState.w - allowedDx
+            });
+          }
         }
+      }
 
-        // --- Vertical Resize (South Edge of Active) ---
-        if (dir.includes('s')) {
-            const activeBottom = current.y + current.h;
-            if (Math.abs(nState.y - activeBottom) < threshold) {
-                // Check Horizontal Overlap
-                const hOverlap = Math.min(current.x + current.w, nState.x + nState.w) - Math.max(current.x, nState.x);
-                if (hOverlap > 0) {
-                    // Push Neighbor Top Edge
-                    const maxShrink = nState.h - minSize;
-                    if (dy > 0 && dy > maxShrink) {
-                        allowedDy = Math.min(allowedDy, maxShrink);
-                    }
+      if (dir.includes('s') && edgesTouch(activeBottom, nState.y)) {
+        if (overlaps(current.x, current.x + current.w, nState.x, neighborRight)) {
+          const maxShrink = nState.h - MIN_NEIGHBOR_SIZE;
+          if (dy > 0 && dy > maxShrink) {
+            allowedDy = Math.min(allowedDy, maxShrink);
+          }
 
-                    if (allowedDy !== 0) {
-                        updateNeighbor(neighborId, {
-                            y: nState.y + allowedDy,
-                            h: nState.h - allowedDy
-                        });
-                    }
-                }
-            }
+          if (allowedDy !== 0) {
+            updateNeighbor(neighborId, {
+              y: nState.y + allowedDy,
+              h: nState.h - allowedDy
+            });
+          }
         }
-        
-        // Similar logic for West/North if needed, but usually E/S are primary resizing directions in 2-pane setups.
-        // For full tiling, would implement all 4 directions.
+      }
     });
 
     return { dx: allowedDx, dy: allowedDy };
-  }, [isManagedMode, saveWindowState]);
+  }, [saveWindowState]);
 
 
   // --- Window Management Logic ---
@@ -271,18 +244,6 @@ function CanvasContainer({
             y: saved.y * 30,
             w: (saved.w / 10) * W,
             h: saved.h * 30,
-            isPixel: true
-        };
-    }
-
-    if (!isManagedMode) {
-        // Fallback Cascade
-        const count = focusStack.length;
-        return {
-            x: (count % 10) * 30 + 20,
-            y: (count % 10) * 30 + 20,
-            w: defaultPixelW || 600,
-            h: defaultPixelH || 400,
             isPixel: true
         };
     }
