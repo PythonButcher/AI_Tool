@@ -133,6 +133,11 @@ function CanvasContainer({
     }
   }, []);
 
+  const rangesOverlap = useCallback(
+    (startA, endA, startB, endB) => Math.min(endA, endB) - Math.max(startA, startB) > 0,
+    []
+  );
+
   /**
    * handleLayoutResize
    * Cooperatively resizes neighbor windows when the active window changes size.
@@ -149,7 +154,6 @@ function CanvasContainer({
     let allowedDx = dx;
     let allowedDy = dy;
 
-    const overlaps = (startA, endA, startB, endB) => Math.min(endA, endB) - Math.max(startA, startB) > 0;
     const edgesTouch = (edgeA, edgeB) => Math.abs(edgeA - edgeB) < SNAP_DISTANCE;
 
     // Apply updates to a neighbor directly (registry avoids React rerenders).
@@ -173,13 +177,15 @@ function CanvasContainer({
       if (neighborId === activeId) return;
       const nState = entry.stateRef.current;
 
+      const activeLeft = current.x;
       const activeRight = current.x + current.w;
+      const activeTop = current.y;
       const activeBottom = current.y + current.h;
       const neighborRight = nState.x + nState.w;
       const neighborBottom = nState.y + nState.h;
 
       if (dir.includes('e') && edgesTouch(activeRight, nState.x)) {
-        if (overlaps(current.y, current.y + current.h, nState.y, neighborBottom)) {
+        if (rangesOverlap(current.y, current.y + current.h, nState.y, neighborBottom)) {
           const maxShrink = nState.w - MIN_NEIGHBOR_WIDTH;
           if (dx > 0 && dx > maxShrink) {
             allowedDx = Math.min(allowedDx, maxShrink);
@@ -194,8 +200,23 @@ function CanvasContainer({
         }
       }
 
+      if (dir.includes('w') && edgesTouch(activeLeft, neighborRight)) {
+        if (rangesOverlap(current.y, current.y + current.h, nState.y, neighborBottom)) {
+          const maxShrink = nState.w - MIN_NEIGHBOR_WIDTH;
+          if (dx < 0 && Math.abs(dx) > maxShrink) {
+            allowedDx = Math.max(allowedDx, -maxShrink);
+          }
+
+          if (allowedDx !== 0) {
+            updateNeighbor(neighborId, {
+              w: nState.w + allowedDx
+            });
+          }
+        }
+      }
+
       if (dir.includes('s') && edgesTouch(activeBottom, nState.y)) {
-        if (overlaps(current.x, current.x + current.w, nState.x, neighborRight)) {
+        if (rangesOverlap(current.x, current.x + current.w, nState.x, neighborRight)) {
           const maxShrink = nState.h - MIN_NEIGHBOR_HEIGHT;
           if (dy > 0 && dy > maxShrink) {
             allowedDy = Math.min(allowedDy, maxShrink);
@@ -209,10 +230,100 @@ function CanvasContainer({
           }
         }
       }
+
+      if (dir.includes('n') && edgesTouch(activeTop, neighborBottom)) {
+        if (rangesOverlap(current.x, current.x + current.w, nState.x, neighborRight)) {
+          const maxShrink = nState.h - MIN_NEIGHBOR_HEIGHT;
+          if (dy < 0 && Math.abs(dy) > maxShrink) {
+            allowedDy = Math.max(allowedDy, -maxShrink);
+          }
+
+          if (allowedDy !== 0) {
+            updateNeighbor(neighborId, {
+              h: nState.h + allowedDy
+            });
+          }
+        }
+      }
     });
 
     return { dx: allowedDx, dy: allowedDy };
-  }, [saveWindowState]);
+  }, [rangesOverlap, saveWindowState]);
+
+  /**
+   * handleLayoutDrag
+   * Snaps dragged windows to nearby edges (container or neighbor) to keep layouts aligned.
+   */
+  const handleLayoutDrag = useCallback((activeId, nextX, nextY) => {
+    const activeEntry = windowRegistry.current.get(activeId);
+    if (!activeEntry) return { x: nextX, y: nextY };
+
+    const { w, h } = activeEntry.stateRef.current;
+    const SNAP_DISTANCE = 15;
+    const container = containerRef.current
+      ? containerRef.current.getBoundingClientRect()
+      : { width: 1920, height: 1080 };
+
+    let snappedX = nextX;
+    let snappedY = nextY;
+    let bestXDelta = SNAP_DISTANCE + 1;
+    let bestYDelta = SNAP_DISTANCE + 1;
+
+    if (Math.abs(nextX) < SNAP_DISTANCE) {
+      snappedX = 0;
+      bestXDelta = Math.abs(nextX);
+    }
+    if (Math.abs(nextY) < SNAP_DISTANCE) {
+      snappedY = 0;
+      bestYDelta = Math.abs(nextY);
+    }
+    if (Math.abs(nextX + w - container.width) < bestXDelta) {
+      snappedX = container.width - w;
+      bestXDelta = Math.abs(nextX + w - container.width);
+    }
+    if (Math.abs(nextY + h - container.height) < bestYDelta) {
+      snappedY = container.height - h;
+      bestYDelta = Math.abs(nextY + h - container.height);
+    }
+
+    windowRegistry.current.forEach((entry, neighborId) => {
+      if (neighborId === activeId) return;
+      const nState = entry.stateRef.current;
+      const neighborRight = nState.x + nState.w;
+      const neighborBottom = nState.y + nState.h;
+
+      const verticalOverlap = rangesOverlap(nextY, nextY + h, nState.y, neighborBottom);
+      const horizontalOverlap = rangesOverlap(nextX, nextX + w, nState.x, neighborRight);
+
+      if (verticalOverlap) {
+        const snapRightDelta = Math.abs(nextX + w - nState.x);
+        if (snapRightDelta < bestXDelta) {
+          snappedX = nState.x - w;
+          bestXDelta = snapRightDelta;
+        }
+        const snapLeftDelta = Math.abs(nextX - neighborRight);
+        if (snapLeftDelta < bestXDelta) {
+          snappedX = neighborRight;
+          bestXDelta = snapLeftDelta;
+        }
+      }
+
+      if (horizontalOverlap) {
+        const snapBottomDelta = Math.abs(nextY + h - nState.y);
+        if (snapBottomDelta < bestYDelta) {
+          snappedY = nState.y - h;
+          bestYDelta = snapBottomDelta;
+        }
+        const snapTopDelta = Math.abs(nextY - neighborBottom);
+        if (snapTopDelta < bestYDelta) {
+          snappedY = neighborBottom;
+          bestYDelta = snapTopDelta;
+        }
+      }
+    });
+
+    return { x: snappedX, y: snappedY };
+  }, [rangesOverlap]);
 
 
   // --- Window Management Logic ---
@@ -364,6 +475,7 @@ function CanvasContainer({
     isLocked: isLocked(id),
     onToggleLock: toggleLock,
     onResize: handleLayoutResize, // Hook into the layout engine
+    onDrag: handleLayoutDrag,
     registerWindow, // Connect to registry
   });
 
