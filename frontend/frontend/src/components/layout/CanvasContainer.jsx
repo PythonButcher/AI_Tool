@@ -143,7 +143,8 @@ function CanvasContainer({
 
     const current = activeEntry.stateRef.current; // State BEFORE this frame's delta
     const SNAP_DISTANCE = 15;
-    const MIN_NEIGHBOR_SIZE = 200;
+    const MIN_NEIGHBOR_WIDTH = 300;
+    const MIN_NEIGHBOR_HEIGHT = 200;
 
     let allowedDx = dx;
     let allowedDy = dy;
@@ -179,7 +180,7 @@ function CanvasContainer({
 
       if (dir.includes('e') && edgesTouch(activeRight, nState.x)) {
         if (overlaps(current.y, current.y + current.h, nState.y, neighborBottom)) {
-          const maxShrink = nState.w - MIN_NEIGHBOR_SIZE;
+          const maxShrink = nState.w - MIN_NEIGHBOR_WIDTH;
           if (dx > 0 && dx > maxShrink) {
             allowedDx = Math.min(allowedDx, maxShrink);
           }
@@ -195,7 +196,7 @@ function CanvasContainer({
 
       if (dir.includes('s') && edgesTouch(activeBottom, nState.y)) {
         if (overlaps(current.x, current.x + current.w, nState.x, neighborRight)) {
-          const maxShrink = nState.h - MIN_NEIGHBOR_SIZE;
+          const maxShrink = nState.h - MIN_NEIGHBOR_HEIGHT;
           if (dy > 0 && dy > maxShrink) {
             allowedDy = Math.min(allowedDy, maxShrink);
           }
@@ -233,17 +234,27 @@ function CanvasContainer({
    * Finds the largest visible window and splits it to place the new one.
    */
   const getInitialState = (id, defaultGridW = 6, defaultGridH = 10, defaultPixelW, defaultPixelH) => {
+    // Keep aligned with useWindowInteraction min sizes to avoid tiny windows.
+    const MIN_WINDOW_WIDTH = 300;
+    const MIN_WINDOW_HEIGHT = 200;
     const saved = getWindowState(id);
-    if (saved && saved.isPixel) return saved;
+    if (saved && saved.isPixel) {
+        return {
+            ...saved,
+            w: Math.max(saved.w, MIN_WINDOW_WIDTH),
+            h: Math.max(saved.h, MIN_WINDOW_HEIGHT)
+        };
+    }
 
     // Use existing conversion if saved logic exists
     const W = containerBounds.width || 1920; 
+    const H = containerBounds.height || 1080;
     if (saved && !saved.isPixel) {
         return {
             x: (saved.x / 10) * W,
             y: saved.y * 30,
-            w: (saved.w / 10) * W,
-            h: saved.h * 30,
+            w: Math.max((saved.w / 10) * W, MIN_WINDOW_WIDTH),
+            h: Math.max(saved.h * 30, MIN_WINDOW_HEIGHT),
             isPixel: true
         };
     }
@@ -256,10 +267,15 @@ function CanvasContainer({
     windowRegistry.current.forEach((entry, winId) => {
         // Skip minimized or closed
         if (!minimizedWindows[winId]) {
-            const area = entry.stateRef.current.w * entry.stateRef.current.h;
-            if (area > maxArea) {
-                maxArea = area;
-                largestWinId = winId;
+            const { w, h } = entry.stateRef.current;
+            const canSplitHorizontally = w >= MIN_WINDOW_WIDTH * 2;
+            const canSplitVertically = h >= MIN_WINDOW_HEIGHT * 2;
+            if (canSplitHorizontally || canSplitVertically) {
+                const area = w * h;
+                if (area > maxArea) {
+                    maxArea = area;
+                    largestWinId = winId;
+                }
             }
         }
     });
@@ -270,7 +286,11 @@ function CanvasContainer({
         const targetState = targetEntry.stateRef.current;
         
         // Decide split direction (Horizontal if wide, Vertical if tall)
-        if (targetState.w > targetState.h * 1.2) {
+        const canSplitHorizontally = targetState.w >= MIN_WINDOW_WIDTH * 2;
+        const canSplitVertically = targetState.h >= MIN_WINDOW_HEIGHT * 2;
+        const shouldSplitHorizontally = targetState.w > targetState.h * 1.2;
+
+        if (shouldSplitHorizontally && canSplitHorizontally) {
             // Split Horizontally (Left / Right)
             const newW = targetState.w / 2;
             
@@ -289,7 +309,7 @@ function CanvasContainer({
                 h: targetState.h,
                 isPixel: true
             };
-        } else {
+        } else if (canSplitVertically) {
             // Split Vertically (Top / Bottom)
             const newH = targetState.h / 2;
 
@@ -311,11 +331,13 @@ function CanvasContainer({
     }
 
     // If no windows to split, center it
+    const fallbackWidth = Math.max(defaultPixelW || Math.min(W * 0.65, 960), MIN_WINDOW_WIDTH);
+    const fallbackHeight = Math.max(defaultPixelH || Math.min(H * 0.6, 720), MIN_WINDOW_HEIGHT);
     return {
-        x: W / 4,
-        y: 100,
-        w: W / 2,
-        h: W / 3,
+        x: Math.max((W - fallbackWidth) / 2, 20),
+        y: Math.max((H - fallbackHeight) / 2, 80),
+        w: fallbackWidth,
+        h: fallbackHeight,
         isPixel: true
     };
   };
