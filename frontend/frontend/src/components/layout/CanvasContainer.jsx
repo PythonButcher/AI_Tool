@@ -25,7 +25,7 @@ import MachineLearningPanel from '../../features/machine_learning/MachineLearnin
 /**
  * Modern Desktop-Grade Canvas Container
  * Uses Pointer Events + RAF for 60fps window management.
- * Features: Managed Layout Engine (Cooperative Resizing)
+ * Cooperative resizing is the default layout behavior (no user-facing toggle).
  */
 function CanvasContainer({
   children,
@@ -72,8 +72,7 @@ function CanvasContainer({
   const [containerBounds, setContainerBounds] = useState({ width: 1920, height: 1080 });
   const [focusStack, setFocusStack] = useState([]); // Array of IDs, last is on top
   
-  // Managed Layout Mode Toggle
-  const [isManagedMode, setIsManagedMode] = useState(true);
+  // Managed layout is the default behavior (no user-facing toggle).
 
   // Registry for direct DOM access (High Performance)
   // Map<id, { node: HTMLElement, stateRef: MutableRefObject }>
@@ -134,111 +133,197 @@ function CanvasContainer({
     }
   }, []);
 
+  const rangesOverlap = useCallback(
+    (startA, endA, startB, endB) => Math.min(endA, endB) - Math.max(startA, startB) > 0,
+    []
+  );
+
   /**
    * handleLayoutResize
    * Cooperatively resizes neighbor windows when the active window changes size.
    */
   const handleLayoutResize = useCallback((activeId, dx, dy, dir) => {
-    if (!isManagedMode) return { dx, dy };
-
     const activeEntry = windowRegistry.current.get(activeId);
     if (!activeEntry) return { dx, dy };
 
-    const current = activeEntry.stateRef.current; // Current state BEFORE this frame's delta
-    const threshold = 15; // Snapping distance
-    const minSize = 200;
+    const current = activeEntry.stateRef.current; // State BEFORE this frame's delta
+    const SNAP_DISTANCE = 15;
+    const MIN_NEIGHBOR_WIDTH = 300;
+    const MIN_NEIGHBOR_HEIGHT = 200;
 
     let allowedDx = dx;
     let allowedDy = dy;
 
-    // Helper: Apply updates to a neighbor directly
+    const edgesTouch = (edgeA, edgeB) => Math.abs(edgeA - edgeB) < SNAP_DISTANCE;
+
+    // Apply updates to a neighbor directly (registry avoids React rerenders).
     const updateNeighbor = (id, updates) => {
-        const entry = windowRegistry.current.get(id);
-        if (!entry) return;
-        
-        // Update state ref
-        const newState = { ...entry.stateRef.current, ...updates };
-        entry.stateRef.current = newState;
-        
-        // Update DOM
-        entry.node.style.transform = `translate(${newState.x}px, ${newState.y}px)`;
-        entry.node.style.width = `${newState.w}px`;
-        entry.node.style.height = `${newState.h}px`;
-        
-        // Notify persistence (debounced in real app, but direct for now)
-        saveWindowState(id, { ...newState, isPixel: true });
+      const entry = windowRegistry.current.get(id);
+      if (!entry) return;
+
+      const newState = { ...entry.stateRef.current, ...updates };
+      entry.stateRef.current = newState;
+
+      entry.node.style.transform = `translate(${newState.x}px, ${newState.y}px)`;
+      entry.node.style.width = `${newState.w}px`;
+      entry.node.style.height = `${newState.h}px`;
+
+      // Persist immediately (debounced upstream if needed).
+      saveWindowState(id, { ...newState, isPixel: true });
     };
 
-    // Iterate all windows to find neighbors
+    // Only adjust neighbors that are touching the active edge and overlapping in the other axis.
     windowRegistry.current.forEach((entry, neighborId) => {
-        if (neighborId === activeId) return;
-        const nState = entry.stateRef.current;
+      if (neighborId === activeId) return;
+      const nState = entry.stateRef.current;
 
-        // --- Horizontal Resize (East Edge of Active) ---
-        if (dir.includes('e')) {
-            // Check if Neighbor is to the Right of Active
-            // Condition: Neighbor Left Edge approx equals Active Right Edge
-            const activeRight = current.x + current.w;
-            if (Math.abs(nState.x - activeRight) < threshold) {
-                // Check Vertical Overlap
-                const vOverlap = Math.min(current.y + current.h, nState.y + nState.h) - Math.max(current.y, nState.y);
-                if (vOverlap > 0) {
-                    // Pull/Push Neighbor Left Edge
-                    // If we grow Right (dx > 0), Neighbor shrinks from Left (x += dx, w -= dx)
-                    // If we shrink Left (dx < 0), Neighbor grows to Left (x += dx, w -= dx) -- wait, no.
-                    // If Active grows (+dx), Neighbor starts later (x + dx), width smaller (w - dx).
-                    
-                    const maxShrink = nState.w - minSize;
-                    const validDx = Math.min(dx, maxShrink);
-                    
-                    // If dx is negative (Active shrinking), Neighbor can grow indefinitely (up to Active's min width constraint handled by Active hook)
-                    // But we simply apply the delta.
-                    
-                    // Constrain the 'allowedDx' based on neighbor's ability to shrink
-                    if (dx > 0 && dx > maxShrink) {
-                        allowedDx = Math.min(allowedDx, maxShrink);
-                    }
+      const activeLeft = current.x;
+      const activeRight = current.x + current.w;
+      const activeTop = current.y;
+      const activeBottom = current.y + current.h;
+      const neighborRight = nState.x + nState.w;
+      const neighborBottom = nState.y + nState.h;
 
-                    // Apply to Neighbor
-                    if (allowedDx !== 0) {
-                        updateNeighbor(neighborId, {
-                            x: nState.x + allowedDx,
-                            w: nState.w - allowedDx
-                        });
-                    }
-                }
-            }
+      if (dir.includes('e') && edgesTouch(activeRight, nState.x)) {
+        if (rangesOverlap(current.y, current.y + current.h, nState.y, neighborBottom)) {
+          const maxShrink = nState.w - MIN_NEIGHBOR_WIDTH;
+          if (dx > 0 && dx > maxShrink) {
+            allowedDx = Math.min(allowedDx, maxShrink);
+          }
+
+          if (allowedDx !== 0) {
+            updateNeighbor(neighborId, {
+              x: nState.x + allowedDx,
+              w: nState.w - allowedDx
+            });
+          }
         }
+      }
 
-        // --- Vertical Resize (South Edge of Active) ---
-        if (dir.includes('s')) {
-            const activeBottom = current.y + current.h;
-            if (Math.abs(nState.y - activeBottom) < threshold) {
-                // Check Horizontal Overlap
-                const hOverlap = Math.min(current.x + current.w, nState.x + nState.w) - Math.max(current.x, nState.x);
-                if (hOverlap > 0) {
-                    // Push Neighbor Top Edge
-                    const maxShrink = nState.h - minSize;
-                    if (dy > 0 && dy > maxShrink) {
-                        allowedDy = Math.min(allowedDy, maxShrink);
-                    }
+      if (dir.includes('w') && edgesTouch(activeLeft, neighborRight)) {
+        if (rangesOverlap(current.y, current.y + current.h, nState.y, neighborBottom)) {
+          const maxShrink = nState.w - MIN_NEIGHBOR_WIDTH;
+          if (dx < 0 && Math.abs(dx) > maxShrink) {
+            allowedDx = Math.max(allowedDx, -maxShrink);
+          }
 
-                    if (allowedDy !== 0) {
-                        updateNeighbor(neighborId, {
-                            y: nState.y + allowedDy,
-                            h: nState.h - allowedDy
-                        });
-                    }
-                }
-            }
+          if (allowedDx !== 0) {
+            updateNeighbor(neighborId, {
+              w: nState.w + allowedDx
+            });
+          }
         }
-        
-        // Similar logic for West/North if needed, but usually E/S are primary resizing directions in 2-pane setups.
-        // For full tiling, would implement all 4 directions.
+      }
+
+      if (dir.includes('s') && edgesTouch(activeBottom, nState.y)) {
+        if (rangesOverlap(current.x, current.x + current.w, nState.x, neighborRight)) {
+          const maxShrink = nState.h - MIN_NEIGHBOR_HEIGHT;
+          if (dy > 0 && dy > maxShrink) {
+            allowedDy = Math.min(allowedDy, maxShrink);
+          }
+
+          if (allowedDy !== 0) {
+            updateNeighbor(neighborId, {
+              y: nState.y + allowedDy,
+              h: nState.h - allowedDy
+            });
+          }
+        }
+      }
+
+      if (dir.includes('n') && edgesTouch(activeTop, neighborBottom)) {
+        if (rangesOverlap(current.x, current.x + current.w, nState.x, neighborRight)) {
+          const maxShrink = nState.h - MIN_NEIGHBOR_HEIGHT;
+          if (dy < 0 && Math.abs(dy) > maxShrink) {
+            allowedDy = Math.max(allowedDy, -maxShrink);
+          }
+
+          if (allowedDy !== 0) {
+            updateNeighbor(neighborId, {
+              h: nState.h + allowedDy
+            });
+          }
+        }
+      }
     });
 
     return { dx: allowedDx, dy: allowedDy };
-  }, [isManagedMode, saveWindowState]);
+  }, [rangesOverlap, saveWindowState]);
+
+  /**
+   * handleLayoutDrag
+   * Snaps dragged windows to nearby edges (container or neighbor) to keep layouts aligned.
+   */
+  const handleLayoutDrag = useCallback((activeId, nextX, nextY) => {
+    const activeEntry = windowRegistry.current.get(activeId);
+    if (!activeEntry) return { x: nextX, y: nextY };
+
+    const { w, h } = activeEntry.stateRef.current;
+    const SNAP_DISTANCE = 15;
+    const container = containerRef.current
+      ? containerRef.current.getBoundingClientRect()
+      : { width: 1920, height: 1080 };
+
+    let snappedX = nextX;
+    let snappedY = nextY;
+    let bestXDelta = SNAP_DISTANCE + 1;
+    let bestYDelta = SNAP_DISTANCE + 1;
+
+    if (Math.abs(nextX) < SNAP_DISTANCE) {
+      snappedX = 0;
+      bestXDelta = Math.abs(nextX);
+    }
+    if (Math.abs(nextY) < SNAP_DISTANCE) {
+      snappedY = 0;
+      bestYDelta = Math.abs(nextY);
+    }
+    if (Math.abs(nextX + w - container.width) < bestXDelta) {
+      snappedX = container.width - w;
+      bestXDelta = Math.abs(nextX + w - container.width);
+    }
+    if (Math.abs(nextY + h - container.height) < bestYDelta) {
+      snappedY = container.height - h;
+      bestYDelta = Math.abs(nextY + h - container.height);
+    }
+
+    windowRegistry.current.forEach((entry, neighborId) => {
+      if (neighborId === activeId) return;
+      const nState = entry.stateRef.current;
+      const neighborRight = nState.x + nState.w;
+      const neighborBottom = nState.y + nState.h;
+
+      const verticalOverlap = rangesOverlap(nextY, nextY + h, nState.y, neighborBottom);
+      const horizontalOverlap = rangesOverlap(nextX, nextX + w, nState.x, neighborRight);
+
+      if (verticalOverlap) {
+        const snapRightDelta = Math.abs(nextX + w - nState.x);
+        if (snapRightDelta < bestXDelta) {
+          snappedX = nState.x - w;
+          bestXDelta = snapRightDelta;
+        }
+        const snapLeftDelta = Math.abs(nextX - neighborRight);
+        if (snapLeftDelta < bestXDelta) {
+          snappedX = neighborRight;
+          bestXDelta = snapLeftDelta;
+        }
+      }
+
+      if (horizontalOverlap) {
+        const snapBottomDelta = Math.abs(nextY + h - nState.y);
+        if (snapBottomDelta < bestYDelta) {
+          snappedY = nState.y - h;
+          bestYDelta = snapBottomDelta;
+        }
+        const snapTopDelta = Math.abs(nextY - neighborBottom);
+        if (snapTopDelta < bestYDelta) {
+          snappedY = neighborBottom;
+          bestYDelta = snapTopDelta;
+        }
+      }
+    });
+
+    return { x: snappedX, y: snappedY };
+  }, [rangesOverlap]);
 
 
   // --- Window Management Logic ---
@@ -260,29 +345,27 @@ function CanvasContainer({
    * Finds the largest visible window and splits it to place the new one.
    */
   const getInitialState = (id, defaultGridW = 6, defaultGridH = 10, defaultPixelW, defaultPixelH) => {
+    // Keep aligned with useWindowInteraction min sizes to avoid tiny windows.
+    const MIN_WINDOW_WIDTH = 300;
+    const MIN_WINDOW_HEIGHT = 200;
     const saved = getWindowState(id);
-    if (saved && saved.isPixel) return saved;
+    if (saved && saved.isPixel) {
+        return {
+            ...saved,
+            w: Math.max(saved.w, MIN_WINDOW_WIDTH),
+            h: Math.max(saved.h, MIN_WINDOW_HEIGHT)
+        };
+    }
 
     // Use existing conversion if saved logic exists
     const W = containerBounds.width || 1920; 
+    const H = containerBounds.height || 1080;
     if (saved && !saved.isPixel) {
         return {
             x: (saved.x / 10) * W,
             y: saved.y * 30,
-            w: (saved.w / 10) * W,
-            h: saved.h * 30,
-            isPixel: true
-        };
-    }
-
-    if (!isManagedMode) {
-        // Fallback Cascade
-        const count = focusStack.length;
-        return {
-            x: (count % 10) * 30 + 20,
-            y: (count % 10) * 30 + 20,
-            w: defaultPixelW || 600,
-            h: defaultPixelH || 400,
+            w: Math.max((saved.w / 10) * W, MIN_WINDOW_WIDTH),
+            h: Math.max(saved.h * 30, MIN_WINDOW_HEIGHT),
             isPixel: true
         };
     }
@@ -295,10 +378,15 @@ function CanvasContainer({
     windowRegistry.current.forEach((entry, winId) => {
         // Skip minimized or closed
         if (!minimizedWindows[winId]) {
-            const area = entry.stateRef.current.w * entry.stateRef.current.h;
-            if (area > maxArea) {
-                maxArea = area;
-                largestWinId = winId;
+            const { w, h } = entry.stateRef.current;
+            const canSplitHorizontally = w >= MIN_WINDOW_WIDTH * 2;
+            const canSplitVertically = h >= MIN_WINDOW_HEIGHT * 2;
+            if (canSplitHorizontally || canSplitVertically) {
+                const area = w * h;
+                if (area > maxArea) {
+                    maxArea = area;
+                    largestWinId = winId;
+                }
             }
         }
     });
@@ -309,7 +397,11 @@ function CanvasContainer({
         const targetState = targetEntry.stateRef.current;
         
         // Decide split direction (Horizontal if wide, Vertical if tall)
-        if (targetState.w > targetState.h * 1.2) {
+        const canSplitHorizontally = targetState.w >= MIN_WINDOW_WIDTH * 2;
+        const canSplitVertically = targetState.h >= MIN_WINDOW_HEIGHT * 2;
+        const shouldSplitHorizontally = targetState.w > targetState.h * 1.2;
+
+        if (shouldSplitHorizontally && canSplitHorizontally) {
             // Split Horizontally (Left / Right)
             const newW = targetState.w / 2;
             
@@ -328,7 +420,7 @@ function CanvasContainer({
                 h: targetState.h,
                 isPixel: true
             };
-        } else {
+        } else if (canSplitVertically) {
             // Split Vertically (Top / Bottom)
             const newH = targetState.h / 2;
 
@@ -350,11 +442,13 @@ function CanvasContainer({
     }
 
     // If no windows to split, center it
+    const fallbackWidth = Math.max(defaultPixelW || Math.min(W * 0.65, 960), MIN_WINDOW_WIDTH);
+    const fallbackHeight = Math.max(defaultPixelH || Math.min(H * 0.6, 720), MIN_WINDOW_HEIGHT);
     return {
-        x: W / 4,
-        y: 100,
-        w: W / 2,
-        h: W / 3,
+        x: Math.max((W - fallbackWidth) / 2, 20),
+        y: Math.max((H - fallbackHeight) / 2, 80),
+        w: fallbackWidth,
+        h: fallbackHeight,
         isPixel: true
     };
   };
@@ -381,6 +475,7 @@ function CanvasContainer({
     isLocked: isLocked(id),
     onToggleLock: toggleLock,
     onResize: handleLayoutResize, // Hook into the layout engine
+    onDrag: handleLayoutDrag,
     registerWindow, // Connect to registry
   });
 
