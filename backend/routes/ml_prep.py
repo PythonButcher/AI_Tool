@@ -352,15 +352,17 @@ def train_dataset_model():
     payload = request.json or {}
     model_type = payload.get('model_type')
     target_column = payload.get('target_column')
-    n_clusters = payload.get('n_clusters', 3)
+    n_clusters = payload.get('n_clusters')
+    feature_columns = payload.get('feature_columns')
 
     if not model_type or model_type not in MODEL_LOOKUP:
         return jsonify({"error": "Invalid or missing model_type."}), 400
 
-    try:
-        n_clusters = int(n_clusters)
-    except (TypeError, ValueError):
-        return jsonify({"error": "n_clusters must be an integer."}), 400
+    if n_clusters is not None:
+        try:
+            n_clusters = int(n_clusters)
+        except (TypeError, ValueError):
+            return jsonify({"error": "n_clusters must be an integer."}), 400
 
     df = _dataset_from_payload(payload)
     if df is None or not isinstance(df, pd.DataFrame) or df.empty:
@@ -372,6 +374,7 @@ def train_dataset_model():
             model_type=model_type,
             target_column=target_column,
             n_clusters=n_clusters,
+            feature_columns=feature_columns,
         )
         results = train_model(request_data)
     except ModelTrainingError as exc:
