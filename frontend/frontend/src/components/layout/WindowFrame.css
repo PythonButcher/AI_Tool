@@ -17,7 +17,7 @@
 
 .window-header {
   height: 36px;
-  background: var(--bg-secondary);
+  background: var(--menu-bar-surface);
   border-bottom: 1px solid var(--border-color);
   display: flex;
   align-items: center;

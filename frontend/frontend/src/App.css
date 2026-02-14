@@ -19,11 +19,13 @@ body {
 
 .main-content {
   padding: 0px;
-  width: calc(120% - 90px); /* Adjust for sidebar */
+  flex: 1;
+  width: auto;
+  max-width: 100%;
   margin-left: 0px; /* Spacing to center main content */
   height: 100%;
   min-height: 0;
-  overflow-y: auto; /* Allow scrolling so off-screen windows become visible */
+  overflow: hidden;
 }
 
 /* ───────────────────────────────
