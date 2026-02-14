@@ -112,3 +112,43 @@
 .numbers-list-container.ml-compact .data-preview-title {
   display: none;
 }
+
+
+.machine-learning-action {
+  opacity: 1;
+  cursor: pointer;
+}
+
+.machine-learning-action:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+.machine-learning-error {
+  color: #ef4444 !important;
+  font-size: 13px;
+}
+
+.machine-learning-results {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+}
+
+.machine-learning-results ul {
+  margin: 8px 0;
+  padding-left: 16px;
+}
+
+.machine-learning-results pre {
+  margin: 6px 0 0;
+  max-height: 160px;
+  overflow: auto;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 8px;
+  font-size: 12px;
+}

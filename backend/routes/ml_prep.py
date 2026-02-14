@@ -8,6 +8,7 @@ from flask import Blueprint, jsonify, request
 import json
 import pandas as pd
 from backend.utils.global_state import get_cleaned_data, get_uploaded_df
+from backend.services.model_training import ModelTrainingError, TrainingRequest, train_model
 
 ml_prep_bp = Blueprint('ml_prep_bp', __name__, url_prefix='/api/ml_prep')
 
@@ -38,6 +39,22 @@ MODEL_LOOKUP = {model["id"]: model for model in MODEL_DEFINITIONS}
 def _get_dataset():
     """Return the cleaned dataset if available, otherwise fall back to the upload."""
     return get_cleaned_data() or get_uploaded_df()
+
+
+def _dataset_from_payload(payload: dict):
+    """Return a dataframe from payload dataset or in-memory app state."""
+    payload_dataset = payload.get("dataset")
+    if payload_dataset is not None:
+        try:
+            if isinstance(payload_dataset, list):
+                return pd.DataFrame(payload_dataset)
+            if isinstance(payload_dataset, dict):
+                return pd.DataFrame.from_dict(payload_dataset)
+        except Exception as exc:  # noqa: BLE001
+            raise ModelTrainingError(f"Unable to parse dataset payload: {exc}") from exc
+        raise ModelTrainingError("dataset must be a list of row objects or a column mapping.")
+
+    return _get_dataset()
 
 
 def _column_is_numeric(series: pd.Series) -> bool:
@@ -327,3 +344,42 @@ def check_dataset_readiness():
 
     ready = not any(issue.get("severity") == "blocking" for issue in issues)
     return jsonify({"ready": ready, "issues": issues, "suggestions": suggestions}), 200
+
+
+@ml_prep_bp.route('/train', methods=['POST'])
+def train_dataset_model():
+    """Train the selected model on prepared data and return metrics/predictions."""
+    payload = request.json or {}
+    model_type = payload.get('model_type')
+    target_column = payload.get('target_column')
+    n_clusters = payload.get('n_clusters')
+    feature_columns = payload.get('feature_columns')
+
+    if not model_type or model_type not in MODEL_LOOKUP:
+        return jsonify({"error": "Invalid or missing model_type."}), 400
+
+    if n_clusters is not None:
+        try:
+            n_clusters = int(n_clusters)
+        except (TypeError, ValueError):
+            return jsonify({"error": "n_clusters must be an integer."}), 400
+
+    df = _dataset_from_payload(payload)
+    if df is None or not isinstance(df, pd.DataFrame) or df.empty:
+        return jsonify({"error": "No dataset available. Upload or provide cleaned data first."}), 400
+
+    try:
+        request_data = TrainingRequest(
+            dataset=df,
+            model_type=model_type,
+            target_column=target_column,
+            n_clusters=n_clusters,
+            feature_columns=feature_columns,
+        )
+        results = train_model(request_data)
+    except ModelTrainingError as exc:
+        return jsonify({"error": str(exc)}), 400
+    except Exception as exc:  # noqa: BLE001
+        return jsonify({"error": f"Unexpected training error: {exc}"}), 500
+
+    return jsonify(results), 200
