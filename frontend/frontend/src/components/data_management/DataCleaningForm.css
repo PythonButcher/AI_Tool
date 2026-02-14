@@ -1,7 +1,7 @@
 .cleaning-form-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(10, 12, 29, 0.55);
+  background: var(--overlay-color);
   backdrop-filter: blur(4px);
   z-index: 999;
   display: flex;
@@ -28,8 +28,8 @@
   justify-content: space-between;
   align-items: center;
   padding: 12px 20px;
-  background: #15192c;
-  border-bottom: 1px solid var(--border-color, #24273a);
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
   flex-shrink: 0;
 }
 
@@ -43,7 +43,7 @@
   margin: 0;
   font-size: 1.2rem;
   font-weight: 600;
-  color: #fff;
+  color: var(--text-primary);
 }
 
 .header-title .subtitle {
@@ -58,9 +58,9 @@
 }
 
 .header-tab {
-  background: #1a1e32;
-  color: #9ba7c0;
-  border: 1px solid #2a2d3e;
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 6px 14px;
   font-size: 0.8rem;
@@ -69,14 +69,14 @@
 }
 
 .header-tab:hover {
-  color: #e8ecff;
-  border-color: #7c9dff;
+  color: var(--text-primary);
+  border-color: var(--accent-blue);
 }
 
 .header-tab.active {
-  background: rgba(124, 157, 255, 0.2);
-  color: #e8ecff;
-  border-color: #7c9dff;
+  background: var(--accent-blue-soft);
+  color: var(--text-primary);
+  border-color: var(--accent-blue);
 }
 
 .header-actions {
@@ -95,13 +95,13 @@
 }
 
 .preview-trigger {
-  background: #2a2d3e;
-  color: #e8ecff;
-  border: 1px solid #3b3f54;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
 }
 
 .preview-trigger:hover {
-  background: #3b3f54;
+  background: var(--bg-secondary);
 }
 
 .apply-trigger {
@@ -142,22 +142,22 @@
 
 .ml-prep-subtitle {
   margin: 6px 0 0;
-  color: #9ba7c0;
+  color: var(--text-secondary);
   font-size: 0.85rem;
 }
 
 .ml-prep-link {
   background: transparent;
-  border: 1px solid #3b3f54;
-  color: #cdd6f1;
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
   padding: 6px 12px;
   border-radius: 6px;
   cursor: pointer;
 }
 
 .ml-prep-link:hover {
-  border-color: #7c9dff;
-  color: #fff;
+  border-color: var(--accent-blue);
+  color: var(--text-primary);
 }
 
 .ml-prep-form {
@@ -172,13 +172,13 @@
   flex-direction: column;
   gap: 6px;
   font-size: 0.85rem;
-  color: #cdd6f1;
+  color: var(--text-secondary);
 }
 
 .ml-prep-field select {
-  background: #15192c;
-  border: 1px solid #2a2d3e;
-  color: #e8ecff;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
   border-radius: 6px;
   padding: 8px;
 }
@@ -227,10 +227,10 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 20px;
-  background: #1a1e32;
+  background: var(--bg-secondary);
   border-radius: 12px;
   padding: 16px;
-  border: 1px solid #24273a;
+  border: 1px solid var(--border-color);
 }
 
 .ml-prep-card-grid {
@@ -240,12 +240,12 @@
 }
 
 .ml-prep-card {
-  background: #15192c;
-  border: 1px solid #2a2d3e;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
   border-left-width: 4px;
   border-radius: 10px;
   padding: 12px;
-  color: #d7deff;
+  color: var(--text-primary);
   font-size: 0.85rem;
   display: flex;
   flex-direction: column;
@@ -261,7 +261,7 @@
 }
 
 .ml-prep-card.info {
-  border-left-color: #7c9dff;
+  border-left-color: var(--accent-blue);
 }
 
 .ml-prep-card-header {
@@ -270,7 +270,7 @@
   align-items: center;
   font-size: 0.75rem;
   text-transform: uppercase;
-  color: #9ba7c0;
+  color: var(--text-secondary);
 }
 
 .ml-prep-card-title {
@@ -283,19 +283,19 @@
 
 .ml-prep-card-reason {
   margin: 0;
-  color: #e8ecff;
+  color: var(--text-primary);
 }
 
 .ml-prep-card-action {
   margin: 0;
-  color: #cdd6f1;
+  color: var(--text-secondary);
 }
 
 .ml-prep-add-fix {
   margin-top: auto;
-  background: rgba(124, 157, 255, 0.15);
-  border: 1px solid rgba(124, 157, 255, 0.5);
-  color: #e8ecff;
+  background: var(--accent-blue-soft);
+  border: 1px solid var(--accent-blue-strong);
+  color: var(--text-primary);
   padding: 6px 10px;
   border-radius: 6px;
   cursor: pointer;
@@ -303,7 +303,7 @@
 }
 
 .ml-prep-add-fix:hover {
-  background: rgba(124, 157, 255, 0.3);
+  background: var(--accent-blue-glow);
 }
 
 .ml-prep-results h4 {
@@ -314,13 +314,13 @@
 .ml-prep-results ul {
   margin: 0;
   padding-left: 18px;
-  color: #d7deff;
+  color: var(--text-primary);
   font-size: 0.85rem;
 }
 
 .ml-prep-hint {
   margin-top: 10px;
-  color: #9ba7c0;
+  color: var(--text-secondary);
   font-size: 0.8rem;
 }
 
