@@ -223,6 +223,25 @@
   color: #ffd6d0;
 }
 
+/* Light mode readability pass for ML prep readiness/status messages */
+[data-theme='light'] .ml-prep-alert.success {
+  background: rgba(16, 185, 129, 0.14);
+  border-color: rgba(5, 150, 105, 0.45);
+  color: #065f46;
+}
+
+[data-theme='light'] .ml-prep-alert.warning {
+  background: rgba(245, 158, 11, 0.14);
+  border-color: rgba(217, 119, 6, 0.45);
+  color: #92400e;
+}
+
+[data-theme='light'] .ml-prep-alert.error {
+  background: rgba(239, 68, 68, 0.14);
+  border-color: rgba(220, 38, 38, 0.45);
+  color: #991b1b;
+}
+
 .ml-prep-results {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
