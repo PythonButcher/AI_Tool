@@ -78,6 +78,12 @@ const SideBar = ({ onButtonClick, onDataCleaned,
     setShowWhiteBoard(true); // ensures it's explicitly turned on
   };
 
+  const handleMLWindow = () => {
+    console.log("📖 Open ML Window");
+    setShowMachineLearning(true);
+    setShowCleaningForm(false);
+
+  };
 
   const parsedDataPreview = Array.isArray(cleanedData)
     ? cleanedData
@@ -260,6 +266,7 @@ const SideBar = ({ onButtonClick, onDataCleaned,
         <DataCleaningForm
           setCleanedData={onDataCleaned}
           closeForm={closeDataCleaningForm}
+          onProceedToTraining={handleMLWindow}
         />
       )}
 
