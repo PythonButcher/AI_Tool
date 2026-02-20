@@ -39,7 +39,7 @@ const columnListFromData = (dataset) => {
   return [];
 };
 
-function DataCleaningForm({ closeForm, setShowDataPreview }) {
+function DataCleaningForm({ closeForm, setShowDataPreview, onProceedToTraining }) {
   const { uploadedData, fullData, cleanedData, setCleanedData } = React.useContext(DataContext);
   const [activePanel, setActivePanel] = useState('cleaning');
   const [selectedCategory, setSelectedCategory] = useState(TRANSFORM_LIBRARY[0]?.category);
@@ -633,6 +633,7 @@ function DataCleaningForm({ closeForm, setShowDataPreview }) {
             <MLPrepPanel
               onSwitchToCleaning={() => setActivePanel('cleaning')}
               onAddFix={addMlPrepFix}
+              onProceedToTraining={onProceedToTraining}
             />           
           )}
           {/* ✅ Help Overlay */}
