@@ -29,7 +29,7 @@ ChartJS.register(
   Legend
 );
 
-function ChartComponentAI({ normalizedChartType = 'Bar', aiChartData }) {
+function ChartComponentAI({ normalizedChartType = 'Bar', aiChartData, onExportPdf }) {
   const chartRef = useRef(null);
 
   if (!aiChartData || !aiChartData.datasets) {
@@ -124,7 +124,7 @@ function ChartComponentAI({ normalizedChartType = 'Bar', aiChartData }) {
 
   return (
     <div style={{ width: "80%", height: "80%", margin: "auto", position: "relative" }}>
-      <ChartToolbar chartRef={chartRef} />
+      <ChartToolbar chartRef={chartRef} onExportPdf={onExportPdf} />
       {renderType === "Bar" && (
         <Bar ref={chartRef} data={aiChartData} options={resolvedOptions} />
       )}
