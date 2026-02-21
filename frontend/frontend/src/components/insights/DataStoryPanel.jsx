@@ -2,13 +2,17 @@ import React, { useEffect, useState, useMemo } from "react";
 import axios from "axios";
 import ChartComponentAI from "../../features/charts/ChartComponentAI";
 import { getDynamicColors } from "../../utils/ChartStyles";
+import { useActiveDataset, DataContext } from '../../context/DataContext';
 import { useWindowContext } from '../../context/WindowContext';
+import { generateAnalyticalPdfReport } from '../../utils/pdfReportExport';
 import "./DataStoryPanel.css";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
 
 export default function DataStoryPanel({ uploadedData, cleanedData, model, savedState }) {
+  const activeDataset = useActiveDataset();
+  const { pipelineResults } = React.useContext(DataContext);
   const { saveWindowContentState } = useWindowContext();
   const [story, setStory] = useState(savedState || null);  // ✅ initialize from savedState
   const [error, setError] = useState(null);
@@ -85,6 +89,17 @@ export default function DataStoryPanel({ uploadedData, cleanedData, model, saved
     return <div className="story-panel-no-data">Please upload some data to this app…</div>;
   if (!story) return <div className="story-panel">Generating story…</div>;
 
+  const handleExportStoryPdf = () => {
+    generateAnalyticalPdfReport({
+      datasetRows: activeDataset || [],
+      storyState: story,
+      pipelineResults,
+      executiveSummaryOverride: story.sections
+        ?.map((section) => `${section.title}\n${section.content}`)
+        .join('\n\n'),
+    });
+  };
+
   return (
     <div className="storyboard-wrapper">
       <div className="charts-column">
@@ -95,6 +110,7 @@ export default function DataStoryPanel({ uploadedData, cleanedData, model, saved
             <ChartComponentAI
               normalizedChartType={cfg.type}
               aiChartData={cfg.data}
+              onExportPdf={handleExportStoryPdf}
             />
           </div>
         ))}
