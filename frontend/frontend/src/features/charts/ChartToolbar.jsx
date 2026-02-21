@@ -2,7 +2,7 @@ import React from 'react';
 import { jsPDF } from 'jspdf';
 import { FaImage, FaCopy, FaFileExport, FaCloudUploadAlt } from 'react-icons/fa';
 
-export default function ChartToolbar({ chartRef }) {
+export default function ChartToolbar({ chartRef, onExportPdf }) {
     const handleCopyImage = async () => {
         if (chartRef?.current) {
           const base64Image = chartRef.current.toBase64Image();
@@ -102,6 +102,11 @@ export default function ChartToolbar({ chartRef }) {
       <button
         style={buttonStyle}
         onClick={() => {
+            if (typeof onExportPdf === 'function') {
+              onExportPdf();
+              return;
+            }
+
             if (!chartRef?.current) {
             alert("Chart is not available.");
             return;
