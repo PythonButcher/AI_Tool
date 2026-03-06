@@ -5,7 +5,6 @@ import CanvasContainer from './components/layout/CanvasContainer';
 import DatasetInfo from './components/insights/DatasetInfo';
 import SideBar from './components/layout/SideBar';
 import { DndContext, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
-import DataCleaningForm from './components/data_management/DataCleaningForm';
 import DataVisualizations from './features/charts/DataVisualization';
 import { transformToChartData } from './utils/chartDataUtils';
 import AIChat from './features/ai/AIChat';
@@ -14,12 +13,12 @@ import { ThemeContext, ThemeProvider } from './context/ThemeContext';
 import { WarehouseProvider } from './context/WarehouseContext';
 import { HelpOverlayProvider } from './context/HelpOverlayContext';
 import useLoadRawData from './hooks/useLoadRawData';
+import Snowfall from 'react-snowfall';
 // ⛔️ Removed: import DataStoryPanel from './components/DataStoryPanel';
 import DataFilterPanel from './components/data_management/DataFilterPanel';
 import './App.css';
 import { MuiThemeContext } from './context/MuiThemeContext';
 import { WindowProvider, useWindowContext } from './context/WindowContext';
-import Snowfall from 'react-snowfall';
 
 
 const parseRecords = (source) => {
@@ -40,17 +39,16 @@ const parseRecords = (source) => {
 function AppContent() {
   const {
     uploadedData, setUploadedData,
-    fullData, setFullData,
+    setFullData,
     cleanedData, setCleanedData,
     pipelineResults, setPipelineResults,
     aiReportReady, setAiReportReady,
     showAiReport, setShowAiReport
   } = useContext(DataContext);
 
-  const { theme } = useContext(ThemeContext); // Access existing theme state
-  const [isSnowing, setIsSnowing] = useState(false); // New state to control the feature
+  const { theme } = useContext(ThemeContext); 
 
-  const { charts, updateChart } = useWindowContext(); // ✅ Consuming Context
+  const { charts, updateChart } = useWindowContext();
 
   console.log("App.jsx received uploadedData:", uploadedData);
 
@@ -65,7 +63,6 @@ function AppContent() {
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
   );
 
-  // ... (rest of state items match original)
   const [aiChartData, setAiChartData] = useState(null);
   const [aiChartType, setAiChartType] = useState('Bar');
   const [showWhiteBoard, setShowWhiteBoard] = useState(null)
@@ -77,7 +74,6 @@ function AppContent() {
   const [selectedChartType, setSelectedChartType] = useState(null);
   const [showChartWindow, setShowChartWindow] = useState(false);
   const [showAIChart, setShowAIChart] = useState(false);
-  const [showCleaningForm, setShowCleaningForm] = useState(false);
   const [showAiWorkflow, setShowAiWorkflow] = useState(false);
   const [showCanvasMinimized, setShowCanvasMinimized] = useState(false);
   const [previewMode, setPreviewMode] = useState('table');
@@ -87,10 +83,10 @@ function AppContent() {
   const [outputWindows, setOutputWindows] = useState([]);
   const [rawUploadFile, setRawUploadFile] = useState(null);
   const [showMachineLearning, setShowMachineLearning] = useState(false);
+  const [isSnowing, setIsSnowing] = useState(false);
 
   useLoadRawData(showRawViewer, rawUploadFile, setFullData);
 
-  // ... (useEffect blocks match original) ...
   useEffect(() => { if (uploadedData) { setShowChartWindow(true); setShowDataPreview(true); } }, [uploadedData]);
   useEffect(() => { if (pipelineResults?.ai_report?.status === 'success') { setAiReportReady(true); } }, [pipelineResults, setAiReportReady]);
 
@@ -106,11 +102,9 @@ function AppContent() {
 
 
   // Callbacks
-  const closeCleaningForm = () => setShowCleaningForm(false);
   const handleStatsSelect = useCallback((statType) => setSelectedStat(statType), []);
 
   const handleDataCleaned = useCallback((newData) => {
-    // (Legacy logic maintained for safety)
     if (!newData || newData.length === 0) { setCleanedData(null); setChartData(null); return; }
     setCleanedData(newData);
   }, [xAxis, yAxis]);
@@ -205,21 +199,8 @@ function AppContent() {
 
   return (
     <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
-    <div className="app-container">
-      {/* ❄️ Let it Snow Feature Integration */}
-      {theme === 'dark' && isSnowing && (
-        <Snowfall 
-          color="#ffffff" 
-          snowflakeCount={200}
-          style={{
-            position: 'fixed',
-            width: '100vw',
-            height: '100vh',
-            zIndex: 1000, 
-            pointerEvents: 'none' // Ensures snow doesn't block UI interactions
-          }} 
-        />
-      )}
+      <div className="app-container">
+        {theme === 'dark' && isSnowing && <Snowfall style={{ zIndex: 1000, pointerEvents: 'none' }} />}
         <SideBar
           onButtonClick={handleSidebarButtonClick}
           onDataCleaned={handleDataCleaned}
@@ -248,8 +229,8 @@ function AppContent() {
             setOpenDataFilter={setOpenDataFilter}
             aiReportReady={aiReportReady}
             onAiReportClick={handleAiReportOpen}
-            onSnowToggle={() => setIsSnowing(prev => !prev)}
             isSnowing={isSnowing}
+            onSnowToggle={() => setIsSnowing(prev => !prev)}
           />
 
           <DataFilterPanel openDataFilter={openDataFilter} setOpenDataFilter={setOpenDataFilter} />
@@ -261,15 +242,6 @@ function AppContent() {
               setCleanedData={setCleanedData}
               uploadedData={uploadedData}
               onSelectChart={handleChartSelection}
-            />
-          )}
-
-          {showCleaningForm && (
-            <DataCleaningForm
-              uploadedData={uploadedData}
-              setCleanedData={setCleanedData}
-              setShowDataPreview={setShowDataPreview}
-              closeForm={closeCleaningForm}
             />
           )}
 
