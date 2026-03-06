@@ -93,6 +93,9 @@ desktop.ini
 .vscode/
 !.vscode/extensions.json
 
+# ai_tool_export
+ai_tool_export/
+
 # JetBrains
 .idea/
 *.iml
