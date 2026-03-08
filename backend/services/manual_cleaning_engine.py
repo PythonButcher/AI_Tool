@@ -28,6 +28,8 @@ class ManualCleaningEngine:
             "remove_duplicates": self._remove_duplicates,
             "reorder_columns": self._reorder_columns,
             "rename_columns": self._rename_columns,
+            "remove_columns": self._remove_columns,
+            "keep_columns": self._keep_columns,
         }
 
     def apply_steps(self, steps: List[Dict[str, Any]], dataframe: pd.DataFrame) -> pd.DataFrame:
@@ -307,6 +309,19 @@ class ManualCleaningEngine:
             return df
         return df.rename(columns=valid_map)
 
+    def _remove_columns(self, df: pd.DataFrame, params: Dict[str, Any]) -> pd.DataFrame:
+        columns = params.get("columns") or []
+        valid_columns = [col for col in columns if col in df.columns]
+        if not valid_columns:
+            return df
+        return df.drop(columns=valid_columns)
+
+    def _keep_columns(self, df: pd.DataFrame, params: Dict[str, Any]) -> pd.DataFrame:
+        columns = params.get("columns") or []
+        valid_columns = [col for col in columns if col in df.columns]
+        if not valid_columns:
+            return df
+        return df[valid_columns]
 
 def apply_steps(steps: List[Dict[str, Any]], dataframe: pd.DataFrame) -> pd.DataFrame:
     engine = ManualCleaningEngine()
