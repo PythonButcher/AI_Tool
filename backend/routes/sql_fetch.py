@@ -4,6 +4,9 @@ from psycopg.rows import dict_row
 from psycopg import sql
 import os
 from dotenv import load_dotenv
+import pandas as pd
+
+from backend.utils.global_state import set_uploaded_df
 
 load_dotenv()
 
@@ -13,7 +16,7 @@ sql_fetch_bp = Blueprint('sql_fetch_bp', __name__)
 DB_CONFIG = {
     'dbname': 'movies_db',
     'user': 'postgres',
-    'password': os.getenv('POSTGRES_PASSWORD', ''),  # 🔐 Load from .env
+    'password': os.getenv('POSTGRES_PASSWORD', ''),
     'host': 'localhost',
     'port': 5432
 }
@@ -39,7 +42,7 @@ def connect_with_credentials():
     config = {
         'host': data.get('host'),
         'port': data.get('port', 5432),
-        'dbname': data.get('dbname'),         # ✅ FIXED: pull 'dbname' correctly
+        'dbname': data.get('dbname'),
         'user': data.get('user'),
         'password': data.get('password')
     }
@@ -67,7 +70,7 @@ def preview_table_route():
     data = request.json or {}
     table_name = data.get('table')
     limit = data.get('limit', 100)
-    db_config = data.get('dbConfig')  # ✅ Expect full dbConfig sent from frontend
+    db_config = data.get('dbConfig')
 
     if not table_name:
         return jsonify({'error': 'Missing table parameter'}), 400
@@ -106,6 +109,10 @@ def get_table_preview(table_name, limit=100, config=None):
             cursor.execute(query, (limit,))
             rows = cursor.fetchall()
         conn.close()
+
+        # Keep backend dataset state in sync for ML Prep / cleaning routes.
+        set_uploaded_df(pd.DataFrame(rows))
+
         preview_rows = rows[:5] if isinstance(rows, list) else rows
         return {'data_preview': preview_rows, 'full_data': rows}, 200
     except Exception as e:
@@ -113,7 +120,6 @@ def get_table_preview(table_name, limit=100, config=None):
         return {'error': f'Failed to preview table: {e}'}, 500
 
 
-# CLI Testing
 if __name__ == '__main__':
     print("🔍 Testing default DB connection:")
     result, status = get_table_names()

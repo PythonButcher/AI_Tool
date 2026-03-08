@@ -41,6 +41,7 @@ export const useWindowInteraction = ({
 
   // Sync state if props change (e.g. Smart Split updates this window from parent)
   useEffect(() => {
+    if (isDragging.current || isResizing.current) return;
     if (initialState) {
         const current = stateRef.current;
         // Only update if difference is significant to avoid jitter
@@ -121,7 +122,7 @@ export const useWindowInteraction = ({
         
         if (targetElem) {
             try {
-                targetElem.removePointerCapture(pointerId);
+                targetElem.releasePointerCapture(pointerId);
                 targetElem.removeEventListener('pointermove', onPointerMove);
                 targetElem.removeEventListener('pointerup', onPointerUp);
             } catch (err) {

@@ -11,7 +11,7 @@
   touch-action: none; /* Crucial for Pointer Events */
 }
 
-@keyframes fadeIn {
+@keyframes windowFrameFadeIn {
   to { opacity: 1; }
 }
 

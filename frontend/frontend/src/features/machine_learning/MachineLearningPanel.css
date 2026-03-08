@@ -4,11 +4,60 @@
   gap: 8px;
   padding: 16px;
   color: var(--text-primary);
+  height: 100%;
+  overflow-y: auto;
 }
 
 .machine-learning-panel h2 {
   margin: 0;
   font-size: 18px;
+}
+
+.ml-panel-header {
+  margin-bottom: 20px;
+  border-bottom: 2px solid var(--accent-blue);
+  padding-bottom: 10px;
+}
+
+.ml-tabs {
+  display: flex;
+  gap: 10px;
+  margin-top: 15px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.ml-tab {
+  padding: 10px 20px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--text-secondary);
+  border-bottom: 3px solid transparent;
+  transition: all 0.2s;
+}
+
+.ml-tab:hover {
+  color: var(--accent-blue);
+}
+
+.ml-tab.active {
+  color: var(--accent-blue);
+  border-bottom-color: var(--accent-blue);
+}
+
+.ml-panel-body {
+  padding: 10px 0;
+  flex: 1;
+}
+
+.ml-not-ready {
+  padding: 20px;
+  background: rgba(255, 0, 0, 0.05);
+  border: 1px solid var(--accent-red);
+  border-radius: 8px;
+  color: var(--accent-red);
+  font-weight: 500;
 }
 
 .machine-learning-panel p {
@@ -59,64 +108,19 @@
 .machine-learning-action {
   margin-top: 16px;
   width: 100%;
-  padding: 10px 12px;
+  padding: 12px;
   border-radius: 6px;
   border: none;
   background-color: var(--accent-blue);
   color: var(--text-on-accent);
   font-size: 14px;
   font-weight: 600;
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.machine-learning-panel .ml-dataset-info .dataset-info {
-  background: transparent;
-  box-shadow: none;
-  padding: 0;
-  border-radius: 0;
-}
-/* ... keep your existing styles at the top ... */
-.numbers-list-container {
-  padding: 20px;
-  background-color: var(--bg-primary);
-  border-radius: 4px;
-  box-shadow: 0 2px 8px var(--shadow-color);
-}
-
-/* ... keep your existing styles at the top ... */
-
-/* 1. The Container: Remove the big white box and shadow */
-.numbers-list-container.ml-compact {
-  padding: 0;
-  background: transparent;
-  box-shadow: none;
-  margin-top: 10px;
-}
-
-/* 2. The Title: Make it smaller (14px) */
-.numbers-list-container.ml-compact .title {
-  font-size: 14px;
-  margin-bottom: 5px;
-}
-
-/* 3. The Preview Box (This is the one you asked about!) */
-.numbers-list-container.ml-compact .data-preview-content {
-  padding: 8px;           /* Less padding */
-  font-size: 11px;        /* Smaller text */
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-}
-
-/* 4. Hide unnecessary sub-titles in compact mode if you want */
-.numbers-list-container.ml-compact .data-preview-title {
-  display: none;
-}
-
-
-.machine-learning-action {
-  opacity: 1;
   cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.machine-learning-action:hover {
+  opacity: 0.9;
 }
 
 .machine-learning-action:disabled {
@@ -127,6 +131,7 @@
 .machine-learning-error {
   color: var(--accent-red) !important;
   font-size: 13px;
+  margin-top: 10px;
 }
 
 .machine-learning-results {

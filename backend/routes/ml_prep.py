@@ -37,8 +37,11 @@ MODEL_LOOKUP = {model["id"]: model for model in MODEL_DEFINITIONS}
 
 
 def _get_dataset():
-    """Return the cleaned dataset if available, otherwise fall back to the upload."""
-    return get_cleaned_data() or get_uploaded_df()
+    """Return cleaned dataset when present; otherwise fall back to uploaded data."""
+    cleaned = get_cleaned_data()
+    if cleaned is not None:
+        return cleaned
+    return get_uploaded_df()
 
 
 def _dataset_from_payload(payload: dict):
@@ -55,6 +58,15 @@ def _dataset_from_payload(payload: dict):
         raise ModelTrainingError("dataset must be a list of row objects or a column mapping.")
 
     return _get_dataset()
+
+
+def _resolve_column_name(df: pd.DataFrame, requested: str):
+    """Resolve target column by exact match first, then case/whitespace-insensitive match."""
+    if requested in df.columns:
+        return requested
+
+    normalized = {str(col).strip().lower(): col for col in df.columns}
+    return normalized.get(str(requested).strip().lower())
 
 
 def _column_is_numeric(series: pd.Series) -> bool:
@@ -316,15 +328,22 @@ def check_dataset_readiness():
     if not model_type or model_type not in MODEL_LOOKUP:
         return jsonify({"error": "Invalid or missing model_type."}), 400
 
-    df = _get_dataset()
-    if df is None or not isinstance(df, pd.DataFrame):
+    try:
+        df = _dataset_from_payload(payload)
+    except ModelTrainingError as exc:
+        return jsonify({"error": str(exc)}), 400
+
+    if df is None or not isinstance(df, pd.DataFrame) or df.empty:
         return jsonify({"error": "No dataset available. Upload data first."}), 400
 
     if model_type in {"linear_regression", "logistic_regression"}:
         if not target_column:
             return jsonify({"error": "target_column is required for the selected model."}), 400
-        if target_column not in df.columns:
+
+        resolved_target = _resolve_column_name(df, target_column)
+        if resolved_target is None:
             return jsonify({"error": f"Target column '{target_column}' does not exist."}), 400
+        target_column = resolved_target
 
     issues = []
     suggestions = []
@@ -367,6 +386,12 @@ def train_dataset_model():
     df = _dataset_from_payload(payload)
     if df is None or not isinstance(df, pd.DataFrame) or df.empty:
         return jsonify({"error": "No dataset available. Upload or provide cleaned data first."}), 400
+
+    if model_type in {"linear_regression", "logistic_regression"} and target_column:
+        resolved_target = _resolve_column_name(df, target_column)
+        if resolved_target is None:
+            return jsonify({"error": f"Target column '{target_column}' does not exist."}), 400
+        target_column = resolved_target
 
     try:
         request_data = TrainingRequest(
