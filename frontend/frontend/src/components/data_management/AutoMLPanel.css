@@ -45,7 +45,7 @@
   background: white;
   padding: 20px;
   border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
 .config-row {
@@ -60,7 +60,11 @@
   flex-direction: column;
   gap: 8px;
   flex: 1;
-  min-width: 250px;
+  min-width: 220px;
+}
+
+.automl-test-size {
+  max-width: 140px;
 }
 
 .automl-field span {
@@ -69,7 +73,8 @@
   font-size: 0.9rem;
 }
 
-.automl-field select {
+.automl-field select,
+.automl-field input {
   padding: 10px 14px;
   border: 2px solid #ddd;
   border-radius: 8px;
@@ -78,7 +83,8 @@
   background-color: #fafafa;
 }
 
-.automl-field select:focus {
+.automl-field select:focus,
+.automl-field input:focus {
   border-color: #4a90e2;
   outline: none;
 }
@@ -134,7 +140,7 @@
   padding: 15px;
   border-radius: 12px;
   margin-bottom: 24px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
 }
 
 .summary-item {
@@ -251,6 +257,67 @@
   gap: 20px;
 }
 
+.automl-details-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px;
+}
+
+.automl-detail-card {
+  border: 1px solid #d9dde3;
+  background: #fff;
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.automl-detail-card h5 {
+  margin: 0 0 8px 0;
+  font-size: 0.95rem;
+  color: #2c3e50;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.automl-detail-card p {
+  margin: 6px 0;
+  color: #3f4956;
+  font-size: 0.9rem;
+}
+
+.automl-detail-card ul {
+  margin: 8px 0;
+  padding-left: 18px;
+  color: #3f4956;
+  font-size: 0.88rem;
+}
+
+.automl-detail-card pre {
+  margin: 8px 0 0;
+  background: #f6f8fb;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 8px;
+  max-height: 150px;
+  overflow: auto;
+  font-size: 0.8rem;
+  color: #334155;
+}
+
+.automl-warning-box {
+  margin-top: 10px;
+  border-radius: 8px;
+  padding: 8px;
+  background: #fff7e6;
+  border: 1px solid #ffd591;
+}
+
+.automl-warning-box p {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #8c4a00;
+}
+
 .automl-placeholder {
   display: flex;
   flex-direction: column;
@@ -268,8 +335,8 @@
 }
 
 .automl-footer-note {
-  margin-top: 30px;
-  padding: 15px;
+  margin-top: 16px;
+  padding: 12px;
   border-top: 1px dashed #ccc;
   color: #7f8c8d;
   font-style: italic;
@@ -279,7 +346,7 @@
 .spinner-small {
   width: 18px;
   height: 18px;
-  border: 3px solid rgba(255,255,255,.3);
+  border: 3px solid rgba(255, 255, 255, 0.3);
   border-radius: 50%;
   border-top-color: #fff;
   animation: spin 1s ease-in-out infinite;

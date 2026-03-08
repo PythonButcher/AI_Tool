@@ -311,3 +311,4 @@ class ManualCleaningEngine:
 def apply_steps(steps: List[Dict[str, Any]], dataframe: pd.DataFrame) -> pd.DataFrame:
     engine = ManualCleaningEngine()
     return engine.apply_steps(steps, dataframe)
+

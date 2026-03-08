@@ -7,6 +7,72 @@ import AutoMLPanel from '../../components/data_management/AutoMLPanel';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
+const metricLabels = {
+  r2: 'R² Score',
+  mae: 'MAE',
+  mse: 'MSE',
+  rmse: 'RMSE',
+  accuracy: 'Accuracy',
+  precision: 'Precision',
+  recall: 'Recall',
+  f1: 'F1 Score',
+};
+
+const formatMetricValue = (value) => {
+  if (value === null || value === undefined) return 'n/a';
+  if (typeof value === 'number') return value.toFixed(4);
+  return Array.isArray(value) ? JSON.stringify(value) : String(value);
+};
+
+const buildDisplayMetrics = (metrics) => {
+  if (!metrics || typeof metrics !== 'object') return [];
+  const entries = Object.entries(metrics);
+
+  const mapped = entries.map(([key, value]) => ({
+    key,
+    label: metricLabels[key] || key,
+    value,
+  }));
+
+  if (metrics.mse !== undefined && metrics.rmse === undefined && typeof metrics.mse === 'number') {
+    mapped.push({
+      key: 'rmse',
+      label: 'RMSE',
+      value: Math.sqrt(metrics.mse),
+    });
+  }
+
+  return mapped;
+};
+
+const modelQualityHint = (modelId, metrics = {}) => {
+  if (modelId === 'linear_regression') {
+    const r2 = Number(metrics.r2);
+    if (Number.isFinite(r2)) {
+      if (r2 >= 0.85) return 'Strong fit for this dataset.';
+      if (r2 >= 0.6) return 'Moderate fit; still useful but can improve.';
+      return 'Weak fit; add features or more data for better predictions.';
+    }
+    return null;
+  }
+
+  if (modelId === 'logistic_regression') {
+    const f1 = Number(metrics.f1);
+    if (Number.isFinite(f1)) {
+      if (f1 >= 0.85) return 'Strong classification performance.';
+      if (f1 >= 0.7) return 'Moderate classification performance.';
+      return 'Weak classification performance; consider better target/features.';
+    }
+    return null;
+  }
+
+  if (modelId === 'kmeans') {
+    return 'For clustering, compare inertia and silhouette score rather than accuracy-style metrics.';
+  }
+
+  return null;
+};
+
 const MachineLearningPanelWrapper = () => {
   const [activeTab, setActiveTab] = useState('custom'); // 'custom' or 'automl'
   const { mlPrepStatus } = useContext(DataContext);
@@ -18,13 +84,13 @@ const MachineLearningPanelWrapper = () => {
         <h2>🧠 Machine Learning</h2>
         {isReady && (
           <div className="ml-tabs">
-            <button 
+            <button
               className={`ml-tab ${activeTab === 'custom' ? 'active' : ''}`}
               onClick={() => setActiveTab('custom')}
             >
               Custom Training
             </button>
-            <button 
+            <button
               className={`ml-tab ${activeTab === 'automl' ? 'active' : ''}`}
               onClick={() => setActiveTab('automl')}
             >
@@ -87,17 +153,8 @@ const CustomMLContent = () => {
     }
   };
 
-  const renderMetrics = () => {
-    if (!trainingResult?.metrics) return null;
-    return Object.entries(trainingResult.metrics).map(([key, value]) => {
-      const display = Array.isArray(value) ? JSON.stringify(value) : String(value);
-      return (
-        <li key={key}>
-          <strong>{key}:</strong> {display}
-        </li>
-      );
-    });
-  };
+  const displayMetrics = buildDisplayMetrics(trainingResult?.metrics);
+  const qualityHint = modelQualityHint(modelId, trainingResult?.metrics);
 
   return (
     <>
@@ -137,7 +194,7 @@ const CustomMLContent = () => {
           </div>
         )}
       </div>
-      
+
       <button type="button" className="machine-learning-action" disabled={isTraining} onClick={handleTrain}>
         {isTraining ? 'Training...' : 'Train Model'}
       </button>
@@ -147,19 +204,29 @@ const CustomMLContent = () => {
       {trainingResult && (
         <div className="machine-learning-results">
           <h3>Training Results</h3>
-          <ul>{renderMetrics()}</ul>
+          {qualityHint && <p><strong>{qualityHint}</strong></p>}
+
+          {displayMetrics.length > 0 && (
+            <ul>
+              {displayMetrics.map((item) => (
+                <li key={item.key}>
+                  <strong>{item.label}:</strong> {formatMetricValue(item.value)}
+                </li>
+              ))}
+            </ul>
+          )}
 
           {Array.isArray(trainingResult.predictions) && (
             <div>
-              <h4>Predictions (first 20)</h4>
-              <pre>{JSON.stringify(trainingResult.predictions.slice(0, 20), null, 2)}</pre>
+              <h4>Predictions (first 10)</h4>
+              <pre>{JSON.stringify(trainingResult.predictions.slice(0, 10), null, 2)}</pre>
             </div>
           )}
 
           {Array.isArray(trainingResult.clusters) && (
             <div>
-              <h4>Cluster Assignments (first 20)</h4>
-              <pre>{JSON.stringify(trainingResult.clusters.slice(0, 20), null, 2)}</pre>
+              <h4>Cluster Assignments (first 10)</h4>
+              <pre>{JSON.stringify(trainingResult.clusters.slice(0, 10), null, 2)}</pre>
             </div>
           )}
         </div>

@@ -1,14 +1,41 @@
 from flask import Blueprint, jsonify, request
 import pandas as pd
+
 from backend.utils.global_state import get_cleaned_data, get_uploaded_df
 from backend.services.automl_logic import AutoMLService
 from backend.services.model_training import ModelTrainingError
 
+
 automl_bp = Blueprint('automl_bp', __name__, url_prefix='/api/automl')
 
+
 def _get_dataset():
-    """Return the cleaned dataset if available, otherwise fall back to the upload."""
-    return get_cleaned_data() or get_uploaded_df()
+    """Return cleaned dataset when present; otherwise fall back to uploaded data."""
+    cleaned = get_cleaned_data()
+    if cleaned is not None:
+        return cleaned
+    return get_uploaded_df()
+
+
+def _dataset_from_payload(payload: dict):
+    payload_dataset = payload.get('dataset')
+    if payload_dataset is None:
+        return _get_dataset()
+
+    if isinstance(payload_dataset, list):
+        return pd.DataFrame(payload_dataset)
+    if isinstance(payload_dataset, dict):
+        return pd.DataFrame.from_dict(payload_dataset)
+
+    raise ModelTrainingError('dataset must be a list of row objects or a column mapping.')
+
+
+def _resolve_column_name(df: pd.DataFrame, requested: str):
+    if requested in df.columns:
+        return requested
+    normalized = {str(col).strip().lower(): col for col in df.columns}
+    return normalized.get(str(requested).strip().lower())
+
 
 @automl_bp.route('/train', methods=['POST'])
 def train_automl():
@@ -17,6 +44,7 @@ def train_automl():
     Expects JSON payload with:
     - target_column: The column to predict.
     - test_size: (Optional) Ratio for test split.
+    - dataset: (Optional) dataset payload from frontend state.
     """
     payload = request.json or {}
     target_column = payload.get('target_column')
@@ -25,15 +53,20 @@ def train_automl():
     if not target_column:
         return jsonify({"error": "target_column is required."}), 400
 
-    df = _get_dataset()
-    if df is None or df.empty:
+    try:
+        df = _dataset_from_payload(payload)
+    except ModelTrainingError as e:
+        return jsonify({"error": str(e)}), 400
+
+    if df is None or not isinstance(df, pd.DataFrame) or df.empty:
         return jsonify({"error": "No dataset available. Please upload a dataset first."}), 400
 
-    if target_column not in df.columns:
+    resolved_target = _resolve_column_name(df, target_column)
+    if resolved_target is None:
         return jsonify({"error": f"Target column '{target_column}' not found in dataset."}), 400
 
     try:
-        results = AutoMLService.train_automl(df, target_column, test_size=test_size)
+        results = AutoMLService.train_automl(df, resolved_target, test_size=test_size)
         return jsonify(results), 200
     except ModelTrainingError as e:
         return jsonify({"error": str(e)}), 400

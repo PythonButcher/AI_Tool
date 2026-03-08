@@ -98,6 +98,7 @@ function MLPrepPanel({ onSwitchToCleaning, onAddFix, onProceedToTraining }) {
 
     try {
       const response = await axios.post(`${API_URL}/api/ml_prep/check`, {
+        dataset: activeDataset,
         model_type: selectedModel,
         target_column: targetColumn || undefined,
       });
@@ -194,33 +195,31 @@ function MLPrepPanel({ onSwitchToCleaning, onAddFix, onProceedToTraining }) {
       {error && <div className="ml-prep-alert error">{error}</div>}
 
       {result && !error && (
-  <div className={`ml-prep-alert ${ready ? 'success' : 'warning'}`}>
-    {ready ? (
-      <div className="ml-ready-container">
-        {/* Text Section */}
-        <span className="ml-ready-text">
-          <strong>Ready!</strong> Dataset is prepared for{' '}
-          {friendlyModelLabel(selectedModel, models)}.
-        </span>
+        <div className={`ml-prep-alert ${ready ? 'success' : 'warning'}`}>
+          {ready ? (
+            <div className="ml-ready-container">
+              <span className="ml-ready-text">
+                <strong>Ready!</strong> Dataset is prepared for{' '}
+                {friendlyModelLabel(selectedModel, models)}.
+              </span>
 
-        {/* Action Button Section */}
-        <button 
-          type="button"
-          onClick={onProceedToTraining}
-          className="ml-proceed-button"
-          data-tooltip="Proceed to Training"
-        >
-          <FaBrain className="ml-proceed-icon" />
-          <span className="ml-proceed-label">Train Model</span>
-        </button>
-      </div>
-    ) : (
-      <div>
-        <strong>Needs attention.</strong> Address the items below before training.
-      </div>
-    )}
-  </div>
-)}
+              <button
+                type="button"
+                onClick={onProceedToTraining}
+                className="ml-proceed-button"
+                data-tooltip="Proceed to Training"
+              >
+                <FaBrain className="ml-proceed-icon" />
+                <span className="ml-proceed-label">Train Model</span>
+              </button>
+            </div>
+          ) : (
+            <div>
+              <strong>Needs attention.</strong> Address the items below before training.
+            </div>
+          )}
+        </div>
+      )}
 
       {result && !ready && !error && (
         <div className="ml-prep-results">

@@ -1,7 +1,14 @@
 import React, { useState, useContext, useMemo } from 'react';
 import axios from 'axios';
 import { DataContext } from '../../context/DataContext';
-import { FaRobot, FaCheckCircle, FaExclamationTriangle, FaChartLine, FaBrain } from 'react-icons/fa';
+import {
+  FaRobot,
+  FaCheckCircle,
+  FaExclamationTriangle,
+  FaChartLine,
+  FaBrain,
+  FaLightbulb,
+} from 'react-icons/fa';
 import './AutoMLPanel.css';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
@@ -13,15 +20,24 @@ const getColumnList = (dataset) => {
   return Object.keys(sample);
 };
 
+const formatMetric = (value) => {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) return 'n/a';
+  if (typeof value === 'number') return value.toFixed(4);
+  return String(value);
+};
+
+const getPrimaryMetricLabel = (problemType) =>
+  problemType === 'regression' ? 'R² Score' : 'F1 Score';
+
 const MetricRow = ({ label, value, isBest }) => (
   <div className={`metric-row ${isBest ? 'best' : ''}`}>
     <span className="metric-label">{label}:</span>
-    <span className="metric-value">{typeof value === 'number' ? value.toFixed(4) : value}</span>
+    <span className="metric-value">{formatMetric(value)}</span>
   </div>
 );
 
 const ModelCard = ({ model, isBest, problemType }) => {
-  const metrics = model.metrics;
+  const metrics = model.metrics || {};
   return (
     <div className={`model-card ${isBest ? 'best-model' : ''}`}>
       <div className="model-card-header">
@@ -51,6 +67,7 @@ const ModelCard = ({ model, isBest, problemType }) => {
 function AutoMLPanel() {
   const { cleanedData, fullData, uploadedData } = useContext(DataContext);
   const [targetColumn, setTargetColumn] = useState('');
+  const [testSize, setTestSize] = useState(0.2);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [results, setResults] = useState(null);
@@ -67,7 +84,9 @@ function AutoMLPanel() {
 
     try {
       const response = await axios.post(`${API_URL}/api/automl/train`, {
+        dataset: activeDataset,
         target_column: targetColumn,
+        test_size: Number(testSize),
       });
       setResults(response.data);
     } catch (err) {
@@ -76,6 +95,10 @@ function AutoMLPanel() {
       setLoading(false);
     }
   };
+
+  const bestModel = results?.best_model;
+  const allModels = results?.all_models || [];
+  const nonBestModels = allModels.filter((m) => m.model_id !== bestModel?.model_id);
 
   return (
     <div className="automl-panel">
@@ -95,8 +118,8 @@ function AutoMLPanel() {
         <div className="config-row">
           <label className="automl-field">
             <span>Target Column (to predict)</span>
-            <select 
-              value={targetColumn} 
+            <select
+              value={targetColumn}
               onChange={(e) => setTargetColumn(e.target.value)}
               disabled={loading}
             >
@@ -108,6 +131,20 @@ function AutoMLPanel() {
               ))}
             </select>
           </label>
+
+          <label className="automl-field automl-test-size">
+            <span>Test Split</span>
+            <input
+              type="number"
+              min="0.1"
+              max="0.5"
+              step="0.05"
+              value={testSize}
+              onChange={(e) => setTestSize(e.target.value)}
+              disabled={loading}
+            />
+          </label>
+
           <button
             type="button"
             className="automl-run-btn"
@@ -133,12 +170,12 @@ function AutoMLPanel() {
         </div>
       )}
 
-      {results && (
+      {results && bestModel && (
         <div className="automl-results">
           <div className="results-summary-banner">
             <div className="summary-item">
               <span className="label">Problem Type:</span>
-              <span className="value type-tag">{results.problem_type.toUpperCase()}</span>
+              <span className="value type-tag">{results.problem_type?.toUpperCase()}</span>
             </div>
             <div className="summary-item">
               <span className="label">Target:</span>
@@ -146,16 +183,16 @@ function AutoMLPanel() {
             </div>
             <div className="summary-item">
               <span className="label">Best Model:</span>
-              <span className="value highlight">{results.best_model.model_name}</span>
+              <span className="value highlight">{bestModel.model_name}</span>
             </div>
           </div>
 
           <div className="results-grid-container">
             <div className="best-model-section">
               <h4><FaCheckCircle /> Winning Model</h4>
-              <ModelCard 
-                model={results.all_models.find(m => m.model_id === results.best_model.model_id)} 
-                isBest={true} 
+              <ModelCard
+                model={allModels.find((m) => m.model_id === bestModel.model_id) || bestModel}
+                isBest={true}
                 problemType={results.problem_type}
               />
             </div>
@@ -163,23 +200,78 @@ function AutoMLPanel() {
             <div className="all-models-section">
               <h4>Candidate Models Performance</h4>
               <div className="candidate-grid">
-                {results.all_models
-                  .filter(m => m.model_id !== results.best_model.model_id)
-                  .map((model) => (
-                    <ModelCard 
-                      key={model.model_id} 
-                      model={model} 
-                      isBest={false} 
-                      problemType={results.problem_type}
-                    />
-                  ))
-                }
+                {nonBestModels.map((model) => (
+                  <ModelCard
+                    key={model.model_id}
+                    model={model}
+                    isBest={false}
+                    problemType={results.problem_type}
+                  />
+                ))}
               </div>
             </div>
           </div>
-          
+
+          <div className="automl-details-grid">
+            {results.training_summary && (
+              <div className="automl-detail-card">
+                <h5>Training Summary</h5>
+                <ul>
+                  <li>Rows used: {results.training_summary.rows_used}</li>
+                  <li>Feature columns: {results.training_summary.feature_columns}</li>
+                  <li>Train/Test rows: {results.training_summary.train_rows} / {results.training_summary.test_rows}</li>
+                  <li>Test split: {results.training_summary.test_split}</li>
+                </ul>
+                {Array.isArray(results.training_summary.warnings) && results.training_summary.warnings.length > 0 && (
+                  <div className="automl-warning-box">
+                    {results.training_summary.warnings.map((warning) => (
+                      <p key={warning}>{warning}</p>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {results.insights && (
+              <div className="automl-detail-card">
+                <h5><FaLightbulb /> Insight Summary</h5>
+                {results.insights.overview && <p>{results.insights.overview}</p>}
+                {results.insights.quality_assessment && <p><strong>{results.insights.quality_assessment}</strong></p>}
+                {Array.isArray(results.insights.key_findings) && results.insights.key_findings.length > 0 && (
+                  <ul>
+                    {results.insights.key_findings.map((finding) => (
+                      <li key={finding}>{finding}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+
+            {Array.isArray(results.feature_importance) && results.feature_importance.length > 0 && (
+              <div className="automl-detail-card">
+                <h5>Feature Importance</h5>
+                <ul>
+                  {results.feature_importance.map((item) => (
+                    <li key={item.feature}>
+                      {item.feature}: {formatMetric(item.importance)}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {Array.isArray(results.prediction_preview) && results.prediction_preview.length > 0 && (
+              <div className="automl-detail-card">
+                <h5>Prediction Preview</h5>
+                <pre>{JSON.stringify(results.prediction_preview, null, 2)}</pre>
+              </div>
+            )}
+          </div>
+
           <div className="automl-footer-note">
-             <p><FaChartLine /> Models were evaluated using {results.problem_type === 'regression' ? 'R² Score' : 'F1 Score'} on a 20% hold-out test set.</p>
+            <p>
+              <FaChartLine /> Models were ranked by {getPrimaryMetricLabel(results.problem_type)} on a hold-out test split.
+            </p>
           </div>
         </div>
       )}
@@ -195,3 +287,5 @@ function AutoMLPanel() {
 }
 
 export default AutoMLPanel;
+
+
