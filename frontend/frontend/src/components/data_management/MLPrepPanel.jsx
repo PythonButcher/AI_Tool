@@ -26,6 +26,8 @@ const ACTION_LABELS = {
   convert_type: 'Convert Type',
   split_column: 'Split Column',
   merge_columns: 'Merge Columns',
+  remove_columns: 'Remove Columns',
+  keep_columns: 'Keep Columns',
 };
 
 const formatColumns = (columns) => {
@@ -275,7 +277,7 @@ function MLPrepPanel({ onSwitchToCleaning, onAddFix, onProceedToTraining }) {
             )}
             <p className="ml-prep-hint">
               Suggestions map to Data Cleaning tools like Replace Nulls, Convert Type,
-              Split/Merge Columns, and Remove Nulls.
+              Split/Merge Columns, Remove Nulls, and column-selection steps.
             </p>
           </div>
         </div>
@@ -285,3 +287,4 @@ function MLPrepPanel({ onSwitchToCleaning, onAddFix, onProceedToTraining }) {
 }
 
 export default MLPrepPanel;
+

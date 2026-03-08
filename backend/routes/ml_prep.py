@@ -7,6 +7,7 @@ return actionable feedback before users run ML workflows.
 from flask import Blueprint, jsonify, request
 import json
 import pandas as pd
+from typing import Optional
 from backend.utils.global_state import get_cleaned_data, get_uploaded_df
 from backend.services.model_training import ModelTrainingError, TrainingRequest, train_model
 
@@ -145,6 +146,17 @@ def _check_missing_values(df: pd.DataFrame, issues: list, suggestions: list) -> 
                 "severity": "blocking",
             },
         )
+        if percentage >= 70:
+            _add_unique_suggestion(
+                suggestions,
+                {
+                    "action_type": "remove_columns",
+                    "columns": [column],
+                    "params": {"columns": [column]},
+                    "reason": "Column has very high missingness and may be better removed for ML prep.",
+                    "severity": "warning",
+                },
+            )
 
 
 def _check_mixed_types(df: pd.DataFrame, issues: list, suggestions: list) -> None:
@@ -167,6 +179,44 @@ def _check_mixed_types(df: pd.DataFrame, issues: list, suggestions: list) -> Non
                     "severity": "warning",
                 },
             )
+
+
+def _check_constant_feature_columns(
+    df: pd.DataFrame,
+    target_column: Optional[str],
+    issues: list,
+    suggestions: list,
+) -> None:
+    """Flag non-target columns with no variance; they add little ML value."""
+    feature_columns = [col for col in df.columns if col != target_column]
+    constant_cols = []
+    for column in feature_columns:
+        non_null = df[column].dropna()
+        if non_null.empty:
+            continue
+        if non_null.nunique() <= 1:
+            constant_cols.append(column)
+
+    if not constant_cols:
+        return
+
+    quoted_columns = ", ".join(f"'{col}'" for col in constant_cols)
+    issues.append(
+        _build_issue(
+            f"Columns {quoted_columns} have no variance and are unlikely to help model training.",
+            "warning",
+        )
+    )
+    _add_unique_suggestion(
+        suggestions,
+        {
+            "action_type": "remove_columns",
+            "columns": constant_cols,
+            "params": {"columns": constant_cols},
+            "reason": "Columns with a single repeated value should usually be removed before ML training.",
+            "severity": "warning",
+        },
+    )
 
 
 def _check_row_feature_ratio(df: pd.DataFrame, feature_count: int, issues: list, suggestions: list) -> None:
@@ -352,6 +402,7 @@ def check_dataset_readiness():
 
     _check_missing_values(df, issues, suggestions)
     _check_mixed_types(df, issues, suggestions)
+    _check_constant_feature_columns(df, target_column, issues, suggestions)
     _check_row_feature_ratio(df, len(feature_columns), issues, suggestions)
 
     if model_type == "linear_regression":
@@ -408,3 +459,4 @@ def train_dataset_model():
         return jsonify({"error": f"Unexpected training error: {exc}"}), 500
 
     return jsonify(results), 200
+
