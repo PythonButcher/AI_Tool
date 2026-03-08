@@ -220,6 +220,20 @@ export const TRANSFORM_LIBRARY = [
         fields: [{ name: 'mappings', type: 'rename-map', label: 'Column Renames' }],
       },
       {
+        type: 'remove_columns',
+        label: 'Remove Columns',
+        description: 'Drop selected columns from the dataset.',
+        icon: <FaTrash />,
+        fields: [{ name: 'columns', type: 'column-multi', label: 'Columns to remove' }],
+      },
+      {
+        type: 'keep_columns',
+        label: 'Keep Columns',
+        description: 'Keep only selected columns and drop the rest.',
+        icon: <FaColumns />,
+        fields: [{ name: 'columns', type: 'column-multi', label: 'Columns to keep' }],
+      },
+      {
         type: 'reorder_columns',
         label: 'Reorder',
         description: 'Arrange columns in a custom order.',
@@ -319,3 +333,4 @@ const getTransformLookup = () => {
 };
 
 export const transformLookup = getTransformLookup();
+
