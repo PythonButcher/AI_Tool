@@ -72,7 +72,7 @@ const WindowFrame = ({
         // width/height/transform managed by hook directly
         boxShadow: isActive ? '0 10px 40px rgba(0,0,0,0.2)' : '0 4px 12px rgba(0,0,0,0.1)',
         opacity: 0, // Hidden until JS sets transform
-        animation: 'fadeIn 0.2s forwards'
+        animation: 'windowFrameFadeIn 0.2s forwards'
       }}
       onPointerDown={() => onFocus(id)}
     >

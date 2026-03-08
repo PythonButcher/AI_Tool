@@ -11,7 +11,8 @@ manual_cleaning_bp = Blueprint('manual_cleaning_bp', __name__, url_prefix='/api'
 
 @manual_cleaning_bp.route('/manual_cleaning', methods=['POST'])
 def manual_cleaning():
-    base_df = get_cleaned_data() or get_uploaded_df()
+    cleaned = get_cleaned_data()
+    base_df = cleaned if cleaned is not None else get_uploaded_df()
     if base_df is None:
         return jsonify({"error": "No dataset available. Upload data first."}), 400
 
@@ -24,6 +25,11 @@ def manual_cleaning():
     except Exception as exc:
         return jsonify({"error": f"Failed to apply cleaning steps: {exc}"}), 500
 
+    if cleaned_df.empty and not base_df.empty and not preview_only:
+        return jsonify({
+            "error": "Cleaning steps produced an empty dataset. No changes were applied. Run Preview to inspect the result before Apply All.",
+            "row_count": 0,
+        }), 400
     preview_rows = cleaned_df.head(100).to_dict(orient='records')
     full_rows = cleaned_df.to_dict(orient='records')
 
@@ -38,3 +44,5 @@ def manual_cleaning():
         "steps_applied": len(steps),
         "committed": not preview_only,
     })
+
+

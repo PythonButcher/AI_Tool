@@ -1,5 +1,7 @@
 from flask import Blueprint, request, jsonify, make_response
 import requests
+import pandas as pd
+from backend.utils.global_state import set_uploaded_df
 
 
 def flatten_dict(d, parent_key='', sep='_'):
@@ -22,6 +24,7 @@ def flatten_dict(d, parent_key='', sep='_'):
             items.append((new_key, "Unsupported Type"))
     return dict(items)
 
+
 api_fetch_bp = Blueprint('api_fetch_bp', __name__)
 
 
@@ -35,6 +38,7 @@ def handle_options():
     response.headers['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
     response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
     return response, 204  # 204 means "No Content" (preflight response)
+
 
 @api_fetch_bp.route('/api/fetch_external_data', methods=['POST'])
 def fetch_external_data():
@@ -53,7 +57,10 @@ def fetch_external_data():
         raw_data = response.json()
         cleaned_data = raw_data if isinstance(raw_data, list) else [raw_data]
 
-        print(f"✅ API Response Processed: {cleaned_data[:2]}")  # Print only first 2 items to avoid overload
+        # Keep backend dataset state in sync with non-file data sources.
+        set_uploaded_df(pd.DataFrame(cleaned_data))
+
+        print(f"✅ API Response Processed: {cleaned_data[:2]}")
 
         return jsonify({
             "data_preview": cleaned_data[:5],
@@ -65,5 +72,3 @@ def fetch_external_data():
     except Exception as e:
         print(f"❌ Server error: {str(e)}")
         return jsonify({"error": f"Server error: {str(e)}"}), 500
-
-
