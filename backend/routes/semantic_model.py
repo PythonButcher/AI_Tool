@@ -1,30 +1,17 @@
 from flask import Blueprint, jsonify, request
 import pandas as pd
 
+from backend.services.dataset_context import resolve_active_dataframe
 from backend.services.semantic_model import (
     infer_semantic_model_from_dataframe,
     normalize_records,
 )
 from backend.utils.global_state import (
-    get_cleaned_data,
     get_semantic_model,
-    get_uploaded_df,
     set_semantic_model,
 )
 
 semantic_model_bp = Blueprint('semantic_model_bp', __name__, url_prefix='/api/semantic-model')
-
-
-def _resolve_active_dataframe():
-    cleaned = get_cleaned_data()
-    if isinstance(cleaned, pd.DataFrame) and not cleaned.empty:
-        return cleaned
-
-    uploaded = get_uploaded_df()
-    if isinstance(uploaded, pd.DataFrame):
-        return uploaded
-
-    return None
 
 
 @semantic_model_bp.route('/infer', methods=['POST'])
@@ -42,7 +29,7 @@ def infer_semantic_model_route():
             return jsonify({'error': 'A valid dataset is required to infer a semantic model.'}), 400
         dataframe = pd.DataFrame(records)
     else:
-        dataframe = _resolve_active_dataframe()
+        dataframe = resolve_active_dataframe()
         if dataframe is None or dataframe.empty:
             return jsonify({'error': 'No dataset is currently available.'}), 400
 
@@ -65,7 +52,7 @@ def get_current_semantic_model_route():
     if semantic_model is not None:
         return jsonify({'semantic_model': semantic_model}), 200
 
-    dataframe = _resolve_active_dataframe()
+    dataframe = resolve_active_dataframe()
     if dataframe is None or dataframe.empty:
         return jsonify({'error': 'No semantic model is available yet.'}), 404
 
