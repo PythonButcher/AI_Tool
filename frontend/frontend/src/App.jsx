@@ -112,7 +112,7 @@ function AppContent() {
   }, [xAxis, yAxis]);
 
   const handleFileUpload = useCallback((raw, file = null) => {
-    const previewRows = parseRecords(raw?.data_preview).slice(0, 5);
+    const previewRows = parseRecords(raw?.data_preview);
     const datasetRows = parseRecords(raw?.full_data ?? raw?.raw_data);
     const finalDataset = datasetRows.length ? datasetRows : previewRows;
     setUploadedData({
@@ -336,4 +336,5 @@ function App() {
 }
 
 export default App;
+
 

@@ -608,22 +608,33 @@ function CanvasContainer({
   // 7. Dynamic Charts
   const chartElements = charts
     .filter((chart) => !minimizedWindows[chart.id])
-    .map((chart) => (
-      <WindowFrame
-        {...getWindowProps(chart.id, `📊 ${chart.type} Chart`, () => removeChart(chart.id), () => minimizeWindow(chart.id, `${chart.type} Chart`))}
-        initialState={getInitialState(chart.id, 6, 18)}
-      >
-        <div style={{ width: '100%', height: '100%', position: 'relative' }}>
-            <SmartChartWindow
-              id={chart.id}
-              data={cleanedData || uploadedData}
-              type={chart.type}
-              mapping={chart.mapping}
-              isLocked={isLocked(chart.id)}
-            />
-        </div>
-      </WindowFrame>
-    ));
+    .map((chart) => {
+      const chartTitle = chart.dataSourceMode === 'semantic'
+        ? `📊 Semantic ${chart.type} Chart`
+        : `📊 ${chart.type} Chart`;
+      const minimizedTitle = chart.dataSourceMode === 'semantic'
+        ? `Semantic ${chart.type} Chart`
+        : `${chart.type} Chart`;
+
+      return (
+        <WindowFrame
+          {...getWindowProps(chart.id, chartTitle, () => removeChart(chart.id), () => minimizeWindow(chart.id, minimizedTitle))}
+          initialState={getInitialState(chart.id, 6, 18)}
+        >
+          <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+              <SmartChartWindow
+                id={chart.id}
+                data={cleanedData || uploadedData}
+                type={chart.type}
+                mapping={chart.mapping}
+                isLocked={isLocked(chart.id)}
+                dataSourceMode={chart.dataSourceMode}
+                semanticConfig={chart.semanticConfig}
+              />
+          </div>
+        </WindowFrame>
+      );
+    });
 
   // 8. Story Panel
   const storyPanelElement = (showStoryPanel && !minimizedWindows['storyPanel']) ? (
@@ -670,3 +681,6 @@ function CanvasContainer({
 }
 
 export default CanvasContainer;
+
+
+

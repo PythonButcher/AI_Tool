@@ -11,13 +11,11 @@ export const WindowContext = createContext();
 
 export const WindowProvider = ({ children }) => {
   const [openWindows, setOpenWindows] = useState([]);
-  const [charts, setCharts] = useState([]); // [{ id, type, mapping }]
+  const [charts, setCharts] = useState([]);
   const [minimizedWindows, setMinimizedWindows] = useState({});
   const [windowStates, setWindowStates] = useState({});
   const [lockedWindows, setLockedWindows] = useState({});
   const [windowContentStates, setWindowContentStates] = useState({});
-
-
 
   const openWindow = (id) => {
     setOpenWindows((prev) => (prev.includes(id) ? prev : [...prev, id]));
@@ -25,19 +23,26 @@ export const WindowProvider = ({ children }) => {
 
   const addChart = (chartConfig) => {
     const newId = `chart-${Date.now()}`;
-    const chart = { id: newId, type: 'Bar', mapping: {}, ...chartConfig };
-    setCharts(prev => [...prev, chart]);
+    const chart = {
+      id: newId,
+      type: 'Bar',
+      mapping: {},
+      dataSourceMode: 'raw',
+      semanticConfig: { metricId: '', groupBy: '' },
+      ...chartConfig,
+    };
+    setCharts((prev) => [...prev, chart]);
     openWindow(newId);
     return newId;
   };
 
   const removeChart = (id) => {
-    setCharts(prev => prev.filter(c => c.id !== id));
+    setCharts((prev) => prev.filter((c) => c.id !== id));
     closeWindow(id);
   };
 
   const updateChart = (id, updates) => {
-    setCharts(prev => prev.map(c => c.id === id ? { ...c, ...updates } : c));
+    setCharts((prev) => prev.map((c) => (c.id === id ? { ...c, ...updates } : c)));
   };
 
   useEffect(() => {
@@ -56,13 +61,13 @@ export const WindowProvider = ({ children }) => {
   }, [windowStates]);
 
   const saveWindowState = (id, layout) => {
-    setWindowStates(prev => ({ ...prev, [id]: layout }));
+    setWindowStates((prev) => ({ ...prev, [id]: layout }));
   };
 
   const getWindowState = (id) => windowStates[id] || null;
 
   const saveWindowContentState = useCallback((id, data) => {
-    setWindowContentStates(prev => ({ ...prev, [id]: data }));
+    setWindowContentStates((prev) => ({ ...prev, [id]: data }));
   }, []);
 
   const getWindowContentState = useCallback(
@@ -71,7 +76,7 @@ export const WindowProvider = ({ children }) => {
   );
 
   const toggleLock = (id) => {
-    setLockedWindows(prev => ({ ...prev, [id]: !prev[id] }));
+    setLockedWindows((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
   const isLocked = (id) => !!lockedWindows[id];
@@ -83,13 +88,12 @@ export const WindowProvider = ({ children }) => {
       delete copy[id];
       return copy;
     });
-    setLockedWindows((prev) => {          // <-- clear lock if closed
+    setLockedWindows((prev) => {
       const copy = { ...prev };
       delete copy[id];
       return copy;
     });
   };
-
 
   const minimizeWindow = (id, label) => {
     setMinimizedWindows((prev) => ({ ...prev, [id]: { label } }));
@@ -104,10 +108,8 @@ export const WindowProvider = ({ children }) => {
   };
 
   const maximizeWindow = (id) => {
-    // placeholder for future maximize behavior
     restoreWindow(id);
   };
-
 
   const value = useMemo(
     () => ({
@@ -127,7 +129,7 @@ export const WindowProvider = ({ children }) => {
       charts,
       addChart,
       removeChart,
-      updateChart
+      updateChart,
     }),
     [openWindows, minimizedWindows, windowStates, lockedWindows, windowContentStates, charts]
   );
@@ -136,4 +138,3 @@ export const WindowProvider = ({ children }) => {
 };
 
 export const useWindowContext = () => useContext(WindowContext);
-

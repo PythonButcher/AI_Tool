@@ -1,0 +1,142 @@
+.semantic-model-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px;
+  border-radius: 14px;
+  border: 1px solid var(--border-color);
+  background:
+    linear-gradient(135deg, rgba(25, 118, 210, 0.08), rgba(25, 118, 210, 0.02)),
+    var(--bg-primary);
+  box-shadow: 0 6px 18px var(--shadow-color);
+}
+
+.semantic-model-panel__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.semantic-model-panel__eyebrow {
+  margin: 0 0 4px;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent-blue);
+}
+
+.semantic-model-panel__title {
+  margin: 0;
+  font-size: 1.1rem;
+  color: var(--text-primary);
+}
+
+.semantic-model-panel__action {
+  border: 1px solid rgba(25, 118, 210, 0.35);
+  background: rgba(25, 118, 210, 0.12);
+  color: var(--text-primary);
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.semantic-model-panel__action:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.semantic-model-panel__status,
+.semantic-model-panel__meta,
+.semantic-model-panel__empty {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.semantic-model-panel__stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.semantic-model-panel__stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(25, 118, 210, 0.12);
+}
+
+.semantic-model-panel__stat-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.semantic-model-panel__stat-label {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+}
+
+.semantic-model-panel__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 0.88rem;
+}
+
+.semantic-model-panel__list-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.semantic-model-panel__list-block h4 {
+  margin: 0 0 8px;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+}
+
+.semantic-model-panel__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.semantic-model-panel__chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
+
+.semantic-model-panel__chip--metric {
+  background: rgba(46, 125, 50, 0.12);
+}
+
+.semantic-model-panel__chip--dimension {
+  background: rgba(255, 143, 0, 0.12);
+}
+
+@media (max-width: 720px) {
+  .semantic-model-panel__header {
+    flex-direction: column;
+  }
+
+  .semantic-model-panel__stats,
+  .semantic-model-panel__list-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .semantic-model-panel__action {
+    width: 100%;
+  }
+}

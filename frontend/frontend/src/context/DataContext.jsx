@@ -37,6 +37,8 @@ const normalizeDatasetRows = (source) => {
   return [];
 };
 
+export { normalizeDatasetRows };
+
 export const DataProvider = ({ children }) => {
   const [uploadedData, setUploadedData] = useState(null);
   const [fullData, setFullData] = useState(null);
@@ -205,3 +207,4 @@ export const useBusinessDefinitions = () => {
     relationships: semanticModel?.relationships || [],
   };
 };
+
