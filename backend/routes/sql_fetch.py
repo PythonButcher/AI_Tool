@@ -1,42 +1,40 @@
 from flask import Blueprint, jsonify, request
-import psycopg
-from psycopg.rows import dict_row
-from psycopg import sql
 import os
-from dotenv import load_dotenv
-import pandas as pd
 
-from backend.utils.global_state import set_uploaded_df
+import pandas as pd
+import psycopg
+from dotenv import load_dotenv
+from psycopg import sql
+from psycopg.rows import dict_row
+
+from backend.services.semantic_model import infer_semantic_model_from_dataframe
+from backend.utils.global_state import set_semantic_model, set_uploaded_df
 
 load_dotenv()
 
 sql_fetch_bp = Blueprint('sql_fetch_bp', __name__)
 
-# Default static configuration (for local dev only)
 DB_CONFIG = {
     'dbname': 'movies_db',
     'user': 'postgres',
     'password': os.getenv('POSTGRES_PASSWORD', ''),
     'host': 'localhost',
-    'port': 5432
+    'port': 5432,
 }
 
 
 def get_db_connection(config=None):
-    """Establish a psycopg3 connection using provided or default config."""
     try:
         conn_config = config if config else DB_CONFIG
         conn = psycopg.connect(**conn_config, row_factory=dict_row)
         return conn
     except Exception as e:
-        print(f"❌ Error connecting to DB: {e}")
+        print(f'Error connecting to DB: {e}')
         return None
 
 
 @sql_fetch_bp.route('/api/db/connect', methods=['POST'])
 def connect_with_credentials():
-    print("📥 Received request to /api/db/connect")
-
     data = request.json or {}
 
     config = {
@@ -44,7 +42,7 @@ def connect_with_credentials():
         'port': data.get('port', 5432),
         'dbname': data.get('dbname'),
         'user': data.get('user'),
-        'password': data.get('password')
+        'password': data.get('password'),
     }
 
     conn = get_db_connection(config)
@@ -53,15 +51,17 @@ def connect_with_credentials():
 
     try:
         with conn.cursor() as cursor:
-            cursor.execute("""
+            cursor.execute(
+                '''
                 SELECT table_name FROM information_schema.tables
                 WHERE table_schema = 'public';
-            """)
+                '''
+            )
             tables = cursor.fetchall()
         conn.close()
         return jsonify({'tables': tables}), 200
     except Exception as e:
-        print(f"❌ Error fetching tables: {e}")
+        print(f'Error fetching tables: {e}')
         return jsonify({'error': 'Failed to fetch tables'}), 500
 
 
@@ -86,15 +86,17 @@ def get_table_names():
 
     try:
         with conn.cursor() as cursor:
-            cursor.execute("""
+            cursor.execute(
+                '''
                 SELECT table_name FROM information_schema.tables
                 WHERE table_schema = 'public';
-            """)
+                '''
+            )
             tables = cursor.fetchall()
         conn.close()
         return {'tables': tables}, 200
     except Exception as e:
-        print(f"❌ Error fetching tables: {e}")
+        print(f'Error fetching tables: {e}')
         return {'error': 'Failed to fetch tables'}, 500
 
 
@@ -105,23 +107,32 @@ def get_table_preview(table_name, limit=100, config=None):
 
     try:
         with conn.cursor() as cursor:
-            query = sql.SQL("SELECT * FROM {} LIMIT %s").format(sql.Identifier(table_name))
+            query = sql.SQL('SELECT * FROM {} LIMIT %s').format(sql.Identifier(table_name))
             cursor.execute(query, (limit,))
             rows = cursor.fetchall()
         conn.close()
 
-        # Keep backend dataset state in sync for ML Prep / cleaning routes.
-        set_uploaded_df(pd.DataFrame(rows))
+        dataframe = pd.DataFrame(rows)
+        set_uploaded_df(dataframe)
+        semantic_model = infer_semantic_model_from_dataframe(
+            dataframe,
+            dataset_name=table_name,
+            source='database_preview',
+        )
+        set_semantic_model(semantic_model)
 
         preview_rows = rows[:5] if isinstance(rows, list) else rows
-        return {'data_preview': preview_rows, 'full_data': rows}, 200
+        return {
+            'data_preview': preview_rows,
+            'full_data': rows,
+            'semantic_model': semantic_model,
+        }, 200
     except Exception as e:
-        print(f"❌ Error previewing table '{table_name}': {e}")
+        print(f"Error previewing table '{table_name}': {e}")
         return {'error': f'Failed to preview table: {e}'}, 500
 
 
 if __name__ == '__main__':
-    print("🔍 Testing default DB connection:")
     result, status = get_table_names()
-    print(f"Status: {status}")
-    print("Tables:", result)
+    print(f'Status: {status}')
+    print('Tables:', result)

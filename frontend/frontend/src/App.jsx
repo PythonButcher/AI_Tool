@@ -43,7 +43,9 @@ function AppContent() {
     cleanedData, setCleanedData,
     pipelineResults, setPipelineResults,
     aiReportReady, setAiReportReady,
-    showAiReport, setShowAiReport
+    showAiReport, setShowAiReport,
+    setSemanticModel,
+    refreshSemanticModelFromDataset,
   } = useContext(DataContext);
 
   const { theme } = useContext(ThemeContext); 
@@ -113,12 +115,23 @@ function AppContent() {
     const previewRows = parseRecords(raw?.data_preview).slice(0, 5);
     const datasetRows = parseRecords(raw?.full_data ?? raw?.raw_data);
     const finalDataset = datasetRows.length ? datasetRows : previewRows;
-    setUploadedData({ data_preview: previewRows });
+    setUploadedData({
+      data_preview: previewRows,
+      semantic_model: raw?.semantic_model || null,
+    });
     setFullData(finalDataset);
     setCleanedData(finalDataset);
+    if (raw?.semantic_model) {
+      setSemanticModel(raw.semantic_model);
+    } else if (finalDataset.length > 0) {
+      refreshSemanticModelFromDataset(finalDataset, {
+        datasetName: file?.name || raw?.name,
+        source: 'app_handle_upload',
+      });
+    }
     setShowDataPreview(true);
     if (file) setRawUploadFile(file);
-  }, [setUploadedData, setFullData, setCleanedData]);
+  }, [setUploadedData, setFullData, setCleanedData, setSemanticModel, refreshSemanticModelFromDataset]);
 
   const handleApiData = (data) => {
     handleFileUpload(data);
@@ -323,3 +336,4 @@ function App() {
 }
 
 export default App;
+
