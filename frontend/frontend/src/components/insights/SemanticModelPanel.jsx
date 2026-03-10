@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import PropTypes from 'prop-types';
+import { normalizeSemanticMetric, normalizeSemanticDimension } from '../../utils/semanticObjectUtils';
 import './SemanticModelPanel.css';
 
 const renderChipLabel = (item, suffix = null) => {
@@ -7,12 +8,19 @@ const renderChipLabel = (item, suffix = null) => {
   return suffix ? `${label} · ${suffix}` : label;
 };
 
-function SemanticModelPanel({ semanticModel, status, onCreateSemanticChart }) {
-  const metrics = semanticModel?.metrics || [];
-  const dimensions = semanticModel?.dimensions || [];
+function SemanticModelPanel({ semanticModel, status, onCreateSemanticChart, onCreateKpiCard }) {
+  const metrics = useMemo(
+    () => (semanticModel?.metrics || []).map(normalizeSemanticMetric),
+    [semanticModel]
+  );
+  const dimensions = useMemo(
+    () => (semanticModel?.dimensions || []).map(normalizeSemanticDimension),
+    [semanticModel]
+  );
   const entities = semanticModel?.entities || [];
   const datasetMeta = semanticModel?.dataset || {};
   const canCreateChart = typeof onCreateSemanticChart === 'function' && metrics.length > 0;
+  const canCreateKpi = typeof onCreateKpiCard === 'function' && metrics.length > 0;
 
   let statusCopy = 'Business definitions will appear here once a dataset is available.';
   if (status === 'loading') {
@@ -21,7 +29,7 @@ function SemanticModelPanel({ semanticModel, status, onCreateSemanticChart }) {
     statusCopy = 'Semantic inference failed. Dataset-first workflows remain available.';
   } else if (status === 'ready') {
     statusCopy = metrics.length || dimensions.length
-      ? 'Business-level definitions are now available alongside raw dataset fields.'
+      ? 'Business-level definitions are now available alongside raw dataset fields. Create semantic charts or KPI cards directly from these definitions.'
       : 'The dataset loaded, but no semantic metrics or dimensions were inferred yet.';
   }
 
@@ -32,16 +40,28 @@ function SemanticModelPanel({ semanticModel, status, onCreateSemanticChart }) {
           <p className="semantic-model-panel__eyebrow">Semantic Layer</p>
           <h3 className="semantic-model-panel__title">Business Definitions</h3>
         </div>
-        {onCreateSemanticChart && (
-          <button
-            type="button"
-            className="semantic-model-panel__action"
-            onClick={onCreateSemanticChart}
-            disabled={!canCreateChart}
-          >
-            New semantic chart
-          </button>
-        )}
+        <div className="semantic-model-panel__actions">
+          {onCreateKpiCard && (
+            <button
+              type="button"
+              className="semantic-model-panel__action semantic-model-panel__action--monitoring"
+              onClick={() => onCreateKpiCard()}
+              disabled={!canCreateKpi}
+            >
+              New KPI card
+            </button>
+          )}
+          {onCreateSemanticChart && (
+            <button
+              type="button"
+              className="semantic-model-panel__action"
+              onClick={() => onCreateSemanticChart()}
+              disabled={!canCreateChart}
+            >
+              New semantic chart
+            </button>
+          )}
+        </div>
       </div>
 
       <p className="semantic-model-panel__status">{statusCopy}</p>
@@ -74,13 +94,31 @@ function SemanticModelPanel({ semanticModel, status, onCreateSemanticChart }) {
 
       <div className="semantic-model-panel__list-grid">
         <div className="semantic-model-panel__list-block">
-          <h4>Metrics</h4>
+          <div className="semantic-model-panel__list-header">
+            <h4>Metrics</h4>
+            <span className="semantic-model-panel__list-hint">Open a semantic chart or KPI card with a metric preselected</span>
+          </div>
           {metrics.length > 0 ? (
-            <div className="semantic-model-panel__chips">
+            <div className="semantic-model-panel__chip-actions-grid">
               {metrics.slice(0, 6).map((metric) => (
-                <span className="semantic-model-panel__chip semantic-model-panel__chip--metric" key={metric.id || metric.name}>
-                  {renderChipLabel(metric, metric.default_aggregation || metric.expression?.aggregation || 'metric')}
-                </span>
+                <div className="semantic-model-panel__chip-row" key={metric.id}>
+                  <button
+                    type="button"
+                    className="semantic-model-panel__chip semantic-model-panel__chip--metric semantic-model-panel__chip-button"
+                    onClick={() => onCreateSemanticChart && onCreateSemanticChart({ metricId: metric.id })}
+                  >
+                    {renderChipLabel(metric, metric.helperLabel)}
+                  </button>
+                  {onCreateKpiCard && (
+                    <button
+                      type="button"
+                      className="semantic-model-panel__mini-action"
+                      onClick={() => onCreateKpiCard({ metricId: metric.id })}
+                    >
+                      KPI
+                    </button>
+                  )}
+                </div>
               ))}
             </div>
           ) : (
@@ -89,13 +127,21 @@ function SemanticModelPanel({ semanticModel, status, onCreateSemanticChart }) {
         </div>
 
         <div className="semantic-model-panel__list-block">
-          <h4>Dimensions</h4>
+          <div className="semantic-model-panel__list-header">
+            <h4>Dimensions</h4>
+            <span className="semantic-model-panel__list-hint">Seed grouping into a semantic chart</span>
+          </div>
           {dimensions.length > 0 ? (
             <div className="semantic-model-panel__chips">
               {dimensions.slice(0, 6).map((dimension) => (
-                <span className="semantic-model-panel__chip semantic-model-panel__chip--dimension" key={dimension.id || dimension.name}>
-                  {renderChipLabel(dimension, dimension.semantic_kind || dimension.data_type || 'dimension')}
-                </span>
+                <button
+                  type="button"
+                  className="semantic-model-panel__chip semantic-model-panel__chip--dimension semantic-model-panel__chip-button"
+                  key={dimension.id}
+                  onClick={() => onCreateSemanticChart && onCreateSemanticChart({ groupBy: dimension.id })}
+                >
+                  {renderChipLabel(dimension, dimension.helperLabel)}
+                </button>
               ))}
             </div>
           ) : (
@@ -116,12 +162,14 @@ SemanticModelPanel.propTypes = {
   }),
   status: PropTypes.string,
   onCreateSemanticChart: PropTypes.func,
+  onCreateKpiCard: PropTypes.func,
 };
 
 SemanticModelPanel.defaultProps = {
   semanticModel: null,
   status: 'idle',
   onCreateSemanticChart: null,
+  onCreateKpiCard: null,
 };
 
 export default SemanticModelPanel;

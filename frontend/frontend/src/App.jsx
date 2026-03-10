@@ -1,4 +1,3 @@
-// File: App.jsx
 import React, { useState, useCallback, useEffect, useContext } from 'react';
 import MenuBar from './components/layout/MenuBar';
 import CanvasContainer from './components/layout/CanvasContainer';
@@ -14,12 +13,10 @@ import { WarehouseProvider } from './context/WarehouseContext';
 import { HelpOverlayProvider } from './context/HelpOverlayContext';
 import useLoadRawData from './hooks/useLoadRawData';
 import Snowfall from 'react-snowfall';
-// ⛔️ Removed: import DataStoryPanel from './components/DataStoryPanel';
 import DataFilterPanel from './components/data_management/DataFilterPanel';
 import './App.css';
 import { MuiThemeContext } from './context/MuiThemeContext';
 import { WindowProvider, useWindowContext } from './context/WindowContext';
-
 
 const parseRecords = (source) => {
   if (!source) return [];
@@ -35,7 +32,6 @@ const parseRecords = (source) => {
   return [];
 };
 
-// Main Content Component
 function AppContent() {
   const {
     uploadedData, setUploadedData,
@@ -48,18 +44,22 @@ function AppContent() {
     refreshSemanticModelFromDataset,
   } = useContext(DataContext);
 
-  const { theme } = useContext(ThemeContext); 
+  const { theme } = useContext(ThemeContext);
+  const {
+    charts,
+    updateChart,
+    dashboardItems,
+    dashboardState,
+    updateDashboardItem,
+    openDashboard,
+    closeDashboard,
+  } = useWindowContext();
 
-  const { charts, updateChart } = useWindowContext();
+  console.log('App.jsx received uploadedData:', uploadedData);
 
-  console.log("App.jsx received uploadedData:", uploadedData);
-
-  // Standard charting state
   const [selectedStat, setSelectedStat] = useState(null);
   const [chartData, setChartData] = useState(null);
   const [chartMapping, setChartMapping] = useState({});
-  const [xAxis, setXAxis] = useState(null);
-  const [yAxis, setYAxis] = useState(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
@@ -67,8 +67,8 @@ function AppContent() {
 
   const [aiChartData, setAiChartData] = useState(null);
   const [aiChartType, setAiChartType] = useState('Bar');
-  const [showWhiteBoard, setShowWhiteBoard] = useState(null)
-  const [openDataFilter, setOpenDataFilter] = useState(false)
+  const [showWhiteBoard, setShowWhiteBoard] = useState(null);
+  const [openDataFilter, setOpenDataFilter] = useState(false);
   const [showDataPreview, setShowDataPreview] = useState(false);
   const [showRawViewer, setShowRawViewer] = useState(false);
   const [showCanvasContainer, setShowCanvasContainer] = useState(true);
@@ -89,27 +89,38 @@ function AppContent() {
 
   useLoadRawData(showRawViewer, rawUploadFile, setFullData);
 
-  useEffect(() => { if (uploadedData) { setShowChartWindow(true); setShowDataPreview(true); } }, [uploadedData]);
-  useEffect(() => { if (pipelineResults?.ai_report?.status === 'success') { setAiReportReady(true); } }, [pipelineResults, setAiReportReady]);
+  useEffect(() => {
+    if (uploadedData) {
+      setShowChartWindow(true);
+      setShowDataPreview(true);
+    }
+  }, [uploadedData]);
 
-  // Old Chart Data Effect (Legacy)
+  useEffect(() => {
+    if (pipelineResults?.ai_report?.status === 'success') {
+      setAiReportReady(true);
+    }
+  }, [pipelineResults, setAiReportReady]);
+
   useEffect(() => {
     if (!cleanedData || !chartMapping['X-Axis'] || !chartMapping['Y-Axis']) return;
     const transformed = transformToChartData(cleanedData, {
-      labelField: chartMapping['X-Axis'] || chartMapping['Category'],
-      dataFields: [chartMapping['Y-Axis'] || chartMapping['Value']],
+      labelField: chartMapping['X-Axis'] || chartMapping.Category,
+      dataFields: [chartMapping['Y-Axis'] || chartMapping.Value],
     });
     if (transformed) setChartData(transformed);
   }, [cleanedData, chartMapping]);
 
-
-  // Callbacks
   const handleStatsSelect = useCallback((statType) => setSelectedStat(statType), []);
 
   const handleDataCleaned = useCallback((newData) => {
-    if (!newData || newData.length === 0) { setCleanedData(null); setChartData(null); return; }
+    if (!newData || newData.length === 0) {
+      setCleanedData(null);
+      setChartData(null);
+      return;
+    }
     setCleanedData(newData);
-  }, [xAxis, yAxis]);
+  }, [setCleanedData]);
 
   const handleFileUpload = useCallback((raw, file = null) => {
     const previewRows = parseRecords(raw?.data_preview);
@@ -136,67 +147,169 @@ function AppContent() {
   const handleApiData = (data) => {
     handleFileUpload(data);
   };
+
   const handleDatabaseData = (data) => {
     handleFileUpload(data);
   };
 
-  const handleSidebarButtonClick = useCallback((action) => { if (action === 'visualize') setShowDataVisual(true); }, []);
+  const handleSidebarButtonClick = useCallback((action) => {
+    if (action === 'visualize') setShowDataVisual(true);
+  }, []);
   const handleClosePreview = useCallback(() => setShowDataPreview(false), []);
   const handleCloseRawViewer = useCallback(() => setShowRawViewer(false), []);
   const handleCloseCanvas = useCallback(() => setShowCanvasContainer(false), []);
-  const handleCanvasMinimize = useCallback(() => setShowCanvasMinimized(prev => !prev), []);
-  const handleAiReportOpen = useCallback(() => { setShowAiReport(true); setAiReportReady(false); }, []);
-  const handleAiReportClose = useCallback(() => { setShowAiReport(false); setAiReportReady(false); }, []);
-  const handleChartSelection = useCallback((chartType) => { setSelectedChartType(chartType); setShowChartWindow(true); setShowDataVisual(false); }, []);
+  const handleCanvasMinimize = useCallback(() => setShowCanvasMinimized((prev) => !prev), []);
+  const handleAiReportOpen = useCallback(() => {
+    setShowAiReport(true);
+    setAiReportReady(false);
+  }, [setAiReportReady, setShowAiReport]);
+  const handleAiReportClose = useCallback(() => {
+    setShowAiReport(false);
+    setAiReportReady(false);
+  }, [setAiReportReady, setShowAiReport]);
+  const handleChartSelection = useCallback((chartType) => {
+    setSelectedChartType(chartType);
+    setShowChartWindow(true);
+    setShowDataVisual(false);
+  }, []);
   const handleCloseChartWindow = useCallback(() => setShowChartWindow(false), []);
   const handleStoryModelChange = (newModel) => setStoryModel(newModel);
 
-  /* LEGACY ONE-CHART DROP HANDLER */
   const handleFieldDrop = useCallback((axis, field) => {
     setChartMapping((prev) => {
       const updated = { ...prev };
-      if (axis === 'x') { setXAxis(field); updated['X-Axis'] = field; }
-      else if (axis === 'y') { setYAxis(field); updated['Y-Axis'] = field; }
+      if (axis === 'x') {
+        updated['X-Axis'] = field;
+      } else if (axis === 'y') {
+        updated['Y-Axis'] = field;
+      }
       return updated;
     });
   }, []);
 
-  /* 🟢 MASTER DRAG HANDLER */
-  const handleDragEnd = useCallback(({ active, over }) => {
-    console.log("Drag End:", { active, over });
+  const handleDashboardToggle = useCallback(() => {
+    if (dashboardState.isVisible) {
+      closeDashboard();
+      return;
+    }
+    openDashboard();
+  }, [closeDashboard, dashboardState.isVisible, openDashboard]);
 
-    // Only handle drops on valid targets when dragging a field
-    if (!over || active.data?.current?.type !== 'field') {
-      console.warn("Invalid drop:", { over, type: active.data?.current?.type });
+  const handleDragEnd = useCallback(({ active, over }) => {
+    console.log('Drag End:', { active, over });
+
+    if (!over) {
       return;
     }
 
-    const fieldName = active.data.current.field;
-    const fieldType = active.data.current.fieldType;
+    const activePayload = active.data?.current;
+    if (!activePayload) {
+      return;
+    }
+
+    if (activePayload.type === 'semantic-object') {
+      const dashboardItemId = over.data?.current?.dashboardItemId;
+      const dashboardRole = over.data?.current?.dashboardRole;
+      const acceptedObjectKinds = over.data?.current?.acceptedObjectKinds;
+
+      if (
+        acceptedObjectKinds
+        && acceptedObjectKinds.length > 0
+        && activePayload.objectKind
+        && !acceptedObjectKinds.includes(activePayload.objectKind)
+      ) {
+        console.warn('Semantic object mismatch:', {
+          objectKind: activePayload.objectKind,
+          acceptedObjectKinds,
+        });
+        return;
+      }
+
+      if (dashboardItemId && dashboardRole === 'metric') {
+        updateDashboardItem(dashboardItemId, {
+          semanticConfig: {
+            metricId: activePayload.semanticId || activePayload.metadata?.id || '',
+          },
+        });
+        return;
+      }
+
+      const targetChartId = over.data?.current?.targetChartId;
+      const semanticRole = over.data?.current?.semanticRole;
+
+      if (!targetChartId || !semanticRole) {
+        return;
+      }
+
+      const chart = charts.find((entry) => entry.id === targetChartId);
+      const dashboardChart = dashboardItems.find((entry) => entry.id === targetChartId && entry.itemType === 'chart');
+      const chartSemanticConfig = chart?.semanticConfig || dashboardChart?.semanticConfig || {};
+
+      const nextSemanticConfig = {
+        metricId: chartSemanticConfig.metricId || '',
+        groupBy: chartSemanticConfig.groupBy || '',
+      };
+
+      if (semanticRole === 'metric') {
+        nextSemanticConfig.metricId = activePayload.semanticId || activePayload.metadata?.id || '';
+      }
+
+      if (semanticRole === 'dimension') {
+        nextSemanticConfig.groupBy = activePayload.semanticId || activePayload.metadata?.id || '';
+      }
+
+      if (dashboardChart) {
+        updateDashboardItem(targetChartId, {
+          dataSourceMode: 'semantic',
+          semanticConfig: nextSemanticConfig,
+        });
+        return;
+      }
+
+      if (chart) {
+        updateChart(targetChartId, {
+          dataSourceMode: 'semantic',
+          semanticConfig: nextSemanticConfig,
+        });
+      }
+      return;
+    }
+
+    if (activePayload.type !== 'field') {
+      console.warn('Invalid drop:', { over, type: activePayload.type });
+      return;
+    }
+
+    const fieldName = activePayload.field;
+    const fieldType = activePayload.fieldType;
     const allowedTypes = over.data?.current?.allowedTypes;
 
-    // Type validation
     if (allowedTypes && allowedTypes.length > 0 && fieldType && !allowedTypes.includes(fieldType)) {
-      console.warn("Type Mismatch:", { fieldType, allowedTypes });
+      console.warn('Type Mismatch:', { fieldType, allowedTypes });
       return;
     }
 
-    // 1. CHECK FOR SMART CHART DROPS (TargetChartId)
     const targetChartId = over.data?.current?.targetChartId;
-    const axisKey = over.data?.current?.axis; // 'x' or 'y'
+    const axisKey = over.data?.current?.axis;
 
     if (targetChartId && axisKey) {
-      // Find current chart to get existing mapping
-      const chart = charts.find(c => c.id === targetChartId);
+      const chart = charts.find((item) => item.id === targetChartId);
+      const dashboardChart = dashboardItems.find((item) => item.id === targetChartId && item.itemType === 'chart');
+      const axisLabel = axisKey === 'x' ? 'X-Axis' : 'Y-Axis';
+
+      if (dashboardChart) {
+        const newMapping = { ...(dashboardChart.mapping || {}), [axisLabel]: fieldName };
+        updateDashboardItem(targetChartId, { mapping: newMapping });
+        return;
+      }
+
       if (chart) {
-        const axisLabel = axisKey === 'x' ? 'X-Axis' : 'Y-Axis';
         const newMapping = { ...chart.mapping, [axisLabel]: fieldName };
         updateChart(targetChartId, { mapping: newMapping });
       }
       return;
     }
 
-    // 2. FALLBACK TO LEGACY DROPS (Global Axis DropZones)
     let axis = over.data?.current?.axis;
     if (!axis) {
       const id = over.id?.toString().toLowerCase();
@@ -206,9 +319,7 @@ function AppContent() {
 
     if (axis === 'x') handleFieldDrop('x', fieldName);
     else if (axis === 'y') handleFieldDrop('y', fieldName);
-
-  }, [handleFieldDrop, charts, updateChart]);
-
+  }, [charts, dashboardItems, handleFieldDrop, updateChart, updateDashboardItem]);
 
   return (
     <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
@@ -243,7 +354,9 @@ function AppContent() {
             aiReportReady={aiReportReady}
             onAiReportClick={handleAiReportOpen}
             isSnowing={isSnowing}
-            onSnowToggle={() => setIsSnowing(prev => !prev)}
+            onSnowToggle={() => setIsSnowing((prev) => !prev)}
+            onDashboardToggle={handleDashboardToggle}
+            isDashboardVisible={dashboardState.isVisible}
           />
 
           <DataFilterPanel openDataFilter={openDataFilter} setOpenDataFilter={setOpenDataFilter} />
@@ -317,7 +430,6 @@ function AppContent() {
   );
 }
 
-// 🟢 Main App Wrapper (Providers)
 function App() {
   return (
     <ThemeProvider>
@@ -325,7 +437,6 @@ function App() {
         <WindowProvider>
           <WarehouseProvider>
             <HelpOverlayProvider>
-              {/* WindowContext is now available to AppContent */}
               <AppContent />
             </HelpOverlayProvider>
           </WarehouseProvider>
@@ -336,5 +447,3 @@ function App() {
 }
 
 export default App;
-
-

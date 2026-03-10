@@ -14,7 +14,7 @@ function DatasetInfo({ selectedStat, className = '' }) {
   const [error, setError] = useState(null);
   const dataset = useActiveDataset();
   const { semanticModel, semanticModelStatus } = useContext(DataContext);
-  const { addChart } = useWindowContext();
+  const { addChart, addDashboardKpi, openDashboard } = useWindowContext();
 
   useEffect(() => {
     if (dataset) {
@@ -68,16 +68,28 @@ function DatasetInfo({ selectedStat, className = '' }) {
     }
   };
 
-  const handleCreateSemanticChart = useCallback(() => {
+  const handleCreateSemanticChart = useCallback((semanticUpdates = {}) => {
     addChart({
       type: 'Bar',
       dataSourceMode: 'semantic',
       semanticConfig: {
         metricId: '',
         groupBy: '',
+        ...semanticUpdates,
       },
     });
   }, [addChart]);
+
+  const handleCreateKpiCard = useCallback((semanticUpdates = {}) => {
+    openDashboard();
+    addDashboardKpi({
+      semanticConfig: {
+        metricId: '',
+        groupBy: '',
+        ...semanticUpdates,
+      },
+    });
+  }, [addDashboardKpi, openDashboard]);
 
   return (
     <div className={`numbers-list-container ${className}`}>
@@ -87,6 +99,7 @@ function DatasetInfo({ selectedStat, className = '' }) {
         semanticModel={semanticModel}
         status={semanticModelStatus}
         onCreateSemanticChart={handleCreateSemanticChart}
+        onCreateKpiCard={handleCreateKpiCard}
       />
 
       {isLoading && <p className="loading-message">Loading...</p>}

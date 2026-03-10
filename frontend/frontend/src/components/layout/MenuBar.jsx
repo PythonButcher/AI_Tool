@@ -1,23 +1,38 @@
 import React, { useState, useRef, useEffect, useContext, useMemo } from 'react';
 import './MenuBar.css';
-import axios from 'axios';
 import FileUpload from '../data_management/FileUpload';
 import ApiDataForm from '../../features/api/APiDataForm';
 import DatabaseConnectForm from '../../features/database/DatabaseConnectForm';
 import DataHubWindow from '../../features/database/DataHubWindow';
-import { FaUpload, FaChartBar, FaServer, FaDatabase, FaRedoAlt, FaFilter, FaFileAlt, FaSun, FaMoon } from 'react-icons/fa';
-import { TbCloudDataConnection } from "react-icons/tb";
-import { DataContext } from '../../context/DataContext';
+import {
+  FaUpload,
+  FaChartBar,
+  FaServer,
+  FaDatabase,
+  FaRedoAlt,
+  FaFilter,
+  FaFileAlt,
+  FaSun,
+  FaMoon,
+  FaTachometerAlt,
+} from 'react-icons/fa';
+import { TbCloudDataConnection } from 'react-icons/tb';
 import { ThemeContext } from '../../context/ThemeContext';
 
-
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
-
-function MenuBar({ onFileUploadSuccess, onStatsSelect,
-  handleApiData, handleDatabaseData, setOpenDataFilter,
-  aiReportReady, onAiReportClick, onSnowToggle, isSnowing }) {
+function MenuBar({
+  onFileUploadSuccess,
+  onStatsSelect,
+  handleApiData,
+  handleDatabaseData,
+  setOpenDataFilter,
+  aiReportReady,
+  onAiReportClick,
+  onSnowToggle,
+  isSnowing,
+  onDashboardToggle,
+  isDashboardVisible,
+}) {
   const [activeDropdown, setActiveDropdown] = useState(null);
-  const { setUploadedData } = useContext(DataContext);
   const { theme, toggleTheme } = useContext(ThemeContext);
 
   const uploadRef = useRef(null);
@@ -25,7 +40,7 @@ function MenuBar({ onFileUploadSuccess, onStatsSelect,
   const apiRef = useRef(null);
   const dbRef = useRef(null);
   const dbHubRef = useRef(null);
-  const themeRef = useRef(null)
+  const themeRef = useRef(null);
 
   const dropdownRefs = useMemo(() => ({
     upload: uploadRef,
@@ -33,7 +48,7 @@ function MenuBar({ onFileUploadSuccess, onStatsSelect,
     api: apiRef,
     db: dbRef,
     hub: dbHubRef,
-    theme: themeRef
+    theme: themeRef,
   }), []);
 
   useEffect(() => {
@@ -49,30 +64,6 @@ function MenuBar({ onFileUploadSuccess, onStatsSelect,
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [dropdownRefs]);
 
-  const handleFileUpload = async (files) => {
-    if (!files || files.length === 0) {
-      alert('No file selected. Please upload a valid file.');
-      return;
-    }
-
-    const file = files[0];
-    const formData = new FormData();
-    formData.append('file', file);
-
-    try {
-      const response = await axios.post(`${API_URL}/api/upload`, formData);
-      console.log('Backend response:', response.data);
-      setUploadedData(response.data);
-      if (onFileUploadSuccess) {
-        onFileUploadSuccess(response.data);
-      }
-      setActiveDropdown(null);
-    } catch (error) {
-      console.error('File upload error:', error);
-      alert(`Failed to upload file: ${error.response?.data?.error || error.message}`);
-    }
-  };
-
   const handleReset = () => window.location.reload();
 
   return (
@@ -80,13 +71,11 @@ function MenuBar({ onFileUploadSuccess, onStatsSelect,
       <div className="menu-title">AI Data Visualization Tool</div>
 
       <div className="menu-actions">
-        {/* ───── LEFT SECTION: Primary Button Clusters ───── */}
         <div className="menu-bar-left">
-          {/* Upload File Dropdown */}
           <div className="menu-button-container" ref={uploadRef}>
             <button
               className="menu-button"
-              onClick={() => setActiveDropdown(prev => prev === 'upload' ? null : 'upload')}
+              onClick={() => setActiveDropdown((prev) => prev === 'upload' ? null : 'upload')}
             >
               <FaUpload className="menu-icon" />
               Upload File
@@ -102,11 +91,10 @@ function MenuBar({ onFileUploadSuccess, onStatsSelect,
             )}
           </div>
 
-          {/* Datahub Button */}
           <div className="menu-button-container" ref={dbHubRef}>
             <button
               className="menu-button"
-              onClick={() => setActiveDropdown(prev => prev === 'open' ? null : 'open')}
+              onClick={() => setActiveDropdown((prev) => prev === 'open' ? null : 'open')}
             >
               <TbCloudDataConnection className="menu-icon" />
               Open Hub
@@ -118,11 +106,10 @@ function MenuBar({ onFileUploadSuccess, onStatsSelect,
             )}
           </div>
 
-          {/* API Dropdown */}
           <div className="menu-button-container" ref={apiRef}>
             <button
               className="menu-button"
-              onClick={() => setActiveDropdown(prev => prev === 'api' ? null : 'api')}
+              onClick={() => setActiveDropdown((prev) => prev === 'api' ? null : 'api')}
             >
               <FaServer className="menu-icon" />
               Connect API
@@ -134,11 +121,10 @@ function MenuBar({ onFileUploadSuccess, onStatsSelect,
             )}
           </div>
 
-          {/* Database Dropdown */}
           <div className="menu-button-container" ref={dbRef}>
             <button
               className="menu-button"
-              onClick={() => setActiveDropdown(prev => prev === 'db' ? null : 'db')}
+              onClick={() => setActiveDropdown((prev) => prev === 'db' ? null : 'db')}
             >
               <FaDatabase className="menu-icon" />
               Connect DB
@@ -154,14 +140,12 @@ function MenuBar({ onFileUploadSuccess, onStatsSelect,
           </div>
         </div>
 
-        {/* ───── RIGHT SECTION: Icon-Only Tools ───── */}
         <div className="menu-bar-right">
-          {/* Stats Icon with Dropdown */}
           <div className="menu-button-container" ref={statsRef}>
             <button
               className="menu-icon-btn"
               title="Statistics"
-              onClick={() => setActiveDropdown(prev => prev === 'stats' ? null : 'stats')}
+              onClick={() => setActiveDropdown((prev) => prev === 'stats' ? null : 'stats')}
             >
               <FaChartBar />
             </button>
@@ -176,6 +160,14 @@ function MenuBar({ onFileUploadSuccess, onStatsSelect,
             )}
           </div>
 
+          <button
+            className={`menu-icon-btn ${isDashboardVisible ? 'menu-icon-btn-active' : ''}`}
+            title={isDashboardVisible ? 'Hide Business Dashboard' : 'Open Business Dashboard'}
+            onClick={onDashboardToggle}
+          >
+            <FaTachometerAlt />
+          </button>
+
           {aiReportReady && (
             <div className="ai-report-notification">
               <button
@@ -189,7 +181,6 @@ function MenuBar({ onFileUploadSuccess, onStatsSelect,
             </div>
           )}
 
-          {/* Reset App */}
           <button
             className="menu-icon-btn"
             title="Reset Application"
@@ -198,7 +189,6 @@ function MenuBar({ onFileUploadSuccess, onStatsSelect,
             <FaRedoAlt />
           </button>
 
-          {/* Filter Slicer Trigger */}
           <button
             className="menu-icon-btn"
             title="Open Filter Panel"
@@ -215,15 +205,15 @@ function MenuBar({ onFileUploadSuccess, onStatsSelect,
           >
             {theme === 'dark' ? <FaSun /> : <FaMoon />}
           </button>
-          {/* Only show the Snow Toggle if in Dark Mode */}
-        {theme === 'dark' && (
-          <button 
-            className={`menu-icon-btn ${isSnowing ? 'active' : ''}`}
-            title="Let it snow!"
-            onClick={onSnowToggle}
-          >
-            ❄️
-          </button>
+
+          {theme === 'dark' && (
+            <button
+              className={`menu-icon-btn ${isSnowing ? 'active' : ''}`}
+              title="Let it snow!"
+              onClick={onSnowToggle}
+            >
+              ❄️
+            </button>
           )}
         </div>
       </div>
