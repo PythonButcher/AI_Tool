@@ -9,10 +9,28 @@
   /* GPU Acceleration hints */
   will-change: transform, width, height;
   touch-action: none; /* Crucial for Pointer Events */
+  transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1), 
+              width 0.2s cubic-bezier(0.2, 0, 0, 1), 
+              height 0.2s cubic-bezier(0.2, 0, 0, 1),
+              opacity 0.2s ease,
+              box-shadow 0.2s ease;
+}
+
+.window-frame.is-dragging,
+.window-frame.is-resizing {
+  transition: none; /* Disable transitions during active interaction for performance */
+  z-index: 1000 !important;
+}
+
+.window-frame.minimizing {
+  transform: scale(0.1) !important;
+  opacity: 0 !important;
+  pointer-events: none;
 }
 
 @keyframes windowFrameFadeIn {
-  to { opacity: 1; }
+  from { opacity: 0; transform: translateY(10px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 .window-header {

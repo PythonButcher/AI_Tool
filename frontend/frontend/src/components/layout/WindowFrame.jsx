@@ -25,12 +25,16 @@ const WindowFrame = ({
   isActive,
   registerWindow // (id, node, stateRef) => void
 }) => {
+  const [isMinimizing, setIsMinimizing] = React.useState(false);
+
   const {
     windowRef,
     stateRef,
     handleDragStart,
     handleResizeStart,
-    applyTransform
+    applyTransform,
+    isDragging,
+    isResizing
   } = useWindowInteraction({
     id,
     initialState,
@@ -60,10 +64,26 @@ const WindowFrame = ({
     };
   }, [id, registerWindow]);
 
+  const handleMinimize = (e) => {
+    e.stopPropagation();
+    setIsMinimizing(true);
+    setTimeout(() => {
+        onMinimize(id, title);
+    }, 200);
+  };
+
+  const handleClose = (e) => {
+    e.stopPropagation();
+    setIsMinimizing(true);
+    setTimeout(() => {
+        onClose(id);
+    }, 200);
+  };
+
   return (
     <div
       ref={windowRef}
-      className={`window-frame ${isActive ? 'active' : ''}`}
+      className={`window-frame ${isActive ? 'active' : ''} ${isDragging ? 'is-dragging' : ''} ${isResizing ? 'is-resizing' : ''} ${isMinimizing ? 'minimizing' : ''}`}
       style={{
         zIndex: zIndex,
         position: 'absolute',
@@ -98,9 +118,9 @@ const WindowFrame = ({
                  {isLocked ? <FaLock size={12}/> : <FaLockOpen size={12}/>}
                </button>
             )}
-            {onMinimize && <MinimizeButton onClick={(e) => { e.stopPropagation(); onMinimize(id, title); }} />}
+            {onMinimize && <MinimizeButton onClick={handleMinimize} />}
             {onMaximize && <MaximizeButton windowId={id} />}
-            {onClose && <CloseButton onClick={(e) => { e.stopPropagation(); onClose(id); }} />}
+            {onClose && <CloseButton onClick={handleClose} />}
         </div>
       </div>
 

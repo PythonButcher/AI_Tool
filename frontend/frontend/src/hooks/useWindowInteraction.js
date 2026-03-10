@@ -29,9 +29,13 @@ export const useWindowInteraction = ({
   // DOM Ref for the window element
   const windowRef = useRef(null);
 
-  // Interaction state
-  const isDragging = useRef(false);
-  const isResizing = useRef(false);
+  // Interaction state (State for CSS class toggling)
+  const [isDragging, setIsDragging] = useState(false);
+  const [isResizing, setIsResizing] = useState(false);
+  
+  // Internal refs for high-frequency tracking
+  const draggingRef = useRef(false);
+  const resizingRef = useRef(false);
   const resizeDir = useRef(null);
   const startPos = useRef({ x: 0, y: 0 });
   const startState = useRef({ x: 0, y: 0, w: 0, h: 0 });
@@ -41,7 +45,7 @@ export const useWindowInteraction = ({
 
   // Sync state if props change (e.g. Smart Split updates this window from parent)
   useEffect(() => {
-    if (isDragging.current || isResizing.current) return;
+    if (draggingRef.current || resizingRef.current) return;
     if (initialState) {
         const current = stateRef.current;
         // Only update if difference is significant to avoid jitter
@@ -84,10 +88,12 @@ export const useWindowInteraction = ({
     e.stopPropagation();
 
     if (interactionType === 'drag') {
-      isDragging.current = true;
+      draggingRef.current = true;
+      setIsDragging(true);
       document.body.style.cursor = 'move';
     } else if (interactionType === 'resize') {
-      isResizing.current = true;
+      resizingRef.current = true;
+      setIsResizing(true);
       resizeDir.current = direction;
       document.body.style.cursor = `${direction}-resize`;
     }
@@ -96,7 +102,7 @@ export const useWindowInteraction = ({
     startState.current = { ...stateRef.current };
 
     const onPointerMove = (ev) => {
-        if (!isDragging.current && !isResizing.current) return;
+        if (!draggingRef.current && !resizingRef.current) return;
         ev.preventDefault();
         
         const rawDx = ev.clientX - startPos.current.x;
@@ -110,8 +116,10 @@ export const useWindowInteraction = ({
     };
 
     const onPointerUp = (ev) => {
-        isDragging.current = false;
-        isResizing.current = false;
+        draggingRef.current = false;
+        resizingRef.current = false;
+        setIsDragging(false);
+        setIsResizing(false);
         resizeDir.current = null;
         document.body.style.cursor = '';
         
@@ -140,7 +148,7 @@ export const useWindowInteraction = ({
     let { x, y, w, h } = current;
     const container = containerRef.current ? containerRef.current.getBoundingClientRect() : { width: 1920, height: 1080 };
 
-    if (isDragging.current) {
+    if (draggingRef.current) {
         let nextX = x + rawDx;
         let nextY = y + rawDy;
 
@@ -164,7 +172,7 @@ export const useWindowInteraction = ({
         y = Math.max(0, Math.min(nextY, container.height - 30));
         x = Math.max(-w + 50, Math.min(nextX, container.width - 50));
 
-    } else if (isResizing.current) {
+    } else if (resizingRef.current) {
         const dir = resizeDir.current;
         
         // Negotiate delta with parent (Layout Manager)
@@ -215,6 +223,8 @@ export const useWindowInteraction = ({
     stateRef,
     handleDragStart,
     handleResizeStart,
-    applyTransform
+    applyTransform,
+    isDragging,
+    isResizing
   };
 };

@@ -1,0 +1,247 @@
+.smart-chart-window {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  background: #fff;
+  overflow: hidden;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.smart-chart-toolbar {
+  display: flex;
+  gap: 12px;
+  padding: 10px 16px;
+  background: #ffffff;
+  border-bottom: 1px solid #f0f0f0;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.chart-type-selector {
+  display: flex;
+  gap: 4px;
+  background: #f5f5f5;
+  padding: 3px;
+  border-radius: 8px;
+}
+
+.chart-type-btn {
+  padding: 6px;
+  border: none;
+  background: transparent;
+  color: #8c8c8c;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  transition: all 0.2s;
+}
+
+.chart-type-btn:hover {
+  color: #595959;
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.chart-type-btn.active {
+  background: #ffffff;
+  color: #183f2e;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.data-source-modes {
+  display: flex;
+  gap: 6px;
+}
+
+.mode-btn {
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid #d9d9d9;
+  background: #ffffff;
+  color: #595959;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.mode-btn:hover {
+  border-color: #bfbfbf;
+  color: #1a1a1a;
+}
+
+.mode-btn.active-raw {
+  background: #e6f7ff;
+  border-color: #91d5ff;
+  color: #0050b3;
+}
+
+.mode-btn.active-semantic {
+  background: #f6ffed;
+  border-color: #b7eb8f;
+  color: #237804;
+}
+
+.semantic-controls {
+  padding: 16px;
+  border-bottom: 1px solid #f0f0f0;
+  background: #fafafa;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  animation: slideDown 0.3s ease-out;
+}
+
+.semantic-controls__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.semantic-controls__title {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.semantic-controls__title strong {
+  font-size: 0.75rem;
+  color: #237804;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.semantic-controls__title p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #8c8c8c;
+}
+
+.semantic-controls__inputs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.semantic-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.semantic-field-group span {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #595959;
+}
+
+.semantic-select {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #d9d9d9;
+  background: #fff;
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.semantic-select:focus {
+  border-color: #237804;
+}
+
+.semantic-status-bar {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  color: #8c8c8c;
+  padding-top: 8px;
+  border-top: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.semantic-status--error {
+  color: #cf1322;
+}
+
+.chart-content-area {
+  flex: 1;
+  position: relative;
+  min-height: 0;
+}
+
+.chart-placeholder {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #bfbfbf;
+  gap: 16px;
+  text-align: center;
+  padding: 32px;
+}
+
+.chart-placeholder p {
+  max-width: 320px;
+  margin: 0;
+  line-height: 1.5;
+  font-size: 0.9rem;
+}
+
+.drop-overlay {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 20px;
+  text-align: center;
+  backdrop-filter: blur(4px);
+  z-index: 20;
+  transition: all 0.2s ease;
+  border-radius: 12px;
+}
+
+.drop-overlay--raw {
+  background: rgba(255, 255, 255, 0.8);
+  border: 2px dashed #d9d9d9;
+  color: #595959;
+}
+
+.drop-overlay--raw.is-over {
+  background: rgba(24, 144, 255, 0.1);
+  border-color: #1890ff;
+  color: #0050b3;
+}
+
+.drop-overlay--semantic {
+  background: rgba(246, 255, 237, 0.85);
+  border: 2px dashed #b7eb8f;
+  color: #237804;
+}
+
+.drop-overlay--semantic.is-over {
+  background: rgba(82, 196, 26, 0.15);
+  border-color: #52c41a;
+  color: #135200;
+}
+
+.drop-label {
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.drop-helper {
+  font-size: 0.85rem;
+  opacity: 0.8;
+}
+
+.current-value-tag {
+  font-size: 0.75rem;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.06);
+  font-weight: 600;
+}

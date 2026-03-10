@@ -8,6 +8,7 @@ import {
   buildResolverFilters,
 } from '../../utils/dashboardFilterUtils';
 import { formatSemanticValue } from '../../utils/semanticChartUtils';
+import { FaArrowUp, FaArrowDown, FaMinus, FaCog } from 'react-icons/fa';
 import './KpiCardWindow.css';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
@@ -32,12 +33,7 @@ const fetchMetricResolution = async ({ metricId, datasetRows, semanticModel, fil
 };
 
 const formatDelta = (delta, formatHint) => {
-  if (delta === null || delta === undefined) return 'No change data';
-
-  if (formatHint === 'percentage') {
-    return `${delta >= 0 ? '+' : ''}${(delta * 100).toFixed(1)} pts`;
-  }
-
+  if (delta === null || delta === undefined) return '0';
   const prefix = delta > 0 ? '+' : '';
   return `${prefix}${formatSemanticValue(delta, formatHint)}`;
 };
@@ -51,6 +47,7 @@ function KpiCardWindow({ id, item, dashboardFilters, isLocked }) {
   const [resolution, setResolution] = useState(null);
   const [comparisonResolution, setComparisonResolution] = useState(null);
   const [activeDragPayload, setActiveDragPayload] = useState(null);
+  const [showSettings, setShowSettings] = useState(false);
 
   const metricOptions = useMemo(
     () => (semanticModel?.metrics || []).map(normalizeSemanticMetric),
@@ -97,7 +94,7 @@ function KpiCardWindow({ id, item, dashboardFilters, isLocked }) {
       setStatus('missing_data');
       setResolution(null);
       setComparisonResolution(null);
-      setError('Load a dataset with semantic definitions to populate KPI cards.');
+      setError('Load a dataset to populate KPI.');
       return;
     }
 
@@ -162,90 +159,103 @@ function KpiCardWindow({ id, item, dashboardFilters, isLocked }) {
     : null;
   const formatHint = resolution?.metric?.format_hint || selectedMetric?.format_hint;
 
-  const comparisonCopy = useMemo(() => {
-    if (!item.comparisonEnabled) {
-      return 'Previous-period comparison is turned off for this card.';
-    }
-    if (!dashboardFilters?.dateDimensionId || !dashboardFilters?.startDate || !dashboardFilters?.endDate) {
-      return 'Add a dashboard date range to compare against the previous period.';
-    }
-    if (comparisonResolution && typeof deltaValue === 'number') {
-      const percentCopy = deltaPercent === null
-        ? 'No percentage delta'
-        : `${deltaPercent >= 0 ? '+' : ''}${(deltaPercent * 100).toFixed(1)}%`;
-      return `${formatDelta(deltaValue, formatHint)} vs previous period (${percentCopy}).`;
-    }
-    if (status === 'loading') {
-      return 'Resolving comparison period.';
-    }
-    return 'Comparison data is unavailable for the selected range.';
-  }, [comparisonResolution, dashboardFilters, deltaPercent, deltaValue, formatHint, item.comparisonEnabled, status]);
+  const renderTrend = () => {
+    if (!item.comparisonEnabled || status !== 'ready' || deltaValue === null) return null;
+
+    const isPositive = deltaValue > 0;
+    const isNegative = deltaValue < 0;
+    const percentStr = deltaPercent !== null ? `${(Math.abs(deltaPercent) * 100).toFixed(1)}%` : '';
+
+    return (
+      <div className={`kpi-trend ${isPositive ? 'is-positive' : isNegative ? 'is-negative' : 'is-neutral'}`}>
+        <span className="kpi-trend__icon">
+          {isPositive && <FaArrowUp />}
+          {isNegative && <FaArrowDown />}
+          {!isPositive && !isNegative && <FaMinus />}
+        </span>
+        <span className="kpi-trend__value">{percentStr}</span>
+        <span className="kpi-trend__label">vs last period</span>
+      </div>
+    );
+  };
 
   return (
-    <div ref={setNodeRef} className={`kpi-card-window ${isOver ? 'kpi-card-window--drop' : ''}`}>
-      <div className="kpi-card-window__toolbar">
-        <label className="kpi-card-window__field">
-          <span>Metric</span>
-          <select
-            value={selectedMetricId}
-            onChange={(event) => updateDashboardItem(id, {
-              semanticConfig: { metricId: event.target.value },
-            })}
-            disabled={isLocked || metricOptions.length === 0}
-          >
-            <option value="">Select metric</option>
-            {metricOptions.map((metric) => (
-              <option key={metric.id} value={metric.id}>
-                {metric.label} · {metric.helperLabel}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label className="kpi-card-window__toggle">
-          <input
-            type="checkbox"
-            checked={item.comparisonEnabled !== false}
-            onChange={(event) => updateDashboardItem(id, {
-              comparisonEnabled: event.target.checked,
-            })}
-            disabled={isLocked}
-          />
-          <span>Compare</span>
-        </label>
+    <div ref={setNodeRef} className={`kpi-card-window ${isOver ? 'kpi-card-window--drop' : ''} ${showSettings ? 'settings-open' : ''}`}>
+      <div className="kpi-card-window__header">
+        <div className="kpi-card-window__eyebrow">
+          {selectedMetric?.helperLabel || 'Metric'}
+        </div>
+        <button 
+            className="kpi-card-settings-toggle" 
+            onClick={() => setShowSettings(!showSettings)}
+            title="Configure KPI"
+        >
+            <FaCog />
+        </button>
       </div>
 
+      {showSettings && (
+        <div className="kpi-card-window__toolbar">
+            <label className="kpi-card-window__field">
+            <span>Select Metric</span>
+            <select
+                value={selectedMetricId}
+                onChange={(event) => updateDashboardItem(id, {
+                semanticConfig: { metricId: event.target.value },
+                })}
+                disabled={isLocked || metricOptions.length === 0}
+            >
+                <option value="">Select metric</option>
+                {metricOptions.map((metric) => (
+                <option key={metric.id} value={metric.id}>
+                    {metric.label}
+                </option>
+                ))}
+            </select>
+            </label>
+
+            <label className="kpi-card-window__toggle">
+            <input
+                type="checkbox"
+                checked={item.comparisonEnabled !== false}
+                onChange={(event) => updateDashboardItem(id, {
+                comparisonEnabled: event.target.checked,
+                })}
+                disabled={isLocked}
+            />
+            <span>Enable Comparison</span>
+            </label>
+        </div>
+      )}
+
       <div className="kpi-card-window__body">
-        <div className="kpi-card-window__eyebrow">KPI Card</div>
-        <h3 className="kpi-card-window__title">{selectedMetric?.label || 'Choose a business metric'}</h3>
+        <h3 className="kpi-card-window__title">
+            {selectedMetric?.label || 'KPI Card'}
+        </h3>
 
         {status === 'error' && <div className="kpi-card-window__status kpi-card-window__status--error">{error}</div>}
-        {status === 'loading' && <div className="kpi-card-window__status">Resolving metric through the centralized resolver...</div>}
-        {status === 'missing_data' && <div className="kpi-card-window__status">{error}</div>}
-
+        {status === 'loading' && <div className="kpi-card-window__loader"><div></div></div>}
+        
         {status === 'awaiting_selection' && (
           <div className="kpi-card-window__empty">
-            <strong>Drop a semantic metric here</strong>
-            <span>
-              {activeDragPayload?.label
-                ? `Release ${activeDragPayload.label} to create a KPI card.`
-                : 'Or pick a metric from the dropdown above.'}
-            </span>
+            <div className="empty-icon">🎯</div>
+            <strong>Drop a metric</strong>
+            <span>Select from Business Definitions</span>
           </div>
         )}
 
         {status === 'ready' && (
-          <>
-            <div className="kpi-card-window__value">{formatSemanticValue(currentValue, formatHint)}</div>
-            <div className={`kpi-card-window__delta ${deltaValue > 0 ? 'is-positive' : deltaValue < 0 ? 'is-negative' : ''}`}>
-              {comparisonCopy}
+          <div className="kpi-card-content">
+            <div className="kpi-card-window__value">
+                {formatSemanticValue(currentValue, formatHint)}
             </div>
+            {renderTrend()}
             {comparisonResolution && typeof previousValue !== 'undefined' && (
               <div className="kpi-card-window__subtle">
-                Previous period: {formatSemanticValue(previousValue, formatHint)}
+                Prev: {formatSemanticValue(previousValue, formatHint)}
               </div>
             )}
-          </>
+          </div>
         )}
       </div>
     </div>
