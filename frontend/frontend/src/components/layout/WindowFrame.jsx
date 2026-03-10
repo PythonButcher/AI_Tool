@@ -23,7 +23,7 @@ const WindowFrame = ({
   containerRef,
   zIndex,
   isActive,
-  registerWindow // (id, node, stateRef) => void
+  registerWindow,
 }) => {
   const [isMinimizing, setIsMinimizing] = React.useState(false);
 
@@ -34,7 +34,7 @@ const WindowFrame = ({
     handleResizeStart,
     applyTransform,
     isDragging,
-    isResizing
+    isResizing,
   } = useWindowInteraction({
     id,
     initialState,
@@ -45,38 +45,35 @@ const WindowFrame = ({
     onDrag,
     snapEnabled: true,
     minWidth: 300,
-    minHeight: 200
+    minHeight: 200,
   });
 
-  // Apply initial transform immediately to avoid flash
   useLayoutEffect(() => {
     applyTransform();
   }, [applyTransform]);
 
-  // Register with parent Layout Arbiter
   useEffect(() => {
     if (registerWindow && windowRef.current) {
-        registerWindow(id, windowRef.current, stateRef);
+      registerWindow(id, windowRef.current, stateRef);
     }
-    // Cleanup on unmount
     return () => {
-        if (registerWindow) registerWindow(id, null, null);
+      if (registerWindow) registerWindow(id, null, null);
     };
-  }, [id, registerWindow]);
+  }, [id, registerWindow, stateRef, windowRef]);
 
-  const handleMinimize = (e) => {
-    e.stopPropagation();
+  const handleMinimize = (event) => {
+    event.stopPropagation();
     setIsMinimizing(true);
     setTimeout(() => {
-        onMinimize(id, title);
+      onMinimize(id, title);
     }, 200);
   };
 
-  const handleClose = (e) => {
-    e.stopPropagation();
+  const handleClose = (event) => {
+    event.stopPropagation();
     setIsMinimizing(true);
     setTimeout(() => {
-        onClose(id);
+      onClose(id);
     }, 200);
   };
 
@@ -85,60 +82,57 @@ const WindowFrame = ({
       ref={windowRef}
       className={`window-frame ${isActive ? 'active' : ''} ${isDragging ? 'is-dragging' : ''} ${isResizing ? 'is-resizing' : ''} ${isMinimizing ? 'minimizing' : ''}`}
       style={{
-        zIndex: zIndex,
+        zIndex,
         position: 'absolute',
         top: 0,
         left: 0,
-        // width/height/transform managed by hook directly
-        boxShadow: isActive ? '0 10px 40px rgba(0,0,0,0.2)' : '0 4px 12px rgba(0,0,0,0.1)',
-        opacity: 0, // Hidden until JS sets transform
-        animation: 'windowFrameFadeIn 0.2s forwards'
       }}
       onPointerDown={() => onFocus(id)}
     >
-      <div 
-        className="window-header"
-        onPointerDown={handleDragStart}
-        style={{ cursor: 'grab' }} // managed by hook 'move'
-      >
-        <div className="header-title-container">
-            <span className="header-title">{title}</span>
-        </div>
-        
-        <div 
-          className="header-button-group"
-          onPointerDown={(e) => e.stopPropagation()}
+      <div className="window-surface">
+        <div
+          className="window-header"
+          onPointerDown={handleDragStart}
+          style={{ cursor: 'grab' }}
         >
+          <div className="header-title-container">
+            <span className="header-title">{title}</span>
+          </div>
+
+          <div
+            className="header-button-group"
+            onPointerDown={(event) => event.stopPropagation()}
+          >
             {onToggleLock && (
-               <button
-                 className="header-button-lock"
-                 onClick={(e) => { e.stopPropagation(); onToggleLock(id); }}
-                 title={isLocked ? 'Unlock Window' : 'Lock Window'}
-               >
-                 {isLocked ? <FaLock size={12}/> : <FaLockOpen size={12}/>}
-               </button>
+              <button
+                className="header-button-lock"
+                onClick={(event) => { event.stopPropagation(); onToggleLock(id); }}
+                title={isLocked ? 'Unlock Window' : 'Lock Window'}
+              >
+                {isLocked ? <FaLock size={12} /> : <FaLockOpen size={12} />}
+              </button>
             )}
             {onMinimize && <MinimizeButton onClick={handleMinimize} />}
             {onMaximize && <MaximizeButton windowId={id} />}
             {onClose && <CloseButton onClick={handleClose} />}
+          </div>
+        </div>
+
+        <div className="window-content-area">
+          {children}
         </div>
       </div>
 
-      <div className="window-content-area">
-        {children}
-      </div>
-
-      {/* Resize Handles */}
       {!isLocked && (
         <>
-          <div className="resize-handle n" onPointerDown={(e) => handleResizeStart(e, 'n')} />
-          <div className="resize-handle s" onPointerDown={(e) => handleResizeStart(e, 's')} />
-          <div className="resize-handle e" onPointerDown={(e) => handleResizeStart(e, 'e')} />
-          <div className="resize-handle w" onPointerDown={(e) => handleResizeStart(e, 'w')} />
-          <div className="resize-handle ne" onPointerDown={(e) => handleResizeStart(e, 'ne')} />
-          <div className="resize-handle nw" onPointerDown={(e) => handleResizeStart(e, 'nw')} />
-          <div className="resize-handle se" onPointerDown={(e) => handleResizeStart(e, 'se')} />
-          <div className="resize-handle sw" onPointerDown={(e) => handleResizeStart(e, 'sw')} />
+          <div className="resize-handle n" onPointerDown={(event) => handleResizeStart(event, 'n')} />
+          <div className="resize-handle s" onPointerDown={(event) => handleResizeStart(event, 's')} />
+          <div className="resize-handle e" onPointerDown={(event) => handleResizeStart(event, 'e')} />
+          <div className="resize-handle w" onPointerDown={(event) => handleResizeStart(event, 'w')} />
+          <div className="resize-handle ne" onPointerDown={(event) => handleResizeStart(event, 'ne')} />
+          <div className="resize-handle nw" onPointerDown={(event) => handleResizeStart(event, 'nw')} />
+          <div className="resize-handle se" onPointerDown={(event) => handleResizeStart(event, 'se')} />
+          <div className="resize-handle sw" onPointerDown={(event) => handleResizeStart(event, 'sw')} />
         </>
       )}
     </div>
