@@ -40,7 +40,14 @@ const columnListFromData = (dataset) => {
 };
 
 function DataCleaningForm({ closeForm, setShowDataPreview, onProceedToTraining }) {
-  const { uploadedData, fullData, cleanedData, setCleanedData } = React.useContext(DataContext);
+  const {
+    uploadedData,
+    fullData,
+    cleanedData,
+    setCleanedData,
+    setSemanticModel,
+    refreshSemanticModelFromDataset,
+  } = React.useContext(DataContext);
   const [activePanel, setActivePanel] = useState('cleaning');
   const [selectedCategory, setSelectedCategory] = useState(TRANSFORM_LIBRARY[0]?.category);
   const [selectedTransform, setSelectedTransform] = useState(null); // No default selected initially
@@ -473,10 +480,15 @@ function DataCleaningForm({ closeForm, setShowDataPreview, onProceedToTraining }
         steps: buildStepPayload(),
         preview_only: previewOnly,
       });
-      const { preview, cleaned_data } = response.data;
+      const { preview, cleaned_data, semantic_model } = response.data;
       setPreviewRows(preview || []);
       if (!previewOnly) {
         setCleanedData(cleaned_data);
+        if (semantic_model) {
+          setSemanticModel(semantic_model);
+        } else {
+          refreshSemanticModelFromDataset(cleaned_data, { source: 'manual_cleaning_apply' });
+        }
         setSuccess('Cleaning applied and dataset updated.');
         if (setShowDataPreview) setShowDataPreview(true);
       } else {
@@ -669,3 +681,4 @@ function DataCleaningForm({ closeForm, setShowDataPreview, onProceedToTraining }
 }
 
 export default DataCleaningForm;
+

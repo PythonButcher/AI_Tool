@@ -235,3 +235,9 @@
   white-space: nowrap;
   z-index: 1000;
 }
+
+.menu-icon-btn-active {
+  color: #143d2b;
+  background-color: rgba(24, 63, 46, 0.12);
+  border-color: rgba(24, 63, 46, 0.2);
+}

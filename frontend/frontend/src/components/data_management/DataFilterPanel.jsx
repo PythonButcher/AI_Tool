@@ -5,55 +5,66 @@ import IconButton from '@mui/material/IconButton';
 import Button from '@mui/material/Button';
 import TextField from '@mui/material/TextField';
 import MenuItem from '@mui/material/MenuItem';
+import axios from 'axios';
+
 import { DataContext } from '../../context/DataContext';
 import { inferFieldTypes, applyRules } from '../../utils/filterUtils';
-import axios from 'axios';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 const operatorOptions = [
-  { value: 'equals',      label: 'Equals' },
-  { value: 'notEquals',   label: 'Not Equals' },
+  { value: 'equals', label: 'Equals' },
+  { value: 'notEquals', label: 'Not Equals' },
   { value: 'greaterThan', label: 'Greater Than' },
-  { value: 'lessThan',    label: 'Less Than' },
-  { value: 'contains',    label: 'Contains' },
+  { value: 'lessThan', label: 'Less Than' },
+  { value: 'contains', label: 'Contains' },
 ];
 
 function DataFilterPanel({ openDataFilter, setOpenDataFilter }) {
-  const { uploadedData, fullData, setFilteredData } = useContext(DataContext);
+  const {
+    uploadedData,
+    fullData,
+    setFilteredData,
+    setSemanticModel,
+    refreshSemanticModelFromDataset,
+  } = useContext(DataContext);
 
-  const [field,    setField]    = useState('');
+  const [field, setField] = useState('');
   const [operator, setOperator] = useState('');
-  const [value,    setValue]    = useState('');
-  const [rules,    setRules]    = useState([]);
+  const [value, setValue] = useState('');
+  const [rules, setRules] = useState([]);
 
-  // ---------- helpers ----------
   const parseDataset = (raw) => {
     if (!raw) return [];
     if (Array.isArray(raw)) return raw;
 
     if (typeof raw === 'string') {
-      try { return JSON.parse(raw); } catch { return []; }
+      try {
+        return JSON.parse(raw);
+      } catch {
+        return [];
+      }
     }
 
     if (raw?.data_preview) {
       const preview = raw.data_preview;
       if (Array.isArray(preview)) return preview;
       if (typeof preview === 'string') {
-        try { return JSON.parse(preview); } catch { return []; }
+        try {
+          return JSON.parse(preview);
+        } catch {
+          return [];
+        }
       }
     }
 
-    if (raw?.data && Array.isArray(raw.data)) return raw.data;   // 🔥 handles {data:[…]}
+    if (raw?.data && Array.isArray(raw.data)) return raw.data;
     return [];
   };
 
-  const dropdownDataset = parseDataset(uploadedData);            // column list (preview OK)
-
-  const fullDataset     = parseDataset(fullData);                // 🔥 normalise fullData
-  const filterDataset   = fullDataset.length ? fullDataset       // 🔥 pick full when ready
-                                             : dropdownDataset;
-
+  const dropdownDataset = parseDataset(uploadedData);
+  const fullDataset = parseDataset(fullData);
+  const filterDataset = fullDataset.length ? fullDataset : dropdownDataset;
   const fieldTypes = inferFieldTypes(dropdownDataset);
 
   const toggleDrawer = (open) => () => setOpenDataFilter(open);
@@ -66,6 +77,14 @@ function DataFilterPanel({ openDataFilter, setOpenDataFilter }) {
     setValue('');
   };
 
+  const syncSemanticModel = async (rows, responseModel, source) => {
+    if (responseModel) {
+      setSemanticModel(responseModel);
+      return;
+    }
+    await refreshSemanticModelFromDataset(rows, { source });
+  };
+
   const handleApplyFilters = async () => {
     if (rules.length === 0) return;
 
@@ -73,9 +92,11 @@ function DataFilterPanel({ openDataFilter, setOpenDataFilter }) {
     setFilteredData(result);
 
     try {
-      await axios.post(`${API_URL}/api/filtered-upload`, { data_preview: result });
+      const response = await axios.post(`${API_URL}/api/filtered-upload`, { data_preview: result });
+      await syncSemanticModel(result, response.data?.semantic_model, 'filter_apply');
     } catch (err) {
       console.error('Failed to send filtered dataset:', err);
+      await syncSemanticModel(result, null, 'filter_apply_fallback');
     }
 
     setOpenDataFilter(false);
@@ -88,9 +109,11 @@ function DataFilterPanel({ openDataFilter, setOpenDataFilter }) {
     const original = fullDataset.length ? fullDataset : dropdownDataset;
 
     try {
-      await axios.post(`${API_URL}/api/filtered-upload`, { data_preview: original });
+      const response = await axios.post(`${API_URL}/api/filtered-upload`, { data_preview: original });
+      await syncSemanticModel(original, response.data?.semantic_model, 'filter_clear');
     } catch (err) {
       console.error('Failed to restore full dataset:', err);
+      await syncSemanticModel(original, null, 'filter_clear_fallback');
     }
 
     setOpenDataFilter(false);
@@ -103,7 +126,10 @@ function DataFilterPanel({ openDataFilter, setOpenDataFilter }) {
         <IconButton onClick={toggleDrawer(false)} style={{ float: 'right', marginTop: -40 }}>✕</IconButton>
 
         <TextField
-          select fullWidth label="Field" value={field}
+          select
+          fullWidth
+          label="Field"
+          value={field}
           onChange={(e) => setField(e.target.value)}
           style={{ marginBottom: 10 }}
         >
@@ -113,7 +139,10 @@ function DataFilterPanel({ openDataFilter, setOpenDataFilter }) {
         </TextField>
 
         <TextField
-          select fullWidth label="Operator" value={operator}
+          select
+          fullWidth
+          label="Operator"
+          value={operator}
           onChange={(e) => setOperator(e.target.value)}
           style={{ marginBottom: 10 }}
         >
@@ -123,7 +152,9 @@ function DataFilterPanel({ openDataFilter, setOpenDataFilter }) {
         </TextField>
 
         <TextField
-          fullWidth label="Value" value={value}
+          fullWidth
+          label="Value"
+          value={value}
           onChange={(e) => setValue(e.target.value)}
           style={{ marginBottom: 10 }}
         />
@@ -136,8 +167,8 @@ function DataFilterPanel({ openDataFilter, setOpenDataFilter }) {
           <div style={{ marginBottom: 20 }}>
             <Typography variant="subtitle1">Rules:</Typography>
             <ul style={{ paddingLeft: 20 }}>
-              {rules.map((r, i) => (
-                <li key={i}>{r.field} {r.operator} "{r.value}"</li>
+              {rules.map((rule, index) => (
+                <li key={index}>{rule.field} {rule.operator} "{rule.value}"</li>
               ))}
             </ul>
           </div>

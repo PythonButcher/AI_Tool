@@ -1,21 +1,29 @@
 // src/components/preview_components/DataTablePreview.jsx
-import React, { useContext } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { useHelpOverlay } from '../../context/HelpOverlayContext';
 import { DataContext } from '../../context/DataContext';
 
+const DEFAULT_PREVIEW_ROWS = 5;
+const PREVIEW_STEP_ROWS = 5;
 
 function DataTablePreview({ label = "Preview Table:", data }) {
-
   const { isHelpVisible, toggleHelp, closeHelp } = useHelpOverlay();
   const helpId = 'dataPreview';
   const { anomalies } = useContext(DataContext);
+  const [visibleRowCount, setVisibleRowCount] = useState(DEFAULT_PREVIEW_ROWS);
+
+  useEffect(() => {
+    setVisibleRowCount(DEFAULT_PREVIEW_ROWS);
+  }, [data]);
+
   if (!Array.isArray(data) || data.length === 0) {
     return <div>No data to display.</div>;
   }
 
-
   const columns = Object.keys(data[0]);
-
+  const rowsToRender = data.slice(0, visibleRowCount);
+  const hasMoreRows = visibleRowCount < data.length;
+  const shownRowCount = Math.min(visibleRowCount, data.length);
 
   return (
     <div className="data-table-preview">
@@ -46,7 +54,7 @@ function DataTablePreview({ label = "Preview Table:", data }) {
           </tr>
         </thead>
         <tbody>
-          {data.map((row, idx) => (
+          {rowsToRender.map((row, idx) => (
             <tr
               key={idx}
               style={anomalies.includes(idx) ? { backgroundColor: '#fff4e6' } : undefined}
@@ -60,6 +68,38 @@ function DataTablePreview({ label = "Preview Table:", data }) {
           ))}
         </tbody>
       </table>
+      {data.length > DEFAULT_PREVIEW_ROWS && (
+        <div
+          style={{
+            marginTop: '8px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
+          <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+            Showing {shownRowCount} of {data.length} rows
+          </span>
+          {hasMoreRows && (
+            <button
+              type="button"
+              onClick={() => setVisibleRowCount((prev) => Math.min(prev + PREVIEW_STEP_ROWS, data.length))}
+              style={{
+                padding: '4px 10px',
+                fontSize: '0.8rem',
+                fontWeight: 600,
+                color: 'var(--text-primary)',
+                backgroundColor: 'var(--bg-secondary)',
+                border: '1px solid var(--border-color)',
+                borderRadius: '6px',
+                cursor: 'pointer',
+              }}
+            >
+              Show More
+            </button>
+          )}
+        </div>
+      )}
       {/* ✅ Help Overlay */}
       {isHelpVisible(helpId) && (
         <div className="help-overlay visible">

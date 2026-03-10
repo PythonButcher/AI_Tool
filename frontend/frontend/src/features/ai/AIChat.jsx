@@ -9,6 +9,7 @@ import MentionDropdown from '../../components/data_management/MentionDropdown';
 import { detectToken, extractTokens } from '../../utils/mentionUtils'; // Check spelling: detectToken vs dectectToken
 import { AICommands } from '../workflow/AiCommandBlock';
 import { getDynamicColors } from '../../utils/ChartStyles';
+import { summarizeSemanticModel } from '../../utils/semanticModelUtils';
 
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
@@ -75,7 +76,13 @@ const formatChartData = (chartResponse) => {
 };
 
 function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
-  const { cleanedData, fullData, setCleanedData } = useContext(DataContext);
+  const {
+    cleanedData,
+    fullData,
+    setCleanedData,
+    semanticModel,
+    refreshSemanticModelFromDataset,
+  } = useContext(DataContext);
   const { datasets } = useContext(WarehouseContext)
   const [showChat, setShowChat] = useState(false);
   const [userMessages, setUserMessages] = useState([]);
@@ -236,6 +243,8 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
 
   
   // -----------------------------------------------------------------------------------------//
+  const semanticContext = summarizeSemanticModel(semanticModel);
+
   const handleSendMessage = async () => {
     if (!userInput.trim()) return;
 
@@ -364,6 +373,7 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
     const conversation_history = [
       { role: "system", content: "You are an AI assistant for data analysis. Only answer questions about the provided dataset concisely, like Captain Jean-Luc Picard." },
       { role: "system", content: `Dataset: ${JSON.stringify(effectiveDatasetContext)}` },
+      ...(semanticContext ? [{ role: "system", content: semanticContext }] : []),
       { role: "system", content: additionalContext }, // <--- INJECTED CONTEXT
       ...userMessages.slice(-5),
       { role: "user", content: userInput }
@@ -399,6 +409,7 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
           return;
         }
         setCleanedData(result);
+        await refreshSemanticModelFromDataset(result, { source: 'ai_chat_clean_command' });
         setAwaitingCleanInstructions(false);
         responseText = "The data has been cleaned successfully.";
       } else {
@@ -409,6 +420,7 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
       const result = await handleUserCommand("/clean", datasetContext, userInput);
       if (result && Array.isArray(result)) {
         setCleanedData(result);
+        await refreshSemanticModelFromDataset(result, { source: 'ai_chat_clean_followup' });
         responseText = "The data has been cleaned successfully.";
       } else {
         responseText = typeof result === 'string' ? result : "Unable to clean data.";
@@ -541,3 +553,8 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
 }
 
 export default AIChat;
+
+
+
+
+

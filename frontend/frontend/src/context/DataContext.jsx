@@ -1,29 +1,66 @@
-import React, { createContext, useState, useEffect, useMemo, useContext } from 'react';
+import React, {
+  createContext,
+  useState,
+  useEffect,
+  useMemo,
+  useContext,
+  useCallback,
+} from 'react';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 export const DataContext = createContext();
 
+const normalizeDatasetRows = (source) => {
+  if (!source) return [];
+  if (Array.isArray(source)) return source;
+  if (typeof source === 'string') {
+    try {
+      const parsed = JSON.parse(source);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  if (Array.isArray(source?.data)) return source.data;
+  if (Array.isArray(source?.full_data)) return source.full_data;
+  if (Array.isArray(source?.cleaned_data)) return source.cleaned_data;
+  if (Array.isArray(source?.data_preview)) return source.data_preview;
+  if (typeof source?.data_preview === 'string') {
+    try {
+      const parsed = JSON.parse(source.data_preview);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+};
+
+export { normalizeDatasetRows };
+
 export const DataProvider = ({ children }) => {
-  const [uploadedData, setUploadedData]   = useState(null);  // preview (≤100 rows)
-  const [fullData,      setFullData]      = useState(null);  // entire table
-  const [cleanedData,   setCleanedData]   = useState(null);
-  const [filteredData,  setFilteredData]  = useState(null);
-  const [pipelineResults, setPipelineResults] = useState({}); // ✅ NEW: results from AI pipeline
-  const [aiReportReady, setAiReportReady] = useState(false); // flag when report finished
+  const [uploadedData, setUploadedData] = useState(null);
+  const [fullData, setFullData] = useState(null);
+  const [cleanedData, setCleanedData] = useState(null);
+  const [filteredData, setFilteredData] = useState(null);
+  const [pipelineResults, setPipelineResults] = useState({});
+  const [aiReportReady, setAiReportReady] = useState(false);
   const [showAiReport, setShowAiReport] = useState(false);
   const [anomalies, setAnomalies] = useState([]);
   const [isDetecting, setIsDetecting] = useState(false);
   const [mlPrepStatus, setMlPrepStatus] = useState(null);
+  const [semanticModel, setSemanticModel] = useState(null);
+  const [semanticModelStatus, setSemanticModelStatus] = useState('idle');
 
-  const detectAnomalies = async () => {
+  const detectAnomalies = useCallback(async () => {
     if (isDetecting) return;
     setIsDetecting(true);
     try {
       const response = await fetch(`${API_URL}/api/outliers`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contamination: 0.02 })
+        body: JSON.stringify({ contamination: 0.02 }),
       });
 
       const data = await response.json();
@@ -42,7 +79,44 @@ export const DataProvider = ({ children }) => {
     } finally {
       setIsDetecting(false);
     }
-  };
+  }, [isDetecting]);
+
+  const refreshSemanticModelFromDataset = useCallback(async (dataset, metadata = {}) => {
+    const rows = normalizeDatasetRows(dataset);
+    if (!rows.length) {
+      setSemanticModel(null);
+      setSemanticModelStatus('idle');
+      return null;
+    }
+
+    setSemanticModelStatus('loading');
+    try {
+      const response = await fetch(`${API_URL}/api/semantic-model/infer`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          dataset: rows,
+          dataset_name: metadata.datasetName,
+          dataset_id: metadata.datasetId,
+          source: metadata.source || 'frontend_refresh',
+          persist_current: true,
+        }),
+      });
+
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload.error || 'Failed to refresh semantic model');
+      }
+
+      setSemanticModel(payload.semantic_model || null);
+      setSemanticModelStatus('ready');
+      return payload.semantic_model || null;
+    } catch (error) {
+      console.error('Failed to refresh semantic model:', error);
+      setSemanticModelStatus('error');
+      return null;
+    }
+  }, []);
 
   useEffect(() => {
     setAnomalies([]);
@@ -50,36 +124,87 @@ export const DataProvider = ({ children }) => {
   }, [uploadedData, fullData]);
 
   useEffect(() => {
+    if (!uploadedData && !fullData && !cleanedData && !filteredData) {
+      setSemanticModel(null);
+      setSemanticModelStatus('idle');
+    }
+  }, [uploadedData, fullData, cleanedData, filteredData]);
+
+  useEffect(() => {
     console.log('DataContext fullData rows:', Array.isArray(fullData) ? fullData.length : 0);
   }, [fullData]);
 
   const value = useMemo(() => ({
-    uploadedData,  setUploadedData,
-    fullData,      setFullData,
-    cleanedData,   setCleanedData,
-    filteredData,  setFilteredData,
-    pipelineResults, setPipelineResults,
-    aiReportReady, setAiReportReady,
-    showAiReport,  setShowAiReport,
-    anomalies, setAnomalies,
-    isDetecting, setIsDetecting,
+    uploadedData,
+    setUploadedData,
+    fullData,
+    setFullData,
+    cleanedData,
+    setCleanedData,
+    filteredData,
+    setFilteredData,
+    pipelineResults,
+    setPipelineResults,
+    aiReportReady,
+    setAiReportReady,
+    showAiReport,
+    setShowAiReport,
+    anomalies,
+    setAnomalies,
+    isDetecting,
+    setIsDetecting,
     detectAnomalies,
-    mlPrepStatus, setMlPrepStatus,
-  }), [uploadedData, fullData, cleanedData, filteredData, pipelineResults, aiReportReady, showAiReport, anomalies, isDetecting, mlPrepStatus]);
+    mlPrepStatus,
+    setMlPrepStatus,
+    semanticModel,
+    setSemanticModel,
+    semanticModelStatus,
+    refreshSemanticModelFromDataset,
+  }), [
+    uploadedData,
+    fullData,
+    cleanedData,
+    filteredData,
+    pipelineResults,
+    aiReportReady,
+    showAiReport,
+    anomalies,
+    isDetecting,
+    detectAnomalies,
+    mlPrepStatus,
+    semanticModel,
+    semanticModelStatus,
+    refreshSemanticModelFromDataset,
+  ]);
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 };
 
-/* helper for previews, charts, etc. */
 export const useActiveDataset = () => {
   const { filteredData, cleanedData, fullData, uploadedData } = useContext(DataContext);
   return filteredData ?? cleanedData ?? fullData ?? uploadedData;
 };
 
-// ✅ useDatasetMeta – derive row/column count
 export const useDatasetMeta = () => {
   const dataset = useActiveDataset();
-  const numRows = dataset ? dataset.length : 0;
-  const numCols = dataset && dataset.length > 0 ? Object.keys(dataset[0]).length : 0;
+  const rows = normalizeDatasetRows(dataset);
+  const numRows = rows.length;
+  const numCols = rows.length > 0 ? Object.keys(rows[0]).length : 0;
   return { numRows, numCols };
 };
+
+export const useSemanticModel = () => {
+  const { semanticModel } = useContext(DataContext);
+  return semanticModel;
+};
+
+export const useBusinessDefinitions = () => {
+  const semanticModel = useSemanticModel();
+  return {
+    entities: semanticModel?.entities || [],
+    dimensions: semanticModel?.dimensions || [],
+    metrics: semanticModel?.metrics || [],
+    relationships: semanticModel?.relationships || [],
+  };
+};
+
