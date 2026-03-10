@@ -1,8 +1,9 @@
-# backend/routes/analysis.py
 from flask import Blueprint, jsonify, request
 import io
-from backend.utils.global_state import get_uploaded_df
+
 from backend.services.ml_logic import detect_anomalies
+from backend.services.semantic_model import infer_semantic_model_from_dataframe
+from backend.utils.global_state import get_uploaded_df, set_semantic_model, set_uploaded_df
 
 analysis_bp = Blueprint('analysis_bp', __name__, url_prefix='/api')
 
@@ -11,20 +12,20 @@ def _run_outlier_detection():
     try:
         uploaded_df = get_uploaded_df()
         if uploaded_df is None:
-            return jsonify({"error": "No file has been uploaded yet"}), 400
+            return jsonify({'error': 'No file has been uploaded yet'}), 400
 
         payload = request.get_json(silent=True) or {}
         contamination = payload.get('contamination') if isinstance(payload, dict) else None
 
         outlier_indices = detect_anomalies(uploaded_df, contamination)
         return jsonify({
-            "outlier_indices": outlier_indices,
-            "count": len(outlier_indices)
+            'outlier_indices': outlier_indices,
+            'count': len(outlier_indices),
         }), 200
     except ValueError as e:
-        return jsonify({"error": str(e)}), 400
+        return jsonify({'error': str(e)}), 400
     except Exception as e:
-        return jsonify({"error": f"Failed to detect outliers: {str(e)}"}), 500
+        return jsonify({'error': f'Failed to detect outliers: {str(e)}'}), 500
 
 
 @analysis_bp.route('/outliers', methods=['POST'])
@@ -36,11 +37,12 @@ def detect_outliers():
 def detect_outliers_legacy():
     return _run_outlier_detection()
 
+
 @analysis_bp.route('/numbers', methods=['GET'])
 def numbers_endpoint():
     uploaded_df = get_uploaded_df()
     if uploaded_df is None:
-        return jsonify({"error": "No file has been uploaded yet"}), 400
+        return jsonify({'error': 'No file has been uploaded yet'}), 400
 
     try:
         buffer = io.StringIO()
@@ -48,16 +50,20 @@ def numbers_endpoint():
         info_output = buffer.getvalue()
 
         numeric_summary = uploaded_df.select_dtypes(include='number').sum().to_dict()
-        categorical_summary = uploaded_df.select_dtypes(exclude='number').apply(lambda x: x.value_counts().to_dict()).to_dict()
+        categorical_summary = (
+            uploaded_df.select_dtypes(exclude='number')
+            .apply(lambda x: x.value_counts().to_dict())
+            .to_dict()
+        )
 
         return jsonify({
-            "data_info": info_output,
-            "numeric_summary": numeric_summary,
-            "categorical_summary": categorical_summary
+            'data_info': info_output,
+            'numeric_summary': numeric_summary,
+            'categorical_summary': categorical_summary,
         }), 200
 
     except Exception as e:
-        return jsonify({"error": f"Failed to retrieve data information: {str(e)}"}), 500
+        return jsonify({'error': f'Failed to retrieve data information: {str(e)}'}), 500
 
 
 @analysis_bp.route('/filtered-upload', methods=['POST'])
@@ -65,72 +71,76 @@ def receive_filtered_data():
     try:
         json_data = request.get_json()
         if not json_data or 'data_preview' not in json_data:
-            return jsonify({"error": "Missing 'data_preview' key"}), 400
+            return jsonify({'error': "Missing 'data_preview' key"}), 400
 
-        from backend.utils.global_state import set_uploaded_df
         import pandas as pd
 
         df = pd.DataFrame(json_data['data_preview'])
         set_uploaded_df(df)
+        semantic_model = infer_semantic_model_from_dataframe(df, source='filtered_dataset')
+        set_semantic_model(semantic_model)
 
-        return jsonify({"message": "Filtered data received and stored"}), 200
+        return jsonify({
+            'message': 'Filtered data received and stored',
+            'semantic_model': semantic_model,
+        }), 200
     except Exception as e:
-        return jsonify({"error": f"Failed to store filtered data: {str(e)}"}), 500
+        return jsonify({'error': f'Failed to store filtered data: {str(e)}'}), 500
 
 
 @analysis_bp.route('/catstats', methods=['GET'])
 def cat_col():
     uploaded_df = get_uploaded_df()
     if uploaded_df is None:
-        return jsonify({"error": "No file has been uploaded yet."}), 400
+        return jsonify({'error': 'No file has been uploaded yet.'}), 400
 
     try:
         column_name = request.args.get('columnName')
         if not column_name:
-            return jsonify({"error": "No 'columnName' parameter provided."}), 400
+            return jsonify({'error': "No 'columnName' parameter provided."}), 400
 
         if column_name not in uploaded_df.columns:
-            return jsonify({"error": f"Column '{column_name}' does not exist in the dataframe."}), 400
+            return jsonify({'error': f"Column '{column_name}' does not exist in the dataframe."}), 400
 
         if uploaded_df[column_name].dtype != 'object':
-            return jsonify({"error": f"Column '{column_name}' is not categorical."}), 400
+            return jsonify({'error': f"Column '{column_name}' is not categorical."}), 400
 
         category_counts = uploaded_df[column_name].value_counts(dropna=False)
         category_mode = uploaded_df[column_name].mode(dropna=False).tolist()
 
         return jsonify({
-            "counts": category_counts.to_dict(),
-            "mode": category_mode
+            'counts': category_counts.to_dict(),
+            'mode': category_mode,
         }), 200
 
     except Exception as e:
-        return jsonify({"error": f"Error calculating categorical statistics: {str(e)}"}), 500
+        return jsonify({'error': f'Error calculating categorical statistics: {str(e)}'}), 500
 
 
 @analysis_bp.route('/categorical-columns', methods=['GET'])
 def get_categorical_columns():
     uploaded_df = get_uploaded_df()
     if uploaded_df is None:
-        return jsonify({"error": "No file has been uploaded yet."}), 400
+        return jsonify({'error': 'No file has been uploaded yet.'}), 400
 
     try:
         categorical_columns = uploaded_df.select_dtypes(include=['object']).columns.tolist()
         return jsonify(categorical_columns), 200
 
     except Exception as e:
-        return jsonify({"error": f"Error retrieving categorical columns: {str(e)}"}), 500
+        return jsonify({'error': f'Error retrieving categorical columns: {str(e)}'}), 500
 
 
 @analysis_bp.route('/stats', methods=['GET'])
 def get_stats():
     uploaded_df = get_uploaded_df()
     if uploaded_df is None:
-        return jsonify({"error": "No file has been uploaded yet"}), 400
+        return jsonify({'error': 'No file has been uploaded yet'}), 400
 
     try:
         numeric_df = uploaded_df.select_dtypes(include=['number'])
         if numeric_df.empty:
-            return jsonify({"error": "No numeric columns available for statistics calculation."}), 400
+            return jsonify({'error': 'No numeric columns available for statistics calculation.'}), 400
 
         mean = numeric_df.mean().to_dict()
         median = numeric_df.median().to_dict()
@@ -139,8 +149,8 @@ def get_stats():
         return jsonify({
             'mean': mean,
             'median': median,
-            'mode': mode
+            'mode': mode,
         }), 200
 
     except Exception as e:
-        return jsonify({"error": f"Error calculating statistics: {str(e)}"}), 500
+        return jsonify({'error': f'Error calculating statistics: {str(e)}'}), 500
