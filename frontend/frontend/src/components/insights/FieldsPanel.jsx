@@ -59,36 +59,32 @@ const formatSampleValue = (value) => {
   return String(value).slice(0, 40);
 };
 
-const RAW_FIELD_GROUP_META = {
-  numeric: {
-    label: 'Numeric fields',
-    icon: <AiOutlineNumber />,
-    description: 'Measures, values and totals',
-  },
-  categorical: {
-    label: 'Categorical fields',
-    icon: <AiOutlineTag />,
-    description: 'Dimensions, labels and groupings',
-  },
-  temporal: {
-    label: 'Temporal fields',
-    icon: <AiOutlineCalendar />,
-    description: 'Dates and time related values',
-  },
-};
-
 const ANALYSIS_GROUP_META = {
   semantic_metric: {
-    label: 'Business metrics',
+    label: 'Business Metrics',
     icon: <AiOutlineFundProjectionScreen />,
-    description: 'Semantic measures resolved through business definitions',
+    description: 'Calculated business KPIs',
   },
   semantic_dimension: {
-    label: 'Business dimensions',
+    label: 'Business Dimensions',
     icon: <AiOutlineTag />,
-    description: 'Semantic groupings and business categories',
+    description: 'Standardized categories',
   },
-  ...RAW_FIELD_GROUP_META,
+  numeric: {
+    label: 'Measures',
+    icon: <AiOutlineNumber />,
+    description: 'Raw numeric columns',
+  },
+  categorical: {
+    label: 'Categories',
+    icon: <AiOutlineTag />,
+    description: 'Raw string labels',
+  },
+  temporal: {
+    label: 'Time',
+    icon: <AiOutlineCalendar />,
+    description: 'Raw date columns',
+  },
 };
 
 const GROUP_ORDER = ['semantic_metric', 'semantic_dimension', 'numeric', 'temporal', 'categorical'];

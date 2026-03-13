@@ -1,18 +1,57 @@
 .window-frame {
   position: absolute;
+  overflow: visible;
+  will-change: transform, width, height;
+  touch-action: none;
+}
+
+.window-surface {
+  width: 100%;
+  height: 100%;
   background-color: var(--bg-primary);
   border-radius: 8px;
   display: flex;
   flex-direction: column;
-  overflow: visible; /* Needed for resize handles to be draggable if they sit on edge */
   border: 1px solid var(--border-color);
-  /* GPU Acceleration hints */
-  will-change: transform, width, height;
-  touch-action: none; /* Crucial for Pointer Events */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition:
+    transform 0.2s cubic-bezier(0.2, 0, 0, 1),
+    opacity 0.2s ease,
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
+  animation: windowSurfaceFadeIn 0.2s forwards;
+  transform-origin: top center;
 }
 
-@keyframes windowFrameFadeIn {
-  to { opacity: 1; }
+.window-frame.active .window-surface {
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
+
+.window-frame.is-dragging,
+.window-frame.is-resizing {
+  z-index: 1000 !important;
+}
+
+.window-frame.is-dragging .window-surface,
+.window-frame.is-resizing .window-surface {
+  transition: none;
+}
+
+.window-frame.minimizing .window-surface {
+  transform: scale(0.1);
+  opacity: 0;
+  pointer-events: none;
+}
+
+@keyframes windowSurfaceFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .window-header {
@@ -73,19 +112,16 @@
   border-radius: 0 0 8px 8px;
 }
 
-/* Resize Handles */
 .resize-handle {
   position: absolute;
   z-index: 10;
 }
 
-/* Edges */
 .resize-handle.n { top: -4px; left: 0; width: 100%; height: 8px; cursor: n-resize; }
 .resize-handle.s { bottom: -4px; left: 0; width: 100%; height: 8px; cursor: s-resize; }
 .resize-handle.e { top: 0; right: -4px; width: 8px; height: 100%; cursor: e-resize; }
 .resize-handle.w { top: 0; left: -4px; width: 8px; height: 100%; cursor: w-resize; }
 
-/* Corners */
 .resize-handle.ne { top: -4px; right: -4px; width: 12px; height: 12px; cursor: ne-resize; z-index: 11; }
 .resize-handle.nw { top: -4px; left: -4px; width: 12px; height: 12px; cursor: nw-resize; z-index: 11; }
 .resize-handle.se { bottom: -4px; right: -4px; width: 12px; height: 12px; cursor: se-resize; z-index: 11; }

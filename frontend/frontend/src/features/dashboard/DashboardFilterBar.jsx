@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   countActiveDashboardFilters,
   getDimensionValues,
@@ -8,6 +8,7 @@ import {
 import { normalizeDatasetRows, useActiveDataset, useSemanticModel } from '../../context/DataContext';
 import { useWindowContext } from '../../context/WindowContext';
 import { normalizeSemanticDimension } from '../../utils/semanticObjectUtils';
+import { FaFilter, FaChevronUp, FaChevronDown, FaPlus, FaTrash, FaTimes } from 'react-icons/fa';
 import './DashboardFilterBar.css';
 
 const getSelectedValues = (event) => Array.from(event.target.selectedOptions).map((option) => option.value);
@@ -15,6 +16,7 @@ const getSelectedValues = (event) => Array.from(event.target.selectedOptions).ma
 function DashboardFilterBar() {
   const activeDataset = useActiveDataset();
   const semanticModel = useSemanticModel();
+  const [isExpanded, setIsExpanded] = useState(false);
   const {
     dashboardState,
     setDashboardFilters,
@@ -68,147 +70,174 @@ function DashboardFilterBar() {
   };
 
   return (
-    <section className="dashboard-filter-bar">
+    <section className={`dashboard-filter-bar ${isExpanded ? 'is-expanded' : ''}`}>
       <div className="dashboard-filter-bar__topline">
         <div className="dashboard-filter-bar__title-block">
-          <span className="dashboard-filter-bar__eyebrow">Business Monitoring</span>
           <input
             className="dashboard-filter-bar__title-input"
             value={dashboardState.name}
             onChange={(event) => updateDashboard({ name: event.target.value })}
             aria-label="Dashboard name"
           />
-          <span className="dashboard-filter-bar__meta">
-            {activeFilterCount > 0 ? `${activeFilterCount} global filters active` : 'No global filters'}
-            {' '}
-            · Saved locally
-          </span>
+          <div className="dashboard-filter-bar__badges">
+            <span className="badge-business">Business Monitoring</span>
+            {activeFilterCount > 0 && (
+                <span className="badge-filters">
+                    <FaFilter size={10} /> {activeFilterCount}
+                </span>
+            )}
+          </div>
         </div>
 
         <div className="dashboard-filter-bar__actions">
-          <button type="button" className="dashboard-filter-bar__action dashboard-filter-bar__action--primary" onClick={() => addDashboardKpi()}>
-            Add KPI card
+          <button type="button" className="dashboard-filter-bar__btn dashboard-filter-bar__btn--primary" onClick={() => addDashboardKpi()}>
+            <FaPlus /> KPI
           </button>
           <button
             type="button"
-            className="dashboard-filter-bar__action"
+            className="dashboard-filter-bar__btn dashboard-filter-bar__btn--primary"
             onClick={() => addDashboardChart({ dataSourceMode: 'semantic' })}
           >
-            Add chart
+            <FaPlus /> Chart
           </button>
-          <button type="button" className="dashboard-filter-bar__action" onClick={clearDashboardFilters}>
-            Clear filters
-          </button>
-          <button type="button" className="dashboard-filter-bar__action dashboard-filter-bar__action--ghost" onClick={closeDashboard}>
-            Hide dashboard
-          </button>
-        </div>
-      </div>
+          
+          <div className="v-divider"></div>
 
-      <div className="dashboard-filter-bar__filters">
-        <label className="dashboard-filter-bar__field dashboard-filter-bar__field--date-dimension">
-          <span>Date dimension</span>
-          <select
-            value={dashboardState.filters.dateDimensionId}
-            onChange={(event) => setDashboardFilters((prev) => ({
-              ...prev,
-              dateDimensionId: event.target.value,
-            }))}
+          <button 
+            type="button" 
+            className={`dashboard-filter-bar__btn ${isExpanded ? 'active' : ''}`} 
+            onClick={() => setIsExpanded(!isExpanded)}
+            title={isExpanded ? 'Collapse Filters' : 'Expand Filters'}
           >
-            <option value="">No date filter</option>
-            {temporalDimensions.map((dimension) => (
-              <option key={dimension.id} value={dimension.id}>
-                {dimension.label}
-              </option>
-            ))}
-          </select>
-        </label>
+            <FaFilter /> Filters {isExpanded ? <FaChevronUp /> : <FaChevronDown />}
+          </button>
 
-        <label className="dashboard-filter-bar__field">
-          <span>Start date</span>
-          <input
-            type="date"
-            value={dashboardState.filters.startDate}
-            onChange={(event) => setDashboardFilters((prev) => ({
-              ...prev,
-              startDate: event.target.value,
-            }))}
-            disabled={!dashboardState.filters.dateDimensionId}
-          />
-        </label>
-
-        <label className="dashboard-filter-bar__field">
-          <span>End date</span>
-          <input
-            type="date"
-            value={dashboardState.filters.endDate}
-            onChange={(event) => setDashboardFilters((prev) => ({
-              ...prev,
-              endDate: event.target.value,
-            }))}
-            disabled={!dashboardState.filters.dateDimensionId}
-          />
-        </label>
-
-        <div className="dashboard-filter-bar__field dashboard-filter-bar__field--stacked">
-          <div className="dashboard-filter-bar__field-header">
-            <span>Dimension filters</span>
-            <button type="button" className="dashboard-filter-bar__mini-action" onClick={addDimensionFilter}>
-              + Add filter
-            </button>
-          </div>
-
-          {dashboardState.filters.dimensionFilters.length === 0 && (
-            <div className="dashboard-filter-bar__empty">No dimension filters yet.</div>
-          )}
-
-          {dashboardState.filters.dimensionFilters.map((filter) => {
-            const availableValues = getDimensionValues(rows, semanticModel, filter.dimensionId);
-
-            return (
-              <div key={filter.id} className="dashboard-filter-bar__dimension-row">
-                <select
-                  value={filter.dimensionId}
-                  onChange={(event) => updateDimensionFilter(filter.id, {
-                    dimensionId: event.target.value,
-                    values: [],
-                  })}
-                >
-                  <option value="">Select dimension</option>
-                  {filterableDimensions.map((dimension) => (
-                    <option key={dimension.id} value={dimension.id}>
-                      {dimension.label}
-                    </option>
-                  ))}
-                </select>
-
-                <select
-                  multiple
-                  value={filter.values}
-                  onChange={(event) => updateDimensionFilter(filter.id, {
-                    values: getSelectedValues(event),
-                  })}
-                  disabled={!filter.dimensionId}
-                >
-                  {availableValues.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-
-                <button
-                  type="button"
-                  className="dashboard-filter-bar__mini-action dashboard-filter-bar__mini-action--danger"
-                  onClick={() => removeDimensionFilter(filter.id)}
-                >
-                  Remove
-                </button>
-              </div>
-            );
-          })}
+          <button type="button" className="dashboard-filter-bar__btn" onClick={clearDashboardFilters} title="Clear all filters">
+            Clear
+          </button>
+          
+          <button type="button" className="dashboard-filter-bar__btn dashboard-filter-bar__btn--close" onClick={closeDashboard} title="Hide Dashboard">
+            <FaTimes />
+          </button>
         </div>
       </div>
+
+      {isExpanded && (
+        <div className="dashboard-filter-bar__expanded-content">
+            <div className="dashboard-filter-bar__filters">
+                <div className="filter-group">
+                    <label className="dashboard-filter-bar__field">
+                    <span>Date Dimension</span>
+                    <select
+                        value={dashboardState.filters.dateDimensionId}
+                        onChange={(event) => setDashboardFilters((prev) => ({
+                        ...prev,
+                        dateDimensionId: event.target.value,
+                        }))}
+                    >
+                        <option value="">No date filter</option>
+                        {temporalDimensions.map((dimension) => (
+                        <option key={dimension.id} value={dimension.id}>
+                            {dimension.label}
+                        </option>
+                        ))}
+                    </select>
+                    </label>
+
+                    <div className="date-range-inputs">
+                        <label className="dashboard-filter-bar__field">
+                        <span>Start</span>
+                        <input
+                            type="date"
+                            value={dashboardState.filters.startDate}
+                            onChange={(event) => setDashboardFilters((prev) => ({
+                            ...prev,
+                            startDate: event.target.value,
+                            }))}
+                            disabled={!dashboardState.filters.dateDimensionId}
+                        />
+                        </label>
+
+                        <label className="dashboard-filter-bar__field">
+                        <span>End</span>
+                        <input
+                            type="date"
+                            value={dashboardState.filters.endDate}
+                            onChange={(event) => setDashboardFilters((prev) => ({
+                            ...prev,
+                            endDate: event.target.value,
+                            }))}
+                            disabled={!dashboardState.filters.dateDimensionId}
+                        />
+                        </label>
+                    </div>
+                </div>
+
+                <div className="dashboard-filter-bar__field dashboard-filter-bar__field--stacked">
+                <div className="dashboard-filter-bar__field-header">
+                    <span>Dimension Filters</span>
+                    <button type="button" className="dashboard-filter-bar__mini-action" onClick={addDimensionFilter}>
+                    <FaPlus /> Add filter
+                    </button>
+                </div>
+
+                {dashboardState.filters.dimensionFilters.length === 0 && (
+                    <div className="dashboard-filter-bar__empty">No dimension filters active.</div>
+                )}
+
+                <div className="dimension-filters-list">
+                    {dashboardState.filters.dimensionFilters.map((filter) => {
+                        const availableValues = getDimensionValues(rows, semanticModel, filter.dimensionId);
+
+                        return (
+                        <div key={filter.id} className="dashboard-filter-bar__dimension-row">
+                            <select
+                            value={filter.dimensionId}
+                            onChange={(event) => updateDimensionFilter(filter.id, {
+                                dimensionId: event.target.value,
+                                values: [],
+                            })}
+                            >
+                            <option value="">Select dimension</option>
+                            {filterableDimensions.map((dimension) => (
+                                <option key={dimension.id} value={dimension.id}>
+                                {dimension.label}
+                                </option>
+                            ))}
+                            </select>
+
+                            <select
+                            multiple
+                            className="multi-select"
+                            value={filter.values}
+                            onChange={(event) => updateDimensionFilter(filter.id, {
+                                values: getSelectedValues(event),
+                            })}
+                            disabled={!filter.dimensionId}
+                            >
+                            {availableValues.map((option) => (
+                                <option key={option.value} value={option.value}>
+                                {option.label}
+                                </option>
+                            ))}
+                            </select>
+
+                            <button
+                            type="button"
+                            className="dashboard-filter-bar__mini-action dashboard-filter-bar__mini-action--danger"
+                            onClick={() => removeDimensionFilter(filter.id)}
+                            title="Remove filter"
+                            >
+                            <FaTrash />
+                            </button>
+                        </div>
+                        );
+                    })}
+                </div>
+                </div>
+            </div>
+        </div>
+      )}
     </section>
   );
 }

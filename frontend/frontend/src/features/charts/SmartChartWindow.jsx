@@ -13,26 +13,9 @@ import { TbChartBar, TbChartDots, TbChartLine, TbChartPie, TbChartDonut } from '
 import { IoAddCircleOutline } from 'react-icons/io5';
 import { useWindowContext } from '../../context/WindowContext';
 import { normalizeDatasetRows, useActiveDataset, useSemanticModel } from '../../context/DataContext';
+import './SmartChartWindow.css';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
-
-const MODE_BUTTON_STYLE = {
-  padding: '6px 10px',
-  borderRadius: '999px',
-  border: '1px solid #d9dde7',
-  background: '#ffffff',
-  color: '#445',
-  cursor: 'pointer',
-  fontSize: '0.78rem',
-  fontWeight: 600,
-};
-
-const SELECT_STYLE = {
-  padding: '9px 10px',
-  borderRadius: '8px',
-  border: '1px solid #d9dde7',
-  background: '#ffffff',
-};
 
 const SemanticDropOverlay = ({ id, label, helperText, currentValue, objectKinds, semanticRole, style }) => {
   const { setNodeRef, isOver } = useDroppable({
@@ -47,35 +30,13 @@ const SemanticDropOverlay = ({ id, label, helperText, currentValue, objectKinds,
   return (
     <div
       ref={setNodeRef}
-      style={{
-        ...style,
-        position: 'absolute',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '6px',
-        borderRadius: '12px',
-        border: isOver ? '2px dashed #2e7d32' : '1px dashed rgba(46, 125, 50, 0.35)',
-        background: isOver ? 'rgba(46, 125, 50, 0.14)' : 'rgba(248, 252, 249, 0.92)',
-        color: '#23432a',
-        textAlign: 'center',
-        padding: '14px',
-        backdropFilter: 'blur(4px)',
-        zIndex: 11,
-      }}
+      className={`drop-overlay drop-overlay--semantic ${isOver ? 'is-over' : ''}`}
+      style={style}
     >
-      <strong>{label}</strong>
-      <span style={{ fontSize: '0.8rem', color: '#47604d' }}>{helperText}</span>
+      <strong className="drop-label">{label}</strong>
+      <span className="drop-helper">{helperText}</span>
       {currentValue && (
-        <span
-          style={{
-            fontSize: '0.76rem',
-            padding: '4px 8px',
-            borderRadius: '999px',
-            background: 'rgba(46, 125, 50, 0.12)',
-          }}
-        >
+        <span className="current-value-tag">
           {currentValue}
         </span>
       )}
@@ -96,36 +57,16 @@ const RawDropOverlay = ({ zoneId, axis, label, style, currentMapping }) => {
   return (
     <div
       ref={setNodeRef}
-      style={{
-        ...style,
-        position: 'absolute',
-        backgroundColor: isOver ? 'rgba(52, 168, 83, 0.2)' : 'rgba(255, 255, 255, 0.85)',
-        border: isOver ? '2px dashed #34a853' : '1px dashed #ccc',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        flexDirection: 'column',
-        zIndex: 10,
-        transition: 'all 0.2s ease',
-        backdropFilter: 'blur(4px)',
-        borderRadius: '8px',
-        color: isOver ? '#1e4620' : '#555',
-        pointerEvents: 'all',
-      }}
+      className={`drop-overlay drop-overlay--raw ${isOver ? 'is-over' : ''}`}
+      style={style}
     >
-      <span style={{ fontWeight: 600 }}>{label}</span>
-      {currentMapping && (
-        <span
-          style={{
-            fontSize: '0.8em',
-            marginTop: '4px',
-            padding: '2px 6px',
-            background: '#e0e0e0',
-            borderRadius: '4px',
-          }}
-        >
+      <span className="drop-label">{label}</span>
+      {currentMapping ? (
+        <span className="current-value-tag">
           {currentMapping}
         </span>
+      ) : (
+        <span className="drop-helper">Drop field here</span>
       )}
     </div>
   );
@@ -331,62 +272,28 @@ const SmartChartWindow = ({
   const semanticStatusCopy = useMemo(() => {
     if (dataSourceMode !== 'semantic') {
       return activeDashboardFilterCount > 0
-        ? 'Dashboard-global filters are being applied to this raw chart before aggregation.'
-        : 'Drop raw dataset fields onto the chart axes to keep using the existing workflow.';
+        ? `Dashboard filters applied (${activeDashboardFilterCount})`
+        : 'Drop raw fields to build chart';
     }
 
-    if (semanticStatus === 'loading') {
-      return 'Resolving the selected semantic metric through the centralized metric resolver.';
-    }
-
-    if (semanticStatus === 'error') {
-      return semanticError;
-    }
-
-    if (semanticStatus === 'missing_model') {
-      return 'Semantic definitions are not available yet for this dataset.';
-    }
-
-    if (semanticStatus === 'awaiting_selection') {
-      return 'Choose or drop a semantic metric to build this chart from business definitions.';
-    }
-
-    if (semanticStatus === 'empty_dataset') {
-      return 'No dataset rows are available for semantic metric resolution.';
-    }
-
+    if (semanticStatus === 'loading') return 'Resolving semantic metric...';
+    if (semanticStatus === 'error') return semanticError;
+    if (semanticStatus === 'missing_model') return 'Semantic model missing';
+    if (semanticStatus === 'awaiting_selection') return 'Drop a business metric to start';
+    
     if (semanticResolution) {
-      const metricLabel = semanticResolution.metric?.label || selectedMetric?.label || 'Metric';
-      const summaryValue = formatSemanticValue(
-        semanticResolution.summary?.value,
-        semanticResolution.metric?.format_hint
-      );
-      const groupLabel = selectedDimension?.label || selectedDimension?.name;
-      const filterCopy = activeDashboardFilterCount > 0
-        ? ` ${activeDashboardFilterCount} dashboard filters applied.`
-        : '';
-      return groupLabel
-        ? `${metricLabel} grouped by ${groupLabel}. Summary value: ${summaryValue}.${filterCopy}`
-        : `${metricLabel} across all rows. Summary value: ${summaryValue}.${filterCopy}`;
+        const summaryValue = formatSemanticValue(
+            semanticResolution.summary?.value,
+            semanticResolution.metric?.format_hint
+        );
+        return `Summary: ${summaryValue} ${activeDashboardFilterCount > 0 ? `(${activeDashboardFilterCount} filters)` : ''}`;
     }
-
-    return 'Semantic charting is available for this dataset.';
-  }, [activeDashboardFilterCount, dataSourceMode, semanticError, semanticResolution, semanticStatus, selectedDimension, selectedMetric]);
+    return 'Semantic mode active';
+  }, [activeDashboardFilterCount, dataSourceMode, semanticError, semanticResolution, semanticStatus]);
 
   const renderToolbar = () => (
-    <div
-      style={{
-        display: 'flex',
-        gap: '8px',
-        padding: '8px',
-        background: '#f8f9fa',
-        borderBottom: '1px solid #eee',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap',
-      }}
-    >
-      <div style={{ display: 'flex', gap: '4px' }}>
+    <div className="smart-chart-toolbar">
+      <div className="chart-type-selector">
         {[
           { type: 'Bar', icon: <TbChartBar /> },
           { type: 'Line', icon: <TbChartLine /> },
@@ -397,198 +304,113 @@ const SmartChartWindow = ({
           <button
             key={option.type}
             onClick={() => handleChartTypeChange(option.type)}
-            className={type === option.type ? 'active' : ''}
-            style={{
-              padding: '6px',
-              border: 'none',
-              background: type === option.type ? '#e8f0fe' : 'transparent',
-              color: type === option.type ? '#1a73e8' : '#666',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              display: 'flex',
-            }}
+            className={`chart-type-btn ${type === option.type ? 'active' : ''}`}
             title={option.type}
           >
             {option.icon}
           </button>
         ))}
       </div>
-      <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+      
+      <div className="data-source-modes">
         <button
           type="button"
           onClick={() => handleModeChange('raw')}
-          style={{
-            ...MODE_BUTTON_STYLE,
-            background: dataSourceMode === 'raw' ? '#e8f0fe' : '#ffffff',
-            borderColor: dataSourceMode === 'raw' ? '#8ab4f8' : '#d9dde7',
-            color: dataSourceMode === 'raw' ? '#1a73e8' : '#445',
-          }}
+          className={`mode-btn ${dataSourceMode === 'raw' ? 'active-raw' : ''}`}
         >
-          Raw fields
+          Raw
         </button>
         <button
           type="button"
           onClick={() => handleModeChange('semantic')}
-          style={{
-            ...MODE_BUTTON_STYLE,
-            background: dataSourceMode === 'semantic' ? '#eef8f2' : '#ffffff',
-            borderColor: dataSourceMode === 'semantic' ? '#7cc58d' : '#d9dde7',
-            color: dataSourceMode === 'semantic' ? '#2e7d32' : '#445',
-          }}
+          className={`mode-btn ${dataSourceMode === 'semantic' ? 'active-semantic' : ''}`}
         >
-          Semantic objects
+          Semantic
         </button>
-        <div style={{ fontSize: '0.8rem', color: '#888' }}>
-          {dataSourceMode === 'semantic' ? 'Business-definition mode' : isEmpty ? 'Draft' : `${type} Chart`}
-        </div>
       </div>
     </div>
   );
 
   const renderSemanticControls = () => (
-    <div
-      style={{
-        padding: '12px 14px',
-        borderBottom: '1px solid #eef1f4',
-        background: '#fbfcfe',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '10px',
-      }}
-    >
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
-        <div>
-          <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#2e7d32', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-            Business Definitions
-          </div>
-          <div style={{ color: '#57606a', fontSize: '0.84rem', marginTop: '3px' }}>
-            Select from the semantic layer or drop business metrics and dimensions from the Analysis Inputs panel.
-          </div>
+    <div className="semantic-controls">
+      <div className="semantic-controls__header">
+        <div className="semantic-controls__title">
+          <strong>Business Definitions</strong>
+          <p>Chart powered by semantic layer resolution</p>
         </div>
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '0.75rem', padding: '5px 10px', borderRadius: '999px', background: 'rgba(46, 125, 50, 0.1)', color: '#2e7d32' }}>
-            {semanticMetrics.length} metrics
-          </span>
-          <span style={{ fontSize: '0.75rem', padding: '5px 10px', borderRadius: '999px', background: 'rgba(141, 110, 99, 0.12)', color: '#6d4c41' }}>
-            {semanticDimensions.length} dimensions
-          </span>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <span className="current-value-tag" style={{ color: '#237804', background: '#f6ffed' }}>{semanticMetrics.length} M</span>
+          <span className="current-value-tag" style={{ color: '#874d00', background: '#fff7e6' }}>{semanticDimensions.length} D</span>
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-        <label style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: '220px', flex: 1 }}>
-          <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#445' }}>Semantic metric</span>
+      <div className="semantic-controls__inputs">
+        <label className="semantic-field-group">
+          <span>Metric</span>
           <select
             value={selectedMetricId}
+            className="semantic-select"
             onChange={(event) => handleSemanticConfigChange({ metricId: event.target.value })}
             disabled={isLocked || semanticMetrics.length === 0}
-            style={SELECT_STYLE}
           >
             <option value="">Select metric</option>
             {semanticMetrics.map((metric) => (
               <option key={metric.id} value={metric.id}>
-                {metric.label} · {metric.helperLabel}
+                {metric.label}
               </option>
             ))}
           </select>
         </label>
 
-        <label style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: '220px', flex: 1 }}>
-          <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#445' }}>Grouping dimension</span>
+        <label className="semantic-field-group">
+          <span>Group By</span>
           <select
             value={selectedGroupBy}
+            className="semantic-select"
             onChange={(event) => handleSemanticConfigChange({ groupBy: event.target.value })}
             disabled={isLocked || semanticDimensions.length === 0}
-            style={SELECT_STYLE}
           >
             <option value="">No grouping</option>
             {semanticDimensions.map((dimension) => (
               <option key={dimension.id} value={dimension.id}>
-                {dimension.label} · {dimension.helperLabel}
+                {dimension.label}
               </option>
             ))}
           </select>
         </label>
       </div>
 
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          gap: '12px',
-          flexWrap: 'wrap',
-          alignItems: 'center',
-          fontSize: '0.84rem',
-        }}
-      >
-        <div style={{ color: semanticStatus === 'error' ? '#c62828' : '#57606a' }}>
-          {semanticStatusCopy}
-        </div>
-        <div style={{ color: '#7a7f87' }}>
-          Resolver: <strong>/api/semantic-metrics/resolve</strong>
-        </div>
+      <div className={`semantic-status-bar ${semanticStatus === 'error' ? 'semantic-status--error' : ''}`}>
+        <span>{semanticStatusCopy}</span>
+        <span>Resolver: v1</span>
       </div>
     </div>
   );
 
   return (
-    <div
-      style={{
-        width: '100%',
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-        position: 'relative',
-        background: '#fff',
-        overflow: 'hidden',
-      }}
-    >
+    <div className="smart-chart-window">
       {renderToolbar()}
       {dataSourceMode === 'semantic' && renderSemanticControls()}
 
-      <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
+      <div className="chart-content-area">
         {!isEmpty && <ChartComponent chartType={type} chartData={chartData} />}
 
         {isEmpty && dataSourceMode === 'raw' && !isDraggingRawField && !isDraggingSemanticObject && (
-          <div
-            style={{
-              height: '100%',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#aaa',
-              gap: '12px',
-              textAlign: 'center',
-              padding: '24px',
-            }}
-          >
+          <div className="chart-placeholder">
             <IoAddCircleOutline size={48} />
-            <p style={{ margin: 0 }}>
+            <p>
               {activeDashboardFilterCount > 0
-                ? 'The dashboard filters left this chart with no rows. Adjust the filters or drop raw fields here.'
+                ? 'Current filters returned no data. Adjust filters or drop fields.'
                 : 'Drag raw fields here to build a chart'}
             </p>
           </div>
         )}
 
         {isEmpty && dataSourceMode === 'semantic' && !isDraggingSemanticObject && (
-          <div
-            style={{
-              height: '100%',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#6b7280',
-              gap: '12px',
-              padding: '24px',
-              textAlign: 'center',
-            }}
-          >
+          <div className="chart-placeholder">
             <IoAddCircleOutline size={42} />
-            <p style={{ maxWidth: '420px', margin: 0 }}>
-              Select or drop a semantic metric and optional business dimension to build a chart from business definitions instead of raw columns.
+            <p>
+              Drop a business metric and optional dimension to build a chart from semantic definitions.
             </p>
           </div>
         )}
@@ -598,15 +420,15 @@ const SmartChartWindow = ({
             <RawDropOverlay
               zoneId={id}
               axis="Y-Axis"
-              label="Y-Axis (Values)"
-              style={{ top: '10px', bottom: '50%', left: '10px', right: '10px' }}
+              label="Values (Y)"
+              style={{ top: '10px', bottom: '55%', left: '10px', right: '10px' }}
               currentMapping={mapping['Y-Axis']}
             />
             <RawDropOverlay
               zoneId={id}
               axis="X-Axis"
-              label="X-Axis (Categories)"
-              style={{ top: '50%', bottom: '10px', left: '10px', right: '10px' }}
+              label="Categories (X)"
+              style={{ top: '45%', bottom: '10px', left: '10px', right: '10px' }}
               currentMapping={mapping['X-Axis']}
             />
           </>
@@ -618,19 +440,19 @@ const SmartChartWindow = ({
               id={id}
               semanticRole="metric"
               objectKinds={['metric']}
-              label={dataSourceMode === 'semantic' ? 'Semantic metric' : 'Switch to semantic metric'}
-              helperText={semanticDragLabel ? `Drop ${semanticDragLabel} here to set the chart metric.` : 'Drop a business metric here.'}
+              label="Metric"
+              helperText={semanticDragLabel ? `Set ${semanticDragLabel}` : 'Drop metric here'}
               currentValue={selectedMetric?.label}
-              style={{ top: '10px', bottom: '50%', left: '10px', right: '10px' }}
+              style={{ top: '10px', bottom: '55%', left: '10px', right: '10px' }}
             />
             <SemanticDropOverlay
               id={id}
               semanticRole="dimension"
               objectKinds={['dimension']}
-              label="Grouping dimension"
-              helperText={semanticDragLabel ? `Drop ${semanticDragLabel} here to group the metric.` : 'Drop a business dimension here.'}
+              label="Group By"
+              helperText={semanticDragLabel ? `Group by ${semanticDragLabel}` : 'Drop dimension here'}
               currentValue={selectedDimension?.label}
-              style={{ top: '50%', bottom: '10px', left: '10px', right: '10px' }}
+              style={{ top: '45%', bottom: '10px', left: '10px', right: '10px' }}
             />
           </>
         )}
