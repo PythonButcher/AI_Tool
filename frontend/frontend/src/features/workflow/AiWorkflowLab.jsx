@@ -20,7 +20,7 @@ import { DataContext } from '../../context/DataContext';
 import AIPipeline from './AIPipeline';
 import DropZoneNode from './DropZoneNode';
 import { useWindowContext } from '../../context/WindowContext';
-import { FiCopy, FiDownload, FiPlay, FiPlus, FiRefreshCw, FiSave, FiUpload } from 'react-icons/fi';
+import { FiCopy, FiDownload, FiPlay, FiPlus, FiRefreshCw, FiSave, FiUpload, FiHelpCircle } from 'react-icons/fi';
 import {
   buildReactFlowGraph,
   buildWorkflowDefinition,
@@ -448,7 +448,6 @@ function AiWorkflowLab({ label = 'AI WorkFlow Lab:', savedState }) {
     <div
       ref={workflowRef}
       className={`ai-workflow-lab-container${isHighlighted ? ' autopilot-highlight' : ''}`}
-      style={{ width: '100%', height: '100%', position: 'relative', zIndex: 2 }}
     >
       {isHelpVisible('aiFlow') && (
         <div className="help-overlay visible" style={{ zIndex: 9999, position: 'fixed', top: 0, left: 0 }}>
@@ -468,252 +467,257 @@ function AiWorkflowLab({ label = 'AI WorkFlow Lab:', savedState }) {
         </div>
       )}
 
-      <div className="workflow-metadata-panel">
-        <div className="workflow-metadata-header">
-          <div>
-            <div className="workflow-kicker">Automation Pipeline</div>
-            <h3>{label}</h3>
+      <header className="wf-header">
+        <div className="wf-header-left">
+          <div className="wf-name-container">
+            <div className="wf-kicker">Automation Pipeline</div>
+            <input
+              className="wf-name-input"
+              value={workflowMeta.name}
+              onChange={(event) => updateWorkflowMeta('name', event.target.value)}
+              placeholder="Quarterly revenue analysis"
+            />
           </div>
-          <button type="button" className="help-overlay-trigger" onClick={() => toggleHelp('aiFlow')}>
-            ❓
+        </div>
+
+        <div className="wf-header-actions">
+          <button type="button" className="wf-btn primary" onClick={handleRunWorkflow}>
+            <FiPlay aria-hidden="true" />
+            <span>Run</span>
           </button>
-        </div>
-
-        <label className="workflow-field">
-          <span>Name</span>
+          <button type="button" className="wf-btn" onClick={() => handleSaveWorkflow(false)} title="Save changes">
+            <FiSave aria-hidden="true" />
+            <span>Save</span>
+          </button>
+          <div style={{ width: '1px', height: '24px', background: '#e2e8f0', margin: '0 4px' }} />
+          <button type="button" className="wf-btn subtle icon-only" onClick={() => handleSaveWorkflow(true)} title="Save As New">
+            <FiPlus aria-hidden="true" />
+          </button>
+          <button type="button" className="wf-btn subtle icon-only" onClick={handleDuplicateWorkflow} title="Duplicate">
+            <FiCopy aria-hidden="true" />
+          </button>
+          <button type="button" className="wf-btn subtle icon-only" onClick={handleExportWorkflow} title="Export JSON">
+            <FiDownload aria-hidden="true" />
+          </button>
+          <button type="button" className="wf-btn subtle icon-only" onClick={handleLoadWorkflowClick} title="Import JSON">
+            <FiUpload aria-hidden="true" />
+          </button>
+          <button type="button" className="wf-btn subtle icon-only" onClick={handleNewWorkflow} title="Clear All">
+            <FiRefreshCw aria-hidden="true" />
+          </button>
+          <button type="button" className="wf-btn subtle icon-only" onClick={() => toggleHelp('aiFlow')} title="Help">
+            <FiHelpCircle aria-hidden="true" />
+          </button>
           <input
-            value={workflowMeta.name}
-            onChange={(event) => updateWorkflowMeta('name', event.target.value)}
-            placeholder="Quarterly revenue analysis"
+            ref={fileInputRef}
+            type="file"
+            accept="application/json,.json"
+            className="workflow-toolbar-file-input"
+            onChange={handleWorkflowFileChange}
           />
-        </label>
-
-        <label className="workflow-field">
-          <span>Description</span>
-          <textarea
-            rows={3}
-            value={workflowMeta.description}
-            onChange={(event) => updateWorkflowMeta('description', event.target.value)}
-            placeholder="Explain what this automation does for business users."
-          />
-        </label>
-
-        <div className="workflow-summary-grid">
-          <div>
-            <strong>{workflowDefinition.nodes.length}</strong>
-            <span>Steps</span>
-          </div>
-          <div>
-            <strong>{workflowDefinition.edges.length}</strong>
-            <span>Connections</span>
-          </div>
-          <div>
-            <strong>{runStatusLabel}</strong>
-            <span>Run status</span>
-          </div>
         </div>
+      </header>
 
-        <label className="workflow-field workflow-checkbox">
-          <input
-            type="checkbox"
-            checked={workflowMeta.continueOnError}
-            onChange={(event) => updateWorkflowMeta('continueOnError', event.target.checked)}
-          />
-          <span>Continue if a step fails</span>
-        </label>
+      <div className="wf-body">
+        <aside className="wf-sidebar">
+          <div className="wf-panel-section">
+            <div className="wf-panel-title">Workflow Config</div>
+            <div className="wf-field">
+              <label>Description</label>
+              <textarea
+                className="wf-textarea"
+                rows={3}
+                value={workflowMeta.description}
+                onChange={(event) => updateWorkflowMeta('description', event.target.value)}
+                placeholder="Explain what this automation does for business users."
+              />
+            </div>
 
-        <div className="workflow-selectors">
-          <label className="workflow-field compact">
-            <span>Saved workflows</span>
-            <select value="" onChange={(event) => handleSelectWorkflow(event.target.value)}>
-              <option value="">Open saved workflow</option>
-              {catalog.workflows.map((workflow) => (
-                <option key={workflow.id} value={workflow.id}>{workflow.name}</option>
-              ))}
-            </select>
-          </label>
-          <label className="workflow-field compact">
-            <span>Templates</span>
-            <select value="" onChange={(event) => handleCreateFromTemplate(event.target.value)}>
-              <option value="">Create from template</option>
-              {catalog.templates.map((template) => (
-                <option key={template.id} value={template.id}>{template.name}</option>
-              ))}
-            </select>
-          </label>
-        </div>
+            <div className="wf-field">
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={workflowMeta.continueOnError}
+                  onChange={(event) => updateWorkflowMeta('continueOnError', event.target.checked)}
+                />
+                <span>Continue if a step fails</span>
+              </label>
+            </div>
 
-        <div className="workflow-catalog-status">
-          {catalogStatus === 'loading' && 'Loading workflow catalog...'}
-          {catalogStatus === 'error' && catalogError}
-          {catalogStatus === 'ready' && `${catalog.workflows.length} saved workflows, ${catalog.templates.length} templates`}
-        </div>
-      </div>
+            <div className="wf-field">
+              <label>Saved Workflows</label>
+              <select className="wf-select" value="" onChange={(event) => handleSelectWorkflow(event.target.value)}>
+                <option value="">Open saved workflow</option>
+                {catalog.workflows.map((workflow) => (
+                  <option key={workflow.id} value={workflow.id}>{workflow.name}</option>
+                ))}
+              </select>
+            </div>
 
-      <div className="workflow-lab-toolbar">
-        <button type="button" className="workflow-toolbar-button primary" onClick={handleRunWorkflow}>
-          <FiPlay aria-hidden="true" />
-          <span>Run</span>
-        </button>
-        <button type="button" className="workflow-toolbar-button" onClick={() => handleSaveWorkflow(false)}>
-          <FiSave aria-hidden="true" />
-          <span>Save</span>
-        </button>
-        <button type="button" className="workflow-toolbar-button" onClick={() => handleSaveWorkflow(true)}>
-          <FiPlus aria-hidden="true" />
-          <span>Save As</span>
-        </button>
-        <button type="button" className="workflow-toolbar-button" onClick={handleDuplicateWorkflow}>
-          <FiCopy aria-hidden="true" />
-          <span>Duplicate</span>
-        </button>
-        <button type="button" className="workflow-toolbar-button" onClick={handleExportWorkflow}>
-          <FiDownload aria-hidden="true" />
-          <span>Export</span>
-        </button>
-        <button type="button" className="workflow-toolbar-button" onClick={handleLoadWorkflowClick}>
-          <FiUpload aria-hidden="true" />
-          <span>Import</span>
-        </button>
-        <button type="button" className="workflow-toolbar-button subtle" onClick={handleNewWorkflow}>
-          <FiRefreshCw aria-hidden="true" />
-          <span>New</span>
-        </button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="application/json,.json"
-          className="workflow-toolbar-file-input"
-          onChange={handleWorkflowFileChange}
-        />
-      </div>
-
-      <div className="workflow-node-library">
-        <div className="workflow-panel-title">Node Library</div>
-        {Object.entries(AiCommandGroups).map(([groupName, groupNodes]) => (
-          <div key={groupName} className="workflow-node-group">
-            <div className="workflow-node-group-title">{groupName}</div>
-            <div className="workflow-node-list">
-              {groupNodes.map((command) => (
-                <button
-                  key={command.id}
-                  type="button"
-                  className="workflow-node-button"
-                  onClick={() => handlePaletteAddNode(Object.keys(AiCommandBlocks).find((key) => AiCommandBlocks[key].id === command.id))}
-                >
-                  <span className="workflow-node-button-title">{command.businessLabel || command.display}</span>
-                  <span className="workflow-node-button-copy">{command.description}</span>
-                </button>
-              ))}
+            <div className="wf-field">
+              <label>Templates</label>
+              <select className="wf-select" value="" onChange={(event) => handleCreateFromTemplate(event.target.value)}>
+                <option value="">Create from template</option>
+                {catalog.templates.map((template) => (
+                  <option key={template.id} value={template.id}>{template.name}</option>
+                ))}
+              </select>
+            </div>
+            
+            <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '8px' }}>
+              {catalogStatus === 'loading' && 'Syncing catalog...'}
+              {catalogStatus === 'error' && catalogError}
+              {catalogStatus === 'ready' && `${catalog.workflows.length} workflows, ${catalog.templates.length} templates`}
             </div>
           </div>
-        ))}
-      </div>
 
-      <div className="workflow-side-panel right">
-        <div className="workflow-panel-title">Execution</div>
-        <div className="workflow-run-summary">
-          <div className="run-metric">
-            <strong>{runProgress.completed}</strong>
-            <span>Completed</span>
+          <div className="wf-panel-section">
+            <div className="wf-panel-title">Node Library</div>
+            {Object.entries(AiCommandGroups).map(([groupName, groupNodes]) => (
+              <div key={groupName} className="wf-node-group">
+                <div className="wf-node-group-title">{groupName}</div>
+                <div className="wf-node-list">
+                  {groupNodes.map((command) => (
+                    <button
+                      key={command.id}
+                      type="button"
+                      className="wf-node-item"
+                      onClick={() => handlePaletteAddNode(Object.keys(AiCommandBlocks).find((key) => AiCommandBlocks[key].id === command.id))}
+                    >
+                      <span className="wf-node-item-title">{command.businessLabel || command.display}</span>
+                      <span className="wf-node-item-desc">{command.description}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
-          <div className="run-metric">
-            <strong>{runProgress.running}</strong>
-            <span>Running</span>
-          </div>
-          <div className="run-metric">
-            <strong>{runProgress.failed}</strong>
-            <span>Failed</span>
-          </div>
-        </div>
-        <div className="workflow-execution-order">
-          <div className="workflow-subtitle">Execution Order</div>
-          <ol>
-            {workflowDefinition.execution_order.map((nodeId) => {
-              const currentNode = workflowDefinition.nodes.find((node) => node.id === nodeId);
-              return <li key={nodeId}>{currentNode?.label || nodeId}</li>;
-            })}
-          </ol>
-        </div>
+        </aside>
 
-        <div className="workflow-panel-title with-margin">Step Details</div>
-        {!selectedNode || selectedNode.id === DROPZONE_NODE_ID ? (
-          <div className="workflow-empty-state">Select a pipeline step to edit its business guidance.</div>
-        ) : (
-          <div className="workflow-node-inspector">
-            <label className="workflow-field compact">
-              <span>Step name</span>
-              <input
-                value={selectedNode.data?.label || ''}
-                onChange={(event) => updateSelectedNodeField('label', event.target.value)}
-              />
-            </label>
-            <label className="workflow-field compact">
-              <span>Business description</span>
-              <textarea
-                rows={3}
-                value={selectedNode.data?.description || ''}
-                onChange={(event) => updateSelectedNodeField('description', event.target.value)}
-              />
-            </label>
-            <label className="workflow-field compact">
-              <span>{selectedNode.data?.command === '/clean' ? 'Cleaning instructions' : 'Business focus'}</span>
-              <textarea
-                rows={4}
-                value={selectedNode.data?.command === '/clean'
-                  ? selectedNode.data?.params?.instructions || ''
-                  : selectedNode.data?.params?.focus || ''}
-                onChange={(event) => updateSelectedNodeParam(
-                  selectedNode.data?.command === '/clean' ? 'instructions' : 'focus',
-                  event.target.value
+        <main className="wf-canvas-area">
+          <ReactFlow
+            nodes={renderedNodes}
+            edges={edges}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onConnect={onConnect}
+            onNodeClick={(_, node) => setSelectedNodeId(node.id)}
+            fitView
+            nodeTypes={{
+              AiWorkLabNodeSizer,
+              dropZoneNode: DropZoneNode,
+            }}
+          >
+            <Background />
+            <Controls />
+          </ReactFlow>
+
+          {clicked && (
+            <ContextMenu
+              x={coords.x}
+              y={coords.y}
+              options={Object.keys(AiCommandBlocks).map((key) => ({
+                id: key,
+                label: `Add ${AiCommandBlocks[key].display}`,
+              }))}
+              onSelect={handleAddNode}
+            />
+          )}
+        </main>
+
+        <aside className="wf-sidebar right">
+          <div className="wf-panel-section">
+            <div className="wf-panel-title">Execution</div>
+            <div className="wf-run-stats">
+              <div className="wf-stat-card">
+                <span className="wf-stat-val">{runProgress.completed}</span>
+                <span className="wf-stat-label">Done</span>
+              </div>
+              <div className="wf-stat-card">
+                <span className="wf-stat-val" style={{ color: '#2563eb' }}>{runProgress.running}</span>
+                <span className="wf-stat-label">Active</span>
+              </div>
+              <div className="wf-stat-card">
+                <span className="wf-stat-val" style={{ color: '#ef4444' }}>{runProgress.failed}</span>
+                <span className="wf-stat-label">Fail</span>
+              </div>
+            </div>
+
+            <div className="wf-field">
+              <label>Status: {runStatusLabel}</label>
+            </div>
+
+            <div className="wf-panel-title" style={{ marginTop: '20px' }}>Sequence</div>
+            <ol className="wf-exec-list">
+              {workflowDefinition.execution_order.map((nodeId) => {
+                const currentNode = workflowDefinition.nodes.find((node) => node.id === nodeId);
+                return (
+                  <li key={nodeId} className="wf-exec-item">
+                    {currentNode?.label || nodeId}
+                  </li>
+                );
+              })}
+            </ol>
+          </div>
+
+          <div className="wf-panel-section">
+            <div className="wf-panel-title">Step Inspector</div>
+            {!selectedNode || selectedNode.id === DROPZONE_NODE_ID ? (
+              <div style={{ fontSize: '13px', color: '#94a3b8', textAlign: 'center', padding: '20px 0' }}>
+                Select a step on the canvas to configure business logic.
+              </div>
+            ) : (
+              <div className="wf-node-inspector">
+                <div className="wf-field">
+                  <label>Step name</label>
+                  <input
+                    className="wf-input"
+                    value={selectedNode.data?.label || ''}
+                    onChange={(event) => updateSelectedNodeField('label', event.target.value)}
+                  />
+                </div>
+                <div className="wf-field">
+                  <label>Business description</label>
+                  <textarea
+                    className="wf-textarea"
+                    rows={2}
+                    value={selectedNode.data?.description || ''}
+                    onChange={(event) => updateSelectedNodeField('description', event.target.value)}
+                  />
+                </div>
+                <div className="wf-field">
+                  <label>{selectedNode.data?.command === '/clean' ? 'Cleaning instructions' : 'Business focus'}</label>
+                  <textarea
+                    className="wf-textarea"
+                    rows={4}
+                    value={selectedNode.data?.command === '/clean'
+                      ? selectedNode.data?.params?.instructions || ''
+                      : selectedNode.data?.params?.focus || ''}
+                    onChange={(event) => updateSelectedNodeParam(
+                      selectedNode.data?.command === '/clean' ? 'instructions' : 'focus',
+                      event.target.value
+                    )}
+                    placeholder={selectedNode.data?.command === '/clean'
+                      ? 'Describe how this step should clean the dataset.'
+                      : 'Describe what this step should emphasize for business users.'}
+                  />
+                </div>
+                {selectedNode.data?.command !== '/clean' && (
+                  <div className="wf-field">
+                    <label>Business goal</label>
+                    <input
+                      className="wf-input"
+                      value={selectedNode.data?.params?.goal || ''}
+                      onChange={(event) => updateSelectedNodeParam('goal', event.target.value)}
+                      placeholder="Optional outcome guidance"
+                    />
+                  </div>
                 )}
-                placeholder={selectedNode.data?.command === '/clean'
-                  ? 'Describe how this step should clean the dataset.'
-                  : 'Describe what this step should emphasize for business users.'}
-              />
-            </label>
-            {selectedNode.data?.command !== '/clean' && (
-              <label className="workflow-field compact">
-                <span>Business goal</span>
-                <input
-                  value={selectedNode.data?.params?.goal || ''}
-                  onChange={(event) => updateSelectedNodeParam('goal', event.target.value)}
-                  placeholder="Optional outcome or audience guidance"
-                />
-              </label>
+              </div>
             )}
           </div>
-        )}
+        </aside>
       </div>
-
-      <ReactFlow
-        nodes={renderedNodes}
-        edges={edges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onConnect={onConnect}
-        onNodeClick={(_, node) => setSelectedNodeId(node.id)}
-        fitView
-        nodeTypes={{
-          AiWorkLabNodeSizer,
-          dropZoneNode: DropZoneNode,
-        }}
-      >
-        <Background />
-        <Controls />
-      </ReactFlow>
-
-      {clicked && (
-        <ContextMenu
-          x={coords.x}
-          y={coords.y}
-          options={Object.keys(AiCommandBlocks).map((key) => ({
-            id: key,
-            label: `Add ${AiCommandBlocks[key].display}`,
-          }))}
-          onSelect={handleAddNode}
-        />
-      )}
 
       <AIPipeline
         workflowDefinition={workflowDefinition}
@@ -727,7 +731,3 @@ function AiWorkflowLab({ label = 'AI WorkFlow Lab:', savedState }) {
 }
 
 export default AiWorkflowLab;
-
-
-
-

@@ -1,51 +1,51 @@
 import { memo } from 'react';
 import { Handle, NodeResizer, Position } from '@xyflow/react';
 
-const STATUS_STYLES = {
+const STATUS_CONFIG = {
   idle: {
     label: 'Idle',
-    pillBackground: '#eef2f6',
-    pillColor: '#52606d',
-    borderColor: '#cfd8e3',
+    bg: '#f1f5f9',
+    color: '#64748b',
+    border: '#e2e8f0',
   },
   running: {
     label: 'Running',
-    pillBackground: '#e1f0ff',
-    pillColor: '#0f5ea8',
-    borderColor: '#74b7ff',
+    bg: '#eff6ff',
+    color: '#2563eb',
+    border: '#bfdbfe',
   },
   completed: {
     label: 'Completed',
-    pillBackground: '#e5f7ee',
-    pillColor: '#146b45',
-    borderColor: '#7bd3a6',
+    bg: '#ecfdf5',
+    color: '#059669',
+    border: '#a7f3d0',
   },
   failed: {
     label: 'Failed',
-    pillBackground: '#fdebec',
-    pillColor: '#a5373f',
-    borderColor: '#f0aab0',
+    bg: '#fef2f2',
+    color: '#dc2626',
+    border: '#fecaca',
   },
 };
 
 const AiWorkLabNodeSizer = ({ data, selected }) => {
   const Icon = data.icon;
-  const statusKey = STATUS_STYLES[data.status] ? data.status : 'idle';
-  const statusStyle = STATUS_STYLES[statusKey];
+  const status = STATUS_CONFIG[data.status] || STATUS_CONFIG.idle;
 
   return (
-    <>
+    <div className={`wf-node-wrapper ${selected ? 'selected' : ''}`} style={{ position: 'relative' }}>
       <NodeResizer
-        color="#444"
+        color="#2563eb"
         isVisible={selected}
-        minWidth={180}
-        minHeight={90}
-        lineStyle={{ strokeWidth: 1.5 }}
+        minWidth={200}
+        minHeight={100}
+        lineStyle={{ strokeWidth: 2 }}
         handleStyle={{
-          width: 10,
-          height: 10,
-          borderRadius: '2px',
-          backgroundColor: '#555',
+          width: 8,
+          height: 8,
+          borderRadius: '50%',
+          backgroundColor: '#2563eb',
+          border: '2px solid #ffffff',
         }}
       />
 
@@ -53,74 +53,84 @@ const AiWorkLabNodeSizer = ({ data, selected }) => {
         type="target"
         position={Position.Left}
         id="input"
-        className="handle-target"
         style={{
-          top: '50%',
-          left: '-12px',
-          transform: 'translateY(-50%)',
+          width: '12px',
+          height: '12px',
+          left: '-6px',
+          background: '#ffffff',
+          border: '2px solid #cbd5e1',
           zIndex: 10,
         }}
       />
 
       <div
+        className="wf-node-card"
         style={{
           display: 'flex',
           flexDirection: 'column',
-          alignItems: 'flex-start',
-          justifyContent: 'center',
-          gap: '8px',
-          padding: '14px 16px',
-          borderRadius: '14px',
-          border: `1.5px solid ${statusStyle.borderColor}`,
-          backgroundColor: '#fefefe',
-          boxShadow: selected
-            ? '0 0 0 2px rgba(74, 144, 226, 0.35)'
-            : '0 12px 28px rgba(36, 52, 67, 0.12)',
-          fontFamily: 'Segoe UI, sans-serif',
-          fontSize: '14px',
-          color: '#1f2a37',
-          textAlign: 'left',
+          padding: '16px',
+          borderRadius: '12px',
+          background: '#ffffff',
+          border: `1px solid ${selected ? '#2563eb' : status.border}`,
+          boxShadow: selected 
+            ? '0 10px 15px -3px rgba(37, 99, 235, 0.1), 0 4px 6px -4px rgba(37, 99, 235, 0.1)'
+            : '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
+          minWidth: '220px',
+          transition: 'all 0.2s ease',
           cursor: 'grab',
-          position: 'relative',
-          minWidth: '200px',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%' }}>
-          {Icon && <Icon size={22} style={{ color: '#274c77', flexShrink: 0 }} />}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0 }}>
-            <div style={{ fontWeight: 700 }}>{data.label}</div>
-            {data.description && (
-              <div style={{ fontSize: '12px', color: '#607080', lineHeight: 1.4 }}>
-                {data.description}
-              </div>
-            )}
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', marginBottom: '12px' }}>
+          <div 
+            style={{ 
+              padding: '8px', 
+              borderRadius: '8px', 
+              background: '#f8fafc',
+              color: '#475569',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              border: '1px solid #f1f5f9'
+            }}
+          >
+            {Icon && <Icon size={20} />}
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', flex: 1, minWidth: 0 }}>
+            <div style={{ fontWeight: 700, fontSize: '14px', color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {data.label}
+            </div>
+            <div style={{ fontSize: '11px', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {data.command}
+            </div>
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', flexWrap: 'wrap' }}>
-          <span
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              padding: '4px 10px',
-              borderRadius: '999px',
-              background: statusStyle.pillBackground,
-              color: statusStyle.pillColor,
-              fontSize: '11px',
-              fontWeight: 700,
-              letterSpacing: '0.03em',
-              textTransform: 'uppercase',
+        {data.description && (
+          <div style={{ fontSize: '12px', color: '#475569', lineHeight: 1.5, marginBottom: '12px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+            {data.description}
+          </div>
+        )}
+
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto' }}>
+          <div 
+            style={{ 
+              fontSize: '10px', 
+              fontWeight: 700, 
+              textTransform: 'uppercase', 
+              letterSpacing: '0.05em',
+              padding: '2px 8px',
+              borderRadius: '4px',
+              background: status.bg,
+              color: status.color,
+              border: `1px solid ${status.border}`
             }}
           >
-            {statusStyle.label}
-          </span>
-          {data.command && (
-            <span style={{ fontSize: '11px', color: '#738091' }}>{data.command}</span>
-          )}
+            {status.label}
+          </div>
         </div>
 
         {data.error && (
-          <div style={{ fontSize: '11px', color: '#a5373f', lineHeight: 1.4 }}>
+          <div style={{ marginTop: '8px', fontSize: '11px', color: '#dc2626', background: '#fef2f2', padding: '6px', borderRadius: '4px', border: '1px solid #fecaca' }}>
             {data.error}
           </div>
         )}
@@ -130,15 +140,16 @@ const AiWorkLabNodeSizer = ({ data, selected }) => {
         type="source"
         position={Position.Right}
         id="output"
-        className="handle-source"
         style={{
-          top: '50%',
-          right: '-12px',
-          transform: 'translateY(-50%)',
+          width: '12px',
+          height: '12px',
+          right: '-6px',
+          background: '#ffffff',
+          border: '2px solid #cbd5e1',
           zIndex: 10,
         }}
       />
-    </>
+    </div>
   );
 };
 
