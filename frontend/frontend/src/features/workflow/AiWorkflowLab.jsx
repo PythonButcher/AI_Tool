@@ -1,7 +1,6 @@
-// 📂 AiWorkflowLab.jsx — cleaned and fixed DropZone behavior with working hover
 import { useHelpOverlay } from '../../context/HelpOverlayContext';
 
-import { useState, useCallback, useContext, useRef, useEffect } from "react";
+import { useState, useCallback, useContext, useRef, useEffect, useMemo } from 'react';
 import {
   ReactFlow,
   Controls,
@@ -9,20 +8,28 @@ import {
   applyNodeChanges,
   applyEdgeChanges,
   addEdge,
-} from "@xyflow/react";
-import "@xyflow/react/dist/style.css";
-import "./AiWorkflowLab.css";
-import "./AiWorkflowLabDropZone.css";
-import { AiCommandBlocks } from "./AiCommandBlock";
-import AiWorkLabNodeSizer from "./AiWorkLabNodeSizer";
-import { useContextMenu } from "../../hooks/useContextMenu";
-import ContextMenu from "../../context/ContextMenu";
-import { DataContext } from "../../context/DataContext";
+} from '@xyflow/react';
+import '@xyflow/react/dist/style.css';
+import './AiWorkflowLab.css';
+import './AiWorkflowLabDropZone.css';
+import { AiCommandBlocks, AiCommandGroups } from './AiCommandBlock';
+import AiWorkLabNodeSizer from './AiWorkLabNodeSizer';
+import { useContextMenu } from '../../hooks/useContextMenu';
+import ContextMenu from '../../context/ContextMenu';
+import { DataContext } from '../../context/DataContext';
 import AIPipeline from './AIPipeline';
 import DropZoneNode from './DropZoneNode';
-import { useWindowContext } from "../../context/WindowContext";
-import { FiDownload, FiUpload } from "react-icons/fi";
-
+import { useWindowContext } from '../../context/WindowContext';
+import { FiCopy, FiDownload, FiPlay, FiPlus, FiRefreshCw, FiSave, FiUpload } from 'react-icons/fi';
+import {
+  buildReactFlowGraph,
+  buildWorkflowDefinition,
+  createDropZoneNode,
+  createEmptyWorkflowMeta,
+  createWorkflowNode,
+  DROPZONE_NODE_ID,
+} from './workflowGraph';
+import { workflowApi } from './workflowApi';
 
 const parsePreview = (preview) => {
   if (!preview) return [];
@@ -38,107 +45,103 @@ const parsePreview = (preview) => {
   return [];
 };
 
+const ensureDropZone = (rfNodes) => {
+  if (rfNodes.some((node) => node.id === DROPZONE_NODE_ID)) {
+    return rfNodes;
+  }
+  return [...rfNodes, createDropZoneNode()];
+};
 
-const initialNodes = [
-  {
-    id: 'dropzone-node',
-    type: 'dropZoneNode',
-    position: { x: 600, y: 900 },
-    data: { hovering: false },
-    deletable: false,
-    draggable: false,
-    selectable: false,
-  },
-];
+const toWorkflowMeta = (definition = {}) => ({
+  id: definition.id || null,
+  name: definition.name || 'Untitled Workflow',
+  description: definition.description || 'Business automation workflow',
+  category: definition.category || 'Custom',
+  isTemplate: Boolean(definition.is_template || definition.isTemplate),
+  sourceWorkflowId: definition.source_workflow_id || definition.sourceWorkflowId || null,
+  continueOnError: Boolean(definition.continue_on_error || definition.continueOnError),
+});
 
-const initialEdges = [];
-
-function AiWorkflowLab({ label = "AI WorkFlow Lab:", savedState }) {
-  const { uploadedData, fullData, cleanedData, pipelineResults, setPipelineResults, setCleanedData } = useContext(DataContext);
+function AiWorkflowLab({ label = 'AI WorkFlow Lab:', savedState }) {
+  const {
+    uploadedData,
+    fullData,
+    cleanedData,
+    pipelineResults,
+    setPipelineResults,
+    setCleanedData,
+  } = useContext(DataContext);
   const { saveWindowContentState } = useWindowContext();
-  const [nodes, setNodes] = useState(savedState?.nodes || initialNodes);
-  const [edges, setEdges] = useState(savedState?.edges || initialEdges);
+  const initialNodes = ensureDropZone(savedState?.nodes || [createDropZoneNode()]);
+  const [nodes, setNodes] = useState(initialNodes);
+  const [edges, setEdges] = useState(savedState?.edges || []);
+  const [workflowMeta, setWorkflowMeta] = useState(savedState?.workflowMeta || createEmptyWorkflowMeta());
   const [hasExecuted, setHasExecuted] = useState(false);
   const [isHighlighted, setIsHighlighted] = useState(false);
+  const [selectedNodeId, setSelectedNodeId] = useState(savedState?.selectedNodeId || null);
+  const [catalog, setCatalog] = useState({ workflows: [], templates: [] });
+  const [catalogStatus, setCatalogStatus] = useState('idle');
+  const [catalogError, setCatalogError] = useState(null);
+  const [runState, setRunState] = useState(null);
 
   const { isHelpVisible, toggleHelp, closeHelp } = useHelpOverlay();
-      const helpId = 'AiWorkLab';
+  const workflowRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const { clicked, coords, setClicked } = useContextMenu(workflowRef);
 
-   // --- NEW: helper to map spec node.type -> AiCommandBlocks entry + node data
-  const mapSpecTypeToBlockKey = useCallback((t) => {
-    const type = String(t || "").toUpperCase();
-    // Adjust these keys to match your AiCommandBlocks keys exactly
-    switch (type) {
-      case "SUMMARY": return "summary";   // maps to AiCommandBlocks.summary
-      case "OUTLIERS": return "outliers"; // maps to AiCommandBlocks.outliers
-      case "CHARTS": return "charts";     // maps to AiCommandBlocks.charts
-      case "INSIGHTS": return "insights"; // maps to AiCommandBlocks.insights
-      case "CLEAN": return "clean";       // maps to AiCommandBlocks.clean
-      case "EXECUTE": return "execute";   // maps to AiCommandBlocks.execute
-      default: return null;               // falls back to CUSTOM
+  const dataset = useMemo(
+    () => cleanedData || fullData || parsePreview(uploadedData?.data_preview),
+    [cleanedData, fullData, uploadedData]
+  );
+
+  const workflowDefinition = useMemo(
+    () => buildWorkflowDefinition({ workflowMeta, nodes, edges }),
+    [workflowMeta, nodes, edges]
+  );
+
+  const selectedNode = useMemo(
+    () => nodes.find((node) => node.id === selectedNodeId) || null,
+    [nodes, selectedNodeId]
+  );
+
+  const refreshCatalog = useCallback(async () => {
+    setCatalogStatus('loading');
+    setCatalogError(null);
+    try {
+      const response = await workflowApi.list();
+      setCatalog(response);
+      setCatalogStatus('ready');
+    } catch (error) {
+      console.error('Failed to load workflows:', error);
+      setCatalogStatus('error');
+      setCatalogError(error.response?.data?.error || error.message || 'Unable to load workflows.');
     }
   }, []);
 
-  // --- NEW: Build a React Flow node from a WorkflowSpec node
-  const buildRfNodeFromSpec = useCallback((specNode) => {
-    const blockKey = mapSpecTypeToBlockKey(specNode.type);
-    const block = blockKey ? AiCommandBlocks[blockKey] : null;
+  useEffect(() => {
+    refreshCatalog();
+  }, [refreshCatalog]);
 
-    const label = block?.display || specNode.label || specNode.type || "Custom";
-    const command = block?.command || `/${(specNode.type || "custom").toLowerCase()}`;
-    const params = specNode.params && typeof specNode.params === "object" ? specNode.params : {};
-
-    return {
-      id: specNode.id || `node-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,
-      type: "AiWorkLabNodeSizer",
-      position: specNode.position || { x: 200, y: 200 },
-      data: {
-        icon: block?.icon || null,
-        label,
-        command,
-        // We’ll keep params so downstream nodes/pipeline can use them
-        params,
-        commandType: blockKey || (typeof specNode.type === "string" ? specNode.type.toLowerCase() : null),
-      },
-    };
-  }, [mapSpecTypeToBlockKey]);
-
-  // --- NEW: Importer — replace current graph with compiled spec
   const importWorkflowSpec = useCallback((spec, opts = {}) => {
-    try {
-      if (!spec || !Array.isArray(spec.nodes)) {
-        console.warn("⚠️ importWorkflowSpec: invalid spec", spec);
-        return;
-      }
-
-      // Build RF nodes from spec (plus keep the dropzone node at the end)
-      const rfNodes = spec.nodes.map(buildRfNodeFromSpec);
-      const rfEdges = (spec.edges || []).map(e => ({
-        id: e.id || `edge-${Math.random().toString(36).slice(2,7)}`,
-        source: e.source,
-        target: e.target,
-        type: "default",
-      }));
-
-      // Always include the non-deletable Drop Zone
-      const dropZone = initialNodes[0];
-      const nextNodes = [...rfNodes, dropZone];
-
-      setNodes(nextNodes);
-      setEdges(rfEdges);
-
-      console.log("✅ Imported workflow spec:", { nodes: nextNodes, edges: rfEdges });
-
-      if (opts.autoRun && typeof window.runAIPipeline === "function") {
-        // slight defer to ensure ReactFlow has committed the new graph
-        setTimeout(() => window.runAIPipeline(), 50);
-      }
-    } catch (err) {
-      console.error("❌ importWorkflowSpec failed:", err);
+    if (!spec || !Array.isArray(spec.nodes)) {
+      console.warn('Invalid workflow specification', spec);
+      return;
     }
-  }, [buildRfNodeFromSpec]);
 
-  // --- NEW: Expose imperative API on window (like your run hook)
+    const graph = buildReactFlowGraph(spec);
+    setNodes(graph.nodes);
+    setEdges(graph.edges);
+    setWorkflowMeta(toWorkflowMeta(spec));
+    setSelectedNodeId(graph.nodes.find((node) => node.id !== DROPZONE_NODE_ID)?.id || null);
+    setRunState(null);
+    setPipelineResults({});
+    setHasExecuted(false);
+
+    if (opts.autoRun && typeof window.runAIPipeline === 'function') {
+      window.setTimeout(() => window.runAIPipeline(), 80);
+    }
+  }, [setPipelineResults]);
+
   useEffect(() => {
     window.importWorkflowSpec = importWorkflowSpec;
     return () => {
@@ -152,169 +155,48 @@ function AiWorkflowLab({ label = "AI WorkFlow Lab:", savedState }) {
     let timeoutId;
     const handleAutopilotReady = () => {
       setIsHighlighted(true);
-      if (timeoutId) clearTimeout(timeoutId);
-      timeoutId = setTimeout(() => setIsHighlighted(false), 1800);
+      window.clearTimeout(timeoutId);
+      timeoutId = window.setTimeout(() => setIsHighlighted(false), 1800);
     };
 
     window.addEventListener('autopilot-workflow-ready', handleAutopilotReady);
     return () => {
       window.removeEventListener('autopilot-workflow-ready', handleAutopilotReady);
-      if (timeoutId) clearTimeout(timeoutId);
+      window.clearTimeout(timeoutId);
     };
   }, []);
 
-  const workflowRef = useRef(null);
-  const fileInputRef = useRef(null);
-  const { clicked, coords, setClicked } = useContextMenu(workflowRef);
-
-  const deriveCommandType = useCallback((node) => {
-    const explicitType = node?.data?.commandType;
-    if (explicitType) {
-      return explicitType;
-    }
-
-    const command = node?.data?.command;
-    if (!command) {
-      return null;
-    }
-
-    const matchedKey = Object.keys(AiCommandBlocks).find(
-      (key) => AiCommandBlocks[key].command === command
-    );
-
-    if (matchedKey) {
-      return matchedKey;
-    }
-
-    if (command.startsWith("/")) {
-      return command.slice(1);
-    }
-
-    return command;
-  }, []);
-
-  const exportWorkflowSpec = useCallback(() => {
-    const workflowNodes = nodes
-      .filter((node) => node.id !== "dropzone-node")
-      .map((node) => {
-        const params = node.data?.params && typeof node.data.params === "object"
-          ? node.data.params
-          : {};
-
-        const type = deriveCommandType(node);
-
-        const specNode = {
-          id: node.id,
-          type: typeof type === "string" ? type : null,
-          label: node.data?.label,
-          icon: node.data?.icon,
-          params,
-          position: node.position,
-        };
-
-        if (!specNode.type) {
-          delete specNode.type;
-        }
-
-        if (!specNode.icon) {
-          delete specNode.icon;
-        }
-
-        if (!specNode.label) {
-          delete specNode.label;
-        }
-
-        return specNode;
-      });
-
-    const workflowEdges = edges.map((edge) => ({
-      id: edge.id,
-      source: edge.source,
-      target: edge.target,
-    }));
-
-    return { nodes: workflowNodes, edges: workflowEdges };
-  }, [deriveCommandType, edges, nodes]);
-
   const triggerDownload = useCallback((spec) => {
-    try {
-      const json = JSON.stringify(spec, null, 2);
-      const blob = new Blob([json], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const timestamp = new Date()
-        .toISOString()
-        .replace(/[:T]/g, "-")
-        .split(".")[0];
-      const anchor = document.createElement("a");
-      anchor.href = url;
-      anchor.download = `workflow-${timestamp}.json`;
-      document.body.appendChild(anchor);
-      anchor.click();
-      document.body.removeChild(anchor);
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error("❌ Failed to export workflow spec", err);
-    }
+    const json = JSON.stringify(spec, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const timestamp = new Date().toISOString().replace(/[:T]/g, '-').split('.')[0];
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `${(spec.name || 'workflow').replace(/\s+/g, '-').toLowerCase()}-${timestamp}.json`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    URL.revokeObjectURL(url);
   }, []);
 
-  const handleSaveWorkflow = useCallback(() => {
-    const spec = exportWorkflowSpec();
-    triggerDownload(spec);
-  }, [exportWorkflowSpec, triggerDownload]);
+  const handleExportWorkflow = useCallback(() => {
+    triggerDownload(workflowDefinition);
+  }, [triggerDownload, workflowDefinition]);
 
-  const handleLoadWorkflowClick = useCallback(() => {
-    fileInputRef.current?.click();
-  }, []);
-
-  const handleWorkflowFileChange = useCallback(
-    (event) => {
-      const file = event.target.files && event.target.files[0];
-      if (!file) {
-        return;
-      }
-
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          const text = e.target?.result;
-          const parsed = JSON.parse(text);
-
-          if (!parsed || !Array.isArray(parsed.nodes) || !Array.isArray(parsed.edges)) {
-            console.warn("⚠️ Invalid workflow file: missing nodes or edges", parsed);
-            alert("Unable to load workflow: the file is missing nodes or edges.");
-            return;
-          }
-
-          setPipelineResults({});
-          setHasExecuted(false);
-          importWorkflowSpec(parsed);
-        } catch (error) {
-          console.error("❌ Failed to load workflow file", error);
-          alert("Unable to load workflow: the file is not valid JSON.");
-        } finally {
-          if (fileInputRef.current) {
-            fileInputRef.current.value = "";
-          }
-        }
-      };
-
-      reader.readAsText(file);
-    },
-    [importWorkflowSpec, setPipelineResults]
-  );
-
-  const handleExecuteDrop = async () => {
-    console.log("🚀 Execute node dropped! Triggering AIPipeline...");
-    if (typeof window.runAIPipeline === "function") {
+  const handleRunWorkflow = useCallback(() => {
+    if (typeof window.runAIPipeline === 'function') {
       window.runAIPipeline();
-    } else {
-      console.warn("⚠️ AIPipeline not registered yet.");
     }
-  };
+  }, []);
+
+  const handleExecuteDrop = useCallback(() => {
+    handleRunWorkflow();
+  }, [handleRunWorkflow]);
 
   const checkOverlapAndTrigger = useCallback(
     (node) => {
-      const dropZoneElement = document.querySelector("[data-id='dropzone-node']");
+      const dropZoneElement = document.querySelector(`[data-id='${DROPZONE_NODE_ID}']`);
       const nodeEl = document.querySelector(`[data-id='${node.id}']`);
       if (!dropZoneElement || !nodeEl) return;
 
@@ -328,13 +210,11 @@ function AiWorkflowLab({ label = "AI WorkFlow Lab:", savedState }) {
         nodeRect.top > dropZoneRect.bottom
       );
 
-      setNodes((prevNodes) =>
-        prevNodes.map((n) =>
-          n.id === 'dropzone-node'
-            ? { ...n, data: { ...n.data, hovering: isIntersecting } }
-            : n
-        )
-      );
+      setNodes((prevNodes) => prevNodes.map((currentNode) => (
+        currentNode.id === DROPZONE_NODE_ID
+          ? { ...currentNode, data: { ...currentNode.data, hovering: isIntersecting } }
+          : currentNode
+      )));
 
       if (isIntersecting && !hasExecuted) {
         setHasExecuted(true);
@@ -343,195 +223,511 @@ function AiWorkflowLab({ label = "AI WorkFlow Lab:", savedState }) {
         setHasExecuted(false);
       }
     },
-    [hasExecuted]
+    [handleExecuteDrop, hasExecuted]
   );
 
-  // 🔁 Add this new handler
   const onConnect = useCallback((params) => {
-    console.log("🔗 New edge created:", params);
-    setEdges((eds) => addEdge(params, eds));
+    setEdges((currentEdges) => addEdge(params, currentEdges));
   }, []);
 
+  const onNodesChange = useCallback((changes) => {
+    setNodes((currentNodes) => {
+      const updatedNodes = applyNodeChanges(changes, currentNodes);
+      const draggedNode = changes.find((change) => change.type === 'position' || change.type === 'dimensions');
 
-  const onNodesChange = useCallback(
-    (changes) => {
-      setNodes((nds) => {
-        const updatedNodes = applyNodeChanges(changes, nds);
-
-        const draggedNode = changes.find(
-          (change) => change.type === "position" || change.type === "dimensions"
-        );
-
-        if (draggedNode && draggedNode.id) {
-          const node = updatedNodes.find((n) => n.id === draggedNode.id);
-          if (node?.data?.command === "/execute") {
-            checkOverlapAndTrigger(node);
-          }
+      if (draggedNode?.id) {
+        const currentNode = updatedNodes.find((node) => node.id === draggedNode.id);
+        if (currentNode?.data?.command === '/execute') {
+          checkOverlapAndTrigger(currentNode);
         }
+      }
 
-        return updatedNodes;
-      });
-    },
-    [checkOverlapAndTrigger]
-  );
+      return updatedNodes;
+    });
+  }, [checkOverlapAndTrigger]);
 
   const onEdgesChange = useCallback((changes) => {
-    setEdges((eds) => applyEdgeChanges(changes, eds));
+    setEdges((currentEdges) => applyEdgeChanges(changes, currentEdges));
   }, []);
 
-  const handleAddNode = useCallback(
-    (type) => {
-      const command = AiCommandBlocks[type];
-      if (!command) return;
+  const handleAddNode = useCallback((type, positionOverride = null) => {
+    const newNode = createWorkflowNode(
+      type,
+      positionOverride || {
+        x: Math.max(coords.x - 140, 80),
+        y: Math.max(coords.y - 80, 120),
+      }
+    );
 
-      const newNode = {
-        id: `node-${Date.now()}`,
-        type: "AiWorkLabNodeSizer",
+    if (!newNode) {
+      return;
+    }
+
+    setNodes((prevNodes) => [...prevNodes, newNode]);
+    setSelectedNodeId(newNode.id);
+    setClicked(false);
+  }, [coords, setClicked]);
+
+  const handlePaletteAddNode = useCallback((type) => {
+    const existingNodeCount = nodes.filter((node) => node.id !== DROPZONE_NODE_ID).length;
+    handleAddNode(type, {
+      x: 180 + (existingNodeCount % 3) * 260,
+      y: 140 + Math.floor(existingNodeCount / 3) * 160,
+    });
+  }, [handleAddNode, nodes]);
+
+  const updateWorkflowMeta = useCallback((key, value) => {
+    setWorkflowMeta((prev) => ({ ...prev, [key]: value }));
+  }, []);
+
+  const updateSelectedNodeField = useCallback((field, value) => {
+    if (!selectedNodeId) return;
+    setNodes((prevNodes) => prevNodes.map((node) => {
+      if (node.id !== selectedNodeId) {
+        return node;
+      }
+      return {
+        ...node,
         data: {
-          icon: command.icon,
-          label: command.display,
-          command: command.command,
-          params: {},
-          commandType: type,
-        },
-        position: {
-          x: coords.x - 100,
-          y: coords.y - 75,
+          ...node.data,
+          [field]: value,
         },
       };
+    }));
+  }, [selectedNodeId]);
 
-      setNodes((prevNodes) => [...prevNodes, newNode]);
-      setClicked(false);
-    },
-    [coords, setClicked]
-  );
+  const updateSelectedNodeParam = useCallback((key, value) => {
+    if (!selectedNodeId) return;
+    setNodes((prevNodes) => prevNodes.map((node) => {
+      if (node.id !== selectedNodeId) {
+        return node;
+      }
+      return {
+        ...node,
+        data: {
+          ...node.data,
+          params: {
+            ...(node.data?.params || {}),
+            [key]: value,
+          },
+        },
+      };
+    }));
+  }, [selectedNodeId]);
+
+  const handleSelectWorkflow = useCallback(async (workflowId) => {
+    if (!workflowId) {
+      return;
+    }
+    try {
+      const workflow = await workflowApi.get(workflowId);
+      importWorkflowSpec(workflow);
+    } catch (error) {
+      console.error('Failed to load workflow:', error);
+      alert(error.response?.data?.error || 'Unable to load workflow.');
+    }
+  }, [importWorkflowSpec]);
+
+  const handleCreateFromTemplate = useCallback(async (templateId) => {
+    if (!templateId) {
+      return;
+    }
+    try {
+      const created = await workflowApi.createFromTemplate(templateId);
+      await refreshCatalog();
+      importWorkflowSpec(created);
+    } catch (error) {
+      console.error('Failed to create workflow from template:', error);
+      alert(error.response?.data?.error || 'Unable to create workflow from template.');
+    }
+  }, [importWorkflowSpec, refreshCatalog]);
+
+  const handleSaveWorkflow = useCallback(async (saveAsNew = false) => {
+    try {
+      const payload = {
+        ...workflowDefinition,
+        id: saveAsNew ? null : workflowDefinition.id,
+        is_template: false,
+      };
+      const saved = payload.id
+        ? await workflowApi.update(payload.id, payload)
+        : await workflowApi.create(payload);
+      setWorkflowMeta(toWorkflowMeta(saved));
+      await refreshCatalog();
+    } catch (error) {
+      console.error('Failed to save workflow:', error);
+      alert(error.response?.data?.error || 'Unable to save workflow.');
+    }
+  }, [refreshCatalog, workflowDefinition]);
+
+  const handleDuplicateWorkflow = useCallback(async () => {
+    try {
+      let workflowId = workflowMeta.id;
+      if (!workflowId) {
+        const created = await workflowApi.create({
+          ...workflowDefinition,
+          is_template: false,
+        });
+        workflowId = created.id;
+      }
+      const duplicate = await workflowApi.duplicate(workflowId);
+      await refreshCatalog();
+      importWorkflowSpec(duplicate);
+    } catch (error) {
+      console.error('Failed to duplicate workflow:', error);
+      alert(error.response?.data?.error || 'Unable to duplicate workflow.');
+    }
+  }, [importWorkflowSpec, refreshCatalog, workflowDefinition, workflowMeta.id]);
+
+  const handleNewWorkflow = useCallback(() => {
+    setNodes([createDropZoneNode()]);
+    setEdges([]);
+    setWorkflowMeta(createEmptyWorkflowMeta());
+    setSelectedNodeId(null);
+    setRunState(null);
+    setPipelineResults({});
+  }, [setPipelineResults]);
+
+  const handleLoadWorkflowClick = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
+
+  const handleWorkflowFileChange = useCallback((event) => {
+    const file = event.target.files && event.target.files[0];
+    if (!file) {
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (loadEvent) => {
+      try {
+        const text = loadEvent.target?.result;
+        const parsed = JSON.parse(text);
+        if (!parsed || !Array.isArray(parsed.nodes) || !Array.isArray(parsed.edges)) {
+          throw new Error('Workflow file is missing nodes or edges.');
+        }
+        importWorkflowSpec(parsed);
+      } catch (error) {
+        console.error('Failed to load workflow file', error);
+        alert(error.message || 'Unable to load workflow JSON.');
+      } finally {
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+      }
+    };
+
+    reader.readAsText(file);
+  }, [importWorkflowSpec]);
 
   useEffect(() => {
-    saveWindowContentState('aiWorkflowLab', { nodes, edges });
-  }, [nodes, edges, saveWindowContentState]);
+    saveWindowContentState('aiWorkflowLab', {
+      nodes,
+      edges,
+      workflowMeta,
+      selectedNodeId,
+    });
+  }, [nodes, edges, workflowMeta, selectedNodeId, saveWindowContentState]);
 
   const renderedNodes = nodes.map((node) => ({
     ...node,
     data: {
       ...node.data,
-      status: pipelineResults[node.id]?.status || null,
+      status: pipelineResults[node.id]?.status || 'idle',
       result: pipelineResults[node.id]?.result || null,
       error: pipelineResults[node.id]?.error || null,
     },
   }));
 
+  const runStatusLabel = runState?.status
+    ? runState.status.charAt(0).toUpperCase() + runState.status.slice(1)
+    : 'Idle';
+  const runProgress = runState?.progress || { total: workflowDefinition.execution_order.length, completed: 0, failed: 0, running: 0 };
+
   return (
-  <div
-    ref={workflowRef}
-    className={`ai-workflow-lab-container${isHighlighted ? ' autopilot-highlight' : ''}`}
-    style={{ width: "100%", height: "100%", position: "relative", zIndex: 2 }}
-  >
-    {/* ✅ Help Overlay (always rendered above everything) */}
-    {isHelpVisible('aiFlow') && (
-      <div
-        className="help-overlay visible"
-        style={{ zIndex: 9999, position: "fixed", top: 0, left: 0 }}
-      >
-        <div className="help-overlay-content">
-          <span
-            className="help-overlay-close"
-            onClick={() => closeHelp('aiFlow')}
-          >
-            ×
-          </span>
-          <h3>Working with the AI Workflow Lab</h3>
-          <ol>
-            <li>The AI Workflow Lab lets you design, test, and automate full data processing pipelines — from raw ingestion to visualization.</li>
-            <li>Each node or module represents a specific step, such as cleaning, transformation, model inference, or chart generation.</li>
-            <li>You can connect modules visually to define data flow and reuse common operations across multiple datasets.</li>
-            <li>Use AI-assisted suggestions to auto-generate workflow components based on your current dataset and analysis goals.</li>
-            <li>When finished, you can export or run your workflow to generate charts, summaries, or cleaned datasets automatically.</li>
-          </ol>
-          <p>
-            Tip: The AI Workflow Lab is an experimental environment — try different pipeline structures, test AI-driven steps, and refine your data process before locking it into production.
-          </p>
+    <div
+      ref={workflowRef}
+      className={`ai-workflow-lab-container${isHighlighted ? ' autopilot-highlight' : ''}`}
+      style={{ width: '100%', height: '100%', position: 'relative', zIndex: 2 }}
+    >
+      {isHelpVisible('aiFlow') && (
+        <div className="help-overlay visible" style={{ zIndex: 9999, position: 'fixed', top: 0, left: 0 }}>
+          <div className="help-overlay-content">
+            <span className="help-overlay-close" onClick={() => closeHelp('aiFlow')}>
+              ×
+            </span>
+            <h3>Business Automation Pipelines</h3>
+            <ol>
+              <li>Save workflows as reusable business automations with names, descriptions, and step layouts.</li>
+              <li>Use templates as starting points for cleaning, insight generation, reporting, and AI analysis.</li>
+              <li>Arrange steps visually and connect them to define execution order and dependencies.</li>
+              <li>Run the full pipeline to track each step as idle, running, completed, or failed.</li>
+              <li>Use the step details panel to keep node configuration business-focused instead of technical.</li>
+            </ol>
+          </div>
+        </div>
+      )}
+
+      <div className="workflow-metadata-panel">
+        <div className="workflow-metadata-header">
+          <div>
+            <div className="workflow-kicker">Automation Pipeline</div>
+            <h3>{label}</h3>
+          </div>
+          <button type="button" className="help-overlay-trigger" onClick={() => toggleHelp('aiFlow')}>
+            ❓
+          </button>
+        </div>
+
+        <label className="workflow-field">
+          <span>Name</span>
+          <input
+            value={workflowMeta.name}
+            onChange={(event) => updateWorkflowMeta('name', event.target.value)}
+            placeholder="Quarterly revenue analysis"
+          />
+        </label>
+
+        <label className="workflow-field">
+          <span>Description</span>
+          <textarea
+            rows={3}
+            value={workflowMeta.description}
+            onChange={(event) => updateWorkflowMeta('description', event.target.value)}
+            placeholder="Explain what this automation does for business users."
+          />
+        </label>
+
+        <div className="workflow-summary-grid">
+          <div>
+            <strong>{workflowDefinition.nodes.length}</strong>
+            <span>Steps</span>
+          </div>
+          <div>
+            <strong>{workflowDefinition.edges.length}</strong>
+            <span>Connections</span>
+          </div>
+          <div>
+            <strong>{runStatusLabel}</strong>
+            <span>Run status</span>
+          </div>
+        </div>
+
+        <label className="workflow-field workflow-checkbox">
+          <input
+            type="checkbox"
+            checked={workflowMeta.continueOnError}
+            onChange={(event) => updateWorkflowMeta('continueOnError', event.target.checked)}
+          />
+          <span>Continue if a step fails</span>
+        </label>
+
+        <div className="workflow-selectors">
+          <label className="workflow-field compact">
+            <span>Saved workflows</span>
+            <select value="" onChange={(event) => handleSelectWorkflow(event.target.value)}>
+              <option value="">Open saved workflow</option>
+              {catalog.workflows.map((workflow) => (
+                <option key={workflow.id} value={workflow.id}>{workflow.name}</option>
+              ))}
+            </select>
+          </label>
+          <label className="workflow-field compact">
+            <span>Templates</span>
+            <select value="" onChange={(event) => handleCreateFromTemplate(event.target.value)}>
+              <option value="">Create from template</option>
+              {catalog.templates.map((template) => (
+                <option key={template.id} value={template.id}>{template.name}</option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        <div className="workflow-catalog-status">
+          {catalogStatus === 'loading' && 'Loading workflow catalog...'}
+          {catalogStatus === 'error' && catalogError}
+          {catalogStatus === 'ready' && `${catalog.workflows.length} saved workflows, ${catalog.templates.length} templates`}
         </div>
       </div>
-    )}
 
-    {/* ✅ Toolbar with Help Button */}
-    <div className="workflow-lab-toolbar">
-      <button
-        type="button"
-        className="workflow-toolbar-button"
-        onClick={handleSaveWorkflow}
+      <div className="workflow-lab-toolbar">
+        <button type="button" className="workflow-toolbar-button primary" onClick={handleRunWorkflow}>
+          <FiPlay aria-hidden="true" />
+          <span>Run</span>
+        </button>
+        <button type="button" className="workflow-toolbar-button" onClick={() => handleSaveWorkflow(false)}>
+          <FiSave aria-hidden="true" />
+          <span>Save</span>
+        </button>
+        <button type="button" className="workflow-toolbar-button" onClick={() => handleSaveWorkflow(true)}>
+          <FiPlus aria-hidden="true" />
+          <span>Save As</span>
+        </button>
+        <button type="button" className="workflow-toolbar-button" onClick={handleDuplicateWorkflow}>
+          <FiCopy aria-hidden="true" />
+          <span>Duplicate</span>
+        </button>
+        <button type="button" className="workflow-toolbar-button" onClick={handleExportWorkflow}>
+          <FiDownload aria-hidden="true" />
+          <span>Export</span>
+        </button>
+        <button type="button" className="workflow-toolbar-button" onClick={handleLoadWorkflowClick}>
+          <FiUpload aria-hidden="true" />
+          <span>Import</span>
+        </button>
+        <button type="button" className="workflow-toolbar-button subtle" onClick={handleNewWorkflow}>
+          <FiRefreshCw aria-hidden="true" />
+          <span>New</span>
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="application/json,.json"
+          className="workflow-toolbar-file-input"
+          onChange={handleWorkflowFileChange}
+        />
+      </div>
+
+      <div className="workflow-node-library">
+        <div className="workflow-panel-title">Node Library</div>
+        {Object.entries(AiCommandGroups).map(([groupName, groupNodes]) => (
+          <div key={groupName} className="workflow-node-group">
+            <div className="workflow-node-group-title">{groupName}</div>
+            <div className="workflow-node-list">
+              {groupNodes.map((command) => (
+                <button
+                  key={command.id}
+                  type="button"
+                  className="workflow-node-button"
+                  onClick={() => handlePaletteAddNode(Object.keys(AiCommandBlocks).find((key) => AiCommandBlocks[key].id === command.id))}
+                >
+                  <span className="workflow-node-button-title">{command.businessLabel || command.display}</span>
+                  <span className="workflow-node-button-copy">{command.description}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="workflow-side-panel right">
+        <div className="workflow-panel-title">Execution</div>
+        <div className="workflow-run-summary">
+          <div className="run-metric">
+            <strong>{runProgress.completed}</strong>
+            <span>Completed</span>
+          </div>
+          <div className="run-metric">
+            <strong>{runProgress.running}</strong>
+            <span>Running</span>
+          </div>
+          <div className="run-metric">
+            <strong>{runProgress.failed}</strong>
+            <span>Failed</span>
+          </div>
+        </div>
+        <div className="workflow-execution-order">
+          <div className="workflow-subtitle">Execution Order</div>
+          <ol>
+            {workflowDefinition.execution_order.map((nodeId) => {
+              const currentNode = workflowDefinition.nodes.find((node) => node.id === nodeId);
+              return <li key={nodeId}>{currentNode?.label || nodeId}</li>;
+            })}
+          </ol>
+        </div>
+
+        <div className="workflow-panel-title with-margin">Step Details</div>
+        {!selectedNode || selectedNode.id === DROPZONE_NODE_ID ? (
+          <div className="workflow-empty-state">Select a pipeline step to edit its business guidance.</div>
+        ) : (
+          <div className="workflow-node-inspector">
+            <label className="workflow-field compact">
+              <span>Step name</span>
+              <input
+                value={selectedNode.data?.label || ''}
+                onChange={(event) => updateSelectedNodeField('label', event.target.value)}
+              />
+            </label>
+            <label className="workflow-field compact">
+              <span>Business description</span>
+              <textarea
+                rows={3}
+                value={selectedNode.data?.description || ''}
+                onChange={(event) => updateSelectedNodeField('description', event.target.value)}
+              />
+            </label>
+            <label className="workflow-field compact">
+              <span>{selectedNode.data?.command === '/clean' ? 'Cleaning instructions' : 'Business focus'}</span>
+              <textarea
+                rows={4}
+                value={selectedNode.data?.command === '/clean'
+                  ? selectedNode.data?.params?.instructions || ''
+                  : selectedNode.data?.params?.focus || ''}
+                onChange={(event) => updateSelectedNodeParam(
+                  selectedNode.data?.command === '/clean' ? 'instructions' : 'focus',
+                  event.target.value
+                )}
+                placeholder={selectedNode.data?.command === '/clean'
+                  ? 'Describe how this step should clean the dataset.'
+                  : 'Describe what this step should emphasize for business users.'}
+              />
+            </label>
+            {selectedNode.data?.command !== '/clean' && (
+              <label className="workflow-field compact">
+                <span>Business goal</span>
+                <input
+                  value={selectedNode.data?.params?.goal || ''}
+                  onChange={(event) => updateSelectedNodeParam('goal', event.target.value)}
+                  placeholder="Optional outcome or audience guidance"
+                />
+              </label>
+            )}
+          </div>
+        )}
+      </div>
+
+      <ReactFlow
+        nodes={renderedNodes}
+        edges={edges}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        onConnect={onConnect}
+        onNodeClick={(_, node) => setSelectedNodeId(node.id)}
+        fitView
+        nodeTypes={{
+          AiWorkLabNodeSizer,
+          dropZoneNode: DropZoneNode,
+        }}
       >
-        <FiDownload aria-hidden="true" />
-        <span>Save Workflow</span>
-      </button>
+        <Background />
+        <Controls />
+      </ReactFlow>
 
-      <button
-        type="button"
-        className="workflow-toolbar-button"
-        onClick={handleLoadWorkflowClick}
-      >
-        <FiUpload aria-hidden="true" />
-        <span>Load Workflow</span>
-      </button>
+      {clicked && (
+        <ContextMenu
+          x={coords.x}
+          y={coords.y}
+          options={Object.keys(AiCommandBlocks).map((key) => ({
+            id: key,
+            label: `Add ${AiCommandBlocks[key].display}`,
+          }))}
+          onSelect={handleAddNode}
+        />
+      )}
 
-      {/* ✅ Help toggle button (must match lowercase 'aiFlow') */}
-      <button
-        type="button"
-        className="help-overlay-trigger"
-        onClick={() => toggleHelp('aiFlow')}
-      >
-        ❓
-      </button>
-
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="application/json,.json"
-        className="workflow-toolbar-file-input"
-        onChange={handleWorkflowFileChange}
+      <AIPipeline
+        workflowDefinition={workflowDefinition}
+        dataset={dataset}
+        onResults={setPipelineResults}
+        onDataCleaned={setCleanedData}
+        onRunStateChange={setRunState}
       />
     </div>
-
-    {/* ✅ ReactFlow Canvas */}
-    <ReactFlow
-      nodes={renderedNodes}
-      edges={edges}
-      onNodesChange={onNodesChange}
-      onEdgesChange={onEdgesChange}
-      onConnect={onConnect}
-      fitView
-      nodeTypes={{
-        AiWorkLabNodeSizer: AiWorkLabNodeSizer,
-        dropZoneNode: DropZoneNode,
-      }}
-    >
-      <Background />
-      <Controls />
-    </ReactFlow>
-
-    {/* ✅ Context Menu */}
-    {clicked && (
-      <ContextMenu
-        x={coords.x}
-        y={coords.y}
-        options={Object.keys(AiCommandBlocks).map((key) => ({
-          id: key,
-          label: `Add ${AiCommandBlocks[key].display}`,
-        }))}
-        onSelect={handleAddNode}
-      />
-    )}
-
-    {/* ✅ Pipeline Runner */}
-    <AIPipeline
-      nodes={nodes}
-      dataset={cleanedData || fullData || parsePreview(uploadedData?.data_preview)}
-      onResults={setPipelineResults}
-      onDataCleaned={setCleanedData}
-    />
-  </div>
-);
+  );
 }
 
-
 export default AiWorkflowLab;
+
+
+
+

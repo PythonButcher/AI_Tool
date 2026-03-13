@@ -116,14 +116,14 @@ const AiAutopilot = ({ setShowAiWorkflow }) => {
 
     const nodesComplete = pendingNodeIds.every((id) => {
       const entry = pipelineResults?.[id];
-      return entry && entry.status && entry.status !== 'pending';
+      return entry && entry.status && entry.status !== 'idle' && entry.status !== 'running' && entry.status !== 'pending';
     });
 
     if (!nodesComplete) {
       return;
     }
 
-    const reportReady = pipelineResults?.ai_report?.status === 'success';
+    const reportReady = pipelineResults?.ai_report?.status === 'completed' || pipelineResults?.ai_report?.status === 'success';
 
     setIsRunning(false);
     setPendingNodeIds([]);
@@ -155,4 +155,5 @@ const AiAutopilot = ({ setShowAiWorkflow }) => {
 };
 
 export default AiAutopilot;
+
 

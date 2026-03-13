@@ -1,0 +1,89 @@
+{
+  "id": "template-ai-analysis",
+  "name": "AI Analysis Workflow",
+  "description": "Full analysis path for summary, anomaly review, visualization, and recommendations.",
+  "category": "Analysis",
+  "is_template": true,
+  "source_workflow_id": null,
+  "created_at": "2026-03-13T03:47:05.931139+00:00",
+  "updated_at": "2026-03-13T03:47:05.931139+00:00",
+  "continue_on_error": false,
+  "graph": {
+    "version": "phase-6",
+    "nodes": [
+      {
+        "id": "summary-step",
+        "type": "summary",
+        "label": "Summary",
+        "command": "/summary",
+        "description": "Create a concise overview of the data.",
+        "params": {},
+        "position": {
+          "x": 160,
+          "y": 180
+        }
+      },
+      {
+        "id": "outlier-step",
+        "type": "outliers",
+        "label": "Outlier Review",
+        "command": "/outliers",
+        "description": "Spot issues that need investigation.",
+        "params": {},
+        "position": {
+          "x": 420,
+          "y": 180
+        }
+      },
+      {
+        "id": "charts-step",
+        "type": "charts",
+        "label": "Visualization",
+        "command": "/charts",
+        "description": "Build a presentation-ready visual suggestion.",
+        "params": {},
+        "position": {
+          "x": 680,
+          "y": 180
+        }
+      },
+      {
+        "id": "insights-step",
+        "type": "insights",
+        "label": "Recommendations",
+        "command": "/insights",
+        "description": "Translate analysis into action.",
+        "params": {
+          "goal": "Recommend next actions for business users."
+        },
+        "position": {
+          "x": 940,
+          "y": 180
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "edge-summary-outlier",
+        "source": "summary-step",
+        "target": "outlier-step"
+      },
+      {
+        "id": "edge-outlier-charts",
+        "source": "outlier-step",
+        "target": "charts-step"
+      },
+      {
+        "id": "edge-charts-insights",
+        "source": "charts-step",
+        "target": "insights-step"
+      }
+    ],
+    "execution_order": [
+      "summary-step",
+      "outlier-step",
+      "charts-step",
+      "insights-step"
+    ]
+  }
+}
