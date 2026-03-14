@@ -1,17 +1,17 @@
 .datahub-window {
   min-width: 320px;
   max-width: 480px;
-  padding: 18px;
+  padding: 14px;
   background:
-    linear-gradient(180deg, color-mix(in srgb, var(--accent-blue-soft) 22%, transparent), transparent 48%),
+    linear-gradient(180deg, color-mix(in srgb, var(--bg-secondary) 88%, transparent), transparent 40%),
     var(--bg-primary);
   color: var(--text-primary);
-  border: 1px solid color-mix(in srgb, var(--border-color) 92%, transparent);
-  border-radius: 14px;
-  box-shadow: 0 18px 36px var(--shadow-color-soft);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  box-shadow: none;
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 14px;
 }
 
 .datahub-header {
@@ -23,21 +23,21 @@
 
 .datahub-header h3 {
   margin: 0;
-  font-size: 1.12rem;
+  font-size: 1rem;
   font-weight: 700;
 }
 
 .refresh-btn {
-  padding: 8px 14px;
-  background: linear-gradient(135deg, var(--accent-blue), color-mix(in srgb, var(--accent-blue) 76%, #ffffff));
+  padding: 7px 12px;
+  background: var(--accent-blue);
   color: var(--text-on-accent);
-  border: none;
-  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--accent-blue) 18%, transparent);
+  border-radius: 6px;
   cursor: pointer;
-  font-size: 0.84rem;
+  font-size: 0.8rem;
   font-weight: 700;
   transition: transform 0.15s ease, box-shadow 0.2s ease, opacity 0.2s ease;
-  box-shadow: 0 10px 22px var(--accent-blue-soft);
+  box-shadow: 0 4px 12px var(--accent-blue-soft);
 }
 
 .refresh-btn:hover:not(:disabled) {
@@ -68,8 +68,8 @@
 
 .datahub-search input {
   flex: 1;
-  padding: 10px 12px;
-  border-radius: 10px;
+  padding: 9px 10px;
+  border-radius: 6px;
   border: 1px solid var(--border-color);
   background: var(--bg-secondary);
   color: var(--text-primary);
@@ -86,13 +86,13 @@
 }
 
 .datahub-search button {
-  padding: 10px 14px;
+  padding: 9px 12px;
   background: var(--accent-blue);
   color: var(--text-on-accent);
-  border: none;
-  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--accent-blue) 18%, transparent);
+  border-radius: 6px;
   cursor: pointer;
-  font-size: 0.84rem;
+  font-size: 0.8rem;
   font-weight: 700;
 }
 
@@ -125,7 +125,7 @@
   max-height: 200px;
   overflow-y: auto;
   border: 1px solid var(--border-color);
-  border-radius: 12px;
+  border-radius: 8px;
   background: color-mix(in srgb, var(--bg-secondary) 88%, transparent);
 }
 
@@ -144,7 +144,7 @@
 
 .datahub-table th,
 .datahub-table td {
-  padding: 10px 12px;
+  padding: 9px 10px;
   text-align: left;
   border-bottom: 1px solid var(--border-color);
 }
@@ -157,9 +157,9 @@
 }
 
 .datahub-table button {
-  padding: 6px 10px;
-  font-size: 0.8rem;
-  border-radius: 8px;
+  padding: 5px 8px;
+  font-size: 0.76rem;
+  border-radius: 6px;
   border: none;
   cursor: pointer;
   font-weight: 600;
@@ -177,7 +177,7 @@
 
 .datahub-form-section h4 {
   margin: 0 0 8px;
-  font-size: 1rem;
+  font-size: 0.92rem;
   font-weight: 700;
 }
 
@@ -190,14 +190,16 @@
 .datahub-form label {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  font-size: 0.85rem;
+  gap: 5px;
+  font-size: 0.76rem;
   font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .datahub-form input {
-  padding: 10px 12px;
-  border-radius: 10px;
+  padding: 9px 10px;
+  border-radius: 6px;
   border: 1px solid var(--border-color);
   background: var(--bg-secondary);
   color: var(--text-primary);
@@ -220,11 +222,11 @@
 }
 
 .form-actions button {
-  padding: 8px 12px;
-  border-radius: 10px;
+  padding: 7px 11px;
+  border-radius: 6px;
   border: none;
   cursor: pointer;
-  font-size: 0.84rem;
+  font-size: 0.8rem;
   font-weight: 700;
 }
 
