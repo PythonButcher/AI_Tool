@@ -1,84 +1,155 @@
 import { memo } from 'react';
-import { Handle, Position, NodeResizer } from '@xyflow/react';
+import { Handle, NodeResizer, Position } from '@xyflow/react';
+
+const STATUS_CONFIG = {
+  idle: {
+    label: 'Idle',
+    bg: '#f1f5f9',
+    color: '#64748b',
+    border: '#e2e8f0',
+  },
+  running: {
+    label: 'Running',
+    bg: '#eff6ff',
+    color: '#2563eb',
+    border: '#bfdbfe',
+  },
+  completed: {
+    label: 'Completed',
+    bg: '#ecfdf5',
+    color: '#059669',
+    border: '#a7f3d0',
+  },
+  failed: {
+    label: 'Failed',
+    bg: '#fef2f2',
+    color: '#dc2626',
+    border: '#fecaca',
+  },
+};
 
 const AiWorkLabNodeSizer = ({ data, selected }) => {
   const Icon = data.icon;
+  const status = STATUS_CONFIG[data.status] || STATUS_CONFIG.idle;
 
   return (
-    <>
+    <div className={`wf-node-wrapper ${selected ? 'selected' : ''}`} style={{ position: 'relative' }}>
       <NodeResizer
-        color="#444"
+        color="#2563eb"
         isVisible={selected}
-        minWidth={120}
-        minHeight={60}
-        lineStyle={{ strokeWidth: 1.5 }}
+        minWidth={200}
+        minHeight={100}
+        lineStyle={{ strokeWidth: 2 }}
         handleStyle={{
-          width: 10,
-          height: 10,
-          borderRadius: '2px',
-          backgroundColor: '#555',
+          width: 8,
+          height: 8,
+          borderRadius: '50%',
+          backgroundColor: '#2563eb',
+          border: '2px solid #ffffff',
         }}
       />
 
-      {/* Target (input) handle styled via .handle-target */}
       <Handle
         type="target"
         position={Position.Left}
         id="input"
-        className="handle-target"
         style={{
-          top: '50%',
-          left: '-12px',
-          transform: 'translateY(-50%)',
+          width: '12px',
+          height: '12px',
+          left: '-6px',
+          background: '#ffffff',
+          border: '2px solid #cbd5e1',
           zIndex: 10,
         }}
       />
 
       <div
+        className="wf-node-card"
         style={{
           display: 'flex',
           flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '14px',
-          borderRadius: '10px',
-          border: '1.5px solid #aaa',
-          backgroundColor: '#fefefe',
-          boxShadow: selected
-            ? '0 0 0 2px #4a90e2'
-            : '0 2px 6px rgba(0, 0, 0, 0.12)',
-          fontFamily: 'Segoe UI, sans-serif',
-          fontSize: '14px',
-          color: '#222',
-          textAlign: 'center',
+          padding: '16px',
+          borderRadius: '12px',
+          background: '#ffffff',
+          border: `1px solid ${selected ? '#2563eb' : status.border}`,
+          boxShadow: selected 
+            ? '0 10px 15px -3px rgba(37, 99, 235, 0.1), 0 4px 6px -4px rgba(37, 99, 235, 0.1)'
+            : '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
+          minWidth: '220px',
+          transition: 'all 0.2s ease',
           cursor: 'grab',
-          position: 'relative',
-          minWidth: '130px',
         }}
       >
-        {Icon && <Icon size={24} style={{ color: '#444', marginBottom: '6px' }} />}
-        <div style={{ fontWeight: 600 }}>{data.label}</div>
-        <div style={{ fontSize: '12px', marginTop: '4px', color: '#666' }}>
-          {data.status === 'pending' && '⏳ Running...'}
-          {data.status === 'success' && '✅ Done'}
-          {data.status === 'error' && '❌ Error'}
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', marginBottom: '12px' }}>
+          <div 
+            style={{ 
+              padding: '8px', 
+              borderRadius: '8px', 
+              background: '#f8fafc',
+              color: '#475569',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              border: '1px solid #f1f5f9'
+            }}
+          >
+            {Icon && <Icon size={20} />}
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', flex: 1, minWidth: 0 }}>
+            <div style={{ fontWeight: 700, fontSize: '14px', color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {data.label}
+            </div>
+            <div style={{ fontSize: '11px', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {data.command}
+            </div>
+          </div>
         </div>
+
+        {data.description && (
+          <div style={{ fontSize: '12px', color: '#475569', lineHeight: 1.5, marginBottom: '12px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+            {data.description}
+          </div>
+        )}
+
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto' }}>
+          <div 
+            style={{ 
+              fontSize: '10px', 
+              fontWeight: 700, 
+              textTransform: 'uppercase', 
+              letterSpacing: '0.05em',
+              padding: '2px 8px',
+              borderRadius: '4px',
+              background: status.bg,
+              color: status.color,
+              border: `1px solid ${status.border}`
+            }}
+          >
+            {status.label}
+          </div>
+        </div>
+
+        {data.error && (
+          <div style={{ marginTop: '8px', fontSize: '11px', color: '#dc2626', background: '#fef2f2', padding: '6px', borderRadius: '4px', border: '1px solid #fecaca' }}>
+            {data.error}
+          </div>
+        )}
       </div>
 
-      {/* Source (output) handle styled via .handle-source */}
       <Handle
         type="source"
         position={Position.Right}
         id="output"
-        className="handle-source"
         style={{
-          top: '50%',
-          right: '-12px',
-          transform: 'translateY(-50%)',
+          width: '12px',
+          height: '12px',
+          right: '-6px',
+          background: '#ffffff',
+          border: '2px solid #cbd5e1',
           zIndex: 10,
         }}
       />
-    </>
+    </div>
   );
 };
 

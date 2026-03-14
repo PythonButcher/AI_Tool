@@ -97,7 +97,7 @@ function AppContent() {
   }, [uploadedData]);
 
   useEffect(() => {
-    if (pipelineResults?.ai_report?.status === 'success') {
+    if (pipelineResults?.ai_report?.status === 'completed' || pipelineResults?.ai_report?.status === 'success') {
       setAiReportReady(true);
     }
   }, [pipelineResults, setAiReportReady]);
@@ -447,3 +447,4 @@ function App() {
 }
 
 export default App;
+
