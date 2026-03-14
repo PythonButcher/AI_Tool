@@ -74,14 +74,14 @@ function MenuBar({
         <div className="menu-bar-left">
           <div className="menu-button-container" ref={uploadRef}>
             <button
-              className="menu-button"
+              className={`menu-button ${activeDropdown === 'upload' ? 'menu-button-active' : ''}`}
               onClick={() => setActiveDropdown((prev) => prev === 'upload' ? null : 'upload')}
             >
               <FaUpload className="menu-icon" />
               Upload File
             </button>
             {activeDropdown === 'upload' && (
-              <div className="menu-dropdown">
+              <div className="menu-dropdown menu-dropdown--panel menu-dropdown--upload">
                 <FileUpload
                   label="Select a File to Upload:"
                   onUploadComplete={() => setActiveDropdown(null)}
@@ -93,14 +93,14 @@ function MenuBar({
 
           <div className="menu-button-container" ref={dbHubRef}>
             <button
-              className="menu-button"
+              className={`menu-button ${activeDropdown === 'open' ? 'menu-button-active' : ''}`}
               onClick={() => setActiveDropdown((prev) => prev === 'open' ? null : 'open')}
             >
               <TbCloudDataConnection className="menu-icon" />
               Open Hub
             </button>
             {activeDropdown === 'open' && (
-              <div className="menu-dropdown">
+              <div className="menu-dropdown menu-dropdown--panel menu-dropdown--hub">
                 <DataHubWindow />
               </div>
             )}
@@ -108,14 +108,14 @@ function MenuBar({
 
           <div className="menu-button-container" ref={apiRef}>
             <button
-              className="menu-button"
+              className={`menu-button ${activeDropdown === 'api' ? 'menu-button-active' : ''}`}
               onClick={() => setActiveDropdown((prev) => prev === 'api' ? null : 'api')}
             >
               <FaServer className="menu-icon" />
               Connect API
             </button>
             {activeDropdown === 'api' && (
-              <div className="menu-dropdown">
+              <div className="menu-dropdown menu-dropdown--panel menu-dropdown--api">
                 <ApiDataForm handleApiData={handleApiData} />
               </div>
             )}
@@ -123,14 +123,14 @@ function MenuBar({
 
           <div className="menu-button-container" ref={dbRef}>
             <button
-              className="menu-button"
+              className={`menu-button ${activeDropdown === 'db' ? 'menu-button-active' : ''}`}
               onClick={() => setActiveDropdown((prev) => prev === 'db' ? null : 'db')}
             >
               <FaDatabase className="menu-icon" />
               Connect DB
             </button>
             {activeDropdown === 'db' && (
-              <div className="menu-dropdown">
+              <div className="menu-dropdown menu-dropdown--panel menu-dropdown--db">
                 <DatabaseConnectForm
                   handleDatabaseData={handleDatabaseData}
                   onClose={() => setActiveDropdown(null)}
@@ -143,18 +143,28 @@ function MenuBar({
         <div className="menu-bar-right">
           <div className="menu-button-container" ref={statsRef}>
             <button
-              className="menu-icon-btn"
+              className={`menu-icon-btn ${activeDropdown === 'stats' ? 'menu-icon-btn-open' : ''}`}
               title="Statistics"
               onClick={() => setActiveDropdown((prev) => prev === 'stats' ? null : 'stats')}
             >
               <FaChartBar />
             </button>
             {activeDropdown === 'stats' && (
-              <div className="menu-dropdown">
-                <div className="dropdown-content">
-                  <button onClick={() => onStatsSelect('mean')}>Mean</button>
-                  <button onClick={() => onStatsSelect('median')}>Median</button>
-                  <button onClick={() => onStatsSelect('mode')}>Mode</button>
+              <div className="menu-dropdown menu-dropdown--compact menu-dropdown--right">
+                <div className="dropdown-content dropdown-content--stats">
+                  <div className="dropdown-section-label">Quick statistics</div>
+                  <button className="dropdown-item" onClick={() => onStatsSelect('mean')}>
+                    <span className="dropdown-item-title">Mean</span>
+                    <span className="dropdown-item-description">Average value across the selected field</span>
+                  </button>
+                  <button className="dropdown-item" onClick={() => onStatsSelect('median')}>
+                    <span className="dropdown-item-title">Median</span>
+                    <span className="dropdown-item-description">Middle value for balanced distribution checks</span>
+                  </button>
+                  <button className="dropdown-item" onClick={() => onStatsSelect('mode')}>
+                    <span className="dropdown-item-title">Mode</span>
+                    <span className="dropdown-item-description">Most frequent value in the selected field</span>
+                  </button>
                 </div>
               </div>
             )}

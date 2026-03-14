@@ -1,14 +1,17 @@
 .datahub-window {
   min-width: 320px;
   max-width: 480px;
-  padding: 16px;
-  background: var(--bg-primary);
+  padding: 18px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--accent-blue-soft) 22%, transparent), transparent 48%),
+    var(--bg-primary);
   color: var(--text-primary);
-  border-radius: 8px;
-  box-shadow: 0 8px 16px var(--shadow-color-strong);
+  border: 1px solid color-mix(in srgb, var(--border-color) 92%, transparent);
+  border-radius: 14px;
+  box-shadow: 0 18px 36px var(--shadow-color-soft);
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 18px;
 }
 
 .datahub-header {
@@ -20,22 +23,31 @@
 
 .datahub-header h3 {
   margin: 0;
-  font-size: 1.1rem;
+  font-size: 1.12rem;
+  font-weight: 700;
 }
 
 .refresh-btn {
-  padding: 6px 12px;
-  background: var(--accent-blue);
+  padding: 8px 14px;
+  background: linear-gradient(135deg, var(--accent-blue), color-mix(in srgb, var(--accent-blue) 76%, #ffffff));
   color: var(--text-on-accent);
   border: none;
-  border-radius: 4px;
+  border-radius: 10px;
   cursor: pointer;
-  font-size: 0.85rem;
+  font-size: 0.84rem;
+  font-weight: 700;
+  transition: transform 0.15s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+  box-shadow: 0 10px 22px var(--accent-blue-soft);
+}
+
+.refresh-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
 }
 
 .refresh-btn:disabled {
   background: var(--bg-secondary);
   cursor: not-allowed;
+  box-shadow: none;
 }
 
 .datahub-status {
@@ -56,11 +68,17 @@
 
 .datahub-search input {
   flex: 1;
-  padding: 8px;
-  border-radius: 4px;
+  padding: 10px 12px;
+  border-radius: 10px;
   border: 1px solid var(--border-color);
   background: var(--bg-secondary);
   color: var(--text-primary);
+}
+
+.datahub-search input:focus {
+  outline: none;
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 3px var(--accent-blue-soft);
 }
 
 .datahub-search input::placeholder {
@@ -68,13 +86,14 @@
 }
 
 .datahub-search button {
-  padding: 6px 12px;
+  padding: 10px 14px;
   background: var(--accent-blue);
   color: var(--text-on-accent);
   border: none;
-  border-radius: 4px;
+  border-radius: 10px;
   cursor: pointer;
-  font-size: 0.85rem;
+  font-size: 0.84rem;
+  font-weight: 700;
 }
 
 .datahub-search button:disabled {
@@ -106,7 +125,8 @@
   max-height: 200px;
   overflow-y: auto;
   border: 1px solid var(--border-color);
-  border-radius: 6px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--bg-secondary) 88%, transparent);
 }
 
 .datahub-table {
@@ -124,7 +144,7 @@
 
 .datahub-table th,
 .datahub-table td {
-  padding: 8px;
+  padding: 10px 12px;
   text-align: left;
   border-bottom: 1px solid var(--border-color);
 }
@@ -137,11 +157,12 @@
 }
 
 .datahub-table button {
-  padding: 4px 8px;
+  padding: 6px 10px;
   font-size: 0.8rem;
-  border-radius: 4px;
+  border-radius: 8px;
   border: none;
   cursor: pointer;
+  font-weight: 600;
 }
 
 .datahub-table button.danger {
@@ -157,6 +178,7 @@
 .datahub-form-section h4 {
   margin: 0 0 8px;
   font-size: 1rem;
+  font-weight: 700;
 }
 
 .datahub-form {
@@ -168,16 +190,23 @@
 .datahub-form label {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   font-size: 0.85rem;
+  font-weight: 600;
 }
 
 .datahub-form input {
-  padding: 8px;
-  border-radius: 4px;
+  padding: 10px 12px;
+  border-radius: 10px;
   border: 1px solid var(--border-color);
   background: var(--bg-secondary);
   color: var(--text-primary);
+}
+
+.datahub-form input:focus {
+  outline: none;
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 3px var(--accent-blue-soft);
 }
 
 .datahub-form input:disabled {
@@ -191,11 +220,12 @@
 }
 
 .form-actions button {
-  padding: 6px 12px;
-  border-radius: 4px;
+  padding: 8px 12px;
+  border-radius: 10px;
   border: none;
   cursor: pointer;
-  font-size: 0.85rem;
+  font-size: 0.84rem;
+  font-weight: 700;
 }
 
 .form-actions .primary {
