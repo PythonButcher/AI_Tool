@@ -1,59 +1,94 @@
-@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+/* src/features/api/APiDataForm.css */
 
-body {
-  background-color: var(--bg-secondary);
-  font-family: 'Press Start 2P', cursive;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
-  margin: 0;
+.api-form-wrapper {
+  padding: 1.5rem;
+  background: var(--bg-primary);
+  border-radius: 1rem;
+  box-shadow: 0 2px 14px var(--shadow-color);
+  max-width: 380px;
+  margin: 0 auto;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
-.container {
-  background-color: var(--accent-green);
-  border: 5px solid var(--text-primary);
-  padding: 2rem;
-  border-radius: 10px;
-  box-shadow: 0 4px 8px var(--shadow-color-strong);
-}
-
-.nintendo-form {
+.api-form {
   display: flex;
   flex-direction: column;
   gap: 1rem;
 }
 
-.nintendo-form label {
-  font-size: 0.8rem;
+.api-form__title {
+  margin: 0 0 0.5rem;
+  font-size: 1.25rem;
+  font-weight: 600;
   color: var(--text-primary);
+  text-align: center;
 }
 
-.nintendo-form input {
-  padding: 0.5rem;
-  font-size: 1rem;
-  border: 2px solid var(--text-primary);
-  border-radius: 5px;
-  box-shadow: inset 0 2px 4px var(--shadow-color);
+.api-form__row {
+  display: flex;
+  flex-direction: column;
 }
 
-.nintendo-form button {
-  background-color: var(--accent-blue);
+.api-form__label {
+  margin-bottom: 0.25rem;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.api-form__input {
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: 0.5rem;
+  font-size: 0.9rem;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  transition: border-color 0.2s ease, background-color 0.3s ease, color 0.3s ease;
+}
+
+.api-form__input:focus {
+  outline: none;
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 2px var(--accent-blue-soft);
+}
+
+.api-form__input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.api-form__button {
+  padding: 0.65rem 1rem;
+  background: var(--accent-blue);
   color: var(--text-on-accent);
-  font-size: 1rem;
-  padding: 0.75rem;
+  font-weight: 600;
   border: none;
-  border-radius: 5px;
+  border-radius: 0.5rem;
   cursor: pointer;
-  transition: background-color 0.3s ease;
+  transition: background 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
 }
 
-.nintendo-form button:hover {
-  background-color: var(--accent-blue);
+.api-form__button[disabled] {
+  background: var(--text-secondary);
+  cursor: default;
+  transform: none;
+}
+
+.api-form__button:not([disabled]):hover {
+  background: var(--accent-blue-strong, #5e7bff);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px var(--shadow-color-soft);
+}
+
+.api-form__button:not([disabled]):active {
+  transform: translateY(0);
 }
 
 .error-message {
+  margin-top: 0.75rem;
+  padding: 0.6rem 0.9rem;
+  background: var(--accent-red-soft);
   color: var(--accent-red);
-  font-size: 0.8rem;
-  font-weight: bold;
+  border-radius: 0.5rem;
+  font-size: 0.85rem;
+  text-align: center;
 }

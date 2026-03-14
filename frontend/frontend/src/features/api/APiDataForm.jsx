@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import './APiDataForm.css';
 
 const API_BACKEND_URL = "http://localhost:5000/api/fetch_external_data";
 
@@ -34,17 +35,24 @@ function ApiDataForm({ handleApiData }) {
   };
   
   return (
-    <div>
-      <label>API Endpoint:</label>
-      <input
-        type="text"
-        value={apiUrl}
-        onChange={(e) => setApiUrl(e.target.value)}
-        disabled={isLoading}
-      />
-      <button onClick={fetchData} disabled={isLoading}>
-        {isLoading ? "Fetching..." : "Fetch Data"}
-      </button>
+    <div className="api-form-wrapper">
+      <div className="api-form">
+        <h3 className="api-form__title">Connect API</h3>
+        <div className="api-form__row">
+          <label className="api-form__label">API Endpoint URL</label>
+          <input
+            className="api-form__input"
+            type="text"
+            placeholder="https://api.example.com/data"
+            value={apiUrl}
+            onChange={(e) => setApiUrl(e.target.value)}
+            disabled={isLoading}
+          />
+        </div>
+        <button className="api-form__button" onClick={fetchData} disabled={isLoading || !apiUrl}>
+          {isLoading ? "Fetching..." : "Fetch Data"}
+        </button>
+      </div>
       {error && <p className="error-message">{error}</p>}
     </div>
   );
