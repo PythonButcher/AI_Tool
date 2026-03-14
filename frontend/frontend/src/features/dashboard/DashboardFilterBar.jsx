@@ -8,7 +8,7 @@ import {
 import { normalizeDatasetRows, useActiveDataset, useSemanticModel } from '../../context/DataContext';
 import { useWindowContext } from '../../context/WindowContext';
 import { normalizeSemanticDimension } from '../../utils/semanticObjectUtils';
-import { FaFilter, FaChevronUp, FaChevronDown, FaPlus, FaTrash, FaTimes } from 'react-icons/fa';
+import { FaFilter, FaChevronUp, FaChevronDown, FaPlus, FaTrash, FaTimes, FaMagic } from 'react-icons/fa';
 import './DashboardFilterBar.css';
 
 const getSelectedValues = (event) => Array.from(event.target.selectedOptions).map((option) => option.value);
@@ -26,6 +26,81 @@ function DashboardFilterBar() {
     closeDashboard,
     updateDashboard,
   } = useWindowContext();
+
+  const generateSmartDashboard = () => {
+    if (!semanticModel || !semanticModel.metrics || semanticModel.metrics.length === 0) {
+      alert("No semantic metrics found. Please configure the semantic model first.");
+      return;
+    }
+
+    const metrics = [...semanticModel.metrics];
+    metrics.sort((a, b) => {
+      if (a.aggregation === 'sum' && b.aggregation !== 'sum') return -1;
+      if (a.aggregation !== 'sum' && b.aggregation === 'sum') return 1;
+      return 0;
+    });
+
+    const selectedMetrics = metrics.slice(0, Math.min(4, metrics.length));
+
+    const dimensions = semanticModel.dimensions || [];
+    const temporalDims = dimensions.filter(d => d.type === 'temporal');
+    const categoricalDims = dimensions.filter(d => d.type === 'categorical');
+
+    const selectedDimensions = [];
+    if (categoricalDims.length > 0) selectedDimensions.push(categoricalDims[0]);
+    if (temporalDims.length > 0) selectedDimensions.push(temporalDims[0]);
+    if (selectedDimensions.length < 2 && categoricalDims.length > 1) selectedDimensions.push(categoricalDims[1]);
+
+    // Create KPI Cards
+    selectedMetrics.forEach(metric => {
+      addDashboardKpi({
+        title: metric.label || metric.name,
+        semanticConfig: {
+          metricId: metric.id,
+          groupBy: ''
+        }
+      });
+    });
+
+    // Create Charts
+    if (selectedDimensions.length > 0 && selectedMetrics.length > 0) {
+      const firstChartMetric = selectedMetrics[0];
+      const firstChartDim = selectedDimensions[0];
+
+      addDashboardChart({
+        chartType: 'Bar',
+        dataSourceMode: 'semantic',
+        semanticConfig: {
+          metricId: firstChartMetric.id,
+          groupBy: firstChartDim.id
+        }
+      });
+
+      if (selectedDimensions.length > 1 && selectedMetrics.length > 1) {
+        const secondChartMetric = selectedMetrics[1];
+        const secondChartDim = selectedDimensions[1];
+
+        addDashboardChart({
+          chartType: secondChartDim.type === 'temporal' ? 'Line' : 'Pie',
+          dataSourceMode: 'semantic',
+          semanticConfig: {
+            metricId: secondChartMetric.id,
+            groupBy: secondChartDim.id
+          }
+        });
+      } else if (selectedDimensions.length > 1) {
+          const secondChartDim = selectedDimensions[1];
+          addDashboardChart({
+            chartType: secondChartDim.type === 'temporal' ? 'Line' : 'Pie',
+            dataSourceMode: 'semantic',
+            semanticConfig: {
+              metricId: firstChartMetric.id,
+              groupBy: secondChartDim.id
+            }
+          });
+      }
+    }
+  };
 
   const rows = useMemo(() => normalizeDatasetRows(activeDataset), [activeDataset]);
   const temporalDimensions = useMemo(
@@ -90,6 +165,17 @@ function DashboardFilterBar() {
         </div>
 
         <div className="dashboard-filter-bar__actions">
+          <button
+            type="button"
+            className="dashboard-filter-bar__btn dashboard-filter-bar__btn--magic"
+            onClick={generateSmartDashboard}
+            title="Generate Smart Dashboard"
+          >
+            <FaMagic /> Smart Dashboard
+          </button>
+
+          <div className="v-divider"></div>
+
           <button type="button" className="dashboard-filter-bar__btn dashboard-filter-bar__btn--primary" onClick={() => addDashboardKpi()}>
             <FaPlus /> KPI
           </button>

@@ -118,6 +118,18 @@
   color: #fff;
 }
 
+.dashboard-filter-bar__btn--magic {
+  background: #6a1b9a;
+  color: #fff;
+  font-weight: 600;
+  border: 1px solid #6a1b9a;
+}
+
+.dashboard-filter-bar__btn--magic:hover {
+  background: #4a148c;
+  color: #fff;
+}
+
 .dashboard-filter-bar__btn--primary:hover {
   background: #123023;
   color: #fff;

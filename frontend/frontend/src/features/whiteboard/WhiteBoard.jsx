@@ -1,7 +1,6 @@
 // File: WhiteBoard.jsx
 import React, { useRef, useCallback, useState, useEffect } from "react";
 import { Excalidraw } from "@excalidraw/excalidraw";
-import "@excalidraw/excalidraw/index.css";
 import WhiteboardToolbar from "./WhiteBoardToolbar";
 import { useWindowContext } from "../../context/WindowContext";
 import { useHelpOverlay } from '../../context/HelpOverlayContext';
