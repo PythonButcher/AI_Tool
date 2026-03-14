@@ -1,12 +1,11 @@
-// src/components/AIPipeline.jsx
-
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
+
 import CleanSuggestionsModal from './CleanSuggestionsModal';
+import { workflowApi } from './workflowApi';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
-// This invisible controller manages the AI workflow execution lifecycle
 const normaliseDataset = (data) => {
   if (!data) return [];
   if (Array.isArray(data)) return data;
@@ -20,150 +19,203 @@ const normaliseDataset = (data) => {
   }
   if (Array.isArray(data?.data)) return data.data;
   if (Array.isArray(data?.data_preview)) return data.data_preview;
+  if (typeof data?.data_preview === 'string') {
+    try {
+      return JSON.parse(data.data_preview);
+    } catch (err) {
+      console.error('AIPipeline failed to parse dataset data_preview string:', err);
+      return [];
+    }
+  }
   return [];
 };
 
-const AIPipeline = ({ nodes, dataset, onResults, onDataCleaned }) => {
-  const [results, setResults] = useState({});
-  const [isRunning, setIsRunning] = useState(false);
+const cloneWorkflow = (workflow) => JSON.parse(JSON.stringify(workflow || {}));
+
+const mergeRunStateIntoResults = (runState) => {
+  const merged = {};
+  const nodeStates = runState?.node_states || {};
+  const resultEntries = runState?.results || {};
+
+  Object.entries(nodeStates).forEach(([nodeId, nodeState]) => {
+    const resultEntry = resultEntries[nodeId] || {};
+    merged[nodeId] = {
+      status: resultEntry.status || nodeState.status || 'idle',
+      result: resultEntry.result || null,
+      error: resultEntry.error || nodeState.error || null,
+      command: resultEntry.command || nodeState.command || null,
+      label: resultEntry.label || nodeState.label || nodeId,
+    };
+  });
+
+  Object.entries(resultEntries).forEach(([nodeId, resultEntry]) => {
+    merged[nodeId] = {
+      status: resultEntry.status || merged[nodeId]?.status || 'idle',
+      result: resultEntry.result || merged[nodeId]?.result || null,
+      error: resultEntry.error || merged[nodeId]?.error || null,
+      command: resultEntry.command || merged[nodeId]?.command || null,
+      label: resultEntry.label || merged[nodeId]?.label || nodeId,
+    };
+  });
+
+  return merged;
+};
+
+const getMissingCleanNodes = (workflow) => {
+  const nodes = workflow?.nodes || [];
+  return nodes.filter((node) => node.command === '/clean' && !node.params?.instructions?.trim());
+};
+
+const AIPipeline = ({ workflowDefinition, dataset, onResults, onDataCleaned, onRunStateChange }) => {
   const [pendingClean, setPendingClean] = useState(null);
+  const [isRunning, setIsRunning] = useState(false);
+  const [activeRunId, setActiveRunId] = useState(null);
+  const pendingResolverRef = useRef(null);
+  const lastAppliedCleanRef = useRef(null);
   const resolvedDataset = useMemo(() => normaliseDataset(dataset), [dataset]);
 
-  // Function exposed globally to run the current pipeline on demand
-  const runWorkflow = async () => {
+  const collectCleaningInstructions = useCallback(async (workflow) => {
+    const workingCopy = cloneWorkflow(workflow);
+    const cleanNodes = getMissingCleanNodes(workingCopy);
+
+    for (const cleanNode of cleanNodes) {
+      const response = await axios.post(`${API_URL}/ai_cmd`, {
+        command: '/clean',
+        dataset: resolvedDataset,
+        params: cleanNode.params || {},
+        execution_context: {
+          mode: 'pipeline_prep',
+          node_id: cleanNode.id,
+          workflow_name: workingCopy.name,
+        },
+      });
+
+      const instructions = await new Promise((resolve) => {
+        pendingResolverRef.current = resolve;
+        setPendingClean({
+          nodeId: cleanNode.id,
+          nodeLabel: cleanNode.label,
+          suggestions: response.data?.suggestions || '',
+        });
+      });
+
+      const targetNode = workingCopy.nodes.find((node) => node.id === cleanNode.id);
+      if (targetNode) {
+        targetNode.params = {
+          ...(targetNode.params || {}),
+          instructions: instructions || '',
+        };
+      }
+    }
+
+    return workingCopy;
+  }, [resolvedDataset]);
+
+  const pollRun = useCallback(async (runId) => {
+    const runState = await workflowApi.getRun(runId);
+    const nextResults = mergeRunStateIntoResults(runState);
+
+    onResults?.(nextResults);
+    onRunStateChange?.(runState);
+
+    const cleanedNode = Object.values(nextResults).find(
+      (entry) => entry.command === '/clean' && entry.status === 'completed' && Array.isArray(entry.result?.cleaned_data)
+    );
+
+    if (cleanedNode && lastAppliedCleanRef.current !== runId) {
+      lastAppliedCleanRef.current = runId;
+      onDataCleaned?.(cleanedNode.result.cleaned_data);
+    }
+
+    if (runState.status === 'completed' || runState.status === 'failed') {
+      setIsRunning(false);
+      setActiveRunId(null);
+    }
+  }, [onDataCleaned, onResults, onRunStateChange]);
+
+  const runWorkflow = useCallback(async () => {
     if (isRunning) return;
-    console.log("🚀 Starting AI pipeline execution...");
+    if (!workflowDefinition?.nodes?.length) {
+      return;
+    }
+
     setIsRunning(true);
-    console.log('AIPipeline dataset row count:', Array.isArray(resolvedDataset) ? resolvedDataset.length : 0);
+    onRunStateChange?.(null);
 
-    const commandBlocks = nodes
-      .filter(node => node.data?.command && node.type !== 'dropZoneNode')
-      .sort((a, b) => a.position.y - b.position.y);
-
-    const newResults = {};
-
-    for (const block of commandBlocks) {
-      const nodeId = block.id;
-      const command = block.data.command;
-
-      newResults[nodeId] = { status: 'pending' };
-      setResults({ ...newResults });
-
-      try {
-        let response;
-        // Special handling for the /clean command
-        if (command === '/clean') {
-          // First request: get suggestions
-          const suggest = await axios.post(`${API_URL}/ai_cmd`, {
-            command,
-            dataset: resolvedDataset,
-          });
-
-          let instructions = '';
-          if (suggest.data && suggest.data.suggestions) {
-            instructions = await new Promise((resolve) => {
-              setPendingClean({ suggestions: suggest.data.suggestions, resolve });
-            });
-          }
-
-          if (!instructions) {
-            newResults[nodeId] = { status: 'skipped', result: suggest.data };
-            setResults({ ...newResults });
-            continue;
-          }
-
-          response = await axios.post(`${API_URL}/ai_cmd`, {
-            command,
-            dataset: resolvedDataset,
-            instructions,
-          });
-
-          if (onDataCleaned && response.data.cleaned_data) {
-            onDataCleaned(response.data.cleaned_data);
-            console.log('✅ Cleaned data updated in the global context.');
-          }
-        } else {
-          // Handle all other AI commands
-          response = await axios.post(`${API_URL}/ai_cmd`, {
-            command,
-            dataset: resolvedDataset,
-          });
-        }
-
-        newResults[nodeId] = {
-          status: 'success',
-          result: response.data,
-        };
-        console.log(`🧪 Result from ${command}:`, response.data);
-        console.log(`✅ Node ${nodeId} (${command}) complete.`);
-
-      } catch (error) {
-        newResults[nodeId] = {
-          status: 'error',
-          error: error.message || 'Unknown error',
-        };
-        console.error(`❌ Node ${nodeId} (${command}) failed.`, error);
-      }
-
-      setResults({ ...newResults });
+    try {
+      const preparedWorkflow = await collectCleaningInstructions(workflowDefinition);
+      const startedRun = await workflowApi.execute(preparedWorkflow, resolvedDataset);
+      setActiveRunId(startedRun.run_id);
+      onRunStateChange?.(startedRun);
+      onResults?.(mergeRunStateIntoResults(startedRun));
+    } catch (error) {
+      console.error('Failed to execute workflow:', error);
+      setIsRunning(false);
+      const message = error.response?.data?.error || error.message || 'Failed to execute workflow.';
+      onResults?.({
+        ai_report: {
+          status: 'failed',
+          result: null,
+          error: message,
+          command: 'ai_report',
+          label: 'AI Report',
+        },
+      });
     }
-
-    // 🧠 Consolidate to a single AI Report
-    const aiReport = {};
-
-    for (const [nodeId, data] of Object.entries(newResults)) {
-      if (data.status !== 'success') continue;
-      const cmd = nodes.find(n => n.id === nodeId)?.data?.command?.replace('/', '');
-      if (cmd === 'summary')  aiReport.summary   = data.result;
-      if (cmd === 'outliers') aiReport.outliers  = data.result;
-      if (cmd === 'insights') aiReport.insights  = data.result;
-      if (cmd === 'execute')  aiReport.execution = data.result;
-      if (cmd === 'charts') {
-        aiReport.chartType = data.result.chartType;
-        aiReport.chartData = data.result.chartData;
-         console.log(
-        `AIPipeline -> aiReport assembly for 'charts' (node <span class="math-inline">\{nodeId\}\)\: chartType\: '</span>{aiReport.chartType}', chartData content:`, aiReport.chartData,
-        `| chartData typeof: ${typeof aiReport.chartData}`,
-        `| chartData isArray: ${Array.isArray(aiReport.chartData)}`,
-        `| chartData length: ${Array.isArray(aiReport.chartData) ? aiReport.chartData.length : 'N/A'}`
-      );
-      }
-    }
-
-    if (Object.keys(aiReport).length > 0) {
-      newResults['ai_report'] = {
-        status: 'success',
-        result: aiReport,
-      };
-    }
-
-    setIsRunning(false);
-    console.log("📤 Final newResults object going to setPipelineResults:", newResults);
-    onResults(newResults);
-
-
-    if (onResults) {
-      onResults(newResults);
-      console.log("📤 Final newResults object going to setPipelineResults:", newResults);
-    }
-  };
+  }, [collectCleaningInstructions, isRunning, onResults, onRunStateChange, resolvedDataset, workflowDefinition]);
 
   useEffect(() => {
     window.runAIPipeline = runWorkflow;
-    return () => delete window.runAIPipeline;
-  }, [nodes, resolvedDataset, onDataCleaned]);
+    return () => {
+      if (window.runAIPipeline === runWorkflow) {
+        delete window.runAIPipeline;
+      }
+    };
+  }, [runWorkflow]);
+
+  useEffect(() => {
+    if (!activeRunId) {
+      return undefined;
+    }
+
+    let isDisposed = false;
+
+    const sync = async () => {
+      if (isDisposed) {
+        return;
+      }
+      try {
+        await pollRun(activeRunId);
+      } catch (error) {
+        console.error('Failed to poll workflow run:', error);
+        setIsRunning(false);
+        setActiveRunId(null);
+      }
+    };
+
+    sync();
+    const intervalId = window.setInterval(sync, 1200);
+
+    return () => {
+      isDisposed = true;
+      window.clearInterval(intervalId);
+    };
+  }, [activeRunId, pollRun]);
 
   return (
     <>
       {pendingClean && (
         <CleanSuggestionsModal
+          title={`Cleaning Suggestions: ${pendingClean.nodeLabel}`}
           suggestions={pendingClean.suggestions}
-          onApply={(inst) => {
-            pendingClean.resolve(inst);
+          onApply={(instructions) => {
+            pendingResolverRef.current?.(instructions);
+            pendingResolverRef.current = null;
             setPendingClean(null);
           }}
           onSkip={() => {
-            pendingClean.resolve(null);
+            pendingResolverRef.current?.('');
+            pendingResolverRef.current = null;
             setPendingClean(null);
           }}
         />

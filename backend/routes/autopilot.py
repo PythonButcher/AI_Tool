@@ -8,8 +8,6 @@ autopilot_bp = Blueprint("autopilot_bp", __name__)
 
 
 def _normalize_dataset(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
-    """Return a list-based dataset sample from the payload."""
-
     def ensure_list(value: Any) -> List[Dict[str, Any]]:
         if isinstance(value, list):
             return value
@@ -31,11 +29,12 @@ def _normalize_dataset(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
 def _build_node(run_id: str, order: int, node_type: str, label: str, command: str, description: str) -> Dict[str, Any]:
     return {
         "id": f"{run_id}-{node_type.lower()}",
-        "type": node_type,
+        "type": node_type.lower(),
         "label": label,
         "command": command,
         "description": description,
-        "position": {"x": 120 + 240 * order, "y": 180},
+        "params": {},
+        "position": {"x": 140 + 260 * order, "y": 210},
     }
 
 
@@ -58,7 +57,7 @@ def generate_autopilot_workflow():
             run_id,
             0,
             "SUMMARY",
-            "Summary",
+            "Executive Summary",
             "/summary",
             f"Generate an overview for {num_rows} rows across {num_cols} fields.",
         ),
@@ -66,7 +65,7 @@ def generate_autopilot_workflow():
             run_id,
             1,
             "OUTLIERS",
-            "Outliers",
+            "Risk Signals",
             "/outliers",
             "Detect unusual values, rare categories, or missing data patterns.",
         ),
@@ -74,7 +73,7 @@ def generate_autopilot_workflow():
             run_id,
             2,
             "CHARTS",
-            "Charts",
+            "Visual Story",
             "/charts",
             "Recommend the most revealing visualization for the dataset sample.",
         ),
@@ -82,7 +81,7 @@ def generate_autopilot_workflow():
             run_id,
             3,
             "INSIGHTS",
-            "Insights",
+            "Business Recommendations",
             "/insights",
             "Summarize key findings and business-ready takeaways.",
         ),
@@ -103,5 +102,13 @@ def generate_autopilot_workflow():
         num_rows,
     )
 
-    return jsonify({"nodes": nodes, "edges": edges})
-
+    return jsonify(
+        {
+            "id": f"autopilot-{run_id}",
+            "name": "Autopilot Insight Workflow",
+            "description": "Auto-generated analysis pipeline for summary, anomalies, visuals, and recommendations.",
+            "category": "Autopilot",
+            "nodes": nodes,
+            "edges": edges,
+        }
+    )

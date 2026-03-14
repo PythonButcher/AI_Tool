@@ -1,0 +1,75 @@
+{
+  "id": "template-automated-insights",
+  "name": "Automated Insight Generation",
+  "description": "Create a reusable insight workflow for executive summaries and anomaly review.",
+  "category": "Insights",
+  "is_template": true,
+  "source_workflow_id": null,
+  "created_at": "2026-03-13T03:47:05.928565+00:00",
+  "updated_at": "2026-03-13T03:47:05.928565+00:00",
+  "continue_on_error": false,
+  "graph": {
+    "version": "phase-6",
+    "nodes": [
+      {
+        "id": "summary-step",
+        "type": "summary",
+        "label": "Executive Summary",
+        "command": "/summary",
+        "description": "Summarize what matters most for business stakeholders.",
+        "params": {
+          "focus": "Keep the language concise and executive-friendly."
+        },
+        "position": {
+          "x": 180,
+          "y": 180
+        }
+      },
+      {
+        "id": "outlier-step",
+        "type": "outliers",
+        "label": "Risk Signals",
+        "command": "/outliers",
+        "description": "Detect anomalies or unusual patterns.",
+        "params": {
+          "focus": "Prioritize business-impacting anomalies and exceptions."
+        },
+        "position": {
+          "x": 460,
+          "y": 180
+        }
+      },
+      {
+        "id": "insights-step",
+        "type": "insights",
+        "label": "Decision Insights",
+        "command": "/insights",
+        "description": "Turn signals into recommended actions.",
+        "params": {
+          "goal": "Surface the next actions a business user should take."
+        },
+        "position": {
+          "x": 740,
+          "y": 180
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "edge-summary-outlier",
+        "source": "summary-step",
+        "target": "outlier-step"
+      },
+      {
+        "id": "edge-outlier-insights",
+        "source": "outlier-step",
+        "target": "insights-step"
+      }
+    ],
+    "execution_order": [
+      "summary-step",
+      "outlier-step",
+      "insights-step"
+    ]
+  }
+}

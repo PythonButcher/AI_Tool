@@ -1,0 +1,75 @@
+{
+  "id": "template-dataset-cleaning",
+  "name": "Dataset Cleaning Pipeline",
+  "description": "Prepare a dataset, summarize quality issues, and deliver cleaned output for downstream analysis.",
+  "category": "Data Preparation",
+  "is_template": true,
+  "source_workflow_id": null,
+  "created_at": "2026-03-13T03:47:05.927058+00:00",
+  "updated_at": "2026-03-13T03:47:05.927058+00:00",
+  "continue_on_error": false,
+  "graph": {
+    "version": "phase-6",
+    "nodes": [
+      {
+        "id": "clean-step",
+        "type": "clean",
+        "label": "Clean Dataset",
+        "command": "/clean",
+        "description": "Apply AI-guided cleaning instructions.",
+        "params": {
+          "instructions": "Handle missing values, normalize data types, and remove duplicates while preserving the dataset schema."
+        },
+        "position": {
+          "x": 180,
+          "y": 180
+        }
+      },
+      {
+        "id": "summary-step",
+        "type": "summary",
+        "label": "Quality Summary",
+        "command": "/summary",
+        "description": "Describe the cleaned dataset for business review.",
+        "params": {
+          "focus": "Highlight completeness, duplicates removed, and any major schema changes."
+        },
+        "position": {
+          "x": 460,
+          "y": 180
+        }
+      },
+      {
+        "id": "insights-step",
+        "type": "insights",
+        "label": "Business Insights",
+        "command": "/insights",
+        "description": "Translate the prepared data into plain-language takeaways.",
+        "params": {
+          "focus": "Call out issues that may affect reporting confidence or operations."
+        },
+        "position": {
+          "x": 740,
+          "y": 180
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "edge-clean-summary",
+        "source": "clean-step",
+        "target": "summary-step"
+      },
+      {
+        "id": "edge-summary-insights",
+        "source": "summary-step",
+        "target": "insights-step"
+      }
+    ],
+    "execution_order": [
+      "clean-step",
+      "summary-step",
+      "insights-step"
+    ]
+  }
+}

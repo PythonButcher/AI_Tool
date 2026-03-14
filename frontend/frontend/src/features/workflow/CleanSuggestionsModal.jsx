@@ -6,11 +6,11 @@ const parseSuggestions = (text) => {
   if (Array.isArray(text)) return text;
   return String(text)
     .split('\n')
-    .map(line => line.replace(/^[-*]\s*/, '').trim())
+    .map((line) => line.replace(/^[-*]\s*/, '').trim())
     .filter(Boolean);
 };
 
-const CleanSuggestionsModal = ({ suggestions, onApply, onSkip }) => {
+const CleanSuggestionsModal = ({ title = 'AI Cleaning Suggestions', suggestions, onApply, onSkip }) => {
   const suggestionList = useMemo(() => parseSuggestions(suggestions), [suggestions]);
   const [selected, setSelected] = useState([]);
 
@@ -19,19 +19,19 @@ const CleanSuggestionsModal = ({ suggestions, onApply, onSkip }) => {
   }, [suggestionList]);
 
   const toggle = (idx) => {
-    setSelected(prev => prev.map((v, i) => (i === idx ? !v : v)));
+    setSelected((prev) => prev.map((value, index) => (index === idx ? !value : value)));
   };
 
   const toggleAll = () => {
-    setSelected(prev => {
-      const allSelected = prev.every(v => v);
+    setSelected((prev) => {
+      const allSelected = prev.every((value) => value);
       return prev.map(() => !allSelected);
     });
   };
 
   const apply = () => {
     const instructions = suggestionList
-      .filter((_, i) => selected[i])
+      .filter((_, index) => selected[index])
       .join('\n');
     onApply(instructions);
   };
@@ -40,7 +40,7 @@ const CleanSuggestionsModal = ({ suggestions, onApply, onSkip }) => {
     <div className="cleaning-form-overlay">
       <div className="data-cleaning-form">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h4>AI Cleaning Suggestions</h4>
+          <h4>{title}</h4>
           <CloseButton onClick={onSkip} />
         </div>
         <ul className="suggestion-list">
@@ -59,9 +59,9 @@ const CleanSuggestionsModal = ({ suggestions, onApply, onSkip }) => {
         </ul>
         <div className="action-buttons">
           <button onClick={toggleAll} className="select-all-btn">
-            {selected.every(v => v) ? 'Clear All' : 'Select All'}
+            {selected.every((value) => value) ? 'Clear All' : 'Select All'}
           </button>
-          <button onClick={apply} disabled={!selected.some(v => v)} className="apply-btn">
+          <button onClick={apply} disabled={!selected.some((value) => value)} className="apply-btn">
             Apply Selected
           </button>
           <button onClick={onSkip} className="skip-btn">Skip</button>
