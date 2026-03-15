@@ -95,6 +95,9 @@ desktop.ini
 
 # ai_tool_export
 ai_tool_export/
+drive_export/
+.backup_project_files/
+
 
 
 # JetBrains
