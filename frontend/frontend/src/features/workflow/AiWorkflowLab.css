@@ -112,8 +112,25 @@
 }
 
 .wf-sidebar.right {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 100%;
   border-right: none;
   border-left: 1px solid var(--wf-border-color);
+  transform: translateX(100%);
+  transition: transform 0.3s ease-in-out;
+  box-shadow: -4px 0 15px rgba(0, 0, 0, 0.05);
+  z-index: 20;
+}
+
+.wf-sidebar.right.open {
+  transform: translateX(0);
+}
+
+.wf-btn.active {
+  background: #e2e8f0;
+  color: var(--wf-accent-primary);
 }
 
 .wf-panel-section {
