@@ -20,7 +20,7 @@ import { DataContext } from '../../context/DataContext';
 import AIPipeline from './AIPipeline';
 import DropZoneNode from './DropZoneNode';
 import { useWindowContext } from '../../context/WindowContext';
-import { FiCopy, FiDownload, FiPlay, FiPlus, FiRefreshCw, FiSave, FiUpload, FiHelpCircle } from 'react-icons/fi';
+import { FiCopy, FiDownload, FiPlay, FiPlus, FiRefreshCw, FiSave, FiUpload, FiHelpCircle, FiSidebar } from 'react-icons/fi';
 import {
   buildReactFlowGraph,
   buildWorkflowDefinition,
@@ -83,6 +83,7 @@ function AiWorkflowLab({ label = 'AI WorkFlow Lab:', savedState }) {
   const [catalogStatus, setCatalogStatus] = useState('idle');
   const [catalogError, setCatalogError] = useState(null);
   const [runState, setRunState] = useState(null);
+  const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(false);
 
   const { isHelpVisible, toggleHelp, closeHelp } = useHelpOverlay();
   const workflowRef = useRef(null);
@@ -265,6 +266,7 @@ function AiWorkflowLab({ label = 'AI WorkFlow Lab:', savedState }) {
 
     setNodes((prevNodes) => [...prevNodes, newNode]);
     setSelectedNodeId(newNode.id);
+    setIsRightSidebarOpen(true);
     setClicked(false);
   }, [coords, setClicked]);
 
@@ -505,6 +507,9 @@ function AiWorkflowLab({ label = 'AI WorkFlow Lab:', savedState }) {
           <button type="button" className="wf-btn subtle icon-only" onClick={handleNewWorkflow} title="Clear All">
             <FiRefreshCw aria-hidden="true" />
           </button>
+          <button type="button" className={`wf-btn subtle icon-only ${isRightSidebarOpen ? 'active' : ''}`} onClick={() => setIsRightSidebarOpen(!isRightSidebarOpen)} title="Toggle Panel">
+            <FiSidebar aria-hidden="true" />
+          </button>
           <button type="button" className="wf-btn subtle icon-only" onClick={() => toggleHelp('aiFlow')} title="Help">
             <FiHelpCircle aria-hidden="true" />
           </button>
@@ -601,7 +606,13 @@ function AiWorkflowLab({ label = 'AI WorkFlow Lab:', savedState }) {
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
-            onNodeClick={(_, node) => setSelectedNodeId(node.id)}
+            onNodeClick={(_, node) => {
+              setSelectedNodeId(node.id);
+              if (node.id !== DROPZONE_NODE_ID) {
+                setIsRightSidebarOpen(true);
+              }
+            }}
+            onPaneClick={() => setIsRightSidebarOpen(false)}
             fitView
             nodeTypes={{
               AiWorkLabNodeSizer,
@@ -625,7 +636,7 @@ function AiWorkflowLab({ label = 'AI WorkFlow Lab:', savedState }) {
           )}
         </main>
 
-        <aside className="wf-sidebar right">
+        <aside className={`wf-sidebar right ${isRightSidebarOpen ? 'open' : ''}`}>
           <div className="wf-panel-section">
             <div className="wf-panel-title">Execution</div>
             <div className="wf-run-stats">
