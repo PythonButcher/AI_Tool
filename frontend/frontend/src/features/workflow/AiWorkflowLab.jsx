@@ -507,9 +507,6 @@ function AiWorkflowLab({ label = 'AI WorkFlow Lab:', savedState }) {
           <button type="button" className="wf-btn subtle icon-only" onClick={handleNewWorkflow} title="Clear All">
             <FiRefreshCw aria-hidden="true" />
           </button>
-          <button type="button" className={`wf-btn subtle icon-only ${isRightSidebarOpen ? 'active' : ''}`} onClick={() => setIsRightSidebarOpen(!isRightSidebarOpen)} title="Toggle Panel">
-            <FiSidebar aria-hidden="true" />
-          </button>
           <button type="button" className="wf-btn subtle icon-only" onClick={() => toggleHelp('aiFlow')} title="Help">
             <FiHelpCircle aria-hidden="true" />
           </button>
@@ -521,6 +518,9 @@ function AiWorkflowLab({ label = 'AI WorkFlow Lab:', savedState }) {
             onChange={handleWorkflowFileChange}
           />
         </div>
+        <button type="button" className={`wf-btn subtle icon-only ${isRightSidebarOpen ? 'active' : ''}`} onClick={() => setIsRightSidebarOpen(!isRightSidebarOpen)} title="Toggle Panel">
+            <FiSidebar aria-hidden="true" />
+          </button>
       </header>
 
       <div className="wf-body">
