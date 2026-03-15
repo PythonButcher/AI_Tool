@@ -74,67 +74,111 @@ function MenuBar({
         <div className="menu-bar-left">
           <div className="menu-button-container" ref={uploadRef}>
             <button
-              className="menu-button"
+              className={`menu-button ${activeDropdown === 'upload' ? 'menu-button-active' : ''}`}
               onClick={() => setActiveDropdown((prev) => prev === 'upload' ? null : 'upload')}
             >
               <FaUpload className="menu-icon" />
               Upload File
             </button>
             {activeDropdown === 'upload' && (
-              <div className="menu-dropdown">
-                <FileUpload
-                  label="Select a File to Upload:"
-                  onUploadComplete={() => setActiveDropdown(null)}
-                  onFileUploadSuccess={onFileUploadSuccess}
-                />
+              <div className="menu-dropdown menu-dropdown--panel menu-dropdown--upload">
+                <div className="menu-dropdown-card">
+                  <div className="menu-dropdown-header">
+                    <div>
+                      <p className="menu-dropdown-eyebrow">Data Intake</p>
+                      <h3 className="menu-dropdown-title">Upload File</h3>
+                    </div>
+                    <span className="menu-dropdown-badge">Import</span>
+                  </div>
+                  <div className="menu-dropdown-body">
+                    <FileUpload
+                      label="Select a File to Upload:"
+                      onUploadComplete={() => setActiveDropdown(null)}
+                      onFileUploadSuccess={onFileUploadSuccess}
+                    />
+                  </div>
+                </div>
               </div>
             )}
           </div>
 
           <div className="menu-button-container" ref={dbHubRef}>
             <button
-              className="menu-button"
+              className={`menu-button ${activeDropdown === 'open' ? 'menu-button-active' : ''}`}
               onClick={() => setActiveDropdown((prev) => prev === 'open' ? null : 'open')}
             >
               <TbCloudDataConnection className="menu-icon" />
               Open Hub
             </button>
             {activeDropdown === 'open' && (
-              <div className="menu-dropdown">
-                <DataHubWindow />
+              <div className="menu-dropdown menu-dropdown--panel menu-dropdown--hub">
+                <div className="menu-dropdown-card">
+                  <div className="menu-dropdown-header">
+                    <div>
+                      <p className="menu-dropdown-eyebrow">Catalog</p>
+                      <h3 className="menu-dropdown-title">Open Hub</h3>
+                    </div>
+                    <span className="menu-dropdown-badge">Managed</span>
+                  </div>
+                  <div className="menu-dropdown-body">
+                    <DataHubWindow />
+                  </div>
+                </div>
               </div>
             )}
           </div>
 
           <div className="menu-button-container" ref={apiRef}>
             <button
-              className="menu-button"
+              className={`menu-button ${activeDropdown === 'api' ? 'menu-button-active' : ''}`}
               onClick={() => setActiveDropdown((prev) => prev === 'api' ? null : 'api')}
             >
               <FaServer className="menu-icon" />
               Connect API
             </button>
             {activeDropdown === 'api' && (
-              <div className="menu-dropdown">
-                <ApiDataForm handleApiData={handleApiData} />
+              <div className="menu-dropdown menu-dropdown--panel menu-dropdown--api">
+                <div className="menu-dropdown-card">
+                  <div className="menu-dropdown-header">
+                    <div>
+                      <p className="menu-dropdown-eyebrow">External Source</p>
+                      <h3 className="menu-dropdown-title">Connect API</h3>
+                    </div>
+                    <span className="menu-dropdown-badge">Live</span>
+                  </div>
+                  <div className="menu-dropdown-body">
+                    <ApiDataForm handleApiData={handleApiData} />
+                  </div>
+                </div>
               </div>
             )}
           </div>
 
           <div className="menu-button-container" ref={dbRef}>
             <button
-              className="menu-button"
+              className={`menu-button ${activeDropdown === 'db' ? 'menu-button-active' : ''}`}
               onClick={() => setActiveDropdown((prev) => prev === 'db' ? null : 'db')}
             >
               <FaDatabase className="menu-icon" />
               Connect DB
             </button>
             {activeDropdown === 'db' && (
-              <div className="menu-dropdown">
-                <DatabaseConnectForm
-                  handleDatabaseData={handleDatabaseData}
-                  onClose={() => setActiveDropdown(null)}
-                />
+              <div className="menu-dropdown menu-dropdown--panel menu-dropdown--db">
+                <div className="menu-dropdown-card">
+                  <div className="menu-dropdown-header">
+                    <div>
+                      <p className="menu-dropdown-eyebrow">Warehouse</p>
+                      <h3 className="menu-dropdown-title">Connect Database</h3>
+                    </div>
+                    <span className="menu-dropdown-badge">Secure</span>
+                  </div>
+                  <div className="menu-dropdown-body">
+                    <DatabaseConnectForm
+                      handleDatabaseData={handleDatabaseData}
+                      onClose={() => setActiveDropdown(null)}
+                    />
+                  </div>
+                </div>
               </div>
             )}
           </div>
@@ -143,18 +187,37 @@ function MenuBar({
         <div className="menu-bar-right">
           <div className="menu-button-container" ref={statsRef}>
             <button
-              className="menu-icon-btn"
+              className={`menu-icon-btn ${activeDropdown === 'stats' ? 'menu-icon-btn-open' : ''}`}
               title="Statistics"
               onClick={() => setActiveDropdown((prev) => prev === 'stats' ? null : 'stats')}
             >
               <FaChartBar />
             </button>
             {activeDropdown === 'stats' && (
-              <div className="menu-dropdown">
-                <div className="dropdown-content">
-                  <button onClick={() => onStatsSelect('mean')}>Mean</button>
-                  <button onClick={() => onStatsSelect('median')}>Median</button>
-                  <button onClick={() => onStatsSelect('mode')}>Mode</button>
+              <div className="menu-dropdown menu-dropdown--compact menu-dropdown--right">
+                <div className="menu-dropdown-card menu-dropdown-card--compact">
+                  <div className="menu-dropdown-header menu-dropdown-header--compact">
+                    <div>
+                      <p className="menu-dropdown-eyebrow">Analytics</p>
+                      <h3 className="menu-dropdown-title">Quick statistics</h3>
+                    </div>
+                  </div>
+                  <div className="menu-dropdown-body menu-dropdown-body--compact">
+                    <div className="dropdown-content dropdown-content--stats">
+                      <button className="dropdown-item" onClick={() => onStatsSelect('mean')}>
+                        <span className="dropdown-item-title">Mean</span>
+                        <span className="dropdown-item-description">Average value across the selected field</span>
+                      </button>
+                      <button className="dropdown-item" onClick={() => onStatsSelect('median')}>
+                        <span className="dropdown-item-title">Median</span>
+                        <span className="dropdown-item-description">Middle value for balanced distribution checks</span>
+                      </button>
+                      <button className="dropdown-item" onClick={() => onStatsSelect('mode')}>
+                        <span className="dropdown-item-title">Mode</span>
+                        <span className="dropdown-item-description">Most frequent value in the selected field</span>
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
