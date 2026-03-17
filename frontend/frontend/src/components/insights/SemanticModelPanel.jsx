@@ -1,6 +1,7 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import PropTypes from 'prop-types';
 import { normalizeSemanticMetric, normalizeSemanticDimension } from '../../utils/semanticObjectUtils';
+import SemanticMetricEditor from '../../features/semantic/SemanticMetricEditor';
 import './SemanticModelPanel.css';
 
 const renderChipLabel = (item, suffix = null) => {
@@ -9,6 +10,7 @@ const renderChipLabel = (item, suffix = null) => {
 };
 
 function SemanticModelPanel({ semanticModel, status, onCreateSemanticChart, onCreateKpiCard }) {
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
   const metrics = useMemo(
     () => (semanticModel?.metrics || []).map(normalizeSemanticMetric),
     [semanticModel]
@@ -61,6 +63,14 @@ function SemanticModelPanel({ semanticModel, status, onCreateSemanticChart, onCr
               New semantic chart
             </button>
           )}
+          <button
+            type="button"
+            className="semantic-model-panel__action semantic-model-panel__action--editor"
+            onClick={() => setIsEditorOpen(true)}
+            disabled={!semanticModel}
+          >
+            Manage metrics
+          </button>
         </div>
       </div>
 
@@ -107,7 +117,7 @@ function SemanticModelPanel({ semanticModel, status, onCreateSemanticChart, onCr
                     className="semantic-model-panel__chip semantic-model-panel__chip--metric semantic-model-panel__chip-button"
                     onClick={() => onCreateSemanticChart && onCreateSemanticChart({ metricId: metric.id })}
                   >
-                    {renderChipLabel(metric, metric.helperLabel)}
+                    {renderChipLabel(metric, `${metric.helperLabel} · ${metric.is_user_defined ? 'custom' : 'inferred'}`)}
                   </button>
                   {onCreateKpiCard && (
                     <button
@@ -122,7 +132,7 @@ function SemanticModelPanel({ semanticModel, status, onCreateSemanticChart, onCr
               ))}
             </div>
           ) : (
-            <p className="semantic-model-panel__empty">No semantic metrics inferred yet.</p>
+            <p className="semantic-model-panel__empty">No semantic metrics available yet.</p>
           )}
         </div>
 
@@ -149,6 +159,12 @@ function SemanticModelPanel({ semanticModel, status, onCreateSemanticChart, onCr
           )}
         </div>
       </div>
+
+      <SemanticMetricEditor
+        isOpen={isEditorOpen}
+        onClose={() => setIsEditorOpen(false)}
+        semanticModel={semanticModel}
+      />
     </section>
   );
 }

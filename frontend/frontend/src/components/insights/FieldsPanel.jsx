@@ -240,7 +240,9 @@ const FieldsPanel = ({ cleanedData }) => {
       type: 'numeric',
       source: 'semantic',
       sourceLabel: 'Metric',
-      subtitle: metric.field ? `Backed by ${metric.field}` : 'Business definition',
+      subtitle: metric.expression?.type === 'derived_formula'
+        ? 'Formula definition'
+        : (metric.field ? `Backed by ${metric.field}` : 'Business definition'),
       title: buildSemanticTitle(metric),
       helperLabel: metric.helperLabel,
       searchText: metric.searchText,
