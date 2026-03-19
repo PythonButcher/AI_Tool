@@ -3,7 +3,7 @@ import io
 
 from backend.services.ml_logic import detect_anomalies
 from backend.services.semantic_model import infer_semantic_model_from_dataframe
-from backend.utils.global_state import get_uploaded_df, set_semantic_model, set_uploaded_df
+from backend.utils.global_state import get_semantic_model, get_uploaded_df, set_semantic_model, set_uploaded_df
 
 analysis_bp = Blueprint('analysis_bp', __name__, url_prefix='/api')
 
@@ -77,7 +77,12 @@ def receive_filtered_data():
 
         df = pd.DataFrame(json_data['data_preview'])
         set_uploaded_df(df)
-        semantic_model = infer_semantic_model_from_dataframe(df, source='filtered_dataset')
+        semantic_model = infer_semantic_model_from_dataframe(
+            df,
+            source='filtered_dataset',
+            existing_model=get_semantic_model(),
+            preserve_user_metrics=True,
+        )
         set_semantic_model(semantic_model)
 
         return jsonify({

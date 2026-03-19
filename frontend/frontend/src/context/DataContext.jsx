@@ -100,6 +100,8 @@ export const DataProvider = ({ children }) => {
           dataset_id: metadata.datasetId,
           source: metadata.source || 'frontend_refresh',
           persist_current: true,
+          preserve_user_metrics: Boolean(metadata.preserveUserMetrics),
+          base_semantic_model: metadata.baseSemanticModel || (metadata.preserveUserMetrics ? semanticModel : null),
         }),
       });
 
@@ -116,6 +118,77 @@ export const DataProvider = ({ children }) => {
       setSemanticModelStatus('error');
       return null;
     }
+  }, [semanticModel]);
+
+  const listSemanticMetrics = useCallback(async () => {
+    const response = await fetch(`${API_URL}/api/semantic-model/metrics`);
+    const payload = await response.json();
+
+    if (!response.ok) {
+      throw new Error(payload.error || 'Failed to load semantic metrics');
+    }
+
+    if (payload.semantic_model) {
+      setSemanticModel(payload.semantic_model);
+      setSemanticModelStatus('ready');
+    }
+
+    return Array.isArray(payload.metrics) ? payload.metrics : [];
+  }, []);
+
+  const createSemanticMetric = useCallback(async (metricPayload) => {
+    setSemanticModelStatus('loading');
+    const response = await fetch(`${API_URL}/api/semantic-model/metrics`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(metricPayload),
+    });
+    const payload = await response.json();
+
+    if (!response.ok) {
+      setSemanticModelStatus('error');
+      throw new Error(payload.error || 'Failed to create semantic metric');
+    }
+
+    setSemanticModel(payload.semantic_model || null);
+    setSemanticModelStatus('ready');
+    return payload.metric;
+  }, []);
+
+  const updateSemanticMetric = useCallback(async (metricId, metricPayload) => {
+    setSemanticModelStatus('loading');
+    const response = await fetch(`${API_URL}/api/semantic-model/metrics/${encodeURIComponent(metricId)}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(metricPayload),
+    });
+    const payload = await response.json();
+
+    if (!response.ok) {
+      setSemanticModelStatus('error');
+      throw new Error(payload.error || 'Failed to update semantic metric');
+    }
+
+    setSemanticModel(payload.semantic_model || null);
+    setSemanticModelStatus('ready');
+    return payload.metric;
+  }, []);
+
+  const deleteSemanticMetric = useCallback(async (metricId) => {
+    setSemanticModelStatus('loading');
+    const response = await fetch(`${API_URL}/api/semantic-model/metrics/${encodeURIComponent(metricId)}`, {
+      method: 'DELETE',
+    });
+    const payload = await response.json();
+
+    if (!response.ok) {
+      setSemanticModelStatus('error');
+      throw new Error(payload.error || 'Failed to delete semantic metric');
+    }
+
+    setSemanticModel(payload.semantic_model || null);
+    setSemanticModelStatus('ready');
+    return true;
   }, []);
 
   useEffect(() => {
@@ -129,6 +202,12 @@ export const DataProvider = ({ children }) => {
       setSemanticModelStatus('idle');
     }
   }, [uploadedData, fullData, cleanedData, filteredData]);
+
+  useEffect(() => {
+    if (semanticModel && semanticModelStatus === 'idle') {
+      setSemanticModelStatus('ready');
+    }
+  }, [semanticModel, semanticModelStatus]);
 
   useEffect(() => {
     console.log('DataContext fullData rows:', Array.isArray(fullData) ? fullData.length : 0);
@@ -160,6 +239,10 @@ export const DataProvider = ({ children }) => {
     setSemanticModel,
     semanticModelStatus,
     refreshSemanticModelFromDataset,
+    listSemanticMetrics,
+    createSemanticMetric,
+    updateSemanticMetric,
+    deleteSemanticMetric,
   }), [
     uploadedData,
     fullData,
@@ -175,6 +258,10 @@ export const DataProvider = ({ children }) => {
     semanticModel,
     semanticModelStatus,
     refreshSemanticModelFromDataset,
+    listSemanticMetrics,
+    createSemanticMetric,
+    updateSemanticMetric,
+    deleteSemanticMetric,
   ]);
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

@@ -2,6 +2,7 @@ from flask import Blueprint, jsonify, request
 
 from backend.services.semantic_model import infer_semantic_model_from_dataframe
 from backend.utils.global_state import (
+    get_semantic_model,
     get_uploaded_df,
     set_cleaned_data,
     set_semantic_model,
@@ -31,7 +32,12 @@ def get_clean():
             return jsonify({'error': 'Invalid cleaning task'}), 400
 
         set_cleaned_data(cleaned_df)
-        semantic_model = infer_semantic_model_from_dataframe(cleaned_df, source='basic_cleaning')
+        semantic_model = infer_semantic_model_from_dataframe(
+            cleaned_df,
+            source='basic_cleaning',
+            existing_model=get_semantic_model(),
+            preserve_user_metrics=True,
+        )
         set_semantic_model(semantic_model)
 
         cleaned_preview = cleaned_df.head(10).to_dict(orient='records')
@@ -57,7 +63,12 @@ def bypass_cleaning():
     try:
         cleaned_df = uploaded_df
         set_cleaned_data(cleaned_df)
-        semantic_model = infer_semantic_model_from_dataframe(cleaned_df, source='bypass_cleaning')
+        semantic_model = infer_semantic_model_from_dataframe(
+            cleaned_df,
+            source='bypass_cleaning',
+            existing_model=get_semantic_model(),
+            preserve_user_metrics=True,
+        )
         set_semantic_model(semantic_model)
 
         cleaned_preview = cleaned_df.head(10).to_dict(orient='records')

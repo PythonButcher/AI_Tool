@@ -1,3 +1,4 @@
+import json
 import sqlite3
 from threading import Lock
 
@@ -47,3 +48,35 @@ def get_db_connection():
                 _SCHEMA_READY = True
 
     return conn
+
+
+def get_dataset_record(dataset_id):
+    if not dataset_id:
+        return None
+
+    conn = get_db_connection()
+    try:
+        row = conn.execute(
+            'SELECT * FROM datahub_datasets WHERE id = ?',
+            (dataset_id,),
+        ).fetchone()
+        return row
+    finally:
+        conn.close()
+
+
+def update_dataset_semantic_model(dataset_id, semantic_model):
+    if not dataset_id:
+        return False
+
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            'UPDATE datahub_datasets SET semantic_model_json = ? WHERE id = ?',
+            (json.dumps(semantic_model) if semantic_model is not None else None, dataset_id),
+        )
+        conn.commit()
+        return cursor.rowcount > 0
+    finally:
+        conn.close()
