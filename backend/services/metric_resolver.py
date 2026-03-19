@@ -1,10 +1,13 @@
 from __future__ import annotations
 
-from typing import Any, Dict, Iterable, List, Optional, Sequence
+import ast
+import operator
+from typing import Any, Dict, List, Optional, Sequence
 
 import pandas as pd
 
 from backend.services.dataset_context import resolve_dataset_bundle
+from backend.services.semantic_model import FORMULA_COLUMN_PATTERN, extract_formula_columns
 
 
 _AGGREGATION_ALIASES = {
@@ -20,6 +23,18 @@ _AGGREGATION_ALIASES = {
     "count_distinct": "nunique",
     "distinct_count": "nunique",
     "nunique": "nunique",
+}
+_ALLOWED_BINARY_OPERATORS = {
+    ast.Add: operator.add,
+    ast.Sub: operator.sub,
+    ast.Mult: operator.mul,
+    ast.Div: operator.truediv,
+    ast.Mod: operator.mod,
+    ast.Pow: operator.pow,
+}
+_ALLOWED_UNARY_OPERATORS = {
+    ast.UAdd: operator.pos,
+    ast.USub: operator.neg,
 }
 
 
@@ -87,6 +102,9 @@ class MetricResolver:
                 "default_aggregation": resolved_metric.get("default_aggregation"),
                 "format_hint": resolved_metric.get("format_hint"),
                 "expression": resolved_metric.get("expression") or {},
+                "status": resolved_metric.get("status"),
+                "is_inferred": resolved_metric.get("is_inferred"),
+                "is_user_defined": resolved_metric.get("is_user_defined"),
             },
             "dataset": {
                 **bundle["dataset_ref"],
@@ -251,46 +269,46 @@ class MetricResolver:
         filtered_df = dataframe
         for filter_def in filters:
             series = filtered_df[filter_def["field"]]
-            operator = filter_def.get("operator", "eq")
+            operator_name = filter_def.get("operator", "eq")
             value = filter_def.get("value")
             values = filter_def.get("values")
 
-            if operator == "eq":
+            if operator_name == "eq":
                 mask = series == MetricResolver._coerce_filter_value(series, value)
-            elif operator == "neq":
+            elif operator_name == "neq":
                 mask = series != MetricResolver._coerce_filter_value(series, value)
-            elif operator == "gt":
+            elif operator_name == "gt":
                 mask = series > MetricResolver._coerce_filter_value(series, value)
-            elif operator == "gte":
+            elif operator_name == "gte":
                 mask = series >= MetricResolver._coerce_filter_value(series, value)
-            elif operator == "lt":
+            elif operator_name == "lt":
                 mask = series < MetricResolver._coerce_filter_value(series, value)
-            elif operator == "lte":
+            elif operator_name == "lte":
                 mask = series <= MetricResolver._coerce_filter_value(series, value)
-            elif operator == "in":
+            elif operator_name == "in":
                 raw_values = values if values is not None else value
                 if not isinstance(raw_values, list):
                     raw_values = [raw_values]
                 coerced = [MetricResolver._coerce_filter_value(series, item) for item in raw_values]
                 mask = series.isin(coerced)
-            elif operator == "not_in":
+            elif operator_name == "not_in":
                 raw_values = values if values is not None else value
                 if not isinstance(raw_values, list):
                     raw_values = [raw_values]
                 coerced = [MetricResolver._coerce_filter_value(series, item) for item in raw_values]
                 mask = ~series.isin(coerced)
-            elif operator == "contains":
+            elif operator_name == "contains":
                 mask = series.astype(str).str.contains(str(value), case=False, na=False)
-            elif operator == "starts_with":
+            elif operator_name == "starts_with":
                 mask = series.astype(str).str.startswith(str(value), na=False)
-            elif operator == "ends_with":
+            elif operator_name == "ends_with":
                 mask = series.astype(str).str.endswith(str(value), na=False)
-            elif operator == "is_null":
+            elif operator_name == "is_null":
                 mask = series.isna()
-            elif operator == "not_null":
+            elif operator_name == "not_null":
                 mask = series.notna()
             else:
-                raise MetricResolutionError(f"Unsupported filter operator '{operator}'.")
+                raise MetricResolutionError(f"Unsupported filter operator '{operator_name}'.")
 
             filtered_df = filtered_df.loc[mask]
 
@@ -328,51 +346,89 @@ class MetricResolver:
 
         group_fields = [item["field"] for item in group_defs]
         group_count = 0
+        execution_field = None
 
         if expression_type == "count_rows":
-            value_field = None
+            summary_value = int(len(dataframe.index))
             execution_aggregation = "row_count"
+            if group_fields:
+                result_frame = dataframe.groupby(list(group_fields), dropna=False).size().reset_index(name="value")
+                result_frame["row_count"] = result_frame["value"]
+                result_frame = MetricResolver._sort_result_frame(result_frame, group_fields, sort)
+                if isinstance(limit, int) and limit > 0:
+                    result_frame = result_frame.head(limit)
+                group_count = int(len(result_frame.index))
+                rows = [MetricResolver._result_row_from_series(row, group_defs) for _, row in result_frame.iterrows()]
+            else:
+                rows = [{
+                    "group": {},
+                    "value": summary_value,
+                    "row_count": int(len(dataframe.index)),
+                }]
         elif expression_type == "column_aggregation":
             value_field = expression.get("column") or metric.get("field")
-            execution_aggregation = resolved_aggregation
             if not value_field:
                 raise MetricResolutionError("Metric expression is missing a column reference.")
             if value_field not in dataframe.columns:
                 raise MetricResolutionError(f"Metric field '{value_field}' does not exist in the dataset.")
+            execution_field = value_field
+            summary_value = MetricResolver._scalar_aggregate(dataframe, value_field, resolved_aggregation)
+            execution_aggregation = resolved_aggregation
+            if group_fields:
+                result_frame = MetricResolver._build_grouped_aggregate_frame(
+                    dataframe=dataframe,
+                    group_fields=group_fields,
+                    value_field=value_field,
+                    aggregation=resolved_aggregation,
+                )
+                result_frame = MetricResolver._sort_result_frame(result_frame, group_fields, sort)
+                if isinstance(limit, int) and limit > 0:
+                    result_frame = result_frame.head(limit)
+                group_count = int(len(result_frame.index))
+                rows = [MetricResolver._result_row_from_series(row, group_defs) for _, row in result_frame.iterrows()]
+            else:
+                rows = [{
+                    "group": {},
+                    "value": MetricResolver._serialize_value(summary_value),
+                    "row_count": int(len(dataframe.index)),
+                }]
+        elif expression_type == "derived_formula":
+            formula = expression.get("formula") or ""
+            formula_columns = expression.get("columns") or extract_formula_columns(formula)
+            if not formula or not formula_columns:
+                raise MetricResolutionError("Formula metrics require a valid formula with [Column] references.")
+            missing_columns = [column for column in formula_columns if column not in dataframe.columns]
+            if missing_columns:
+                raise MetricResolutionError(f"Formula references missing dataset fields: {', '.join(missing_columns)}.")
+            execution_field = ", ".join(formula_columns)
+            summary_value = MetricResolver._evaluate_formula_scalar(
+                dataframe=dataframe,
+                formula=formula,
+                columns=formula_columns,
+                aggregation=resolved_aggregation,
+            )
+            execution_aggregation = f"{resolved_aggregation}_formula"
+            if group_fields:
+                result_frame = MetricResolver._build_grouped_formula_frame(
+                    dataframe=dataframe,
+                    group_fields=group_fields,
+                    formula=formula,
+                    columns=formula_columns,
+                    aggregation=resolved_aggregation,
+                )
+                result_frame = MetricResolver._sort_result_frame(result_frame, group_fields, sort)
+                if isinstance(limit, int) and limit > 0:
+                    result_frame = result_frame.head(limit)
+                group_count = int(len(result_frame.index))
+                rows = [MetricResolver._result_row_from_series(row, group_defs) for _, row in result_frame.iterrows()]
+            else:
+                rows = [{
+                    "group": {},
+                    "value": MetricResolver._serialize_value(summary_value),
+                    "row_count": int(len(dataframe.index)),
+                }]
         else:
             raise MetricResolutionError(f"Unsupported metric expression type '{expression_type}'.")
-
-        if group_fields:
-            result_frame = MetricResolver._execute_grouped_metric(
-                dataframe=dataframe,
-                group_fields=group_fields,
-                value_field=value_field,
-                aggregation=resolved_aggregation,
-                expression_type=expression_type,
-            )
-            result_frame = MetricResolver._sort_result_frame(result_frame, group_fields, sort)
-            if isinstance(limit, int) and limit > 0:
-                result_frame = result_frame.head(limit)
-            group_count = int(len(result_frame.index))
-            rows = [MetricResolver._result_row_from_series(row, group_defs) for _, row in result_frame.iterrows()]
-            summary_value = MetricResolver._scalar_metric_value(
-                dataframe=dataframe,
-                value_field=value_field,
-                aggregation=resolved_aggregation,
-                expression_type=expression_type,
-            )
-        else:
-            summary_value = MetricResolver._scalar_metric_value(
-                dataframe=dataframe,
-                value_field=value_field,
-                aggregation=resolved_aggregation,
-                expression_type=expression_type,
-            )
-            rows = [{
-                "group": {},
-                "value": MetricResolver._serialize_value(summary_value),
-                "row_count": int(len(dataframe.index)),
-            }]
 
         return {
             "rows": rows,
@@ -384,25 +440,19 @@ class MetricResolver:
             "execution": {
                 "expression_type": expression_type,
                 "resolved_aggregation": execution_aggregation,
-                "resolved_field": value_field,
+                "resolved_field": execution_field,
             },
         }
 
     @staticmethod
-    def _execute_grouped_metric(
+    def _build_grouped_aggregate_frame(
         dataframe: pd.DataFrame,
         group_fields: Sequence[str],
-        value_field: Optional[str],
-        aggregation: Optional[str],
-        expression_type: str,
+        value_field: str,
+        aggregation: str,
     ) -> pd.DataFrame:
         grouped = dataframe.groupby(list(group_fields), dropna=False)
         row_counts = grouped.size().reset_index(name="row_count")
-
-        if expression_type == "count_rows":
-            result_frame = row_counts.rename(columns={"row_count": "value"})
-            result_frame["row_count"] = result_frame["value"]
-            return result_frame
 
         if aggregation in {"sum", "mean", "min", "max"}:
             metric_series = pd.to_numeric(dataframe[value_field], errors="coerce")
@@ -427,26 +477,66 @@ class MetricResolver:
         return result_frame.merge(row_counts, on=list(group_fields), how="left")
 
     @staticmethod
-    def _scalar_metric_value(
+    def _build_grouped_formula_frame(
         dataframe: pd.DataFrame,
-        value_field: Optional[str],
-        aggregation: Optional[str],
-        expression_type: str,
-    ) -> Any:
-        if expression_type == "count_rows":
-            return int(len(dataframe.index))
+        group_fields: Sequence[str],
+        formula: str,
+        columns: Sequence[str],
+        aggregation: str,
+    ) -> pd.DataFrame:
+        result_frame = None
+        for index, column in enumerate(columns):
+            aggregated = MetricResolver._build_grouped_aggregate_frame(
+                dataframe=dataframe,
+                group_fields=group_fields,
+                value_field=column,
+                aggregation=aggregation,
+            )
+            aggregated = aggregated.rename(columns={"value": f"_operand_{index}"})
+            aggregated = aggregated.drop(columns=["row_count"], errors="ignore")
+            result_frame = aggregated if result_frame is None else result_frame.merge(
+                aggregated,
+                on=list(group_fields),
+                how="outer",
+            )
 
+        if result_frame is None:
+            raise MetricResolutionError("Formula metric could not be evaluated.")
+
+        row_counts = dataframe.groupby(list(group_fields), dropna=False).size().reset_index(name="row_count")
+        variables = {
+            column: result_frame[f"_operand_{index}"].fillna(0)
+            for index, column in enumerate(columns)
+        }
+        result_frame["value"] = MetricResolver._evaluate_formula(formula, variables)
+        result_frame = result_frame.merge(row_counts, on=list(group_fields), how="left")
+        return result_frame
+
+    @staticmethod
+    def _evaluate_formula_scalar(
+        dataframe: pd.DataFrame,
+        formula: str,
+        columns: Sequence[str],
+        aggregation: str,
+    ) -> Any:
+        variables = {
+            column: MetricResolver._normalize_formula_operand(MetricResolver._scalar_aggregate(dataframe, column, aggregation))
+            for column in columns
+        }
+        return MetricResolver._serialize_value(MetricResolver._evaluate_formula(formula, variables))
+
+    @staticmethod
+    def _scalar_aggregate(dataframe: pd.DataFrame, value_field: str, aggregation: str) -> Any:
         if aggregation in {"sum", "mean", "min", "max"}:
             numeric_series = pd.to_numeric(dataframe[value_field], errors="coerce")
             if aggregation == "sum":
                 result = numeric_series.sum(min_count=1)
-            elif aggregation == "mean":
-                result = numeric_series.mean()
-            elif aggregation == "min":
-                result = numeric_series.min()
-            else:
-                result = numeric_series.max()
-            return 0 if pd.isna(result) and aggregation == "sum" else MetricResolver._serialize_value(result)
+                return 0 if pd.isna(result) else MetricResolver._serialize_value(result)
+            if aggregation == "mean":
+                return MetricResolver._serialize_value(numeric_series.mean())
+            if aggregation == "min":
+                return MetricResolver._serialize_value(numeric_series.min())
+            return MetricResolver._serialize_value(numeric_series.max())
 
         if aggregation == "count":
             return int(dataframe[value_field].count())
@@ -454,6 +544,74 @@ class MetricResolver:
             return int(dataframe[value_field].nunique(dropna=True))
 
         raise MetricResolutionError(f"Unsupported aggregation '{aggregation}'.")
+
+    @staticmethod
+    def _evaluate_formula(formula: str, variables: Dict[str, Any]) -> Any:
+        alias_by_column: Dict[str, str] = {}
+
+        def replace_column(match: Any) -> str:
+            column = str(match.group(1)).strip()
+            alias = alias_by_column.get(column)
+            if alias is None:
+                alias = f"v{len(alias_by_column)}"
+                alias_by_column[column] = alias
+            return alias
+
+        rewritten_formula = extract_formula_columns(formula)
+        if not rewritten_formula:
+            raise MetricResolutionError("Formula metrics require [Column] references.")
+
+        expression_text = FORMULA_COLUMN_PATTERN.sub(replace_column, formula)
+        try:
+            compiled_formula = ast.parse(expression_text, mode="eval")
+        except SyntaxError as exc:
+            raise MetricResolutionError(f"Invalid metric formula syntax: {exc.msg}.") from exc
+        scoped_variables = {
+            alias: variables[column]
+            for column, alias in alias_by_column.items()
+        }
+        return MetricResolver._evaluate_formula_node(compiled_formula.body, scoped_variables)
+
+    @staticmethod
+    def _evaluate_formula_node(node: ast.AST, variables: Dict[str, Any]) -> Any:
+        if isinstance(node, ast.BinOp):
+            operator_fn = _ALLOWED_BINARY_OPERATORS.get(type(node.op))
+            if operator_fn is None:
+                raise MetricResolutionError("Unsupported operator used in metric formula.")
+            left_value = MetricResolver._evaluate_formula_node(node.left, variables)
+            right_value = MetricResolver._evaluate_formula_node(node.right, variables)
+            return operator_fn(left_value, right_value)
+
+        if isinstance(node, ast.UnaryOp):
+            operator_fn = _ALLOWED_UNARY_OPERATORS.get(type(node.op))
+            if operator_fn is None:
+                raise MetricResolutionError("Unsupported unary operator used in metric formula.")
+            operand_value = MetricResolver._evaluate_formula_node(node.operand, variables)
+            return operator_fn(operand_value)
+
+        if isinstance(node, ast.Name):
+            if node.id not in variables:
+                raise MetricResolutionError(f"Unknown formula variable '{node.id}'.")
+            return variables[node.id]
+
+        if isinstance(node, ast.Constant):
+            return node.value
+
+        if isinstance(node, ast.Expr):
+            return MetricResolver._evaluate_formula_node(node.value, variables)
+
+        raise MetricResolutionError("Formula contains unsupported syntax.")
+
+    @staticmethod
+    def _normalize_formula_operand(value: Any) -> Any:
+        if value is None:
+            return 0
+        try:
+            if pd.isna(value):
+                return 0
+        except Exception:
+            return value
+        return value
 
     @staticmethod
     def _sort_result_frame(result_frame: pd.DataFrame, group_fields: Sequence[str], sort: Optional[str]) -> pd.DataFrame:

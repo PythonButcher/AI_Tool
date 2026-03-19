@@ -409,7 +409,7 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
           return;
         }
         setCleanedData(result);
-        await refreshSemanticModelFromDataset(result, { source: 'ai_chat_clean_command' });
+        await refreshSemanticModelFromDataset(result, { source: 'ai_chat_clean_command', preserveUserMetrics: true });
         setAwaitingCleanInstructions(false);
         responseText = "The data has been cleaned successfully.";
       } else {
@@ -420,7 +420,7 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
       const result = await handleUserCommand("/clean", datasetContext, userInput);
       if (result && Array.isArray(result)) {
         setCleanedData(result);
-        await refreshSemanticModelFromDataset(result, { source: 'ai_chat_clean_followup' });
+        await refreshSemanticModelFromDataset(result, { source: 'ai_chat_clean_followup', preserveUserMetrics: true });
         responseText = "The data has been cleaned successfully.";
       } else {
         responseText = typeof result === 'string' ? result : "Unable to clean data.";

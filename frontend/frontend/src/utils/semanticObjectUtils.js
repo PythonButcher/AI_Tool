@@ -9,12 +9,15 @@ const normalizeSemanticType = (value) => {
 const buildSemanticSearchText = (item) => [
   item.label,
   item.name,
+  item.display_name,
   item.field,
   item.description,
   item.default_aggregation,
   item.semantic_kind,
   item.data_type,
   item.format_hint,
+  item.status,
+  item.expression?.formula,
 ]
   .filter(Boolean)
   .join(' ')
@@ -28,7 +31,9 @@ export const normalizeSemanticMetric = (metric) => ({
   fieldType: 'numeric',
   objectKind: 'metric',
   semanticType: 'metric',
-  helperLabel: metric?.default_aggregation || metric?.expression?.aggregation || 'metric',
+  helperLabel: metric?.expression?.type === 'derived_formula'
+    ? `formula · ${metric?.default_aggregation || metric?.expression?.aggregation || 'sum'}`
+    : (metric?.default_aggregation || metric?.expression?.aggregation || 'metric'),
   searchText: buildSemanticSearchText(metric || {}),
 });
 

@@ -82,7 +82,7 @@ function DataFilterPanel({ openDataFilter, setOpenDataFilter }) {
       setSemanticModel(responseModel);
       return;
     }
-    await refreshSemanticModelFromDataset(rows, { source });
+    await refreshSemanticModelFromDataset(rows, { source, preserveUserMetrics: true });
   };
 
   const handleApplyFilters = async () => {

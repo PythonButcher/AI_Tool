@@ -487,7 +487,7 @@ function DataCleaningForm({ closeForm, setShowDataPreview, onProceedToTraining }
         if (semantic_model) {
           setSemanticModel(semantic_model);
         } else {
-          refreshSemanticModelFromDataset(cleaned_data, { source: 'manual_cleaning_apply' });
+          refreshSemanticModelFromDataset(cleaned_data, { source: 'manual_cleaning_apply', preserveUserMetrics: true });
         }
         setSuccess('Cleaning applied and dataset updated.');
         if (setShowDataPreview) setShowDataPreview(true);

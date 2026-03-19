@@ -4,6 +4,7 @@ from backend.services.manual_cleaning_engine import apply_steps
 from backend.services.semantic_model import infer_semantic_model_from_dataframe
 from backend.utils.global_state import (
     get_cleaned_data,
+    get_semantic_model,
     get_uploaded_df,
     set_cleaned_data,
     set_semantic_model,
@@ -39,6 +40,8 @@ def manual_cleaning():
     semantic_model = infer_semantic_model_from_dataframe(
         cleaned_df,
         source='manual_cleaning_preview' if preview_only else 'manual_cleaning',
+        existing_model=get_semantic_model(),
+        preserve_user_metrics=True,
     )
 
     if not preview_only:
