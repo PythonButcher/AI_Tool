@@ -8,6 +8,7 @@ import {
 import { normalizeDatasetRows, useActiveDataset, useSemanticModel } from '../../context/DataContext';
 import { useWindowContext } from '../../context/WindowContext';
 import { normalizeSemanticDimension } from '../../utils/semanticObjectUtils';
+import SemanticMetricEditor from '../semantic/SemanticMetricEditor';
 import { FaFilter, FaChevronUp, FaChevronDown, FaPlus, FaTrash, FaTimes } from 'react-icons/fa';
 import './DashboardFilterBar.css';
 
@@ -17,6 +18,7 @@ function DashboardFilterBar() {
   const activeDataset = useActiveDataset();
   const semanticModel = useSemanticModel();
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isSemanticEditorOpen, setIsSemanticEditorOpen] = useState(false);
   const {
     dashboardState,
     setDashboardFilters,
@@ -100,9 +102,15 @@ function DashboardFilterBar() {
           >
             <FaPlus /> Chart
           </button>
-          
-          <div className="v-divider"></div>
-
+          {/* Added dashboard-filter-bar__btn--primary to make the button dark like KPI and Chart */}
+          <button 
+            type="button" 
+            className={`dashboard-filter-bar__btn dashboard-filter-bar__btn--primary ${isSemanticEditorOpen ? 'active' : ''}`} 
+            onClick={() => setIsSemanticEditorOpen(true)}
+            title="Manage Semantic Model"
+          >
+            <FaPlus /> Semantic
+          </button>
           <button 
             type="button" 
             className={`dashboard-filter-bar__btn ${isExpanded ? 'active' : ''}`} 
@@ -238,6 +246,11 @@ function DashboardFilterBar() {
             </div>
         </div>
       )}
+      <SemanticMetricEditor
+        isOpen={isSemanticEditorOpen}
+        onClose={() => setIsSemanticEditorOpen(false)}
+        semanticModel={semanticModel}
+      />
     </section>
   );
 }
