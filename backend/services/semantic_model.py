@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 from datetime import datetime, timezone
+import logging
 import re
 from typing import Any, Dict, List, Optional, Sequence, Set
 
@@ -16,6 +17,7 @@ TEMPORAL_KEYWORDS = ("date", "time", "timestamp", "year", "month", "day", "week"
 SUPPORTED_AGGREGATIONS = {"sum", "avg", "average", "mean", "min", "max", "count", "count_distinct", "distinct_count", "nunique"}
 SUPPORTED_FORMAT_HINTS = {None, "", "number", "currency", "percentage", "date"}
 FORMULA_COLUMN_PATTERN = re.compile(r"\[([^\]]+)\]")
+logger = logging.getLogger(__name__)
 
 
 def _iso_timestamp() -> str:
@@ -150,6 +152,13 @@ def infer_semantic_model_from_dataframe(
             "notes": "The semantic model is additive and does not replace the existing dataset pipeline.",
         },
     }
+    logger.info(
+        "Inferred semantic model for dataset %s with %s columns, %s metrics, and %s dimensions.",
+        resolved_dataset_name,
+        len(column_names),
+        len(metrics),
+        len(dimensions),
+    )
     return finalize_semantic_model(model)
 
 
@@ -533,7 +542,10 @@ def _coerce_ratio(non_null: pd.Series, kind: str) -> float:
         if kind == "numeric":
             coerced = pd.to_numeric(non_null, errors="coerce")
         else:
-            coerced = pd.to_datetime(non_null, errors="coerce", utc=False)
+            try:
+                coerced = pd.to_datetime(non_null, errors="coerce", utc=False, format="mixed")
+            except TypeError:
+                coerced = pd.to_datetime(non_null, errors="coerce", utc=False)
     except Exception:
         return 0.0
     return float(coerced.notna().sum()) / float(non_null.shape[0])
