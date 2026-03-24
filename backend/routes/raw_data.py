@@ -1,6 +1,10 @@
 from flask import Blueprint, request, jsonify
-import pandas as pd
 import json
+import logging
+
+from backend.services.dataset_context import read_dataset_file
+
+logger = logging.getLogger(__name__)
 
 raw_data_bp = Blueprint("raw_data_bp", __name__, url_prefix="/api")
 
@@ -14,19 +18,11 @@ def raw_upload():
         return jsonify({"error": "No file selected"}), 400
 
     try:
-        if file.filename.endswith('.csv'):
-            df = pd.read_csv(file)
-        elif file.filename.endswith(('.xls', '.xlsx')):
-            df = pd.read_excel(file)
-        elif file.filename.endswith('.json'):
-            df = pd.read_json(file)
-        elif file.filename.endswith('.geojson'):
-            geojson_obj = json.load(file)
-            df = pd.json_normalize(geojson_obj['features'])
-        else:
-            return jsonify({"error": "Unsupported file type"}), 400
+        df = read_dataset_file(file, filename=file.filename)
 
-        return jsonify({ "raw_data": df.to_dict(orient="records") })
+        raw_data = json.loads(df.to_json(orient="records", date_format="iso"))
+        return jsonify({ "raw_data": raw_data })
 
     except Exception as e:
+        logger.exception("Failed to parse raw upload file %s", file.filename)
         return jsonify({ "error": f"Failed to parse raw data: {str(e)}" }), 500

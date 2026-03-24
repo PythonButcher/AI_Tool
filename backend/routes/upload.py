@@ -1,11 +1,12 @@
 from flask import Blueprint, jsonify, request
 import json
+import logging
 
-import pandas as pd
-
+from backend.services.dataset_context import read_dataset_file
 from backend.services.semantic_model import infer_semantic_model_from_dataframe
 from backend.utils.global_state import set_semantic_model, set_uploaded_df
 
+logger = logging.getLogger(__name__)
 
 upload_bp = Blueprint('upload_bp', __name__, url_prefix='/api')
 
@@ -20,17 +21,7 @@ def upload_file():
         return jsonify({'error': 'No selected file'}), 400
 
     try:
-        if file.filename.endswith('.csv'):
-            df = pd.read_csv(file)
-        elif file.filename.endswith(('.xls', '.xlsx')):
-            df = pd.read_excel(file)
-        elif file.filename.endswith('.json'):
-            df = pd.read_json(file)
-        elif file.filename.endswith('.geojson'):
-            geojson_obj = json.load(file)
-            df = pd.json_normalize(geojson_obj['features'])
-        else:
-            return jsonify({'error': 'Unsupported file type'}), 400
+        df = read_dataset_file(file, filename=file.filename)
 
         set_uploaded_df(df)
         semantic_model = infer_semantic_model_from_dataframe(df, dataset_name=file.filename, source='upload')
@@ -42,8 +33,8 @@ def upload_file():
             .apply(lambda x: x.value_counts().to_dict())
             .to_dict()
         )
-        data_preview = df.head().to_json(orient='records')
-        full_data = df.to_dict(orient='records')
+        data_preview = json.loads(df.head().to_json(orient='records', date_format='iso'))
+        full_data = json.loads(df.to_json(orient='records', date_format='iso'))
 
         return jsonify({
             'message': f"File '{file.filename}' uploaded successfully!",
@@ -55,4 +46,5 @@ def upload_file():
         }), 200
 
     except Exception as e:
+        logger.exception("Failed to process uploaded file %s", file.filename)
         return jsonify({'error': f'Failed to process the file: {str(e)}'}), 500
