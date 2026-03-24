@@ -1,4 +1,5 @@
 import React, { useContext, useEffect, useMemo, useState } from 'react';
+import ReactDOM from 'react-dom';
 import PropTypes from 'prop-types';
 import { DataContext, normalizeDatasetRows, useActiveDataset } from '../../context/DataContext';
 import { normalizeSemanticMetric } from '../../utils/semanticObjectUtils';
@@ -284,7 +285,7 @@ function SemanticMetricEditor({ isOpen, onClose, semanticModel }) {
     }
   };
 
-  return (
+  const modalContent = (
     <div className="semantic-metric-editor__backdrop" role="presentation" onClick={handleClose}>
       <div
         className="semantic-metric-editor"
@@ -584,6 +585,8 @@ function SemanticMetricEditor({ isOpen, onClose, semanticModel }) {
       </div>
     </div>
   );
+
+  return ReactDOM.createPortal(modalContent, document.body);
 }
 
 SemanticMetricEditor.propTypes = {
