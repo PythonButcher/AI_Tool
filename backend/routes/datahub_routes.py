@@ -2,10 +2,10 @@ from datetime import datetime
 import json
 import sqlite3
 
-import pandas as pd
 from flask import Blueprint, jsonify, request
 
 from backend.db.backend_db import get_db_connection
+from backend.services.dataset_context import read_dataset_file
 from backend.services.semantic_model import infer_semantic_model_from_dataframe
 
 
@@ -24,23 +24,6 @@ def _deserialize_dataset_record(row):
     record.pop('preview_json', None)
     record.pop('semantic_model_json', None)
     return record
-
-
-def _read_dataset_file(path):
-    normalized_path = path.strip('"').strip("'")
-    lower_path = normalized_path.lower()
-    if lower_path.endswith('.csv'):
-        return pd.read_csv(normalized_path)
-    if lower_path.endswith(('.xls', '.xlsx')):
-        return pd.read_excel(normalized_path)
-    if lower_path.endswith('.json'):
-        return pd.read_json(normalized_path)
-    if lower_path.endswith('.geojson'):
-        with open(normalized_path, 'r', encoding='utf-8') as handle:
-            geojson_obj = json.load(handle)
-        return pd.json_normalize(geojson_obj['features'])
-    raise ValueError('Unsupported file format')
-
 
 @datahub_bp.route('/list', methods=['GET'])
 def get_all_datasets():
@@ -154,7 +137,7 @@ def get_dataset_semantic_model(dataset_id):
         return jsonify({'semantic_model': json.loads(row['semantic_model_json'])}), 200
 
     try:
-        dataframe = _read_dataset_file(row['path'])
+        dataframe = read_dataset_file(row['path'])
     except Exception as exc:
         return jsonify({'error': f'Unable to infer semantic model: {exc}'}), 500
 
@@ -236,7 +219,7 @@ def fetch_dataset_rows():
                 continue
 
             try:
-                dataframe = _read_dataset_file(record['path'])
+                dataframe = read_dataset_file(record['path'])
                 semantic_model = record['semantic_model'] or infer_semantic_model_from_dataframe(
                     dataframe,
                     dataset_name=record['name'],
