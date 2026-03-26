@@ -32,6 +32,24 @@ const parseRecords = (source) => {
   return [];
 };
 
+const RIBBON_TAB_TO_WORKFLOW = {
+  Home: 'data',
+  Explore: 'explore',
+  Visualise: 'visualise',
+  Business: 'business',
+  AI: 'ai',
+  Dashboard: 'dashboard',
+};
+
+const WORKFLOW_TO_RIBBON_TAB = {
+  data: 'Home',
+  explore: 'Explore',
+  visualise: 'Visualise',
+  business: 'Business',
+  ai: 'AI',
+  dashboard: 'Dashboard',
+};
+
 function AppContent() {
   const {
     uploadedData, setUploadedData,
@@ -53,6 +71,7 @@ function AppContent() {
     updateDashboardItem,
     openDashboard,
     closeDashboard,
+    restoreWindow,
   } = useWindowContext();
 
   console.log('App.jsx received uploadedData:', uploadedData);
@@ -86,6 +105,10 @@ function AppContent() {
   const [rawUploadFile, setRawUploadFile] = useState(null);
   const [showMachineLearning, setShowMachineLearning] = useState(false);
   const [isSnowing, setIsSnowing] = useState(false);
+  const [activeRibbonTab, setActiveRibbonTab] = useState('Home');
+  const [activeWorkflow, setActiveWorkflow] = useState('data');
+  const [aiChatOpenRequestKey, setAiChatOpenRequestKey] = useState(0);
+  const [menuBarHeight, setMenuBarHeight] = useState(116);
 
   useLoadRawData(showRawViewer, rawUploadFile, setFullData);
 
@@ -154,6 +177,29 @@ function AppContent() {
 
   const handleSidebarButtonClick = useCallback((action) => {
     if (action === 'visualize') setShowDataVisual(true);
+  }, []);
+  const handleOpenAiChat = useCallback(() => {
+    setAiChatOpenRequestKey((prev) => prev + 1);
+  }, []);
+  const handleRibbonTabChange = useCallback((tab) => {
+    setActiveRibbonTab(tab);
+    const mappedWorkflow = RIBBON_TAB_TO_WORKFLOW[tab];
+    if (mappedWorkflow) {
+      setActiveWorkflow(mappedWorkflow);
+      return;
+    }
+    if (tab === 'Settings') {
+      setActiveWorkflow(null);
+    }
+  }, []);
+  const handleWorkflowSelect = useCallback((workflow) => {
+    setActiveWorkflow((prev) => {
+      const nextWorkflow = prev === workflow ? null : workflow;
+      if (nextWorkflow && WORKFLOW_TO_RIBBON_TAB[nextWorkflow]) {
+        setActiveRibbonTab(WORKFLOW_TO_RIBBON_TAB[nextWorkflow]);
+      }
+      return nextWorkflow;
+    });
   }, []);
   const handleClosePreview = useCallback(() => setShowDataPreview(false), []);
   const handleCloseRawViewer = useCallback(() => setShowRawViewer(false), []);
@@ -326,6 +372,8 @@ function AppContent() {
       <div className="app-container">
         {theme === 'dark' && isSnowing && <Snowfall style={{ zIndex: 1000, pointerEvents: 'none' }} />}
         <SideBar
+          activeWorkflow={activeWorkflow}
+          onWorkflowSelect={handleWorkflowSelect}
           onButtonClick={handleSidebarButtonClick}
           onDataCleaned={handleDataCleaned}
           uploadedData={uploadedData}
@@ -334,6 +382,12 @@ function AppContent() {
           setShowAiWorkflow={setShowAiWorkflow}
           setShowDataPreview={setShowDataPreview}
           setShowRawViewer={setShowRawViewer}
+          setOpenDataFilter={setOpenDataFilter}
+          onDashboardToggle={handleDashboardToggle}
+          isDashboardVisible={dashboardState.isVisible}
+          aiReportReady={aiReportReady}
+          onAiReportClick={handleAiReportOpen}
+          onOpenAiChat={handleOpenAiChat}
           setStoryData={setStoryData}
           setShowStoryPanel={setShowStoryPanel}
           showWhiteBoard={showWhiteBoard}
@@ -344,10 +398,15 @@ function AppContent() {
 
         <div className="main-content">
           <MenuBar
+            activeTab={activeRibbonTab}
+            onTabChange={handleRibbonTabChange}
+            activeWorkflow={activeWorkflow}
+            onWorkflowSelect={handleWorkflowSelect}
             onFileUploadSuccess={handleFileUpload}
             onStatsSelect={handleStatsSelect}
             showDataPreview={showDataPreview}
             setShowDataPreview={setShowDataPreview}
+            setShowRawViewer={setShowRawViewer}
             handleApiData={handleApiData}
             handleDatabaseData={handleDatabaseData}
             setOpenDataFilter={setOpenDataFilter}
@@ -357,6 +416,29 @@ function AppContent() {
             onSnowToggle={() => setIsSnowing((prev) => !prev)}
             onDashboardToggle={handleDashboardToggle}
             isDashboardVisible={dashboardState.isVisible}
+            onOpenAiChat={handleOpenAiChat}
+            onOpenAiWorkflow={() => {
+              setShowAiWorkflow(true);
+              restoreWindow('aiWorkflowLab');
+            }}
+            onOpenStoryboard={() => {
+              setStoryData(null);
+              setShowStoryPanel(true);
+              restoreWindow('storyPanel');
+              setActiveWorkflow('ai');
+              setActiveRibbonTab('AI');
+            }}
+            onOpenWhiteboard={() => {
+              setShowWhiteBoard(true);
+              restoreWindow('whiteBoard');
+              setActiveWorkflow('whiteboard');
+            }}
+            onOpenChartGallery={() => {
+              setShowDataVisual(true);
+              setActiveWorkflow('visualise');
+              setActiveRibbonTab('Visualise');
+            }}
+            onHeightChange={setMenuBarHeight}
           />
 
           <DataFilterPanel openDataFilter={openDataFilter} setOpenDataFilter={setOpenDataFilter} />
@@ -424,6 +506,8 @@ function AppContent() {
           setShowAIChart={setShowAIChart}
           setAiChartType={setAiChartType}
           setAiChartData={setAiChartData}
+          openRequestKey={aiChatOpenRequestKey}
+          topOffset={menuBarHeight}
         />
       </div>
     </DndContext>

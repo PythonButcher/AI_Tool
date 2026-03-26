@@ -1,282 +1,504 @@
-import React, { useState } from 'react';
-import OutsideClickWrapper from '../../utils/OutsideClickWrapper';
+import React, { useMemo, useState } from 'react';
 import {
+  FaBook,
+  FaBrain,
+  FaBriefcase,
   FaBroom,
   FaChartBar,
-  FaBook,
-  FaFileExport,
-  FaCog,
   FaColumns,
-  FaTable,
+  FaDatabase,
+  FaFileExport,
+  FaFilter,
   FaPen,
-  FaBrain,
+  FaPlus,
+  FaRobot,
+  FaTable,
+  FaTachometerAlt,
+  FaTimes,
 } from 'react-icons/fa';
-import { FcWorkflow } from "react-icons/fc";
-import { AiOutlineEye } from "react-icons/ai";
-import { BiSpreadsheet } from "react-icons/bi";
-import { SiGooglegemini } from "react-icons/si";
-import { PiOpenAiLogo } from "react-icons/pi";
-import './SideBar.css';
 import DataCleaningForm from '../data_management/DataCleaningForm';
 import FileExport from '../data_management/FileExport';
 import FieldsPanel from '../insights/FieldsPanel';
+import SemanticModelPanel from '../insights/SemanticModelPanel';
+import { normalizeDatasetRows, useActiveDataset, useSemanticModel } from '../../context/DataContext';
 import { useWindowContext } from '../../context/WindowContext';
+import './SideBar.css';
 
+const workflowItems = [
+  { id: 'data', label: 'Data', icon: <FaDatabase /> },
+  { id: 'explore', label: 'Explore', icon: <FaColumns /> },
+  { id: 'visualise', label: 'Visualise', icon: <FaChartBar /> },
+  { id: 'business', label: 'Business', icon: <FaBriefcase /> },
+  { id: 'ai', label: 'AI', icon: <FaRobot /> },
+  { id: 'dashboard', label: 'Dashboard', icon: <FaTachometerAlt /> },
+  { id: 'whiteboard', label: 'Whiteboard', icon: <FaPen /> },
+];
 
+const chartShortcuts = [
+  { type: 'Bar', icon: <FaChartBar /> },
+  { type: 'Line', icon: <FaChartBar /> },
+  { type: 'Pie', icon: <FaChartBar /> },
+  { type: 'Doughnut', icon: <FaChartBar /> },
+];
 
-const SideBar = ({ onButtonClick, onDataCleaned,
-  cleanedData, setShowDataPreview, setShowRawViewer,
-  setStoryData, setShowAiWorkflow,
-  setShowStoryPanel, setShowWhiteBoard,
-  storyModel, onStoryModelChange,
-  setShowMachineLearning }) => {
+const emptySemanticConfig = {
+  metricId: '',
+  groupBy: '',
+};
+
+const DrawerHeader = ({ eyebrow, title, description, onClose }) => (
+  <div className="workflow-drawer__header">
+    <div>
+      <p className="workflow-drawer__eyebrow">{eyebrow}</p>
+      <h2 className="workflow-drawer__title">{title}</h2>
+      <p className="workflow-drawer__description">{description}</p>
+    </div>
+    <button type="button" className="workflow-drawer__close" onClick={onClose} aria-label="Close drawer">
+      <FaTimes />
+    </button>
+  </div>
+);
+
+const StatChip = ({ label, value }) => (
+  <div className="workflow-stat-chip">
+    <span className="workflow-stat-chip__value">{value}</span>
+    <span className="workflow-stat-chip__label">{label}</span>
+  </div>
+);
+
+function SideBar({
+  activeWorkflow,
+  onWorkflowSelect,
+  onButtonClick,
+  onDataCleaned,
+  cleanedData,
+  showAiWorkflow,
+  setShowAiWorkflow,
+  setShowDataPreview,
+  setShowRawViewer,
+  setOpenDataFilter,
+  onDashboardToggle,
+  isDashboardVisible,
+  aiReportReady,
+  onAiReportClick,
+  onOpenAiChat,
+  setStoryData,
+  setShowStoryPanel,
+  setShowWhiteBoard,
+  onStoryModelChange,
+  setShowMachineLearning,
+}) {
   const [showCleaningForm, setShowCleaningForm] = useState(false);
-  const [showExportDropdown, setShowExportDropdown] = useState(false);
-  //  const [showDataViewerDropdown, setShowDataViewerDropdown] = useState(false);
-  const [showFieldsPanel, setShowFieldsPanel] = useState(false); // Toggle for FieldsPanel
-  const [showModelOptions, setShowModelOptions] = useState(false);
-  const [showDataViewerOptions, setShowDataViewerOptions] = useState(false)
-  const { restoreWindow } = useWindowContext();
+  const [showExportPanel, setShowExportPanel] = useState(false);
+  const activeDataset = useActiveDataset();
+  const semanticModel = useSemanticModel();
+  const {
+    restoreWindow,
+    addChart,
+    addDashboardChart,
+    addDashboardKpi,
+  } = useWindowContext();
 
+  const datasetRows = useMemo(() => {
+    const preferredRows = normalizeDatasetRows(cleanedData);
+    if (preferredRows.length > 0) return preferredRows;
+    return normalizeDatasetRows(activeDataset);
+  }, [activeDataset, cleanedData]);
+  const rowCount = datasetRows.length;
+  const columnCount = rowCount > 0 ? Object.keys(datasetRows[0]).length : 0;
+  const semanticMetricCount = semanticModel?.metrics?.length || 0;
+  const semanticDimensionCount = semanticModel?.dimensions?.length || 0;
+  const hasDataset = rowCount > 0;
 
-  // Toggles DataCleaningForm visibility
-  const handleDataCleaningClick = () => {
-    setShowCleaningForm((prev) => !prev);
-  };
-
-  // Closes the DataCleaningForm
-  const closeDataCleaningForm = () => {
-    setShowCleaningForm(false);
-  };
-
-
-  // Toggles the export dropdown visibility
-  const toggleExportDropdown = () => {
-    setShowExportDropdown((prev) => !prev);
-  };
-
-  // Toggles the DataView dropdown visibility
-  //const toggleDataViewerDropdown = () => {
-  // setShowDataViewerDropdown((prev) => !prev);
-  //  };
-
-  // Toggles FieldsPanel visibility
-  const toggleFieldsPanel = () => {
-    setShowFieldsPanel((prev) => !prev);
-  };
-
-  const handleGenerateStory = () => {
-    console.log("📖 Generate Story button clicked");
-    // Reset storyData to null to trigger a new fetch in DataStoryPanel's useEffect
+  const handleGenerateStory = (model) => {
+    onStoryModelChange(model);
     setStoryData(null);
-    // Explicitly show the story panel
     setShowStoryPanel(true);
+    restoreWindow('storyPanel');
   };
 
-  const handleWhiteBoard = () => {
-    console.log("🔳 Open the whiteboard");
-    setShowWhiteBoard(true); // ensures it's explicitly turned on
+  const handleQuickChart = (type) => {
+    if (!hasDataset) {
+      alert("No cleaned data available. Please load a dataset before creating a chart.");
+      return;
+    }
+
+    addChart({ type });
   };
 
-  const handleMLWindow = () => {
-    console.log("📖 Open ML Window");
-    setShowMachineLearning(true);
-    setShowCleaningForm(false);
-
+  const handleCreateSemanticChart = (semanticOverrides = {}) => {
+    addChart({
+      type: 'Bar',
+      dataSourceMode: 'semantic',
+      semanticConfig: {
+        ...emptySemanticConfig,
+        ...semanticOverrides,
+      },
+    });
   };
 
-  const parsedDataPreview = Array.isArray(cleanedData)
-    ? cleanedData
-    : Array.isArray(cleanedData?.data_preview)
-      ? cleanedData.data_preview
-      : typeof cleanedData?.data_preview === 'string'
-        ? JSON.parse(cleanedData.data_preview)
-        : [];
+  const handleCreateSemanticKpi = (semanticOverrides = {}) => {
+    addDashboardKpi({
+      semanticConfig: {
+        ...emptySemanticConfig,
+        ...semanticOverrides,
+      },
+    });
 
-  const fields = parsedDataPreview.length > 0
-    ? Object.keys(parsedDataPreview[0])
-    : [];
+    if (activeWorkflow !== 'dashboard') {
+      onWorkflowSelect('dashboard');
+    }
+  };
 
-
-  return (
-    <div className="sidebar-container">
-
-
-      {/* Data Viewer Button */}
-      <div
-        className="sidebar-button"
-        data-tooltip="Data Viewer"
-        aria-haspopup="menu"
-        aria-expanded={showDataViewerOptions}
-        onClick={() => setShowDataViewerOptions(prev => !prev)}
-      >
-        <FaTable className="sidebar-button-icon" />
-      </div>
-
-      {/* Data Viewer Options Submenu */}
-      {showDataViewerOptions && (
-        <OutsideClickWrapper onOutsideClick={() => setShowDataViewerOptions(false)}>
-          <div className="data-choice-menu">
-            <div
-              className="sidebar-subbutton"
-              data-tooltip="Data Preview"
-              onClick={() => {
-                setShowDataPreview(true);      // existing feature
-                setShowDataViewerOptions(false);
-              }}
-            >
-              <AiOutlineEye className="sidebar-button-icon" />
-            </div>
-
-            <div
-              className="sidebar-subbutton"
-              data-tooltip="Raw data"
-              onClick={() => {
-                setShowRawViewer(true);        // new feature
-                restoreWindow && restoreWindow('rawViewer');
-                setShowDataViewerOptions(false);
-              }}
-            >
-              <BiSpreadsheet className="sidebar-button-icon" />
-            </div>
-          </div>
-        </OutsideClickWrapper>
-      )}
-
-
-      {/* Data Cleaning Button */}
-      <div
-        className="sidebar-button"
-        data-tooltip="Data Cleaning"
-        onClick={handleDataCleaningClick}
-      >
-        <FaBroom className="sidebar-button-icon" />
-      </div>
-
-      {/* Data Visualization Button */}
-      <div
-        className="sidebar-button"
-        data-tooltip="Data Visualization"
-        onClick={() => onButtonClick('visualize')} // Trigger visualization action
-      >
-        <FaChartBar className="sidebar-button-icon" />
-      </div>
-
-      {/* AI workflow*/}
-      <div
-        className="sidebar-button"
-        data-tooltip="AI Workflow Lab"
-        onClick={() => setShowAiWorkflow(prev => !prev)} // clearly toggles visibility
-      >
-        <FcWorkflow className="sidebar-button-icon" />
-      </div>
-
-      {/* Generate Storyboard Button */}
-      <div
-        className="sidebar-button"
-        data-tooltip="Generate Story"
-        onClick={() => setShowModelOptions(prev => !prev)}
-      >
-        <FaBook className="sidebar-button-icon" />
-      </div>
-
-      {/* Model Options Submenu */}
-      {showModelOptions && (
-        <OutsideClickWrapper onOutsideClick={() => setShowModelOptions(false)}>
-          <div className="model-choice-menu">
-            <div
-              className="sidebar-subbutton"
-              data-tooltip="Use OpenAI"
-              onClick={() => {
-                onStoryModelChange("openai");
-                handleGenerateStory();
-                setShowModelOptions(false);
-              }}
-            >
-              <PiOpenAiLogo className="sidebar-button-icon" />
-            </div>
-
-            <div
-              className="sidebar-subbutton"
-              data-tooltip="Use Gemini"
-              onClick={() => {
-                onStoryModelChange("gemini");
-                handleGenerateStory();
-                setShowModelOptions(false);
-              }}
-            >
-              <SiGooglegemini className="sidebar-button-icon" />
-            </div>
-          </div>
-        </OutsideClickWrapper>
-      )}
-
-      {/* Generate White Board */}
-      <div
-        className="sidebar-button"
-        data-tooltip="White Board"
-        onClick={handleWhiteBoard}
-      >
-        <FaPen className="sidebar-button-icon" />
-      </div>
-
-      {/* Machine Learning */}
-      <div
-        className="sidebar-button"
-        data-tooltip="Machine Learning"
-        onClick={() => {
-          setShowMachineLearning(true);
-          restoreWindow && restoreWindow('machineLearning');
-        }}
-      >
-        <FaBrain className="sidebar-button-icon" />
-      </div>
-
-      {/* Export Data Button */}
-      <div className="sidebar-button" data-tooltip="Export Data">
-        <OutsideClickWrapper onOutsideClick={() => setShowExportDropdown(false)}>
-          <FaFileExport
-            className="sidebar-button-icon"
-            onClick={toggleExportDropdown}
+  const renderDrawerContent = () => {
+    if (activeWorkflow === 'data') {
+      return (
+        <>
+          <DrawerHeader
+            eyebrow="Workflow"
+            title="Data"
+            description="Load, preview, clean, and export datasets without leaving the left rail."
+            onClose={() => onWorkflowSelect('data')}
           />
-          {showExportDropdown && (
-            <div className="export-dropdown">
+
+          <div className="workflow-stat-row">
+            <StatChip label="Rows" value={rowCount} />
+            <StatChip label="Columns" value={columnCount} />
+            <StatChip label="Status" value={hasDataset ? 'Loaded' : 'Waiting'} />
+          </div>
+
+          <div className="workflow-action-grid">
+            <button type="button" className="workflow-action-card" onClick={() => {
+              setShowDataPreview(true);
+              restoreWindow('dataPreview');
+            }}>
+              <FaTable />
+              <span>Data Preview</span>
+              <small>Open the preview window for the active dataset.</small>
+            </button>
+
+            <button type="button" className="workflow-action-card" onClick={() => {
+              setShowRawViewer(true);
+              restoreWindow('rawViewer');
+            }}>
+              <FaDatabase />
+              <span>Raw Viewer</span>
+              <small>Inspect the full raw dataset in its own window.</small>
+            </button>
+
+            <button type="button" className={`workflow-action-card ${showCleaningForm ? 'is-active' : ''}`} onClick={() => setShowCleaningForm((prev) => !prev)}>
+              <FaBroom />
+              <span>Cleaning Tools</span>
+              <small>Show or hide the existing data-cleaning form.</small>
+            </button>
+
+            <button type="button" className={`workflow-action-card ${showExportPanel ? 'is-active' : ''}`} onClick={() => setShowExportPanel((prev) => !prev)}>
+              <FaFileExport />
+              <span>Export</span>
+              <small>Reveal export controls for the current workspace.</small>
+            </button>
+          </div>
+
+          {showCleaningForm ? (
+            <div className="workflow-embedded-panel">
+              <DataCleaningForm
+                setCleanedData={onDataCleaned}
+                closeForm={() => setShowCleaningForm(false)}
+                onProceedToTraining={() => {
+                  setShowMachineLearning(true);
+                  restoreWindow('machineLearning');
+                }}
+              />
+            </div>
+          ) : null}
+
+          {showExportPanel ? (
+            <div className="workflow-embedded-panel workflow-embedded-panel--export">
               <FileExport />
             </div>
-          )}
-        </OutsideClickWrapper>
+          ) : null}
+        </>
+      );
+    }
+
+    if (activeWorkflow === 'explore') {
+      return (
+        <>
+          <DrawerHeader
+            eyebrow="Workflow"
+            title="Explore"
+            description="Browse raw and business fields, then drag them straight into charts, KPIs, and dashboards."
+            onClose={() => onWorkflowSelect('explore')}
+          />
+
+          <div className="workflow-stat-row">
+            <StatChip label="Raw Fields" value={columnCount} />
+            <StatChip label="Metrics" value={semanticMetricCount} />
+            <StatChip label="Dimensions" value={semanticDimensionCount} />
+          </div>
+
+          <div className="workflow-action-grid workflow-action-grid--compact">
+            <button type="button" className="workflow-action-card" onClick={() => setOpenDataFilter(true)}>
+              <FaFilter />
+              <span>Filter Dataset</span>
+              <small>Open the existing filter drawer.</small>
+            </button>
+
+            <button type="button" className="workflow-action-card" onClick={() => {
+              setShowDataPreview(true);
+              restoreWindow('dataPreview');
+            }}>
+              <FaTable />
+              <span>Preview Rows</span>
+              <small>Keep one-click access to the current data preview.</small>
+            </button>
+          </div>
+
+          <div className="workflow-fields-shell">
+            <FieldsPanel cleanedData={datasetRows} />
+          </div>
+        </>
+      );
+    }
+
+    if (activeWorkflow === 'visualise') {
+      return (
+        <>
+          <DrawerHeader
+            eyebrow="Workflow"
+            title="Visualise"
+            description="Start a chart quickly, then drag fields from Explore onto your chart windows."
+            onClose={() => onWorkflowSelect('visualise')}
+          />
+
+          <div className="workflow-stat-row">
+            <StatChip label="Dataset" value={hasDataset ? 'Ready' : 'Missing'} />
+            <StatChip label="Charts" value="Quick add" />
+            <StatChip label="Mode" value="Phase 1" />
+          </div>
+
+          <div className="workflow-action-grid">
+            <button type="button" className="workflow-action-card workflow-action-card--primary" onClick={() => onButtonClick('visualize')}>
+              <FaChartBar />
+              <span>Chart Gallery</span>
+              <small>Open the existing chart selection modal.</small>
+            </button>
+
+            <button type="button" className="workflow-action-card" onClick={() => onWorkflowSelect('explore')}>
+              <FaColumns />
+              <span>Open Field Explorer</span>
+              <small>Jump back to drag raw or business fields.</small>
+            </button>
+          </div>
+
+          <div className="workflow-shortcut-grid">
+            {chartShortcuts.map((shortcut) => (
+              <button
+                key={shortcut.type}
+                type="button"
+                className="workflow-shortcut"
+                onClick={() => handleQuickChart(shortcut.type)}
+              >
+                <span className="workflow-shortcut__icon">{shortcut.icon}</span>
+                <span className="workflow-shortcut__label">{shortcut.type}</span>
+              </button>
+            ))}
+          </div>
+
+          <div className="workflow-phase-note">
+            Drag fields from the Explore drawer onto any chart window to keep the existing axis-mapping behavior intact.
+          </div>
+        </>
+      );
+    }
+
+    if (activeWorkflow === 'business') {
+      return (
+        <>
+          <DrawerHeader
+            eyebrow="Workflow"
+            title="Business"
+            description="Phase 1 brings semantic definitions into the shell without changing the underlying contracts."
+            onClose={() => onWorkflowSelect('business')}
+          />
+
+          <SemanticModelPanel
+            semanticModel={semanticModel}
+            status={semanticModel ? 'ready' : 'idle'}
+            onCreateSemanticChart={handleCreateSemanticChart}
+            onCreateKpiCard={handleCreateSemanticKpi}
+          />
+        </>
+      );
+    }
+
+    if (activeWorkflow === 'ai') {
+      return (
+        <>
+          <DrawerHeader
+            eyebrow="Workflow"
+            title="AI"
+            description="Keep AI chat, workflow lab, story generation, and reports close to the canvas."
+            onClose={() => onWorkflowSelect('ai')}
+          />
+
+          <div className="workflow-stat-row">
+            <StatChip label="Chat" value="Ready" />
+            <StatChip label="Workflow" value={showAiWorkflow ? 'Open' : 'Closed'} />
+            <StatChip label="Report" value={aiReportReady ? 'Ready' : 'Waiting'} />
+          </div>
+
+          <div className="workflow-action-grid">
+            <button type="button" className="workflow-action-card workflow-action-card--primary" onClick={onOpenAiChat}>
+              <FaRobot />
+              <span>Open AI Chat</span>
+              <small>Reveal the assistant panel with current data context.</small>
+            </button>
+
+            <button type="button" className="workflow-action-card" onClick={() => {
+              setShowAiWorkflow(true);
+              restoreWindow('aiWorkflowLab');
+            }}>
+              <FaPlus />
+              <span>Workflow Lab</span>
+              <small>Open the existing AI workflow window.</small>
+            </button>
+
+            <button type="button" className="workflow-action-card" onClick={() => handleGenerateStory('openai')}>
+              <FaBook />
+              <span>Story with OpenAI</span>
+              <small>Launch the story panel using the OpenAI path.</small>
+            </button>
+
+            <button type="button" className="workflow-action-card" onClick={() => handleGenerateStory('gemini')}>
+              <FaBook />
+              <span>Story with Gemini</span>
+              <small>Launch the story panel using the Gemini path.</small>
+            </button>
+
+            <button
+              type="button"
+              className="workflow-action-card"
+              onClick={onAiReportClick}
+              disabled={!aiReportReady}
+            >
+              <FaRobot />
+              <span>AI Report</span>
+              <small>{aiReportReady ? 'Open the completed AI report window.' : 'Enabled when an AI report is available.'}</small>
+            </button>
+          </div>
+        </>
+      );
+    }
+
+    if (activeWorkflow === 'dashboard') {
+      return (
+        <>
+          <DrawerHeader
+            eyebrow="Workflow"
+            title="Dashboard"
+            description="Open the monitoring canvas, then add KPI cards or dashboard charts from the drawer."
+            onClose={() => onWorkflowSelect('dashboard')}
+          />
+
+          <div className="workflow-stat-row">
+            <StatChip label="Canvas" value={isDashboardVisible ? 'Visible' : 'Hidden'} />
+            <StatChip label="KPI" value="Enabled" />
+            <StatChip label="Charts" value="Enabled" />
+          </div>
+
+          <div className="workflow-action-grid">
+            <button type="button" className={`workflow-action-card workflow-action-card--primary ${isDashboardVisible ? 'is-active' : ''}`} onClick={onDashboardToggle}>
+              <FaTachometerAlt />
+              <span>{isDashboardVisible ? 'Hide Dashboard' : 'Show Dashboard'}</span>
+              <small>Toggle the dashboard canvas in the main workspace.</small>
+            </button>
+
+            <button type="button" className="workflow-action-card" onClick={() => addDashboardKpi()}>
+              <FaPlus />
+              <span>Add KPI Card</span>
+              <small>Create a dashboard KPI window immediately.</small>
+            </button>
+
+            <button type="button" className="workflow-action-card" onClick={() => addDashboardChart({ chartType: 'Bar' })}>
+              <FaChartBar />
+              <span>Add Dashboard Chart</span>
+              <small>Seed the dashboard with a new chart tile.</small>
+            </button>
+
+            <button type="button" className="workflow-action-card" onClick={() => setOpenDataFilter(true)}>
+              <FaFilter />
+              <span>Filter Dataset</span>
+              <small>Reuse the existing filter drawer for dashboard context.</small>
+            </button>
+          </div>
+        </>
+      );
+    }
+
+    if (activeWorkflow === 'whiteboard') {
+      return (
+        <>
+          <DrawerHeader
+            eyebrow="Workflow"
+            title="Whiteboard"
+            description="Keep exploratory canvas tools nearby while the new shell settles in."
+            onClose={() => onWorkflowSelect('whiteboard')}
+          />
+
+          <div className="workflow-action-grid">
+            <button type="button" className="workflow-action-card workflow-action-card--primary" onClick={() => {
+              setShowWhiteBoard(true);
+              restoreWindow('whiteBoard');
+            }}>
+              <FaPen />
+              <span>Open Whiteboard</span>
+              <small>Launch the freeform whiteboard workspace.</small>
+            </button>
+
+            <button type="button" className="workflow-action-card" onClick={() => {
+              setShowMachineLearning(true);
+              restoreWindow('machineLearning');
+            }}>
+              <FaBrain />
+              <span>Machine Learning</span>
+              <small>Open the existing machine-learning panel.</small>
+            </button>
+          </div>
+        </>
+      );
+    }
+
+    return null;
+  };
+
+  return (
+    <aside className={`workflow-shell ${activeWorkflow ? 'has-drawer' : ''}`}>
+      <div className="workflow-rail" aria-label="Workflow navigation">
+        {workflowItems.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            className={`workflow-rail__button ${activeWorkflow === item.id ? 'is-active' : ''}`}
+            onClick={() => onWorkflowSelect(item.id)}
+            aria-pressed={activeWorkflow === item.id}
+            title={item.label}
+          >
+            <span className="workflow-rail__icon" aria-hidden="true">{item.icon}</span>
+            <span className="workflow-rail__label">{item.label}</span>
+          </button>
+        ))}
       </div>
 
-      {/* Settings Button */}
-      <div className="sidebar-button" data-tooltip="Settings">
-        <FaCog className="sidebar-button-icon" />
-      </div>
-
-      {/* Toggle Fields Panel Button */}
-      <div
-        className="sidebar-button"
-        data-tooltip="Toggle Fields Panel"
-        onClick={toggleFieldsPanel}
-      >
-        <FaColumns className="sidebar-button-icon" />
-      </div>
-
-      {/* Render DataCleaningForm when visible */}
-      {showCleaningForm && (
-        <DataCleaningForm
-          setCleanedData={onDataCleaned}
-          closeForm={closeDataCleaningForm}
-          onProceedToTraining={handleMLWindow}
-        />
-      )}
-
-      {/* FieldsPanel - Removed OutsideClickWrapper to allow drag interaction with canvas */}
-      {showFieldsPanel && fields.length > 0 && (
-        <FieldsPanel cleanedData={parsedDataPreview} />
-      )}
-
-    </div>
+      {activeWorkflow ? (
+        <div className="workflow-drawer">
+          <div className="workflow-drawer__content">
+            {renderDrawerContent()}
+          </div>
+        </div>
+      ) : null}
+    </aside>
   );
-};
+}
 
 export default SideBar;

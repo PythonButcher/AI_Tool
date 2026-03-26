@@ -75,7 +75,7 @@ const formatChartData = (chartResponse) => {
   };
 };
 
-function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
+function AIChat({ setShowAIChart, setAiChartType, setAiChartData, openRequestKey, topOffset }) {
   const {
     cleanedData,
     fullData,
@@ -101,6 +101,11 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
   const chatIconRef = useRef(null);
 
   const toggleChat = () => setShowChat(prev => !prev);
+
+  useEffect(() => {
+    if (!openRequestKey) return;
+    setShowChat(true);
+  }, [openRequestKey]);
 
   console.log("Here are the datasets:", WarehouseContext.Provider)
 
@@ -477,7 +482,8 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
     setIsMentionOpen(false);
   }
   };
-
+  const panelTop = Math.max((topOffset || 80) + 12, 80);
+  const panelHeight = `calc(100% - ${panelTop + 18}px)`;
 
   return (
     <>
@@ -490,7 +496,11 @@ function AIChat({ setShowAIChart, setAiChartType, setAiChartData }) {
         <FaRobot size={30} />
       </div>
 
-      <div ref={chatPanelRef} className={`chat-panel ${showChat ? "open" : ""}`}>
+      <div
+        ref={chatPanelRef}
+        className={`chat-panel ${showChat ? "open" : ""}`}
+        style={{ top: `${panelTop}px`, height: panelHeight }}
+      >
         
         <div className="chat-header">
           <span>AI Data Assistant</span>
