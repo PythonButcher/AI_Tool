@@ -117,6 +117,8 @@ const SmartChartWindow = ({
 
   const selectedMetricId = semanticConfig?.metricId || '';
   const selectedGroupBy = semanticConfig?.groupBy || '';
+  const selectedMetric = semanticMetrics.find((metric) => metric.id === selectedMetricId) || null;
+  const selectedDimension = semanticDimensions.find((dimension) => dimension.id === selectedGroupBy) || null;
 
   useDndMonitor({
     onDragStart: (event) => {
@@ -204,6 +206,20 @@ const SmartChartWindow = ({
       return;
     }
 
+    if (!selectedMetric) {
+      setSemanticResolution(null);
+      setSemanticStatus('invalid_selection');
+      setSemanticError('The selected semantic metric is no longer available. Pick another metric to continue.');
+      return;
+    }
+
+    if (selectedGroupBy && !selectedDimension) {
+      setSemanticResolution(null);
+      setSemanticStatus('invalid_selection');
+      setSemanticError('The selected semantic dimension is no longer available. Choose another grouping.');
+      return;
+    }
+
     if (!datasetRows.length) {
       setSemanticResolution(null);
       setSemanticStatus('empty_dataset');
@@ -254,7 +270,17 @@ const SmartChartWindow = ({
     return () => {
       isCancelled = true;
     };
-  }, [dataSourceMode, datasetRows, dashboardResolverFilters, semanticMetrics.length, semanticModel, selectedGroupBy, selectedMetricId]);
+  }, [
+    dataSourceMode,
+    datasetRows,
+    dashboardResolverFilters,
+    semanticMetrics.length,
+    semanticModel,
+    selectedDimension,
+    selectedGroupBy,
+    selectedMetric,
+    selectedMetricId,
+  ]);
 
   const semanticChartData = useMemo(
     () => buildSemanticChartData(semanticResolution),
@@ -263,8 +289,6 @@ const SmartChartWindow = ({
 
   const chartData = dataSourceMode === 'semantic' ? semanticChartData : rawChartData;
   const isEmpty = !chartData;
-  const selectedMetric = semanticMetrics.find((metric) => metric.id === selectedMetricId) || null;
-  const selectedDimension = semanticDimensions.find((dimension) => dimension.id === selectedGroupBy) || null;
   const isDraggingRawField = activeDragPayload?.type === 'field';
   const isDraggingSemanticObject = activeDragPayload?.type === 'semantic-object';
   const semanticDragLabel = activeDragPayload?.metadata?.label || activeDragPayload?.label || '';
@@ -278,6 +302,7 @@ const SmartChartWindow = ({
 
     if (semanticStatus === 'loading') return 'Resolving semantic metric...';
     if (semanticStatus === 'error') return semanticError;
+    if (semanticStatus === 'invalid_selection') return semanticError;
     if (semanticStatus === 'missing_model') return 'Semantic model missing';
     if (semanticStatus === 'awaiting_selection') return 'Drop a business metric to start';
     
@@ -338,9 +363,9 @@ const SmartChartWindow = ({
           <strong>Business Definitions</strong>
           <p>Chart powered by semantic layer resolution</p>
         </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <span className="current-value-tag" style={{ color: '#237804', background: '#f6ffed' }}>{semanticMetrics.length} M</span>
-          <span className="current-value-tag" style={{ color: '#874d00', background: '#fff7e6' }}>{semanticDimensions.length} D</span>
+        <div className="semantic-controls__counts">
+          <span className="semantic-controls__count semantic-controls__count--metric">{semanticMetrics.length} M</span>
+          <span className="semantic-controls__count semantic-controls__count--dimension">{semanticDimensions.length} D</span>
         </div>
       </div>
 

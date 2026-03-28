@@ -4,8 +4,12 @@ import { DragOverlay, useDndContext, useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import {
   AiOutlineCalendar,
+  AiOutlineEdit,
+  AiOutlineFilter,
   AiOutlineFundProjectionScreen,
+  AiOutlineLineChart,
   AiOutlineNumber,
+  AiOutlinePlusSquare,
   AiOutlineSearch,
   AiOutlineTag,
 } from 'react-icons/ai';
@@ -22,16 +26,24 @@ const FIELD_EXPLORER_TABS = [
   { id: 'business', label: 'Business Fields' },
 ];
 
+const BUSINESS_FILTERS = [
+  { id: 'all', label: 'All' },
+  { id: 'metrics', label: 'Metrics' },
+  { id: 'dimensions', label: 'Dimensions' },
+  { id: 'custom', label: 'Custom' },
+  { id: 'inferred', label: 'Inferred' },
+];
+
 const ANALYSIS_GROUP_META = {
   semantic_metric: {
     label: 'Business Metrics',
     icon: <AiOutlineFundProjectionScreen />,
-    description: 'Reusable KPIs and derived measures',
+    description: 'Reusable measures for charts, KPIs, and monitoring',
   },
   semantic_dimension: {
     label: 'Business Dimensions',
     icon: <AiOutlineTag />,
-    description: 'Reusable groupings for charts and filters',
+    description: 'Reusable groupings for charts, filters, and drill-downs',
   },
   numeric: {
     label: 'Measures',
@@ -104,17 +116,171 @@ const buildSemanticTitle = (item) => {
   return parts.filter(Boolean).join('\n');
 };
 
-const AnalysisRowContent = ({ item }) => (
+const buildSemanticSubtitle = (item, fallbackLabel) => {
+  if (item.description) return item.description;
+  if (item.field) return `Backed by ${item.field}`;
+  return fallbackLabel;
+};
+
+const stopActionEvent = (event) => {
+  event.preventDefault();
+  event.stopPropagation();
+};
+
+const FieldActionButton = ({ icon, label, onClick, disabled, title, tone }) => (
+  <button
+    type="button"
+    className={`field-action-button ${tone ? `field-action-button--${tone}` : ''}`}
+    onPointerDown={stopActionEvent}
+    onMouseDown={stopActionEvent}
+    onClick={(event) => {
+      stopActionEvent(event);
+      if (!disabled) {
+        onClick();
+      }
+    }}
+    disabled={disabled}
+    title={title || label}
+  >
+    <span aria-hidden="true">{icon}</span>
+    <span>{label}</span>
+  </button>
+);
+
+FieldActionButton.propTypes = {
+  icon: PropTypes.node.isRequired,
+  label: PropTypes.string.isRequired,
+  onClick: PropTypes.func,
+  disabled: PropTypes.bool,
+  title: PropTypes.string,
+  tone: PropTypes.oneOf(['metric', 'dimension', 'neutral']),
+};
+
+FieldActionButton.defaultProps = {
+  onClick: null,
+  disabled: false,
+  title: '',
+  tone: 'neutral',
+};
+
+const SemanticQuickActions = ({
+  item,
+  defaultMetricId,
+  onCreateSemanticChart,
+  onCreateSemanticKpi,
+  onEditSemanticMetric,
+  onAddDashboardFilter,
+}) => {
+  const canChart = typeof onCreateSemanticChart === 'function';
+  const canKpi = typeof onCreateSemanticKpi === 'function' && item.objectKind === 'metric';
+  const canEdit = typeof onEditSemanticMetric === 'function' && item.objectKind === 'metric';
+  const canFilter = typeof onAddDashboardFilter === 'function';
+
+  if (!canChart && !canKpi && !canEdit && !canFilter) {
+    return null;
+  }
+
+  return (
+    <div className="field-row-actions">
+      {canChart && (
+        <FieldActionButton
+          icon={<AiOutlineLineChart />}
+          label="Chart"
+          tone={item.objectKind === 'metric' ? 'metric' : 'dimension'}
+          onClick={() => onCreateSemanticChart(
+            item.objectKind === 'metric'
+              ? { metricId: item.id }
+              : { metricId: defaultMetricId || '', groupBy: item.id }
+          )}
+          title={item.objectKind === 'metric'
+            ? `Create a semantic chart for ${item.label}`
+            : `Create a chart grouped by ${item.label}`}
+        />
+      )}
+      {canKpi && (
+        <FieldActionButton
+          icon={<AiOutlinePlusSquare />}
+          label="KPI"
+          tone="metric"
+          onClick={() => onCreateSemanticKpi({ metricId: item.id })}
+          title={`Create a KPI card for ${item.label}`}
+        />
+      )}
+      {canFilter && (
+        <FieldActionButton
+          icon={<AiOutlineFilter />}
+          label="Filter"
+          tone="neutral"
+          onClick={() => onAddDashboardFilter(item)}
+          title={`Add ${item.label} to dashboard filters`}
+        />
+      )}
+      {canEdit && (
+        <FieldActionButton
+          icon={<AiOutlineEdit />}
+          label={item.is_user_defined ? 'Edit' : 'View'}
+          tone="neutral"
+          onClick={() => onEditSemanticMetric(item)}
+          title={item.is_user_defined
+            ? `Edit the custom metric ${item.label}`
+            : `Open the inferred metric ${item.label} in the editor`}
+        />
+      )}
+    </div>
+  );
+};
+
+SemanticQuickActions.propTypes = {
+  item: PropTypes.shape({
+    id: PropTypes.string.isRequired,
+    label: PropTypes.string.isRequired,
+    objectKind: PropTypes.oneOf(['metric', 'dimension']).isRequired,
+    is_user_defined: PropTypes.bool,
+  }).isRequired,
+  defaultMetricId: PropTypes.string,
+  onCreateSemanticChart: PropTypes.func,
+  onCreateSemanticKpi: PropTypes.func,
+  onEditSemanticMetric: PropTypes.func,
+  onAddDashboardFilter: PropTypes.func,
+};
+
+SemanticQuickActions.defaultProps = {
+  defaultMetricId: '',
+  onCreateSemanticChart: null,
+  onCreateSemanticKpi: null,
+  onEditSemanticMetric: null,
+  onAddDashboardFilter: null,
+};
+
+const AnalysisRowContent = ({ item, actions }) => (
   <>
     <span className={`field-type-marker ${item.type}`} aria-hidden="true" />
     <div className="field-row-main">
-      <span className="field-row-label">{item.label}</span>
+      <div className="field-row-heading">
+        <span className="field-row-label">{item.label}</span>
+      </div>
       {item.subtitle ? <span className="field-row-subtitle">{item.subtitle}</span> : null}
+      {item.description && item.description !== item.subtitle ? (
+        <span className="field-row-description">{item.description}</span>
+      ) : null}
     </div>
-    <span className={`field-row-pill field-row-pill--source field-row-pill--${item.source}`}>
-      {item.sourceLabel}
-    </span>
-    <span className="field-row-pill">{item.helperLabel}</span>
+    <div className="field-row-trailing">
+      <div className="field-row-meta">
+        <span className={`field-row-pill field-row-pill--source field-row-pill--${item.source}`}>
+          {item.sourceLabel}
+        </span>
+        <span className="field-row-pill">{item.helperLabel}</span>
+        {item.statusLabel ? (
+          <span className={`field-row-pill field-row-pill--status field-row-pill--${item.is_user_defined ? 'custom' : 'inferred'}`}>
+            {item.statusLabel}
+          </span>
+        ) : null}
+        {item.backingLabel ? (
+          <span className="field-row-pill field-row-pill--field">{item.backingLabel}</span>
+        ) : null}
+      </div>
+      {actions}
+    </div>
   </>
 );
 
@@ -122,14 +288,26 @@ AnalysisRowContent.propTypes = {
   item: PropTypes.shape({
     label: PropTypes.string.isRequired,
     subtitle: PropTypes.string,
+    description: PropTypes.string,
     type: PropTypes.oneOf(['numeric', 'categorical', 'temporal']).isRequired,
     source: PropTypes.oneOf(['raw', 'semantic']).isRequired,
     sourceLabel: PropTypes.string.isRequired,
     helperLabel: PropTypes.string.isRequired,
+    statusLabel: PropTypes.string,
+    is_user_defined: PropTypes.bool,
+    backingLabel: PropTypes.string,
   }).isRequired,
+  actions: PropTypes.node,
 };
 
-const DraggableAnalysisItem = React.memo(({ item }) => {
+AnalysisRowContent.defaultProps = {
+  actions: null,
+};
+
+const DraggableAnalysisItem = React.memo(({
+  item,
+  actions,
+}) => {
   const dragData = item.dragType === 'semantic-object'
     ? toSemanticDragData(item)
     : {
@@ -157,7 +335,7 @@ const DraggableAnalysisItem = React.memo(({ item }) => {
       {...listeners}
       {...attributes}
     >
-      <AnalysisRowContent item={item} />
+      <AnalysisRowContent item={item} actions={actions} />
     </div>
   );
 });
@@ -171,20 +349,33 @@ DraggableAnalysisItem.propTypes = {
     name: PropTypes.string,
     label: PropTypes.string.isRequired,
     subtitle: PropTypes.string,
+    description: PropTypes.string,
     type: PropTypes.oneOf(['numeric', 'categorical', 'temporal']).isRequired,
     source: PropTypes.oneOf(['raw', 'semantic']).isRequired,
     sourceLabel: PropTypes.string.isRequired,
     helperLabel: PropTypes.string.isRequired,
     title: PropTypes.string.isRequired,
   }).isRequired,
+  actions: PropTypes.node,
 };
 
-function FieldsPanel({ cleanedData }) {
+DraggableAnalysisItem.defaultProps = {
+  actions: null,
+};
+
+function FieldsPanel({
+  cleanedData,
+  onCreateSemanticChart,
+  onCreateSemanticKpi,
+  onEditSemanticMetric,
+  onAddDashboardFilter,
+}) {
   const activeDataset = useActiveDataset();
   const semanticModel = useSemanticModel();
   const { active } = useDndContext();
   const [activeTab, setActiveTab] = useState('raw');
   const [searchTerm, setSearchTerm] = useState('');
+  const [businessFilter, setBusinessFilter] = useState('all');
   const [collapsedGroups, setCollapsedGroups] = useState({
     semantic_metric: false,
     semantic_dimension: false,
@@ -215,6 +406,7 @@ function FieldsPanel({ cleanedData }) {
         name,
         label: name,
         subtitle: `Sample: ${sample}`,
+        description: '',
         type,
         source: 'raw',
         sourceLabel: 'Raw',
@@ -233,11 +425,11 @@ function FieldsPanel({ cleanedData }) {
       type: 'numeric',
       source: 'semantic',
       sourceLabel: 'Metric',
-      subtitle: metric.expression?.type === 'derived_formula'
-        ? 'Formula definition'
-        : (metric.field ? `Backed by ${metric.field}` : 'Business definition'),
+      subtitle: buildSemanticSubtitle(metric, metric.definitionLabel),
+      description: metric.description || '',
       title: buildSemanticTitle(metric),
       helperLabel: metric.helperLabel,
+      backingLabel: metric.field ? `Field: ${metric.field}` : '',
       searchText: metric.searchText,
     })),
     [semanticModel]
@@ -251,13 +443,17 @@ function FieldsPanel({ cleanedData }) {
       type: dimension.fieldType,
       source: 'semantic',
       sourceLabel: 'Dimension',
-      subtitle: dimension.field ? `Backed by ${dimension.field}` : 'Business grouping',
+      subtitle: buildSemanticSubtitle(dimension, 'Business grouping'),
+      description: dimension.description || '',
       title: buildSemanticTitle(dimension),
       helperLabel: dimension.helperLabel,
+      backingLabel: dimension.field ? `Field: ${dimension.field}` : '',
       searchText: dimension.searchText,
     })),
     [semanticModel]
   );
+
+  const defaultMetricId = semanticMetrics[0]?.id || '';
 
   const filteredRawFields = useMemo(() => {
     if (!searchTerm) return rawFields;
@@ -266,16 +462,32 @@ function FieldsPanel({ cleanedData }) {
   }, [rawFields, searchTerm]);
 
   const filteredSemanticMetrics = useMemo(() => {
-    if (!searchTerm) return semanticMetrics;
     const query = searchTerm.toLowerCase();
-    return semanticMetrics.filter((metric) => metric.searchText.includes(query));
-  }, [searchTerm, semanticMetrics]);
+    return semanticMetrics.filter((metric) => {
+      if (searchTerm && !metric.searchText.includes(query)) {
+        return false;
+      }
+      if (businessFilter === 'metrics') return true;
+      if (businessFilter === 'custom') return Boolean(metric.is_user_defined);
+      if (businessFilter === 'inferred') return Boolean(metric.is_inferred);
+      if (businessFilter === 'dimensions') return false;
+      return true;
+    });
+  }, [businessFilter, searchTerm, semanticMetrics]);
 
   const filteredSemanticDimensions = useMemo(() => {
-    if (!searchTerm) return semanticDimensions;
     const query = searchTerm.toLowerCase();
-    return semanticDimensions.filter((dimension) => dimension.searchText.includes(query));
-  }, [searchTerm, semanticDimensions]);
+    return semanticDimensions.filter((dimension) => {
+      if (searchTerm && !dimension.searchText.includes(query)) {
+        return false;
+      }
+      if (businessFilter === 'dimensions') return true;
+      if (businessFilter === 'custom') return false;
+      if (businessFilter === 'metrics') return false;
+      if (businessFilter === 'inferred') return true;
+      return true;
+    });
+  }, [businessFilter, searchTerm, semanticDimensions]);
 
   const groupedItems = useMemo(() => {
     const groupedRaw = filteredRawFields.reduce(
@@ -298,7 +510,8 @@ function FieldsPanel({ cleanedData }) {
     };
   }, [filteredRawFields, filteredSemanticDimensions, filteredSemanticMetrics]);
 
-  const activeTabItems = GROUP_ORDER[activeTab].reduce((total, groupKey) => total + (groupedItems[groupKey]?.length || 0), 0);
+  const activeTabItems = GROUP_ORDER[activeTab]
+    .reduce((total, groupKey) => total + (groupedItems[groupKey]?.length || 0), 0);
   const totalSemanticObjects = semanticMetrics.length + semanticDimensions.length;
   const activeItem = useMemo(() => {
     const current = active?.data?.current;
@@ -320,7 +533,7 @@ function FieldsPanel({ cleanedData }) {
       return (
         <div className="fields-empty-state">
           <strong>No business fields yet.</strong>
-          <span>Semantic metrics and dimensions will appear here when the active dataset provides them.</span>
+          <span>Semantic metrics and dimensions appear here as soon as the active dataset has a semantic model.</span>
         </div>
       );
     }
@@ -342,6 +555,27 @@ function FieldsPanel({ cleanedData }) {
     );
   };
 
+  const renderBusinessToolbar = () => (
+    <div className="fields-business-toolbar">
+      <div className="fields-business-toolbar__copy">
+        <strong>Business definitions</strong>
+        <span>Drag them into windows or use quick actions for charts, KPIs, filters, and metric editing.</span>
+      </div>
+      <div className="fields-filter-pills" role="tablist" aria-label="Business field filters">
+        {BUSINESS_FILTERS.map((filter) => (
+          <button
+            key={filter.id}
+            type="button"
+            className={`fields-filter-pill ${businessFilter === filter.id ? 'is-active' : ''}`}
+            onClick={() => setBusinessFilter(filter.id)}
+          >
+            {filter.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
   return (
     <>
       <div className="fields-panel fields-panel--docked">
@@ -357,7 +591,7 @@ function FieldsPanel({ cleanedData }) {
             Dataset columns
           </span>
           <span className="fields-panel-summary__chip fields-panel-summary__chip--semantic">
-            Business definitions
+            Semantic definitions
           </span>
         </div>
 
@@ -380,13 +614,15 @@ function FieldsPanel({ cleanedData }) {
           <AiOutlineSearch className="fields-search-icon" />
           <input
             type="text"
-            placeholder={activeTab === 'raw' ? 'Search raw fields' : 'Search business fields'}
+            placeholder={activeTab === 'raw' ? 'Search raw fields' : 'Search business fields, formulas, or descriptions'}
             value={searchTerm}
             onChange={(event) => setSearchTerm(event.target.value)}
             aria-label={activeTab === 'raw' ? 'Search raw fields' : 'Search business fields'}
           />
           <span className="fields-search-count">{activeTabItems}</span>
         </label>
+
+        {activeTab === 'business' ? renderBusinessToolbar() : null}
 
         <div className="fields-panel-body">
           {activeTabItems > 0 ? (
@@ -419,7 +655,20 @@ function FieldsPanel({ cleanedData }) {
 
                   <div className={`field-group-list ${collapsed ? 'is-collapsed' : ''}`}>
                     {items.map((item) => (
-                      <DraggableAnalysisItem key={item.dragId} item={item} />
+                      <DraggableAnalysisItem
+                        key={item.dragId}
+                        item={item}
+                        actions={item.source === 'semantic' ? (
+                          <SemanticQuickActions
+                            item={item}
+                            defaultMetricId={defaultMetricId}
+                            onCreateSemanticChart={onCreateSemanticChart}
+                            onCreateSemanticKpi={onCreateSemanticKpi}
+                            onEditSemanticMetric={onEditSemanticMetric}
+                            onAddDashboardFilter={onAddDashboardFilter}
+                          />
+                        ) : null}
+                      />
                     ))}
                   </div>
                 </section>
@@ -442,10 +691,18 @@ function FieldsPanel({ cleanedData }) {
 
 FieldsPanel.propTypes = {
   cleanedData: PropTypes.arrayOf(PropTypes.object),
+  onCreateSemanticChart: PropTypes.func,
+  onCreateSemanticKpi: PropTypes.func,
+  onEditSemanticMetric: PropTypes.func,
+  onAddDashboardFilter: PropTypes.func,
 };
 
 FieldsPanel.defaultProps = {
   cleanedData: null,
+  onCreateSemanticChart: null,
+  onCreateSemanticKpi: null,
+  onEditSemanticMetric: null,
+  onAddDashboardFilter: null,
 };
 
 export default FieldsPanel;

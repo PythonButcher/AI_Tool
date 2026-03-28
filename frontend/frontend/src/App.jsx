@@ -108,7 +108,7 @@ function AppContent() {
   const [activeRibbonTab, setActiveRibbonTab] = useState('Home');
   const [activeWorkflow, setActiveWorkflow] = useState('data');
   const [aiChatOpenRequestKey, setAiChatOpenRequestKey] = useState(0);
-  const [menuBarHeight, setMenuBarHeight] = useState(116);
+  const [menuBarHeight, setMenuBarHeight] = useState(64);
 
   useLoadRawData(showRawViewer, rawUploadFile, setFullData);
 
