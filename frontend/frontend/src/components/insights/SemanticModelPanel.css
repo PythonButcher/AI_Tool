@@ -3,10 +3,11 @@
   flex-direction: column;
   gap: 14px;
   padding: 18px;
-  border-radius: 14px;
+  border-radius: 18px;
   border: 1px solid var(--border-color);
   background:
-    linear-gradient(135deg, rgba(25, 118, 210, 0.08), rgba(25, 118, 210, 0.02)),
+    radial-gradient(circle at top right, color-mix(in srgb, var(--accent-green-soft) 42%, transparent), transparent 34%),
+    linear-gradient(135deg, color-mix(in srgb, var(--accent-blue-soft) 22%, transparent), transparent 40%),
     var(--bg-primary);
   box-shadow: 0 6px 18px var(--shadow-color);
 }
@@ -41,35 +42,55 @@
 
 .semantic-model-panel__action,
 .semantic-model-panel__mini-action {
-  border: 1px solid rgba(25, 118, 210, 0.35);
-  background: rgba(25, 118, 210, 0.12);
+  border: 1px solid color-mix(in srgb, var(--accent-blue) 28%, var(--border-color));
+  background: color-mix(in srgb, var(--accent-blue-soft) 42%, transparent);
   color: var(--text-primary);
   border-radius: 999px;
   padding: 8px 12px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
 }
 
 .semantic-model-panel__action--monitoring {
-  border-color: rgba(46, 125, 50, 0.34);
-  background: rgba(46, 125, 50, 0.14);
+  border-color: color-mix(in srgb, var(--accent-green) 30%, var(--border-color));
+  background: color-mix(in srgb, var(--accent-green-soft) 48%, transparent);
 }
 
 .semantic-model-panel__action--editor {
-  border-color: rgba(15, 118, 110, 0.3);
-  background: rgba(15, 118, 110, 0.12);
+  border-color: color-mix(in srgb, var(--accent-blue) 20%, var(--border-color));
+  background: color-mix(in srgb, var(--accent-white-medium) 58%, transparent);
 }
 
 .semantic-model-panel__mini-action {
-  padding: 6px 10px;
-  font-size: 0.78rem;
-  border-color: rgba(46, 125, 50, 0.28);
-  background: rgba(46, 125, 50, 0.1);
+  padding: 7px 10px;
+  font-size: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
-.semantic-model-panel__action:disabled {
+.semantic-model-panel__mini-action--metric {
+  border-color: color-mix(in srgb, var(--accent-green) 22%, var(--border-color));
+  background: color-mix(in srgb, var(--accent-green-soft) 40%, transparent);
+}
+
+.semantic-model-panel__mini-action--dimension {
+  border-color: color-mix(in srgb, #d97706 20%, var(--border-color));
+  background: color-mix(in srgb, rgba(217, 119, 6, 0.16) 70%, transparent);
+}
+
+.semantic-model-panel__mini-action:hover,
+.semantic-model-panel__action:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px var(--shadow-color-soft);
+}
+
+.semantic-model-panel__action:disabled,
+.semantic-model-panel__mini-action:disabled {
   opacity: 0.55;
   cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
 .semantic-model-panel__status,
@@ -90,9 +111,9 @@
   flex-direction: column;
   gap: 4px;
   padding: 12px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.5);
-  border: 1px solid rgba(25, 118, 210, 0.12);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--bg-primary) 86%, var(--glass-overlay-strong));
+  border: 1px solid color-mix(in srgb, var(--accent-blue) 12%, var(--border-color));
 }
 
 .semantic-model-panel__stat-value {
@@ -113,6 +134,33 @@
   flex-wrap: wrap;
   gap: 12px;
   font-size: 0.88rem;
+}
+
+.semantic-model-panel__insight-strip {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.semantic-model-panel__insight {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--border-color) 92%, transparent);
+  background: color-mix(in srgb, var(--accent-white-soft) 38%, transparent);
+}
+
+.semantic-model-panel__insight strong {
+  color: var(--text-primary);
+  font-size: 0.82rem;
+}
+
+.semantic-model-panel__insight span {
+  color: var(--text-secondary);
+  font-size: 0.74rem;
+  line-height: 1.45;
 }
 
 .semantic-model-panel__list-grid {
@@ -139,54 +187,121 @@
   color: var(--text-secondary);
 }
 
-.semantic-model-panel__chips,
-.semantic-model-panel__chip-actions-grid {
+.semantic-model-panel__definition-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.semantic-model-panel__definition-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid color-mix(in srgb, var(--border-color) 90%, transparent);
+  background: color-mix(in srgb, var(--bg-primary) 84%, var(--glass-overlay-strong));
+}
+
+.semantic-model-panel__definition-card--metric {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent-green) 10%, transparent);
+}
+
+.semantic-model-panel__definition-card--dimension {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, #d97706 10%, transparent);
+}
+
+.semantic-model-panel__definition-header {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.semantic-model-panel__definition-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.semantic-model-panel__definition-icon--metric {
+  background: color-mix(in srgb, var(--accent-green-soft) 56%, transparent);
+  color: color-mix(in srgb, var(--accent-green) 78%, var(--text-primary));
+}
+
+.semantic-model-panel__definition-icon--dimension {
+  background: color-mix(in srgb, rgba(217, 119, 6, 0.16) 76%, transparent);
+  color: #b45309;
+}
+
+.semantic-model-panel__definition-copy h5 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+}
+
+.semantic-model-panel__definition-copy p {
+  margin: 4px 0 0;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+.semantic-model-panel__definition-meta,
+.semantic-model-panel__definition-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
 }
 
-.semantic-model-panel__chip-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.semantic-model-panel__chip {
+.semantic-model-panel__badge {
   display: inline-flex;
   align-items: center;
-  padding: 6px 10px;
+  min-height: 24px;
+  padding: 0 10px;
   border-radius: 999px;
-  font-size: 0.82rem;
-  border: 1px solid var(--border-color);
-  color: var(--text-primary);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
-.semantic-model-panel__chip-button {
-  cursor: pointer;
-  text-align: left;
-  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+.semantic-model-panel__badge--metric {
+  background: color-mix(in srgb, var(--accent-green-soft) 42%, transparent);
+  color: color-mix(in srgb, var(--accent-green) 74%, var(--text-primary));
 }
 
-.semantic-model-panel__chip-button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 14px var(--shadow-color-soft);
+.semantic-model-panel__badge--dimension {
+  background: color-mix(in srgb, rgba(217, 119, 6, 0.16) 70%, transparent);
+  color: #b45309;
 }
 
-.semantic-model-panel__chip--metric {
-  background: rgba(46, 125, 50, 0.12);
+.semantic-model-panel__badge--custom {
+  background: color-mix(in srgb, var(--accent-green-soft) 58%, transparent);
+  color: color-mix(in srgb, var(--accent-green) 78%, var(--text-primary));
 }
 
-.semantic-model-panel__chip--metric:hover {
-  border-color: rgba(46, 125, 50, 0.26);
+.semantic-model-panel__badge--inferred {
+  background: color-mix(in srgb, var(--accent-blue-soft) 42%, transparent);
+  color: color-mix(in srgb, var(--accent-blue) 74%, var(--text-primary));
 }
 
-.semantic-model-panel__chip--dimension {
-  background: rgba(255, 143, 0, 0.12);
+.semantic-model-panel__badge--field {
+  background: color-mix(in srgb, var(--accent-white-medium) 68%, transparent);
+  color: var(--text-secondary);
+  text-transform: none;
+  letter-spacing: 0;
 }
 
-.semantic-model-panel__chip--dimension:hover {
-  border-color: rgba(255, 143, 0, 0.26);
+@media (max-width: 920px) {
+  .semantic-model-panel__stats,
+  .semantic-model-panel__list-grid,
+  .semantic-model-panel__insight-strip {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 720px) {
@@ -198,17 +313,7 @@
     width: 100%;
   }
 
-  .semantic-model-panel__stats,
-  .semantic-model-panel__list-grid {
-    grid-template-columns: 1fr;
-  }
-
   .semantic-model-panel__action {
     width: 100%;
-  }
-
-  .semantic-model-panel__chip-row {
-    width: 100%;
-    flex-wrap: wrap;
   }
 }

@@ -527,22 +527,36 @@ function MenuBar({
 
   return (
     <header ref={barRef} className={`menu-bar ${isRibbonCollapsed ? 'is-collapsed' : ''}`}>
-      <div className="menu-bar__masthead">
-        <div className="menu-brand">
-          <p className="menu-brand__eyebrow">Phase 1 Workflow Shell</p>
-          <div className="menu-brand__title-row">
-            <h1 className="menu-brand__title">AI Data Visualization Tool</h1>
-            <span className="menu-brand__status">
-              {activeWorkflow ? `Workflow: ${activeWorkflow}` : 'Shell controls'}
-            </span>
-          </div>
+      <div className="menu-bar__topline">
+        <div className="menu-bar__identity" aria-label="Application shell">
+          <span className="menu-bar__app-dot" aria-hidden="true" />
+          <span className="menu-bar__app-name">AI Tool</span>
         </div>
 
+        <nav className="menu-tab-strip" aria-label="Primary ribbon tabs">
+          {RIBBON_TABS.map((tab) => (
+            <button
+              key={tab}
+              type="button"
+              className={`menu-tab ${activeTab === tab ? 'is-active' : ''}`}
+              onClick={() => onTabChange(tab)}
+            >
+              {tab}
+            </button>
+          ))}
+        </nav>
+
         <div className="menu-bar__utility">
+          {activeWorkflow ? (
+            <span className="menu-bar__workflow-chip">
+              {activeWorkflow}
+            </span>
+          ) : null}
+
           {aiReportReady ? (
             <button type="button" className="menu-bar__utility-pill" onClick={onAiReportClick}>
               <FaFileAlt />
-              AI report ready
+              Report
             </button>
           ) : null}
 
@@ -556,19 +570,6 @@ function MenuBar({
           </button>
         </div>
       </div>
-
-      <nav className="menu-tab-strip" aria-label="Primary ribbon tabs">
-        {RIBBON_TABS.map((tab) => (
-          <button
-            key={tab}
-            type="button"
-            className={`menu-tab ${activeTab === tab ? 'is-active' : ''}`}
-            onClick={() => onTabChange(tab)}
-          >
-            {tab}
-          </button>
-        ))}
-      </nav>
 
       {!isRibbonCollapsed ? (
         <div className="menu-ribbon">

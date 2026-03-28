@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useContext, useMemo, useState } from 'react';
 import {
   FaBook,
   FaBrain,
@@ -20,8 +20,9 @@ import DataCleaningForm from '../data_management/DataCleaningForm';
 import FileExport from '../data_management/FileExport';
 import FieldsPanel from '../insights/FieldsPanel';
 import SemanticModelPanel from '../insights/SemanticModelPanel';
-import { normalizeDatasetRows, useActiveDataset, useSemanticModel } from '../../context/DataContext';
+import { DataContext, normalizeDatasetRows, useActiveDataset, useSemanticModel } from '../../context/DataContext';
 import { useWindowContext } from '../../context/WindowContext';
+import { normalizeSemanticDimension } from '../../utils/semanticObjectUtils';
 import './SideBar.css';
 
 const workflowItems = [
@@ -92,12 +93,21 @@ function SideBar({
   const [showExportPanel, setShowExportPanel] = useState(false);
   const activeDataset = useActiveDataset();
   const semanticModel = useSemanticModel();
+  const { semanticModelStatus } = useContext(DataContext);
   const {
     restoreWindow,
     addChart,
     addDashboardChart,
     addDashboardKpi,
+    openDashboard,
+    setDashboardFilters,
   } = useWindowContext();
+  const [semanticEditorRequest, setSemanticEditorRequest] = useState({
+    isOpen: false,
+    initialMetricId: '__new__',
+    initialDraft: null,
+    requestKey: 0,
+  });
 
   const datasetRows = useMemo(() => {
     const preferredRows = normalizeDatasetRows(cleanedData);
@@ -109,6 +119,10 @@ function SideBar({
   const semanticMetricCount = semanticModel?.metrics?.length || 0;
   const semanticDimensionCount = semanticModel?.dimensions?.length || 0;
   const hasDataset = rowCount > 0;
+  const semanticDimensions = useMemo(
+    () => (semanticModel?.dimensions || []).map(normalizeSemanticDimension),
+    [semanticModel]
+  );
 
   const handleGenerateStory = (model) => {
     onStoryModelChange(model);
@@ -126,7 +140,7 @@ function SideBar({
     addChart({ type });
   };
 
-  const handleCreateSemanticChart = (semanticOverrides = {}) => {
+  const handleCreateSemanticChart = useCallback((semanticOverrides = {}) => {
     addChart({
       type: 'Bar',
       dataSourceMode: 'semantic',
@@ -135,9 +149,9 @@ function SideBar({
         ...semanticOverrides,
       },
     });
-  };
+  }, [addChart]);
 
-  const handleCreateSemanticKpi = (semanticOverrides = {}) => {
+  const handleCreateSemanticKpi = useCallback((semanticOverrides = {}) => {
     addDashboardKpi({
       semanticConfig: {
         ...emptySemanticConfig,
@@ -148,7 +162,80 @@ function SideBar({
     if (activeWorkflow !== 'dashboard') {
       onWorkflowSelect('dashboard');
     }
-  };
+  }, [activeWorkflow, addDashboardKpi, onWorkflowSelect]);
+
+  const handleOpenSemanticEditor = useCallback((options = {}) => {
+    setSemanticEditorRequest((prev) => ({
+      isOpen: true,
+      initialMetricId: options.metricId || '__new__',
+      initialDraft: options.initialDraft || null,
+      requestKey: prev.requestKey + 1,
+    }));
+
+    if (activeWorkflow !== 'business') {
+      onWorkflowSelect('business');
+    }
+  }, [activeWorkflow, onWorkflowSelect]);
+
+  const handleCloseSemanticEditor = useCallback(() => {
+    setSemanticEditorRequest((prev) => ({
+      ...prev,
+      isOpen: false,
+      initialDraft: null,
+      initialMetricId: '__new__',
+    }));
+  }, []);
+
+  const resolveFilterDimension = useCallback((semanticObject) => {
+    if (!semanticObject || !semanticDimensions.length) return null;
+
+    if (semanticObject.objectKind === 'dimension') {
+      return semanticDimensions.find((dimension) => dimension.id === semanticObject.id) || null;
+    }
+
+    const normalizedField = String(semanticObject.field || '').trim().toLowerCase();
+    if (!normalizedField) return null;
+
+    return semanticDimensions.find((dimension) => {
+      const candidates = [dimension.id, dimension.name, dimension.label, dimension.field];
+      return candidates.some((candidate) => String(candidate || '').trim().toLowerCase() === normalizedField);
+    }) || null;
+  }, [semanticDimensions]);
+
+  const handleAddSemanticFilter = useCallback((semanticObject) => {
+    const targetDimension = resolveFilterDimension(semanticObject);
+    openDashboard();
+
+    setDashboardFilters((prev) => {
+      if (targetDimension?.fieldType === 'temporal') {
+        return {
+          ...prev,
+          dateDimensionId: targetDimension.id,
+        };
+      }
+
+      const existingFilter = prev.dimensionFilters.find((filter) => filter.dimensionId === targetDimension?.id);
+      if (existingFilter) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        dimensionFilters: [
+          ...prev.dimensionFilters,
+          {
+            id: `dashboard-filter-${Date.now()}`,
+            dimensionId: targetDimension?.id || '',
+            values: [],
+          },
+        ],
+      };
+    });
+
+    if (activeWorkflow !== 'dashboard') {
+      onWorkflowSelect('dashboard');
+    }
+  }, [activeWorkflow, onWorkflowSelect, openDashboard, resolveFilterDimension, setDashboardFilters]);
 
   const renderDrawerContent = () => {
     if (activeWorkflow === 'data') {
@@ -255,7 +342,13 @@ function SideBar({
           </div>
 
           <div className="workflow-fields-shell">
-            <FieldsPanel cleanedData={datasetRows} />
+            <FieldsPanel
+              cleanedData={datasetRows}
+              onCreateSemanticChart={handleCreateSemanticChart}
+              onCreateSemanticKpi={handleCreateSemanticKpi}
+              onEditSemanticMetric={(metric) => handleOpenSemanticEditor({ metricId: metric?.id })}
+              onAddDashboardFilter={handleAddSemanticFilter}
+            />
           </div>
         </>
       );
@@ -318,15 +411,19 @@ function SideBar({
           <DrawerHeader
             eyebrow="Workflow"
             title="Business"
-            description="Phase 1 brings semantic definitions into the shell without changing the underlying contracts."
+            description="Semantic definitions now drive charts, KPIs, filters, and metric management without removing raw dataset workflows."
             onClose={() => onWorkflowSelect('business')}
           />
 
           <SemanticModelPanel
             semanticModel={semanticModel}
-            status={semanticModel ? 'ready' : 'idle'}
+            status={semanticModelStatus}
             onCreateSemanticChart={handleCreateSemanticChart}
             onCreateKpiCard={handleCreateSemanticKpi}
+            onEditSemanticMetric={(metric) => handleOpenSemanticEditor({ metricId: metric?.id })}
+            onAddDashboardFilter={handleAddSemanticFilter}
+            editorRequest={semanticEditorRequest}
+            onEditorClose={handleCloseSemanticEditor}
           />
         </>
       );

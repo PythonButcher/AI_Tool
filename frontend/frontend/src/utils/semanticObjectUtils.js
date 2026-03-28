@@ -23,6 +23,19 @@ const buildSemanticSearchText = (item) => [
   .join(' ')
   .toLowerCase();
 
+const formatSemanticStatusLabel = (item) => {
+  if (item?.is_user_defined || item?.status === 'user_defined') return 'Custom';
+  if (item?.is_inferred || item?.status === 'inferred') return 'Inferred';
+  return 'Semantic';
+};
+
+const formatDefinitionLabel = (metric) => {
+  const definitionType = metric?.expression?.type || metric?.definition_kind;
+  if (definitionType === 'derived_formula') return 'Formula';
+  if (definitionType === 'count_rows') return 'Row count';
+  return 'Aggregate';
+};
+
 export const normalizeSemanticMetric = (metric) => ({
   ...metric,
   id: metric?.id || metric?.name || metric?.field || 'semantic_metric',
@@ -31,6 +44,9 @@ export const normalizeSemanticMetric = (metric) => ({
   fieldType: 'numeric',
   objectKind: 'metric',
   semanticType: 'metric',
+  statusLabel: formatSemanticStatusLabel(metric),
+  definitionLabel: formatDefinitionLabel(metric),
+  isEditable: Boolean(metric?.is_user_defined),
   helperLabel: metric?.expression?.type === 'derived_formula'
     ? `formula · ${metric?.default_aggregation || metric?.expression?.aggregation || 'sum'}`
     : (metric?.default_aggregation || metric?.expression?.aggregation || 'metric'),
@@ -45,6 +61,9 @@ export const normalizeSemanticDimension = (dimension) => ({
   fieldType: normalizeSemanticType(dimension?.semantic_kind || dimension?.data_type),
   objectKind: 'dimension',
   semanticType: 'dimension',
+  statusLabel: formatSemanticStatusLabel(dimension),
+  definitionLabel: 'Dimension',
+  isEditable: false,
   helperLabel: dimension?.semantic_kind || dimension?.data_type || 'dimension',
   searchText: buildSemanticSearchText(dimension || {}),
 });
