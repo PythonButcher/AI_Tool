@@ -28,11 +28,11 @@ body,
 :root {
   /* Light theme (default) */
   --bg-primary: #ffffff;
-  --bg-secondary: #f9fafb;
-  --menu-bar-surface: #eef1f5;
+  --bg-secondary: #fbfbfc;
+  --menu-bar-surface: #ffffff;
   --text-primary: #111827;
   --text-secondary: #374151;
-  --border-color: #d1d5db;
+  --border-color: #cfd6df;
   --accent-blue: #2563eb;
   --accent-green: #10b981;
   --accent-red: #ef4444;

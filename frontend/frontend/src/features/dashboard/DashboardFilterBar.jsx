@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   countActiveDashboardFilters,
   getDimensionValues,
@@ -19,6 +19,8 @@ function DashboardFilterBar() {
   const semanticModel = useSemanticModel();
   const [isExpanded, setIsExpanded] = useState(false);
   const [isSemanticEditorOpen, setIsSemanticEditorOpen] = useState(false);
+  const previousFilterCountRef = useRef(0);
+  const previousDateDimensionRef = useRef('');
   const {
     dashboardState,
     setDashboardFilters,
@@ -40,6 +42,23 @@ function DashboardFilterBar() {
   );
 
   const activeFilterCount = countActiveDashboardFilters(dashboardState.filters);
+
+  useEffect(() => {
+    const currentFilterCount = dashboardState.filters.dimensionFilters.length;
+    const previousFilterCount = previousFilterCountRef.current;
+    const previousDateDimension = previousDateDimensionRef.current;
+
+    if (currentFilterCount > previousFilterCount) {
+      setIsExpanded(true);
+    }
+
+    if (dashboardState.filters.dateDimensionId && dashboardState.filters.dateDimensionId !== previousDateDimension) {
+      setIsExpanded(true);
+    }
+
+    previousFilterCountRef.current = currentFilterCount;
+    previousDateDimensionRef.current = dashboardState.filters.dateDimensionId;
+  }, [dashboardState.filters.dateDimensionId, dashboardState.filters.dimensionFilters.length]);
 
   const updateDimensionFilter = (filterId, updates) => {
     setDashboardFilters((prev) => ({
@@ -93,23 +112,22 @@ function DashboardFilterBar() {
 
         <div className="dashboard-filter-bar__actions">
           <button type="button" className="dashboard-filter-bar__btn dashboard-filter-bar__btn--primary" onClick={() => addDashboardKpi()}>
-            <FaPlus /> KPI
+            <FaPlus /> Semantic KPI
           </button>
           <button
             type="button"
             className="dashboard-filter-bar__btn dashboard-filter-bar__btn--primary"
             onClick={() => addDashboardChart({ dataSourceMode: 'semantic' })}
           >
-            <FaPlus /> Chart
+            <FaPlus /> Semantic Chart
           </button>
-          {/* Added dashboard-filter-bar__btn--primary to make the button dark like KPI and Chart */}
           <button 
             type="button" 
             className={`dashboard-filter-bar__btn dashboard-filter-bar__btn--primary ${isSemanticEditorOpen ? 'active' : ''}`} 
             onClick={() => setIsSemanticEditorOpen(true)}
-            title="Manage Semantic Model"
+            title="Manage semantic metrics"
           >
-            <FaPlus /> Semantic
+            <FaPlus /> Metrics
           </button>
           <button 
             type="button" 

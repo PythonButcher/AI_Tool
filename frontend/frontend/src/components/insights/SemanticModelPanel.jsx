@@ -1,16 +1,163 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import PropTypes from 'prop-types';
+import {
+  AiOutlineEdit,
+  AiOutlineFilter,
+  AiOutlineFundProjectionScreen,
+  AiOutlineLineChart,
+  AiOutlinePlusSquare,
+  AiOutlineTag,
+} from 'react-icons/ai';
 import { normalizeSemanticMetric, normalizeSemanticDimension } from '../../utils/semanticObjectUtils';
 import SemanticMetricEditor from '../../features/semantic/SemanticMetricEditor';
 import './SemanticModelPanel.css';
 
-const renderChipLabel = (item, suffix = null) => {
-  const label = item?.label || item?.name || item?.field || 'Unnamed';
-  return suffix ? `${label} · ${suffix}` : label;
+const MetricActionButton = ({ icon, label, onClick, tone, title }) => (
+  <button
+    type="button"
+    className={`semantic-model-panel__mini-action semantic-model-panel__mini-action--${tone}`}
+    onClick={onClick}
+    title={title || label}
+  >
+    <span aria-hidden="true">{icon}</span>
+    <span>{label}</span>
+  </button>
+);
+
+MetricActionButton.propTypes = {
+  icon: PropTypes.node.isRequired,
+  label: PropTypes.string.isRequired,
+  onClick: PropTypes.func,
+  tone: PropTypes.oneOf(['metric', 'dimension', 'neutral']),
+  title: PropTypes.string,
 };
 
-function SemanticModelPanel({ semanticModel, status, onCreateSemanticChart, onCreateKpiCard }) {
+MetricActionButton.defaultProps = {
+  onClick: null,
+  tone: 'neutral',
+  title: '',
+};
+
+const DefinitionCard = ({
+  item,
+  icon,
+  defaultMetricId,
+  onCreateSemanticChart,
+  onCreateKpiCard,
+  onEditSemanticMetric,
+  onAddDashboardFilter,
+}) => {
+  const isMetric = item.objectKind === 'metric';
+
+  return (
+    <article className={`semantic-model-panel__definition-card semantic-model-panel__definition-card--${isMetric ? 'metric' : 'dimension'}`}>
+      <div className="semantic-model-panel__definition-header">
+        <span className={`semantic-model-panel__definition-icon semantic-model-panel__definition-icon--${isMetric ? 'metric' : 'dimension'}`} aria-hidden="true">
+          {icon}
+        </span>
+        <div className="semantic-model-panel__definition-copy">
+          <h5>{item.label}</h5>
+          <p>{item.description || (item.field ? `Backed by ${item.field}` : 'Semantic definition')}</p>
+        </div>
+      </div>
+
+      <div className="semantic-model-panel__definition-meta">
+        <span className={`semantic-model-panel__badge semantic-model-panel__badge--${isMetric ? 'metric' : 'dimension'}`}>
+          {item.definitionLabel}
+        </span>
+        <span className={`semantic-model-panel__badge semantic-model-panel__badge--${item.is_user_defined ? 'custom' : 'inferred'}`}>
+          {item.statusLabel}
+        </span>
+        {item.field ? (
+          <span className="semantic-model-panel__badge semantic-model-panel__badge--field">
+            {item.field}
+          </span>
+        ) : null}
+      </div>
+
+      <div className="semantic-model-panel__definition-actions">
+        {typeof onCreateSemanticChart === 'function' ? (
+          <MetricActionButton
+            icon={<AiOutlineLineChart />}
+            label="Chart"
+            tone={isMetric ? 'metric' : 'dimension'}
+            onClick={() => onCreateSemanticChart(
+              isMetric
+                ? { metricId: item.id }
+                : { metricId: defaultMetricId || '', groupBy: item.id }
+            )}
+          />
+        ) : null}
+        {typeof onCreateKpiCard === 'function' && isMetric ? (
+          <MetricActionButton
+            icon={<AiOutlinePlusSquare />}
+            label="KPI"
+            tone="metric"
+            onClick={() => onCreateKpiCard({ metricId: item.id })}
+          />
+        ) : null}
+        {typeof onAddDashboardFilter === 'function' ? (
+          <MetricActionButton
+            icon={<AiOutlineFilter />}
+            label="Filter"
+            tone="neutral"
+            onClick={() => onAddDashboardFilter(item)}
+          />
+        ) : null}
+        {typeof onEditSemanticMetric === 'function' && isMetric ? (
+          <MetricActionButton
+            icon={<AiOutlineEdit />}
+            label={item.is_user_defined ? 'Edit' : 'View'}
+            tone="neutral"
+            onClick={() => onEditSemanticMetric(item)}
+          />
+        ) : null}
+      </div>
+    </article>
+  );
+};
+
+DefinitionCard.propTypes = {
+  item: PropTypes.shape({
+    id: PropTypes.string.isRequired,
+    label: PropTypes.string.isRequired,
+    description: PropTypes.string,
+    field: PropTypes.string,
+    objectKind: PropTypes.oneOf(['metric', 'dimension']).isRequired,
+    definitionLabel: PropTypes.string,
+    statusLabel: PropTypes.string,
+    is_user_defined: PropTypes.bool,
+  }).isRequired,
+  icon: PropTypes.node.isRequired,
+  defaultMetricId: PropTypes.string,
+  onCreateSemanticChart: PropTypes.func,
+  onCreateKpiCard: PropTypes.func,
+  onEditSemanticMetric: PropTypes.func,
+  onAddDashboardFilter: PropTypes.func,
+};
+
+DefinitionCard.defaultProps = {
+  defaultMetricId: '',
+  onCreateSemanticChart: null,
+  onCreateKpiCard: null,
+  onEditSemanticMetric: null,
+  onAddDashboardFilter: null,
+};
+
+function SemanticModelPanel({
+  semanticModel,
+  status,
+  onCreateSemanticChart,
+  onCreateKpiCard,
+  onEditSemanticMetric,
+  onAddDashboardFilter,
+  editorRequest,
+  onEditorClose,
+}) {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [editorInitialMetricId, setEditorInitialMetricId] = useState('__new__');
+  const [editorInitialDraft, setEditorInitialDraft] = useState(null);
+
   const metrics = useMemo(
     () => (semanticModel?.metrics || []).map(normalizeSemanticMetric),
     [semanticModel]
@@ -21,19 +168,47 @@ function SemanticModelPanel({ semanticModel, status, onCreateSemanticChart, onCr
   );
   const entities = semanticModel?.entities || [];
   const datasetMeta = semanticModel?.dataset || {};
-  const canCreateChart = typeof onCreateSemanticChart === 'function' && metrics.length > 0;
+  const summary = semanticModel?.summary || {};
+  const defaultMetricId = metrics[0]?.id || '';
+  const canCreateChart = typeof onCreateSemanticChart === 'function' && (metrics.length > 0 || dimensions.length > 0);
   const canCreateKpi = typeof onCreateKpiCard === 'function' && metrics.length > 0;
+
+  useEffect(() => {
+    if (!editorRequest?.isOpen) return;
+
+    setEditorInitialMetricId(editorRequest.initialMetricId || '__new__');
+    setEditorInitialDraft(editorRequest.initialDraft || null);
+    setIsEditorOpen(true);
+  }, [editorRequest]);
 
   let statusCopy = 'Business definitions will appear here once a dataset is available.';
   if (status === 'loading') {
     statusCopy = 'Inferring business metrics and dimensions from the active dataset.';
   } else if (status === 'error') {
-    statusCopy = 'Semantic inference failed. Dataset-first workflows remain available.';
+    statusCopy = 'Semantic inference failed. Raw field workflows remain available.';
   } else if (status === 'ready') {
     statusCopy = metrics.length || dimensions.length
-      ? 'Business-level definitions are now available alongside raw dataset fields. Create semantic charts or KPI cards directly from these definitions.'
+      ? 'Use these business definitions to start semantic charts, KPI cards, and reusable dashboard filters without hunting through raw columns.'
       : 'The dataset loaded, but no semantic metrics or dimensions were inferred yet.';
   }
+
+  const handleOpenEditor = (metric = null) => {
+    setEditorInitialMetricId(metric?.id || '__new__');
+    setEditorInitialDraft(null);
+    setIsEditorOpen(true);
+    if (typeof onEditSemanticMetric === 'function' && metric) {
+      onEditSemanticMetric(metric);
+    }
+  };
+
+  const handleCloseEditor = () => {
+    setIsEditorOpen(false);
+    setEditorInitialMetricId('__new__');
+    setEditorInitialDraft(null);
+    if (typeof onEditorClose === 'function') {
+      onEditorClose();
+    }
+  };
 
   return (
     <section className={`semantic-model-panel semantic-model-panel--${status}`}>
@@ -57,7 +232,7 @@ function SemanticModelPanel({ semanticModel, status, onCreateSemanticChart, onCr
             <button
               type="button"
               className="semantic-model-panel__action"
-              onClick={() => onCreateSemanticChart()}
+              onClick={() => onCreateSemanticChart({ metricId: defaultMetricId })}
               disabled={!canCreateChart}
             >
               New semantic chart
@@ -66,7 +241,11 @@ function SemanticModelPanel({ semanticModel, status, onCreateSemanticChart, onCr
           <button
             type="button"
             className="semantic-model-panel__action semantic-model-panel__action--editor"
-            onClick={() => setIsEditorOpen(true)}
+            onClick={() => {
+              setEditorInitialMetricId('__new__');
+              setEditorInitialDraft(null);
+              setIsEditorOpen(true);
+            }}
             disabled={!semanticModel}
           >
             Manage metrics
@@ -99,36 +278,42 @@ function SemanticModelPanel({ semanticModel, status, onCreateSemanticChart, onCr
           <span>
             Grain: <strong>{entities[0]?.grain || 'record'}</strong>
           </span>
+          <span>
+            Custom metrics: <strong>{summary.user_defined_metric_count || metrics.filter((metric) => metric.is_user_defined).length}</strong>
+          </span>
         </div>
       )}
+
+      <div className="semantic-model-panel__insight-strip">
+        <div className="semantic-model-panel__insight">
+          <strong>Start with metrics</strong>
+          <span>Metrics are resolver-backed and ready for charts, KPIs, and business monitoring.</span>
+        </div>
+        <div className="semantic-model-panel__insight">
+          <strong>Use dimensions to filter or group</strong>
+          <span>Dimensions can seed chart grouping and dashboard filters in one click.</span>
+        </div>
+      </div>
 
       <div className="semantic-model-panel__list-grid">
         <div className="semantic-model-panel__list-block">
           <div className="semantic-model-panel__list-header">
             <h4>Metrics</h4>
-            <span className="semantic-model-panel__list-hint">Open a semantic chart or KPI card with a metric preselected</span>
+            <span className="semantic-model-panel__list-hint">Create charts, KPI cards, or edit custom definitions directly</span>
           </div>
           {metrics.length > 0 ? (
-            <div className="semantic-model-panel__chip-actions-grid">
-              {metrics.slice(0, 6).map((metric) => (
-                <div className="semantic-model-panel__chip-row" key={metric.id}>
-                  <button
-                    type="button"
-                    className="semantic-model-panel__chip semantic-model-panel__chip--metric semantic-model-panel__chip-button"
-                    onClick={() => onCreateSemanticChart && onCreateSemanticChart({ metricId: metric.id })}
-                  >
-                    {renderChipLabel(metric, `${metric.helperLabel} · ${metric.is_user_defined ? 'custom' : 'inferred'}`)}
-                  </button>
-                  {onCreateKpiCard && (
-                    <button
-                      type="button"
-                      className="semantic-model-panel__mini-action"
-                      onClick={() => onCreateKpiCard({ metricId: metric.id })}
-                    >
-                      KPI
-                    </button>
-                  )}
-                </div>
+            <div className="semantic-model-panel__definition-grid">
+              {metrics.slice(0, 8).map((metric) => (
+                <DefinitionCard
+                  key={metric.id}
+                  item={metric}
+                  icon={<AiOutlineFundProjectionScreen />}
+                  defaultMetricId={defaultMetricId}
+                  onCreateSemanticChart={onCreateSemanticChart}
+                  onCreateKpiCard={onCreateKpiCard}
+                  onEditSemanticMetric={handleOpenEditor}
+                  onAddDashboardFilter={onAddDashboardFilter}
+                />
               ))}
             </div>
           ) : (
@@ -139,19 +324,19 @@ function SemanticModelPanel({ semanticModel, status, onCreateSemanticChart, onCr
         <div className="semantic-model-panel__list-block">
           <div className="semantic-model-panel__list-header">
             <h4>Dimensions</h4>
-            <span className="semantic-model-panel__list-hint">Seed grouping into a semantic chart</span>
+            <span className="semantic-model-panel__list-hint">Group semantic charts or add dashboard filters without leaving the workflow</span>
           </div>
           {dimensions.length > 0 ? (
-            <div className="semantic-model-panel__chips">
-              {dimensions.slice(0, 6).map((dimension) => (
-                <button
-                  type="button"
-                  className="semantic-model-panel__chip semantic-model-panel__chip--dimension semantic-model-panel__chip-button"
+            <div className="semantic-model-panel__definition-grid">
+              {dimensions.slice(0, 8).map((dimension) => (
+                <DefinitionCard
                   key={dimension.id}
-                  onClick={() => onCreateSemanticChart && onCreateSemanticChart({ groupBy: dimension.id })}
-                >
-                  {renderChipLabel(dimension, dimension.helperLabel)}
-                </button>
+                  item={dimension}
+                  icon={<AiOutlineTag />}
+                  defaultMetricId={defaultMetricId}
+                  onCreateSemanticChart={onCreateSemanticChart}
+                  onAddDashboardFilter={onAddDashboardFilter}
+                />
               ))}
             </div>
           ) : (
@@ -162,8 +347,11 @@ function SemanticModelPanel({ semanticModel, status, onCreateSemanticChart, onCr
 
       <SemanticMetricEditor
         isOpen={isEditorOpen}
-        onClose={() => setIsEditorOpen(false)}
+        onClose={handleCloseEditor}
         semanticModel={semanticModel}
+        initialMetricId={editorInitialMetricId}
+        initialDraft={editorInitialDraft}
+        openRequestKey={editorRequest?.requestKey || 0}
       />
     </section>
   );
@@ -175,10 +363,20 @@ SemanticModelPanel.propTypes = {
     entities: PropTypes.array,
     dimensions: PropTypes.array,
     metrics: PropTypes.array,
+    summary: PropTypes.object,
   }),
   status: PropTypes.string,
   onCreateSemanticChart: PropTypes.func,
   onCreateKpiCard: PropTypes.func,
+  onEditSemanticMetric: PropTypes.func,
+  onAddDashboardFilter: PropTypes.func,
+  editorRequest: PropTypes.shape({
+    isOpen: PropTypes.bool,
+    initialMetricId: PropTypes.string,
+    initialDraft: PropTypes.object,
+    requestKey: PropTypes.number,
+  }),
+  onEditorClose: PropTypes.func,
 };
 
 SemanticModelPanel.defaultProps = {
@@ -186,6 +384,10 @@ SemanticModelPanel.defaultProps = {
   status: 'idle',
   onCreateSemanticChart: null,
   onCreateKpiCard: null,
+  onEditSemanticMetric: null,
+  onAddDashboardFilter: null,
+  editorRequest: null,
+  onEditorClose: null,
 };
 
 export default SemanticModelPanel;
