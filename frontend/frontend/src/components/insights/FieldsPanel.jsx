@@ -1,22 +1,59 @@
-import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react';
+import React, { useMemo, useState } from 'react';
 import PropTypes from 'prop-types';
-import { useDraggable, useDndContext, DragOverlay } from '@dnd-kit/core';
+import { DragOverlay, useDndContext, useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import {
-  AiOutlineNumber,
   AiOutlineCalendar,
-  AiOutlineTag,
-  AiOutlineSearch,
   AiOutlineFundProjectionScreen,
+  AiOutlineNumber,
+  AiOutlineSearch,
+  AiOutlineTag,
 } from 'react-icons/ai';
-import { RxDragHandleDots2 } from 'react-icons/rx';
 import { useActiveDataset, useSemanticModel } from '../../context/DataContext';
 import {
-  normalizeSemanticMetric,
   normalizeSemanticDimension,
+  normalizeSemanticMetric,
   toSemanticDragData,
 } from '../../utils/semanticObjectUtils';
 import './FieldsPanel.css';
+
+const FIELD_EXPLORER_TABS = [
+  { id: 'raw', label: 'Raw Fields' },
+  { id: 'business', label: 'Business Fields' },
+];
+
+const ANALYSIS_GROUP_META = {
+  semantic_metric: {
+    label: 'Business Metrics',
+    icon: <AiOutlineFundProjectionScreen />,
+    description: 'Reusable KPIs and derived measures',
+  },
+  semantic_dimension: {
+    label: 'Business Dimensions',
+    icon: <AiOutlineTag />,
+    description: 'Reusable groupings for charts and filters',
+  },
+  numeric: {
+    label: 'Measures',
+    icon: <AiOutlineNumber />,
+    description: 'Numeric source columns',
+  },
+  temporal: {
+    label: 'Time',
+    icon: <AiOutlineCalendar />,
+    description: 'Date and time columns',
+  },
+  categorical: {
+    label: 'Categories',
+    icon: <AiOutlineTag />,
+    description: 'Labels, names, and string fields',
+  },
+};
+
+const GROUP_ORDER = {
+  raw: ['numeric', 'temporal', 'categorical'],
+  business: ['semantic_metric', 'semantic_dimension'],
+};
 
 const inferFieldType = (value) => {
   if (value === null || value === undefined) return 'categorical';
@@ -49,52 +86,17 @@ const inferFieldType = (value) => {
 
 const formatSampleValue = (value) => {
   if (value === undefined || value === null) return '—';
+
   if (typeof value === 'object') {
     try {
-      return JSON.stringify(value).slice(0, 40);
-    } catch (error) {
+      return JSON.stringify(value).slice(0, 42);
+    } catch {
       return '[object]';
     }
   }
-  return String(value).slice(0, 40);
+
+  return String(value).slice(0, 42);
 };
-
-const ANALYSIS_GROUP_META = {
-  semantic_metric: {
-    label: 'Business Metrics',
-    icon: <AiOutlineFundProjectionScreen />,
-    description: 'Calculated business KPIs',
-  },
-  semantic_dimension: {
-    label: 'Business Dimensions',
-    icon: <AiOutlineTag />,
-    description: 'Standardized categories',
-  },
-  numeric: {
-    label: 'Measures',
-    icon: <AiOutlineNumber />,
-    description: 'Raw numeric columns',
-  },
-  categorical: {
-    label: 'Categories',
-    icon: <AiOutlineTag />,
-    description: 'Raw string labels',
-  },
-  temporal: {
-    label: 'Time',
-    icon: <AiOutlineCalendar />,
-    description: 'Raw date columns',
-  },
-};
-
-const GROUP_ORDER = ['semantic_metric', 'semantic_dimension', 'numeric', 'temporal', 'categorical'];
-
-const clamp = (value, min, max) => {
-  if (Number.isNaN(value)) return min;
-  return Math.min(Math.max(value, min), Math.max(min, max));
-};
-
-const INITIAL_PANEL_POSITION = { x: 96, y: 120 };
 
 const buildSemanticTitle = (item) => {
   const parts = [item.description];
@@ -107,7 +109,7 @@ const AnalysisRowContent = ({ item }) => (
     <span className={`field-type-marker ${item.type}`} aria-hidden="true" />
     <div className="field-row-main">
       <span className="field-row-label">{item.label}</span>
-      {item.subtitle && <span className="field-row-subtitle">{item.subtitle}</span>}
+      {item.subtitle ? <span className="field-row-subtitle">{item.subtitle}</span> : null}
     </div>
     <span className={`field-row-pill field-row-pill--source field-row-pill--${item.source}`}>
       {item.sourceLabel}
@@ -177,15 +179,11 @@ DraggableAnalysisItem.propTypes = {
   }).isRequired,
 };
 
-const FieldsPanel = ({ cleanedData }) => {
+function FieldsPanel({ cleanedData }) {
   const activeDataset = useActiveDataset();
   const semanticModel = useSemanticModel();
   const { active } = useDndContext();
-  const panelRef = useRef(null);
-  const dragStateRef = useRef(null);
-
-  const [panelPosition, setPanelPosition] = useState(INITIAL_PANEL_POSITION);
-  const [isPanelDragging, setIsPanelDragging] = useState(false);
+  const [activeTab, setActiveTab] = useState('raw');
   const [searchTerm, setSearchTerm] = useState('');
   const [collapsedGroups, setCollapsedGroups] = useState({
     semantic_metric: false,
@@ -196,25 +194,21 @@ const FieldsPanel = ({ cleanedData }) => {
   });
 
   const dataset = useMemo(() => {
-    if (Array.isArray(cleanedData) && cleanedData.length) return cleanedData;
-    return Array.isArray(activeDataset) && activeDataset.length ? activeDataset : null;
-  }, [cleanedData, activeDataset]);
-
-  const toggleGroup = useCallback((group) => {
-    setCollapsedGroups((prev) => ({
-      ...prev,
-      [group]: !prev[group],
-    }));
-  }, []);
+    if (Array.isArray(cleanedData) && cleanedData.length > 0) return cleanedData;
+    if (Array.isArray(activeDataset) && activeDataset.length > 0) return activeDataset;
+    return [];
+  }, [activeDataset, cleanedData]);
 
   const rawFields = useMemo(() => {
-    if (!dataset || dataset.length === 0) return [];
+    if (!dataset.length) return [];
+
     const referenceRow = dataset[0] || {};
 
     return Object.keys(referenceRow).map((name) => {
       const rawValue = referenceRow[name];
       const type = inferFieldType(rawValue);
       const sample = formatSampleValue(rawValue);
+
       return {
         dragId: `field:${name}`,
         dragType: 'field',
@@ -223,10 +217,9 @@ const FieldsPanel = ({ cleanedData }) => {
         subtitle: `Sample: ${sample}`,
         type,
         source: 'raw',
-        sourceLabel: 'Raw field',
+        sourceLabel: 'Raw',
         helperLabel: type,
         title: `Sample value: ${sample}`,
-        sample,
         searchText: `${name} ${type} ${sample}`.toLowerCase(),
       };
     });
@@ -292,22 +285,21 @@ const FieldsPanel = ({ cleanedData }) => {
         return acc;
       },
       {
-        semantic_metric: [...filteredSemanticMetrics],
-        semantic_dimension: [...filteredSemanticDimensions],
         numeric: [],
         temporal: [],
         categorical: [],
       }
     );
 
-    groupedRaw.semantic_metric = filteredSemanticMetrics;
-    groupedRaw.semantic_dimension = filteredSemanticDimensions;
-    return groupedRaw;
+    return {
+      ...groupedRaw,
+      semantic_metric: filteredSemanticMetrics,
+      semantic_dimension: filteredSemanticDimensions,
+    };
   }, [filteredRawFields, filteredSemanticDimensions, filteredSemanticMetrics]);
 
+  const activeTabItems = GROUP_ORDER[activeTab].reduce((total, groupKey) => total + (groupedItems[groupKey]?.length || 0), 0);
   const totalSemanticObjects = semanticMetrics.length + semanticDimensions.length;
-  const hasAnyAnalysisInputs = rawFields.length > 0 || totalSemanticObjects > 0;
-
   const activeItem = useMemo(() => {
     const current = active?.data?.current;
     if (!current) return null;
@@ -316,196 +308,127 @@ const FieldsPanel = ({ cleanedData }) => {
     return null;
   }, [active]);
 
-  const startPanelDrag = useCallback(
-    (event) => {
-      if (event.button !== 0) return;
-      const panelEl = panelRef.current;
-      if (!panelEl) return;
-      event.preventDefault();
+  const toggleGroup = (group) => {
+    setCollapsedGroups((prev) => ({
+      ...prev,
+      [group]: !prev[group],
+    }));
+  };
 
-      const rect = panelEl.getBoundingClientRect();
-      const viewportWidth = window.innerWidth || rect.width;
-      const viewportHeight = window.innerHeight || rect.height;
-      const margin = 12;
-      const bounds = {
-        minX: margin,
-        minY: margin,
-        maxX: Math.max(margin, viewportWidth - rect.width - margin),
-        maxY: Math.max(margin, viewportHeight - rect.height - margin),
-      };
-
-      const dragSnapshot = {
-        startX: event.clientX,
-        startY: event.clientY,
-        initialX: panelPosition.x,
-        initialY: panelPosition.y,
-        bounds,
-      };
-      dragStateRef.current = dragSnapshot;
-      setIsPanelDragging(true);
-
-      const handlePointerMove = (moveEvent) => {
-        if (!dragStateRef.current) return;
-        moveEvent.preventDefault();
-        const { startX, startY, initialX, initialY, bounds: moveBounds } = dragStateRef.current;
-        const deltaX = moveEvent.clientX - startX;
-        const deltaY = moveEvent.clientY - startY;
-        setPanelPosition({
-          x: clamp(initialX + deltaX, moveBounds.minX, moveBounds.maxX),
-          y: clamp(initialY + deltaY, moveBounds.minY, moveBounds.maxY),
-        });
-      };
-
-      const handlePointerUp = () => {
-        if (dragStateRef.current?.cleanup) {
-          dragStateRef.current.cleanup();
-        }
-        dragStateRef.current = null;
-        setIsPanelDragging(false);
-      };
-
-      window.addEventListener('pointermove', handlePointerMove);
-      window.addEventListener('pointerup', handlePointerUp);
-
-      dragStateRef.current.cleanup = () => {
-        window.removeEventListener('pointermove', handlePointerMove);
-        window.removeEventListener('pointerup', handlePointerUp);
-      };
-    },
-    [panelPosition]
-  );
-
-  useEffect(() => () => {
-    if (dragStateRef.current?.cleanup) {
-      dragStateRef.current.cleanup();
-    }
-  }, []);
-
-  useEffect(() => {
-    const handleResize = () => {
-      const panelEl = panelRef.current;
-      if (!panelEl) return;
-      const rect = panelEl.getBoundingClientRect();
-      const margin = 12;
-      const viewportWidth = window.innerWidth || rect.width;
-      const viewportHeight = window.innerHeight || rect.height;
-      setPanelPosition((prev) => ({
-        x: clamp(prev.x, margin, Math.max(margin, viewportWidth - rect.width - margin)),
-        y: clamp(prev.y, margin, Math.max(margin, viewportHeight - rect.height - margin)),
-      }));
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  if (!hasAnyAnalysisInputs) {
-    return (
-      <div
-        className={`fields-panel fields-panel-empty ${isPanelDragging ? 'is-moving' : ''}`}
-        ref={panelRef}
-        style={{ transform: `translate3d(${panelPosition.x}px, ${panelPosition.y}px, 0)` }}
-      >
-        <div
-          className="fields-panel-header"
-          onPointerDown={startPanelDrag}
-          role="presentation"
-        >
-          <div className="fields-panel-grip" aria-hidden="true">
-            <RxDragHandleDots2 />
-          </div>
-          <div className="fields-panel-title">
-            <h3>Analysis Inputs</h3>
-            <span>0 available</span>
-          </div>
+  const renderEmptyState = () => {
+    if (activeTab === 'business') {
+      return (
+        <div className="fields-empty-state">
+          <strong>No business fields yet.</strong>
+          <span>Semantic metrics and dimensions will appear here when the active dataset provides them.</span>
         </div>
-        <p className="fields-panel-empty-message">
-          Upload or select a dataset to explore raw fields and business definitions.
-        </p>
+      );
+    }
+
+    if (!dataset.length) {
+      return (
+        <div className="fields-empty-state">
+          <strong>No dataset loaded.</strong>
+          <span>Upload or connect a dataset from the Home tab to explore fields here.</span>
+        </div>
+      );
+    }
+
+    return (
+      <div className="fields-empty-state">
+        <strong>No matching fields.</strong>
+        <span>Try a different search or switch tabs to browse other field groups.</span>
       </div>
     );
-  }
+  };
 
   return (
     <>
-      <div
-        ref={panelRef}
-        className={`fields-panel ${isPanelDragging ? 'is-moving' : ''}`}
-        style={{ transform: `translate3d(${panelPosition.x}px, ${panelPosition.y}px, 0)` }}
-      >
-        <div
-          className="fields-panel-header"
-          onPointerDown={startPanelDrag}
-          role="presentation"
-        >
-          <div className="fields-panel-grip" aria-hidden="true">
-            <RxDragHandleDots2 />
-          </div>
+      <div className="fields-panel fields-panel--docked">
+        <div className="fields-panel-header">
           <div className="fields-panel-title">
-            <h3>Analysis Inputs</h3>
-            <span>{rawFields.length} raw fields · {totalSemanticObjects} business definitions</span>
+            <h3>Field Explorer</h3>
+            <span>{rawFields.length} raw fields · {totalSemanticObjects} business fields</span>
           </div>
         </div>
 
         <div className="fields-panel-summary">
-          <span className="fields-panel-summary__chip fields-panel-summary__chip--raw">Dataset columns</span>
-          <span className="fields-panel-summary__chip fields-panel-summary__chip--semantic">Semantic metrics and dimensions</span>
+          <span className="fields-panel-summary__chip fields-panel-summary__chip--raw">
+            Dataset columns
+          </span>
+          <span className="fields-panel-summary__chip fields-panel-summary__chip--semantic">
+            Business definitions
+          </span>
+        </div>
+
+        <div className="fields-tab-strip" role="tablist" aria-label="Field explorer tabs">
+          {FIELD_EXPLORER_TABS.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              role="tab"
+              aria-selected={activeTab === tab.id}
+              className={`fields-tab ${activeTab === tab.id ? 'is-active' : ''}`}
+              onClick={() => setActiveTab(tab.id)}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
 
         <label className="fields-search">
           <AiOutlineSearch className="fields-search-icon" />
           <input
             type="text"
-            placeholder="Search fields and business definitions"
+            placeholder={activeTab === 'raw' ? 'Search raw fields' : 'Search business fields'}
             value={searchTerm}
             onChange={(event) => setSearchTerm(event.target.value)}
-            aria-label="Search fields and business definitions"
+            aria-label={activeTab === 'raw' ? 'Search raw fields' : 'Search business fields'}
           />
+          <span className="fields-search-count">{activeTabItems}</span>
         </label>
 
         <div className="fields-panel-body">
-          {GROUP_ORDER.map((groupKey) => {
-            const items = groupedItems[groupKey];
-            if (!items || items.length === 0) return null;
-            const meta = ANALYSIS_GROUP_META[groupKey];
-            const collapsed = collapsedGroups[groupKey];
+          {activeTabItems > 0 ? (
+            GROUP_ORDER[activeTab].map((groupKey) => {
+              const items = groupedItems[groupKey];
+              if (!items || items.length === 0) return null;
 
-            return (
-              <section className="field-group" key={groupKey}>
-                <button
-                  type="button"
-                  className="field-group-toggle"
-                  onClick={() => toggleGroup(groupKey)}
-                  aria-expanded={!collapsed}
-                >
-                  <span className={`group-icon ${groupKey}`} aria-hidden="true">
-                    {meta.icon}
-                  </span>
-                  <div className="group-copy">
-                    <p className="group-title">{meta.label}</p>
-                    <p className="group-description">{meta.description}</p>
+              const meta = ANALYSIS_GROUP_META[groupKey];
+              const collapsed = collapsedGroups[groupKey];
+
+              return (
+                <section className="field-group" key={groupKey}>
+                  <button
+                    type="button"
+                    className="field-group-toggle"
+                    onClick={() => toggleGroup(groupKey)}
+                    aria-expanded={!collapsed}
+                  >
+                    <span className={`group-icon ${groupKey}`} aria-hidden="true">
+                      {meta.icon}
+                    </span>
+                    <div className="group-copy">
+                      <p className="group-title">{meta.label}</p>
+                      <p className="group-description">{meta.description}</p>
+                    </div>
+                    <span className="group-count" aria-label={`${items.length} items`}>
+                      {items.length}
+                    </span>
+                  </button>
+
+                  <div className={`field-group-list ${collapsed ? 'is-collapsed' : ''}`}>
+                    {items.map((item) => (
+                      <DraggableAnalysisItem key={item.dragId} item={item} />
+                    ))}
                   </div>
-                  <span className="group-count" aria-label={`${items.length} items`}>
-                    {items.length}
-                  </span>
-                </button>
-
-                <div className={`field-group-list ${collapsed ? 'is-collapsed' : ''}`}>
-                  {items.map((item) => (
-                    <DraggableAnalysisItem key={item.dragId} item={item} />
-                  ))}
-                </div>
-              </section>
-            );
-          })}
-
-          {filteredRawFields.length === 0
-            && filteredSemanticMetrics.length === 0
-            && filteredSemanticDimensions.length === 0 && (
-            <div className="fields-empty-state">No analysis inputs match that search.</div>
-          )}
+                </section>
+              );
+            })
+          ) : renderEmptyState()}
         </div>
       </div>
+
       <DragOverlay>
         {activeItem ? (
           <div className="field-row field-row-overlay" title={activeItem.title}>
@@ -515,7 +438,7 @@ const FieldsPanel = ({ cleanedData }) => {
       </DragOverlay>
     </>
   );
-};
+}
 
 FieldsPanel.propTypes = {
   cleanedData: PropTypes.arrayOf(PropTypes.object),

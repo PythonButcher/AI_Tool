@@ -1,225 +1,333 @@
-/* Sidebar.css */
-.sidebar-container {
-    width: 40px; /* Narrower sidebar for a sleek look */
-    padding: 140px 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    height: 70vh;
-    background: none;
-    position: fixed; /* Fix the position for consistency */
-    left: 0; /* Position on the far left */
-    background-color: transparent; /* Transparent background */
-    z-index: 1000; /* Ensure it stays above other elements */
-}
-
-/* Hide the sidebar title for an icon-only design */
-.sidebar-title {
-    display: none;
-}
-
-/* Style for each sidebar button */
-.sidebar-button {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 50px;
-    height: 50px;
-    margin: 10px 0;
-    position: relative;
-    transition: transform 0.2s ease;
-}
-
-.sidebar-button:hover {
-    transform: scale(1.15);
-    cursor: pointer;
-}
-
-/* Distinct colors for each icon */
-.sidebar-button:nth-child(1) .sidebar-button-icon {
-    color: var(--accent-red); /* Tomato */
-}
-.sidebar-button:nth-child(2) .sidebar-button-icon {
-    color: var(--accent-blue); /* SteelBlue */
-}
-.sidebar-button:nth-child(3) .sidebar-button-icon {
-    color: var(--accent-green); /* LimeGreen */
-}
-.sidebar-button:nth-child(4) .sidebar-button-icon {
-    color: var(--accent-green); /* GoldenRod */
-}
-.sidebar-button:nth-child(5) .sidebar-button-icon {
-    color: var(--accent-blue); /* SlateBlue */
-}
-
-/* Fields Panel Toggle Button */
-.sidebar-button:nth-child(6) .sidebar-button-icon {
-    color: var(--accent-green); /* LightSeaGreen */
-}
-
-.sidebar-button:nth-child(7) .sidebar-button-icon {
-    color: var(--accent-blue); /* DodgerBlue */
-}
-
-/* Tooltip styling for button hover */
-.sidebar-button[data-tooltip]:hover::after {
-    content: attr(data-tooltip);
-    position: absolute;
-    left: 60px; /* Align tooltip to the right of the button */
-    background-color: var(--text-secondary);
-    color: var(--text-on-accent);
-    padding: 5px 10px;
-    border-radius: 4px;
-    font-size: 0.8em;
-    white-space: nowrap;
-    box-shadow: 0px 0px 5px var(--shadow-color);
-    z-index: 10;
-    opacity: 1;
-    transition: opacity 0.3s ease;
-}
-
-.cleaning-form-container.hidden {
-    display: none;
-}
-
-.cleaning-form-container.visible {
-    display: block;
-}
-
-/* Tooltip styling for hidden tooltips */
-.tooltip-text {
-    visibility: hidden;
-    width: 120px;
-    background-color: var(--text-primary);
-    color: var(--text-on-accent);
-    text-align: center;
-    border-radius: 4px;
-    padding: 5px 0;
-    position: absolute;
-    z-index: 1;
-    bottom: 125%; /* Position above the button */
-    left: 50%;
-    transform: translateX(-50%);
-    opacity: 0;
-    transition: opacity 0.3s ease;
-}
-
-.sidebar-button:hover .tooltip-text {
-    visibility: visible;
-    opacity: 1;
-}
-
-/* Export dropdown styles */
-.export-dropdown {
-    position: absolute;
-    top: 100%;
-    left: 120%; /* Shift it more to the right */
-    transform: translateX(0); /* Remove centering adjustment */
-    background-color: var(--bg-primary);
-    box-shadow: 0px 4px 8px var(--shadow-color-strong);
-    border-radius: 6px;
-    padding: 10px 0;
-    z-index: 10;
-    width: 150px;
-}
-.export-dropdown {          /* get rid of this block altogether, this just hides it
-  background: transparent;  /* remove white box */
-  border: none;             /* if any border exists */
-  box-shadow: none;         /* remove shadow if present */
-  padding: 0;               /* optional if spacing causes the box */
-}
-
-
-.export-dropdown button {
-    display: block;
-    width: 100%;
-    text-align: left;
-    padding: 10px 15px;
-    background: none;
-    border: none;
-    color: var(--text-primary);
-    font-size: 14px;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-}
-
-.export-dropdown button:hover {
-    background-color: var(--bg-secondary);
-    color: var(--text-primary);
-}
-.sidebar-storyboard-wrapper {
+.workflow-shell {
   position: relative;
+  z-index: 15;
+  display: flex;
+  height: 100%;
+  min-height: 0;
+  border-right: 1px solid color-mix(in srgb, var(--border-color) 96%, transparent);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--accent-white-soft) 72%, transparent), transparent 100%),
+    var(--bg-primary);
 }
 
-.model-choice-menu {
-  position: absolute;
-  left: 50px; /* to the right of the icon */
-  top: 50%;   /* vertically center on the icon */
-  transform: translateY(-50%); /* ensure perfect center alignment */
+.workflow-rail {
+  width: 86px;
   display: flex;
   flex-direction: column;
-  background-color: var(--bg-secondary);
-  padding: 6px;
-  border-radius: 8px;
-  box-shadow: 0 0 8px var(--shadow-color);
-  z-index: 999;
+  gap: 10px;
+  padding: 18px 12px;
+  border-right: 1px solid color-mix(in srgb, var(--border-color) 82%, transparent);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--menu-bar-surface, var(--bg-secondary)) 78%, transparent), transparent 100%),
+    var(--bg-primary);
 }
 
-.sidebar-subbutton {
+.workflow-rail__button {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  padding: 8px 12px;
-  margin: 4px 0;
+  justify-content: center;
+  gap: 8px;
+  min-height: 68px;
+  padding: 12px 8px;
+  border: 1px solid transparent;
+  border-radius: 16px;
+  background: transparent;
+  color: var(--text-secondary);
   cursor: pointer;
-  border-radius: 6px;
-  transition: background-color 0.2s;
+  transition: transform 0.18s ease, border-color 0.18s ease, background-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
 }
 
-.sidebar-subbutton:hover {
-  background-color: var(--border-color);
+.workflow-rail__button:hover {
+  transform: translateY(-1px);
+  border-color: var(--border-color);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--accent-blue-soft) 18%, transparent), transparent 100%),
+    var(--menu-bar-surface, var(--bg-secondary));
+  color: var(--text-primary);
+  box-shadow: 0 10px 18px var(--shadow-color-soft);
 }
 
-.sidebar-subbutton .sidebar-button-icon {
-  font-size: 20px;
-  margin-right: 8px;
+.workflow-rail__button.is-active {
+  border-color: color-mix(in srgb, var(--accent-blue) 22%, var(--border-color));
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--accent-blue-soft) 38%, transparent), transparent 100%),
+    color-mix(in srgb, var(--menu-bar-surface, var(--bg-secondary)) 78%, transparent);
+  color: var(--text-primary);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--accent-white-medium) 30%, transparent);
 }
 
-.sidebar-subbutton[data-tooltip] {
-  position: relative;
+.workflow-rail__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--accent-blue-soft) 16%, transparent);
+  font-size: 1rem;
 }
 
-.sidebar-subbutton[data-tooltip]::after {
-  content: attr(data-tooltip);
-  position: absolute;
-  left: 40px;
-  top: 50%;
-  transform: translateY(-50%);
-  background-color: var(--text-primary);
-  color: var(--text-on-accent);
-  padding: 4px 8px;
-  font-size: 12px;
-  border-radius: 4px;
-  white-space: nowrap;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.2s ease;
-  z-index: 1000;
+.workflow-rail__label {
+  font-size: 0.74rem;
+  font-weight: 700;
+  line-height: 1.15;
+  text-align: center;
 }
 
-.sidebar-subbutton:hover::after {
-  opacity: 1;
-}
-
-.data-choice-menu {
-  position: absolute;
-  left: 50px; /* to the right of the icon */
-  top: 15%;   /* vertically center on the icon */
+.workflow-drawer {
+  width: min(420px, calc(100vw - 110px));
+  min-width: 320px;
   display: flex;
   flex-direction: column;
-  background-color: var(--bg-secondary);
-  padding: 6px;
-  border-radius: 8px;
-  box-shadow: 0 0 8px var(--shadow-color);
-  z-index: 999;
+  min-height: 0;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--accent-white-soft) 72%, transparent), transparent 100%),
+    color-mix(in srgb, var(--bg-primary) 92%, transparent);
+  box-shadow: 16px 0 40px var(--shadow-color-soft);
+}
 
+.workflow-drawer__content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  height: 100%;
+  min-height: 0;
+  padding: 18px 18px 22px;
+  overflow: auto;
+}
+
+.workflow-drawer__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.workflow-drawer__eyebrow {
+  margin: 0 0 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent-blue);
+}
+
+.workflow-drawer__title {
+  margin: 0 0 6px;
+  font-size: 1.35rem;
+  color: var(--text-primary);
+}
+
+.workflow-drawer__description {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.45;
+}
+
+.workflow-drawer__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  background: var(--menu-bar-surface, var(--bg-secondary));
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.workflow-drawer__close:hover {
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+}
+
+.workflow-stat-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.workflow-stat-chip {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--border-color) 92%, transparent);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--accent-white-soft) 34%, transparent), transparent 100%),
+    var(--menu-bar-surface, var(--bg-secondary));
+}
+
+.workflow-stat-chip__value {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.workflow-stat-chip__label {
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.workflow-action-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.workflow-action-grid--compact {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.workflow-action-card,
+.workflow-shortcut {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  min-height: 108px;
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid color-mix(in srgb, var(--border-color) 92%, transparent);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--accent-white-soft) 34%, transparent), transparent 100%),
+    var(--bg-primary);
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.18s ease, border-color 0.18s ease, background-color 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
+}
+
+.workflow-action-card:hover,
+.workflow-shortcut:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--accent-blue) 18%, var(--border-color));
+  box-shadow: 0 12px 22px var(--shadow-color-soft);
+}
+
+.workflow-action-card:disabled,
+.workflow-shortcut:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.workflow-action-card.is-active,
+.workflow-action-card--primary {
+  border-color: color-mix(in srgb, var(--accent-blue) 22%, var(--border-color));
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--accent-blue-soft) 38%, transparent), transparent 100%),
+    var(--bg-secondary);
+}
+
+.workflow-action-card svg,
+.workflow-shortcut__icon {
+  font-size: 1.1rem;
+  color: var(--accent-blue);
+}
+
+.workflow-action-card span,
+.workflow-shortcut__label {
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.workflow-action-card small {
+  color: var(--text-secondary);
+  line-height: 1.45;
+}
+
+.workflow-embedded-panel,
+.workflow-fields-shell {
+  min-height: 0;
+  border-radius: 18px;
+  border: 1px solid color-mix(in srgb, var(--border-color) 92%, transparent);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--accent-white-soft) 28%, transparent), transparent 100%),
+    var(--bg-primary);
+  box-shadow: 0 14px 30px var(--shadow-color-soft);
+  overflow: hidden;
+}
+
+.workflow-embedded-panel {
+  padding: 12px;
+}
+
+.workflow-embedded-panel--export {
+  padding: 14px;
+}
+
+.workflow-fields-shell {
+  display: flex;
+  flex: 1;
+}
+
+.workflow-shortcut-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.workflow-shortcut {
+  align-items: center;
+  justify-content: center;
+  min-height: 94px;
+  text-align: center;
+}
+
+.workflow-phase-note {
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px dashed color-mix(in srgb, var(--accent-blue) 20%, var(--border-color));
+  background: color-mix(in srgb, var(--accent-blue-soft) 16%, transparent);
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+@media (max-width: 1200px) {
+  .workflow-drawer {
+    width: min(360px, calc(100vw - 102px));
+  }
+
+  .workflow-shortcut-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 960px) {
+  .workflow-rail {
+    width: 72px;
+    padding: 12px 8px;
+  }
+
+  .workflow-rail__label {
+    display: none;
+  }
+
+  .workflow-drawer {
+    width: min(340px, calc(100vw - 84px));
+    backdrop-filter: blur(14px);
+    box-shadow: 24px 0 42px var(--shadow-color-strong);
+  }
+}
+
+@media (max-width: 760px) {
+  .workflow-drawer__content {
+    padding: 16px;
+  }
+
+  .workflow-stat-row,
+  .workflow-action-grid,
+  .workflow-action-grid--compact,
+  .workflow-shortcut-grid {
+    grid-template-columns: 1fr;
+  }
 }
