@@ -1,227 +1,71 @@
-# Phase 1 Unified Field System And Workflow Shell Plan
+# Phase 1: Unified Field System and Shell Correction
 
 ## Intent
-Phase 1 is a controlled UI and interaction-model overhaul that moves the product away from a visible `dataset + semantic layer` split and toward a single intelligent field system.
+Phase 1 focuses on the structural and interaction-model shift from a "Dataset + Semantic Layer" split to a "Single Intelligent Field System." The primary goal is to hide the technical distinction between raw data and business logic from the user, while preserving the existing backend execution paths. This phase also addresses critical layout issues in the sidebar and drawer system.
 
-The purpose of this phase is not to replace the existing backend architecture. It is to change how the frontend presents fields, workflows, and layout so users experience one analysis surface instead of choosing between raw and business concepts.
-
-This phase should be executed before visual polish work. The main goal is structural correction:
-
-- unify field discovery
-- remove `Semantic Layer` as a primary UI concept
-- fix the left-rail drawer behavior and layout constraints
-- reset the default application state so the canvas starts clean
-- preserve all existing routing behavior behind the scenes
-
-## Product Direction For This Phase
-The application should now behave as if it has one shared field system:
-
-- some fields are direct source columns
-- some fields are calculated or inferred
-- all of them are presented together as usable fields
-
-Users should not have to decide whether they are using `raw` fields or `business` fields before they can explore data, build charts, create KPI cards, or assemble dashboards.
-
-The semantic resolver remains the backend execution path for calculated business logic, but that distinction becomes implementation detail rather than workflow language.
+## Product Direction
+- **Unified Experience**: Users should browse a single field catalog.
+- **Hidden Complexity**: The distinction between "Raw" and "Semantic" is an implementation detail (routing), not a user-facing category.
+- **Intelligent Defaults**: The system automatically chooses the best execution path based on the field type.
+- **Calm Canvas**: The application starts in a neutral state to reduce initial cognitive load.
 
 ## Planned Interaction Changes
 
-### 1. Unified field system in the explorer
-The existing field explorer currently exposes a visible split between `Raw Fields` and `Business Fields`. That split should be removed from the primary interaction model.
+### 1. Unified Field Explorer
+The `FieldsPanel` will be refactored to remove the "Raw" vs "Business" tab split.
+- **Single List**: All fields (raw columns and semantic objects) will coexist in a single searchable list.
+- **Intelligent Grouping**: Fields will be grouped by their functional role:
+  - **Measures**: Numeric raw columns and semantic metrics.
+  - **Dimensions**: Categorical raw columns and semantic dimensions.
+  - **Time**: Temporal raw columns.
+  - **Calculated**: User-defined or complex inferred fields.
+- **Metadata Refinement**: Semantic fields will be distinguished by subtle icons or "Intelligent" labels rather than being in a separate tab.
 
-Planned behavior:
+### 2. Removal of "Semantic Layer" UI Concept
+- **Language Shift**: References to "Semantic Layer" or "Business Definitions" in the primary workflow will be replaced with "Calculated Fields" or "Field Intelligence."
+- **Workflow Integration**: The "Business" tab in the left rail will be renamed or integrated into a "Field Management" flow that feels like part of the core data exploration.
 
-- replace the current tab split with one unified field list
-- reorganize items under user-facing groups such as `Measures`, `Dimensions`, `Calculated Fields`, and `Time` where appropriate
-- rename semantic metrics into field language so they read as intelligent measures rather than a second system
-- allow search, drag-and-drop, and quick actions to operate across one combined list
-- keep field metadata useful, but reduce obvious source-language that tells users they are switching systems
+### 3. Adaptive Drawer and Sidebar
+The slide-out drawer (`SideBar.jsx` / `SideBar.css`) will be redesigned for better content safety.
+- **Dynamic Sizing**: The drawer will use `min-content` or flexible widths to prevent label truncation.
+- **Overflow Handling**: Improved internal scrolling and padding to ensure all controls (especially in `FieldsPanel` and editors) are accessible.
+- **Alignment**: Ensure the drawer-to-canvas transition is seamless and doesn't overlap or obscure the main workspace.
 
-Expected result:
+### 4. Clean Application State
+- **Empty Canvas**: On initial load or hard reset, no windows (Charts, KPI cards) will be open.
+- **Intentional Launch**: Windows only appear as a direct result of user actions (drag-and-drop or clicking "Add").
 
-- users browse one field catalog
-- some fields may show subtle intelligence indicators such as `Calculated`, `Inferred`, or `Custom`
-- the UI explains field usefulness without exposing backend architecture
+### 5. Invisible Routing Logic
+- **Drag Payload Preservation**: The `dnd-kit` payloads will continue to carry their `source` (raw vs semantic) to allow the `SmartChartWindow` to route requests correctly.
+- **Automatic Mode Switching**: `SmartChartWindow` will automatically toggle its `dataSourceMode` based on the first field dropped into it, removing the manual toggle.
 
-### 2. Removal of `Semantic Layer` as a visible workflow concept
-The current `Business` workflow and `Semantic Layer` language should no longer sit at the center of the user experience.
+## Affected Components and Files
 
-Planned behavior:
+### Core Shell
+- `frontend/frontend/src/components/layout/SideBar.jsx` & `.css`: Refactor drawer width and transition logic.
+- `frontend/frontend/src/components/layout/CanvasContainer.jsx` & `.css`: Update layout constraints.
+- `frontend/frontend/src/App.jsx`: Modify initial state and reset logic.
 
-- remove `Semantic Layer` terminology from the main field exploration flow
-- remove or rename `Business` entry points that frame the feature as a separate layer
-- reposition metric management as field editing or calculated field management
-- update editor copy so users are editing a field definition, not entering a separate semantic subsystem
-- treat inferred and custom logic as field intelligence states, not separate object families in the shell
+### Field Explorer
+- `frontend/frontend/src/components/insights/FieldsPanel.jsx` & `.css`: 
+  - Remove `FIELD_EXPLORER_TABS`.
+  - Refactor `groupedItems` useMemo to merge raw and semantic fields.
+  - Update `ANALYSIS_GROUP_META` for unified naming.
+- `frontend/frontend/src/utils/semanticObjectUtils.js`: Ensure normalization supports unified listing.
 
-Expected result:
+### Interaction Logic
+- `frontend/frontend/src/features/charts/SmartChartWindow.jsx`:
+  - Hide the "Raw/Semantic" mode toggle in the toolbar.
+  - Implement auto-mode detection on drop.
+  - Update placeholder text to be source-agnostic.
 
-- users still benefit from resolver-backed definitions
-- users do not mentally model the product as having a raw mode and a semantic mode
-- semantic objects become intelligent fields inside a single analysis environment
+## What is NOT Changing
+- **Backend Architecture**: All API endpoints (`/api/semantic-metrics/resolve`, etc.) remain identical.
+- **Semantic Resolver**: The logic for calculating business metrics is preserved.
+- **Dataset Ingestion**: The raw data pipeline remains "Dataset-First."
+- **Data Contracts**: The structure of the semantic model and normalized dataset rows remains the same.
 
-### 3. Slide-out drawer and sidebar positioning correction
-The workflow drawer currently uses rigid width constraints that can truncate labels, compress controls, and feel visually disconnected from the canvas.
-
-Planned behavior:
-
-- redesign drawer sizing so it responds to content density instead of relying on a single narrow width
-- improve width constraints, internal spacing, and overflow rules so long labels and action rows do not clip
-- align the drawer edge and canvas relationship more deliberately so the shell feels intentional rather than layered on top
-- make the drawer degrade gracefully at smaller widths through stacking, wrapping, or section compaction instead of clipping
-- ensure embedded panels such as the field explorer and field editor can scroll internally without hiding important controls
-
-Expected result:
-
-- the left rail remains the main workflow anchor
-- the drawer feels like a stable analysis surface
-- content remains readable on smaller laptop widths
-
-### 4. Clean initial application state
-The application should stop opening analysis surfaces too aggressively on load or reset.
-
-Planned behavior:
-
-- no floating windows open by default on a clean application load
-- no chart windows, workflow outputs, or preview windows should appear unless the user opened them
-- the canvas should begin empty and readable
-- reset flows should return to that same calm default state
-- persisted local window state should not recreate a cluttered first impression after reset
-
-Expected result:
-
-- the user lands on a clean workspace
-- the rail and canvas communicate where to begin
-- the product feels deliberate rather than pre-populated
-
-### 5. Preserve drag-and-drop with invisible routing
-The drag-and-drop model is still a strong interaction pattern and should remain intact.
-
-Planned behavior:
-
-- preserve existing drag contracts for source columns and intelligent fields
-- keep automatic routing behavior:
-  - calculated or inferred fields continue to resolve through `POST /api/semantic-metrics/resolve`
-  - direct source columns continue to use dataset aggregation
-- keep charting, KPI cards, and dashboard composition compatible with the current routing behavior
-- hide the routing distinction from the user so they only think in terms of using fields
-
-Expected result:
-
-- users drag fields exactly as before
-- the system chooses the correct execution path automatically
-- no new routing toggle, mode switch, or semantic/explore split is introduced
-
-## Planned UI Behavior Changes
-
-### Field discovery
-- The field explorer becomes a single searchable field system instead of a tabbed raw-versus-business chooser.
-- Measures, dimensions, time fields, and calculated fields are grouped for readability, but all live in one explorer.
-- Field cards should communicate purpose and intelligence level without overwhelming the user with badges or backend terminology.
-
-### Field editing
-- Metric editing evolves into field editing or calculated field editing.
-- Inferred and custom definitions remain supported, but the editing surface should be framed around field behavior, not semantic system management.
-
-### Workflow shell
-- The left workflow rail remains, but drawer layout behavior becomes more adaptive and content-safe.
-- Drawers should feel docked to the shell rather than like narrow overlays that happen to slide out.
-
-### Canvas state
-- Initial load and reset return the app to an empty, focused canvas.
-- Windows, charts, drawers, and workflows should open intentionally from user action rather than by default.
-
-## Expected Components And Files Affected
-These are the expected primary frontend touchpoints for Phase 1 planning. This list is intentionally concrete so later implementation can be scoped cleanly.
-
-### Primary shell and state management
-- `frontend/frontend/src/App.jsx`
-- `frontend/frontend/src/App.css`
-- `frontend/frontend/src/components/layout/SideBar.jsx`
-- `frontend/frontend/src/components/layout/SideBar.css`
-- `frontend/frontend/src/components/layout/CanvasContainer.jsx`
-- `frontend/frontend/src/components/layout/CanvasContainer.css`
-- `frontend/frontend/src/context/WindowContext.jsx`
-
-### Unified field system surfaces
-- `frontend/frontend/src/components/insights/FieldsPanel.jsx`
-- `frontend/frontend/src/components/insights/FieldsPanel.css`
-- `frontend/frontend/src/utils/semanticObjectUtils.js`
-- `frontend/frontend/src/utils/semanticModelUtils.js`
-- `frontend/frontend/src/context/DataContext.jsx`
-
-### Field intelligence and editing surfaces
-- `frontend/frontend/src/components/insights/SemanticModelPanel.jsx`
-- `frontend/frontend/src/components/insights/SemanticModelPanel.css`
-- `frontend/frontend/src/features/semantic/SemanticMetricEditor.jsx`
-- `frontend/frontend/src/features/semantic/SemanticMetricEditor.css`
-
-### Visualization and dashboard integration surfaces that must remain compatible
-- `frontend/frontend/src/features/charts/SmartChartWindow.jsx`
-- `frontend/frontend/src/features/charts/SmartChartWindow.css`
-- `frontend/frontend/src/features/dashboard/KpiCardWindow.jsx`
-- `frontend/frontend/src/features/dashboard/KpiCardWindow.css`
-- `frontend/frontend/src/features/dashboard/DashboardFilterBar.jsx`
-- `frontend/frontend/src/features/dashboard/DashboardFilterBar.css`
-
-### Backend contracts that remain in place and must continue to be consumed
-- `backend/routes/semantic_metrics.py`
-- `backend/services/metric_resolver.py`
-- `backend/routes/semantic_model.py`
-
-These backend files are listed as integration dependencies, not rewrite targets.
-
-## What Is Not Changing In Phase 1
-This phase is explicitly not a backend rewrite.
-
-The following remain in place:
-
-- dataset-first ingestion and normalization
-- the centralized semantic resolver at `POST /api/semantic-metrics/resolve`
-- raw dataset aggregation for direct source fields
-- existing chart rendering stack
-- existing KPI card capability
-- existing dashboard capability
-- existing AI flows and workflow outputs
-- existing drag-and-drop foundation and routing contracts
-- additive semantic model behavior in the backend
-
-This phase changes presentation and interaction model, not the execution architecture.
-
-## Risks And Edge Cases
-
-### 1. Backward compatibility risk in drag payload handling
-The current drag-and-drop system already distinguishes source fields and semantic objects. Unifying the explorer must not break those payload contracts or any drop targets already used by charts, KPI cards, dashboards, and workflow windows.
-
-### 2. Copy and labeling risk during the rename away from semantic language
-Removing `Semantic Layer` wording from the UI is straightforward, but the replacement labels must remain accurate. Terms such as `Calculated Field`, `Inferred Field`, and `Measure` need to be consistent across the explorer, chart builders, KPI cards, and editor surfaces.
-
-### 3. Smaller-screen drawer behavior
-The current drawer already shows constraint problems on narrower widths. Any Phase 1 refactor needs explicit handling for:
-
-- long field names
-- quick action rows with multiple buttons
-- embedded editors or filters inside the drawer
-- laptop-width layouts where the drawer and canvas compete for space
-
-### 4. Empty or low-semantic datasets
-Some datasets may infer few or no intelligent fields. The unified explorer still needs to feel coherent when only source columns are available, without exposing missing-system language or making the user feel like part of the product failed.
-
-### 5. Persisted local state and reset behavior
-`WindowContext.jsx` and local storage currently preserve dashboard and window state. Phase 1 needs a clear reset/default-state rule so a deliberate reset can always return the app to a clean canvas without breaking legitimate persistence elsewhere.
-
-### 6. Existing workflow naming
-The product currently uses labels such as `Business`, `Business Definitions`, and `semantic` across shell copy. Removing those from primary workflows will create transitional risk unless the naming model is updated consistently in field explorer text, chart empty states, KPI prompts, and dashboard filters.
-
-## Phase 1 Boundary
-Phase 1 should stop once the interaction model is structurally correct.
-
-That means this phase should deliver:
-
-- one intelligent field explorer
-- no primary raw-versus-business split in the UI
-- corrected drawer behavior
-- calm initial canvas behavior
-- preserved invisible routing
-
-This phase should not attempt full visual restyling, chart polish, or dashboard aesthetic modernization. Those belong in Phase 2 after the structural model is stable.
+## Risks and Edge Cases
+- **Naming Collisions**: If a raw field has the same name as a semantic metric. *Strategy*: Use icons to distinguish and allow the semantic version to take precedence or show both with source indicators.
+- **Payload Ambiguity**: Ensuring existing drop zones in Dashboards and Charts still recognize both payload types.
+- **Performance**: Rendering a significantly larger unified list in the `FieldsPanel`. *Strategy*: Use React virtualization or optimized memoization if the field count exceeds ~200.
