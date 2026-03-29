@@ -336,23 +336,6 @@ const SmartChartWindow = ({
           </button>
         ))}
       </div>
-      
-      <div className="data-source-modes">
-        <button
-          type="button"
-          onClick={() => handleModeChange('raw')}
-          className={`mode-btn ${dataSourceMode === 'raw' ? 'active-raw' : ''}`}
-        >
-          Raw
-        </button>
-        <button
-          type="button"
-          onClick={() => handleModeChange('semantic')}
-          className={`mode-btn ${dataSourceMode === 'semantic' ? 'active-semantic' : ''}`}
-        >
-          Semantic
-        </button>
-      </div>
     </div>
   );
 
@@ -420,22 +403,13 @@ const SmartChartWindow = ({
       <div className="chart-content-area">
         {!isEmpty && <ChartComponent chartType={type} chartData={chartData} />}
 
-        {isEmpty && dataSourceMode === 'raw' && !isDraggingRawField && !isDraggingSemanticObject && (
+        {isEmpty && !isDraggingRawField && !isDraggingSemanticObject && (
           <div className="chart-placeholder">
             <IoAddCircleOutline size={48} />
             <p>
               {activeDashboardFilterCount > 0
                 ? 'Current filters returned no data. Adjust filters or drop fields.'
-                : 'Drag raw fields here to build a chart'}
-            </p>
-          </div>
-        )}
-
-        {isEmpty && dataSourceMode === 'semantic' && !isDraggingSemanticObject && (
-          <div className="chart-placeholder">
-            <IoAddCircleOutline size={42} />
-            <p>
-              Drop a business metric and optional dimension to build a chart from semantic definitions.
+                : 'Drag any field here from the explorer to start building your chart.'}
             </p>
           </div>
         )}

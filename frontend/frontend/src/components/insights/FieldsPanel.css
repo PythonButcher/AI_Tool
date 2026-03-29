@@ -245,11 +245,26 @@
   background: color-mix(in srgb, var(--accent-white-soft) 46%, transparent);
 }
 
-.group-icon.semantic_metric { color: var(--field-color-semantic); }
-.group-icon.semantic_dimension { color: var(--field-color-semantic-dimension); }
-.group-icon.numeric { color: var(--field-color-numeric); }
-.group-icon.temporal { color: var(--field-color-temporal); }
-.group-icon.categorical { color: var(--field-color-categorical); }
+.group-icon.measures { color: var(--field-color-numeric); }
+.group-icon.dimensions { color: var(--field-color-categorical); }
+.group-icon.time { color: var(--field-color-temporal); }
+
+.intelligent-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  margin-left: 4px;
+  border-radius: 4px;
+  background: var(--accent-green, #237804);
+  color: white;
+  font-size: 0.75rem;
+  line-height: 1;
+  cursor: help;
+  vertical-align: middle;
+  box-shadow: 0 2px 4px var(--shadow-color-soft);
+}
 
 .group-copy {
   flex: 1;

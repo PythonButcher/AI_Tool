@@ -29,7 +29,7 @@ const workflowItems = [
   { id: 'data', label: 'Data', icon: <FaDatabase /> },
   { id: 'explore', label: 'Explore', icon: <FaColumns /> },
   { id: 'visualise', label: 'Visualise', icon: <FaChartBar /> },
-  { id: 'business', label: 'Business', icon: <FaBriefcase /> },
+  { id: 'business', label: 'Intelligence', icon: <FaBrain /> },
   { id: 'ai', label: 'AI', icon: <FaRobot /> },
   { id: 'dashboard', label: 'Dashboard', icon: <FaTachometerAlt /> },
   { id: 'whiteboard', label: 'Whiteboard', icon: <FaPen /> },
@@ -409,9 +409,9 @@ function SideBar({
       return (
         <>
           <DrawerHeader
-            eyebrow="Workflow"
-            title="Business"
-            description="Semantic definitions now drive charts, KPIs, filters, and metric management without removing raw dataset workflows."
+            eyebrow="Intelligence"
+            title="Field Intelligence"
+            description="Advanced field definitions, calculated metrics, and semantic mappings that power your automated insights."
             onClose={() => onWorkflowSelect('business')}
           />
 

@@ -113,13 +113,6 @@ function AppContent() {
   useLoadRawData(showRawViewer, rawUploadFile, setFullData);
 
   useEffect(() => {
-    if (uploadedData) {
-      setShowChartWindow(true);
-      setShowDataPreview(true);
-    }
-  }, [uploadedData]);
-
-  useEffect(() => {
     if (pipelineResults?.ai_report?.status === 'completed' || pipelineResults?.ai_report?.status === 'success') {
       setAiReportReady(true);
     }
@@ -345,13 +338,19 @@ function AppContent() {
 
       if (dashboardChart) {
         const newMapping = { ...(dashboardChart.mapping || {}), [axisLabel]: fieldName };
-        updateDashboardItem(targetChartId, { mapping: newMapping });
+        updateDashboardItem(targetChartId, {
+          dataSourceMode: 'raw',
+          mapping: newMapping,
+        });
         return;
       }
 
       if (chart) {
         const newMapping = { ...chart.mapping, [axisLabel]: fieldName };
-        updateChart(targetChartId, { mapping: newMapping });
+        updateChart(targetChartId, {
+          dataSourceMode: 'raw',
+          mapping: newMapping,
+        });
       }
       return;
     }

@@ -21,51 +21,25 @@ import {
 } from '../../utils/semanticObjectUtils';
 import './FieldsPanel.css';
 
-const FIELD_EXPLORER_TABS = [
-  { id: 'raw', label: 'Raw Fields' },
-  { id: 'business', label: 'Business Fields' },
-];
-
-const BUSINESS_FILTERS = [
-  { id: 'all', label: 'All' },
-  { id: 'metrics', label: 'Metrics' },
-  { id: 'dimensions', label: 'Dimensions' },
-  { id: 'custom', label: 'Custom' },
-  { id: 'inferred', label: 'Inferred' },
-];
-
 const ANALYSIS_GROUP_META = {
-  semantic_metric: {
-    label: 'Business Metrics',
-    icon: <AiOutlineFundProjectionScreen />,
-    description: 'Reusable measures for charts, KPIs, and monitoring',
-  },
-  semantic_dimension: {
-    label: 'Business Dimensions',
-    icon: <AiOutlineTag />,
-    description: 'Reusable groupings for charts, filters, and drill-downs',
-  },
-  numeric: {
+  measures: {
     label: 'Measures',
     icon: <AiOutlineNumber />,
-    description: 'Numeric source columns',
+    description: 'Numeric columns and business metrics',
   },
-  temporal: {
+  dimensions: {
+    label: 'Dimensions',
+    icon: <AiOutlineTag />,
+    description: 'Categorical columns and business groupings',
+  },
+  time: {
     label: 'Time',
     icon: <AiOutlineCalendar />,
     description: 'Date and time columns',
   },
-  categorical: {
-    label: 'Categories',
-    icon: <AiOutlineTag />,
-    description: 'Labels, names, and string fields',
-  },
 };
 
-const GROUP_ORDER = {
-  raw: ['numeric', 'temporal', 'categorical'],
-  business: ['semantic_metric', 'semantic_dimension'],
-};
+const UNIFIED_GROUP_ORDER = ['measures', 'dimensions', 'time'];
 
 const inferFieldType = (value) => {
   if (value === null || value === undefined) return 'categorical';
@@ -257,7 +231,14 @@ const AnalysisRowContent = ({ item, actions }) => (
     <span className={`field-type-marker ${item.type}`} aria-hidden="true" />
     <div className="field-row-main">
       <div className="field-row-heading">
-        <span className="field-row-label">{item.label}</span>
+        <span className="field-row-label">
+          {item.label}
+          {item.source === 'semantic' && (
+            <span className="intelligent-badge" title="Powered by Field Intelligence">
+              ★
+            </span>
+          )}
+        </span>
       </div>
       {item.subtitle ? <span className="field-row-subtitle">{item.subtitle}</span> : null}
       {item.description && item.description !== item.subtitle ? (
@@ -373,15 +354,11 @@ function FieldsPanel({
   const activeDataset = useActiveDataset();
   const semanticModel = useSemanticModel();
   const { active } = useDndContext();
-  const [activeTab, setActiveTab] = useState('raw');
   const [searchTerm, setSearchTerm] = useState('');
-  const [businessFilter, setBusinessFilter] = useState('all');
   const [collapsedGroups, setCollapsedGroups] = useState({
-    semantic_metric: false,
-    semantic_dimension: false,
-    numeric: false,
-    temporal: false,
-    categorical: false,
+    measures: false,
+    dimensions: false,
+    time: false,
   });
 
   const dataset = useMemo(() => {
@@ -463,56 +440,44 @@ function FieldsPanel({
 
   const filteredSemanticMetrics = useMemo(() => {
     const query = searchTerm.toLowerCase();
-    return semanticMetrics.filter((metric) => {
-      if (searchTerm && !metric.searchText.includes(query)) {
-        return false;
-      }
-      if (businessFilter === 'metrics') return true;
-      if (businessFilter === 'custom') return Boolean(metric.is_user_defined);
-      if (businessFilter === 'inferred') return Boolean(metric.is_inferred);
-      if (businessFilter === 'dimensions') return false;
-      return true;
-    });
-  }, [businessFilter, searchTerm, semanticMetrics]);
+    return semanticMetrics.filter((metric) => !searchTerm || metric.searchText.includes(query));
+  }, [searchTerm, semanticMetrics]);
 
   const filteredSemanticDimensions = useMemo(() => {
     const query = searchTerm.toLowerCase();
-    return semanticDimensions.filter((dimension) => {
-      if (searchTerm && !dimension.searchText.includes(query)) {
-        return false;
-      }
-      if (businessFilter === 'dimensions') return true;
-      if (businessFilter === 'custom') return false;
-      if (businessFilter === 'metrics') return false;
-      if (businessFilter === 'inferred') return true;
-      return true;
-    });
-  }, [businessFilter, searchTerm, semanticDimensions]);
+    return semanticDimensions.filter((dimension) => !searchTerm || dimension.searchText.includes(query));
+  }, [searchTerm, semanticDimensions]);
 
   const groupedItems = useMemo(() => {
-    const groupedRaw = filteredRawFields.reduce(
-      (acc, field) => {
-        const bucket = acc[field.type] ?? acc.categorical;
-        bucket.push(field);
-        return acc;
-      },
-      {
-        numeric: [],
-        temporal: [],
-        categorical: [],
-      }
-    );
-
-    return {
-      ...groupedRaw,
-      semantic_metric: filteredSemanticMetrics,
-      semantic_dimension: filteredSemanticDimensions,
+    const groups = {
+      measures: [],
+      dimensions: [],
+      time: [],
     };
+
+    filteredRawFields.forEach((field) => {
+      if (field.type === 'numeric') groups.measures.push(field);
+      else if (field.type === 'temporal') groups.time.push(field);
+      else groups.dimensions.push(field);
+    });
+
+    filteredSemanticMetrics.forEach((metric) => {
+      groups.measures.push(metric);
+    });
+
+    filteredSemanticDimensions.forEach((dimension) => {
+      if (dimension.type === 'temporal') groups.time.push(dimension);
+      else groups.dimensions.push(dimension);
+    });
+
+    return groups;
   }, [filteredRawFields, filteredSemanticDimensions, filteredSemanticMetrics]);
 
-  const activeTabItems = GROUP_ORDER[activeTab]
+  const totalFilteredCount = UNIFIED_GROUP_ORDER
     .reduce((total, groupKey) => total + (groupedItems[groupKey]?.length || 0), 0);
+
   const totalSemanticObjects = semanticMetrics.length + semanticDimensions.length;
+
   const activeItem = useMemo(() => {
     const current = active?.data?.current;
     if (!current) return null;
@@ -529,15 +494,6 @@ function FieldsPanel({
   };
 
   const renderEmptyState = () => {
-    if (activeTab === 'business') {
-      return (
-        <div className="fields-empty-state">
-          <strong>No business fields yet.</strong>
-          <span>Semantic metrics and dimensions appear here as soon as the active dataset has a semantic model.</span>
-        </div>
-      );
-    }
-
     if (!dataset.length) {
       return (
         <div className="fields-empty-state">
@@ -550,31 +506,10 @@ function FieldsPanel({
     return (
       <div className="fields-empty-state">
         <strong>No matching fields.</strong>
-        <span>Try a different search or switch tabs to browse other field groups.</span>
+        <span>Try a different search term to browse your field catalog.</span>
       </div>
     );
   };
-
-  const renderBusinessToolbar = () => (
-    <div className="fields-business-toolbar">
-      <div className="fields-business-toolbar__copy">
-        <strong>Business definitions</strong>
-        <span>Drag them into windows or use quick actions for charts, KPIs, filters, and metric editing.</span>
-      </div>
-      <div className="fields-filter-pills" role="tablist" aria-label="Business field filters">
-        {BUSINESS_FILTERS.map((filter) => (
-          <button
-            key={filter.id}
-            type="button"
-            className={`fields-filter-pill ${businessFilter === filter.id ? 'is-active' : ''}`}
-            onClick={() => setBusinessFilter(filter.id)}
-          >
-            {filter.label}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
 
   return (
     <>
@@ -591,42 +526,25 @@ function FieldsPanel({
             Dataset columns
           </span>
           <span className="fields-panel-summary__chip fields-panel-summary__chip--semantic">
-            Semantic definitions
+            ★ Field Intelligence
           </span>
-        </div>
-
-        <div className="fields-tab-strip" role="tablist" aria-label="Field explorer tabs">
-          {FIELD_EXPLORER_TABS.map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              role="tab"
-              aria-selected={activeTab === tab.id}
-              className={`fields-tab ${activeTab === tab.id ? 'is-active' : ''}`}
-              onClick={() => setActiveTab(tab.id)}
-            >
-              {tab.label}
-            </button>
-          ))}
         </div>
 
         <label className="fields-search">
           <AiOutlineSearch className="fields-search-icon" />
           <input
             type="text"
-            placeholder={activeTab === 'raw' ? 'Search raw fields' : 'Search business fields, formulas, or descriptions'}
+            placeholder="Search all fields, metrics, or groupings"
             value={searchTerm}
             onChange={(event) => setSearchTerm(event.target.value)}
-            aria-label={activeTab === 'raw' ? 'Search raw fields' : 'Search business fields'}
+            aria-label="Search fields"
           />
-          <span className="fields-search-count">{activeTabItems}</span>
+          <span className="fields-search-count">{totalFilteredCount}</span>
         </label>
 
-        {activeTab === 'business' ? renderBusinessToolbar() : null}
-
         <div className="fields-panel-body">
-          {activeTabItems > 0 ? (
-            GROUP_ORDER[activeTab].map((groupKey) => {
+          {totalFilteredCount > 0 ? (
+            UNIFIED_GROUP_ORDER.map((groupKey) => {
               const items = groupedItems[groupKey];
               if (!items || items.length === 0) return null;
 
