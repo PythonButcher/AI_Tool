@@ -117,7 +117,7 @@ function MenuBar({
   onHeightChange,
 }) {
   const [activeSurface, setActiveSurface] = useState(null);
-  const [isRibbonCollapsed, setIsRibbonCollapsed] = useState(false);
+  const [isRibbonCollapsed, setIsRibbonCollapsed] = useState(true);
   const { theme, toggleTheme } = useContext(ThemeContext);
   const barRef = useRef(null);
 

@@ -106,7 +106,7 @@ function AppContent() {
   const [showMachineLearning, setShowMachineLearning] = useState(false);
   const [isSnowing, setIsSnowing] = useState(false);
   const [activeRibbonTab, setActiveRibbonTab] = useState('Home');
-  const [activeWorkflow, setActiveWorkflow] = useState('data');
+  const [activeWorkflow, setActiveWorkflow] = useState(null);
   const [aiChatOpenRequestKey, setAiChatOpenRequestKey] = useState(0);
   const [menuBarHeight, setMenuBarHeight] = useState(64);
 
