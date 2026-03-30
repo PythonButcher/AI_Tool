@@ -3,9 +3,9 @@
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: #ffffff;
-  color: #1a1a1a;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
   position: relative;
   overflow: hidden;
 }
@@ -20,17 +20,18 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 16px;
-  background: #fcfcfc;
-  border-bottom: 1px solid #f0f0f0;
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-primary);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .kpi-card-window__eyebrow {
   font-size: 0.65rem;
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
   text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: #8c8c8c;
+  letter-spacing: 0.08em;
+  color: var(--text-secondary);
+  opacity: 0.8;
 }
 
 .kpi-card-settings-toggle {
@@ -49,12 +50,12 @@
 }
 
 .kpi-card-window__toolbar {
-  padding: 12px 16px;
-  background: #f9f9f9;
-  border-bottom: 1px solid #f0f0f0;
+  padding: var(--space-3);
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
   animation: slideDown 0.2s ease-out;
 }
 
@@ -109,18 +110,19 @@
 }
 
 .kpi-card-window__value {
-  font-size: 2.5rem;
-  font-weight: 700;
-  color: #000;
-  letter-spacing: -0.02em;
+  font-size: 2.75rem;
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+  letter-spacing: -0.03em;
+  line-height: 1.1;
 }
 
 .kpi-trend {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 0.9rem;
-  font-weight: 600;
+  gap: var(--space-1);
+  font-size: 0.95rem;
+  font-weight: var(--font-weight-semibold);
 }
 
 .kpi-trend__icon {
@@ -128,9 +130,9 @@
   align-items: center;
 }
 
-.kpi-trend.is-positive { color: #237804; }
-.kpi-trend.is-negative { color: #a8071a; }
-.kpi-trend.is-neutral { color: #595959; }
+.kpi-trend.is-positive { color: var(--accent-green); }
+.kpi-trend.is-negative { color: var(--accent-red); }
+.kpi-trend.is-neutral { color: var(--text-secondary); }
 
 .kpi-trend__label {
   font-weight: 400;
@@ -190,10 +192,10 @@
 }
 
 .kpi-card-window__status--error {
-  color: #a8071a;
+  color: var(--accent-red);
   font-size: 0.85rem;
-  padding: 12px;
-  background: #fff1f0;
-  border-radius: 6px;
-  border: 1px solid #ffa39e;
+  padding: var(--space-3);
+  background: var(--accent-red-soft);
+  border-radius: 8px;
+  border: 1px solid var(--accent-red);
 }
