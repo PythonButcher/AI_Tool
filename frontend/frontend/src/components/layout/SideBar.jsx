@@ -27,7 +27,6 @@ import './SideBar.css';
 
 const workflowItems = [
   { id: 'data', label: 'Data', icon: <FaDatabase /> },
-  { id: 'explore', label: 'Explore', icon: <FaColumns /> },
   { id: 'visualise', label: 'Visualise', icon: <FaChartBar /> },
   { id: 'business', label: 'Intelligence', icon: <FaBrain /> },
   { id: 'ai', label: 'AI', icon: <FaRobot /> },
@@ -308,52 +307,6 @@ function SideBar({
       );
     }
 
-    if (activeWorkflow === 'explore') {
-      return (
-        <>
-          <DrawerHeader
-            eyebrow="Workflow"
-            title="Explore"
-            description="Browse raw and business fields, then drag them straight into charts, KPIs, and dashboards."
-            onClose={() => onWorkflowSelect('explore')}
-          />
-
-          <div className="workflow-stat-row">
-            <StatChip label="Raw Fields" value={columnCount} />
-            <StatChip label="Metrics" value={semanticMetricCount} />
-            <StatChip label="Dimensions" value={semanticDimensionCount} />
-          </div>
-
-          <div className="workflow-action-grid workflow-action-grid--compact">
-            <button type="button" className="workflow-action-card" onClick={() => setOpenDataFilter(true)}>
-              <FaFilter />
-              <span>Filter Dataset</span>
-              <small>Open the existing filter drawer.</small>
-            </button>
-
-            <button type="button" className="workflow-action-card" onClick={() => {
-              setShowDataPreview(true);
-              restoreWindow('dataPreview');
-            }}>
-              <FaTable />
-              <span>Preview Rows</span>
-              <small>Keep one-click access to the current data preview.</small>
-            </button>
-          </div>
-
-          <div className="workflow-fields-shell">
-            <FieldsPanel
-              cleanedData={datasetRows}
-              onCreateSemanticChart={handleCreateSemanticChart}
-              onCreateSemanticKpi={handleCreateSemanticKpi}
-              onEditSemanticMetric={(metric) => handleOpenSemanticEditor({ metricId: metric?.id })}
-              onAddDashboardFilter={handleAddSemanticFilter}
-            />
-          </div>
-        </>
-      );
-    }
-
     if (activeWorkflow === 'visualise') {
       return (
         <>
@@ -375,12 +328,6 @@ function SideBar({
               <FaChartBar />
               <span>Chart Gallery</span>
               <small>Open the existing chart selection modal.</small>
-            </button>
-
-            <button type="button" className="workflow-action-card" onClick={() => onWorkflowSelect('explore')}>
-              <FaColumns />
-              <span>Open Field Explorer</span>
-              <small>Jump back to drag raw or business fields.</small>
             </button>
           </div>
 
