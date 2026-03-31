@@ -245,11 +245,26 @@
   background: color-mix(in srgb, var(--accent-white-soft) 46%, transparent);
 }
 
-.group-icon.semantic_metric { color: var(--field-color-semantic); }
-.group-icon.semantic_dimension { color: var(--field-color-semantic-dimension); }
-.group-icon.numeric { color: var(--field-color-numeric); }
-.group-icon.temporal { color: var(--field-color-temporal); }
-.group-icon.categorical { color: var(--field-color-categorical); }
+.group-icon.measures { color: var(--field-color-numeric); }
+.group-icon.dimensions { color: var(--field-color-categorical); }
+.group-icon.time { color: var(--field-color-temporal); }
+
+.intelligent-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  margin-left: 4px;
+  border-radius: 4px;
+  background: var(--accent-green, #237804);
+  color: white;
+  font-size: 0.75rem;
+  line-height: 1;
+  cursor: help;
+  vertical-align: middle;
+  box-shadow: 0 2px 4px var(--shadow-color-soft);
+}
 
 .group-copy {
   flex: 1;
@@ -296,133 +311,42 @@
 
 .field-row {
   display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 12px;
-  border-radius: 14px;
+  align-items: center; /* More compact vertical alignment */
+  gap: 12px;
+  padding: 8px 12px; /* Reduced vertical padding */
+  border-radius: 12px;
   cursor: grab;
-  transition: transform 0.18s ease, border-color 0.18s ease, background-color 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   border: 1px solid transparent;
-  background: var(--menu-bar-surface, var(--bg-secondary));
+  background: var(--bg-secondary);
+  position: relative;
+  overflow: hidden;
 }
 
 .field-row:hover {
-  transform: translateY(-1px);
-  border-color: color-mix(in srgb, var(--accent-blue) 18%, var(--border-color));
-  box-shadow: 0 8px 18px var(--shadow-color-soft);
+  transform: translateX(4px);
+  border-color: var(--border-color);
+  background: var(--bg-primary);
+  box-shadow: var(--shadow-sm);
 }
 
-.field-row--semantic {
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--accent-green-soft) 18%, transparent), transparent 100%),
-    var(--menu-bar-surface, var(--bg-secondary));
+.field-row::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: transparent;
+  transition: background-color 0.2s ease;
 }
 
-.field-row.is-dragging {
-  opacity: 0.5;
+.field-row:hover::before {
+  background: var(--accent-blue);
 }
 
-.field-type-marker {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  margin-top: 7px;
-}
-
-.field-type-marker.numeric { background: var(--field-color-numeric); }
-.field-type-marker.temporal { background: var(--field-color-temporal); }
-.field-type-marker.categorical { background: var(--field-color-categorical); }
-
-.field-row-main {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.field-row-heading {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.field-row-label {
-  display: block;
-  font-size: 0.88rem;
-  font-weight: 700;
-  color: var(--text-primary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.field-row-subtitle,
-.field-row-description {
-  display: block;
-  font-size: 0.7rem;
-  color: var(--text-secondary);
-  line-height: 1.4;
-}
-
-.field-row-description {
-  opacity: 0.9;
-}
-
-.field-row-trailing {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 8px;
-  min-width: 190px;
-}
-
-.field-row-meta {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 6px;
-}
-
-.field-row-pill {
-  display: inline-flex;
-  align-items: center;
-  min-height: 22px;
-  padding: 0 8px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--accent-white-soft) 52%, transparent);
-  color: var(--text-secondary);
-  font-size: 0.62rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.field-row-pill--semantic {
-  background: color-mix(in srgb, var(--accent-green-soft) 42%, transparent);
-}
-
-.field-row-pill--raw {
-  background: color-mix(in srgb, var(--accent-blue-soft) 42%, transparent);
-}
-
-.field-row-pill--status.field-row-pill--custom {
-  background: color-mix(in srgb, var(--accent-green-soft) 44%, transparent);
-  color: color-mix(in srgb, var(--accent-green) 72%, var(--text-primary));
-}
-
-.field-row-pill--status.field-row-pill--inferred {
-  background: color-mix(in srgb, var(--accent-blue-soft) 38%, transparent);
-  color: color-mix(in srgb, var(--accent-blue) 70%, var(--text-primary));
-}
-
-.field-row-pill--field {
-  background: color-mix(in srgb, var(--accent-white-medium) 72%, transparent);
-  max-width: 170px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.field-row--semantic:hover::before {
+  background: var(--accent-green);
 }
 
 .field-row-actions {
@@ -430,7 +354,42 @@
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 6px;
+  opacity: 0;
+  transform: translateX(10px);
+  transition: all 0.2s ease;
 }
+
+.field-row:hover .field-row-actions {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.field-row-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.field-row-trailing {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.field-row-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: opacity 0.2s ease;
+}
+
+.field-row:hover .field-row-meta {
+  opacity: 0.4; /* Fade meta when actions appear */
+}
+
 
 .field-action-button {
   min-height: 28px;

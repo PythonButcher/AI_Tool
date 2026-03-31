@@ -1,0 +1,152 @@
+.data-pane {
+  position: relative;
+  width: 320px;
+  height: 100%;
+  background: var(--bg-primary);
+  border-left: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s ease;
+  z-index: 100;
+  box-shadow: -4px 0 15px var(--shadow-color-soft);
+}
+
+.data-pane.is-collapsed {
+  width: 0;
+  border-left: none;
+  transform: translateX(100%);
+}
+
+.data-pane__toggle {
+  position: absolute;
+  left: -24px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 48px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-right: none;
+  border-radius: 8px 0 0 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: all 0.2s ease;
+  z-index: 101;
+}
+
+.data-pane.is-collapsed .data-pane__toggle {
+  left: -32px;
+  border-right: 1px solid var(--border-color);
+  border-radius: 8px;
+  width: 32px;
+  background: var(--bg-secondary);
+  box-shadow: -2px 0 8px var(--shadow-color-soft);
+}
+
+.data-pane__toggle:hover {
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+}
+
+.data-pane__content {
+  width: 320px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  opacity: 1;
+  transition: opacity 0.2s ease;
+}
+
+.data-pane.is-collapsed .data-pane__content {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.data-pane__header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-color);
+  background: linear-gradient(to bottom, var(--bg-secondary), var(--bg-primary));
+}
+
+.data-pane__title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.data-pane__icon {
+  color: var(--accent-blue);
+  font-size: 1.2rem;
+}
+
+.data-pane__title h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--text-primary);
+  text-transform: uppercase;
+}
+
+.data-pane__body {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Override FieldsPanel styles for the new context */
+.data-pane .fields-panel {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+}
+
+.data-pane .fields-panel-header {
+  display: none; /* We have our own header */
+}
+
+.data-pane .fields-search {
+  margin: 12px 16px;
+  background: var(--bg-secondary);
+  border-radius: 8px;
+}
+
+.data-pane .fields-panel-body {
+  padding: 0 12px 16px;
+}
+
+.data-pane .field-group {
+  border-radius: 12px;
+  margin-bottom: 8px;
+}
+
+.data-pane .field-row {
+  padding: 6px 10px;
+  margin-bottom: 4px;
+}
+
+.data-pane .field-row-label {
+  font-size: 0.85rem;
+}
+
+.data-pane .field-row-subtitle, 
+.data-pane .field-row-description,
+.data-pane .field-row-meta {
+  display: none; /* Strip back for Power BI look */
+}
+
+.data-pane .field-row:hover .field-row-meta {
+  display: none;
+}
+
+/* Ensure the drawer is always scrollable */
+.data-pane .fields-panel-body {
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-color) transparent;
+}

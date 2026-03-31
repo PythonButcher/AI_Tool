@@ -10,8 +10,8 @@
 
 .smart-chart-toolbar {
   display: flex;
-  gap: 12px;
-  padding: 10px 16px;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
   background: var(--bg-primary);
   border-bottom: 1px solid var(--border-color);
   align-items: center;
@@ -22,9 +22,9 @@
 .chart-type-selector {
   display: flex;
   gap: 4px;
-  background: var(--menu-bar-surface, var(--bg-secondary));
-  padding: 3px;
-  border-radius: 8px;
+  background: var(--bg-secondary);
+  padding: 4px;
+  border-radius: 10px;
 }
 
 .chart-type-btn {
@@ -45,8 +45,8 @@
 
 .chart-type-btn.active {
   background: var(--bg-primary);
-  color: var(--text-primary);
-  box-shadow: 0 2px 4px var(--shadow-color-soft);
+  color: var(--accent-blue);
+  box-shadow: var(--shadow-sm);
 }
 
 .data-source-modes {
@@ -84,12 +84,12 @@
 }
 
 .semantic-controls {
-  padding: 16px;
+  padding: var(--space-3);
   border-bottom: 1px solid var(--border-color);
-  background: color-mix(in srgb, var(--menu-bar-surface, var(--bg-secondary)) 84%, transparent);
+  background: var(--bg-secondary);
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-3);
   animation: slideDown 0.3s ease-out;
 }
 
@@ -106,10 +106,11 @@
 }
 
 .semantic-controls__title strong {
-  font-size: 0.75rem;
-  color: color-mix(in srgb, var(--accent-green) 78%, var(--text-primary));
+  font-size: 0.7rem;
+  color: var(--accent-green);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
+  font-weight: var(--font-weight-bold);
 }
 
 .semantic-controls__title p {
@@ -136,60 +137,63 @@
 }
 
 .semantic-controls__count--metric {
-  color: color-mix(in srgb, var(--accent-green) 76%, var(--text-primary));
-  background: color-mix(in srgb, var(--accent-green-soft) 56%, transparent);
+  color: var(--accent-green);
+  background: var(--accent-green-soft);
+  font-weight: var(--font-weight-bold);
 }
 
 .semantic-controls__count--dimension {
   color: #b45309;
-  background: color-mix(in srgb, rgba(217, 119, 6, 0.18) 72%, transparent);
+  background: rgba(217, 119, 6, 0.1);
+  font-weight: var(--font-weight-bold);
 }
 
 .semantic-controls__inputs {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  gap: var(--space-3);
 }
 
 .semantic-field-group {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--space-1);
 }
 
 .semantic-field-group span {
-  font-size: 0.75rem;
-  font-weight: 600;
+  font-size: 0.7rem;
+  font-weight: var(--font-weight-semibold);
   color: var(--text-secondary);
 }
 
 .semantic-select {
-  padding: 8px 12px;
+  padding: var(--space-2) var(--space-2);
   border-radius: 8px;
   border: 1px solid var(--border-color);
   background: var(--bg-primary);
   color: var(--text-primary);
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   outline: none;
-  transition: border-color 0.2s;
+  transition: all 0.2s;
 }
 
 .semantic-select:focus {
-  border-color: color-mix(in srgb, var(--accent-green) 58%, var(--border-color));
+  border-color: var(--accent-green);
+  box-shadow: 0 0 0 3px var(--accent-green-soft);
 }
 
 .semantic-status-bar {
   display: flex;
   justify-content: space-between;
-  gap: 8px;
-  font-size: 0.8rem;
+  gap: var(--space-2);
+  font-size: 0.75rem;
   color: var(--text-secondary);
-  padding-top: 8px;
-  border-top: 1px solid color-mix(in srgb, var(--border-color) 92%, transparent);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--border-color);
 }
 
 .semantic-status--error {
-  color: color-mix(in srgb, var(--accent-red) 78%, var(--text-primary));
+  color: var(--accent-red);
 }
 
 .chart-content-area {

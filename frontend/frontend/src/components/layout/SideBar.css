@@ -76,8 +76,9 @@
 }
 
 .workflow-drawer {
-  width: min(420px, calc(100vw - 110px));
-  min-width: 320px;
+  width: fit-content;
+  max-width: 500px;
+  min-width: 340px;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -85,6 +86,7 @@
     linear-gradient(180deg, color-mix(in srgb, var(--accent-white-soft) 72%, transparent), transparent 100%),
     color-mix(in srgb, var(--bg-primary) 92%, transparent);
   box-shadow: 16px 0 40px var(--shadow-color-soft);
+  transition: width 0.3s ease-in-out;
 }
 
 .workflow-drawer__content {
