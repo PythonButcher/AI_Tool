@@ -3,6 +3,7 @@ import MenuBar from './components/layout/MenuBar';
 import CanvasContainer from './components/layout/CanvasContainer';
 import DatasetInfo from './components/insights/DatasetInfo';
 import SideBar from './components/layout/SideBar';
+import DataPane from './components/layout/DataPane';
 import { DndContext, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import DataVisualizations from './features/charts/DataVisualization';
 import { transformToChartData } from './utils/chartDataUtils';
@@ -72,6 +73,9 @@ function AppContent() {
     openDashboard,
     closeDashboard,
     restoreWindow,
+    addChart,
+    addDashboardKpi,
+    setDashboardFilters,
   } = useWindowContext();
 
   console.log('App.jsx received uploadedData:', uploadedData);
@@ -109,6 +113,51 @@ function AppContent() {
   const [activeWorkflow, setActiveWorkflow] = useState(null);
   const [aiChatOpenRequestKey, setAiChatOpenRequestKey] = useState(0);
   const [menuBarHeight, setMenuBarHeight] = useState(64);
+  const [isDataPaneOpen, setIsDataPaneOpen] = useState(true);
+
+  const handleCreateSemanticChart = useCallback((semanticOverrides = {}) => {
+    addChart({
+      type: 'Bar',
+      dataSourceMode: 'semantic',
+      semanticConfig: {
+        metricId: '',
+        groupBy: '',
+        ...semanticOverrides,
+      },
+    });
+  }, [addChart]);
+
+  const handleCreateSemanticKpi = useCallback((semanticOverrides = {}) => {
+    addDashboardKpi({
+      semanticConfig: {
+        metricId: '',
+        groupBy: '',
+        ...semanticOverrides,
+      },
+    });
+    if (activeWorkflow !== 'dashboard') {
+      setActiveWorkflow('dashboard');
+    }
+  }, [activeWorkflow, addDashboardKpi]);
+
+  const handleAddSemanticFilter = useCallback((semanticObject) => {
+    openDashboard();
+    // Simplified filter logic for App context
+    setDashboardFilters((prev) => ({
+      ...prev,
+      dimensionFilters: [
+        ...prev.dimensionFilters,
+        {
+          id: `dashboard-filter-${Date.now()}`,
+          dimensionId: semanticObject.id || '',
+          values: [],
+        },
+      ],
+    }));
+    if (activeWorkflow !== 'dashboard') {
+      setActiveWorkflow('dashboard');
+    }
+  }, [activeWorkflow, openDashboard, setDashboardFilters]);
 
   useLoadRawData(showRawViewer, rawUploadFile, setFullData);
 
@@ -177,6 +226,10 @@ function AppContent() {
   const handleRibbonTabChange = useCallback((tab) => {
     setActiveRibbonTab(tab);
     const mappedWorkflow = RIBBON_TAB_TO_WORKFLOW[tab];
+    if (mappedWorkflow === 'explore') {
+      setIsDataPaneOpen(true);
+      return;
+    }
     if (mappedWorkflow) {
       setActiveWorkflow(mappedWorkflow);
       return;
@@ -186,6 +239,10 @@ function AppContent() {
     }
   }, []);
   const handleWorkflowSelect = useCallback((workflow) => {
+    if (workflow === 'explore') {
+      setIsDataPaneOpen((prev) => !prev);
+      return;
+    }
     setActiveWorkflow((prev) => {
       const nextWorkflow = prev === workflow ? null : workflow;
       if (nextWorkflow && WORKFLOW_TO_RIBBON_TAB[nextWorkflow]) {
@@ -507,6 +564,15 @@ function AppContent() {
           setAiChartData={setAiChartData}
           openRequestKey={aiChatOpenRequestKey}
           topOffset={menuBarHeight}
+        />
+
+        <DataPane
+          cleanedData={cleanedData}
+          isCollapsed={!isDataPaneOpen}
+          setIsCollapsed={(val) => setIsDataPaneOpen(!val)}
+          onCreateSemanticChart={handleCreateSemanticChart}
+          onCreateSemanticKpi={handleCreateSemanticKpi}
+          onAddDashboardFilter={handleAddSemanticFilter}
         />
       </div>
     </DndContext>

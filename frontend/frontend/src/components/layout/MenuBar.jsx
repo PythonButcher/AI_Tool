@@ -25,7 +25,7 @@ import {
 import { TbCloudDataConnection } from 'react-icons/tb';
 import { ThemeContext } from '../../context/ThemeContext';
 
-const RIBBON_TABS = ['Home', 'Explore', 'Visualise', 'Business', 'AI', 'Dashboard', 'Settings'];
+const RIBBON_TABS = ['Home', 'Visualise', 'Business', 'AI', 'Dashboard', 'Settings'];
 
 const inlinePanelMeta = {
   upload: {
@@ -259,62 +259,6 @@ function MenuBar({
       );
     }
 
-    if (activeTab === 'Explore') {
-      return (
-        <>
-          <RibbonGroup title="Inspect" caption="Preview and filter the active dataset">
-            <RibbonCommand
-              icon={<FaTable />}
-              label="Open Explore"
-              description="Dock the field explorer in the left rail"
-              onClick={() => onWorkflowSelect('explore')}
-              active={activeWorkflow === 'explore'}
-              emphasized
-            />
-            <RibbonCommand
-              icon={<FaTable />}
-              label="Data Preview"
-              description="Open the preview window"
-              onClick={() => setShowDataPreview(true)}
-            />
-            <RibbonCommand
-              icon={<FaTable />}
-              label="Raw Viewer"
-              description="Open the full raw-data viewer"
-              onClick={() => setShowRawViewer(true)}
-            />
-            <RibbonCommand
-              icon={<FaFilter />}
-              label="Filter Panel"
-              description="Apply dataset filters"
-              onClick={() => setOpenDataFilter(true)}
-            />
-          </RibbonGroup>
-
-          <RibbonGroup title="Quick Stats" caption="Fast summary actions from the current dataset">
-            <RibbonCommand
-              icon={<FaChartBar />}
-              label="Mean"
-              description="Average value for a selected field"
-              onClick={() => onStatsSelect('mean')}
-            />
-            <RibbonCommand
-              icon={<FaChartBar />}
-              label="Median"
-              description="Middle value for distribution checks"
-              onClick={() => onStatsSelect('median')}
-            />
-            <RibbonCommand
-              icon={<FaChartBar />}
-              label="Mode"
-              description="Most frequent observed value"
-              onClick={() => onStatsSelect('mode')}
-            />
-          </RibbonGroup>
-        </>
-      );
-    }
-
     if (activeTab === 'Visualise') {
       return (
         <>
@@ -337,10 +281,10 @@ function MenuBar({
 
           <RibbonGroup title="Flow" caption="Move quickly between fields and charts">
             <RibbonCommand
-              icon={<FaTable />}
-              label="Field Explorer"
-              description="Open the Explore drawer to drag fields"
-              onClick={() => onWorkflowSelect('explore')}
+              icon={<FaDatabase />}
+              label="Data Pane"
+              description="The field explorer is now persistent on the right"
+              disabled
             />
             <RibbonCommand
               icon={<FaTachometerAlt />}
@@ -376,10 +320,10 @@ function MenuBar({
 
           <RibbonGroup title="Next Up" caption="Deeper semantic workflows are staged for later phases">
             <RibbonCommand
-              icon={<FaTable />}
-              label="Explore Fields"
-              description="Use business fields from the Explore drawer"
-              onClick={() => onWorkflowSelect('explore')}
+              icon={<FaDatabase />}
+              label="Persistent Fields"
+              description="Use business fields from the right Data Pane"
+              disabled
             />
             <RibbonCommand
               icon={<FaFileAlt />}
