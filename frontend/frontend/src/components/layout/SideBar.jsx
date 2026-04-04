@@ -9,6 +9,7 @@ import {
   FaDatabase,
   FaFileExport,
   FaFilter,
+  FaLightbulb,
   FaPen,
   FaPlus,
   FaRobot,
@@ -87,6 +88,7 @@ function SideBar({
   setShowWhiteBoard,
   onStoryModelChange,
   setShowMachineLearning,
+  onRunDecision,
 }) {
   const [showCleaningForm, setShowCleaningForm] = useState(false);
   const [showExportPanel, setShowExportPanel] = useState(false);
@@ -361,6 +363,24 @@ function SideBar({
             description="Advanced field definitions, calculated metrics, and semantic mappings that power your automated insights."
             onClose={() => onWorkflowSelect('business')}
           />
+
+          <div className="workflow-stat-row">
+            <StatChip label="Metrics" value={semanticMetricCount} />
+            <StatChip label="Dims" value={semanticDimensionCount} />
+            <StatChip label="Decision" value="Ready" />
+          </div>
+
+          <div className="workflow-action-grid">
+            <button
+              type="button"
+              className="workflow-action-card workflow-action-card--primary"
+              onClick={onRunDecision}
+            >
+              <FaLightbulb />
+              <span>Run Decision Intelligence</span>
+              <small>Analyze signals, generate recommendations, and preview scenarios.</small>
+            </button>
+          </div>
 
           <SemanticModelPanel
             semanticModel={semanticModel}

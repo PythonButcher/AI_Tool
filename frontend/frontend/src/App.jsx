@@ -18,6 +18,7 @@ import DataFilterPanel from './components/data_management/DataFilterPanel';
 import './App.css';
 import { MuiThemeContext } from './context/MuiThemeContext';
 import { WindowProvider, useWindowContext } from './context/WindowContext';
+import { runDecisionPipeline } from './features/business/decision/decisionApi';
 
 const parseRecords = (source) => {
   if (!source) return [];
@@ -108,6 +109,8 @@ function AppContent() {
   const [outputWindows, setOutputWindows] = useState([]);
   const [rawUploadFile, setRawUploadFile] = useState(null);
   const [showMachineLearning, setShowMachineLearning] = useState(false);
+  const [showDecisionPanel, setShowDecisionPanel] = useState(false);
+  const [decisionBundle, setDecisionBundle] = useState(null);
   const [isSnowing, setIsSnowing] = useState(false);
   const [activeRibbonTab, setActiveRibbonTab] = useState('Home');
   const [activeWorkflow, setActiveWorkflow] = useState(null);
@@ -270,6 +273,48 @@ function AppContent() {
   }, []);
   const handleCloseChartWindow = useCallback(() => setShowChartWindow(false), []);
   const handleStoryModelChange = (newModel) => setStoryModel(newModel);
+
+  const handleRunDecision = useCallback(async () => {
+    if (!uploadedData?.semantic_model?.dataset?.id) {
+      alert('Please load a dataset with a semantic model to run decision intelligence.');
+      return;
+    }
+
+    try {
+      const payload = {
+        dataset_ref: {
+          source: 'datahub',
+          dataset_id: uploadedData.semantic_model.dataset.id,
+        },
+        include_anomaly_detection: true,
+        include_scenario_preview: true,
+      };
+
+      const result = await runDecisionPipeline(payload);
+      if (result.status === 'success') {
+        setDecisionBundle(result.decision_bundle);
+        setShowDecisionPanel(true);
+        restoreWindow('decisionPanel');
+      }
+    } catch (err) {
+      console.error('Failed to run decision pipeline:', err);
+      alert('Decision pipeline failed. Check console for details.');
+    }
+  }, [uploadedData, restoreWindow]);
+
+  const handleDecisionAction = useCallback((action) => {
+    if (action.action_type === 'break_down_metric') {
+      const { metric_id, group_by } = action.payload;
+      addChart({
+        type: 'Bar',
+        dataSourceMode: 'semantic',
+        semanticConfig: {
+          metricId: metric_id,
+          groupBy: Array.isArray(group_by) ? group_by[0] : group_by,
+        },
+      });
+    }
+  }, [addChart]);
 
   const handleFieldDrop = useCallback((axis, field) => {
     setChartMapping((prev) => {
@@ -450,6 +495,7 @@ function AppContent() {
           setShowWhiteBoard={setShowWhiteBoard}
           onStoryModelChange={handleStoryModelChange}
           setShowMachineLearning={setShowMachineLearning}
+          onRunDecision={handleRunDecision}
         />
 
         <div className="main-content">
@@ -552,6 +598,10 @@ function AppContent() {
               handleCloseRawViewer={handleCloseRawViewer}
               showMachineLearning={showMachineLearning}
               setShowMachineLearning={setShowMachineLearning}
+              showDecisionPanel={showDecisionPanel}
+              setShowDecisionPanel={setShowDecisionPanel}
+              decisionBundle={decisionBundle}
+              onDecisionAction={handleDecisionAction}
             >
               <DatasetInfo selectedStat={selectedStat} />
             </CanvasContainer>

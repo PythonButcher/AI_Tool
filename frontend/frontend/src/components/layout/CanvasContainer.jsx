@@ -20,6 +20,7 @@ import RawDataViewer from '../../features/viewing/RawDataViewer';
 import MachineLearningPanel from '../../features/machine_learning/MachineLearningPanel';
 import DashboardFilterBar from '../../features/dashboard/DashboardFilterBar';
 import KpiCardWindow from '../../features/dashboard/KpiCardWindow';
+import DecisionPanel from '../../features/business/decision/DecisionPanel';
 
 function CanvasContainer({
   children,
@@ -53,6 +54,10 @@ function CanvasContainer({
   handleCloseRawViewer,
   showMachineLearning,
   setShowMachineLearning,
+  showDecisionPanel,
+  setShowDecisionPanel,
+  decisionBundle,
+  onDecisionAction,
 }) {
   const {
     minimizedWindows,
@@ -638,6 +643,18 @@ function CanvasContainer({
     </WindowFrame>
   ) : null;
 
+  const decisionPanelElement = (showDecisionPanel && !minimizedWindows.decisionPanel) ? (
+    <WindowFrame
+      {...getWindowProps('decisionPanel', '🧠 Decision Intelligence', () => setShowDecisionPanel(false), () => minimizeWindow('decisionPanel', 'Decision Intelligence'))}
+      initialState={getInitialState('decisionPanel', 9, 25, 1200, 800)}
+    >
+      <DecisionPanel 
+        bundle={decisionBundle} 
+        onActionClick={onDecisionAction}
+      />
+    </WindowFrame>
+  ) : null;
+
   const dashboardEmptyState = dashboardState.isVisible && dashboardItems.length === 0 ? (
     <div
       style={{
@@ -685,6 +702,7 @@ function CanvasContainer({
         {dashboardElements}
         {storyPanelElement}
         {machineLearningElement}
+        {decisionPanelElement}
       </div>
       <MinimizedDock />
     </div>
