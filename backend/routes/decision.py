@@ -1,6 +1,7 @@
 from flask import Blueprint, jsonify, request
 
 from backend.services.decision_brief_service import generate_decision_brief
+from backend.services.decision_pipeline_service import run_decision_pipeline
 from backend.services.decision_signal_service import generate_decision_signals
 from backend.services.decision_support import DecisionServiceError
 from backend.services.recommendation_service import generate_recommendations
@@ -40,6 +41,17 @@ def generate_brief_route():
         return jsonify(_error_payload("INVALID_DECISION_REQUEST", str(exc))), 400
     except Exception as exc:
         return jsonify(_error_payload("DECISION_BRIEF_GENERATION_FAILED", f"Failed to generate decision brief: {exc}")), 500
+
+
+@decision_bp.route("/run", methods=["POST"])
+def run_decision_pipeline_route():
+    payload = request.get_json(silent=True) or {}
+    try:
+        return jsonify(run_decision_pipeline(payload)), 200
+    except DecisionServiceError as exc:
+        return jsonify(_error_payload("INVALID_DECISION_REQUEST", str(exc))), 400
+    except Exception as exc:
+        return jsonify(_error_payload("DECISION_PIPELINE_RUN_FAILED", f"Failed to run decision pipeline: {exc}")), 500
 
 
 @decision_bp.route("/recommendations/generate", methods=["POST"])

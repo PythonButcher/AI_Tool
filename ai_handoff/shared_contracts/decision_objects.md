@@ -429,3 +429,126 @@ Represents a Phase 1 what-if evaluation scaffold. The object is intentionally li
   "generated_at": "2026-04-03T23:59:59+00:00"
 }
 ```
+
+## DecisionScenarioPreview
+
+Represents a Phase 3 lightweight scenario suggestion generated from the connected decision pipeline. It reuses the existing scenario service but returns only preview-oriented inputs and projection summaries.
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `status` | `string` | Yes | `ready`, `not_applicable`, or `not_requested` |
+| `summary` | `string` | Yes | Short explanation of whether a preview was prepared |
+| `based_on_recommendation_ids` | `string[]` | Yes | Ordered recommendation identifiers used to prepare the preview |
+| `based_on_signal_ids` | `string[]` | Yes | Ordered signal identifiers traced through the recommendations |
+| `suggested_inputs` | `object` | Yes | Lightweight scenario input proposal for future UI or automation use |
+| `projections` | `object[]` | Yes | Condensed projected metric outputs derived from the existing scenario service |
+| `assumptions` | `string[]` | Yes | Explicit scenario-preview assumptions |
+| `generated_at` | `string` | Yes | ISO timestamp |
+
+### `suggested_inputs` schema
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `name` | `string` | Yes | Suggested scenario label |
+| `filters` | `object[]` | Yes | Echoed pipeline filters |
+| `group_by` | `string[]` | Yes | Shared chart-compatible grouping fields chosen from recommendation actions |
+| `metric_targets` | `object[]` | Yes | Suggested scenario targets |
+
+### `suggested_inputs.metric_targets[]` schema
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `metric_id` | `string` | Yes | Semantic metric identifier |
+| `adjustment_type` | `string` | Yes | Phase 3 uses `percent` |
+| `adjustment_value` | `number` | Yes | Deterministic lightweight adjustment inferred from top signals/recommendations |
+
+### `projections[]` schema
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `metric_ref` | `Metric Reference` | Yes | Metric being previewed |
+| `adjustment` | `object` | Yes | Existing scenario-style adjustment object |
+| `baseline_value` | `number \| null` | No | Baseline summary value |
+| `projected_value` | `number \| null` | No | Projected summary value |
+| `delta_value` | `number \| null` | No | Projected minus baseline |
+| `delta_pct` | `number \| null` | No | Decimal ratio when baseline is non-zero |
+| `comparison_summary` | `object \| null` | No | Reused comparison rollup from the scenario service |
+
+## DecisionBundle
+
+Represents the Phase 3 unified decision-pipeline output.
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `signals` | `DecisionSignal[]` | Yes | Final ranked and filtered signals for the pipeline run |
+| `brief` | `DecisionBrief` | Yes | Brief generated from the final filtered signals |
+| `recommendations` | `Recommendation[]` | Yes | Recommendations derived from the same signal set |
+| `scenario_preview` | `DecisionScenarioPreview` | Yes | Lightweight preview generated from top recommendations or a predictable no-op object |
+
+### Example
+
+```json
+{
+  "signals": [
+    {
+      "signal_id": "signal_metric_delta_metric_revenue_sum_2026_04_04t150000_00_00",
+      "signal_type": "metric_delta"
+    }
+  ],
+  "brief": {
+    "brief_id": "brief_q1_sales_2026_04_04t150000_00_00",
+    "headline_signal_ids": [
+      "signal_metric_delta_metric_revenue_sum_2026_04_04t150000_00_00"
+    ]
+  },
+  "recommendations": [
+    {
+      "recommendation_id": "recommendation_optimize_signal_metric_delta_metric_revenue_sum_2026_04_04t150000_00_00_2026_04_04t150000_00_00",
+      "based_on_signal_ids": [
+        "signal_metric_delta_metric_revenue_sum_2026_04_04t150000_00_00"
+      ]
+    }
+  ],
+  "scenario_preview": {
+    "status": "ready",
+    "based_on_recommendation_ids": [
+      "recommendation_optimize_signal_metric_delta_metric_revenue_sum_2026_04_04t150000_00_00_2026_04_04t150000_00_00"
+    ],
+    "based_on_signal_ids": [
+      "signal_metric_delta_metric_revenue_sum_2026_04_04t150000_00_00"
+    ],
+    "suggested_inputs": {
+      "name": "Decision pipeline preview",
+      "filters": [],
+      "group_by": ["Region"],
+      "metric_targets": [
+        {
+          "metric_id": "metric_revenue_sum",
+          "adjustment_type": "percent",
+          "adjustment_value": -0.08
+        }
+      ]
+    },
+    "projections": [
+      {
+        "metric_ref": {
+          "metric_id": "metric_revenue_sum",
+          "label": "Revenue"
+        },
+        "adjustment": {
+          "type": "percent",
+          "value": -0.08
+        },
+        "baseline_value": 145000,
+        "projected_value": 133400,
+        "delta_value": -11600,
+        "delta_pct": -0.08
+      }
+    ],
+    "assumptions": [
+      "Scenario projections apply direct metric adjustments only."
+    ],
+    "generated_at": "2026-04-04T15:00:00+00:00"
+  }
+}
+```

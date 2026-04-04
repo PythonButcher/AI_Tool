@@ -17,6 +17,13 @@ from backend.services.decision_support import (
 )
 
 
+PRIORITY_RANK = {
+    "low": 1,
+    "medium": 2,
+    "high": 3,
+}
+
+
 def _priority_from_signal(signal: Dict[str, Any]) -> str:
     severity = signal.get("severity")
     importance_score = float(signal.get("importance_score") or 0.0)
@@ -91,6 +98,7 @@ def _build_time_action(metric_ref: Dict[str, Any] | None, time_dimension: Dict[s
 def _recommendation_from_signal(context: Dict[str, Any], signal: Dict[str, Any], selected_metrics: list[Dict[str, Any]]) -> Dict[str, Any]:
     created_at = iso_timestamp()
     signal_type = signal.get("signal_type")
+    signal_payload = {"signal_id": signal["signal_id"]}
     metric = _resolve_reference_metric(context, signal, selected_metrics)
     metric_ref = signal.get("metric_ref") if isinstance(signal.get("metric_ref"), dict) else build_metric_ref(metric)
     dimension_ref = signal.get("dimension_ref")
@@ -123,10 +131,12 @@ def _recommendation_from_signal(context: Dict[str, Any], signal: Dict[str, Any],
                     description="Use the current chart workflow to isolate which segment drove the shift.",
                     metric_ref=metric_ref,
                     group_by=[resolved_dimension_ref["field"]],
+                    extra_payload=signal_payload,
                 )
             )
         time_action = _build_time_action(metric_ref, time_dimension)
         if time_action:
+            time_action["payload"].update(signal_payload)
             actions.append(time_action)
         if secondary_dimension:
             actions.append(
@@ -136,6 +146,7 @@ def _recommendation_from_signal(context: Dict[str, Any], signal: Dict[str, Any],
                     description="Use a second simple breakdown if the first segmentation does not isolate the driver cleanly.",
                     metric_ref=metric_ref,
                     group_by=[secondary_dimension["field"]],
+                    extra_payload=signal_payload,
                 )
             )
         expected_outcome = (
@@ -160,12 +171,12 @@ def _recommendation_from_signal(context: Dict[str, Any], signal: Dict[str, Any],
                     description="Use a simple metric + group by view to see whether anomalies cluster in one segment.",
                     metric_ref=metric_ref,
                     group_by=[resolved_dimension_ref["field"]],
-                    extra_payload={"signal_id": signal["signal_id"]},
+                    extra_payload=signal_payload,
                 )
             )
         time_action = _build_time_action(metric_ref, time_dimension)
         if time_action:
-            time_action["payload"]["signal_id"] = signal["signal_id"]
+            time_action["payload"].update(signal_payload)
             actions.append(time_action)
         expected_outcome = "Separate data quality issues from real operational changes."
         summary = (
@@ -184,11 +195,12 @@ def _recommendation_from_signal(context: Dict[str, Any], signal: Dict[str, Any],
                     description="Use the simplest segmentation view to size the dependence on the dominant segment.",
                     metric_ref=metric_ref,
                     group_by=[target_dimension_ref["field"]],
-                    extra_payload={"signal_id": signal["signal_id"]},
+                    extra_payload=signal_payload,
                 )
             )
         time_action = _build_time_action(metric_ref, time_dimension)
         if time_action:
+            time_action["payload"].update(signal_payload)
             actions.append(time_action)
         expected_outcome = "Reduce concentration risk and understand whether it is structural or temporary."
         summary = (
@@ -207,11 +219,12 @@ def _recommendation_from_signal(context: Dict[str, Any], signal: Dict[str, Any],
                     description="Use a quick chart to see whether missingness aligns to a specific segment or shows up broadly.",
                     metric_ref=metric_ref,
                     group_by=[field_name],
-                    extra_payload={"signal_id": signal["signal_id"]},
+                    extra_payload=signal_payload,
                 )
             )
         time_action = _build_time_action(metric_ref, time_dimension)
         if time_action:
+            time_action["payload"].update(signal_payload)
             actions.append(time_action)
         expected_outcome = "Improve data reliability before downstream decisions use the field."
         summary = (
@@ -226,6 +239,7 @@ def _recommendation_from_signal(context: Dict[str, Any], signal: Dict[str, Any],
                 description="Fallback chart action using the existing metric workflow.",
                 metric_ref=metric_ref,
                 group_by=[],
+                extra_payload=signal_payload,
             )
         )
 
@@ -244,6 +258,113 @@ def _recommendation_from_signal(context: Dict[str, Any], signal: Dict[str, Any],
         "expected_outcome": expected_outcome,
         "confidence": rounded(signal.get("confidence") or 0.6),
         "created_at": created_at,
+    }
+
+
+def _action_signature(action: Dict[str, Any]) -> tuple:
+    payload = action.get("payload") if isinstance(action.get("payload"), dict) else {}
+    group_by = payload.get("group_by")
+    if not isinstance(group_by, list):
+        group_by = []
+    return (
+        action.get("action_type"),
+        payload.get("metric_id"),
+        tuple(str(item) for item in group_by),
+    )
+
+
+def _dedupe_actions(actions: list[Dict[str, Any]]) -> list[Dict[str, Any]]:
+    deduped = {}
+    for action in actions:
+        signature = _action_signature(action)
+        if signature not in deduped:
+            deduped[signature] = action
+    return list(deduped.values())
+
+
+def _recommendation_rank(recommendation: Dict[str, Any]) -> tuple:
+    return (
+        PRIORITY_RANK.get(recommendation.get("priority"), 0),
+        recommendation.get("confidence") or 0,
+        len(recommendation.get("based_on_signal_ids") or []),
+    )
+
+
+def _recommendation_signature(recommendation: Dict[str, Any]) -> tuple:
+    metric_ref = recommendation.get("metric_ref") if isinstance(recommendation.get("metric_ref"), dict) else {}
+    dimension_ref = recommendation.get("dimension_ref") if isinstance(recommendation.get("dimension_ref"), dict) else {}
+    action_signatures = tuple(_action_signature(action) for action in recommendation.get("actions") or [])
+    return (
+        recommendation.get("recommendation_type"),
+        metric_ref.get("metric_id"),
+        dimension_ref.get("dimension_id") or dimension_ref.get("field"),
+        action_signatures,
+    )
+
+
+def _dedupe_recommendations(recommendations: list[Dict[str, Any]]) -> list[Dict[str, Any]]:
+    deduped: Dict[tuple, Dict[str, Any]] = {}
+    for recommendation in recommendations:
+        recommendation["actions"] = _dedupe_actions(list(recommendation.get("actions") or []))
+        signature = _recommendation_signature(recommendation)
+        existing = deduped.get(signature)
+        if existing is None:
+            deduped[signature] = recommendation
+            continue
+
+        merged_signal_ids = []
+        for signal_id in [*(existing.get("based_on_signal_ids") or []), *(recommendation.get("based_on_signal_ids") or [])]:
+            if signal_id and signal_id not in merged_signal_ids:
+                merged_signal_ids.append(signal_id)
+
+        winning = recommendation if _recommendation_rank(recommendation) > _recommendation_rank(existing) else existing
+        merged = dict(winning)
+        merged["based_on_signal_ids"] = merged_signal_ids
+        deduped[signature] = merged
+
+    return sorted(deduped.values(), key=_recommendation_rank, reverse=True)
+
+
+def build_recommendation_artifacts(
+    context: Dict[str, Any],
+    signals: list[Dict[str, Any]],
+    selected_metrics: list[Dict[str, Any]],
+    max_recommendations: int,
+    generated_at: str | None = None,
+) -> Dict[str, Any]:
+    ordered_signals = sorted(
+        list(signals or []),
+        key=lambda signal: (
+            signal.get("importance_score") or 0,
+            PRIORITY_RANK.get(_priority_from_signal(signal), 0),
+            signal.get("confidence") or 0,
+        ),
+        reverse=True,
+    )
+    raw_recommendations = [
+        _recommendation_from_signal(context, signal, selected_metrics)
+        for signal in ordered_signals
+    ]
+    recommendations = _dedupe_recommendations(raw_recommendations)[:max_recommendations]
+    supporting_signal_ids = {
+        signal_id
+        for recommendation in recommendations
+        for signal_id in recommendation.get("based_on_signal_ids") or []
+    }
+    supporting_signals = [
+        signal
+        for signal in ordered_signals
+        if signal.get("signal_id") in supporting_signal_ids
+    ]
+    resolved_generated_at = generated_at or iso_timestamp()
+    return {
+        "recommendations": recommendations,
+        "supporting_signals": supporting_signals,
+        "meta": {
+            "recommendation_count": len(recommendations),
+            "empty_dataset": context["dataframe"].empty,
+            "generated_at": resolved_generated_at,
+        },
     }
 
 
@@ -267,8 +388,12 @@ def generate_recommendations(payload: Dict[str, Any]) -> Dict[str, Any]:
         metric_names=signal_response["request"]["metric_names"],
         max_metrics=max_recommendations,
     ) if not context["dataframe"].empty else []
-    signals = signal_response["signals"][:max_recommendations]
-    recommendations = [_recommendation_from_signal(context, signal, selected_metrics) for signal in signals]
+    recommendation_artifacts = build_recommendation_artifacts(
+        context=context,
+        signals=signal_response["signals"],
+        selected_metrics=selected_metrics,
+        max_recommendations=max_recommendations,
+    )
 
     return {
         "status": "success",
@@ -280,12 +405,8 @@ def generate_recommendations(payload: Dict[str, Any]) -> Dict[str, Any]:
         },
         "dataset": context["dataset"],
         "semantic_model": build_semantic_summary(context["semantic_model"]),
-        "recommendations": recommendations,
-        "supporting_signals": signals,
-        "meta": {
-            "recommendation_count": len(recommendations),
-            "empty_dataset": context["dataframe"].empty,
-            "generated_at": iso_timestamp(),
-        },
+        "recommendations": recommendation_artifacts["recommendations"],
+        "supporting_signals": recommendation_artifacts["supporting_signals"],
+        "meta": recommendation_artifacts["meta"],
         "warnings": signal_response.get("warnings", []),
     }

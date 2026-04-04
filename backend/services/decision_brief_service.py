@@ -123,6 +123,50 @@ def _brief_confidence(signals: List[Dict[str, Any]]) -> float:
     return round(min(0.95, max(0.65, total / float(len(top_signals)))), 4)
 
 
+def build_decision_brief_artifacts(
+    context: Dict[str, Any],
+    filters: List[Dict[str, Any]],
+    selected_metrics: List[Dict[str, Any]],
+    signals: List[Dict[str, Any]],
+    generated_at: str | None = None,
+) -> Dict[str, Any]:
+    ordered_signals = sorted(signals, key=_signal_rank, reverse=True)
+    relevant_metrics = _pick_relevant_metrics(ordered_signals, selected_metrics, limit=4)
+    key_metrics = _build_key_metrics(context, relevant_metrics, filters)
+    primary_change = _first_metric_change(context, relevant_metrics, filters)
+    resolved_generated_at = generated_at or iso_timestamp()
+    themes = derive_themes(ordered_signals)
+    summary = _build_brief_summary(context, ordered_signals, themes)
+
+    brief = {
+        "brief_id": make_identifier("brief", context["dataset"]["dataset_name"], resolved_generated_at),
+        "title": ordered_signals[0]["title"] if ordered_signals else f"Decision brief for {context['dataset']['dataset_name']}",
+        "summary": summary,
+        "dataset": context["dataset"],
+        "time_context": (
+            ordered_signals[0].get("time_context")
+            if ordered_signals and ordered_signals[0].get("time_context")
+            else build_time_context(primary_change, context.get("time_dimension"))
+        ),
+        "headline_signal_ids": [signal["signal_id"] for signal in ordered_signals[:3]],
+        "key_metrics": key_metrics,
+        "themes": themes,
+        "confidence": _brief_confidence(ordered_signals),
+        "generated_at": resolved_generated_at,
+    }
+
+    return {
+        "brief": brief,
+        "supporting_signals": ordered_signals,
+        "meta": {
+            "headline_signal_count": len(brief["headline_signal_ids"]),
+            "key_metric_count": len(key_metrics),
+            "empty_dataset": context["dataframe"].empty,
+            "generated_at": resolved_generated_at,
+        },
+    }
+
+
 def generate_decision_brief(payload: Dict[str, Any]) -> Dict[str, Any]:
     payload = payload if isinstance(payload, dict) else {}
     context = resolve_decision_context(
@@ -136,27 +180,15 @@ def generate_decision_brief(payload: Dict[str, Any]) -> Dict[str, Any]:
     metric_names = normalize_reference_list(payload, "metric_names", "metricNames")
 
     signal_response = generate_decision_signals(payload)
-    signals = sorted(signal_response["signals"], key=_signal_rank, reverse=True)
     selected_metrics = select_metrics(context, metric_ids=metric_ids, metric_names=metric_names, max_metrics=5)
-    relevant_metrics = _pick_relevant_metrics(signals, selected_metrics, limit=4)
-    key_metrics = _build_key_metrics(context, relevant_metrics, filters)
-    primary_change = _first_metric_change(context, relevant_metrics, filters)
     generated_at = iso_timestamp()
-    themes = derive_themes(signals)
-    summary = _build_brief_summary(context, signals, themes)
-
-    brief = {
-        "brief_id": make_identifier("brief", context["dataset"]["dataset_name"], generated_at),
-        "title": signals[0]["title"] if signals else f"Decision brief for {context['dataset']['dataset_name']}",
-        "summary": summary,
-        "dataset": context["dataset"],
-        "time_context": signals[0].get("time_context") if signals and signals[0].get("time_context") else build_time_context(primary_change, context.get("time_dimension")),
-        "headline_signal_ids": [signal["signal_id"] for signal in signals[:3]],
-        "key_metrics": key_metrics,
-        "themes": themes,
-        "confidence": _brief_confidence(signals),
-        "generated_at": generated_at,
-    }
+    brief_artifacts = build_decision_brief_artifacts(
+        context=context,
+        filters=filters,
+        selected_metrics=selected_metrics,
+        signals=signal_response["signals"],
+        generated_at=generated_at,
+    )
 
     return {
         "status": "success",
@@ -167,13 +199,8 @@ def generate_decision_brief(payload: Dict[str, Any]) -> Dict[str, Any]:
         },
         "dataset": context["dataset"],
         "semantic_model": build_semantic_summary(context["semantic_model"]),
-        "brief": brief,
-        "supporting_signals": signals,
-        "meta": {
-            "headline_signal_count": len(brief["headline_signal_ids"]),
-            "key_metric_count": len(key_metrics),
-            "empty_dataset": context["dataframe"].empty,
-            "generated_at": generated_at,
-        },
+        "brief": brief_artifacts["brief"],
+        "supporting_signals": brief_artifacts["supporting_signals"],
+        "meta": brief_artifacts["meta"],
         "warnings": signal_response.get("warnings", []),
     }
