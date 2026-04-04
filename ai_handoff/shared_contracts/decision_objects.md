@@ -1,0 +1,413 @@
+# Decision Objects Contract
+
+This document is the Phase 1 source of truth for backend and frontend integration of the Decision Layer.
+
+All timestamps use ISO-8601 UTC strings. Optional fields may be `null`. All objects below are additive and sit on top of the existing semantic model, metric resolver, and dataset context systems.
+
+## Shared Nested Objects
+
+### Dataset Summary
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `source` | `string` | Yes | `active`, `inline`, or `datahub` |
+| `dataset_id` | `string \| null` | No | Present when known |
+| `dataset_name` | `string` | Yes | Human-readable dataset label |
+| `row_count` | `integer` | Yes | Row count for the resolved dataset |
+| `column_count` | `integer` | Yes | Column count for the resolved dataset |
+
+### Metric Reference
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `metric_id` | `string` | Yes | Semantic metric identifier |
+| `name` | `string` | Yes | Metric name |
+| `label` | `string` | Yes | Display label |
+| `field` | `string \| null` | No | Backing field when applicable |
+| `default_aggregation` | `string \| null` | No | `sum`, `mean`, `count`, etc. |
+| `format_hint` | `string \| null` | No | `number`, `currency`, `percentage`, `date`, or `null` |
+
+### Dimension Reference
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `dimension_id` | `string` | Yes | Semantic dimension identifier |
+| `name` | `string` | Yes | Dimension name |
+| `label` | `string` | Yes | Display label |
+| `field` | `string` | Yes | Backing dataset field |
+| `semantic_kind` | `string \| null` | No | `categorical`, `temporal`, etc. |
+| `data_type` | `string \| null` | No | `string`, `datetime`, `number`, etc. |
+
+### Time Context
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `dimension_id` | `string \| null` | No | Temporal dimension identifier |
+| `field` | `string \| null` | No | Temporal field name |
+| `grain` | `string \| null` | No | Phase 1 uses `observed_value` when present |
+| `current_value` | `string \| number \| null` | No | Latest observed grouped value |
+| `previous_value` | `string \| number \| null` | No | Previous observed grouped value |
+
+## DecisionSignal
+
+Represents a detected change, anomaly, concentration, or data-quality condition that matters for decision-making.
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `signal_id` | `string` | Yes | Stable generated identifier |
+| `signal_type` | `string` | Yes | `metric_delta`, `anomaly_rate`, `dimension_concentration`, `data_quality` |
+| `title` | `string` | Yes | Short headline |
+| `summary` | `string` | Yes | Human-readable explanation |
+| `severity` | `string` | Yes | `low`, `medium`, `high`, `critical` |
+| `status` | `string` | Yes | Phase 1 uses `active` |
+| `direction` | `string` | Yes | `up`, `down`, `flat`, `mixed`, `unknown` |
+| `dataset` | `Dataset Summary` | Yes | Resolved dataset context |
+| `metric_ref` | `Metric Reference \| null` | No | Present for metric-linked signals |
+| `dimension_ref` | `Dimension Reference \| null` | No | Present for dimension-linked signals |
+| `time_context` | `Time Context \| null` | No | Present for time-based change signals |
+| `evidence` | `object` | Yes | Machine-friendly evidence payload |
+| `confidence` | `number` | Yes | `0.0` to `1.0` |
+| `importance_score` | `number` | Yes | `0` to `100` |
+| `created_at` | `string` | Yes | ISO timestamp |
+
+### `evidence` expectations
+
+- `metric_delta`
+  - `kind`: `metric_comparison`
+  - `current_value`, `previous_value`, `delta_value`, `delta_pct`
+  - `row_count`
+  - `chart_hint`: `{ "metric_id": string, "group_by": string[] }`
+- `anomaly_rate`
+  - `kind`: `dataset_anomaly_scan`
+  - `anomaly_count`, `anomaly_rate`, `numeric_field_count`, `row_count`
+- `dimension_concentration`
+  - `kind`: `dimension_distribution`
+  - `top_value`, `top_count`, `top_share`, `distinct_count`, `row_count`
+- `data_quality`
+  - `kind`: `field_null_rate`
+  - `field`, `null_count`, `null_rate`, `row_count`
+
+### Example
+
+```json
+{
+  "signal_id": "signal_metric_delta_metric_revenue_sum_2026_04_03t235959z",
+  "signal_type": "metric_delta",
+  "title": "Revenue increased in the latest observed period",
+  "summary": "Revenue moved from 120000 to 145000 (+20.8%) between the two latest observed time values.",
+  "severity": "medium",
+  "status": "active",
+  "direction": "up",
+  "dataset": {
+    "source": "datahub",
+    "dataset_id": "sales_q1",
+    "dataset_name": "Q1 Sales",
+    "row_count": 1280,
+    "column_count": 14
+  },
+  "metric_ref": {
+    "metric_id": "metric_revenue_sum",
+    "name": "Revenue",
+    "label": "Revenue",
+    "field": "Revenue",
+    "default_aggregation": "sum",
+    "format_hint": "currency"
+  },
+  "dimension_ref": null,
+  "time_context": {
+    "dimension_id": "dimension_order_date",
+    "field": "Order Date",
+    "grain": "observed_value",
+    "current_value": "2026-03-31T00:00:00",
+    "previous_value": "2026-03-30T00:00:00"
+  },
+  "evidence": {
+    "kind": "metric_comparison",
+    "current_value": 145000,
+    "previous_value": 120000,
+    "delta_value": 25000,
+    "delta_pct": 0.2083,
+    "row_count": 1280,
+    "chart_hint": {
+      "metric_id": "metric_revenue_sum",
+      "group_by": ["Order Date"]
+    }
+  },
+  "confidence": 0.84,
+  "importance_score": 72.5,
+  "created_at": "2026-04-03T23:59:59+00:00"
+}
+```
+
+## DecisionBrief
+
+Represents a high-level summary of what matters in a dataset or resolved slice.
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `brief_id` | `string` | Yes | Stable generated identifier |
+| `title` | `string` | Yes | Short brief title |
+| `summary` | `string` | Yes | High-level summary paragraph |
+| `dataset` | `Dataset Summary` | Yes | Resolved dataset context |
+| `time_context` | `Time Context \| null` | No | Highest-confidence temporal context when available |
+| `headline_signal_ids` | `string[]` | Yes | Ordered signal identifiers that anchor the brief |
+| `key_metrics` | `object[]` | Yes | Metric snapshots for quick orientation |
+| `themes` | `string[]` | Yes | High-level categories surfaced from signals |
+| `confidence` | `number` | Yes | `0.0` to `1.0` |
+| `generated_at` | `string` | Yes | ISO timestamp |
+
+### `key_metrics` item schema
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `metric_ref` | `Metric Reference` | Yes | Referenced semantic metric |
+| `current_value` | `number \| string \| null` | No | Current resolved summary value |
+| `previous_value` | `number \| string \| null` | No | Previous value when time comparison exists |
+| `delta_value` | `number \| null` | No | Current minus previous |
+| `delta_pct` | `number \| null` | No | Decimal ratio |
+| `status` | `string` | Yes | `changed`, `steady`, `baseline_only` |
+
+### Example
+
+```json
+{
+  "brief_id": "brief_q1_sales_2026_04_03t235959z",
+  "title": "Decision brief for Q1 Sales",
+  "summary": "Three actionable signals were detected across tracked metrics. Revenue improved in the latest period, but anomaly activity and regional concentration suggest follow-up analysis.",
+  "dataset": {
+    "source": "datahub",
+    "dataset_id": "sales_q1",
+    "dataset_name": "Q1 Sales",
+    "row_count": 1280,
+    "column_count": 14
+  },
+  "time_context": {
+    "dimension_id": "dimension_order_date",
+    "field": "Order Date",
+    "grain": "observed_value",
+    "current_value": "2026-03-31T00:00:00",
+    "previous_value": "2026-03-30T00:00:00"
+  },
+  "headline_signal_ids": [
+    "signal_metric_delta_metric_revenue_sum_2026_04_03t235959z",
+    "signal_anomaly_rate_q1_sales_2026_04_03t235959z"
+  ],
+  "key_metrics": [
+    {
+      "metric_ref": {
+        "metric_id": "metric_revenue_sum",
+        "name": "Revenue",
+        "label": "Revenue",
+        "field": "Revenue",
+        "default_aggregation": "sum",
+        "format_hint": "currency"
+      },
+      "current_value": 145000,
+      "previous_value": 120000,
+      "delta_value": 25000,
+      "delta_pct": 0.2083,
+      "status": "changed"
+    }
+  ],
+  "themes": [
+    "Performance change",
+    "Anomaly monitoring",
+    "Concentration risk"
+  ],
+  "confidence": 0.8,
+  "generated_at": "2026-04-03T23:59:59+00:00"
+}
+```
+
+## Recommendation
+
+Represents a suggested next action derived from one or more decision signals.
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `recommendation_id` | `string` | Yes | Stable generated identifier |
+| `recommendation_type` | `string` | Yes | `investigate`, `monitor`, `validate`, `optimize` |
+| `priority` | `string` | Yes | `low`, `medium`, `high` |
+| `status` | `string` | Yes | Phase 1 uses `proposed` |
+| `title` | `string` | Yes | Short action-oriented headline |
+| `summary` | `string` | Yes | Human-readable recommendation |
+| `dataset` | `Dataset Summary` | Yes | Resolved dataset context |
+| `based_on_signal_ids` | `string[]` | Yes | Traceability back to DecisionSignal objects |
+| `metric_ref` | `Metric Reference \| null` | No | Present when tied to a metric |
+| `dimension_ref` | `Dimension Reference \| null` | No | Present when tied to a dimension |
+| `actions` | `object[]` | Yes | Structured next-step hints |
+| `expected_outcome` | `string` | Yes | High-level expected result |
+| `confidence` | `number` | Yes | `0.0` to `1.0` |
+| `created_at` | `string` | Yes | ISO timestamp |
+
+### `actions` item schema
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `action_type` | `string` | Yes | Example: `break_down_metric`, `review_anomalies`, `audit_field_quality` |
+| `label` | `string` | Yes | Short display label |
+| `description` | `string` | Yes | Explains why to do it |
+| `payload` | `object` | Yes | Machine-friendly parameters for future workflow/UI use |
+
+### Example
+
+```json
+{
+  "recommendation_id": "recommendation_investigate_metric_revenue_sum_2026_04_03t235959z",
+  "recommendation_type": "investigate",
+  "priority": "high",
+  "status": "proposed",
+  "title": "Investigate the latest revenue shift",
+  "summary": "Revenue changed materially in the latest observed period. Break the metric down by a business dimension to isolate the drivers.",
+  "dataset": {
+    "source": "datahub",
+    "dataset_id": "sales_q1",
+    "dataset_name": "Q1 Sales",
+    "row_count": 1280,
+    "column_count": 14
+  },
+  "based_on_signal_ids": [
+    "signal_metric_delta_metric_revenue_sum_2026_04_03t235959z"
+  ],
+  "metric_ref": {
+    "metric_id": "metric_revenue_sum",
+    "name": "Revenue",
+    "label": "Revenue",
+    "field": "Revenue",
+    "default_aggregation": "sum",
+    "format_hint": "currency"
+  },
+  "dimension_ref": {
+    "dimension_id": "dimension_region",
+    "name": "Region",
+    "label": "Region",
+    "field": "Region",
+    "semantic_kind": "categorical",
+    "data_type": "string"
+  },
+  "actions": [
+    {
+      "action_type": "break_down_metric",
+      "label": "Break revenue down by Region",
+      "description": "Use a simple metric + group by breakdown to identify which segment moved.",
+      "payload": {
+        "metric_id": "metric_revenue_sum",
+        "group_by": ["Region"]
+      }
+    }
+  ],
+  "expected_outcome": "Identify the segment responsible for the latest change.",
+  "confidence": 0.84,
+  "created_at": "2026-04-03T23:59:59+00:00"
+}
+```
+
+## Scenario
+
+Represents a Phase 1 what-if evaluation scaffold. The object is intentionally lightweight and designed for later expansion.
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `scenario_id` | `string` | Yes | Stable generated identifier |
+| `name` | `string` | Yes | Scenario label |
+| `status` | `string` | Yes | Phase 1 uses `scaffolded` |
+| `summary` | `string` | Yes | High-level explanation of the evaluation |
+| `dataset` | `Dataset Summary` | Yes | Resolved dataset context |
+| `parameters` | `object` | Yes | Echoed scenario inputs |
+| `baseline_metrics` | `object[]` | Yes | Resolved current-state metric outputs |
+| `projected_metrics` | `object[]` | Yes | Simple projected outputs based on input adjustments |
+| `assumptions` | `string[]` | Yes | Explicit Phase 1 assumptions |
+| `generated_at` | `string` | Yes | ISO timestamp |
+
+### `baseline_metrics` item schema
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `metric_ref` | `Metric Reference` | Yes | Metric being evaluated |
+| `summary_value` | `number \| string \| null` | No | Baseline summary value |
+| `rows` | `object[]` | Yes | Grouped metric rows from the metric resolver |
+
+### `projected_metrics` item schema
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `metric_ref` | `Metric Reference` | Yes | Metric being evaluated |
+| `adjustment` | `object` | Yes | `{ "type": "percent" \| "absolute", "value": number }` |
+| `baseline_value` | `number \| null` | No | Numeric baseline when coercible |
+| `projected_value` | `number \| null` | No | Numeric projection when coercible |
+| `delta_value` | `number \| null` | No | `projected_value - baseline_value` |
+
+### Example
+
+```json
+{
+  "scenario_id": "scenario_upside_case_2026_04_03t235959z",
+  "name": "Upside case",
+  "status": "scaffolded",
+  "summary": "Scenario scaffold evaluated 2 metric targets using simple direct adjustments on semantic metric baselines.",
+  "dataset": {
+    "source": "datahub",
+    "dataset_id": "sales_q1",
+    "dataset_name": "Q1 Sales",
+    "row_count": 1280,
+    "column_count": 14
+  },
+  "parameters": {
+    "filters": [],
+    "group_by": ["Region"],
+    "metric_targets": [
+      {
+        "metric_id": "metric_revenue_sum",
+        "adjustment_type": "percent",
+        "adjustment_value": 0.08
+      }
+    ]
+  },
+  "baseline_metrics": [
+    {
+      "metric_ref": {
+        "metric_id": "metric_revenue_sum",
+        "name": "Revenue",
+        "label": "Revenue",
+        "field": "Revenue",
+        "default_aggregation": "sum",
+        "format_hint": "currency"
+      },
+      "summary_value": 145000,
+      "rows": [
+        {
+          "group": {
+            "Region": "East"
+          },
+          "value": 55000,
+          "row_count": 320
+        }
+      ]
+    }
+  ],
+  "projected_metrics": [
+    {
+      "metric_ref": {
+        "metric_id": "metric_revenue_sum",
+        "name": "Revenue",
+        "label": "Revenue",
+        "field": "Revenue",
+        "default_aggregation": "sum",
+        "format_hint": "currency"
+      },
+      "adjustment": {
+        "type": "percent",
+        "value": 0.08
+      },
+      "baseline_value": 145000,
+      "projected_value": 156600,
+      "delta_value": 11600
+    }
+  ],
+  "assumptions": [
+    "Phase 1 scenarios apply direct metric adjustments only.",
+    "No causal or multi-step simulation is performed yet."
+  ],
+  "generated_at": "2026-04-03T23:59:59+00:00"
+}
+```
