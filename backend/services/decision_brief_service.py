@@ -19,12 +19,60 @@ from backend.services.decision_support import (
 )
 
 
+def _signal_rank(signal: Dict[str, Any]) -> tuple:
+    severity_rank = {
+        "low": 1,
+        "medium": 2,
+        "high": 3,
+        "critical": 4,
+    }
+    return (
+        signal.get("importance_score") or 0,
+        severity_rank.get(signal.get("severity"), 0),
+        signal.get("confidence") or 0,
+    )
+
+
+def _pick_relevant_metrics(signals: List[Dict[str, Any]], metrics: List[Dict[str, Any]], limit: int = 4) -> List[Dict[str, Any]]:
+    selected = []
+    seen_metric_ids = set()
+
+    signal_metric_ids = [
+        (signal.get("metric_ref") or {}).get("metric_id")
+        for signal in sorted(signals, key=_signal_rank, reverse=True)
+        if isinstance(signal.get("metric_ref"), dict)
+    ]
+    ordered_metric_ids = [metric_id for metric_id in signal_metric_ids if metric_id]
+
+    for metric_id in ordered_metric_ids:
+        metric = next((candidate for candidate in metrics if (candidate.get("id") or candidate.get("metric_id")) == metric_id), None)
+        if metric is None:
+            continue
+        seen_metric_ids.add(metric_id)
+        selected.append(metric)
+        if len(selected) >= limit:
+            return selected
+
+    for metric in metrics:
+        metric_id = metric.get("id") or metric.get("metric_id")
+        if metric_id in seen_metric_ids:
+            continue
+        selected.append(metric)
+        if len(selected) >= limit:
+            break
+    return selected
+
+
 def _build_key_metrics(context: Dict[str, Any], metrics: List[Dict[str, Any]], filters: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     key_metrics = []
-    for metric in metrics[:3]:
+    for metric in metrics:
         metric_ref = build_metric_ref(metric)
         result = resolve_metric_result(context, metric, filters=filters)
         change = latest_metric_change(context, metric, filters=filters)
+        delta_pct = change.get("delta_pct") if change else None
+        status = "baseline_only"
+        if change:
+            status = "steady" if delta_pct is not None and abs(delta_pct) < 0.03 else "changed"
 
         key_metrics.append(
             {
@@ -32,8 +80,8 @@ def _build_key_metrics(context: Dict[str, Any], metrics: List[Dict[str, Any]], f
                 "current_value": result.get("summary", {}).get("value"),
                 "previous_value": change.get("previous_value") if change else None,
                 "delta_value": change.get("delta_value") if change else None,
-                "delta_pct": change.get("delta_pct") if change else None,
-                "status": "changed" if change else "baseline_only",
+                "delta_pct": delta_pct,
+                "status": status,
             }
         )
     return key_metrics
@@ -45,6 +93,34 @@ def _first_metric_change(context: Dict[str, Any], metrics: List[Dict[str, Any]],
         if change is not None:
             return change
     return None
+
+
+def _build_brief_summary(context: Dict[str, Any], signals: List[Dict[str, Any]], themes: List[str]) -> str:
+    if context["dataframe"].empty:
+        return "The resolved dataset is empty, so no decision brief highlights could be generated yet."
+    if not signals:
+        return "No material decision signals were detected in the current dataset slice."
+
+    top_signal = signals[0]
+    high_priority_count = len([signal for signal in signals if signal.get("severity") in {"high", "critical"}])
+    theme_text = ", ".join(themes[:2]) if themes else "decision monitoring"
+
+    if high_priority_count:
+        return (
+            f"{top_signal['title']}. {high_priority_count} high-priority signal"
+            f"{'s were' if high_priority_count != 1 else ' was'} surfaced in this slice, with themes centered on {theme_text}."
+        )
+    return (
+        f"{top_signal['title']}. {len(signals)} signals were surfaced for this slice, led by {theme_text}."
+    )
+
+
+def _brief_confidence(signals: List[Dict[str, Any]]) -> float:
+    if not signals:
+        return 0.6
+    top_signals = signals[:3]
+    total = sum(float(signal.get("confidence") or 0.0) for signal in top_signals)
+    return round(min(0.95, max(0.65, total / float(len(top_signals)))), 4)
 
 
 def generate_decision_brief(payload: Dict[str, Any]) -> Dict[str, Any]:
@@ -60,32 +136,25 @@ def generate_decision_brief(payload: Dict[str, Any]) -> Dict[str, Any]:
     metric_names = normalize_reference_list(payload, "metric_names", "metricNames")
 
     signal_response = generate_decision_signals(payload)
-    signals = signal_response["signals"]
-    selected_metrics = select_metrics(context, metric_ids=metric_ids, metric_names=metric_names, max_metrics=3)
-    key_metrics = _build_key_metrics(context, selected_metrics, filters)
-    primary_change = _first_metric_change(context, selected_metrics, filters)
+    signals = sorted(signal_response["signals"], key=_signal_rank, reverse=True)
+    selected_metrics = select_metrics(context, metric_ids=metric_ids, metric_names=metric_names, max_metrics=5)
+    relevant_metrics = _pick_relevant_metrics(signals, selected_metrics, limit=4)
+    key_metrics = _build_key_metrics(context, relevant_metrics, filters)
+    primary_change = _first_metric_change(context, relevant_metrics, filters)
     generated_at = iso_timestamp()
-
-    if context["dataframe"].empty:
-        summary = "The resolved dataset is empty, so no decision brief highlights could be generated yet."
-    elif signals:
-        summary = (
-            f"{len(signals)} actionable signals were detected across tracked metrics. "
-            f"{signals[0]['title']} is the leading headline for this dataset slice."
-        )
-    else:
-        summary = "No material decision signals were detected in the current dataset slice."
+    themes = derive_themes(signals)
+    summary = _build_brief_summary(context, signals, themes)
 
     brief = {
         "brief_id": make_identifier("brief", context["dataset"]["dataset_name"], generated_at),
-        "title": f"Decision brief for {context['dataset']['dataset_name']}",
+        "title": signals[0]["title"] if signals else f"Decision brief for {context['dataset']['dataset_name']}",
         "summary": summary,
         "dataset": context["dataset"],
-        "time_context": build_time_context(primary_change, context.get("time_dimension")),
+        "time_context": signals[0].get("time_context") if signals and signals[0].get("time_context") else build_time_context(primary_change, context.get("time_dimension")),
         "headline_signal_ids": [signal["signal_id"] for signal in signals[:3]],
         "key_metrics": key_metrics,
-        "themes": derive_themes(signals),
-        "confidence": 0.8 if signals else 0.6,
+        "themes": themes,
+        "confidence": _brief_confidence(signals),
         "generated_at": generated_at,
     }
 

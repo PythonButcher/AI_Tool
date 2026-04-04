@@ -69,6 +69,65 @@ def _apply_adjustment(baseline_value: float | None, adjustment_type: str, adjust
     return baseline_value + adjustment_value
 
 
+def _project_grouped_rows(rows: List[Dict[str, Any]], adjustment_type: str, adjustment_value: float) -> List[Dict[str, Any]]:
+    projected_rows = []
+    for row in rows:
+        baseline_value = safe_float(row.get("value"))
+        projected_value = _apply_adjustment(baseline_value, adjustment_type, adjustment_value)
+        delta_value = projected_value - baseline_value if projected_value is not None and baseline_value is not None else None
+        delta_pct = None
+        if baseline_value not in {None, 0} and delta_value is not None:
+            delta_pct = delta_value / abs(baseline_value)
+        projected_rows.append(
+            {
+                "group": row.get("group", {}),
+                "baseline_value": rounded(baseline_value),
+                "projected_value": rounded(projected_value),
+                "delta_value": rounded(delta_value) if delta_value is not None else None,
+                "delta_pct": rounded(delta_pct),
+                "row_count": int(row.get("row_count") or 0),
+            }
+        )
+    return projected_rows
+
+
+def _build_comparison_summary(
+    baseline_value: float | None,
+    projected_value: float | None,
+    projected_rows: List[Dict[str, Any]],
+) -> Dict[str, Any]:
+    delta_value = projected_value - baseline_value if projected_value is not None and baseline_value is not None else None
+    delta_pct = None
+    if baseline_value not in {None, 0} and delta_value is not None:
+        delta_pct = delta_value / abs(baseline_value)
+
+    largest_group = None
+    if projected_rows:
+        ranked_rows = [
+            row
+            for row in projected_rows
+            if row.get("delta_value") is not None
+        ]
+        ranked_rows.sort(key=lambda row: abs(row.get("delta_value") or 0), reverse=True)
+        if ranked_rows:
+            largest_group = ranked_rows[0]
+
+    direction = "flat"
+    if delta_value is not None:
+        if delta_value > 0:
+            direction = "up"
+        elif delta_value < 0:
+            direction = "down"
+
+    return {
+        "direction": direction,
+        "delta_value": rounded(delta_value) if delta_value is not None else None,
+        "delta_pct": rounded(delta_pct),
+        "projected_group_count": len(projected_rows),
+        "largest_group_change": largest_group,
+    }
+
+
 def evaluate_scenario(payload: Dict[str, Any]) -> Dict[str, Any]:
     payload = payload if isinstance(payload, dict) else {}
     context = resolve_decision_context(
@@ -98,6 +157,8 @@ def evaluate_scenario(payload: Dict[str, Any]) -> Dict[str, Any]:
         metric_ref = build_metric_ref(metric)
         baseline_value = safe_float(result.get("summary", {}).get("value"))
         projected_value = _apply_adjustment(baseline_value, target["adjustment_type"], target["adjustment_value"])
+        projected_rows = _project_grouped_rows(result.get("rows", []), target["adjustment_type"], target["adjustment_value"]) if group_by else []
+        comparison_summary = _build_comparison_summary(baseline_value, projected_value, projected_rows)
 
         baseline_metrics.append(
             {
@@ -116,17 +177,21 @@ def evaluate_scenario(payload: Dict[str, Any]) -> Dict[str, Any]:
                 "baseline_value": rounded(baseline_value),
                 "projected_value": rounded(projected_value),
                 "delta_value": rounded(projected_value - baseline_value) if projected_value is not None and baseline_value is not None else None,
+                "delta_pct": comparison_summary.get("delta_pct"),
+                "projected_rows": projected_rows,
+                "comparison_summary": comparison_summary,
             }
         )
 
     generated_at = iso_timestamp()
     scenario_name = str(payload.get("name") or payload.get("scenario_name") or payload.get("scenarioName") or "Scenario evaluation").strip()
+    group_by_text = f" across {', '.join(str(item) for item in group_by)}" if group_by else ""
     scenario = {
         "scenario_id": make_identifier("scenario", scenario_name, generated_at),
         "name": scenario_name,
         "status": "scaffolded",
         "summary": (
-            f"Scenario scaffold evaluated {len(projected_metrics)} metric targets using simple direct adjustments "
+            f"Scenario scaffold evaluated {len(projected_metrics)} metric targets{group_by_text} using direct adjustments "
             f"on semantic metric baselines."
         ),
         "dataset": context["dataset"],
@@ -138,7 +203,9 @@ def evaluate_scenario(payload: Dict[str, Any]) -> Dict[str, Any]:
         "baseline_metrics": baseline_metrics,
         "projected_metrics": projected_metrics,
         "assumptions": [
-            "Phase 1 scenarios apply direct metric adjustments only.",
+            "Scenario projections apply direct metric adjustments only.",
+            "Percent adjustments are applied multiplicatively to both the total baseline and any grouped rows.",
+            "Grouped projections assume the same adjustment pattern for each returned segment.",
             "No causal or multi-step simulation is performed yet.",
         ],
         "generated_at": generated_at,

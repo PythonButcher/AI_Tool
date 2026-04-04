@@ -44,7 +44,7 @@ All timestamps use ISO-8601 UTC strings. Optional fields may be `null`. All obje
 | --- | --- | --- | --- |
 | `dimension_id` | `string \| null` | No | Temporal dimension identifier |
 | `field` | `string \| null` | No | Temporal field name |
-| `grain` | `string \| null` | No | Phase 1 uses `observed_value` when present |
+| `grain` | `string \| null` | No | Phase 2 may infer `day`, `week`, `month`, `quarter`, `year`, or fall back to `observed_value` |
 | `current_value` | `string \| number \| null` | No | Latest observed grouped value |
 | `previous_value` | `string \| number \| null` | No | Previous observed grouped value |
 
@@ -76,16 +76,20 @@ Represents a detected change, anomaly, concentration, or data-quality condition 
   - `kind`: `metric_comparison`
   - `current_value`, `previous_value`, `delta_value`, `delta_pct`
   - `row_count`
+  - Optional `semantic_context`: metric semantics such as `metric_type`, `aggregation`, `format_hint`, `business_weight`, `related_metrics`, `time_grain`
   - `chart_hint`: `{ "metric_id": string, "group_by": string[] }`
 - `anomaly_rate`
   - `kind`: `dataset_anomaly_scan`
   - `anomaly_count`, `anomaly_rate`, `numeric_field_count`, `row_count`
+  - Optional `semantic_context`: scan metadata such as `numeric_fields_scanned`, `scan_scope`
 - `dimension_concentration`
   - `kind`: `dimension_distribution`
   - `top_value`, `top_count`, `top_share`, `distinct_count`, `row_count`
+  - Optional `semantic_context`: dimension metadata such as `importance_score`, `unique_count`, `null_rate`, `top_share`
 - `data_quality`
   - `kind`: `field_null_rate`
   - `field`, `null_count`, `null_rate`, `row_count`
+  - Optional `semantic_context`: field metadata such as `field_role`, `field_format_hint`, `is_metric_backed`
 
 ### Example
 
@@ -247,7 +251,7 @@ Represents a suggested next action derived from one or more decision signals.
 | `action_type` | `string` | Yes | Example: `break_down_metric`, `review_anomalies`, `audit_field_quality` |
 | `label` | `string` | Yes | Short display label |
 | `description` | `string` | Yes | Explains why to do it |
-| `payload` | `object` | Yes | Machine-friendly parameters for future workflow/UI use |
+| `payload` | `object` | Yes | Machine-friendly parameters for future workflow/UI use. Phase 2 should keep chart-ready actions simple: `metric_id` plus `group_by` remain the primary keys, with optional additive context such as `signal_id`. |
 
 ### Example
 
@@ -336,6 +340,20 @@ Represents a Phase 1 what-if evaluation scaffold. The object is intentionally li
 | `baseline_value` | `number \| null` | No | Numeric baseline when coercible |
 | `projected_value` | `number \| null` | No | Numeric projection when coercible |
 | `delta_value` | `number \| null` | No | `projected_value - baseline_value` |
+| `delta_pct` | `number \| null` | No | Decimal ratio when `baseline_value` is non-zero |
+| `projected_rows` | `object[]` | No | Optional grouped projections when `group_by` was provided |
+| `comparison_summary` | `object \| null` | No | Optional comparison rollup such as direction, `delta_pct`, projected group count, and largest group change |
+
+### `projected_rows` item schema
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `group` | `object` | Yes | Group key/value pairs copied from the baseline rows |
+| `baseline_value` | `number \| null` | No | Numeric grouped baseline |
+| `projected_value` | `number \| null` | No | Numeric grouped projection |
+| `delta_value` | `number \| null` | No | Projected minus baseline |
+| `delta_pct` | `number \| null` | No | Decimal ratio when baseline is non-zero |
+| `row_count` | `integer` | Yes | Row count for the grouped slice |
 
 ### Example
 

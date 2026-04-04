@@ -5,104 +5,237 @@ from typing import Any, Dict
 from backend.services.decision_signal_service import generate_decision_signals
 from backend.services.decision_support import (
     build_dimension_ref,
+    build_metric_ref,
     build_semantic_summary,
     iso_timestamp,
-    list_candidate_dimensions,
     make_identifier,
     normalize_positive_int,
     resolve_decision_context,
     rounded,
+    select_breakdown_dimensions,
+    select_metrics,
 )
 
 
-def _priority_from_severity(severity: str) -> str:
-    if severity in {"critical", "high"}:
+def _priority_from_signal(signal: Dict[str, Any]) -> str:
+    severity = signal.get("severity")
+    importance_score = float(signal.get("importance_score") or 0.0)
+    if severity in {"critical", "high"} or importance_score >= 80:
         return "high"
-    if severity == "medium":
+    if severity == "medium" or importance_score >= 55:
         return "medium"
     return "low"
 
 
-def _recommendation_from_signal(context: Dict[str, Any], signal: Dict[str, Any]) -> Dict[str, Any]:
+def _chart_action(
+    action_type: str,
+    label: str,
+    description: str,
+    metric_ref: Dict[str, Any] | None,
+    group_by: list[str],
+    extra_payload: Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
+    payload = {
+        "metric_id": metric_ref.get("metric_id") if isinstance(metric_ref, dict) else None,
+        "group_by": group_by,
+    }
+    if isinstance(extra_payload, dict):
+        payload.update(extra_payload)
+    return {
+        "action_type": action_type,
+        "label": label,
+        "description": description,
+        "payload": payload,
+    }
+
+
+def _resolve_reference_metric(
+    context: Dict[str, Any],
+    signal: Dict[str, Any],
+    selected_metrics: list[Dict[str, Any]],
+) -> Dict[str, Any] | None:
+    signal_metric_ref = signal.get("metric_ref") if isinstance(signal.get("metric_ref"), dict) else None
+    if signal_metric_ref:
+        signal_metric_id = signal_metric_ref.get("metric_id")
+        if signal_metric_id:
+            match = next(
+                (
+                    metric
+                    for metric in selected_metrics
+                    if (metric.get("id") or metric.get("metric_id")) == signal_metric_id
+                ),
+                None,
+            )
+            if match is not None:
+                return match
+
+    if selected_metrics:
+        return selected_metrics[0]
+
+    fallback_metrics = select_metrics(context, max_metrics=1)
+    return fallback_metrics[0] if fallback_metrics else None
+
+
+def _build_time_action(metric_ref: Dict[str, Any] | None, time_dimension: Dict[str, Any] | None) -> Dict[str, Any] | None:
+    if not metric_ref or not isinstance(time_dimension, dict) or not time_dimension.get("field"):
+        return None
+    return _chart_action(
+        action_type="compare_metric_over_time",
+        label=f"Review {metric_ref['label']} over time",
+        description="Use the existing metric + group by chart flow to confirm whether the pattern is persistent or recent.",
+        metric_ref=metric_ref,
+        group_by=[time_dimension["field"]],
+    )
+
+
+def _recommendation_from_signal(context: Dict[str, Any], signal: Dict[str, Any], selected_metrics: list[Dict[str, Any]]) -> Dict[str, Any]:
     created_at = iso_timestamp()
     signal_type = signal.get("signal_type")
-    metric_ref = signal.get("metric_ref")
+    metric = _resolve_reference_metric(context, signal, selected_metrics)
+    metric_ref = signal.get("metric_ref") if isinstance(signal.get("metric_ref"), dict) else build_metric_ref(metric)
     dimension_ref = signal.get("dimension_ref")
-    fallback_dimension = None
-    candidate_dimensions = list_candidate_dimensions(context, max_dimensions=1)
-    if candidate_dimensions:
-        fallback_dimension = build_dimension_ref(candidate_dimensions[0])
+    evidence = signal.get("evidence") if isinstance(signal.get("evidence"), dict) else {}
+    time_dimension = context.get("time_dimension") if isinstance(context.get("time_dimension"), dict) else None
+    breakdown_dimensions = select_breakdown_dimensions(
+        context,
+        metric=metric,
+        max_dimensions=2,
+        exclude_fields=[(dimension_ref or {}).get("field")] if isinstance(dimension_ref, dict) else None,
+    )
+    fallback_dimension = build_dimension_ref(breakdown_dimensions[0]) if breakdown_dimensions else None
+    secondary_dimension = build_dimension_ref(breakdown_dimensions[1]) if len(breakdown_dimensions) > 1 else None
     resolved_dimension_ref = dimension_ref or fallback_dimension
 
     if signal_type == "metric_delta":
-        title = f"Investigate the latest {metric_ref['label']} shift"
-        recommendation_type = "investigate"
-        actions = [
-            {
-                "action_type": "break_down_metric",
-                "label": f"Break {metric_ref['label']} down by {resolved_dimension_ref['label']}" if resolved_dimension_ref else f"Review {metric_ref['label']}",
-                "description": "Use a simple metric + group by breakdown to isolate the change driver.",
-                "payload": {
-                    "metric_id": metric_ref["metric_id"],
-                    "group_by": [resolved_dimension_ref["field"]] if resolved_dimension_ref else [],
-                },
-            }
-        ]
-        expected_outcome = "Identify the segment responsible for the latest change."
+        direction = signal.get("direction")
+        recommendation_type = "optimize" if direction == "up" else "investigate"
+        title = (
+            f"Break down the latest {metric_ref['label']} increase"
+            if direction == "up"
+            else f"Break down the latest {metric_ref['label']} decline"
+        )
+        actions = []
+        if resolved_dimension_ref:
+            actions.append(
+                _chart_action(
+                    action_type="break_down_metric",
+                    label=f"Break {metric_ref['label']} down by {resolved_dimension_ref['label']}",
+                    description="Use the current chart workflow to isolate which segment drove the shift.",
+                    metric_ref=metric_ref,
+                    group_by=[resolved_dimension_ref["field"]],
+                )
+            )
+        time_action = _build_time_action(metric_ref, time_dimension)
+        if time_action:
+            actions.append(time_action)
+        if secondary_dimension:
+            actions.append(
+                _chart_action(
+                    action_type="compare_segments",
+                    label=f"Compare {metric_ref['label']} by {secondary_dimension['label']}",
+                    description="Use a second simple breakdown if the first segmentation does not isolate the driver cleanly.",
+                    metric_ref=metric_ref,
+                    group_by=[secondary_dimension["field"]],
+                )
+            )
+        expected_outcome = (
+            "Identify which business segment is sustaining the increase."
+            if direction == "up"
+            else "Identify which business segment is responsible for the decline."
+        )
+        breakdown_suffix = f" by {resolved_dimension_ref['label']}" if resolved_dimension_ref else ""
+        summary = (
+            f"{signal.get('summary')} Start with a simple breakdown"
+            f"{breakdown_suffix} to find the driver."
+        )
     elif signal_type == "anomaly_rate":
-        title = "Review anomalous rows before acting"
+        title = "Isolate where anomalous behavior is clustering"
         recommendation_type = "investigate"
-        actions = [
-            {
-                "action_type": "review_anomalies",
-                "label": "Inspect anomalous records",
-                "description": "Validate whether the anomaly cluster reflects bad data or a true operating change.",
-                "payload": {
-                    "signal_id": signal["signal_id"],
-                    "scan_kind": "dataset_anomaly_scan",
-                },
-            }
-        ]
+        actions = []
+        if resolved_dimension_ref and metric_ref:
+            actions.append(
+                _chart_action(
+                    action_type="break_down_metric",
+                    label=f"Break {metric_ref['label']} down by {resolved_dimension_ref['label']}",
+                    description="Use a simple metric + group by view to see whether anomalies cluster in one segment.",
+                    metric_ref=metric_ref,
+                    group_by=[resolved_dimension_ref["field"]],
+                    extra_payload={"signal_id": signal["signal_id"]},
+                )
+            )
+        time_action = _build_time_action(metric_ref, time_dimension)
+        if time_action:
+            time_action["payload"]["signal_id"] = signal["signal_id"]
+            actions.append(time_action)
         expected_outcome = "Separate data quality issues from real operational changes."
+        summary = (
+            f"{signal.get('summary')} Use one segmentation view and one time view before deciding whether to treat this as noise or a real business shift."
+        )
     elif signal_type == "dimension_concentration":
-        title = f"Monitor concentration in {dimension_ref['label']}"
+        target_dimension_ref = dimension_ref or resolved_dimension_ref or {"label": "the dominant segment", "field": None}
+        title = f"Quantify concentration in {target_dimension_ref['label']}"
         recommendation_type = "monitor"
-        actions = [
-            {
-                "action_type": "monitor_dimension_share",
-                "label": f"Track {dimension_ref['label']} share over time",
-                "description": "Watch whether the dominant segment continues to grow or normalize.",
-                "payload": {
-                    "dimension": dimension_ref["field"],
-                    "signal_id": signal["signal_id"],
-                },
-            }
-        ]
+        actions = []
+        if metric_ref and target_dimension_ref.get("field"):
+            actions.append(
+                _chart_action(
+                    action_type="break_down_metric",
+                    label=f"Break {metric_ref['label']} down by {target_dimension_ref['label']}",
+                    description="Use the simplest segmentation view to size the dependence on the dominant segment.",
+                    metric_ref=metric_ref,
+                    group_by=[target_dimension_ref["field"]],
+                    extra_payload={"signal_id": signal["signal_id"]},
+                )
+            )
+        time_action = _build_time_action(metric_ref, time_dimension)
+        if time_action:
+            actions.append(time_action)
         expected_outcome = "Reduce concentration risk and understand whether it is structural or temporary."
+        summary = (
+            f"{signal.get('summary')} Measure how much of {metric_ref['label'] if metric_ref else 'performance'} depends on this segment before deciding whether to diversify or monitor."
+        )
     else:
-        title = "Audit the affected field before relying on it"
+        title = "Validate the affected field before relying on it"
         recommendation_type = "validate"
-        field_name = signal.get("evidence", {}).get("field")
-        actions = [
-            {
-                "action_type": "audit_field_quality",
-                "label": f"Audit {field_name}",
-                "description": "Check ingestion, cleaning, and null handling for the affected field.",
-                "payload": {
-                    "field": field_name,
-                    "signal_id": signal["signal_id"],
-                },
-            }
-        ]
+        field_name = evidence.get("field")
+        actions = []
+        if metric_ref and field_name:
+            actions.append(
+                _chart_action(
+                    action_type="break_down_metric",
+                    label=f"Break {metric_ref['label']} down by {field_name}",
+                    description="Use a quick chart to see whether missingness aligns to a specific segment or shows up broadly.",
+                    metric_ref=metric_ref,
+                    group_by=[field_name],
+                    extra_payload={"signal_id": signal["signal_id"]},
+                )
+            )
+        time_action = _build_time_action(metric_ref, time_dimension)
+        if time_action:
+            actions.append(time_action)
         expected_outcome = "Improve data reliability before downstream decisions use the field."
+        summary = (
+            f"{signal.get('summary')} Check whether the issue is concentrated in one segment or recent periods before trusting downstream comparisons."
+        )
+
+    if not actions and metric_ref:
+        actions.append(
+            _chart_action(
+                action_type="review_metric",
+                label=f"Review {metric_ref['label']}",
+                description="Fallback chart action using the existing metric workflow.",
+                metric_ref=metric_ref,
+                group_by=[],
+            )
+        )
 
     return {
         "recommendation_id": make_identifier("recommendation", recommendation_type, signal.get("signal_id"), created_at),
         "recommendation_type": recommendation_type,
-        "priority": _priority_from_severity(signal.get("severity")),
+        "priority": _priority_from_signal(signal),
         "status": "proposed",
         "title": title,
-        "summary": signal.get("summary"),
+        "summary": summary,
         "dataset": context["dataset"],
         "based_on_signal_ids": [signal["signal_id"]],
         "metric_ref": metric_ref,
@@ -127,10 +260,15 @@ def generate_recommendations(payload: Dict[str, Any]) -> Dict[str, Any]:
         5,
         "max_recommendations",
     )
-
     signal_response = generate_decision_signals(payload)
+    selected_metrics = select_metrics(
+        context,
+        metric_ids=signal_response["request"]["metric_ids"],
+        metric_names=signal_response["request"]["metric_names"],
+        max_metrics=max_recommendations,
+    ) if not context["dataframe"].empty else []
     signals = signal_response["signals"][:max_recommendations]
-    recommendations = [_recommendation_from_signal(context, signal) for signal in signals]
+    recommendations = [_recommendation_from_signal(context, signal, selected_metrics) for signal in signals]
 
     return {
         "status": "success",
