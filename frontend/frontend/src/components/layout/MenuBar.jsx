@@ -8,6 +8,7 @@ import {
   FaChartBar,
   FaChevronDown,
   FaChevronUp,
+  FaCogs,
   FaDatabase,
   FaFileAlt,
   FaFilter,
@@ -25,7 +26,12 @@ import {
 import { TbCloudDataConnection } from 'react-icons/tb';
 import { ThemeContext } from '../../context/ThemeContext';
 
-const RIBBON_TABS = ['Home', 'Visualise', 'Business', 'AI', 'Dashboard', 'Settings'];
+const DESTINATIONS = {
+  WORKSPACE: 'workspace',
+  EXPLORE: 'explore',
+  DASHBOARDS: 'dashboards',
+  DECISIONS: 'decisions',
+};
 
 const inlinePanelMeta = {
   upload: {
@@ -92,10 +98,8 @@ function RibbonGroup({ title, caption, children }) {
 }
 
 function MenuBar({
-  activeTab,
-  onTabChange,
-  activeWorkflow,
-  onWorkflowSelect,
+  activeDestination,
+  onDestinationSelect,
   onFileUploadSuccess,
   onStatsSelect,
   setShowDataPreview,
@@ -122,10 +126,6 @@ function MenuBar({
   const barRef = useRef(null);
 
   useEffect(() => {
-    setActiveSurface(null);
-  }, [activeTab]);
-
-  useEffect(() => {
     if (!onHeightChange || !barRef.current) {
       return undefined;
     }
@@ -145,7 +145,7 @@ function MenuBar({
     const observer = new ResizeObserver(() => updateHeight());
     observer.observe(barRef.current);
     return () => observer.disconnect();
-  }, [activeSurface, activeTab, isRibbonCollapsed, onHeightChange]);
+  }, [activeSurface, activeDestination, isRibbonCollapsed, onHeightChange]);
 
   const handleReset = () => window.location.reload();
 
@@ -205,324 +205,111 @@ function MenuBar({
   };
 
   const renderActiveRibbon = () => {
-    if (activeTab === 'Home') {
-      return (
-        <>
-          <RibbonGroup title="Load Data" caption="Bring datasets into the workspace">
-            <RibbonCommand
-              icon={<FaUpload />}
-              label="Upload File"
-              description="Import a local dataset"
-              onClick={() => toggleSurface('upload')}
-              active={activeSurface === 'upload'}
-              emphasized
-            />
-            <RibbonCommand
-              icon={<TbCloudDataConnection />}
-              label="Open Hub"
-              description="Browse managed datasets"
-              onClick={() => toggleSurface('hub')}
-              active={activeSurface === 'hub'}
-            />
-            <RibbonCommand
-              icon={<FaServer />}
-              label="Connect API"
-              description="Stream data from an endpoint"
-              onClick={() => toggleSurface('api')}
-              active={activeSurface === 'api'}
-            />
-            <RibbonCommand
-              icon={<FaDatabase />}
-              label="Connect DB"
-              description="Query warehouse tables"
-              onClick={() => toggleSurface('db')}
-              active={activeSurface === 'db'}
-            />
-          </RibbonGroup>
-
-          <RibbonGroup title="Workspace" caption="Jump into the next workflow">
-            <RibbonCommand
-              icon={<FaTable />}
-              label="Data Workflow"
-              description="Open the left drawer for preview, cleaning, and export"
-              onClick={() => onWorkflowSelect('data')}
-              active={activeWorkflow === 'data'}
-            />
-            <RibbonCommand
-              icon={<FaRedoAlt />}
-              label="Reset App"
-              description="Reload the current workspace"
-              onClick={handleReset}
-            />
-          </RibbonGroup>
-        </>
-      );
-    }
-
-    if (activeTab === 'Visualise') {
-      return (
-        <>
-          <RibbonGroup title="Build" caption="Launch chart workflows without leaving the canvas">
-            <RibbonCommand
-              icon={<FaChartBar />}
-              label="Visualise Drawer"
-              description="Open chart templates and shortcuts"
-              onClick={() => onWorkflowSelect('visualise')}
-              active={activeWorkflow === 'visualise'}
-              emphasized
-            />
-            <RibbonCommand
-              icon={<FaChartBar />}
-              label="Chart Gallery"
-              description="Use the existing chart picker"
-              onClick={onOpenChartGallery}
-            />
-          </RibbonGroup>
-
-          <RibbonGroup title="Flow" caption="Move quickly between fields and charts">
-            <RibbonCommand
-              icon={<FaDatabase />}
-              label="Data Pane"
-              description="The field explorer is now persistent on the right"
-              disabled
-            />
-            <RibbonCommand
-              icon={<FaTachometerAlt />}
-              label="Dashboard"
-              description="Jump into dashboard-focused work"
-              onClick={() => onWorkflowSelect('dashboard')}
-            />
-          </RibbonGroup>
-        </>
-      );
-    }
-
-    if (activeTab === 'Business') {
-      return (
-        <>
-          <RibbonGroup title="Definitions" caption="Phase 1 keeps semantics discoverable in the shell">
-            <RibbonCommand
-              icon={<FaTable />}
-              label="Business Drawer"
-              description="Open business definitions and KPI shortcuts"
-              onClick={() => onWorkflowSelect('business')}
-              active={activeWorkflow === 'business'}
-              emphasized
-            />
-            <RibbonCommand
-              icon={<FaTachometerAlt />}
-              label={isDashboardVisible ? 'Hide Dashboard' : 'Open Dashboard'}
-              description="Toggle the dashboard canvas"
-              onClick={onDashboardToggle}
-              active={isDashboardVisible}
-            />
-          </RibbonGroup>
-
-          <RibbonGroup title="Next Up" caption="Deeper semantic workflows are staged for later phases">
-            <RibbonCommand
-              icon={<FaDatabase />}
-              label="Persistent Fields"
-              description="Use business fields from the right Data Pane"
-              disabled
-            />
-            <RibbonCommand
-              icon={<FaFileAlt />}
-              label="AI Report"
-              description={aiReportReady ? 'Open the latest completed report' : 'Report becomes active when ready'}
-              onClick={onAiReportClick}
-              disabled={!aiReportReady}
-              badge={aiReportReady ? 'Ready' : 'Waiting'}
-            />
-          </RibbonGroup>
-        </>
-      );
-    }
-
-    if (activeTab === 'AI') {
-      return (
-        <>
-          <RibbonGroup title="Assist" caption="Open AI surfaces without leaving the main workspace">
-            <RibbonCommand
-              icon={<FaRobot />}
-              label="AI Drawer"
-              description="Open workflow, story, and report shortcuts"
-              onClick={() => onWorkflowSelect('ai')}
-              active={activeWorkflow === 'ai'}
-              emphasized
-            />
-            <RibbonCommand
-              icon={<FaRobot />}
-              label="Open Chat"
-              description="Reveal the AI assistant panel"
-              onClick={onOpenAiChat}
-            />
-            <RibbonCommand
-              icon={<FaMagic />}
-              label="Workflow Lab"
-              description="Open the existing AI workflow window"
-              onClick={onOpenAiWorkflow}
-            />
-            <RibbonCommand
-              icon={<FaFileAlt />}
-              label="Storyboard"
-              description="Open the current narrative workflow"
-              onClick={onOpenStoryboard}
-            />
-          </RibbonGroup>
-
-          <RibbonGroup title="Support" caption="Keep supporting tools close at hand">
-            <RibbonCommand
-              icon={<FaFileAlt />}
-              label="AI Report"
-              description={aiReportReady ? 'Open the completed report window' : 'Will enable when the report is ready'}
-              onClick={onAiReportClick}
-              disabled={!aiReportReady}
-              badge={aiReportReady ? 'Ready' : 'Soon'}
-            />
-            <RibbonCommand
-              icon={<FaTable />}
-              label="Whiteboard"
-              description="Jump to the freeform workspace"
-              onClick={onOpenWhiteboard}
-            />
-          </RibbonGroup>
-        </>
-      );
-    }
-
-    if (activeTab === 'Dashboard') {
-      return (
-        <>
-          <RibbonGroup title="Monitoring" caption="Open and manage dashboard-focused work">
-            <RibbonCommand
-              icon={<FaTachometerAlt />}
-              label="Dashboard Drawer"
-              description="Open KPI and dashboard actions in the rail"
-              onClick={() => onWorkflowSelect('dashboard')}
-              active={activeWorkflow === 'dashboard'}
-              emphasized
-            />
-            <RibbonCommand
-              icon={<FaTachometerAlt />}
-              label={isDashboardVisible ? 'Hide Canvas' : 'Show Canvas'}
-              description="Toggle dashboard mode on the workspace"
-              onClick={onDashboardToggle}
-              active={isDashboardVisible}
-            />
-          </RibbonGroup>
-
-          <RibbonGroup title="Insight" caption="Use current reporting and chart tools together">
-            <RibbonCommand
-              icon={<FaFileAlt />}
-              label="Open Report"
-              description={aiReportReady ? 'Review the latest AI analysis' : 'No AI report ready yet'}
-              onClick={onAiReportClick}
-              disabled={!aiReportReady}
-              badge={aiReportReady ? 'Ready' : 'Waiting'}
-            />
-            <RibbonCommand
-              icon={<FaChartBar />}
-              label="Chart Gallery"
-              description="Add another chart from the existing picker"
-              onClick={onOpenChartGallery}
-            />
-          </RibbonGroup>
-        </>
-      );
-    }
-
     return (
       <>
-        <RibbonGroup title="Appearance" caption="Keep the new shell consistent across themes">
+        <RibbonGroup title="Data Sources" caption="Import or connect datasets">
+          <RibbonCommand
+            icon={<FaUpload />}
+            label="Upload File"
+            description="Local CSV/JSON"
+            onClick={() => toggleSurface('upload')}
+            active={activeSurface === 'upload'}
+            emphasized
+          />
+          <RibbonCommand
+            icon={<TbCloudDataConnection />}
+            label="Data Hub"
+            description="Managed catalog"
+            onClick={() => toggleSurface('hub')}
+            active={activeSurface === 'hub'}
+          />
+          <RibbonCommand
+            icon={<FaServer />}
+            label="API"
+            description="External endpoint"
+            onClick={() => toggleSurface('api')}
+            active={activeSurface === 'api'}
+          />
+          <RibbonCommand
+            icon={<FaDatabase />}
+            label="Database"
+            description="Warehouse table"
+            onClick={() => toggleSurface('db')}
+            active={activeSurface === 'db'}
+          />
+        </RibbonGroup>
+
+        <RibbonGroup title="App" caption="Workspace settings">
           <RibbonCommand
             icon={theme === 'dark' ? <FaSun /> : <FaMoon />}
             label={theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
-            description="Toggle the application theme"
             onClick={toggleTheme}
-            emphasized
           />
           <RibbonCommand
             icon={<FaSnowflake />}
             label="Snow"
-            description={theme === 'dark' ? 'Toggle the winter easter egg' : 'Available in dark mode'}
             onClick={onSnowToggle}
             active={isSnowing}
             disabled={theme !== 'dark'}
           />
-        </RibbonGroup>
-
-        <RibbonGroup title="Workspace" caption="Utility actions for the overall app shell">
           <RibbonCommand
             icon={<FaRedoAlt />}
-            label="Reset App"
-            description="Reload the full application"
+            label="Reload"
             onClick={handleReset}
-          />
-          <RibbonCommand
-            icon={isRibbonCollapsed ? <FaChevronDown /> : <FaChevronUp />}
-            label={isRibbonCollapsed ? 'Expand Ribbon' : 'Collapse Ribbon'}
-            description="Hide or show ribbon groups"
-            onClick={() => setIsRibbonCollapsed((prev) => !prev)}
           />
         </RibbonGroup>
       </>
     );
   };
 
+  const getDestinationLabel = () => {
+    const item = Object.entries(DESTINATIONS).find(([key, val]) => val === activeDestination);
+    return item ? item[0].charAt(0) + item[0].slice(1).toLowerCase() : 'Workspace';
+  };
+
   return (
     <header ref={barRef} className={`menu-bar ${isRibbonCollapsed ? 'is-collapsed' : ''}`}>
       <div className="menu-bar__topline">
-        <div className="menu-bar__identity" aria-label="Application shell">
+        <div className="menu-bar__identity" onClick={() => onDestinationSelect(DESTINATIONS.WORKSPACE)} style={{ cursor: 'pointer' }}>
           <span className="menu-bar__app-dot" aria-hidden="true" />
           <span className="menu-bar__app-name">AI Tool</span>
         </div>
 
-        <nav className="menu-tab-strip" aria-label="Primary ribbon tabs">
-          {RIBBON_TABS.map((tab) => (
-            <button
-              key={tab}
-              type="button"
-              className={`menu-tab ${activeTab === tab ? 'is-active' : ''}`}
-              onClick={() => onTabChange(tab)}
-            >
-              {tab}
-            </button>
-          ))}
-        </nav>
+        <div className="menu-bar__context">
+          <span className="menu-bar__breadcrumb-sep">/</span>
+          <span className="menu-bar__active-dest">{getDestinationLabel()}</span>
+        </div>
 
         <div className="menu-bar__utility">
-          {activeWorkflow ? (
-            <span className="menu-bar__workflow-chip">
-              {activeWorkflow}
-            </span>
-          ) : null}
+          <button 
+            type="button" 
+            className={`menu-bar__setup-trigger ${!isRibbonCollapsed ? 'is-active' : ''}`}
+            onClick={() => setIsRibbonCollapsed((prev) => !prev)}
+          >
+            <FaCogs />
+            <span>Data & Setup</span>
+            {isRibbonCollapsed ? <FaChevronDown /> : <FaChevronUp />}
+          </button>
 
-          {aiReportReady ? (
+          <div className="menu-bar__divider" />
+
+          {aiReportReady && (
             <button type="button" className="menu-bar__utility-pill" onClick={onAiReportClick}>
               <FaFileAlt />
               Report
             </button>
-          ) : null}
-
-          <button
-            type="button"
-            className="menu-bar__collapse-toggle"
-            onClick={() => setIsRibbonCollapsed((prev) => !prev)}
-            aria-label={isRibbonCollapsed ? 'Expand ribbon' : 'Collapse ribbon'}
-          >
-            {isRibbonCollapsed ? <FaChevronDown /> : <FaChevronUp />}
-          </button>
+          )}
         </div>
       </div>
 
-      {!isRibbonCollapsed ? (
+      {!isRibbonCollapsed && (
         <div className="menu-ribbon">
           <div className="menu-ribbon__groups">
             {renderActiveRibbon()}
           </div>
           {renderInlinePanel()}
         </div>
-      ) : null}
+      )}
     </header>
   );
 }

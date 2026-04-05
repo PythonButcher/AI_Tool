@@ -34,28 +34,17 @@ const parseRecords = (source) => {
   return [];
 };
 
-const RIBBON_TAB_TO_WORKFLOW = {
-  Home: 'data',
-  Explore: 'explore',
-  Visualise: 'visualise',
-  Business: 'business',
-  AI: 'ai',
-  Dashboard: 'dashboard',
-};
-
-const WORKFLOW_TO_RIBBON_TAB = {
-  data: 'Home',
-  explore: 'Explore',
-  visualise: 'Visualise',
-  business: 'Business',
-  ai: 'AI',
-  dashboard: 'Dashboard',
+const DESTINATIONS = {
+  WORKSPACE: 'workspace',
+  EXPLORE: 'explore',
+  DASHBOARDS: 'dashboards',
+  DECISIONS: 'decisions',
 };
 
 function AppContent() {
   const {
     uploadedData, setUploadedData,
-    setFullData,
+    fullData, setFullData,
     cleanedData, setCleanedData,
     pipelineResults, setPipelineResults,
     aiReportReady, setAiReportReady,
@@ -80,8 +69,7 @@ function AppContent() {
     setDashboardFilters,
   } = useWindowContext();
 
-  console.log('App.jsx received uploadedData:', uploadedData);
-
+  const [activeDestination, setActiveDestination] = useState(DESTINATIONS.WORKSPACE);
   const [selectedStat, setSelectedStat] = useState(null);
   const [chartData, setChartData] = useState(null);
   const [chartMapping, setChartMapping] = useState({});
@@ -228,40 +216,53 @@ function AppContent() {
     handleFileUpload(data);
   };
 
-  const handleSidebarButtonClick = useCallback((action) => {
-    if (action === 'visualize') setShowDataVisual(true);
-  }, []);
   const handleOpenAiChat = useCallback(() => {
     setAiChatOpenRequestKey((prev) => prev + 1);
   }, []);
-  const handleRibbonTabChange = useCallback((tab) => {
-    setActiveRibbonTab(tab);
-    const mappedWorkflow = RIBBON_TAB_TO_WORKFLOW[tab];
-    if (mappedWorkflow === 'explore') {
+
+  const handleDestinationSelect = useCallback((destination) => {
+    setActiveDestination(destination);
+    
+    // Compatibility mapping for existing context logic
+    if (destination === DESTINATIONS.EXPLORE) {
       setIsDataPaneOpen(true);
-      return;
-    }
-    if (mappedWorkflow) {
-      setActiveWorkflow(mappedWorkflow);
-      return;
-    }
-    if (tab === 'Settings') {
+      setActiveWorkflow('explore');
+    } else if (destination === DESTINATIONS.DASHBOARDS) {
+      setActiveWorkflow('dashboard');
+      openDashboard();
+    } else if (destination === DESTINATIONS.DECISIONS) {
+      setActiveWorkflow('business');
+    } else {
       setActiveWorkflow(null);
     }
-  }, []);
-  const handleWorkflowSelect = useCallback((workflow) => {
-    if (workflow === 'explore') {
-      setIsDataPaneOpen((prev) => !prev);
-      return;
+  }, [openDashboard]);
+
+  const handleRibbonTabChange = useCallback((tab) => {
+    const tabToDest = {
+      'Home': DESTINATIONS.WORKSPACE,
+      'Visualise': DESTINATIONS.EXPLORE,
+      'Explore': DESTINATIONS.EXPLORE,
+      'Dashboard': DESTINATIONS.DASHBOARDS,
+      'Business': DESTINATIONS.DECISIONS,
+      'AI': DESTINATIONS.EXPLORE, // Default to explore for now
+    };
+    if (tabToDest[tab]) {
+      handleDestinationSelect(tabToDest[tab]);
     }
-    setActiveWorkflow((prev) => {
-      const nextWorkflow = prev === workflow ? null : workflow;
-      if (nextWorkflow && WORKFLOW_TO_RIBBON_TAB[nextWorkflow]) {
-        setActiveRibbonTab(WORKFLOW_TO_RIBBON_TAB[nextWorkflow]);
-      }
-      return nextWorkflow;
-    });
-  }, []);
+  }, [handleDestinationSelect]);
+
+  const handleWorkflowSelect = useCallback((workflow) => {
+    const workflowToDest = {
+      'data': DESTINATIONS.WORKSPACE,
+      'explore': DESTINATIONS.EXPLORE,
+      'visualise': DESTINATIONS.EXPLORE,
+      'dashboard': DESTINATIONS.DASHBOARDS,
+      'business': DESTINATIONS.DECISIONS,
+    };
+    if (workflowToDest[workflow]) {
+      handleDestinationSelect(workflowToDest[workflow]);
+    }
+  }, [handleDestinationSelect]);
   const handleClosePreview = useCallback(() => setShowDataPreview(false), []);
   const handleCloseRawViewer = useCallback(() => setShowRawViewer(false), []);
   const handleCloseCanvas = useCallback(() => setShowCanvasContainer(false), []);
@@ -512,9 +513,8 @@ function AppContent() {
       <div className="app-container">
         {theme === 'dark' && isSnowing && <Snowfall style={{ zIndex: 1000, pointerEvents: 'none' }} />}
         <SideBar
-          activeWorkflow={activeWorkflow}
-          onWorkflowSelect={handleWorkflowSelect}
-          onButtonClick={handleSidebarButtonClick}
+          activeDestination={activeDestination}
+          onDestinationSelect={handleDestinationSelect}
           onDataCleaned={handleDataCleaned}
           uploadedData={uploadedData}
           cleanedData={cleanedData}
@@ -540,10 +540,8 @@ function AppContent() {
 
         <div className="main-content">
           <MenuBar
-            activeTab={activeRibbonTab}
-            onTabChange={handleRibbonTabChange}
-            activeWorkflow={activeWorkflow}
-            onWorkflowSelect={handleWorkflowSelect}
+            activeDestination={activeDestination}
+            onDestinationSelect={handleDestinationSelect}
             onFileUploadSuccess={handleFileUpload}
             onStatsSelect={handleStatsSelect}
             showDataPreview={showDataPreview}
@@ -567,18 +565,16 @@ function AppContent() {
               setStoryData(null);
               setShowStoryPanel(true);
               restoreWindow('storyPanel');
-              setActiveWorkflow('ai');
-              setActiveRibbonTab('AI');
+              handleDestinationSelect(DESTINATIONS.EXPLORE);
             }}
             onOpenWhiteboard={() => {
               setShowWhiteBoard(true);
               restoreWindow('whiteBoard');
-              setActiveWorkflow('whiteboard');
+              handleDestinationSelect(DESTINATIONS.EXPLORE);
             }}
             onOpenChartGallery={() => {
               setShowDataVisual(true);
-              setActiveWorkflow('visualise');
-              setActiveRibbonTab('Visualise');
+              handleDestinationSelect(DESTINATIONS.EXPLORE);
             }}
             onHeightChange={setMenuBarHeight}
           />
