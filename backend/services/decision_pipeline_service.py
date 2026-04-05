@@ -5,9 +5,11 @@ from typing import Any, Dict, List
 from backend.services.decision_brief_service import build_decision_brief_artifacts
 from backend.services.decision_signal_service import generate_decision_signals
 from backend.services.decision_support import (
+    DecisionServiceError,
     build_semantic_summary,
     iso_timestamp,
     normalize_bool,
+    normalize_reference_list,
     normalize_positive_int,
     resolve_decision_context,
     rounded,
@@ -32,6 +34,136 @@ def _normalize_warning_list(*warning_groups: List[str]) -> List[str]:
             if warning and warning not in ordered:
                 ordered.append(warning)
     return ordered
+
+
+def _empty_dataset_summary(dataset_name: str = "Active Dataset", source: str = "active") -> Dict[str, Any]:
+    return {
+        "source": source,
+        "dataset_id": None,
+        "dataset_name": dataset_name,
+        "row_count": 0,
+        "column_count": 0,
+    }
+
+
+def _empty_scenario_preview(summary: str, generated_at: str, status: str = "not_applicable") -> Dict[str, Any]:
+    return {
+        "status": status,
+        "summary": summary,
+        "based_on_recommendation_ids": [],
+        "based_on_signal_ids": [],
+        "suggested_inputs": {
+            "name": "Decision pipeline preview",
+            "filters": [],
+            "group_by": [],
+            "metric_targets": [],
+        },
+        "projections": [],
+        "assumptions": [],
+        "generated_at": generated_at,
+    }
+
+
+def _empty_decision_bundle(
+    dataset_summary: Dict[str, Any],
+    generated_at: str,
+    brief_title: str,
+    brief_summary: str,
+    scenario_summary: str,
+) -> Dict[str, Any]:
+    return {
+        "signals": [],
+        "brief": {
+            "brief_id": None,
+            "title": brief_title,
+            "summary": brief_summary,
+            "dataset": dataset_summary,
+            "time_context": None,
+            "headline_signal_ids": [],
+            "key_metrics": [],
+            "themes": [],
+            "confidence": 0.6,
+            "generated_at": generated_at,
+        },
+        "recommendations": [],
+        "scenario_preview": _empty_scenario_preview(
+            summary=scenario_summary,
+            generated_at=generated_at,
+        ),
+    }
+
+
+def _build_readiness(
+    dataset_loaded: bool,
+    semantic_ready: bool,
+    metrics_ready: bool,
+) -> Dict[str, Any]:
+    missing_requirements = []
+    if not dataset_loaded:
+        missing_requirements.append("dataset")
+    if not semantic_ready:
+        missing_requirements.append("semantic_model")
+    if not metrics_ready:
+        missing_requirements.append("metrics")
+
+    return {
+        "dataset_loaded": dataset_loaded,
+        "semantic_ready": semantic_ready,
+        "decision_ready": dataset_loaded and semantic_ready,
+        "missing_requirements": missing_requirements,
+    }
+
+
+def _normalize_pipeline_warning(warning: str) -> str:
+    warning_text = str(warning or "").strip()
+    if not warning_text:
+        return ""
+
+    if warning_text == "The resolved dataset is empty. No decision signals were generated.":
+        return "The current dataset has no rows to analyze."
+    if warning_text == "The resolved dataset is empty. Scenario outputs contain scaffolded structures only.":
+        return "Scenario preview could not be generated because the current dataset has no rows."
+    return warning_text
+
+
+def _build_non_ready_response(
+    dataset_summary: Dict[str, Any],
+    semantic_summary: Dict[str, Any],
+    readiness: Dict[str, Any],
+    warnings: List[str],
+    generated_at: str,
+    brief_title: str,
+    brief_summary: str,
+    scenario_summary: str,
+) -> Dict[str, Any]:
+    bundle = _empty_decision_bundle(
+        dataset_summary=dataset_summary,
+        generated_at=generated_at,
+        brief_title=brief_title,
+        brief_summary=brief_summary,
+        scenario_summary=scenario_summary,
+    )
+    return {
+        "status": "success",
+        "dataset": dataset_summary,
+        "semantic_model": semantic_summary,
+        "decision_bundle": bundle,
+        "readiness": readiness,
+        "meta": {
+            "signal_count": 0,
+            "recommendation_count": 0,
+            "scenario_preview_status": bundle["scenario_preview"]["status"],
+            "empty_dataset": dataset_summary.get("row_count", 0) == 0,
+            "generated_at": generated_at,
+        },
+        "warnings": _normalize_warning_list([_normalize_pipeline_warning(warning) for warning in warnings]),
+    }
+
+
+def _resolve_pipeline_payload_models(payload: Dict[str, Any]) -> tuple[Any, Any]:
+    dataset = payload.get("dataset")
+    semantic_model = payload.get("semantic_model") or payload.get("semanticModel")
+    return dataset, semantic_model
 
 
 def _pick_preview_group_by(recommendations: List[Dict[str, Any]]) -> List[str]:
@@ -190,12 +322,8 @@ def _build_scenario_preview(
 
 def run_decision_pipeline(payload: Dict[str, Any]) -> Dict[str, Any]:
     payload = payload if isinstance(payload, dict) else {}
-    context = resolve_decision_context(
-        dataset=payload.get("dataset"),
-        dataset_ref=payload.get("dataset_ref") or payload.get("datasetRef"),
-        semantic_model=payload.get("semantic_model") or payload.get("semanticModel"),
-        source="decision_pipeline",
-    )
+    dataset, semantic_model = _resolve_pipeline_payload_models(payload)
+    dataset_ref = payload.get("dataset_ref") or payload.get("datasetRef")
     max_signals = normalize_positive_int(payload.get("max_signals") or payload.get("maxSignals"), 8, "max_signals")
     max_recommendations = normalize_positive_int(
         payload.get("max_recommendations") or payload.get("maxRecommendations"),
@@ -212,17 +340,79 @@ def run_decision_pipeline(payload: Dict[str, Any]) -> Dict[str, Any]:
         "max_preview_targets",
         maximum=5,
     )
+    metric_ids = normalize_reference_list(payload, "metric_ids", "metricIds")
+    metric_names = normalize_reference_list(payload, "metric_names", "metricNames")
+
+    try:
+        context = resolve_decision_context(
+            dataset=dataset,
+            dataset_ref=dataset_ref,
+            semantic_model=semantic_model,
+            source="decision_pipeline",
+        )
+    except DecisionServiceError as exc:
+        error_message = str(exc)
+        if error_message not in {"No active dataset is available.", "A valid dataset is required."}:
+            raise
+
+        generated_at = iso_timestamp()
+        readiness = _build_readiness(
+            dataset_loaded=False,
+            semantic_ready=False,
+            metrics_ready=False,
+        )
+        requested_source = dataset_ref.get("source") if isinstance(dataset_ref, dict) else None
+        dataset_summary = _empty_dataset_summary(source=requested_source or "active")
+        return _build_non_ready_response(
+            dataset_summary=dataset_summary,
+            semantic_summary=build_semantic_summary(semantic_model if isinstance(semantic_model, dict) else {}),
+            readiness=readiness,
+            warnings=[
+                "No dataset is currently loaded.",
+                "Load a dataset to enable Decision Intelligence.",
+            ],
+            generated_at=generated_at,
+            brief_title="Decision Intelligence is waiting for a dataset",
+            brief_summary="Load a dataset before running Decision Intelligence.",
+            scenario_summary="Scenario preview is unavailable until a dataset is loaded.",
+        )
+
+    semantic_summary = build_semantic_summary(context["semantic_model"])
+    selected_metrics = select_metrics(
+        context,
+        metric_ids=metric_ids,
+        metric_names=metric_names,
+        max_metrics=max(max_signals, max_recommendations, 5),
+    ) if not context["dataframe"].empty else []
+    readiness = _build_readiness(
+        dataset_loaded=True,
+        semantic_ready=True,
+        metrics_ready=bool(selected_metrics),
+    )
+
+    if not selected_metrics:
+        generated_at = iso_timestamp()
+        warnings = []
+        if not semantic_summary.get("summary", {}).get("metric_count"):
+            warnings.append("No semantic metrics are defined.")
+        else:
+            warnings.append("No compatible semantic metrics are currently available.")
+        warnings.append("Decision Intelligence requires at least one metric.")
+        return _build_non_ready_response(
+            dataset_summary=context["dataset"],
+            semantic_summary=semantic_summary,
+            readiness=readiness,
+            warnings=warnings,
+            generated_at=generated_at,
+            brief_title="Decision Intelligence needs at least one metric",
+            brief_summary="Define or resolve at least one semantic metric before running Decision Intelligence.",
+            scenario_summary="Scenario preview is unavailable until at least one semantic metric is available.",
+        )
 
     signal_payload = dict(payload)
     signal_payload["max_signals"] = max_signals
     signal_response = generate_decision_signals(signal_payload)
     signals = list(signal_response.get("signals") or [])
-    selected_metrics = select_metrics(
-        context,
-        metric_ids=signal_response["request"]["metric_ids"],
-        metric_names=signal_response["request"]["metric_names"],
-        max_metrics=max(max_signals, max_recommendations, 5),
-    ) if not context["dataframe"].empty else []
 
     generated_at = iso_timestamp()
     brief_artifacts = build_decision_brief_artifacts(
@@ -253,13 +443,14 @@ def run_decision_pipeline(payload: Dict[str, Any]) -> Dict[str, Any]:
     return {
         "status": "success",
         "dataset": context["dataset"],
-        "semantic_model": build_semantic_summary(context["semantic_model"]),
+        "semantic_model": semantic_summary,
         "decision_bundle": {
             "signals": signals,
             "brief": brief_artifacts["brief"],
             "recommendations": recommendation_artifacts["recommendations"],
             "scenario_preview": scenario_preview,
         },
+        "readiness": readiness,
         "meta": {
             "signal_count": len(signals),
             "recommendation_count": len(recommendation_artifacts["recommendations"]),
@@ -267,5 +458,8 @@ def run_decision_pipeline(payload: Dict[str, Any]) -> Dict[str, Any]:
             "empty_dataset": context["dataframe"].empty,
             "generated_at": generated_at,
         },
-        "warnings": _normalize_warning_list(signal_response.get("warnings", []), scenario_warnings),
+        "warnings": _normalize_warning_list(
+            [_normalize_pipeline_warning(warning) for warning in signal_response.get("warnings", [])],
+            [_normalize_pipeline_warning(warning) for warning in scenario_warnings],
+        ),
     }

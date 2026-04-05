@@ -9,11 +9,50 @@
   overflow-y: auto;
 }
 
-.decision-panel--empty {
+.decision-panel--empty,
+.decision-panel--setup {
   align-items: center;
   justify-content: center;
   text-align: center;
   color: var(--text-secondary);
+  height: 100%;
+}
+
+.decision-setup-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  max-width: 400px;
+  padding: 40px;
+  border-radius: 24px;
+  background: color-mix(in srgb, var(--accent-blue-soft) 5%, var(--bg-primary));
+  border: 1px dashed color-mix(in srgb, var(--border-color) 60%, transparent);
+}
+
+.decision-setup-icon {
+  font-size: 3rem;
+  margin-bottom: 8px;
+  opacity: 0.8;
+}
+
+.decision-setup-message h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.decision-setup-message p {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.decision-setup-message small {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  opacity: 0.8;
 }
 
 .decision-panel__warnings {

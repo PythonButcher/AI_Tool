@@ -58,6 +58,8 @@ function CanvasContainer({
   setShowDecisionPanel,
   decisionBundle,
   onDecisionAction,
+  decisionReadiness,
+  decisionWarnings,
 }) {
   const {
     minimizedWindows,
@@ -651,6 +653,8 @@ function CanvasContainer({
       <DecisionPanel 
         bundle={decisionBundle} 
         onActionClick={onDecisionAction}
+        readiness={decisionReadiness}
+        warnings={decisionWarnings}
       />
     </WindowFrame>
   ) : null;

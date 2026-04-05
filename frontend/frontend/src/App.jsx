@@ -60,6 +60,7 @@ function AppContent() {
     pipelineResults, setPipelineResults,
     aiReportReady, setAiReportReady,
     showAiReport, setShowAiReport,
+    semanticModel,
     setSemanticModel,
     refreshSemanticModelFromDataset,
   } = useContext(DataContext);
@@ -111,6 +112,13 @@ function AppContent() {
   const [showMachineLearning, setShowMachineLearning] = useState(false);
   const [showDecisionPanel, setShowDecisionPanel] = useState(false);
   const [decisionBundle, setDecisionBundle] = useState(null);
+  const [decisionReadiness, setDecisionReadiness] = useState({
+    dataset_loaded: false,
+    semantic_ready: false,
+    decision_ready: false,
+    missing_requirements: ['dataset', 'semantic_model', 'metrics'],
+  });
+  const [decisionWarnings, setDecisionWarnings] = useState([]);
   const [isSnowing, setIsSnowing] = useState(false);
   const [activeRibbonTab, setActiveRibbonTab] = useState('Home');
   const [activeWorkflow, setActiveWorkflow] = useState(null);
@@ -274,23 +282,54 @@ function AppContent() {
   const handleCloseChartWindow = useCallback(() => setShowChartWindow(false), []);
   const handleStoryModelChange = (newModel) => setStoryModel(newModel);
 
-  const handleRunDecision = useCallback(async () => {
-    if (!uploadedData?.semantic_model?.dataset?.id) {
-      alert('Please load a dataset with a semantic model to run decision intelligence.');
-      return;
-    }
-
+  const fetchDecisionReadiness = useCallback(async () => {
     try {
       const payload = {
-        dataset_ref: {
+        dataset_ref: uploadedData?.semantic_model?.dataset?.id ? {
           source: 'datahub',
           dataset_id: uploadedData.semantic_model.dataset.id,
-        },
+        } : null,
+      };
+
+      const result = await runDecisionPipeline(payload);
+      if (result.readiness) {
+        setDecisionReadiness(result.readiness);
+      }
+      if (result.warnings) {
+        setDecisionWarnings(result.warnings);
+      }
+    } catch (err) {
+      console.error('Failed to fetch decision readiness:', err);
+    }
+  }, [uploadedData]);
+
+  useEffect(() => {
+    if (activeWorkflow === 'business') {
+      fetchDecisionReadiness();
+    }
+  }, [activeWorkflow, fetchDecisionReadiness, uploadedData, semanticModel]);
+
+  const handleRunDecision = useCallback(async () => {
+    try {
+      const payload = {
+        dataset_ref: uploadedData?.semantic_model?.dataset?.id ? {
+          source: 'datahub',
+          dataset_id: uploadedData.semantic_model.dataset.id,
+        } : null,
         include_anomaly_detection: true,
         include_scenario_preview: true,
       };
 
       const result = await runDecisionPipeline(payload);
+      
+      // Update readiness even on partial/failed runs
+      if (result.readiness) {
+        setDecisionReadiness(result.readiness);
+      }
+      if (result.warnings) {
+        setDecisionWarnings(result.warnings);
+      }
+
       if (result.status === 'success') {
         setDecisionBundle(result.decision_bundle);
         setShowDecisionPanel(true);
@@ -298,7 +337,7 @@ function AppContent() {
       }
     } catch (err) {
       console.error('Failed to run decision pipeline:', err);
-      alert('Decision pipeline failed. Check console for details.');
+      // No blocking alert here, readiness state handles the UI
     }
   }, [uploadedData, restoreWindow]);
 
@@ -496,6 +535,7 @@ function AppContent() {
           onStoryModelChange={handleStoryModelChange}
           setShowMachineLearning={setShowMachineLearning}
           onRunDecision={handleRunDecision}
+          decisionReadiness={decisionReadiness}
         />
 
         <div className="main-content">
@@ -602,6 +642,8 @@ function AppContent() {
               setShowDecisionPanel={setShowDecisionPanel}
               decisionBundle={decisionBundle}
               onDecisionAction={handleDecisionAction}
+              decisionReadiness={decisionReadiness}
+              decisionWarnings={decisionWarnings}
             >
               <DatasetInfo selectedStat={selectedStat} />
             </CanvasContainer>

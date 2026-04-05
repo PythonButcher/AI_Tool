@@ -89,6 +89,7 @@ function SideBar({
   onStoryModelChange,
   setShowMachineLearning,
   onRunDecision,
+  decisionReadiness,
 }) {
   const [showCleaningForm, setShowCleaningForm] = useState(false);
   const [showExportPanel, setShowExportPanel] = useState(false);
@@ -375,10 +376,17 @@ function SideBar({
               type="button"
               className="workflow-action-card workflow-action-card--primary"
               onClick={onRunDecision}
+              disabled={!decisionReadiness?.decision_ready || decisionReadiness?.missing_requirements?.includes('metrics')}
             >
               <FaLightbulb />
               <span>Run Decision Intelligence</span>
-              <small>Analyze signals, generate recommendations, and preview scenarios.</small>
+              <small>
+                {(!decisionReadiness?.dataset_loaded) 
+                  ? 'Load a dataset to enable Decision Intelligence.'
+                  : (decisionReadiness?.missing_requirements?.includes('metrics'))
+                    ? 'Define metrics to enable Decision Intelligence.'
+                    : 'Analyze signals, generate recommendations, and preview scenarios.'}
+              </small>
             </button>
           </div>
 
