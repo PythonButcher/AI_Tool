@@ -39,6 +39,7 @@ const DESTINATIONS = {
   EXPLORE: 'explore',
   DASHBOARDS: 'dashboards',
   DECISIONS: 'decisions',
+  AI: 'ai',
 };
 
 function AppContent() {
@@ -232,6 +233,8 @@ function AppContent() {
       openDashboard();
     } else if (destination === DESTINATIONS.DECISIONS) {
       setActiveWorkflow('business');
+    } else if (destination === DESTINATIONS.AI) {
+      setActiveWorkflow('ai');
     } else {
       setActiveWorkflow(null);
     }
@@ -244,7 +247,7 @@ function AppContent() {
       'Explore': DESTINATIONS.EXPLORE,
       'Dashboard': DESTINATIONS.DASHBOARDS,
       'Business': DESTINATIONS.DECISIONS,
-      'AI': DESTINATIONS.EXPLORE, // Default to explore for now
+      'AI': DESTINATIONS.AI,
     };
     if (tabToDest[tab]) {
       handleDestinationSelect(tabToDest[tab]);
@@ -593,6 +596,7 @@ function AppContent() {
 
           {showCanvasContainer && (
             <CanvasContainer
+              activeDestination={activeDestination}
               showAiWorkflow={showAiWorkflow}
               setShowAiWorkflow={setShowAiWorkflow}
               uploadedData={uploadedData || null}
@@ -640,6 +644,9 @@ function AppContent() {
               onDecisionAction={handleDecisionAction}
               decisionReadiness={decisionReadiness}
               decisionWarnings={decisionWarnings}
+              onOpenAiChat={handleOpenAiChat}
+              onRunDecision={handleRunDecision}
+              setShowDataVisual={setShowDataVisual}
             >
               <DatasetInfo selectedStat={selectedStat} />
             </CanvasContainer>
@@ -655,6 +662,7 @@ function AppContent() {
         />
 
         <DataPane
+          activeDestination={activeDestination}
           cleanedData={cleanedData}
           isCollapsed={!isDataPaneOpen}
           setIsCollapsed={(val) => setIsDataPaneOpen(!val)}

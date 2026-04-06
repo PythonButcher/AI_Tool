@@ -7,6 +7,7 @@ import {
   FaChartBar,
   FaColumns,
   FaDatabase,
+  FaFileAlt,
   FaFileExport,
   FaFilter,
   FaLightbulb,
@@ -31,6 +32,7 @@ const DESTINATIONS = {
   EXPLORE: 'explore',
   DASHBOARDS: 'dashboards',
   DECISIONS: 'decisions',
+  AI: 'ai',
 };
 
 const navigationItems = [
@@ -38,6 +40,7 @@ const navigationItems = [
   { id: DESTINATIONS.EXPLORE, label: 'Explore', icon: <FaChartBar /> },
   { id: DESTINATIONS.DASHBOARDS, label: 'Dashboards', icon: <FaTachometerAlt /> },
   { id: DESTINATIONS.DECISIONS, label: 'Decisions', icon: <FaBrain /> },
+  { id: DESTINATIONS.AI, label: 'AI', icon: <FaRobot /> },
 ];
 
 const chartShortcuts = [
@@ -322,23 +325,19 @@ function SideBar({
           <DrawerHeader
             eyebrow="Destination"
             title="Explore"
-            description="Analyze fields, spawn charts, and use AI-assisted exploration."
+            description="Manual data exploration, field analysis, and chart gallery."
             onClose={() => setActiveDrawer(null)}
           />
 
           <div className="workflow-action-grid">
-            <button type="button" className="workflow-action-card workflow-action-card--primary" onClick={onOpenAiChat}>
-              <FaRobot />
-              <span>AI Analysis</span>
-              <small>Use the assistant for chart generation.</small>
-            </button>
-            <button type="button" className="workflow-action-card" onClick={() => setShowDataPreview(true)}>
+            <button type="button" className="workflow-action-card workflow-action-card--primary" onClick={() => setShowDataPreview(true)}>
               <FaChartBar />
-              <span>Gallery</span>
-              <small>Select from existing chart templates.</small>
+              <span>Chart Gallery</span>
+              <small>Select from existing templates.</small>
             </button>
           </div>
 
+          <p className="workflow-drawer__eyebrow" style={{ marginTop: '24px' }}>Quick Charts</p>
           <div className="workflow-shortcut-grid">
             {chartShortcuts.map((shortcut) => (
               <button
@@ -355,22 +354,61 @@ function SideBar({
               </button>
             ))}
           </div>
+        </>
+      );
+    }
 
-          <div className="workflow-action-grid" style={{ marginTop: '16px' }}>
-             <button type="button" className="workflow-action-card" onClick={() => {
-                setShowAiWorkflow(true);
-                restoreWindow('aiWorkflowLab');
-              }}>
-                <FaPlus />
-                <span>Workflow Lab</span>
-              </button>
-              <button type="button" className="workflow-action-card" onClick={() => {
-                setShowWhiteBoard(true);
-                restoreWindow('whiteBoard');
-              }}>
-                <FaPen />
-                <span>Whiteboard</span>
-              </button>
+    if (activeDrawer === DESTINATIONS.AI) {
+      return (
+        <>
+          <DrawerHeader
+            eyebrow="Destination"
+            title="AI Suite"
+            description="Intelligent assistance, automated reporting, and conversational analysis."
+            onClose={() => setActiveDrawer(null)}
+          />
+
+          <div className="workflow-action-grid">
+            <button type="button" className="workflow-action-card workflow-action-card--primary" onClick={onOpenAiChat}>
+              <FaRobot />
+              <span>AI Analysis</span>
+              <small>Conversational data exploration.</small>
+            </button>
+
+            <button type="button" className="workflow-action-card" onClick={() => {
+              setShowAiWorkflow(true);
+              restoreWindow('aiWorkflowLab');
+            }}>
+              <FaPlus />
+              <span>Workflow Lab</span>
+              <small>Automated analysis pipelines.</small>
+            </button>
+
+            <button
+              type="button"
+              className="workflow-action-card"
+              onClick={onAiReportClick}
+              disabled={!aiReportReady}
+            >
+              <FaFileAlt />
+              <span>AI Report</span>
+              <small>{aiReportReady ? 'View latest intelligence.' : 'Run analysis to generate.'}</small>
+            </button>
+
+            <button type="button" className="workflow-action-card" onClick={() => handleGenerateStory('openai')}>
+              <FaBook />
+              <span>Story Gen</span>
+              <small>Narrative from data insights.</small>
+            </button>
+
+            <button type="button" className="workflow-action-card" onClick={() => {
+              setShowWhiteBoard(true);
+              restoreWindow('whiteBoard');
+            }}>
+              <FaPen />
+              <span>Whiteboard</span>
+              <small>AI-assisted brainstorming.</small>
+            </button>
           </div>
         </>
       );

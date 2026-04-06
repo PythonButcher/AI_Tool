@@ -31,6 +31,7 @@ const DESTINATIONS = {
   EXPLORE: 'explore',
   DASHBOARDS: 'dashboards',
   DECISIONS: 'decisions',
+  AI: 'ai',
 };
 
 const inlinePanelMeta = {

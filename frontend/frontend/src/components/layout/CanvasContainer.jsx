@@ -21,8 +21,18 @@ import MachineLearningPanel from '../../features/machine_learning/MachineLearnin
 import DashboardFilterBar from '../../features/dashboard/DashboardFilterBar';
 import KpiCardWindow from '../../features/dashboard/KpiCardWindow';
 import DecisionPanel from '../../features/business/decision/DecisionPanel';
+import DestinationHome from './DestinationHome';
+
+const DESTINATIONS = {
+  WORKSPACE: 'workspace',
+  EXPLORE: 'explore',
+  DASHBOARDS: 'dashboards',
+  DECISIONS: 'decisions',
+  AI: 'ai',
+};
 
 function CanvasContainer({
+  activeDestination,
   children,
   uploadedData,
   showDataPreview,
@@ -43,6 +53,7 @@ function CanvasContainer({
   chartMapping,
   previewMode,
   setPreviewMode,
+  setShowDataPreview,
   showWhiteBoard,
   setShowWhiteBoard,
   pipelineResults,
@@ -60,6 +71,9 @@ function CanvasContainer({
   onDecisionAction,
   decisionReadiness,
   decisionWarnings,
+  onOpenAiChat,
+  onRunDecision,
+  setShowDataVisual,
 }) {
   const {
     minimizedWindows,
@@ -74,7 +88,56 @@ function CanvasContainer({
     dashboardState,
     dashboardItems,
     removeDashboardItem,
+    restoreWindow,
   } = useWindowContext();
+
+  const handleDestinationHomeAction = useCallback((action) => {
+    switch (action) {
+      case 'gallery':
+        setShowDataVisual(true);
+        break;
+      case 'ai_chat':
+        onOpenAiChat();
+        break;
+      case 'workflow_lab':
+        setShowAiWorkflow(true);
+        restoreWindow('aiWorkflowLab');
+        break;
+      case 'run_intelligence':
+        onRunDecision();
+        break;
+      case 'ai_chart':
+        onOpenAiChat();
+        break;
+      case 'upload':
+        // Ideally we'd trigger the MenuBar ribbon here, 
+        // but since we can't easily reach it from here without more prop drilling,
+        // we'll just open the Data Preview which usually prompts for data if empty.
+        setShowDataPreview(true);
+        restoreWindow('dataPreview');
+        break;
+      case 'hub':
+        setShowDataPreview(true);
+        restoreWindow('dataPreview');
+        break;
+      case 'definitions':
+        // The SideBar handles this destination, but we can ensure it's "Ready" 
+        // by showing the decision panel if available.
+        setShowDecisionPanel(true);
+        restoreWindow('decisionPanel');
+        break;
+      default:
+        console.warn('Unknown destination home action:', action);
+    }
+  }, [
+    setShowDataVisual, 
+    onOpenAiChat, 
+    setShowAiWorkflow, 
+    restoreWindow, 
+    onRunDecision, 
+    setShowDataPreview, 
+    setShowDecisionPanel
+  ]);
 
   const containerRef = useRef(null);
   const [containerBounds, setContainerBounds] = useState({ width: 1920, height: 1080 });
@@ -687,6 +750,38 @@ function CanvasContainer({
     </div>
   ) : null;
 
+  const shouldShowHome = useMemo(() => {
+    if (dashboardState.isVisible) return false;
+
+    // Check if ANY windows relevant to this destination are open
+    if (activeDestination === DESTINATIONS.WORKSPACE) {
+      return !showDataPreview && !showRawViewer;
+    }
+    if (activeDestination === DESTINATIONS.EXPLORE) {
+      return charts.length === 0 && !showDataPreview;
+    }
+    if (activeDestination === DESTINATIONS.AI) {
+      const hasAiWorkflowWindows = outputWindows.length > 0;
+      return !showAiWorkflow && !showAIChart && !showStoryPanel && !showWhiteBoard && !hasAiWorkflowWindows;
+    }
+    if (activeDestination === DESTINATIONS.DECISIONS) {
+      return !showDecisionPanel;
+    }
+    return true;
+  }, [
+    activeDestination,
+    dashboardState.isVisible,
+    showDataPreview,
+    showRawViewer,
+    charts.length,
+    showAiWorkflow,
+    showAIChart,
+    showStoryPanel,
+    showWhiteBoard,
+    outputWindows.length,
+    showDecisionPanel,
+  ]);
+
   return (
     <div className="canvas-dnd-wrapper" style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden' }}>
       <div
@@ -696,6 +791,12 @@ function CanvasContainer({
       >
         {dashboardState.isVisible && <DashboardFilterBar />}
         {dashboardEmptyState}
+        {shouldShowHome && (
+          <DestinationHome 
+            activeDestination={activeDestination} 
+            onAction={handleDestinationHomeAction} 
+          />
+        )}
         {workflowElements}
         {dataPreviewElement}
         {rawDataElement}
