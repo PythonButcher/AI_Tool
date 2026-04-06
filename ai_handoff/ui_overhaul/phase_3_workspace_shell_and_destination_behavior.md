@@ -35,6 +35,7 @@ The current top-level destinations are:
 - Explore
 - Dashboards
 - Decisions
+- AI
 
 That direction is acceptable.
 
@@ -92,11 +93,38 @@ AI must be:
 - not hidden
 - not treated like a random extra tool
 
+For now, AI must remain its own sidebar icon / top-level destination.
+
+Do not fold AI into Explore for now.
+
+Do not make AI only a global floating helper for now.
+
+The AI destination should act as the main home for the current AI feature set.
+
 You need to make a clean decision about:
 
 - what AI does globally
-- what AI does inside Explore
+- what AI does inside the dedicated AI destination
 - whether any AI workflows stay destination-specific
+
+Do not treat "AI" as one vague capability.
+
+The existing AI feature set must remain present in the product experience.
+
+That includes:
+
+- AI chat
+- AI-assisted chart generation / NLP charting
+- AI Workflow Lab
+- AI reports
+- story / storyboard generation
+- other existing AI-assisted workflows already in the frontend
+
+For now, these features should be grouped under the AI sidebar area so the user has one obvious place to go for AI capabilities.
+
+These features do not all need the same UI treatment, but they must not disappear, become hard to find, or be reduced to a single generic AI entry point.
+
+If you reorganize them, do it in a way that makes them easier to understand and easier to reach.
 
 ### 5. Where Decision Intelligence belongs
 
@@ -181,7 +209,8 @@ Use these rules while working:
 - Explore should feel like the main place for analysis and charting.
 - Dashboards should feel like monitoring, not just another canvas mode.
 - Decisions should feel like decision help, not like semantic setup with a new name.
-- AI should help everywhere, even if some AI tools live inside specific areas.
+- AI should be its own sidebar destination for now.
+- AI should still be able to help everywhere, even if its main feature home is the AI destination.
 - Setup should not overpower day-to-day use.
 - Advanced definitions should be reachable without being shoved in the user’s face all the time.
 
@@ -225,6 +254,26 @@ They all must remain available.
 But they also must stop feeling scattered.
 
 That is the balance you need to achieve.
+
+## Explicit AI Preservation Reminder
+
+When continuing implementation, assume the user expects all existing AI-facing capabilities to survive the overhaul.
+
+Do not accidentally drop or hide:
+
+- the AI sidebar destination itself
+- floating AI chat access
+- AI chart generation
+- conversational data help
+- AI Workflow Lab
+- AI reporting surfaces
+- story / narrative generation surfaces
+
+If a feature is moved, it must still be clearly reachable.
+
+If a feature becomes contextual, it must still be discoverable.
+
+If a feature remains global, it must not feel disconnected from the rest of the product.
 
 ## Output Expectation
 
