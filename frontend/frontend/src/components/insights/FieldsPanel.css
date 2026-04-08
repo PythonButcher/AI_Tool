@@ -330,6 +330,18 @@
   box-shadow: var(--shadow-sm);
 }
 
+.field-row--irrelevant {
+  opacity: 0.45;
+  filter: grayscale(0.6);
+  transition: opacity 0.25s ease, filter 0.25s ease, transform 0.25s ease;
+}
+
+.field-row--irrelevant:hover {
+  opacity: 1;
+  filter: grayscale(0);
+  transform: translateX(6px);
+}
+
 .field-row::before {
   content: '';
   position: absolute;

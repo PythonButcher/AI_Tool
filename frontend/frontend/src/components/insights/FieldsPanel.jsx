@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import PropTypes from 'prop-types';
 import { DragOverlay, useDndContext, useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
@@ -344,7 +344,16 @@ DraggableAnalysisItem.defaultProps = {
   actions: null,
 };
 
+const DESTINATIONS = {
+  WORKSPACE: 'workspace',
+  EXPLORE: 'explore',
+  DASHBOARDS: 'dashboards',
+  DECISIONS: 'decisions',
+  AI: 'ai',
+};
+
 function FieldsPanel({
+  activeDestination,
   cleanedData,
   onCreateSemanticChart,
   onCreateSemanticKpi,
@@ -493,6 +502,23 @@ function FieldsPanel({
     }));
   };
 
+  const isItemRelevant = useCallback((item) => {
+    if (!activeDestination) return true;
+    
+    switch (activeDestination) {
+      case DESTINATIONS.WORKSPACE:
+        return item.source === 'raw';
+      case DESTINATIONS.DASHBOARDS:
+        return item.source === 'semantic' || item.type === 'temporal';
+      case DESTINATIONS.DECISIONS:
+        return item.source === 'semantic';
+      case DESTINATIONS.EXPLORE:
+      case DESTINATIONS.AI:
+      default:
+        return true;
+    }
+  }, [activeDestination]);
+
   const renderEmptyState = () => {
     if (!dataset.length) {
       return (
@@ -573,20 +599,21 @@ function FieldsPanel({
 
                   <div className={`field-group-list ${collapsed ? 'is-collapsed' : ''}`}>
                     {items.map((item) => (
-                      <DraggableAnalysisItem
-                        key={item.dragId}
-                        item={item}
-                        actions={item.source === 'semantic' ? (
-                          <SemanticQuickActions
-                            item={item}
-                            defaultMetricId={defaultMetricId}
-                            onCreateSemanticChart={onCreateSemanticChart}
-                            onCreateSemanticKpi={onCreateSemanticKpi}
-                            onEditSemanticMetric={onEditSemanticMetric}
-                            onAddDashboardFilter={onAddDashboardFilter}
-                          />
-                        ) : null}
-                      />
+                      <div key={item.dragId} className={isItemRelevant(item) ? '' : 'field-row--irrelevant'}>
+                        <DraggableAnalysisItem
+                          item={item}
+                          actions={item.source === 'semantic' ? (
+                            <SemanticQuickActions
+                              item={item}
+                              defaultMetricId={defaultMetricId}
+                              onCreateSemanticChart={onCreateSemanticChart}
+                              onCreateSemanticKpi={onCreateSemanticKpi}
+                              onEditSemanticMetric={onEditSemanticMetric}
+                              onAddDashboardFilter={onAddDashboardFilter}
+                            />
+                          ) : null}
+                        />
+                      </div>
                     ))}
                   </div>
                 </section>

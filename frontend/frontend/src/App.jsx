@@ -18,6 +18,7 @@ import DataFilterPanel from './components/data_management/DataFilterPanel';
 import './App.css';
 import { MuiThemeContext } from './context/MuiThemeContext';
 import { WindowProvider, useWindowContext } from './context/WindowContext';
+import { runDecisionPipeline } from './features/business/decision/decisionApi';
 
 const parseRecords = (source) => {
   if (!source) return [];
@@ -33,32 +34,23 @@ const parseRecords = (source) => {
   return [];
 };
 
-const RIBBON_TAB_TO_WORKFLOW = {
-  Home: 'data',
-  Explore: 'explore',
-  Visualise: 'visualise',
-  Business: 'business',
+const DESTINATIONS = {
+  WORKSPACE: 'workspace',
+  EXPLORE: 'explore',
+  DASHBOARDS: 'dashboards',
+  DECISIONS: 'decisions',
   AI: 'ai',
-  Dashboard: 'dashboard',
-};
-
-const WORKFLOW_TO_RIBBON_TAB = {
-  data: 'Home',
-  explore: 'Explore',
-  visualise: 'Visualise',
-  business: 'Business',
-  ai: 'AI',
-  dashboard: 'Dashboard',
 };
 
 function AppContent() {
   const {
     uploadedData, setUploadedData,
-    setFullData,
+    fullData, setFullData,
     cleanedData, setCleanedData,
     pipelineResults, setPipelineResults,
     aiReportReady, setAiReportReady,
     showAiReport, setShowAiReport,
+    semanticModel,
     setSemanticModel,
     refreshSemanticModelFromDataset,
   } = useContext(DataContext);
@@ -78,8 +70,7 @@ function AppContent() {
     setDashboardFilters,
   } = useWindowContext();
 
-  console.log('App.jsx received uploadedData:', uploadedData);
-
+  const [activeDestination, setActiveDestination] = useState(DESTINATIONS.WORKSPACE);
   const [selectedStat, setSelectedStat] = useState(null);
   const [chartData, setChartData] = useState(null);
   const [chartMapping, setChartMapping] = useState({});
@@ -108,6 +99,15 @@ function AppContent() {
   const [outputWindows, setOutputWindows] = useState([]);
   const [rawUploadFile, setRawUploadFile] = useState(null);
   const [showMachineLearning, setShowMachineLearning] = useState(false);
+  const [showDecisionPanel, setShowDecisionPanel] = useState(false);
+  const [decisionBundle, setDecisionBundle] = useState(null);
+  const [decisionReadiness, setDecisionReadiness] = useState({
+    dataset_loaded: false,
+    semantic_ready: false,
+    decision_ready: false,
+    missing_requirements: ['dataset', 'semantic_model', 'metrics'],
+  });
+  const [decisionWarnings, setDecisionWarnings] = useState([]);
   const [isSnowing, setIsSnowing] = useState(false);
   const [activeRibbonTab, setActiveRibbonTab] = useState('Home');
   const [activeWorkflow, setActiveWorkflow] = useState(null);
@@ -217,40 +217,55 @@ function AppContent() {
     handleFileUpload(data);
   };
 
-  const handleSidebarButtonClick = useCallback((action) => {
-    if (action === 'visualize') setShowDataVisual(true);
-  }, []);
   const handleOpenAiChat = useCallback(() => {
     setAiChatOpenRequestKey((prev) => prev + 1);
   }, []);
-  const handleRibbonTabChange = useCallback((tab) => {
-    setActiveRibbonTab(tab);
-    const mappedWorkflow = RIBBON_TAB_TO_WORKFLOW[tab];
-    if (mappedWorkflow === 'explore') {
+
+  const handleDestinationSelect = useCallback((destination) => {
+    setActiveDestination(destination);
+    
+    // Compatibility mapping for existing context logic
+    if (destination === DESTINATIONS.EXPLORE) {
       setIsDataPaneOpen(true);
-      return;
-    }
-    if (mappedWorkflow) {
-      setActiveWorkflow(mappedWorkflow);
-      return;
-    }
-    if (tab === 'Settings') {
+      setActiveWorkflow('explore');
+    } else if (destination === DESTINATIONS.DASHBOARDS) {
+      setActiveWorkflow('dashboard');
+      openDashboard();
+    } else if (destination === DESTINATIONS.DECISIONS) {
+      setActiveWorkflow('business');
+    } else if (destination === DESTINATIONS.AI) {
+      setActiveWorkflow('ai');
+    } else {
       setActiveWorkflow(null);
     }
-  }, []);
-  const handleWorkflowSelect = useCallback((workflow) => {
-    if (workflow === 'explore') {
-      setIsDataPaneOpen((prev) => !prev);
-      return;
+  }, [openDashboard]);
+
+  const handleRibbonTabChange = useCallback((tab) => {
+    const tabToDest = {
+      'Home': DESTINATIONS.WORKSPACE,
+      'Visualise': DESTINATIONS.EXPLORE,
+      'Explore': DESTINATIONS.EXPLORE,
+      'Dashboard': DESTINATIONS.DASHBOARDS,
+      'Business': DESTINATIONS.DECISIONS,
+      'AI': DESTINATIONS.AI,
+    };
+    if (tabToDest[tab]) {
+      handleDestinationSelect(tabToDest[tab]);
     }
-    setActiveWorkflow((prev) => {
-      const nextWorkflow = prev === workflow ? null : workflow;
-      if (nextWorkflow && WORKFLOW_TO_RIBBON_TAB[nextWorkflow]) {
-        setActiveRibbonTab(WORKFLOW_TO_RIBBON_TAB[nextWorkflow]);
-      }
-      return nextWorkflow;
-    });
-  }, []);
+  }, [handleDestinationSelect]);
+
+  const handleWorkflowSelect = useCallback((workflow) => {
+    const workflowToDest = {
+      'data': DESTINATIONS.WORKSPACE,
+      'explore': DESTINATIONS.EXPLORE,
+      'visualise': DESTINATIONS.EXPLORE,
+      'dashboard': DESTINATIONS.DASHBOARDS,
+      'business': DESTINATIONS.DECISIONS,
+    };
+    if (workflowToDest[workflow]) {
+      handleDestinationSelect(workflowToDest[workflow]);
+    }
+  }, [handleDestinationSelect]);
   const handleClosePreview = useCallback(() => setShowDataPreview(false), []);
   const handleCloseRawViewer = useCallback(() => setShowRawViewer(false), []);
   const handleCloseCanvas = useCallback(() => setShowCanvasContainer(false), []);
@@ -270,6 +285,79 @@ function AppContent() {
   }, []);
   const handleCloseChartWindow = useCallback(() => setShowChartWindow(false), []);
   const handleStoryModelChange = (newModel) => setStoryModel(newModel);
+
+  const fetchDecisionReadiness = useCallback(async () => {
+    try {
+      const payload = {
+        dataset_ref: uploadedData?.semantic_model?.dataset?.id ? {
+          source: 'datahub',
+          dataset_id: uploadedData.semantic_model.dataset.id,
+        } : null,
+      };
+
+      const result = await runDecisionPipeline(payload);
+      if (result.readiness) {
+        setDecisionReadiness(result.readiness);
+      }
+      if (result.warnings) {
+        setDecisionWarnings(result.warnings);
+      }
+    } catch (err) {
+      console.error('Failed to fetch decision readiness:', err);
+    }
+  }, [uploadedData]);
+
+  useEffect(() => {
+    if (activeWorkflow === 'business') {
+      fetchDecisionReadiness();
+    }
+  }, [activeWorkflow, fetchDecisionReadiness, uploadedData, semanticModel]);
+
+  const handleRunDecision = useCallback(async () => {
+    try {
+      const payload = {
+        dataset_ref: uploadedData?.semantic_model?.dataset?.id ? {
+          source: 'datahub',
+          dataset_id: uploadedData.semantic_model.dataset.id,
+        } : null,
+        include_anomaly_detection: true,
+        include_scenario_preview: true,
+      };
+
+      const result = await runDecisionPipeline(payload);
+      
+      // Update readiness even on partial/failed runs
+      if (result.readiness) {
+        setDecisionReadiness(result.readiness);
+      }
+      if (result.warnings) {
+        setDecisionWarnings(result.warnings);
+      }
+
+      if (result.status === 'success') {
+        setDecisionBundle(result.decision_bundle);
+        setShowDecisionPanel(true);
+        restoreWindow('decisionPanel');
+      }
+    } catch (err) {
+      console.error('Failed to run decision pipeline:', err);
+      // No blocking alert here, readiness state handles the UI
+    }
+  }, [uploadedData, restoreWindow]);
+
+  const handleDecisionAction = useCallback((action) => {
+    if (action.action_type === 'break_down_metric') {
+      const { metric_id, group_by } = action.payload;
+      addChart({
+        type: 'Bar',
+        dataSourceMode: 'semantic',
+        semanticConfig: {
+          metricId: metric_id,
+          groupBy: Array.isArray(group_by) ? group_by[0] : group_by,
+        },
+      });
+    }
+  }, [addChart]);
 
   const handleFieldDrop = useCallback((axis, field) => {
     setChartMapping((prev) => {
@@ -428,9 +516,8 @@ function AppContent() {
       <div className="app-container">
         {theme === 'dark' && isSnowing && <Snowfall style={{ zIndex: 1000, pointerEvents: 'none' }} />}
         <SideBar
-          activeWorkflow={activeWorkflow}
-          onWorkflowSelect={handleWorkflowSelect}
-          onButtonClick={handleSidebarButtonClick}
+          activeDestination={activeDestination}
+          onDestinationSelect={handleDestinationSelect}
           onDataCleaned={handleDataCleaned}
           uploadedData={uploadedData}
           cleanedData={cleanedData}
@@ -450,14 +537,14 @@ function AppContent() {
           setShowWhiteBoard={setShowWhiteBoard}
           onStoryModelChange={handleStoryModelChange}
           setShowMachineLearning={setShowMachineLearning}
+          onRunDecision={handleRunDecision}
+          decisionReadiness={decisionReadiness}
         />
 
         <div className="main-content">
           <MenuBar
-            activeTab={activeRibbonTab}
-            onTabChange={handleRibbonTabChange}
-            activeWorkflow={activeWorkflow}
-            onWorkflowSelect={handleWorkflowSelect}
+            activeDestination={activeDestination}
+            onDestinationSelect={handleDestinationSelect}
             onFileUploadSuccess={handleFileUpload}
             onStatsSelect={handleStatsSelect}
             showDataPreview={showDataPreview}
@@ -481,18 +568,16 @@ function AppContent() {
               setStoryData(null);
               setShowStoryPanel(true);
               restoreWindow('storyPanel');
-              setActiveWorkflow('ai');
-              setActiveRibbonTab('AI');
+              handleDestinationSelect(DESTINATIONS.EXPLORE);
             }}
             onOpenWhiteboard={() => {
               setShowWhiteBoard(true);
               restoreWindow('whiteBoard');
-              setActiveWorkflow('whiteboard');
+              handleDestinationSelect(DESTINATIONS.EXPLORE);
             }}
             onOpenChartGallery={() => {
               setShowDataVisual(true);
-              setActiveWorkflow('visualise');
-              setActiveRibbonTab('Visualise');
+              handleDestinationSelect(DESTINATIONS.EXPLORE);
             }}
             onHeightChange={setMenuBarHeight}
           />
@@ -511,6 +596,7 @@ function AppContent() {
 
           {showCanvasContainer && (
             <CanvasContainer
+              activeDestination={activeDestination}
               showAiWorkflow={showAiWorkflow}
               setShowAiWorkflow={setShowAiWorkflow}
               uploadedData={uploadedData || null}
@@ -552,6 +638,15 @@ function AppContent() {
               handleCloseRawViewer={handleCloseRawViewer}
               showMachineLearning={showMachineLearning}
               setShowMachineLearning={setShowMachineLearning}
+              showDecisionPanel={showDecisionPanel}
+              setShowDecisionPanel={setShowDecisionPanel}
+              decisionBundle={decisionBundle}
+              onDecisionAction={handleDecisionAction}
+              decisionReadiness={decisionReadiness}
+              decisionWarnings={decisionWarnings}
+              onOpenAiChat={handleOpenAiChat}
+              onRunDecision={handleRunDecision}
+              setShowDataVisual={setShowDataVisual}
             >
               <DatasetInfo selectedStat={selectedStat} />
             </CanvasContainer>
@@ -567,6 +662,7 @@ function AppContent() {
         />
 
         <DataPane
+          activeDestination={activeDestination}
           cleanedData={cleanedData}
           isCollapsed={!isDataPaneOpen}
           setIsCollapsed={(val) => setIsDataPaneOpen(!val)}
