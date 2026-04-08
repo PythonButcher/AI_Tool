@@ -4,14 +4,15 @@ import FieldsPanel from '../insights/FieldsPanel';
 import './DataPane.css';
 
 const DataPane = ({ 
+  activeDestination,
   cleanedData,
   onCreateSemanticChart,
   onCreateSemanticKpi,
   onEditSemanticMetric,
-  onAddDashboardFilter 
+  onAddDashboardFilter,
+  isCollapsed,
+  setIsCollapsed,
 }) => {
-  const [isCollapsed, setIsCollapsed] = useState(false);
-
   return (
     <aside className={`data-pane ${isCollapsed ? 'is-collapsed' : ''}`}>
       <button 
@@ -32,6 +33,7 @@ const DataPane = ({
 
         <div className="data-pane__body">
           <FieldsPanel 
+            activeDestination={activeDestination}
             cleanedData={cleanedData}
             onCreateSemanticChart={onCreateSemanticChart}
             onCreateSemanticKpi={onCreateSemanticKpi}

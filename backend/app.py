@@ -24,6 +24,7 @@ from backend.routes.ml_prep import ml_prep_bp
 from backend.routes.automl import automl_bp
 from backend.routes.semantic_model import semantic_model_bp
 from backend.routes.semantic_metrics import semantic_metrics_bp
+from backend.routes.decision import decision_bp
 from backend.routes.workflows import workflow_bp
 
 
@@ -59,6 +60,7 @@ def create_app():
     app.register_blueprint(automl_bp)
     app.register_blueprint(semantic_model_bp)
     app.register_blueprint(semantic_metrics_bp)
+    app.register_blueprint(decision_bp)
     app.register_blueprint(workflow_bp)
 
     @app.route('/', methods=['GET'])
