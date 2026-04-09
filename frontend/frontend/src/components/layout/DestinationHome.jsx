@@ -112,11 +112,33 @@ const DestinationHome = ({ activeDestination, onAction }) => {
     </div>
   );
 
+  const renderDashboardsHome = () => (
+    <div className="dest-home">
+      <div className="dest-home__icon-orbit">
+        <FaTachometerAlt className="dest-home__main-icon" />
+      </div>
+      <h2 className="dest-home__title">Business Monitoring</h2>
+      <p className="dest-home__description">
+        Keep your finger on the pulse. Create KPI cards, track metric trends, 
+        and build custom monitoring views for your business health.
+      </p>
+      <div className="dest-home__actions">
+        <button className="dest-home__button dest-home__button--primary" onClick={() => onAction('new_kpi')}>
+          <FaPlus /> New KPI Card
+        </button>
+        <button className="dest-home__button" onClick={() => onAction('new_chart')}>
+          Add Dashboard Chart <FaArrowRight />
+        </button>
+      </div>
+    </div>
+  );
+
   switch (activeDestination) {
     case DESTINATIONS.WORKSPACE: return renderWorkspaceHome();
     case DESTINATIONS.EXPLORE: return renderExploreHome();
     case DESTINATIONS.AI: return renderAIHome();
     case DESTINATIONS.DECISIONS: return renderDecisionsHome();
+    case DESTINATIONS.DASHBOARDS: return renderDashboardsHome();
     default: return null;
   }
 };

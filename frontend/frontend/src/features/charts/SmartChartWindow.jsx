@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { useDndMonitor, useDroppable } from '@dnd-kit/core';
+import { useDndMonitor } from '@dnd-kit/core';
 import ChartComponent from './ChartComponent';
 import { transformToChartData } from '../../utils/chartDataUtils';
 import { buildSemanticChartData, formatSemanticValue } from '../../utils/semanticChartUtils';
@@ -10,67 +10,13 @@ import {
   countActiveDashboardFilters,
 } from '../../utils/dashboardFilterUtils';
 import { TbChartBar, TbChartDots, TbChartLine, TbChartPie, TbChartDonut } from 'react-icons/tb';
-import { IoAddCircleOutline } from 'react-icons/io5';
+import { AiOutlineFundProjectionScreen, AiOutlineTag, AiOutlineFileSearch, AiOutlineLineChart } from 'react-icons/ai';
 import { useWindowContext } from '../../context/WindowContext';
 import { normalizeDatasetRows, useActiveDataset, useSemanticModel } from '../../context/DataContext';
+import DropZone from '../../utils/DropZone';
 import './SmartChartWindow.css';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
-
-const SemanticDropOverlay = ({ id, label, helperText, currentValue, objectKinds, semanticRole, style }) => {
-  const { setNodeRef, isOver } = useDroppable({
-    id: `chart-${id}-${semanticRole}`,
-    data: {
-      targetChartId: id,
-      semanticRole,
-      acceptedObjectKinds: objectKinds,
-    },
-  });
-
-  return (
-    <div
-      ref={setNodeRef}
-      className={`drop-overlay drop-overlay--semantic ${isOver ? 'is-over' : ''}`}
-      style={style}
-    >
-      <strong className="drop-label">{label}</strong>
-      <span className="drop-helper">{helperText}</span>
-      {currentValue && (
-        <span className="current-value-tag">
-          {currentValue}
-        </span>
-      )}
-    </div>
-  );
-};
-
-const RawDropOverlay = ({ zoneId, axis, label, style, currentMapping }) => {
-  const { setNodeRef, isOver } = useDroppable({
-    id: `chart-${zoneId}-${axis}`,
-    data: {
-      targetChartId: zoneId,
-      axis: axis === 'X-Axis' ? 'x' : 'y',
-      allowedTypes: axis === 'Y-Axis' ? ['numeric'] : ['categorical', 'temporal'],
-    },
-  });
-
-  return (
-    <div
-      ref={setNodeRef}
-      className={`drop-overlay drop-overlay--raw ${isOver ? 'is-over' : ''}`}
-      style={style}
-    >
-      <span className="drop-label">{label}</span>
-      {currentMapping ? (
-        <span className="current-value-tag">
-          {currentMapping}
-        </span>
-      ) : (
-        <span className="drop-helper">Drop field here</span>
-      )}
-    </div>
-  );
-};
 
 const SmartChartWindow = ({
   id,
@@ -127,12 +73,8 @@ const SmartChartWindow = ({
         setActiveDragPayload(current);
       }
     },
-    onDragEnd: () => {
-      setActiveDragPayload(null);
-    },
-    onDragCancel: () => {
-      setActiveDragPayload(null);
-    },
+    onDragEnd: () => setActiveDragPayload(null),
+    onDragCancel: () => setActiveDragPayload(null),
   });
 
   const handleChartTypeChange = useCallback((nextType) => {
@@ -142,15 +84,6 @@ const SmartChartWindow = ({
     }
     updateChart(id, { type: nextType });
   }, [id, updateChart, updateDashboardItem]);
-
-  const handleModeChange = useCallback((nextMode) => {
-    if (nextMode === dataSourceMode) return;
-    if (id.startsWith('dashboard-')) {
-      updateDashboardItem(id, { dataSourceMode: nextMode });
-      return;
-    }
-    updateChart(id, { dataSourceMode: nextMode });
-  }, [dataSourceMode, id, updateChart, updateDashboardItem]);
 
   const handleSemanticConfigChange = useCallback((updates) => {
     if (id.startsWith('dashboard-')) {
@@ -209,21 +142,7 @@ const SmartChartWindow = ({
     if (!selectedMetric) {
       setSemanticResolution(null);
       setSemanticStatus('invalid_selection');
-      setSemanticError('The selected semantic metric is no longer available. Pick another metric to continue.');
-      return;
-    }
-
-    if (selectedGroupBy && !selectedDimension) {
-      setSemanticResolution(null);
-      setSemanticStatus('invalid_selection');
-      setSemanticError('The selected semantic dimension is no longer available. Choose another grouping.');
-      return;
-    }
-
-    if (!datasetRows.length) {
-      setSemanticResolution(null);
-      setSemanticStatus('empty_dataset');
-      setSemanticError('No dataset rows are available for semantic metric resolution.');
+      setSemanticError('Selected metric no longer available.');
       return;
     }
 
@@ -243,14 +162,11 @@ const SmartChartWindow = ({
             dataset: datasetRows,
             semantic_model: semanticModel,
             filters: dashboardResolverFilters,
-            sort: 'group_asc',
           }),
         });
 
         const payload = await response.json();
-        if (!response.ok) {
-          throw new Error(payload.error || 'Failed to resolve semantic metric.');
-        }
+        if (!response.ok) throw new Error(payload.error || 'Resolution failed');
 
         if (!isCancelled) {
           setSemanticResolution(payload);
@@ -266,21 +182,8 @@ const SmartChartWindow = ({
     };
 
     resolveMetric();
-
-    return () => {
-      isCancelled = true;
-    };
-  }, [
-    dataSourceMode,
-    datasetRows,
-    dashboardResolverFilters,
-    semanticMetrics.length,
-    semanticModel,
-    selectedDimension,
-    selectedGroupBy,
-    selectedMetric,
-    selectedMetricId,
-  ]);
+    return () => { isCancelled = true; };
+  }, [dataSourceMode, datasetRows, dashboardResolverFilters, semanticMetrics.length, semanticModel, selectedGroupBy, selectedMetricId, selectedMetric]);
 
   const semanticChartData = useMemo(
     () => buildSemanticChartData(semanticResolution),
@@ -288,33 +191,31 @@ const SmartChartWindow = ({
   );
 
   const chartData = dataSourceMode === 'semantic' ? semanticChartData : rawChartData;
+  const isPopulated = dataSourceMode === 'semantic' ? !!selectedMetricId : (!!mapping['X-Axis'] && !!mapping['Y-Axis']);
   const isEmpty = !chartData;
+  const isDraggingAny = !!activeDragPayload;
   const isDraggingRawField = activeDragPayload?.type === 'field';
   const isDraggingSemanticObject = activeDragPayload?.type === 'semantic-object';
-  const semanticDragLabel = activeDragPayload?.metadata?.label || activeDragPayload?.label || '';
 
   const semanticStatusCopy = useMemo(() => {
-    if (dataSourceMode !== 'semantic') {
-      return activeDashboardFilterCount > 0
-        ? `Dashboard filters applied (${activeDashboardFilterCount})`
-        : 'Drop raw fields to build chart';
-    }
-
-    if (semanticStatus === 'loading') return 'Resolving semantic metric...';
+    if (dataSourceMode !== 'semantic') return activeDashboardFilterCount > 0 ? `Filters applied (${activeDashboardFilterCount})` : 'Ready for fields';
+    if (semanticStatus === 'loading') return 'Resolving...';
     if (semanticStatus === 'error') return semanticError;
-    if (semanticStatus === 'invalid_selection') return semanticError;
-    if (semanticStatus === 'missing_model') return 'Semantic model missing';
-    if (semanticStatus === 'awaiting_selection') return 'Drop a business metric to start';
+    if (semanticStatus === 'awaiting_selection') return 'Drop metric to start';
     
     if (semanticResolution) {
-        const summaryValue = formatSemanticValue(
-            semanticResolution.summary?.value,
-            semanticResolution.metric?.format_hint
-        );
-        return `Summary: ${summaryValue} ${activeDashboardFilterCount > 0 ? `(${activeDashboardFilterCount} filters)` : ''}`;
+        const val = formatSemanticValue(semanticResolution.summary?.value, semanticResolution.metric?.format_hint);
+        return `Value: ${val} ${activeDashboardFilterCount > 0 ? `(${activeDashboardFilterCount} filters)` : ''}`;
     }
-    return 'Semantic mode active';
+    return 'Semantic layer active';
   }, [activeDashboardFilterCount, dataSourceMode, semanticError, semanticResolution, semanticStatus]);
+
+  const isDashboardItem = id.startsWith('dashboard-') || !!externalFilters;
+
+  const handleDataSourceModeChange = useCallback((nextMode) => {
+    if (isDashboardItem) return; // Prevent switching in dashboard context
+    updateChart(id, { dataSourceMode: nextMode });
+  }, [id, isDashboardItem, updateChart]);
 
   const renderToolbar = () => (
     <div className="smart-chart-toolbar">
@@ -336,61 +237,28 @@ const SmartChartWindow = ({
           </button>
         ))}
       </div>
-    </div>
-  );
 
-  const renderSemanticControls = () => (
-    <div className="semantic-controls">
-      <div className="semantic-controls__header">
-        <div className="semantic-controls__title">
-          <strong>Business Definitions</strong>
-          <p>Chart powered by semantic layer resolution</p>
-        </div>
-        <div className="semantic-controls__counts">
-          <span className="semantic-controls__count semantic-controls__count--metric">{semanticMetrics.length} M</span>
-          <span className="semantic-controls__count semantic-controls__count--dimension">{semanticDimensions.length} D</span>
-        </div>
-      </div>
-
-      <div className="semantic-controls__inputs">
-        <label className="semantic-field-group">
-          <span>Metric</span>
-          <select
-            value={selectedMetricId}
-            className="semantic-select"
-            onChange={(event) => handleSemanticConfigChange({ metricId: event.target.value })}
-            disabled={isLocked || semanticMetrics.length === 0}
+      {!isDashboardItem && (
+        <div className="data-source-modes">
+          <button
+            className={`mode-btn ${dataSourceMode === 'raw' ? 'active-raw' : ''}`}
+            onClick={() => handleDataSourceModeChange('raw')}
+            title="Raw Explorer"
           >
-            <option value="">Select metric</option>
-            {semanticMetrics.map((metric) => (
-              <option key={metric.id} value={metric.id}>
-                {metric.label}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label className="semantic-field-group">
-          <span>Group By</span>
-          <select
-            value={selectedGroupBy}
-            className="semantic-select"
-            onChange={(event) => handleSemanticConfigChange({ groupBy: event.target.value })}
-            disabled={isLocked || semanticDimensions.length === 0}
+            Raw Data
+          </button>
+          <button
+            className={`mode-btn ${dataSourceMode === 'semantic' ? 'active-semantic' : ''}`}
+            onClick={() => handleDataSourceModeChange('semantic')}
+            title="Semantic Insight"
           >
-            <option value="">No grouping</option>
-            {semanticDimensions.map((dimension) => (
-              <option key={dimension.id} value={dimension.id}>
-                {dimension.label}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
+            Intelligence
+          </button>
+        </div>
+      )}
 
-      <div className={`semantic-status-bar ${semanticStatus === 'error' ? 'semantic-status--error' : ''}`}>
-        <span>{semanticStatusCopy}</span>
-        <span>Resolver: v1</span>
+      <div className="semantic-status-mini">
+        {semanticStatusCopy}
       </div>
     </div>
   );
@@ -398,62 +266,208 @@ const SmartChartWindow = ({
   return (
     <div className="smart-chart-window">
       {renderToolbar()}
-      {dataSourceMode === 'semantic' && renderSemanticControls()}
+
+      {dataSourceMode === 'raw' && !isDashboardItem && (
+        <div className="semantic-controls" style={{ background: 'var(--bg-secondary-soft)', borderBottomColor: 'var(--border-color-soft)' }}>
+          <div className="semantic-controls__title">
+            <strong style={{ color: 'var(--accent-blue)' }}>Raw Data Mapping</strong>
+          </div>
+          <div className="semantic-controls__inputs">
+            <div className="semantic-field-group">
+              <span>Y-Axis</span>
+              <select
+                className="semantic-select"
+                value={mapping['Y-Axis'] || ''}
+                onChange={(e) => {
+                  const newMapping = { ...mapping, 'Y-Axis': e.target.value };
+                  if (id.startsWith('dashboard-')) {
+                    updateDashboardItem(id, { mapping: newMapping });
+                  } else {
+                    updateChart(id, { mapping: newMapping });
+                  }
+                }}
+                disabled={isLocked}
+              >
+                <option value="">Select field</option>
+                {Object.keys(datasetRows[0] || {}).map((f) => (
+                  <option key={f} value={f}>{f}</option>
+                ))}
+              </select>
+            </div>
+            <div className="semantic-field-group">
+              <span>X-Axis</span>
+              <select
+                className="semantic-select"
+                value={mapping['X-Axis'] || ''}
+                onChange={(e) => {
+                  const newMapping = { ...mapping, 'X-Axis': e.target.value };
+                  if (id.startsWith('dashboard-')) {
+                    updateDashboardItem(id, { mapping: newMapping });
+                  } else {
+                    updateChart(id, { mapping: newMapping });
+                  }
+                }}
+                disabled={isLocked}
+              >
+                <option value="">Select field</option>
+                {Object.keys(datasetRows[0] || {}).map((f) => (
+                  <option key={f} value={f}>{f}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {dataSourceMode === 'semantic' && (
+        <div className="semantic-controls">
+          <div className="semantic-controls__header">
+            <div className="semantic-controls__title">
+              <strong>Field Intelligence</strong>
+            </div>
+            <div className="semantic-controls__counts">
+              <span className="semantic-controls__count semantic-controls__count--metric" title="Available Metrics">
+                {semanticMetrics.length}
+              </span>
+              <span className="semantic-controls__count semantic-controls__count--dimension" title="Available Dimensions">
+                {semanticDimensions.length}
+              </span>
+            </div>
+          </div>
+
+          <div className="semantic-controls__inputs">
+            <div className="semantic-field-group">
+              <span>Metric</span>
+              <select
+                className="semantic-select"
+                value={selectedMetricId}
+                onChange={(e) => handleSemanticConfigChange({ metricId: e.target.value })}
+                disabled={isLocked || semanticMetrics.length === 0}
+              >
+                <option value="">Select metric</option>
+                {semanticMetrics.map((metric) => (
+                  <option key={metric.id} value={metric.id}>
+                    {metric.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="semantic-field-group">
+              <span>Group By</span>
+              <select
+                className="semantic-select"
+                value={selectedGroupBy}
+                onChange={(e) => handleSemanticConfigChange({ groupBy: e.target.value })}
+                disabled={isLocked || semanticDimensions.length === 0}
+              >
+                <option value="">None (Summary)</option>
+                {semanticDimensions.map((dim) => (
+                  <option key={dim.id} value={dim.id}>
+                    {dim.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {semanticStatus === 'error' && (
+            <div className="semantic-status-bar semantic-status--error">
+              {semanticError}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="chart-content-area">
         {!isEmpty && <ChartComponent chartType={type} chartData={chartData} />}
 
-        {isEmpty && !isDraggingRawField && !isDraggingSemanticObject && (
+        {isEmpty && !isDraggingAny && (
           <div className="chart-placeholder">
-            <IoAddCircleOutline size={48} />
+            <AiOutlineFileSearch size={40} />
             <p>
-              {activeDashboardFilterCount > 0
-                ? 'Current filters returned no data. Adjust filters or drop fields.'
-                : 'Drag any field here from the explorer to start building your chart.'}
+              {dataSourceMode === 'semantic' 
+                ? 'Drop a business metric here from the Definitions pane.'
+                : 'Drop raw fields from the explorer to build your chart.'}
             </p>
           </div>
         )}
 
         {dataSourceMode === 'raw' && isDraggingRawField && (
-          <>
-            <RawDropOverlay
-              zoneId={id}
-              axis="Y-Axis"
-              label="Values (Y)"
-              style={{ top: '10px', bottom: '55%', left: '10px', right: '10px' }}
-              currentMapping={mapping['Y-Axis']}
+          <div className="drop-overlay-container">
+            <DropZone
+              axis="y"
+              roleLabel="Values (Y)"
+              helperText="Drop numeric field"
+              allowedTypes={['numeric']}
+              currentField={mapping['Y-Axis']}
             />
-            <RawDropOverlay
-              zoneId={id}
-              axis="X-Axis"
-              label="Categories (X)"
-              style={{ top: '45%', bottom: '10px', left: '10px', right: '10px' }}
-              currentMapping={mapping['X-Axis']}
+            <DropZone
+              axis="x"
+              roleLabel="Categories (X)"
+              helperText="Drop grouping field"
+              allowedTypes={['categorical', 'temporal']}
+              currentField={mapping['X-Axis']}
             />
-          </>
+          </div>
         )}
 
         {isDraggingSemanticObject && (
-          <>
-            <SemanticDropOverlay
-              id={id}
+          <div className="drop-overlay-container">
+            <DropZone
+              id={`drop-${id}-metric`}
+              axis="y"
+              roleLabel="Metric"
+              helperText="Drop business metric"
+              allowedTypes={['numeric']}
+              currentField={selectedMetric?.label}
+              icon={<AiOutlineFundProjectionScreen />}
+              targetChartId={id}
               semanticRole="metric"
-              objectKinds={['metric']}
-              label="Metric"
-              helperText={semanticDragLabel ? `Set ${semanticDragLabel}` : 'Drop metric here'}
-              currentValue={selectedMetric?.label}
-              style={{ top: '10px', bottom: '55%', left: '10px', right: '10px' }}
+              acceptedObjectKinds={['metric']}
             />
-            <SemanticDropOverlay
-              id={id}
+            <DropZone
+              id={`drop-${id}-groupBy`}
+              axis="x"
+              roleLabel="Group By"
+              helperText="Drop business grouping"
+              allowedTypes={['categorical', 'temporal']}
+              currentField={selectedDimension?.label}
+              icon={<AiOutlineTag />}
+              targetChartId={id}
               semanticRole="dimension"
-              objectKinds={['dimension']}
-              label="Group By"
-              helperText={semanticDragLabel ? `Group by ${semanticDragLabel}` : 'Drop dimension here'}
-              currentValue={selectedDimension?.label}
-              style={{ top: '45%', bottom: '10px', left: '10px', right: '10px' }}
+              acceptedObjectKinds={['dimension']}
             />
-          </>
+          </div>
+        )}
+
+        {!isPopulated && !isDraggingSemanticObject && (
+          <div className="chart-empty-state">
+            <AiOutlineLineChart className="empty-icon" />
+            <h4>Ready to Visualize</h4>
+            <p>Drag metrics or dimensions from the {dataSourceMode === 'semantic' ? 'Semantic Layer' : 'Field Catalog'} to start building.</p>
+            
+            <div className="empty-state-zones">
+              <DropZone
+                id={`empty-drop-${id}-y`}
+                axis="y"
+                roleLabel="Metric"
+                allowedTypes={['numeric']}
+                targetChartId={id}
+                semanticRole="metric"
+                acceptedObjectKinds={['metric']}
+              />
+              <DropZone
+                id={`empty-drop-${id}-x`}
+                axis="x"
+                roleLabel="Group By"
+                allowedTypes={['categorical', 'temporal']}
+                targetChartId={id}
+                semanticRole="dimension"
+                acceptedObjectKinds={['dimension']}
+              />
+            </div>
+          </div>
         )}
       </div>
     </div>

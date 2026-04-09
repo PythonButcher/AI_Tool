@@ -93,6 +93,7 @@ function SideBar({
   setStoryData,
   setShowStoryPanel,
   setShowWhiteBoard,
+  setShowDataVisual,
   onStoryModelChange,
   setShowMachineLearning,
   onRunDecision,
@@ -266,22 +267,22 @@ function SideBar({
           </div>
 
           <div className="workflow-action-grid">
-            <button type="button" className="workflow-action-card" onClick={() => {
+            <button type="button" className="workflow-action-card workflow-action-card--primary" onClick={() => {
               setShowDataPreview(true);
               restoreWindow('dataPreview');
             }}>
-              <FaTable />
-              <span>Data Preview</span>
-              <small>View records in the active canvas.</small>
+              <FaDatabase />
+              <span>Data Hub</span>
+              <small>Browse and manage your active datasets.</small>
             </button>
 
             <button type="button" className="workflow-action-card" onClick={() => {
               setShowRawViewer(true);
               restoreWindow('rawViewer');
             }}>
-              <FaDatabase />
-              <span>Raw Viewer</span>
-              <small>Full inspection of all data rows.</small>
+              <FaTable />
+              <span>Raw Inspection</span>
+              <small>Full spreadsheet-style view of all rows.</small>
             </button>
 
             <button type="button" className={`workflow-action-card ${showCleaningForm ? 'is-active' : ''}`} onClick={() => setShowCleaningForm((prev) => !prev)}>
@@ -330,10 +331,21 @@ function SideBar({
           />
 
           <div className="workflow-action-grid">
-            <button type="button" className="workflow-action-card workflow-action-card--primary" onClick={() => setShowDataPreview(true)}>
+            <button type="button" className="workflow-action-card workflow-action-card--primary" onClick={() => {
+              setShowDataVisual(true);
+              onDestinationSelect(DESTINATIONS.EXPLORE);
+            }}>
               <FaChartBar />
               <span>Chart Gallery</span>
               <small>Select from existing templates.</small>
+            </button>
+            <button type="button" className="workflow-action-card" onClick={() => {
+              setShowWhiteBoard(true);
+              restoreWindow('whiteBoard');
+            }}>
+              <FaPen />
+              <span>Visual Sandbox</span>
+              <small>Free-form whiteboard for exploration.</small>
             </button>
           </div>
 
@@ -476,19 +488,9 @@ function SideBar({
             </button>
           </div>
 
-          <div style={{ marginTop: '24px' }}>
-            <p className="workflow-drawer__eyebrow">Definitions</p>
-            <SemanticModelPanel
-              semanticModel={semanticModel}
-              status={semanticModelStatus}
-              onCreateSemanticChart={handleCreateSemanticChart}
-              onCreateKpiCard={handleCreateSemanticKpi}
-              onEditSemanticMetric={(metric) => handleOpenSemanticEditor({ metricId: metric?.id })}
-              onAddDashboardFilter={handleAddSemanticFilter}
-              editorRequest={semanticEditorRequest}
-              onEditorClose={handleCloseSemanticEditor}
-            />
-          </div>
+          <p className="workflow-drawer__copy" style={{ marginTop: '24px', fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
+            Business definitions and semantic metrics are available in the right-side <strong>Definitions</strong> pane for quick reference and management without cluttering the intelligence canvas.
+          </p>
         </>
       );
     }

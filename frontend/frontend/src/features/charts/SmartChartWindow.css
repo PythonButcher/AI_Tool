@@ -11,7 +11,7 @@
 .smart-chart-toolbar {
   display: flex;
   gap: var(--space-3);
-  padding: var(--space-2) var(--space-3);
+  padding: 6px 12px;
   background: var(--bg-primary);
   border-bottom: 1px solid var(--border-color);
   align-items: center;
@@ -21,21 +21,22 @@
 
 .chart-type-selector {
   display: flex;
-  gap: 4px;
+  gap: 2px;
   background: var(--bg-secondary);
-  padding: 4px;
-  border-radius: 10px;
+  padding: 3px;
+  border-radius: 8px;
 }
 
 .chart-type-btn {
-  padding: 6px;
+  padding: 5px;
   border: none;
   background: transparent;
   color: var(--text-secondary);
-  border-radius: 6px;
+  border-radius: 5px;
   cursor: pointer;
   display: flex;
   transition: all 0.2s;
+  font-size: 1.1rem;
 }
 
 .chart-type-btn:hover {
@@ -55,13 +56,13 @@
 }
 
 .mode-btn {
-  padding: 6px 12px;
+  padding: 4px 10px;
   border-radius: 6px;
   border: 1px solid var(--border-color);
   background: var(--bg-primary);
   color: var(--text-secondary);
   cursor: pointer;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   font-weight: 600;
   transition: all 0.2s;
 }
@@ -84,29 +85,28 @@
 }
 
 .semantic-controls {
-  padding: var(--space-3);
+  padding: 10px 12px;
   border-bottom: 1px solid var(--border-color);
   background: var(--bg-secondary);
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: 8px;
   animation: slideDown 0.3s ease-out;
 }
 
 .semantic-controls__header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
 }
 
 .semantic-controls__title {
   display: flex;
   flex-direction: column;
-  gap: 2px;
 }
 
 .semantic-controls__title strong {
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   color: var(--accent-green);
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -114,82 +114,81 @@
 }
 
 .semantic-controls__title p {
-  margin: 0;
-  font-size: 0.85rem;
-  color: var(--text-secondary);
+  display: none;
 }
 
 .semantic-controls__counts {
   display: flex;
-  gap: 8px;
+  gap: 6px;
 }
 
 .semantic-controls__count {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 38px;
-  min-height: 28px;
-  padding: 0 10px;
+  min-width: 32px;
+  min-height: 24px;
+  padding: 0 8px;
   border-radius: 999px;
-  font-size: 0.74rem;
+  font-size: 0.68rem;
   font-weight: 700;
 }
 
 .semantic-controls__count--metric {
   color: var(--accent-green);
   background: var(--accent-green-soft);
-  font-weight: var(--font-weight-bold);
 }
 
 .semantic-controls__count--dimension {
   color: #b45309;
   background: rgba(217, 119, 6, 0.1);
-  font-weight: var(--font-weight-bold);
 }
 
 .semantic-controls__inputs {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: var(--space-3);
+  gap: 10px;
 }
 
 .semantic-field-group {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
 }
 
 .semantic-field-group span {
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   font-weight: var(--font-weight-semibold);
   color: var(--text-secondary);
+  white-space: nowrap;
 }
 
 .semantic-select {
-  padding: var(--space-2) var(--space-2);
-  border-radius: 8px;
+  flex: 1;
+  padding: 4px 8px;
+  border-radius: 6px;
   border: 1px solid var(--border-color);
   background: var(--bg-primary);
   color: var(--text-primary);
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   outline: none;
   transition: all 0.2s;
+  min-width: 0;
 }
 
 .semantic-select:focus {
   border-color: var(--accent-green);
-  box-shadow: 0 0 0 3px var(--accent-green-soft);
 }
 
 .semantic-status-bar {
   display: flex;
   justify-content: space-between;
   gap: var(--space-2);
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   color: var(--text-secondary);
-  padding-top: var(--space-2);
-  border-top: 1px solid var(--border-color);
+  padding-top: 6px;
+  border-top: 1px solid var(--border-color-soft);
 }
 
 .semantic-status--error {
@@ -209,73 +208,117 @@
   align-items: center;
   justify-content: center;
   color: var(--text-secondary);
-  gap: 16px;
+  gap: 12px;
   text-align: center;
-  padding: 32px;
+  padding: 24px;
 }
 
 .chart-placeholder p {
-  max-width: 320px;
+  max-width: 280px;
   margin: 0;
-  line-height: 1.5;
-  font-size: 0.9rem;
+  line-height: 1.4;
+  font-size: 0.85rem;
 }
 
-.drop-overlay {
+.semantic-status-mini {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+  max-width: 50%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chart-empty-state {
   position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 20px;
+  padding: 24px;
+  background: var(--bg-primary);
+  z-index: 10;
   text-align: center;
-  backdrop-filter: blur(4px);
-  z-index: 20;
-  transition: all 0.2s ease;
-  border-radius: 12px;
 }
 
-.drop-overlay--raw {
-  background: color-mix(in srgb, var(--bg-primary) 82%, transparent);
-  border: 2px dashed var(--border-color);
-  color: var(--text-secondary);
+.chart-empty-state .empty-icon {
+  font-size: 3rem;
+  color: var(--text-tertiary);
+  margin-bottom: 16px;
+  opacity: 0.5;
 }
 
-.drop-overlay--raw.is-over {
-  background: color-mix(in srgb, var(--accent-blue-soft) 48%, transparent);
-  border-color: var(--accent-blue);
-  color: color-mix(in srgb, var(--accent-blue) 82%, var(--text-primary));
-}
-
-.drop-overlay--semantic {
-  background: color-mix(in srgb, var(--accent-green-soft) 46%, transparent);
-  border: 2px dashed color-mix(in srgb, var(--accent-green) 30%, var(--border-color));
-  color: color-mix(in srgb, var(--accent-green) 80%, var(--text-primary));
-}
-
-.drop-overlay--semantic.is-over {
-  background: color-mix(in srgb, var(--accent-green-soft) 62%, transparent);
-  border-color: var(--accent-green);
-  color: color-mix(in srgb, var(--accent-green) 92%, var(--text-primary));
-}
-
-.drop-label {
+.chart-empty-state h4 {
+  margin: 0 0 8px;
+  font-size: 1.1rem;
   font-weight: 700;
-  font-size: 1rem;
+  color: var(--text-primary);
 }
 
-.drop-helper {
+.chart-empty-state p {
+  margin: 0 0 24px;
   font-size: 0.85rem;
-  opacity: 0.8;
+  color: var(--text-secondary);
+  max-width: 280px;
+  line-height: 1.4;
 }
 
-.current-value-tag {
-  font-size: 0.75rem;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--accent-white-soft) 72%, transparent);
-  font-weight: 600;
+.empty-state-zones {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+  max-width: 400px;
+  height: 100px;
+}
+
+.empty-state-zones > * {
+  flex: 1;
+}
+
+.drop-overlay-container {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 50;
+  pointer-events: none;
+}
+
+.drop-overlay-container > * {
+  pointer-events: auto;
+  flex: 1;
+}
+
+.drop-zone-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.drop-zone-icon {
+  font-size: 1.2rem;
+  opacity: 0.7;
+}
+
+.drop-zone-label {
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.drop-zone-helper {
+  font-size: 0.7rem;
+  opacity: 0.6;
 }
 
 @keyframes slideDown {
@@ -284,13 +327,6 @@
 }
 
 @media (max-width: 720px) {
-  .smart-chart-toolbar,
-  .semantic-controls__header,
-  .semantic-status-bar {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
   .semantic-controls__inputs {
     grid-template-columns: 1fr;
   }

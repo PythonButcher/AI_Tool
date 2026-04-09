@@ -224,21 +224,28 @@ function AppContent() {
   const handleDestinationSelect = useCallback((destination) => {
     setActiveDestination(destination);
     
-    // Compatibility mapping for existing context logic
+    // Manage side effects of destination transitions
     if (destination === DESTINATIONS.EXPLORE) {
       setIsDataPaneOpen(true);
       setActiveWorkflow('explore');
+      closeDashboard(); // Transitioning away from dashboard
     } else if (destination === DESTINATIONS.DASHBOARDS) {
       setActiveWorkflow('dashboard');
       openDashboard();
+      setIsDataPaneOpen(true); // Open data pane to show semantic seeds
     } else if (destination === DESTINATIONS.DECISIONS) {
       setActiveWorkflow('business');
+      closeDashboard();
+      setIsDataPaneOpen(true); // Open data pane for semantic definitions
     } else if (destination === DESTINATIONS.AI) {
       setActiveWorkflow('ai');
+      closeDashboard();
+      handleOpenAiChat(); // Auto-open AI chat when entering AI destination
     } else {
       setActiveWorkflow(null);
+      closeDashboard();
     }
-  }, [openDashboard]);
+  }, [openDashboard, closeDashboard, handleOpenAiChat]);
 
   const handleRibbonTabChange = useCallback((tab) => {
     const tabToDest = {
@@ -535,6 +542,7 @@ function AppContent() {
           setShowStoryPanel={setShowStoryPanel}
           showWhiteBoard={showWhiteBoard}
           setShowWhiteBoard={setShowWhiteBoard}
+          setShowDataVisual={setShowDataVisual}
           onStoryModelChange={handleStoryModelChange}
           setShowMachineLearning={setShowMachineLearning}
           onRunDecision={handleRunDecision}
@@ -647,6 +655,7 @@ function AppContent() {
               onOpenAiChat={handleOpenAiChat}
               onRunDecision={handleRunDecision}
               setShowDataVisual={setShowDataVisual}
+              setIsDataPaneOpen={setIsDataPaneOpen}
             >
               <DatasetInfo selectedStat={selectedStat} />
             </CanvasContainer>
