@@ -77,7 +77,7 @@ Status:
 
 - **COMPLETE** (Implementation active in code)
 
-## Intermission Cleanup (Current Priority)
+## Intermission Cleanup
 
 File:
 
@@ -92,27 +92,43 @@ Role:
 
 Status:
 
-- Planned / Next implementation slice
+- baseline implementation work appears in code
+- keep this file as a quality constraint reference, not as the active resume point
 
-## Phase 4 (After Intermission)
+## Phase 4 (Current Priority)
+
+Primary file:
+
+- `phase_4_decision_experience_redesign.md`
+
+Supporting backend/frontend handoff:
+
+- `../backend_to_frontend/phase_4_handoff.md`
+
+Supporting backend usability contract:
+
+- `../phase_docs/phase_4_backend_usability_support.md`
 
 Role:
 
-- **Advanced UI Polish, Density, and Workflow Optimization**
-- Refine the internal layouts of the destination-aware panels.
-- Smooth transitions between destinations.
-- Advance the AI-to-Workflow Lab handoffs.
+- **Decision Experience Redesign**
+- Make Decision Intelligence understandable, actionable, and naturally accessible.
+- Convert readiness metadata into guided setup and pre-run orientation states.
+- Refine the current decision surface into a product-grade workflow instead of a basic payload view.
 
 Status:
 
-- Planned / Next Slice
+- active planning handoff complete
+- frontend execution should resume here next
 
 ## Backend / Decision Integration Inputs
 
 Supporting docs outside this folder that remain important:
 
 - `ai_handoff/backend_to_frontend/phase_3_handoff.md`
+- `ai_handoff/backend_to_frontend/phase_4_handoff.md`
 - `ai_handoff/phase_docs/phase_3_frontend_integration.md`
+- `ai_handoff/phase_docs/phase_4_backend_usability_support.md`
 
 These confirm that Decision Intelligence frontend/backend integration is already implemented and should be preserved during shell work.
 
@@ -125,21 +141,26 @@ The live frontend already has:
 - context/setup menu bar in `MenuBar.jsx`
 - destination-aware canvas home states in `CanvasContainer.jsx` and `DestinationHome.jsx`
 - active Decision Intelligence run flow and panel rendering
+- backend-driven readiness metadata wired into frontend state
 
 ## What Is Still Ambiguous
 
-The shell still needs Gemini implementation work for:
+Phase 4 still needs Gemini implementation work for:
 
-- destination ownership rules
-- dashboard destination normalization
-- right-side data pane behavior by destination
-- clean separation between Decisions and definitions
-- AI global-helper versus AI-destination behavior
-- fixing placeholder or miswired destination CTAs
+- turning readiness into stronger setup guidance and pre-run orientation
+- making decision output easier to read and act on
+- reducing the sense that Decision Intelligence is a separate hidden subsystem
+- adding lightweight decision reachability from adjacent workflows without reopening navigation
+- tightening decision-facing language so it matches the destination model
 
 ## Resume Point For Gemini
 
-Resume from the intermission cleanup file first, then continue into Phase 4.
+Resume from `phase_4_decision_experience_redesign.md`.
+
+Use these alongside it:
+
+- `ai_handoff/backend_to_frontend/phase_4_handoff.md`
+- `ai_handoff/phase_docs/phase_4_backend_usability_support.md`
 
 Treat the following as already decided:
 
@@ -151,9 +172,9 @@ Treat the following as already decided:
 
 Treat the following as the active implementation target:
 
-- complete the intermission cleanup for window behavior, right-pane density, and drag/drop clarity
-- preserve the current destination model while making the shell materially easier to use
-- return to the later Decision Intelligence clarity work only after the intermission slice is complete
+- preserve the current destination model while making Decision Intelligence materially easier to understand and use
+- use backend readiness metadata as the source of truth for guided setup states
+- improve the current Decisions destination and related decision entry points rather than reopening shell structure
 
 ## Guidance For Codex
 

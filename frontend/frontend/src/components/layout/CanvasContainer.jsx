@@ -773,6 +773,9 @@ function CanvasContainer({
         onActionClick={onDecisionAction}
         readiness={decisionReadiness}
         warnings={decisionWarnings}
+        onRunDecision={onRunDecision}
+        onOpenAiChat={onOpenAiChat}
+        setIsDataPaneOpen={setIsDataPaneOpen}
       />
     </WindowFrame>
   ) : null;
@@ -818,6 +821,7 @@ function CanvasContainer({
           <DestinationHome 
             activeDestination={activeDestination} 
             onAction={handleDestinationHomeAction} 
+            readiness={decisionReadiness}
           />
         )}
         

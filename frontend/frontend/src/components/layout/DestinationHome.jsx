@@ -13,7 +13,30 @@ const DESTINATIONS = {
   AI: 'ai',
 };
 
-const DestinationHome = ({ activeDestination, onAction }) => {
+/**
+ * DestinationHome
+ * 
+ * The landing surface for each primary destination (Workspace, Explore, AI, etc.)
+ * when no windows are active. 
+ * 
+ * Phase 4 Enhancement: Proactive Disclosure
+ * This component now checks the 'readiness' state of Decision Intelligence.
+ * If data is prepared, it shows a 'Bridge' CTA even when the user is in 
+ * Workspace or Dashboards, encouraging cross-destination value discovery.
+ * 
+ * @param {string} activeDestination - The current active rail destination.
+ * @param {Function} onAction - Global action dispatcher for destination-level events.
+ * @param {Object} readiness - Decision Intelligence readiness metadata.
+ */
+const DestinationHome = ({ activeDestination, onAction, readiness }) => {
+  // Logic to determine if Decision Intelligence is 'Latent' (Ready but not yet run).
+  const missingRequirements = readiness?.missing_requirements || [];
+  const isDecisionReady = readiness?.decision_ready && missingRequirements.length === 0;
+
+  /**
+   * Renders the Workspace home.
+   * Proactively nudges toward Decisions if data is loaded and ready.
+   */
   const renderWorkspaceHome = () => (
     <div className="dest-home">
       <div className="dest-home__icon-orbit">
@@ -21,8 +44,8 @@ const DestinationHome = ({ activeDestination, onAction }) => {
       </div>
       <h2 className="dest-home__title">Welcome to your Workspace</h2>
       <p className="dest-home__description">
-        This is where your data journey begins. Start by uploading a dataset, 
-        connecting to a database, or exploring your existing data hub.
+        Manage your data lifecycle. Upload new datasets, connect to live sources, 
+        or refine your existing data hub.
       </p>
       <div className="dest-home__actions">
         <button className="dest-home__button dest-home__button--primary" onClick={() => onAction('upload')}>
@@ -32,6 +55,15 @@ const DestinationHome = ({ activeDestination, onAction }) => {
           Browse Data Hub <FaArrowRight />
         </button>
       </div>
+
+      {/* Decision Bridge: Proactive Disclosure when setup is complete */}
+      {isDecisionReady && (
+        <div className="dest-home__bridge">
+          <FaLightbulb />
+          <span>Your data is prepared for <strong>Decision Intelligence</strong>.</span>
+          <button onClick={() => onAction('run_intelligence')}>Run Now</button>
+        </div>
+      )}
     </div>
   );
 
@@ -42,8 +74,8 @@ const DestinationHome = ({ activeDestination, onAction }) => {
       </div>
       <h2 className="dest-home__title">Explore & Visualize</h2>
       <p className="dest-home__description">
-        Dive deep into your fields. Create custom charts, analyze distributions, 
-        and discover patterns in your data through manual exploration.
+        Dive deep into your fields. Discover patterns, analyze distributions, 
+        and build custom charts through manual exploration.
       </p>
       <div className="dest-home__actions">
         <button className="dest-home__button dest-home__button--primary" onClick={() => onAction('gallery')}>
@@ -63,8 +95,8 @@ const DestinationHome = ({ activeDestination, onAction }) => {
       </div>
       <h2 className="dest-home__title">AI Analysis Suite</h2>
       <p className="dest-home__description">
-        Leverage advanced intelligence to automate your analysis. Chat with your data, 
-        generate complex workflows, or let AI write your business stories.
+        Leverage autonomous intelligence. Chat with your data, 
+        generate complex workflows, or automate your business reporting.
       </p>
       <div className="dest-home__actions">
         <button className="dest-home__button dest-home__button--ai" onClick={() => onAction('ai_chat')}>
@@ -74,44 +106,79 @@ const DestinationHome = ({ activeDestination, onAction }) => {
           Enter Workflow Lab <FaMagic />
         </button>
       </div>
-      <div className="dest-home__feature-grid">
-        <div className="dest-home__feature">
-          <FaMagic />
-          <span>NLP Charting</span>
-        </div>
-        <div className="dest-home__feature">
-          <FaBrain />
-          <span>Story Gen</span>
-        </div>
-        <div className="dest-home__feature">
-          <FaChartLine />
-          <span>Automated Reports</span>
-        </div>
-      </div>
     </div>
   );
 
-  const renderDecisionsHome = () => (
-    <div className="dest-home">
-      <div className="dest-home__icon-orbit">
-        <FaLightbulb className="dest-home__main-icon" />
-      </div>
-      <h2 className="dest-home__title">Decision Intelligence</h2>
-      <p className="dest-home__description">
-        Transform analysis into action. Monitor business signals, evaluate scenarios, 
-        and receive intelligent recommendations for your next move.
-      </p>
-      <div className="dest-home__actions">
-        <button className="dest-home__button dest-home__button--primary" onClick={() => onAction('run_intelligence')}>
-          <FaLightbulb /> Run Intelligence
-        </button>
-        <button className="dest-home__button" onClick={() => onAction('definitions')}>
-          Review Definitions <FaArrowRight />
-        </button>
-      </div>
-    </div>
-  );
+  /**
+   * Renders the Decisions home.
+   * Uses 'Guided Setup' logic to provide concrete next steps instead of empty states.
+   */
+  const renderDecisionsHome = () => {
+    // Branching based on missing prerequisites.
+    if (missingRequirements.includes('dataset')) {
+      return (
+        <div className="dest-home">
+          <div className="dest-home__icon-orbit">
+            <FaDatabase className="dest-home__main-icon" />
+          </div>
+          <h2 className="dest-home__title">Connect Data to Begin</h2>
+          <p className="dest-home__description">
+            Decision Intelligence needs a dataset to evaluate signals and scenarios. 
+            Connect your first source to enable this destination.
+          </p>
+          <div className="dest-home__actions">
+            <button className="dest-home__button dest-home__button--primary" onClick={() => onAction('upload')}>
+              <FaPlus /> Load Dataset
+            </button>
+          </div>
+        </div>
+      );
+    }
 
+    if (missingRequirements.includes('semantic_model') || missingRequirements.includes('metrics')) {
+      return (
+        <div className="dest-home">
+          <div className="dest-home__icon-orbit">
+            <FaBrain className="dest-home__main-icon" />
+          </div>
+          <h2 className="dest-home__title">Define Your Metrics</h2>
+          <p className="dest-home__description">
+            We found your data, but we need to understand your business goals. 
+            Define your semantic metrics to begin generating recommendations.
+          </p>
+          <div className="dest-home__actions">
+            <button className="dest-home__button dest-home__button--primary" onClick={() => onAction('definitions')}>
+              Review Definitions <FaArrowRight />
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // Ready state: Final nudge before execution.
+    return (
+      <div className="dest-home">
+        <div className="dest-home__icon-orbit dest-home__icon-orbit--ready">
+          <FaLightbulb className="dest-home__main-icon" />
+        </div>
+        <h2 className="dest-home__title">Intelligence is Ready</h2>
+        <p className="dest-home__description">
+          All setup requirements are met. Run the engine to evaluate signals, 
+          receive recommendations, and preview potential business outcomes.
+        </p>
+        <div className="dest-home__actions">
+          <button className="dest-home__button dest-home__button--primary" onClick={() => onAction('run_intelligence')}>
+            <FaLightbulb /> Run Intelligence
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  /**
+   * Renders the Dashboards home.
+   * Proactively nudges toward Decisions if deeper analysis is ready.
+   */
   const renderDashboardsHome = () => (
     <div className="dest-home">
       <div className="dest-home__icon-orbit">
@@ -119,8 +186,8 @@ const DestinationHome = ({ activeDestination, onAction }) => {
       </div>
       <h2 className="dest-home__title">Business Monitoring</h2>
       <p className="dest-home__description">
-        Keep your finger on the pulse. Create KPI cards, track metric trends, 
-        and build custom monitoring views for your business health.
+        Track your high-level business health. Create KPI cards, 
+        monitor trends, and build custom operation views.
       </p>
       <div className="dest-home__actions">
         <button className="dest-home__button dest-home__button--primary" onClick={() => onAction('new_kpi')}>
@@ -130,8 +197,17 @@ const DestinationHome = ({ activeDestination, onAction }) => {
           Add Dashboard Chart <FaArrowRight />
         </button>
       </div>
+
+      {isDecisionReady && (
+        <div className="dest-home__bridge">
+          <FaBrain />
+          <span>Setup complete. <strong>Decision Intelligence</strong> can now analyze these metrics.</span>
+          <button onClick={() => onAction('run_intelligence')}>Go to Decisions</button>
+        </div>
+      )}
     </div>
   );
+
 
   switch (activeDestination) {
     case DESTINATIONS.WORKSPACE: return renderWorkspaceHome();

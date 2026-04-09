@@ -153,3 +153,68 @@
 .dest-home--ai .dest-home__feature svg {
   color: #6366f1;
 }
+
+/* Phase 4 Bridge and Ready Orbit */
+.dest-home__icon-orbit--ready::after {
+  content: '';
+  position: absolute;
+  top: -10px;
+  left: -10px;
+  right: -10px;
+  bottom: -10px;
+  border-radius: 50%;
+  border: 2px dashed color-mix(in srgb, var(--accent-green) 40%, transparent);
+  animation: destOrbitRotate 20s linear infinite;
+}
+
+@keyframes destOrbitRotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.dest-home__bridge {
+  margin-top: 40px;
+  padding: 16px 24px;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--accent-blue-soft) 5%, var(--bg-primary));
+  border: 1px solid color-mix(in srgb, var(--border-color) 40%, transparent);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  animation: bridgeFadeIn 0.8s ease;
+}
+
+.dest-home__bridge strong {
+  color: var(--text-primary);
+}
+
+.dest-home__bridge svg {
+  color: var(--accent-blue);
+  font-size: 1.2rem;
+}
+
+.dest-home__bridge button {
+  margin-left: auto;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--accent-blue);
+  background: transparent;
+  color: var(--accent-blue);
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.dest-home__bridge button:hover {
+  background: var(--accent-blue);
+  color: white;
+  transform: translateX(4px);
+}
+
+@keyframes bridgeFadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
