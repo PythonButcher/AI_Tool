@@ -134,6 +134,12 @@
   margin-top: 4px;
 }
 
+.workflow-drawer__copy {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
 /* Action Cards */
 .workflow-action-grid {
   display: grid;

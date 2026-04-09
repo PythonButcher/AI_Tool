@@ -74,6 +74,7 @@ function CanvasContainer({
   onOpenAiChat,
   onRunDecision,
   setShowDataVisual,
+  setIsDataPaneOpen,
 }) {
   const {
     minimizedWindows,
@@ -88,6 +89,8 @@ function CanvasContainer({
     dashboardState,
     dashboardItems,
     removeDashboardItem,
+    addDashboardKpi,
+    addDashboardChart,
     restoreWindow,
   } = useWindowContext();
 
@@ -110,21 +113,24 @@ function CanvasContainer({
         onOpenAiChat();
         break;
       case 'upload':
-        // Ideally we'd trigger the MenuBar ribbon here, 
-        // but since we can't easily reach it from here without more prop drilling,
-        // we'll just open the Data Preview which usually prompts for data if empty.
+        // Trigger data preview which handles intake
         setShowDataPreview(true);
         restoreWindow('dataPreview');
         break;
       case 'hub':
+        // In the new shell, 'hub' is basically the data preview/management window
         setShowDataPreview(true);
         restoreWindow('dataPreview');
         break;
       case 'definitions':
-        // The SideBar handles this destination, but we can ensure it's "Ready" 
-        // by showing the decision panel if available.
-        setShowDecisionPanel(true);
-        restoreWindow('decisionPanel');
+        // Orient user toward the semantic definitions in the DataPane
+        setIsDataPaneOpen(true);
+        break;
+      case 'new_kpi':
+        addDashboardKpi();
+        break;
+      case 'new_chart':
+        addDashboardChart({ chartType: 'Bar' });
         break;
       default:
         console.warn('Unknown destination home action:', action);
@@ -136,7 +142,9 @@ function CanvasContainer({
     restoreWindow, 
     onRunDecision, 
     setShowDataPreview, 
-    setShowDecisionPanel
+    setShowDecisionPanel,
+    addDashboardKpi,
+    addDashboardChart
   ]);
 
   const containerRef = useRef(null);
@@ -503,6 +511,12 @@ function CanvasContainer({
     registerWindow,
   });
 
+  const isDashboardDest = activeDestination === DESTINATIONS.DASHBOARDS;
+  const isExploreDest = activeDestination === DESTINATIONS.EXPLORE;
+  const isWorkspaceDest = activeDestination === DESTINATIONS.WORKSPACE;
+  const isDecisionDest = activeDestination === DESTINATIONS.DECISIONS;
+  const isAiDest = activeDestination === DESTINATIONS.AI;
+
   const workflowElements = outputWindows
     .filter((windowItem) => !minimizedWindows[`workflow-${windowItem.id}`])
     .map((windowItem) => {
@@ -648,47 +662,45 @@ function CanvasContainer({
       );
     });
 
-  const dashboardElements = dashboardState.isVisible
-    ? dashboardItems
-      .filter((item) => !minimizedWindows[item.id])
-      .map((item) => {
-        if (item.itemType === 'kpi') {
-          return (
-            <WindowFrame
-              {...getWindowProps(item.id, `📌 ${item.title || 'KPI Card'}`, () => removeDashboardItem(item.id), () => minimizeWindow(item.id, item.title || 'KPI Card'))}
-              initialState={getInitialState(item.id, 4, 8, 380, 260)}
-            >
-              <KpiCardWindow
-                id={item.id}
-                item={item}
-                dashboardFilters={dashboardState.filters}
-                isLocked={isLocked(item.id)}
-              />
-            </WindowFrame>
-          );
-        }
-
+  const dashboardElements = dashboardItems
+    .filter((item) => !minimizedWindows[item.id])
+    .map((item) => {
+      if (item.itemType === 'kpi') {
         return (
           <WindowFrame
-            {...getWindowProps(item.id, `📊 Dashboard ${item.chartType} Chart`, () => removeDashboardItem(item.id), () => minimizeWindow(item.id, `Dashboard ${item.chartType} Chart`))}
-            initialState={getInitialState(item.id, 7, 18, 680, 420)}
+            {...getWindowProps(item.id, `📌 ${item.title || 'KPI Card'}`, () => removeDashboardItem(item.id), () => minimizeWindow(item.id, item.title || 'KPI Card'))}
+            initialState={getInitialState(item.id, 4, 8, 380, 260)}
           >
-            <div style={{ width: '100%', height: '100%', position: 'relative' }}>
-              <SmartChartWindow
-                id={item.id}
-                data={cleanedData || uploadedData}
-                type={item.chartType}
-                mapping={item.mapping}
-                isLocked={isLocked(item.id)}
-                dataSourceMode={item.dataSourceMode}
-                semanticConfig={item.semanticConfig}
-                externalFilters={dashboardState.filters}
-              />
-            </div>
+            <KpiCardWindow
+              id={item.id}
+              item={item}
+              dashboardFilters={dashboardState.filters}
+              isLocked={isLocked(item.id)}
+            />
           </WindowFrame>
         );
-      })
-    : [];
+      }
+
+      return (
+        <WindowFrame
+          {...getWindowProps(item.id, `📊 Dashboard ${item.chartType} Chart`, () => removeDashboardItem(item.id), () => minimizeWindow(item.id, `Dashboard ${item.chartType} Chart`))}
+          initialState={getInitialState(item.id, 7, 18, 680, 420)}
+        >
+          <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+            <SmartChartWindow
+              id={item.id}
+              data={cleanedData || uploadedData}
+              type={item.chartType}
+              mapping={item.mapping}
+              isLocked={isLocked(item.id)}
+              dataSourceMode={item.dataSourceMode}
+              semanticConfig={item.semanticConfig}
+              externalFilters={dashboardState.filters}
+            />
+          </div>
+        </WindowFrame>
+      );
+    });
 
   const storyPanelElement = (showStoryPanel && !minimizedWindows.storyPanel) ? (
     <WindowFrame
@@ -722,58 +734,27 @@ function CanvasContainer({
     </WindowFrame>
   ) : null;
 
-  const dashboardEmptyState = dashboardState.isVisible && dashboardItems.length === 0 ? (
-    <div
-      style={{
-        position: 'absolute',
-        top: '190px',
-        left: '50%',
-        transform: 'translateX(-50%)',
-        width: 'min(520px, calc(100% - 32px))',
-        padding: '22px 24px',
-        borderRadius: '18px',
-        background: 'rgba(255, 255, 255, 0.86)',
-        border: '1px solid rgba(24, 63, 46, 0.12)',
-        boxShadow: '0 18px 40px rgba(22, 35, 28, 0.12)',
-        zIndex: 35,
-        textAlign: 'center',
-        color: '#31453a',
-      }}
-    >
-      <div style={{ fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700, color: '#3b6d57', marginBottom: '8px' }}>
-        Dashboard Canvas
-      </div>
-      <h3 style={{ margin: '0 0 10px', fontSize: '1.25rem' }}>Start monitoring your business</h3>
-      <p style={{ margin: 0, color: '#5d6d63', lineHeight: 1.5 }}>
-        Add KPI cards and charts from the dashboard toolbar or from the Business Definitions panel. Global dashboard filters will keep every item in sync.
-      </p>
-    </div>
-  ) : null;
-
   const shouldShowHome = useMemo(() => {
-    if (dashboardState.isVisible) return false;
-
-    // Check if ANY windows relevant to this destination are open
-    if (activeDestination === DESTINATIONS.WORKSPACE) {
-      return !showDataPreview && !showRawViewer;
-    }
-    if (activeDestination === DESTINATIONS.EXPLORE) {
-      return charts.length === 0 && !showDataPreview;
-    }
-    if (activeDestination === DESTINATIONS.AI) {
+    if (isWorkspaceDest) return !showDataPreview && !showRawViewer && !showMachineLearning;
+    if (isExploreDest) return charts.length === 0 && !showDataPreview;
+    if (isDashboardDest) return dashboardItems.length === 0;
+    if (isAiDest) {
       const hasAiWorkflowWindows = outputWindows.length > 0;
       return !showAiWorkflow && !showAIChart && !showStoryPanel && !showWhiteBoard && !hasAiWorkflowWindows;
     }
-    if (activeDestination === DESTINATIONS.DECISIONS) {
-      return !showDecisionPanel;
-    }
+    if (isDecisionDest) return !showDecisionPanel && charts.length === 0;
     return true;
   }, [
-    activeDestination,
-    dashboardState.isVisible,
+    isWorkspaceDest,
+    isExploreDest,
+    isDashboardDest,
+    isAiDest,
+    isDecisionDest,
     showDataPreview,
     showRawViewer,
+    showMachineLearning,
     charts.length,
+    dashboardItems.length,
     showAiWorkflow,
     showAIChart,
     showStoryPanel,
@@ -789,25 +770,26 @@ function CanvasContainer({
         className="canvas-container desktop-surface"
         style={{ width: '100%', height: '100%', position: 'relative' }}
       >
-        {dashboardState.isVisible && <DashboardFilterBar />}
-        {dashboardEmptyState}
+        {isDashboardDest && <DashboardFilterBar />}
         {shouldShowHome && (
           <DestinationHome 
             activeDestination={activeDestination} 
             onAction={handleDestinationHomeAction} 
           />
         )}
-        {workflowElements}
-        {dataPreviewElement}
-        {rawDataElement}
-        {aiChartElement}
-        {workflowLabElement}
-        {whiteBoardElement}
-        {chartElements}
-        {dashboardElements}
-        {storyPanelElement}
-        {machineLearningElement}
-        {decisionPanelElement}
+        
+        {/* Render relevant windows for the active destination */}
+        {(isAiDest || isWorkspaceDest) && workflowElements}
+        {(isWorkspaceDest || isExploreDest) && dataPreviewElement}
+        {isWorkspaceDest && rawDataElement}
+        {isWorkspaceDest && machineLearningElement}
+        {(isExploreDest || isAiDest) && aiChartElement}
+        {isAiDest && workflowLabElement}
+        {isAiDest && whiteBoardElement}
+        {isAiDest && storyPanelElement}
+        {(isExploreDest || isDecisionDest) && chartElements}
+        {isDashboardDest && dashboardElements}
+        {isDecisionDest && decisionPanelElement}
       </div>
       <MinimizedDock />
     </div>
