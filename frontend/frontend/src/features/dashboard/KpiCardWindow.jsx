@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useDndMonitor, useDroppable } from '@dnd-kit/core';
+import { useDndMonitor } from '@dnd-kit/core';
 import { normalizeDatasetRows, useActiveDataset, useSemanticModel } from '../../context/DataContext';
 import { useWindowContext } from '../../context/WindowContext';
 import { normalizeSemanticMetric } from '../../utils/semanticObjectUtils';
@@ -9,6 +9,8 @@ import {
 } from '../../utils/dashboardFilterUtils';
 import { formatSemanticValue } from '../../utils/semanticChartUtils';
 import { FaArrowUp, FaArrowDown, FaMinus, FaCog } from 'react-icons/fa';
+import { AiOutlineFundProjectionScreen, AiOutlinePlusSquare } from 'react-icons/ai';
+import DropZone from '../../utils/DropZone';
 import './KpiCardWindow.css';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
@@ -30,12 +32,6 @@ const fetchMetricResolution = async ({ metricId, datasetRows, semanticModel, fil
     throw new Error(payload.error || 'Failed to resolve KPI metric.');
   }
   return payload;
-};
-
-const formatDelta = (delta, formatHint) => {
-  if (delta === null || delta === undefined) return '0';
-  const prefix = delta > 0 ? '+' : '';
-  return `${prefix}${formatSemanticValue(delta, formatHint)}`;
 };
 
 function KpiCardWindow({ id, item, dashboardFilters, isLocked }) {
@@ -60,15 +56,6 @@ function KpiCardWindow({ id, item, dashboardFilters, isLocked }) {
 
   const selectedMetricId = item?.semanticConfig?.metricId || '';
   const selectedMetric = metricOptions.find((metric) => metric.id === selectedMetricId) || null;
-
-  const { setNodeRef, isOver } = useDroppable({
-    id: `kpi-${id}-metric`,
-    data: {
-      dashboardItemId: id,
-      dashboardRole: 'metric',
-      acceptedObjectKinds: ['metric'],
-    },
-  });
 
   useDndMonitor({
     onDragStart: (event) => {
@@ -144,9 +131,7 @@ function KpiCardWindow({ id, item, dashboardFilters, isLocked }) {
 
     resolveKpi();
 
-    return () => {
-      isCancelled = true;
-    };
+    return () => { isCancelled = true; };
   }, [dashboardFilters, datasetRows, item.comparisonEnabled, semanticModel, selectedMetricId]);
 
   const currentValue = resolution?.summary?.value;
@@ -179,8 +164,12 @@ function KpiCardWindow({ id, item, dashboardFilters, isLocked }) {
     );
   };
 
+  const isDraggingSemanticObject = activeDragPayload?.type === 'semantic-object';
+  const isPopulated = !!selectedMetricId;
+  const effectiveShowSettings = showSettings || !isPopulated;
+
   return (
-    <div ref={setNodeRef} className={`kpi-card-window ${isOver ? 'kpi-card-window--drop' : ''} ${showSettings ? 'settings-open' : ''}`}>
+    <div className={`kpi-card-window ${effectiveShowSettings ? 'settings-open' : ''} ${!isPopulated ? 'is-empty' : ''}`}>
       <div className="kpi-card-window__header">
         <div className="kpi-card-window__eyebrow">
           {selectedMetric?.helperLabel || 'Metric'}
@@ -194,10 +183,10 @@ function KpiCardWindow({ id, item, dashboardFilters, isLocked }) {
         </button>
       </div>
 
-      {showSettings && (
+      {effectiveShowSettings && (
         <div className="kpi-card-window__toolbar">
             <label className="kpi-card-window__field">
-            <span>Select Metric</span>
+            <span>Metric</span>
             <select
                 value={selectedMetricId}
                 onChange={(event) => updateDashboardItem(id, {
@@ -229,32 +218,64 @@ function KpiCardWindow({ id, item, dashboardFilters, isLocked }) {
       )}
 
       <div className="kpi-card-window__body">
-        <h3 className="kpi-card-window__title">
-            {selectedMetric?.label || 'KPI Card'}
-        </h3>
-
-        {status === 'error' && <div className="kpi-card-window__status kpi-card-window__status--error">{error}</div>}
-        {status === 'loading' && <div className="kpi-card-window__loader"><div></div></div>}
-        
-        {status === 'awaiting_selection' && (
-          <div className="kpi-card-window__empty">
-            <div className="empty-icon">🎯</div>
-            <strong>Drop a metric</strong>
-            <span>Select from Business Definitions</span>
+        {isDraggingSemanticObject && (
+          <div className="kpi-drop-overlay">
+            <DropZone
+              id={`drop-${id}-kpi-metric`}
+              axis={`kpi-${id}`}
+              roleLabel="Metric"
+              helperText="Drop business metric"
+              allowedTypes={['numeric']}
+              currentField={selectedMetric?.label}
+              icon={<AiOutlineFundProjectionScreen />}
+              dashboardItemId={id}
+              dashboardRole="metric"
+              acceptedObjectKinds={['metric']}
+            />
           </div>
         )}
 
-        {status === 'ready' && (
-          <div className="kpi-card-content">
-            <div className="kpi-card-window__value">
-                {formatSemanticValue(currentValue, formatHint)}
-            </div>
-            {renderTrend()}
-            {comparisonResolution && typeof previousValue !== 'undefined' && (
-              <div className="kpi-card-window__subtle">
-                Prev: {formatSemanticValue(previousValue, formatHint)}
+        {!isDraggingSemanticObject && isPopulated && (
+          <>
+            <h3 className="kpi-card-window__title">
+                {selectedMetric?.label || 'KPI Card'}
+            </h3>
+
+            {status === 'error' && <div className="kpi-card-window__status kpi-card-window__status--error">{error}</div>}
+            {status === 'loading' && <div className="kpi-card-window__loader"><div></div></div>}
+            
+            {status === 'ready' && (
+              <div className="kpi-card-content">
+                <div className="kpi-card-window__value">
+                    {formatSemanticValue(currentValue, formatHint)}
+                </div>
+                {renderTrend()}
+                {comparisonResolution && typeof previousValue !== 'undefined' && (
+                  <div className="kpi-card-window__subtle">
+                    Prev: {formatSemanticValue(previousValue, formatHint)}
+                  </div>
+                )}
               </div>
             )}
+          </>
+        )}
+
+        {!isPopulated && !isDraggingSemanticObject && (
+          <div className="kpi-empty-state">
+            <AiOutlinePlusSquare className="empty-icon" />
+            <h4>Metric Required</h4>
+            <p>Drag a business metric here to define this KPI card.</p>
+            <div className="kpi-empty-drop-zone">
+              <DropZone
+                id={`empty-drop-${id}-kpi`}
+                axis={`kpi-${id}`}
+                roleLabel="Drop Metric"
+                allowedTypes={['numeric']}
+                dashboardItemId={id}
+                dashboardRole="metric"
+                acceptedObjectKinds={['metric']}
+              />
+            </div>
           </div>
         )}
       </div>

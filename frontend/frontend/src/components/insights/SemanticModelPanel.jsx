@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import PropTypes from 'prop-types';
+import { useDraggable } from '@dnd-kit/core';
+import { CSS } from '@dnd-kit/utilities';
 import {
   AiOutlineEdit,
   AiOutlineFilter,
@@ -7,8 +9,9 @@ import {
   AiOutlineLineChart,
   AiOutlinePlusSquare,
   AiOutlineTag,
+  AiOutlineHolder,
 } from 'react-icons/ai';
-import { normalizeSemanticMetric, normalizeSemanticDimension } from '../../utils/semanticObjectUtils';
+import { normalizeSemanticMetric, normalizeSemanticDimension, toSemanticDragData } from '../../utils/semanticObjectUtils';
 import SemanticMetricEditor from '../../features/semantic/SemanticMetricEditor';
 import './SemanticModelPanel.css';
 
@@ -48,35 +51,57 @@ const DefinitionCard = ({
   onAddDashboardFilter,
 }) => {
   const isMetric = item.objectKind === 'metric';
+  const dragData = toSemanticDragData({
+    ...item,
+    dragId: `semantic:${item.objectKind}:${item.id}`,
+    dragType: 'semantic-object',
+    type: isMetric ? 'numeric' : (item.fieldType || 'categorical'),
+    source: 'semantic',
+  });
+
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: `semantic:${item.objectKind}:${item.id}`,
+    data: dragData,
+  });
+
+  const style = {
+    transform: CSS.Translate.toString(transform),
+    opacity: isDragging ? 0.6 : 1,
+    cursor: 'grab',
+  };
 
   return (
-    <article className={`semantic-model-panel__definition-card semantic-model-panel__definition-card--${isMetric ? 'metric' : 'dimension'}`}>
+    <article 
+      ref={setNodeRef}
+      style={style}
+      className={`semantic-model-panel__definition-card semantic-model-panel__definition-card--${isMetric ? 'metric' : 'dimension'} ${isDragging ? 'is-dragging' : ''}`}
+      {...listeners}
+      {...attributes}
+    >
       <div className="semantic-model-panel__definition-header">
         <span className={`semantic-model-panel__definition-icon semantic-model-panel__definition-icon--${isMetric ? 'metric' : 'dimension'}`} aria-hidden="true">
           {icon}
         </span>
         <div className="semantic-model-panel__definition-copy">
           <h5>{item.label}</h5>
-          <p>{item.description || (item.field ? `Backed by ${item.field}` : 'Semantic definition')}</p>
+          <div className="semantic-model-panel__definition-meta">
+            <span className={`semantic-model-panel__badge semantic-model-panel__badge--${isMetric ? 'metric' : 'dimension'}`}>
+              {item.definitionLabel}
+            </span>
+            {item.field && (
+              <span className="semantic-model-panel__badge semantic-model-panel__badge--field">
+                {item.field}
+              </span>
+            )}
+          </div>
+        </div>
+        <div className="semantic-model-panel__drag-hint">
+          <AiOutlineHolder />
         </div>
       </div>
 
-      <div className="semantic-model-panel__definition-meta">
-        <span className={`semantic-model-panel__badge semantic-model-panel__badge--${isMetric ? 'metric' : 'dimension'}`}>
-          {item.definitionLabel}
-        </span>
-        <span className={`semantic-model-panel__badge semantic-model-panel__badge--${item.is_user_defined ? 'custom' : 'inferred'}`}>
-          {item.statusLabel}
-        </span>
-        {item.field ? (
-          <span className="semantic-model-panel__badge semantic-model-panel__badge--field">
-            {item.field}
-          </span>
-        ) : null}
-      </div>
-
-      <div className="semantic-model-panel__definition-actions">
-        {typeof onCreateSemanticChart === 'function' ? (
+      <div className="semantic-model-panel__definition-actions" onPointerDown={e => e.stopPropagation()}>
+        {typeof onCreateSemanticChart === 'function' && (
           <MetricActionButton
             icon={<AiOutlineLineChart />}
             label="Chart"
@@ -87,31 +112,23 @@ const DefinitionCard = ({
                 : { metricId: defaultMetricId || '', groupBy: item.id }
             )}
           />
-        ) : null}
-        {typeof onCreateKpiCard === 'function' && isMetric ? (
+        )}
+        {typeof onCreateKpiCard === 'function' && isMetric && (
           <MetricActionButton
             icon={<AiOutlinePlusSquare />}
             label="KPI"
             tone="metric"
             onClick={() => onCreateKpiCard({ metricId: item.id })}
           />
-        ) : null}
-        {typeof onAddDashboardFilter === 'function' ? (
+        )}
+        {typeof onAddDashboardFilter === 'function' && (
           <MetricActionButton
             icon={<AiOutlineFilter />}
             label="Filter"
             tone="neutral"
             onClick={() => onAddDashboardFilter(item)}
           />
-        ) : null}
-        {typeof onEditSemanticMetric === 'function' && isMetric ? (
-          <MetricActionButton
-            icon={<AiOutlineEdit />}
-            label={item.is_user_defined ? 'Edit' : 'View'}
-            tone="neutral"
-            onClick={() => onEditSemanticMetric(item)}
-          />
-        ) : null}
+        )}
       </div>
     </article>
   );

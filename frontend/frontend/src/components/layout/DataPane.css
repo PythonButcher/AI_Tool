@@ -1,6 +1,6 @@
 .data-pane {
   position: relative;
-  width: 320px;
+  width: 280px;
   height: 100%;
   background: var(--bg-primary);
   border-left: 1px solid var(--border-color);
@@ -8,21 +8,25 @@
   flex-direction: column;
   transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s ease;
   z-index: 100;
-  box-shadow: -4px 0 15px var(--shadow-color-soft);
+  box-shadow: -1px 0 8px rgba(0, 0, 0, 0.04);
+}
+
+.data-pane--semantic {
+  width: 360px; /* Refined from 380px */
 }
 
 .data-pane.is-collapsed {
-  width: 0;
+  width: 0 !important;
   border-left: none;
   transform: translateX(100%);
 }
 
 .data-pane__toggle {
   position: absolute;
-  left: -24px;
+  left: -20px;
   top: 50%;
   transform: translateY(-50%);
-  width: 24px;
+  width: 20px;
   height: 48px;
   background: var(--bg-primary);
   border: 1px solid var(--border-color);
@@ -32,64 +36,57 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: var(--text-secondary);
+  color: var(--text-tertiary);
   transition: all 0.2s ease;
   z-index: 101;
 }
 
 .data-pane.is-collapsed .data-pane__toggle {
-  left: -32px;
+  left: -28px;
   border-right: 1px solid var(--border-color);
   border-radius: 8px;
-  width: 32px;
+  width: 28px;
   background: var(--bg-secondary);
-  box-shadow: -2px 0 8px var(--shadow-color-soft);
 }
 
 .data-pane__toggle:hover {
-  color: var(--text-primary);
-  background: var(--bg-secondary);
-}
-
-.data-pane__content {
-  width: 320px;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  opacity: 1;
-  transition: opacity 0.2s ease;
-}
-
-.data-pane.is-collapsed .data-pane__content {
-  opacity: 0;
-  pointer-events: none;
+  color: var(--accent-blue);
+  background: var(--bg-secondary-soft);
 }
 
 .data-pane__header {
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--border-color);
-  background: linear-gradient(to bottom, var(--bg-secondary), var(--bg-primary));
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-color-soft);
+  background: var(--bg-primary);
+  flex-shrink: 0;
+}
+
+.data-pane__eyebrow {
+  font-size: 0.6rem;
+  font-weight: 800;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 2px;
 }
 
 .data-pane__title {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .data-pane__icon {
   color: var(--accent-blue);
-  font-size: 1.2rem;
+  font-size: 0.85rem;
+  opacity: 0.8;
 }
 
 .data-pane__title h2 {
   margin: 0;
-  font-size: 1.1rem;
+  font-size: 0.85rem;
   font-weight: 700;
-  letter-spacing: 0.02em;
   color: var(--text-primary);
-  text-transform: uppercase;
 }
 
 .data-pane__body {
@@ -99,54 +96,150 @@
   flex-direction: column;
 }
 
-/* Override FieldsPanel styles for the new context */
-.data-pane .fields-panel {
+/* Override Panels for Sidebar Context */
+.data-pane .fields-panel,
+.data-pane .semantic-model-panel {
   background: transparent;
   border: none;
   border-radius: 0;
+  padding: 0;
+  height: 100%;
 }
 
-.data-pane .fields-panel-header {
-  display: none; /* We have our own header */
-}
-
-.data-pane .fields-search {
-  margin: 12px 16px;
-  background: var(--bg-secondary);
-  border-radius: 8px;
-}
-
-.data-pane .fields-panel-body {
-  padding: 0 12px 16px;
-}
-
-.data-pane .field-group {
-  border-radius: 12px;
-  margin-bottom: 8px;
-}
-
-.data-pane .field-row {
-  padding: 6px 10px;
-  margin-bottom: 4px;
-}
-
-.data-pane .field-row-label {
-  font-size: 0.85rem;
-}
-
-.data-pane .field-row-subtitle, 
-.data-pane .field-row-description,
-.data-pane .field-row-meta {
-  display: none; /* Strip back for Power BI look */
-}
-
-.data-pane .field-row:hover .field-row-meta {
+.data-pane .fields-panel-header,
+.data-pane .semantic-model-panel__header {
   display: none;
 }
 
-/* Ensure the drawer is always scrollable */
-.data-pane .fields-panel-body {
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: var(--border-color) transparent;
+.data-pane .fields-search {
+  margin: 8px 12px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color-soft);
+  background: var(--bg-secondary-soft);
 }
+
+.data-pane .fields-panel-body,
+.data-pane .semantic-model-panel__list-grid {
+  padding: 0 8px 12px;
+  overflow-y: auto;
+}
+
+/* Compact Semantic Overrides */
+.data-pane .semantic-model-panel__status {
+  padding: 8px 10px;
+  font-size: 0.68rem;
+  margin: 0 12px 12px;
+  background: var(--bg-secondary-soft);
+  border: 1px solid var(--border-color-soft);
+  color: var(--text-secondary);
+}
+
+.data-pane .semantic-model-panel__stats {
+  padding: 0 12px 12px;
+  gap: 4px;
+}
+
+.data-pane .semantic-model-panel__stat {
+  padding: 4px;
+  background: var(--bg-primary);
+  border-radius: 6px;
+}
+
+.data-pane .semantic-model-panel__stat-value {
+  font-size: 0.85rem;
+}
+
+.data-pane .semantic-model-panel__list-grid {
+  gap: 12px;
+}
+
+.data-pane .semantic-model-panel__list-header h4 {
+  font-size: 0.72rem;
+  color: var(--text-tertiary);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.data-pane .semantic-model-panel__definition-grid {
+  gap: 4px;
+}
+
+.data-pane .semantic-model-panel__definition-card {
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+}
+
+.data-pane .semantic-model-panel__definition-card:hover {
+  background: var(--bg-secondary-soft);
+  border-color: var(--border-color-soft);
+  transform: none;
+}
+
+.data-pane .semantic-model-panel__definition-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  font-size: 0.75rem;
+}
+
+.data-pane .semantic-model-panel__definition-copy h5 {
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.data-pane .semantic-model-panel__badge {
+  height: 16px;
+  font-size: 0.55rem;
+  padding: 0 5px;
+}
+
+.data-pane .semantic-model-panel__definition-actions {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid rgba(0, 0, 0, 0.03);
+  justify-content: flex-start;
+  opacity: 0.4;
+  transition: opacity 0.2s;
+}
+
+.data-pane .semantic-model-panel__definition-card:hover .semantic-model-panel__definition-actions {
+  opacity: 1;
+}
+
+.data-pane .semantic-model-panel__mini-action {
+  padding: 2px 5px;
+  font-size: 0.6rem;
+  background: transparent;
+  border-color: transparent;
+}
+
+.data-pane .semantic-model-panel__mini-action:hover {
+  background: var(--bg-primary);
+  border-color: var(--border-color-soft);
+}
+
+.data-pane .field-group {
+  margin-bottom: 4px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color-soft);
+}
+
+.data-pane .field-group-toggle {
+  padding: 6px 8px;
+}
+
+.data-pane .group-title {
+  font-size: 0.7rem;
+}
+
+.data-pane .field-row {
+  padding: 3px 6px;
+}
+
+.data-pane .field-row-label {
+  font-size: 0.72rem;
+}
+

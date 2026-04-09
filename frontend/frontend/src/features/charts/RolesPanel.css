@@ -64,16 +64,49 @@
   color: var(--text-secondary);
 }
 
-.drop-zone.is-over.is-compatible {
-  border-color: var(--accent-green);
-  background: rgba(37, 192, 138, 0.15);
-  transform: translateY(-2px);
+.drop-zone.is-compatible-hint {
+  border-color: rgba(37, 192, 138, 0.4);
+  background: rgba(37, 192, 138, 0.05);
+  box-shadow: 0 0 0 2px rgba(37, 192, 138, 0.1);
 }
 
-.drop-zone.is-over.is-incompatible {
+.drop-zone.is-incompatible-hint {
+  opacity: 0.45;
+  filter: grayscale(0.8);
+  border-style: solid;
+}
+
+.drop-zone.is-compatible-match {
+  border-color: var(--accent-green);
+  background: rgba(37, 192, 138, 0.2);
+  transform: scale(1.02);
+  border-style: solid;
+}
+
+.drop-zone.is-incompatible-match {
   border-color: var(--accent-red);
-  background: rgba(229, 72, 77, 0.1);
+  background: rgba(229, 72, 77, 0.15);
   color: var(--accent-red);
+  transform: scale(0.98);
+}
+
+.drop-zone-compatible-flash {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--accent-green);
+  opacity: 0.1;
+  animation: drop-zone-pulse 2s infinite ease-in-out;
+  pointer-events: none;
+  border-radius: 8px;
+}
+
+@keyframes drop-zone-pulse {
+  0% { opacity: 0.05; }
+  50% { opacity: 0.15; }
+  100% { opacity: 0.05; }
 }
 
 .drop-zone.has-field {
@@ -81,7 +114,7 @@
   background: rgba(255, 255, 255, 0.06);
 }
 
-.drop-zone.is-incompatible:not(.is-over) {
-  opacity: 0.6;
+.drop-zone.is-incompatible-hint:not(.is-over) {
+  opacity: 0.4;
 }
   

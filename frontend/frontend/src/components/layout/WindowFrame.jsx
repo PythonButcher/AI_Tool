@@ -4,6 +4,7 @@ import CloseButton from '../buttons/CloseButton';
 import MinimizeButton from '../buttons/MinimizeButton';
 import MaximizeButton from '../buttons/MaximizeButton';
 import { FaLock, FaLockOpen } from 'react-icons/fa';
+import { WINDOW_SIZING } from '../../utils/windowSizing';
 import './WindowFrame.css';
 
 const WindowFrame = ({
@@ -24,6 +25,9 @@ const WindowFrame = ({
   zIndex,
   isActive,
   registerWindow,
+  minWidth = WINDOW_SIZING.DEFAULT.minW,
+  minHeight = WINDOW_SIZING.DEFAULT.minH,
+  footer,
 }) => {
   const [isMinimizing, setIsMinimizing] = React.useState(false);
 
@@ -44,8 +48,8 @@ const WindowFrame = ({
     onResize,
     onDrag,
     snapEnabled: true,
-    minWidth: 300,
-    minHeight: 200,
+    minWidth,
+    minHeight,
   });
 
   useLayoutEffect(() => {
@@ -121,6 +125,12 @@ const WindowFrame = ({
         <div className="window-content-area">
           {children}
         </div>
+
+        {footer && (
+          <div className="window-footer">
+            {footer}
+          </div>
+        )}
       </div>
 
       {!isLocked && (

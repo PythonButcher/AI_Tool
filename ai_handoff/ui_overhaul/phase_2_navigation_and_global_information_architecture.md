@@ -1,265 +1,262 @@
 # Phase 2: Navigation and Global Information Architecture
 
-## Gemini Role
+## Audience
 
-Gemini review and design exploration is needed for this phase.
+This file is written for Gemini as the current source-of-truth navigation handoff for the UI overhaul.
 
-This phase should be handled as a high-level product structure and navigation design problem, not as an implementation task and not as a backend task.
+It replaces the earlier "design prompt" version of Phase 2 with a code-backed status record so later frontend work can start from what is already implemented instead of re-opening settled decisions.
 
-Your job in this phase is to define the next navigation and global information architecture direction for the app so that later implementation work has a clear structural target.
+## Phase Status
 
-You should be creative in how the future experience is framed, but you must remain grounded in the current product reality and the non-negotiable constraints from Phase 0 and Phase 1.
+Phase 2 is partially complete in the frontend.
 
-## What This Phase Must Solve
+The destination-based navigation direction is implemented enough to be treated as the active product structure, but it is not fully normalized across the shell yet.
 
-The current app has too many competing navigation systems:
+What is settled:
 
-- top ribbon tabs
-- left workflow rail
-- workflow drawers
-- right data pane
-- floating windows
-- modals
-- floating AI chat
+- the product is no longer being framed around the old ribbon-first information architecture
+- destination-based navigation is the correct direction
+- the left rail is now the primary global navigation surface
+- the top bar is now an orientation and setup surface rather than the primary navigation model
+- Decision Intelligence frontend integration is live and must remain part of the destination model
 
-The result is that the product feels powerful but hard to enter, hard to learn, and hard to navigate.
+What is not yet settled:
 
-This phase must define a cleaner global structure that:
+- exact destination ownership rules
+- dashboard behavior versus destination state
+- right-side field pane behavior by destination
+- separation of Decisions from semantic-definition management
+- exact shell/window behavior for default states versus opened work
 
-- gives the user a clear top-level product map
-- reduces the feeling of scattered features
-- creates stronger hierarchy between primary destinations and secondary tools
-- keeps advanced capability intact
-- makes the app feel like one integrated system
+## Current Implemented Navigation Reality
 
-## Inputs You Must Use
+The live frontend now uses five top-level destinations:
 
-Base your work on:
+- Workspace
+- Explore
+- Dashboards
+- Decisions
+- AI
 
-- `phase_0_ui_overhaul_master_plan.md`
-- `phase_1_ui_audit_and_information_architecture.md`
+This is implemented in:
 
-You must assume the current frontend architecture described in Phase 1 is accurate:
+- `frontend/frontend/src/App.jsx`
+- `frontend/frontend/src/components/layout/SideBar.jsx`
+- `frontend/frontend/src/components/layout/MenuBar.jsx`
+- `frontend/frontend/src/components/layout/CanvasContainer.jsx`
+- `frontend/frontend/src/components/layout/DestinationHome.jsx`
 
-- desktop-style shell
-- floating-window workspace
-- current semantic/chart/dashboard/decision/AI capabilities
-- non-route-driven structure
-- strong overlap between shell surfaces
+Important clarification:
 
-## Non-Negotiable Constraints
+The original Phase 2 implementation record called this a 4-destination model, but the current code clearly supports five destinations because AI remains a first-class destination. Later phases should treat the five-destination model as canonical unless there is explicit approval to remove AI as a top-level area.
 
-Do not violate any of the following:
+## What Phase 2 Has Already Achieved
 
-- preserve all existing backend endpoints and contracts
-- preserve the `decision_bundle` structure
-- preserve chart behavior, including metric + `group_by`
-- preserve semantic layer power
-- preserve dashboards and KPI workflows
-- preserve Decision Intelligence
-- preserve AI-assisted workflows
-- preserve current theme and tone
-- do not remove features without approval
-- do not assume backend rewrites
-- do not simplify away core logic just to make navigation cleaner
+## 1. Global Navigation Authority Moved to the Left Rail
 
-This is a navigation and architecture redesign phase, not a capability reduction exercise.
+The left rail in `SideBar.jsx` is now the clearest top-level navigation system in the app.
 
-## Product Experience Target
+It does the following:
 
-The navigation and IA direction should make the app feel:
+- displays the primary destinations
+- highlights the active destination
+- opens a destination-specific drawer
+- gives each destination a distinct entry point rather than relying on overlapping ribbon tabs and workflow icons
 
-- modern
-- sleek
-- lightweight
-- guided
-- discoverable
-- integrated
-- powerful without feeling crowded
+This means later work should continue to strengthen the rail, not reintroduce competing top-level nav systems.
 
-The user should no longer feel like they have to remember where features are hidden.
+## 2. The Menu Bar Was Demoted from "Main Navigation" to "Context + Setup"
 
-## Core Problems Your Navigation Proposal Must Address
+`MenuBar.jsx` now behaves primarily as:
 
-Your output must directly address these current failures:
+- app identity
+- active destination breadcrumb
+- data/setup access
+- utility actions
 
-- users do not know where to start
-- users do not know what to do next
-- users must hunt for features
-- decision support is hidden behind business/intelligence concepts
-- charting starts from too many unrelated places
-- semantic/business terminology dominates too much of the top-level experience
-- dashboards feel like a mode rather than a clear destination
-- AI feels both separate and everywhere, without a clean structural role
-- the field explorer is important but not clearly positioned in the product hierarchy
+That is a good direction and should remain in place.
 
-## What You Should Produce In Your Response
+The top bar should not drift back into being a second primary navigation system.
 
-Your response for this phase should define a proposed global navigation and information architecture for the product.
+## 3. Destination State Exists in App-Level Orchestration
 
-It should include:
+`App.jsx` now owns:
 
-- the recommended primary top-level destinations
-- the role of each destination
-- what belongs in each destination
-- what should be primary vs secondary vs contextual
-- how the shell hierarchy should work
-- how users should move from setup to exploration to dashboards to decisions to AI support
-- how always-available help or decision support should fit into the shell
-- how the current drawer/pane/window model should be reframed conceptually, even if some of it remains technically
+- `activeDestination`
+- `handleDestinationSelect`
 
-Do not give implementation code.
+The app uses that destination state to coordinate:
 
-Do not give step-by-step React changes.
+- sidebar highlighting
+- top-bar breadcrumb
+- canvas empty states
+- compatibility mappings into older workflow state
 
-Do not redesign individual screens in detail yet.
+This is the architectural backbone for the overhaul and should be preserved.
 
-This phase is about product structure and navigation architecture.
+## 4. The Canvas Is Destination-Aware
 
-## Strong Directional Guidance
+`CanvasContainer.jsx` now changes some default behavior based on destination and renders `DestinationHome.jsx` for destination-level landing states.
 
-You should work from the assumption that the future app should have a smaller number of clearer primary destinations.
+This is important because it means the product is no longer only a neutral floating-window canvas. The shell now has the beginnings of destination-specific framing.
 
-The navigation should be organized around user goals, not internal architecture.
+## 5. Decision Intelligence Integration Is No Longer Hypothetical
 
-That means the structure should likely elevate concepts such as:
+Decision Intelligence is implemented through:
 
-- workspace or home
-- exploration / analysis
-- dashboards / monitoring
-- decisions / decision support
-- AI assist
+- `frontend/frontend/src/features/business/decision/decisionApi.js`
+- `frontend/frontend/src/features/business/decision/DecisionPanel.jsx`
+- `frontend/frontend/src/App.jsx`
 
-And it should likely demote or reframe concepts such as:
+The `POST /api/decision/run` orchestration path is live and should be treated as a preserved capability during all later UI work.
 
-- “business” as a primary top-level label
-- “semantic” as a top-level label
-- raw implementation-driven shell controls being treated as equal to product destinations
+Relevant supporting docs:
 
-You do not have to use those exact labels if a better structure exists, but your proposal should move in that direction.
+- `ai_handoff/backend_to_frontend/phase_3_handoff.md`
+- `ai_handoff/phase_docs/phase_3_frontend_integration.md`
 
-## Specific Questions You Must Resolve
+## The Current Information Architecture Decision
 
-Your navigation proposal should answer the following clearly:
+The active IA direction should be treated as:
 
-### 1. What are the primary top-level destinations?
+### Workspace
 
-Define the future primary navigation set.
+Purpose:
 
-Keep it focused and understandable.
+- orientation
+- data intake/setup entry
+- readiness awareness
+- first landing point when the user enters the product
 
-### 2. What becomes contextual rather than top-level?
+### Explore
 
-Decide which current concepts should stop being primary navigation items and instead become:
+Purpose:
 
-- contextual tools
-- workspace side panels
-- secondary entry points
-- progressive disclosure surfaces
+- charting
+- exploratory analysis
+- raw plus semantic field interaction
+- fast path from question to chart
 
-### 3. What is the role of the shell?
+### Dashboards
 
-Clarify what the persistent global shell should do versus what belongs inside destination-level content.
+Purpose:
 
-### 4. What is the role of the field explorer / data pane?
+- KPI monitoring
+- dashboard charting
+- dashboard-wide filters
+- monitoring and saved analysis views
 
-It is clearly important today.
+### Decisions
 
-Decide whether it should remain persistent, become contextual, become destination-bound, or evolve into a more structured guided panel.
+Purpose:
 
-### 5. How should Decision Intelligence be surfaced?
+- decision readiness
+- signals
+- recommendations
+- scenario preview
+- downstream analytical actions launched from decision output
 
-It must feel like a natural capability of the system, not a hidden specialist feature.
+### AI
 
-Clarify whether it should be:
+Purpose:
 
-- a primary destination
-- a contextual assistant layer
-- both
+- conversational assistance
+- AI charting / NLP workflows
+- AI Workflow Lab
+- AI report and narrative surfaces
 
-### 6. How should AI be framed?
+## Important IA Constraints That Are Still Active
 
-Resolve the ambiguity between:
+Later frontend work must preserve all of the following:
 
-- AI as a global assistant
-- AI as a destination
-- AI as a set of workflow tools
+- existing backend endpoints and request/response contracts
+- `decision_bundle`
+- metric + `group_by` chart behavior
+- semantic layer power
+- dashboard and KPI workflows
+- Decision Intelligence logic
+- AI-assisted workflows
+- current theme and tone
 
-Your answer should make that relationship coherent.
+Do not remove capabilities in order to simplify the navigation model.
 
-### 7. How should charting be entered?
+## What Phase 2 Did Not Fully Resolve
 
-There should be one clear primary charting entry concept, even if multiple accelerators remain available.
+The destination model exists, but these issues remain open and now belong to Phase 3 execution:
 
-Clarify where charting truly belongs in the IA.
+## 1. Dashboards Is Still Both a Destination and a Visibility Mode
 
-### 8. How should dashboards be framed?
+`handleDestinationSelect('dashboards')` opens dashboard state, but dashboard rendering still depends on `dashboardState.isVisible`.
 
-Dashboards should feel like a destination and workflow, not just a visibility toggle on a shared canvas.
+That means Dashboards is not yet fully normalized into destination ownership.
 
-### 9. How should setup vs usage vs advanced configuration be separated?
+## 2. Decisions Still Shares Space with Definitions
 
-This is a major source of visual and cognitive overload in the current product.
+The Decisions drawer still includes `SemanticModelPanel`, which means semantic-definition management is still mixed into the Decision Intelligence area.
 
-Your proposal should clearly distinguish:
+This preserves capability, but it keeps the old ambiguity alive.
 
-- source/setup work
-- routine analytical work
-- monitoring work
-- advanced definition/configuration work
+## 3. The Right Data Pane Is Still Structurally Ambiguous
 
-## Deliverable Shape
+`DataPane.jsx` remains globally mounted and the `FieldsPanel` content is only lightly destination-aware.
 
-Please structure your response as a design-planning artifact, not casual commentary.
+This means the product still has an unresolved question:
 
-A strong output for this phase should include sections similar to:
+- is the pane global
+- destination-contextual
+- Explore-first but available elsewhere
+- or a guided helper surface
 
-- recommended navigation model
-- destination definitions
-- shell hierarchy
-- contextual surfaces
-- role of AI and decision support
-- migration notes from current structure to future structure
-- rationale and tradeoffs
+## 4. Chart Entry Is Improved but Not Yet Canonical
 
-You may choose your own section titles, but the result must be easy to turn into later implementation planning.
+Explore is the intended analysis destination, but charting still has multiple entry paths:
 
-## What You Should Not Do Yet
+- Explore drawer
+- semantic quick actions
+- dashboard actions
+- AI chat
+- decision recommendation actions
 
-Do not:
+That is acceptable, but Explore must become the clearly dominant manual entry point.
 
-- redesign individual screens in high detail
-- propose backend/API changes
-- remove features
-- collapse advanced semantic capability into oversimplified UI
-- prescribe exact implementation steps in React
-- treat this as a visual polish pass
+## 5. AI Is Both a Destination and a Global Assistant
 
-Phase 2 is structural. It should produce the product map that later phases build upon.
+That is directionally acceptable, but the exact boundary is not fully documented yet.
 
-## Creative Freedom
+Phase 3 must define the difference between:
 
-You should absolutely use design judgment here.
+- global AI help
+- AI destination workflows
+- AI outputs that appear inside the shared canvas
 
-You are expected to improve clarity, hierarchy, and product coherence.
+## Explicit Direction for Gemini
 
-You are not expected to preserve the current shell organization if a cleaner architecture is clearly better.
+Do not reopen the top-level navigation labels unless something is materially broken.
 
-However:
+The current destination set is good enough to continue from:
 
-- preserve the product’s intelligence-heavy identity
-- preserve the analytical power of the system
-- preserve the integrated nature of charts, dashboards, semantics, decisions, and AI
-- do not make the product feel generic or stripped down
+- Workspace
+- Explore
+- Dashboards
+- Decisions
+- AI
 
-## Desired Outcome
+The next work should refine ownership, shell behavior, and workflow clarity inside that model rather than re-running a broad IA brainstorm.
 
-After this phase, we should have a clear answer to:
+## Relationship to the Phase 2 Implementation Record
 
-- what the top-level product structure should be
-- how the app should be navigated
-- which surfaces are primary vs supporting
-- how to stop the current “hunt for functionality” experience
-- how to make the product feel unified before moving into shell and screen redesign
+Use this file as the current structural summary.
 
-This phase should give the overhaul initiative a strong structural backbone for the next stages.
+Use `phase_2_navigation_and_logic_overhaul.md` as the implementation-history companion document for the visual and state-management work already completed.
+
+## Handoff Into Phase 3
+
+Phase 3 should now focus on:
+
+- shell stability
+- destination ownership
+- contextual pane behavior
+- window behavior rules
+- reducing lingering ambiguity between setup, analysis, monitoring, decisions, and AI workflows
+
+Gemini should treat the navigation model as established and move the overhaul from "new direction" into "execution-ready shell behavior."

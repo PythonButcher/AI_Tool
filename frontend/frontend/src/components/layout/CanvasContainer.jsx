@@ -20,6 +20,7 @@ import RawDataViewer from '../../features/viewing/RawDataViewer';
 import MachineLearningPanel from '../../features/machine_learning/MachineLearningPanel';
 import DashboardFilterBar from '../../features/dashboard/DashboardFilterBar';
 import KpiCardWindow from '../../features/dashboard/KpiCardWindow';
+import { WINDOW_SIZING } from '../../utils/windowSizing';
 import DecisionPanel from '../../features/business/decision/DecisionPanel';
 import DestinationHome from './DestinationHome';
 
@@ -74,6 +75,7 @@ function CanvasContainer({
   onOpenAiChat,
   onRunDecision,
   setShowDataVisual,
+  setIsDataPaneOpen,
 }) {
   const {
     minimizedWindows,
@@ -88,8 +90,16 @@ function CanvasContainer({
     dashboardState,
     dashboardItems,
     removeDashboardItem,
+    addDashboardKpi,
+    addDashboardChart,
     restoreWindow,
   } = useWindowContext();
+
+  const isDashboardDest = activeDestination === DESTINATIONS.DASHBOARDS;
+  const isExploreDest = activeDestination === DESTINATIONS.EXPLORE;
+  const isWorkspaceDest = activeDestination === DESTINATIONS.WORKSPACE;
+  const isDecisionDest = activeDestination === DESTINATIONS.DECISIONS;
+  const isAiDest = activeDestination === DESTINATIONS.AI;
 
   const handleDestinationHomeAction = useCallback((action) => {
     switch (action) {
@@ -110,21 +120,27 @@ function CanvasContainer({
         onOpenAiChat();
         break;
       case 'upload':
-        // Ideally we'd trigger the MenuBar ribbon here, 
-        // but since we can't easily reach it from here without more prop drilling,
-        // we'll just open the Data Preview which usually prompts for data if empty.
+        // Trigger data preview which handles intake
         setShowDataPreview(true);
         restoreWindow('dataPreview');
         break;
       case 'hub':
+        // In the new shell, 'hub' is basically the data preview/management window
         setShowDataPreview(true);
         restoreWindow('dataPreview');
         break;
       case 'definitions':
-        // The SideBar handles this destination, but we can ensure it's "Ready" 
-        // by showing the decision panel if available.
-        setShowDecisionPanel(true);
-        restoreWindow('decisionPanel');
+        // Orient user toward the semantic definitions in the DataPane
+        setIsDataPaneOpen(true);
+        break;
+      case 'new_kpi':
+        addDashboardKpi();
+        break;
+      case 'new_chart':
+        addDashboardChart({ 
+          chartType: 'Bar',
+          dataSourceMode: isDashboardDest ? 'semantic' : 'raw'
+        });
         break;
       default:
         console.warn('Unknown destination home action:', action);
@@ -136,7 +152,11 @@ function CanvasContainer({
     restoreWindow, 
     onRunDecision, 
     setShowDataPreview, 
-    setShowDecisionPanel
+    setShowDecisionPanel,
+    addDashboardKpi,
+    addDashboardChart,
+    isDashboardDest,
+    setIsDataPaneOpen
   ]);
 
   const containerRef = useRef(null);
@@ -387,15 +407,13 @@ function CanvasContainer({
     return idx === -1 ? 1 : 10 + idx;
   };
 
-  const getInitialState = (id, defaultGridW = 6, defaultGridH = 10, defaultPixelW, defaultPixelH) => {
-    const MIN_WINDOW_WIDTH = 300;
-    const MIN_WINDOW_HEIGHT = 200;
+  const getInitialState = (id, defaultGridW = 6, defaultGridH = 10, defaultPixelW, defaultPixelH, minW = 300, minH = 200) => {
     const saved = getWindowState(id);
     if (saved && saved.isPixel) {
       return {
         ...saved,
-        w: Math.max(saved.w, MIN_WINDOW_WIDTH),
-        h: Math.max(saved.h, MIN_WINDOW_HEIGHT),
+        w: Math.max(saved.w, minW),
+        h: Math.max(saved.h, minH),
       };
     }
 
@@ -405,8 +423,8 @@ function CanvasContainer({
       return {
         x: (saved.x / 10) * width,
         y: saved.y * 30,
-        w: Math.max((saved.w / 10) * width, MIN_WINDOW_WIDTH),
-        h: Math.max(saved.h * 30, MIN_WINDOW_HEIGHT),
+        w: Math.max((saved.w / 10) * width, minW),
+        h: Math.max(saved.h * 30, minH),
         isPixel: true,
       };
     }
@@ -417,8 +435,8 @@ function CanvasContainer({
     windowRegistry.current.forEach((entry, windowId) => {
       if (!minimizedWindows[windowId]) {
         const { w, h } = entry.stateRef.current;
-        const canSplitHorizontally = w >= MIN_WINDOW_WIDTH * 2;
-        const canSplitVertically = h >= MIN_WINDOW_HEIGHT * 2;
+        const canSplitHorizontally = w >= minW * 2;
+        const canSplitVertically = h >= minH * 2;
         if (canSplitHorizontally || canSplitVertically) {
           const area = w * h;
           if (area > maxArea) {
@@ -432,8 +450,8 @@ function CanvasContainer({
     if (largestWindowId) {
       const targetEntry = windowRegistry.current.get(largestWindowId);
       const targetState = targetEntry.stateRef.current;
-      const canSplitHorizontally = targetState.w >= MIN_WINDOW_WIDTH * 2;
-      const canSplitVertically = targetState.h >= MIN_WINDOW_HEIGHT * 2;
+      const canSplitHorizontally = targetState.w >= minW * 2;
+      const canSplitVertically = targetState.h >= minH * 2;
       const shouldSplitHorizontally = targetState.w > targetState.h * 1.2;
 
       if (shouldSplitHorizontally && canSplitHorizontally) {
@@ -446,8 +464,8 @@ function CanvasContainer({
         return {
           x: targetState.x + newWidth,
           y: targetState.y,
-          w: newWidth,
-          h: targetState.h,
+          w: Math.max(newWidth, minW),
+          h: Math.max(targetState.h, minH),
           isPixel: true,
         };
       }
@@ -462,15 +480,15 @@ function CanvasContainer({
         return {
           x: targetState.x,
           y: targetState.y + newHeight,
-          w: targetState.w,
-          h: newHeight,
+          w: Math.max(targetState.w, minW),
+          h: Math.max(newHeight, minH),
           isPixel: true,
         };
       }
     }
 
-    const fallbackWidth = Math.max(defaultPixelW || Math.min(width * 0.65, 960), MIN_WINDOW_WIDTH);
-    const fallbackHeight = Math.max(defaultPixelH || Math.min(height * 0.6, 720), MIN_WINDOW_HEIGHT);
+    const fallbackWidth = Math.max(defaultPixelW || Math.min(width * 0.65, 960), minW);
+    const fallbackHeight = Math.max(defaultPixelH || Math.min(height * 0.6, 720), minH);
     return {
       x: Math.max((width - fallbackWidth) / 2, 20),
       y: Math.max((height - fallbackHeight) / 2, 80),
@@ -507,7 +525,11 @@ function CanvasContainer({
     .filter((windowItem) => !minimizedWindows[`workflow-${windowItem.id}`])
     .map((windowItem) => {
       const id = `workflow-${windowItem.id}`;
-      const initialState = getInitialState(id, 8, 15);
+      let sizing = WINDOW_SIZING.WORKFLOW_NODE.TEXT;
+      if (windowItem.type === 'chart') sizing = WINDOW_SIZING.WORKFLOW_NODE.CHART;
+      if (windowItem.type === 'report') sizing = WINDOW_SIZING.WORKFLOW_NODE.REPORT;
+
+      const initialState = getInitialState(id, 8, 15, sizing.defW, sizing.defH, sizing.minW, sizing.minH);
 
       return (
         <WindowFrame
@@ -530,6 +552,8 @@ function CanvasContainer({
             () => {}
           )}
           initialState={initialState}
+          minWidth={sizing.minW}
+          minHeight={sizing.minH}
         >
           {windowItem.type === 'text' && <pre style={{ padding: '10px' }}>{windowItem.content}</pre>}
           {windowItem.type === 'chart' && <AICharts aiChartType={windowItem.chartType} aiChartData={windowItem.chartData} />}
@@ -550,7 +574,9 @@ function CanvasContainer({
   const dataPreviewElement = (dataset && previewData.length > 0 && showDataPreview && !minimizedWindows.dataPreview) ? (
     <WindowFrame
       {...getWindowProps('dataPreview', '📄 Data Preview', handleClosePreview, () => minimizeWindow('dataPreview', 'Data Preview'))}
-      initialState={getInitialState('dataPreview', 8, 20)}
+      initialState={getInitialState('dataPreview', 8, 20, WINDOW_SIZING.DATA_PREVIEW.defW, WINDOW_SIZING.DATA_PREVIEW.defH, WINDOW_SIZING.DATA_PREVIEW.minW, WINDOW_SIZING.DATA_PREVIEW.minH)}
+      minWidth={WINDOW_SIZING.DATA_PREVIEW.minW}
+      minHeight={WINDOW_SIZING.DATA_PREVIEW.minH}
     >
       <div className="uploaded-data-preview">
         <div style={{ padding: '0 10px 10px 10px' }}>
@@ -577,7 +603,9 @@ function CanvasContainer({
   const rawDataElement = (showRawViewer && !minimizedWindows.rawViewer) ? (
     <WindowFrame
       {...getWindowProps('rawViewer', '📜 Raw Data (All Rows)', handleCloseRawViewer, () => minimizeWindow('rawViewer', 'Raw Data'))}
-      initialState={getInitialState('rawViewer', 8, 20)}
+      initialState={getInitialState('rawViewer', 8, 20, WINDOW_SIZING.RAW_VIEWER.defW, WINDOW_SIZING.RAW_VIEWER.defH, WINDOW_SIZING.RAW_VIEWER.minW, WINDOW_SIZING.RAW_VIEWER.minH)}
+      minWidth={WINDOW_SIZING.RAW_VIEWER.minW}
+      minHeight={WINDOW_SIZING.RAW_VIEWER.minH}
     >
       <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
         <RawDataViewer rows={fullData || []} pageSize={500} />
@@ -588,7 +616,9 @@ function CanvasContainer({
   const aiChartElement = (showAIChart && !minimizedWindows.aiChartWindow) ? (
     <WindowFrame
       {...getWindowProps('aiChartWindow', '📊 AI-Generated Chart', () => setShowAIChart(false), () => minimizeWindow('aiChartWindow', 'AI Chart'))}
-      initialState={getInitialState('aiChartWindow', 8, 15)}
+      initialState={getInitialState('aiChartWindow', 8, 15, WINDOW_SIZING.AI_CHART.defW, WINDOW_SIZING.AI_CHART.defH, WINDOW_SIZING.AI_CHART.minW, WINDOW_SIZING.AI_CHART.minH)}
+      minWidth={WINDOW_SIZING.AI_CHART.minW}
+      minHeight={WINDOW_SIZING.AI_CHART.minH}
     >
       <div style={{ height: '100%', padding: '10px' }}>
         <AICharts aiChartType={aiChartType} aiChartData={aiChartData} />
@@ -599,7 +629,9 @@ function CanvasContainer({
   const workflowLabElement = (showAiWorkflow && !minimizedWindows.aiWorkflowLab) ? (
     <WindowFrame
       {...getWindowProps('aiWorkflowLab', 'AI Workflow Lab', () => setShowAiWorkflow(false), () => minimizeWindow('aiWorkflowLab', 'AI Workflow'))}
-      initialState={getInitialState('aiWorkflowLab', 9, 25)}
+      initialState={getInitialState('aiWorkflowLab', 9, 25, WINDOW_SIZING.WORKFLOW_LAB.defW, WINDOW_SIZING.WORKFLOW_LAB.defH, WINDOW_SIZING.WORKFLOW_LAB.minW, WINDOW_SIZING.WORKFLOW_LAB.minH)}
+      minWidth={WINDOW_SIZING.WORKFLOW_LAB.minW}
+      minHeight={WINDOW_SIZING.WORKFLOW_LAB.minH}
     >
       <div className="workflow-content">
         <AiWorkflowLab savedState={getWindowContentState('aiWorkflowLab')} />
@@ -610,7 +642,9 @@ function CanvasContainer({
   const whiteBoardElement = (showWhiteBoard && !minimizedWindows.whiteBoard) ? (
     <WindowFrame
       {...getWindowProps('whiteBoard', '📊 White Board', () => setShowWhiteBoard(false), () => minimizeWindow('whiteBoard', 'White Board'))}
-      initialState={getInitialState('whiteBoard', 9, 25)}
+      initialState={getInitialState('whiteBoard', 9, 25, WINDOW_SIZING.WHITEBOARD.defW, WINDOW_SIZING.WHITEBOARD.defH, WINDOW_SIZING.WHITEBOARD.minW, WINDOW_SIZING.WHITEBOARD.minH)}
+      minWidth={WINDOW_SIZING.WHITEBOARD.minW}
+      minHeight={WINDOW_SIZING.WHITEBOARD.minH}
     >
       <div style={{ height: '100%' }}>
         <Whiteboard savedScene={getWindowContentState('whiteBoard')} />
@@ -628,10 +662,16 @@ function CanvasContainer({
         ? `Semantic ${chart.type} Chart`
         : `${chart.type} Chart`;
 
+      const isPopulated = chart.mapping && (chart.mapping['X-Axis'] || chart.mapping['Y-Axis'] || chart.mapping.values || chart.semanticConfig?.metricId);
+      const sizing = isPopulated ? WINDOW_SIZING.CHART.POPULATED : WINDOW_SIZING.CHART.BLANK;
+      const initialState = getInitialState(chart.id, 6, 18, sizing.defW, sizing.defH, sizing.minW, sizing.minH);
+
       return (
         <WindowFrame
           {...getWindowProps(chart.id, chartTitle, () => removeChart(chart.id), () => minimizeWindow(chart.id, minimizedTitle))}
-          initialState={getInitialState(chart.id, 6, 18)}
+          initialState={initialState}
+          minWidth={sizing.minW}
+          minHeight={sizing.minH}
         >
           <div style={{ width: '100%', height: '100%', position: 'relative' }}>
             <SmartChartWindow
@@ -648,52 +688,63 @@ function CanvasContainer({
       );
     });
 
-  const dashboardElements = dashboardState.isVisible
-    ? dashboardItems
-      .filter((item) => !minimizedWindows[item.id])
-      .map((item) => {
-        if (item.itemType === 'kpi') {
-          return (
-            <WindowFrame
-              {...getWindowProps(item.id, `📌 ${item.title || 'KPI Card'}`, () => removeDashboardItem(item.id), () => minimizeWindow(item.id, item.title || 'KPI Card'))}
-              initialState={getInitialState(item.id, 4, 8, 380, 260)}
-            >
-              <KpiCardWindow
-                id={item.id}
-                item={item}
-                dashboardFilters={dashboardState.filters}
-                isLocked={isLocked(item.id)}
-              />
-            </WindowFrame>
-          );
-        }
-
+  const dashboardElements = dashboardItems
+    .filter((item) => !minimizedWindows[item.id])
+    .map((item) => {
+      if (item.itemType === 'kpi') {
+        const isPopulated = !!item.semanticConfig?.metricId;
+        const sizing = isPopulated ? WINDOW_SIZING.KPI.POPULATED : WINDOW_SIZING.KPI.BLANK;
+        
         return (
           <WindowFrame
-            {...getWindowProps(item.id, `📊 Dashboard ${item.chartType} Chart`, () => removeDashboardItem(item.id), () => minimizeWindow(item.id, `Dashboard ${item.chartType} Chart`))}
-            initialState={getInitialState(item.id, 7, 18, 680, 420)}
+            {...getWindowProps(item.id, `📌 ${item.title || 'KPI Card'}`, () => removeDashboardItem(item.id), () => minimizeWindow(item.id, item.title || 'KPI Card'))}
+            initialState={getInitialState(item.id, 4, 8, sizing.defW, sizing.defH, sizing.minW, sizing.minH)}
+            minWidth={sizing.minW}
+            minHeight={sizing.minH}
           >
-            <div style={{ width: '100%', height: '100%', position: 'relative' }}>
-              <SmartChartWindow
-                id={item.id}
-                data={cleanedData || uploadedData}
-                type={item.chartType}
-                mapping={item.mapping}
-                isLocked={isLocked(item.id)}
-                dataSourceMode={item.dataSourceMode}
-                semanticConfig={item.semanticConfig}
-                externalFilters={dashboardState.filters}
-              />
-            </div>
+            <KpiCardWindow
+              id={item.id}
+              item={item}
+              dashboardFilters={dashboardState.filters}
+              isLocked={isLocked(item.id)}
+            />
           </WindowFrame>
         );
-      })
-    : [];
+      }
+
+      const isPopulated = item.mapping && (item.mapping['X-Axis'] || item.mapping['Y-Axis'] || item.mapping.values || item.semanticConfig?.metricId);
+      const sizing = isPopulated ? WINDOW_SIZING.CHART.POPULATED : WINDOW_SIZING.CHART.BLANK;
+      const initialState = getInitialState(item.id, 7, 18, sizing.defW, sizing.defH, sizing.minW, sizing.minH);
+
+      return (
+        <WindowFrame
+          {...getWindowProps(item.id, `📊 Dashboard ${item.chartType} Chart`, () => removeDashboardItem(item.id), () => minimizeWindow(item.id, `Dashboard ${item.chartType} Chart`))}
+          initialState={initialState}
+          minWidth={sizing.minW}
+          minHeight={sizing.minH}
+        >
+          <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+            <SmartChartWindow
+              id={item.id}
+              data={cleanedData || uploadedData}
+              type={item.chartType}
+              mapping={item.mapping}
+              isLocked={isLocked(item.id)}
+              dataSourceMode={item.dataSourceMode}
+              semanticConfig={item.semanticConfig}
+              externalFilters={dashboardState.filters}
+            />
+          </div>
+        </WindowFrame>
+      );
+    });
 
   const storyPanelElement = (showStoryPanel && !minimizedWindows.storyPanel) ? (
     <WindowFrame
       {...getWindowProps('storyPanel', '📖 Data Story', () => setShowStoryPanel(false), () => minimizeWindow('storyPanel', 'Story'))}
-      initialState={getInitialState('storyPanel', 9, 25)}
+      initialState={getInitialState('storyPanel', 9, 25, WINDOW_SIZING.STORY_PANEL.defW, WINDOW_SIZING.STORY_PANEL.defH, WINDOW_SIZING.STORY_PANEL.minW, WINDOW_SIZING.STORY_PANEL.minH)}
+      minWidth={WINDOW_SIZING.STORY_PANEL.minW}
+      minHeight={WINDOW_SIZING.STORY_PANEL.minH}
     >
       <DataStoryPanel uploadedData={uploadedData} cleanedData={cleanedData} model={storyModel} />
     </WindowFrame>
@@ -702,7 +753,9 @@ function CanvasContainer({
   const machineLearningElement = (showMachineLearning && !minimizedWindows.machineLearning) ? (
     <WindowFrame
       {...getWindowProps('machineLearning', '🧠 Machine Learning', () => setShowMachineLearning(false), () => minimizeWindow('machineLearning', 'ML'))}
-      initialState={getInitialState('machineLearning', 8, 20)}
+      initialState={getInitialState('machineLearning', 8, 20, WINDOW_SIZING.MACHINE_LEARNING.defW, WINDOW_SIZING.MACHINE_LEARNING.defH, WINDOW_SIZING.MACHINE_LEARNING.minW, WINDOW_SIZING.MACHINE_LEARNING.minH)}
+      minWidth={WINDOW_SIZING.MACHINE_LEARNING.minW}
+      minHeight={WINDOW_SIZING.MACHINE_LEARNING.minH}
     >
       <MachineLearningPanel />
     </WindowFrame>
@@ -711,7 +764,9 @@ function CanvasContainer({
   const decisionPanelElement = (showDecisionPanel && !minimizedWindows.decisionPanel) ? (
     <WindowFrame
       {...getWindowProps('decisionPanel', '🧠 Decision Intelligence', () => setShowDecisionPanel(false), () => minimizeWindow('decisionPanel', 'Decision Intelligence'))}
-      initialState={getInitialState('decisionPanel', 9, 25, 1200, 800)}
+      initialState={getInitialState('decisionPanel', 9, 25, WINDOW_SIZING.DECISION_PANEL.defW, WINDOW_SIZING.DECISION_PANEL.defH, WINDOW_SIZING.DECISION_PANEL.minW, WINDOW_SIZING.DECISION_PANEL.minH)}
+      minWidth={WINDOW_SIZING.DECISION_PANEL.minW}
+      minHeight={WINDOW_SIZING.DECISION_PANEL.minH}
     >
       <DecisionPanel 
         bundle={decisionBundle} 
@@ -722,58 +777,27 @@ function CanvasContainer({
     </WindowFrame>
   ) : null;
 
-  const dashboardEmptyState = dashboardState.isVisible && dashboardItems.length === 0 ? (
-    <div
-      style={{
-        position: 'absolute',
-        top: '190px',
-        left: '50%',
-        transform: 'translateX(-50%)',
-        width: 'min(520px, calc(100% - 32px))',
-        padding: '22px 24px',
-        borderRadius: '18px',
-        background: 'rgba(255, 255, 255, 0.86)',
-        border: '1px solid rgba(24, 63, 46, 0.12)',
-        boxShadow: '0 18px 40px rgba(22, 35, 28, 0.12)',
-        zIndex: 35,
-        textAlign: 'center',
-        color: '#31453a',
-      }}
-    >
-      <div style={{ fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700, color: '#3b6d57', marginBottom: '8px' }}>
-        Dashboard Canvas
-      </div>
-      <h3 style={{ margin: '0 0 10px', fontSize: '1.25rem' }}>Start monitoring your business</h3>
-      <p style={{ margin: 0, color: '#5d6d63', lineHeight: 1.5 }}>
-        Add KPI cards and charts from the dashboard toolbar or from the Business Definitions panel. Global dashboard filters will keep every item in sync.
-      </p>
-    </div>
-  ) : null;
-
   const shouldShowHome = useMemo(() => {
-    if (dashboardState.isVisible) return false;
-
-    // Check if ANY windows relevant to this destination are open
-    if (activeDestination === DESTINATIONS.WORKSPACE) {
-      return !showDataPreview && !showRawViewer;
-    }
-    if (activeDestination === DESTINATIONS.EXPLORE) {
-      return charts.length === 0 && !showDataPreview;
-    }
-    if (activeDestination === DESTINATIONS.AI) {
+    if (isWorkspaceDest) return !showDataPreview && !showRawViewer && !showMachineLearning;
+    if (isExploreDest) return charts.length === 0 && !showDataPreview;
+    if (isDashboardDest) return dashboardItems.length === 0;
+    if (isAiDest) {
       const hasAiWorkflowWindows = outputWindows.length > 0;
       return !showAiWorkflow && !showAIChart && !showStoryPanel && !showWhiteBoard && !hasAiWorkflowWindows;
     }
-    if (activeDestination === DESTINATIONS.DECISIONS) {
-      return !showDecisionPanel;
-    }
+    if (isDecisionDest) return !showDecisionPanel && charts.length === 0;
     return true;
   }, [
-    activeDestination,
-    dashboardState.isVisible,
+    isWorkspaceDest,
+    isExploreDest,
+    isDashboardDest,
+    isAiDest,
+    isDecisionDest,
     showDataPreview,
     showRawViewer,
+    showMachineLearning,
     charts.length,
+    dashboardItems.length,
     showAiWorkflow,
     showAIChart,
     showStoryPanel,
@@ -789,25 +813,26 @@ function CanvasContainer({
         className="canvas-container desktop-surface"
         style={{ width: '100%', height: '100%', position: 'relative' }}
       >
-        {dashboardState.isVisible && <DashboardFilterBar />}
-        {dashboardEmptyState}
+        {isDashboardDest && <DashboardFilterBar />}
         {shouldShowHome && (
           <DestinationHome 
             activeDestination={activeDestination} 
             onAction={handleDestinationHomeAction} 
           />
         )}
-        {workflowElements}
-        {dataPreviewElement}
-        {rawDataElement}
-        {aiChartElement}
-        {workflowLabElement}
-        {whiteBoardElement}
-        {chartElements}
-        {dashboardElements}
-        {storyPanelElement}
-        {machineLearningElement}
-        {decisionPanelElement}
+        
+        {/* Render relevant windows for the active destination */}
+        {(isAiDest || isWorkspaceDest) && workflowElements}
+        {(isWorkspaceDest || isExploreDest) && dataPreviewElement}
+        {isWorkspaceDest && rawDataElement}
+        {isWorkspaceDest && machineLearningElement}
+        {(isExploreDest || isAiDest) && aiChartElement}
+        {isAiDest && workflowLabElement}
+        {isAiDest && whiteBoardElement}
+        {isAiDest && storyPanelElement}
+        {(isExploreDest || isDecisionDest) && chartElements}
+        {isDashboardDest && dashboardElements}
+        {isDecisionDest && decisionPanelElement}
       </div>
       <MinimizedDock />
     </div>
