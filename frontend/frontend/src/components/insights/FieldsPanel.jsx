@@ -12,6 +12,7 @@ import {
   AiOutlinePlusSquare,
   AiOutlineSearch,
   AiOutlineTag,
+  AiOutlineHolder,
 } from 'react-icons/ai';
 import { useActiveDataset, useSemanticModel } from '../../context/DataContext';
 import {
@@ -240,27 +241,12 @@ const AnalysisRowContent = ({ item, actions }) => (
           )}
         </span>
       </div>
-      {item.subtitle ? <span className="field-row-subtitle">{item.subtitle}</span> : null}
-      {item.description && item.description !== item.subtitle ? (
-        <span className="field-row-description">{item.description}</span>
-      ) : null}
     </div>
     <div className="field-row-trailing">
-      <div className="field-row-meta">
-        <span className={`field-row-pill field-row-pill--source field-row-pill--${item.source}`}>
-          {item.sourceLabel}
-        </span>
-        <span className="field-row-pill">{item.helperLabel}</span>
-        {item.statusLabel ? (
-          <span className={`field-row-pill field-row-pill--status field-row-pill--${item.is_user_defined ? 'custom' : 'inferred'}`}>
-            {item.statusLabel}
-          </span>
-        ) : null}
-        {item.backingLabel ? (
-          <span className="field-row-pill field-row-pill--field">{item.backingLabel}</span>
-        ) : null}
-      </div>
       {actions}
+      <div className="field-row-drag-hint" aria-hidden="true">
+        <AiOutlineHolder />
+      </div>
     </div>
   </>
 );
@@ -305,6 +291,7 @@ const DraggableAnalysisItem = React.memo(({
 
   const style = {
     transform: CSS.Translate.toString(transform),
+    cursor: 'grab',
   };
 
   return (
@@ -625,8 +612,16 @@ function FieldsPanel({
 
       <DragOverlay>
         {activeItem ? (
-          <div className="field-row field-row-overlay" title={activeItem.title}>
-            <AnalysisRowContent item={activeItem} />
+          <div className="field-row field-row-overlay" title={activeItem.title || activeItem.label}>
+            <AnalysisRowContent 
+              item={{
+                ...activeItem,
+                type: activeItem.type || (activeItem.objectKind === 'metric' ? 'numeric' : 'categorical'),
+                source: activeItem.source || 'semantic',
+                sourceLabel: activeItem.sourceLabel || (activeItem.objectKind === 'metric' ? 'Metric' : 'Dimension'),
+                helperLabel: activeItem.helperLabel || activeItem.type || 'categorical',
+              }} 
+            />
           </div>
         ) : null}
       </DragOverlay>

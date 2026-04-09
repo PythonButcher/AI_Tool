@@ -77,7 +77,24 @@ Status:
 
 - **COMPLETE** (Implementation active in code)
 
-## Phase 4 (Next Priority)
+## Intermission Cleanup (Current Priority)
+
+File:
+
+- `intermission_window_behavior_and_right_pane_cleanup.md`
+
+Role:
+
+- one-off cleanup slice between Phase 3 and Phase 4
+- improve window sizing and resize stability across populated windows
+- reduce right-pane bulk while preserving expandability and tone
+- make field-catalog drag-and-drop clearer and more teachable
+
+Status:
+
+- Planned / Next implementation slice
+
+## Phase 4 (After Intermission)
 
 Role:
 
@@ -122,7 +139,7 @@ The shell still needs Gemini implementation work for:
 
 ## Resume Point For Gemini
 
-Resume from Phase 3, not from Phase 1 or a fresh IA brainstorm.
+Resume from the intermission cleanup file first, then continue into Phase 4.
 
 Treat the following as already decided:
 
@@ -134,9 +151,9 @@ Treat the following as already decided:
 
 Treat the following as the active implementation target:
 
-- finish shell behavior
-- finish destination clarity
-- make the right pane and canvas follow the destination model consistently
+- complete the intermission cleanup for window behavior, right-pane density, and drag/drop clarity
+- preserve the current destination model while making the shell materially easier to use
+- return to the later Decision Intelligence clarity work only after the intermission slice is complete
 
 ## Guidance For Codex
 

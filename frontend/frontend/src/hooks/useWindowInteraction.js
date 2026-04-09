@@ -14,8 +14,8 @@ export const useWindowInteraction = ({
   onSave,
   onResize, // (id, dx, dy, dir) => { dx, dy } (Adjusted deltas)
   onDrag,   // (id, x, y) => { x, y } (Adjusted coords)
-  minWidth = 300,
-  minHeight = 200,
+  minWidth = 400,
+  minHeight = 300,
   snapEnabled = true
 }) => {
   // Current geometric state (Mutable, high-freq)
@@ -23,7 +23,7 @@ export const useWindowInteraction = ({
     x: initialState?.x || 0,
     y: initialState?.y || 0,
     w: initialState?.w || 600,
-    h: initialState?.h || 400,
+    h: initialState?.h || 450,
   });
 
   // DOM Ref for the window element
@@ -46,24 +46,40 @@ export const useWindowInteraction = ({
   // Sync state if props change (e.g. Smart Split updates this window from parent)
   useEffect(() => {
     if (draggingRef.current || resizingRef.current) return;
+    
+    let needsUpdate = false;
+    const current = { ...stateRef.current };
+
     if (initialState) {
-        const current = stateRef.current;
         // Only update if difference is significant to avoid jitter
         if (Math.abs(current.x - initialState.x) > 1 || 
             Math.abs(current.y - initialState.y) > 1 || 
             Math.abs(current.w - initialState.w) > 1 || 
             Math.abs(current.h - initialState.h) > 1) {
             
-            stateRef.current = {
-                x: initialState.x,
-                y: initialState.y,
-                w: initialState.w,
-                h: initialState.h
-            };
-            applyTransform();
+            current.x = initialState.x;
+            current.y = initialState.y;
+            current.w = initialState.w;
+            current.h = initialState.h;
+            needsUpdate = true;
         }
     }
-  }, [initialState?.x, initialState?.y, initialState?.w, initialState?.h]);
+
+    // Enforce new minimums even if initialState didn't change (e.g. window became populated)
+    if (current.w < minWidth) {
+        current.w = minWidth;
+        needsUpdate = true;
+    }
+    if (current.h < minHeight) {
+        current.h = minHeight;
+        needsUpdate = true;
+    }
+
+    if (needsUpdate) {
+        stateRef.current = current;
+        applyTransform();
+    }
+  }, [initialState?.x, initialState?.y, initialState?.w, initialState?.h, minWidth, minHeight]);
 
   const applyTransform = useCallback(() => {
     if (windowRef.current) {

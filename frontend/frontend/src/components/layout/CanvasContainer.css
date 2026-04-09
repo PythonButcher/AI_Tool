@@ -145,20 +145,94 @@
 
 .drop-zone {
   flex: 1;
-  border: 2px dashed var(--border-color);
-  margin: 0 10px;
-  padding: 10px;
+  border: 2px dashed var(--border-color-soft);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   text-align: center;
-  transition: background-color 0.3s, color 0.3s ease,
-    border-color 0.3s ease;
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+  background: var(--bg-secondary-soft);
+  position: relative;
+  overflow: hidden;
+  min-height: 60px;
 }
 
-.drop-zone:hover {
-  background-color: var(--accent-yellow-soft);
+.drop-zone.is-empty {
+  color: var(--text-tertiary);
 }
 
-.drop-zone.active {
-  background-color: var(--accent-green-soft);
+.drop-zone.has-field {
+  border-style: solid;
+  border-color: var(--accent-blue-soft);
+  background: var(--bg-primary);
+  color: var(--accent-blue);
+}
+
+/* Compatibility Hints (when dragging but not over) */
+.drop-zone.is-compatible-hint {
+  border-color: var(--accent-green);
+  background: color-mix(in srgb, var(--accent-green-soft) 15%, transparent);
+}
+
+.drop-zone.is-incompatible-hint {
+  opacity: 0.5;
+  filter: grayscale(1);
+}
+
+/* Match States (when dragging AND over) */
+.drop-zone.is-compatible-match {
+  border-color: var(--accent-green);
+  background: var(--accent-green-soft);
+  transform: scale(1.02);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent-green) 10%, transparent);
+}
+
+.drop-zone.is-incompatible-match {
+  border-color: var(--accent-red);
+  background: var(--accent-red-soft);
+  cursor: no-drop;
+}
+
+.drop-zone-compatible-flash {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--accent-green);
+  opacity: 0.05;
+  animation: pulseCompatible 2s infinite ease-in-out;
+  pointer-events: none;
+}
+
+@keyframes pulseCompatible {
+  0% { opacity: 0.02; }
+  50% { opacity: 0.08; }
+  100% { opacity: 0.02; }
+}
+
+.drop-zone-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  z-index: 1;
+}
+
+.drop-zone-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.drop-zone-helper {
+  font-size: 0.65rem;
+  opacity: 0.7;
+}
+
+.drop-zone-icon {
+  font-size: 1.2rem;
+  margin-bottom: 2px;
 }
 
 .workflow-maximize-button {

@@ -20,6 +20,7 @@ import RawDataViewer from '../../features/viewing/RawDataViewer';
 import MachineLearningPanel from '../../features/machine_learning/MachineLearningPanel';
 import DashboardFilterBar from '../../features/dashboard/DashboardFilterBar';
 import KpiCardWindow from '../../features/dashboard/KpiCardWindow';
+import { WINDOW_SIZING } from '../../utils/windowSizing';
 import DecisionPanel from '../../features/business/decision/DecisionPanel';
 import DestinationHome from './DestinationHome';
 
@@ -94,6 +95,12 @@ function CanvasContainer({
     restoreWindow,
   } = useWindowContext();
 
+  const isDashboardDest = activeDestination === DESTINATIONS.DASHBOARDS;
+  const isExploreDest = activeDestination === DESTINATIONS.EXPLORE;
+  const isWorkspaceDest = activeDestination === DESTINATIONS.WORKSPACE;
+  const isDecisionDest = activeDestination === DESTINATIONS.DECISIONS;
+  const isAiDest = activeDestination === DESTINATIONS.AI;
+
   const handleDestinationHomeAction = useCallback((action) => {
     switch (action) {
       case 'gallery':
@@ -130,7 +137,10 @@ function CanvasContainer({
         addDashboardKpi();
         break;
       case 'new_chart':
-        addDashboardChart({ chartType: 'Bar' });
+        addDashboardChart({ 
+          chartType: 'Bar',
+          dataSourceMode: isDashboardDest ? 'semantic' : 'raw'
+        });
         break;
       default:
         console.warn('Unknown destination home action:', action);
@@ -144,7 +154,9 @@ function CanvasContainer({
     setShowDataPreview, 
     setShowDecisionPanel,
     addDashboardKpi,
-    addDashboardChart
+    addDashboardChart,
+    isDashboardDest,
+    setIsDataPaneOpen
   ]);
 
   const containerRef = useRef(null);
@@ -395,15 +407,13 @@ function CanvasContainer({
     return idx === -1 ? 1 : 10 + idx;
   };
 
-  const getInitialState = (id, defaultGridW = 6, defaultGridH = 10, defaultPixelW, defaultPixelH) => {
-    const MIN_WINDOW_WIDTH = 300;
-    const MIN_WINDOW_HEIGHT = 200;
+  const getInitialState = (id, defaultGridW = 6, defaultGridH = 10, defaultPixelW, defaultPixelH, minW = 300, minH = 200) => {
     const saved = getWindowState(id);
     if (saved && saved.isPixel) {
       return {
         ...saved,
-        w: Math.max(saved.w, MIN_WINDOW_WIDTH),
-        h: Math.max(saved.h, MIN_WINDOW_HEIGHT),
+        w: Math.max(saved.w, minW),
+        h: Math.max(saved.h, minH),
       };
     }
 
@@ -413,8 +423,8 @@ function CanvasContainer({
       return {
         x: (saved.x / 10) * width,
         y: saved.y * 30,
-        w: Math.max((saved.w / 10) * width, MIN_WINDOW_WIDTH),
-        h: Math.max(saved.h * 30, MIN_WINDOW_HEIGHT),
+        w: Math.max((saved.w / 10) * width, minW),
+        h: Math.max(saved.h * 30, minH),
         isPixel: true,
       };
     }
@@ -425,8 +435,8 @@ function CanvasContainer({
     windowRegistry.current.forEach((entry, windowId) => {
       if (!minimizedWindows[windowId]) {
         const { w, h } = entry.stateRef.current;
-        const canSplitHorizontally = w >= MIN_WINDOW_WIDTH * 2;
-        const canSplitVertically = h >= MIN_WINDOW_HEIGHT * 2;
+        const canSplitHorizontally = w >= minW * 2;
+        const canSplitVertically = h >= minH * 2;
         if (canSplitHorizontally || canSplitVertically) {
           const area = w * h;
           if (area > maxArea) {
@@ -440,8 +450,8 @@ function CanvasContainer({
     if (largestWindowId) {
       const targetEntry = windowRegistry.current.get(largestWindowId);
       const targetState = targetEntry.stateRef.current;
-      const canSplitHorizontally = targetState.w >= MIN_WINDOW_WIDTH * 2;
-      const canSplitVertically = targetState.h >= MIN_WINDOW_HEIGHT * 2;
+      const canSplitHorizontally = targetState.w >= minW * 2;
+      const canSplitVertically = targetState.h >= minH * 2;
       const shouldSplitHorizontally = targetState.w > targetState.h * 1.2;
 
       if (shouldSplitHorizontally && canSplitHorizontally) {
@@ -454,8 +464,8 @@ function CanvasContainer({
         return {
           x: targetState.x + newWidth,
           y: targetState.y,
-          w: newWidth,
-          h: targetState.h,
+          w: Math.max(newWidth, minW),
+          h: Math.max(targetState.h, minH),
           isPixel: true,
         };
       }
@@ -470,15 +480,15 @@ function CanvasContainer({
         return {
           x: targetState.x,
           y: targetState.y + newHeight,
-          w: targetState.w,
-          h: newHeight,
+          w: Math.max(targetState.w, minW),
+          h: Math.max(newHeight, minH),
           isPixel: true,
         };
       }
     }
 
-    const fallbackWidth = Math.max(defaultPixelW || Math.min(width * 0.65, 960), MIN_WINDOW_WIDTH);
-    const fallbackHeight = Math.max(defaultPixelH || Math.min(height * 0.6, 720), MIN_WINDOW_HEIGHT);
+    const fallbackWidth = Math.max(defaultPixelW || Math.min(width * 0.65, 960), minW);
+    const fallbackHeight = Math.max(defaultPixelH || Math.min(height * 0.6, 720), minH);
     return {
       x: Math.max((width - fallbackWidth) / 2, 20),
       y: Math.max((height - fallbackHeight) / 2, 80),
@@ -511,17 +521,15 @@ function CanvasContainer({
     registerWindow,
   });
 
-  const isDashboardDest = activeDestination === DESTINATIONS.DASHBOARDS;
-  const isExploreDest = activeDestination === DESTINATIONS.EXPLORE;
-  const isWorkspaceDest = activeDestination === DESTINATIONS.WORKSPACE;
-  const isDecisionDest = activeDestination === DESTINATIONS.DECISIONS;
-  const isAiDest = activeDestination === DESTINATIONS.AI;
-
   const workflowElements = outputWindows
     .filter((windowItem) => !minimizedWindows[`workflow-${windowItem.id}`])
     .map((windowItem) => {
       const id = `workflow-${windowItem.id}`;
-      const initialState = getInitialState(id, 8, 15);
+      let sizing = WINDOW_SIZING.WORKFLOW_NODE.TEXT;
+      if (windowItem.type === 'chart') sizing = WINDOW_SIZING.WORKFLOW_NODE.CHART;
+      if (windowItem.type === 'report') sizing = WINDOW_SIZING.WORKFLOW_NODE.REPORT;
+
+      const initialState = getInitialState(id, 8, 15, sizing.defW, sizing.defH, sizing.minW, sizing.minH);
 
       return (
         <WindowFrame
@@ -544,6 +552,8 @@ function CanvasContainer({
             () => {}
           )}
           initialState={initialState}
+          minWidth={sizing.minW}
+          minHeight={sizing.minH}
         >
           {windowItem.type === 'text' && <pre style={{ padding: '10px' }}>{windowItem.content}</pre>}
           {windowItem.type === 'chart' && <AICharts aiChartType={windowItem.chartType} aiChartData={windowItem.chartData} />}
@@ -564,7 +574,9 @@ function CanvasContainer({
   const dataPreviewElement = (dataset && previewData.length > 0 && showDataPreview && !minimizedWindows.dataPreview) ? (
     <WindowFrame
       {...getWindowProps('dataPreview', '📄 Data Preview', handleClosePreview, () => minimizeWindow('dataPreview', 'Data Preview'))}
-      initialState={getInitialState('dataPreview', 8, 20)}
+      initialState={getInitialState('dataPreview', 8, 20, WINDOW_SIZING.DATA_PREVIEW.defW, WINDOW_SIZING.DATA_PREVIEW.defH, WINDOW_SIZING.DATA_PREVIEW.minW, WINDOW_SIZING.DATA_PREVIEW.minH)}
+      minWidth={WINDOW_SIZING.DATA_PREVIEW.minW}
+      minHeight={WINDOW_SIZING.DATA_PREVIEW.minH}
     >
       <div className="uploaded-data-preview">
         <div style={{ padding: '0 10px 10px 10px' }}>
@@ -591,7 +603,9 @@ function CanvasContainer({
   const rawDataElement = (showRawViewer && !minimizedWindows.rawViewer) ? (
     <WindowFrame
       {...getWindowProps('rawViewer', '📜 Raw Data (All Rows)', handleCloseRawViewer, () => minimizeWindow('rawViewer', 'Raw Data'))}
-      initialState={getInitialState('rawViewer', 8, 20)}
+      initialState={getInitialState('rawViewer', 8, 20, WINDOW_SIZING.RAW_VIEWER.defW, WINDOW_SIZING.RAW_VIEWER.defH, WINDOW_SIZING.RAW_VIEWER.minW, WINDOW_SIZING.RAW_VIEWER.minH)}
+      minWidth={WINDOW_SIZING.RAW_VIEWER.minW}
+      minHeight={WINDOW_SIZING.RAW_VIEWER.minH}
     >
       <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
         <RawDataViewer rows={fullData || []} pageSize={500} />
@@ -602,7 +616,9 @@ function CanvasContainer({
   const aiChartElement = (showAIChart && !minimizedWindows.aiChartWindow) ? (
     <WindowFrame
       {...getWindowProps('aiChartWindow', '📊 AI-Generated Chart', () => setShowAIChart(false), () => minimizeWindow('aiChartWindow', 'AI Chart'))}
-      initialState={getInitialState('aiChartWindow', 8, 15)}
+      initialState={getInitialState('aiChartWindow', 8, 15, WINDOW_SIZING.AI_CHART.defW, WINDOW_SIZING.AI_CHART.defH, WINDOW_SIZING.AI_CHART.minW, WINDOW_SIZING.AI_CHART.minH)}
+      minWidth={WINDOW_SIZING.AI_CHART.minW}
+      minHeight={WINDOW_SIZING.AI_CHART.minH}
     >
       <div style={{ height: '100%', padding: '10px' }}>
         <AICharts aiChartType={aiChartType} aiChartData={aiChartData} />
@@ -613,7 +629,9 @@ function CanvasContainer({
   const workflowLabElement = (showAiWorkflow && !minimizedWindows.aiWorkflowLab) ? (
     <WindowFrame
       {...getWindowProps('aiWorkflowLab', 'AI Workflow Lab', () => setShowAiWorkflow(false), () => minimizeWindow('aiWorkflowLab', 'AI Workflow'))}
-      initialState={getInitialState('aiWorkflowLab', 9, 25)}
+      initialState={getInitialState('aiWorkflowLab', 9, 25, WINDOW_SIZING.WORKFLOW_LAB.defW, WINDOW_SIZING.WORKFLOW_LAB.defH, WINDOW_SIZING.WORKFLOW_LAB.minW, WINDOW_SIZING.WORKFLOW_LAB.minH)}
+      minWidth={WINDOW_SIZING.WORKFLOW_LAB.minW}
+      minHeight={WINDOW_SIZING.WORKFLOW_LAB.minH}
     >
       <div className="workflow-content">
         <AiWorkflowLab savedState={getWindowContentState('aiWorkflowLab')} />
@@ -624,7 +642,9 @@ function CanvasContainer({
   const whiteBoardElement = (showWhiteBoard && !minimizedWindows.whiteBoard) ? (
     <WindowFrame
       {...getWindowProps('whiteBoard', '📊 White Board', () => setShowWhiteBoard(false), () => minimizeWindow('whiteBoard', 'White Board'))}
-      initialState={getInitialState('whiteBoard', 9, 25)}
+      initialState={getInitialState('whiteBoard', 9, 25, WINDOW_SIZING.WHITEBOARD.defW, WINDOW_SIZING.WHITEBOARD.defH, WINDOW_SIZING.WHITEBOARD.minW, WINDOW_SIZING.WHITEBOARD.minH)}
+      minWidth={WINDOW_SIZING.WHITEBOARD.minW}
+      minHeight={WINDOW_SIZING.WHITEBOARD.minH}
     >
       <div style={{ height: '100%' }}>
         <Whiteboard savedScene={getWindowContentState('whiteBoard')} />
@@ -642,10 +662,16 @@ function CanvasContainer({
         ? `Semantic ${chart.type} Chart`
         : `${chart.type} Chart`;
 
+      const isPopulated = chart.mapping && (chart.mapping['X-Axis'] || chart.mapping['Y-Axis'] || chart.mapping.values || chart.semanticConfig?.metricId);
+      const sizing = isPopulated ? WINDOW_SIZING.CHART.POPULATED : WINDOW_SIZING.CHART.BLANK;
+      const initialState = getInitialState(chart.id, 6, 18, sizing.defW, sizing.defH, sizing.minW, sizing.minH);
+
       return (
         <WindowFrame
           {...getWindowProps(chart.id, chartTitle, () => removeChart(chart.id), () => minimizeWindow(chart.id, minimizedTitle))}
-          initialState={getInitialState(chart.id, 6, 18)}
+          initialState={initialState}
+          minWidth={sizing.minW}
+          minHeight={sizing.minH}
         >
           <div style={{ width: '100%', height: '100%', position: 'relative' }}>
             <SmartChartWindow
@@ -666,10 +692,15 @@ function CanvasContainer({
     .filter((item) => !minimizedWindows[item.id])
     .map((item) => {
       if (item.itemType === 'kpi') {
+        const isPopulated = !!item.semanticConfig?.metricId;
+        const sizing = isPopulated ? WINDOW_SIZING.KPI.POPULATED : WINDOW_SIZING.KPI.BLANK;
+        
         return (
           <WindowFrame
             {...getWindowProps(item.id, `📌 ${item.title || 'KPI Card'}`, () => removeDashboardItem(item.id), () => minimizeWindow(item.id, item.title || 'KPI Card'))}
-            initialState={getInitialState(item.id, 4, 8, 380, 260)}
+            initialState={getInitialState(item.id, 4, 8, sizing.defW, sizing.defH, sizing.minW, sizing.minH)}
+            minWidth={sizing.minW}
+            minHeight={sizing.minH}
           >
             <KpiCardWindow
               id={item.id}
@@ -681,10 +712,16 @@ function CanvasContainer({
         );
       }
 
+      const isPopulated = item.mapping && (item.mapping['X-Axis'] || item.mapping['Y-Axis'] || item.mapping.values || item.semanticConfig?.metricId);
+      const sizing = isPopulated ? WINDOW_SIZING.CHART.POPULATED : WINDOW_SIZING.CHART.BLANK;
+      const initialState = getInitialState(item.id, 7, 18, sizing.defW, sizing.defH, sizing.minW, sizing.minH);
+
       return (
         <WindowFrame
           {...getWindowProps(item.id, `📊 Dashboard ${item.chartType} Chart`, () => removeDashboardItem(item.id), () => minimizeWindow(item.id, `Dashboard ${item.chartType} Chart`))}
-          initialState={getInitialState(item.id, 7, 18, 680, 420)}
+          initialState={initialState}
+          minWidth={sizing.minW}
+          minHeight={sizing.minH}
         >
           <div style={{ width: '100%', height: '100%', position: 'relative' }}>
             <SmartChartWindow
@@ -705,7 +742,9 @@ function CanvasContainer({
   const storyPanelElement = (showStoryPanel && !minimizedWindows.storyPanel) ? (
     <WindowFrame
       {...getWindowProps('storyPanel', '📖 Data Story', () => setShowStoryPanel(false), () => minimizeWindow('storyPanel', 'Story'))}
-      initialState={getInitialState('storyPanel', 9, 25)}
+      initialState={getInitialState('storyPanel', 9, 25, WINDOW_SIZING.STORY_PANEL.defW, WINDOW_SIZING.STORY_PANEL.defH, WINDOW_SIZING.STORY_PANEL.minW, WINDOW_SIZING.STORY_PANEL.minH)}
+      minWidth={WINDOW_SIZING.STORY_PANEL.minW}
+      minHeight={WINDOW_SIZING.STORY_PANEL.minH}
     >
       <DataStoryPanel uploadedData={uploadedData} cleanedData={cleanedData} model={storyModel} />
     </WindowFrame>
@@ -714,7 +753,9 @@ function CanvasContainer({
   const machineLearningElement = (showMachineLearning && !minimizedWindows.machineLearning) ? (
     <WindowFrame
       {...getWindowProps('machineLearning', '🧠 Machine Learning', () => setShowMachineLearning(false), () => minimizeWindow('machineLearning', 'ML'))}
-      initialState={getInitialState('machineLearning', 8, 20)}
+      initialState={getInitialState('machineLearning', 8, 20, WINDOW_SIZING.MACHINE_LEARNING.defW, WINDOW_SIZING.MACHINE_LEARNING.defH, WINDOW_SIZING.MACHINE_LEARNING.minW, WINDOW_SIZING.MACHINE_LEARNING.minH)}
+      minWidth={WINDOW_SIZING.MACHINE_LEARNING.minW}
+      minHeight={WINDOW_SIZING.MACHINE_LEARNING.minH}
     >
       <MachineLearningPanel />
     </WindowFrame>
@@ -723,7 +764,9 @@ function CanvasContainer({
   const decisionPanelElement = (showDecisionPanel && !minimizedWindows.decisionPanel) ? (
     <WindowFrame
       {...getWindowProps('decisionPanel', '🧠 Decision Intelligence', () => setShowDecisionPanel(false), () => minimizeWindow('decisionPanel', 'Decision Intelligence'))}
-      initialState={getInitialState('decisionPanel', 9, 25, 1200, 800)}
+      initialState={getInitialState('decisionPanel', 9, 25, WINDOW_SIZING.DECISION_PANEL.defW, WINDOW_SIZING.DECISION_PANEL.defH, WINDOW_SIZING.DECISION_PANEL.minW, WINDOW_SIZING.DECISION_PANEL.minH)}
+      minWidth={WINDOW_SIZING.DECISION_PANEL.minW}
+      minHeight={WINDOW_SIZING.DECISION_PANEL.minH}
     >
       <DecisionPanel 
         bundle={decisionBundle} 
