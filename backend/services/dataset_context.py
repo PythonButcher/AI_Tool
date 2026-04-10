@@ -343,6 +343,7 @@ def resolve_dataset_bundle(
     dataset_ref: Optional[Dict[str, Any]] = None,
     semantic_model: Optional[Dict[str, Any]] = None,
     source: str = "metric_resolution",
+    allow_active_fallback: bool = True,
 ) -> Dict[str, Any]:
     normalized_ref = dataset_ref if isinstance(dataset_ref, dict) else {}
 
@@ -378,6 +379,9 @@ def resolve_dataset_bundle(
                 source=f"{source}_datahub_dataset",
             )
         return bundle
+
+    if not allow_active_fallback:
+        raise ValueError("No active dataset is available.")
 
     dataframe = resolve_active_dataframe()
     if dataframe is None or dataframe.empty:

@@ -48,6 +48,21 @@ All timestamps use ISO-8601 UTC strings. Optional fields may be `null`. All obje
 | `current_value` | `string \| number \| null` | No | Latest observed grouped value |
 | `previous_value` | `string \| number \| null` | No | Previous observed grouped value |
 
+### Period Context
+
+Business-facing label metadata derived from `time_context`. This object is additive and intended for UI copy.
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `label` | `string \| null` | No | Business-facing current context label such as `Mar 2026`, `Q1 2026`, or a generic observed-period label |
+| `comparison_label` | `string \| null` | No | Business-facing comparison label such as `Feb 2026`, `Q4 2025`, or `Previous period` |
+| `current_label` | `string \| null` | No | Explicit formatted label for the current value when available |
+| `previous_label` | `string \| null` | No | Explicit formatted label for the previous value when available |
+| `grain` | `string \| null` | No | Echoes the inferred grain from `time_context` |
+| `comparison_type` | `string \| null` | No | Current implementation uses `sequential_period` when a prior comparison exists |
+| `calendar_type` | `string \| null` | No | `calendar` when labels were derived from calendar-aware values, otherwise `observed_value` or `null` |
+| `fiscal_calendar` | `object \| null` | No | Reserved for future fiscal-calendar metadata. Current implementation returns `null` unless backend fiscal support is explicitly added. |
+
 ## DecisionSignal
 
 Represents a detected change, anomaly, concentration, or data-quality condition that matters for decision-making.
@@ -154,6 +169,7 @@ Represents a high-level summary of what matters in a dataset or resolved slice.
 | `summary` | `string` | Yes | High-level summary paragraph |
 | `dataset` | `Dataset Summary` | Yes | Resolved dataset context |
 | `time_context` | `Time Context \| null` | No | Highest-confidence temporal context when available |
+| `period_context` | `Period Context \| null` | No | Business-facing label and comparison metadata derived from `time_context` |
 | `headline_signal_ids` | `string[]` | Yes | Ordered signal identifiers that anchor the brief |
 | `key_metrics` | `object[]` | Yes | Metric snapshots for quick orientation |
 | `themes` | `string[]` | Yes | High-level categories surfaced from signals |
@@ -169,6 +185,8 @@ Represents a high-level summary of what matters in a dataset or resolved slice.
 | `previous_value` | `number \| string \| null` | No | Previous value when time comparison exists |
 | `delta_value` | `number \| null` | No | Current minus previous |
 | `delta_pct` | `number \| null` | No | Decimal ratio |
+| `period_label` | `string \| null` | No | Business-facing current-period label for the metric card |
+| `comparison_label` | `string \| null` | No | Business-facing comparison label for the metric card |
 | `status` | `string` | Yes | `changed`, `steady`, `baseline_only` |
 
 ### Example
@@ -192,6 +210,16 @@ Represents a high-level summary of what matters in a dataset or resolved slice.
     "current_value": "2026-03-31T00:00:00",
     "previous_value": "2026-03-30T00:00:00"
   },
+  "period_context": {
+    "label": "Mar 31, 2026",
+    "comparison_label": "Mar 30, 2026",
+    "current_label": "Mar 31, 2026",
+    "previous_label": "Mar 30, 2026",
+    "grain": "observed_value",
+    "comparison_type": "sequential_period",
+    "calendar_type": "observed_value",
+    "fiscal_calendar": null
+  },
   "headline_signal_ids": [
     "signal_metric_delta_metric_revenue_sum_2026_04_03t235959z",
     "signal_anomaly_rate_q1_sales_2026_04_03t235959z"
@@ -210,6 +238,8 @@ Represents a high-level summary of what matters in a dataset or resolved slice.
       "previous_value": 120000,
       "delta_value": 25000,
       "delta_pct": 0.2083,
+      "period_label": "Mar 31, 2026",
+      "comparison_label": "Mar 30, 2026",
       "status": "changed"
     }
   ],
@@ -440,6 +470,7 @@ Represents a Phase 3 lightweight scenario suggestion generated from the connecte
 | `summary` | `string` | Yes | Short explanation of whether a preview was prepared |
 | `based_on_recommendation_ids` | `string[]` | Yes | Ordered recommendation identifiers used to prepare the preview |
 | `based_on_signal_ids` | `string[]` | Yes | Ordered signal identifiers traced through the recommendations |
+| `period_context` | `Period Context \| null` | No | Shared business-facing time/comparison context for the preview when available |
 | `suggested_inputs` | `object` | Yes | Lightweight scenario input proposal for future UI or automation use |
 | `projections` | `object[]` | Yes | Condensed projected metric outputs derived from the existing scenario service |
 | `assumptions` | `string[]` | Yes | Explicit scenario-preview assumptions |
@@ -469,7 +500,9 @@ Represents a Phase 3 lightweight scenario suggestion generated from the connecte
 | `metric_ref` | `Metric Reference` | Yes | Metric being previewed |
 | `adjustment` | `object` | Yes | Existing scenario-style adjustment object |
 | `baseline_value` | `number \| null` | No | Baseline summary value |
+| `baseline_label` | `string \| null` | No | Business-facing label for the baseline comparison frame |
 | `projected_value` | `number \| null` | No | Projected summary value |
+| `projected_label` | `string \| null` | No | Business-facing label for the projected comparison frame |
 | `delta_value` | `number \| null` | No | Projected minus baseline |
 | `delta_pct` | `number \| null` | No | Decimal ratio when baseline is non-zero |
 | `comparison_summary` | `object \| null` | No | Reused comparison rollup from the scenario service |
@@ -517,6 +550,16 @@ Represents the Phase 3 unified decision-pipeline output.
     "based_on_signal_ids": [
       "signal_metric_delta_metric_revenue_sum_2026_04_04t150000_00_00"
     ],
+    "period_context": {
+      "label": "Mar 2026",
+      "comparison_label": "Feb 2026",
+      "current_label": "Mar 2026",
+      "previous_label": "Feb 2026",
+      "grain": "month",
+      "comparison_type": "sequential_period",
+      "calendar_type": "calendar",
+      "fiscal_calendar": null
+    },
     "suggested_inputs": {
       "name": "Decision pipeline preview",
       "filters": [],
@@ -540,7 +583,9 @@ Represents the Phase 3 unified decision-pipeline output.
           "value": -0.08
         },
         "baseline_value": 145000,
+        "baseline_label": "Current Context (Mar 2026)",
         "projected_value": 133400,
+        "projected_label": "Projected Context (Mar 2026)",
         "delta_value": -11600,
         "delta_pct": -0.08
       }

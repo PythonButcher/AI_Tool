@@ -12,6 +12,22 @@ Codex should continue owning:
 
 Gemini should treat this phase as frontend work only unless Codex explicitly reopens backend changes.
 
+## Execution Standard For Gemini
+
+Quality is preferred over speed for this phase.
+
+Explicitly:
+
+- do not rush
+- do not optimize for clearing the task quickly
+- read the affected files carefully before editing
+- verify behavior more than once before considering the work complete
+- preserve capability unless Codex or the user explicitly approves removal
+
+Gemini must not remove, weaken, or silently replace working product features in order to make this phase easier.
+
+If a surface is crowded or confusing, improve hierarchy and guidance without cutting core workflows unless there is explicit approval.
+
 ## Status
 
 Phase 4 is now active.
@@ -44,6 +60,34 @@ The purpose of Phase 4 is not to invent a new backend or a new decision system.
 
 The purpose is to make the existing system understandable, actionable, and naturally reachable inside the destination-based product shell.
 
+## New Requirement: Time Intelligence Must Be Supported
+
+Decision Intelligence should be treated as time-aware business tooling, not just generic metric analysis.
+
+That means Gemini should design this phase with the expectation that users will often need comparisons such as:
+
+- fiscal year versus prior fiscal year
+- fiscal quarter versus prior fiscal quarter
+- current period versus same period last fiscal year
+- calendar versus fiscal comparison context when both matter
+
+This is now an active product requirement for the decision experience.
+
+Important boundary:
+
+- Gemini should not invent backend time-intelligence logic that does not exist
+- Gemini should not fake fiscal comparisons in the frontend
+- Gemini should not hide or avoid the issue by simplifying the decision UX
+
+Instead, Gemini should make the frontend decision experience ready for time intelligence by:
+
+- using labels and layout that can accommodate comparison context cleanly
+- avoiding hard-coded wording that assumes only generic "latest period" comparisons
+- leaving space in the UX for fiscal/calendar comparison explanation when the backend provides it
+- surfacing uncertainty honestly when the current backend cannot yet express the comparison the user would expect
+
+If Gemini finds that a desired fiscal comparison requires backend support, it should document the gap clearly and hand it back to Codex rather than weakening the product.
+
 ## Current Implemented Baseline In Code
 
 Gemini should begin from the code reality below instead of re-auditing the entire app:
@@ -74,6 +118,15 @@ Gemini should begin from the code reality below instead of re-auditing the entir
 - `ai_handoff/phase_docs/phase_4_backend_usability_support.md`
 - `ai_handoff/backend_to_frontend/phase_4_handoff.md`
 
+Current additive time fields now available from the backend:
+
+- `decision_bundle.brief.period_context`
+- `decision_bundle.brief.key_metrics[].period_label`
+- `decision_bundle.brief.key_metrics[].comparison_label`
+- `decision_bundle.scenario_preview.period_context`
+- `decision_bundle.scenario_preview.projections[].baseline_label`
+- `decision_bundle.scenario_preview.projections[].projected_label`
+
 Do not redesign this phase as if readiness, bundle orchestration, or recommendation-driven chart launch still need to be invented.
 
 ## Current UX Gaps Visible In The Repo
@@ -97,6 +150,7 @@ What is still missing:
 - stronger next-step guidance
 - better visibility of readiness before the user feels blocked
 - more explicit connection between missing requirements and the exact place to fix them
+- better communication of what comparison logic the engine is actually using today
 
 ## 2. The current setup guidance is too passive
 
@@ -123,6 +177,10 @@ The current `DecisionPanel` is technically correct but still too close to raw pa
 - the surface still feels like a report panel more than an embedded decision workflow
 
 Gemini should preserve the data, but the presentation needs to become more human-readable and more obviously sequenced.
+
+Nested evidence structures must be rendered cleanly.
+
+Gemini should not stop at flattening top-level keys if nested evidence still reads like inline JSON.
 
 ## 4. Decision Intelligence still feels too isolated from normal work
 
@@ -252,6 +310,12 @@ This should be lightweight.
 
 The dedicated execution and reading surface still belongs to `Decisions`.
 
+Critical implementation rule:
+
+- a bridge CTA must not trigger a hidden decision run
+- if the user starts from `Workspace`, `Dashboards`, or another adjacent surface, the interaction must still land them in a visible decision experience
+- "Run now" and "Go to Decisions" must behave consistently with the destination model
+
 ## 6. Preserve the existing destination model and backend contracts
 
 Do not reopen any of the following:
@@ -264,6 +328,14 @@ Do not reopen any of the following:
 - backend readiness contract
 
 If frontend work appears to require backend contract changes, stop and hand that back to Codex.
+
+Also do not remove or narrow any of the following without explicit approval:
+
+- recommendation-driven chart launch
+- scenario preview support
+- existing semantic chart and KPI workflows
+- existing drag-and-drop behavior that already works
+- Decision Intelligence destination ownership
 
 ## Specific Mapping Rules Gemini Should Follow
 
@@ -317,6 +389,92 @@ When `missing_requirements` is empty:
 - `frontend/frontend/src/components/layout/DataPane.jsx`
 - `frontend/frontend/src/components/insights/SemanticModelPanel.jsx`
 
+## Concrete Remaining Frontend Tasks
+
+Gemini should treat the following as active fix targets for this phase:
+
+### 1. Preserve the fixed cross-destination bridge and clean the remaining hook issue
+
+The cross-destination bridge behavior is now directionally correct in code.
+
+Gemini should preserve that behavior and clean the remaining frontend stability issue around the destination-home action callback:
+
+- keep the user transition into a visible `Decisions` experience
+- keep `Go to Decisions` separate from expensive hidden runs
+- fix the current `CanvasContainer.jsx` callback dependency drift without changing behavior
+- keep CTA wording aligned with actual behavior
+
+### 2. Remove the duplicate window-state provider
+
+The app still has duplicate `WindowProvider` mounting in the shell bootstrap path.
+
+Gemini should fix this carefully without removing any existing window behavior:
+
+- keep current window interactions working
+- preserve decision-panel visibility and restore behavior
+- remove the duplicate provider only after tracing which scope should remain authoritative
+
+### 3. Finish evidence rendering for nested payloads
+
+The current evidence surface has improved, but nested objects still need a more intentional rendering model.
+
+Gemini should:
+
+- render nested evidence structures in a readable hierarchy
+- preserve traceability and technical accuracy
+- avoid collapsing back to raw JSON unless there is no better fallback
+
+### 4. Remove Phase 4 polish drift
+
+Gemini should clean obvious polish issues in this slice, including:
+
+- awkward or duplicated button copy
+- stale labels
+- helper text that points to the wrong product surface
+- any copy that still sounds like a prototype instead of a product
+
+### 5. Keep recommendation handoff visible and trustworthy
+
+If a recommendation launches a downstream chart or related surface:
+
+- the result must be visible
+- the transition must feel intentional
+- the user should not have to guess whether the action worked
+
+### 6. Consume the finalized period-context fields without weakening the system
+
+The backend now provides additive period/comparison display metadata for the existing sequential comparison flow.
+
+Gemini should:
+
+- prefer `brief.period_context` over frontend-invented context copy
+- prefer `key_metrics[].period_label` and `key_metrics[].comparison_label` when present
+- prefer `scenario_preview.projections[].baseline_label` and `projected_label` when present
+- keep sensible fallback copy only for truly missing values
+
+### 7. Avoid weakening the system to paper over the remaining fiscal gap
+
+If fiscal/calendar comparison support is incomplete:
+
+- do not hide decision features
+- do not remove comparison-oriented language entirely
+- do not oversimplify the UX into generic signal cards only
+- do not treat `fiscal_calendar: null` as a frontend failure state
+
+Instead, keep the product ready for richer time intelligence and report backend gaps to Codex.
+
+## Emergency Regression Rule
+
+Gemini must preserve the emergency no-data fix now in place.
+
+Specifically:
+
+- when the current app session has no explicit dataset rows, `Decisions` must remain in setup guidance
+- the workspace and dashboard bridge surfaces must not claim Decision Intelligence is connected or ready without an explicit current dataset
+- running Decision Intelligence with no explicit current dataset must not surface stale generic results from old backend state
+
+If Gemini changes anything in readiness, bridge CTAs, or decision orchestration, it must re-verify this exact no-data behavior before calling the work complete.
+
 ## What Gemini Should Not Spend This Phase Doing
 
 - do not redesign the entire shell again
@@ -339,6 +497,8 @@ Phase 4 should be considered successful when:
 - decision evidence is readable without exposing raw backend structure as the default
 - recommendations feel directly connected to downstream actions
 - decision support feels reachable from normal product flow without requiring a new navigation model
+- cross-destination CTAs never produce hidden or confusing runs
+- the decision UX is compatible with future fiscal/calendar comparison context instead of being hard-coded around generic latest-period language
 - no backend contract changes are required
 
 ## Final Direction For Gemini

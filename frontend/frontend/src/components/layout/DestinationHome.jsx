@@ -202,7 +202,7 @@ const DestinationHome = ({ activeDestination, onAction, readiness }) => {
         <div className="dest-home__bridge">
           <FaBrain />
           <span>Setup complete. <strong>Decision Intelligence</strong> can now analyze these metrics.</span>
-          <button onClick={() => onAction('run_intelligence')}>Go to Decisions</button>
+          <button onClick={() => onAction('go_to_decisions')}>Go to Decisions</button>
         </div>
       )}
     </div>

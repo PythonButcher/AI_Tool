@@ -74,6 +74,7 @@ function CanvasContainer({
   decisionWarnings,
   onOpenAiChat,
   onRunDecision,
+  onDestinationSelect,
   setShowDataVisual,
   setIsDataPaneOpen,
 }) {
@@ -114,7 +115,13 @@ function CanvasContainer({
         restoreWindow('aiWorkflowLab');
         break;
       case 'run_intelligence':
+        if (activeDestination !== DESTINATIONS.DECISIONS) {
+          onDestinationSelect(DESTINATIONS.DECISIONS);
+        }
         onRunDecision();
+        break;
+      case 'go_to_decisions':
+        onDestinationSelect(DESTINATIONS.DECISIONS);
         break;
       case 'ai_chart':
         onOpenAiChat();
@@ -151,6 +158,8 @@ function CanvasContainer({
     setShowAiWorkflow, 
     restoreWindow, 
     onRunDecision, 
+    onDestinationSelect,
+    activeDestination,
     setShowDataPreview, 
     setShowDecisionPanel,
     addDashboardKpi,

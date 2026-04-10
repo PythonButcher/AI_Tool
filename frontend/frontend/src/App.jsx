@@ -8,7 +8,7 @@ import { DndContext, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import DataVisualizations from './features/charts/DataVisualization';
 import { transformToChartData } from './utils/chartDataUtils';
 import AIChat from './features/ai/AIChat';
-import { DataContext } from './context/DataContext';
+import { DataContext, normalizeDatasetRows } from './context/DataContext';
 import { ThemeContext, ThemeProvider } from './context/ThemeContext';
 import { WarehouseProvider } from './context/WarehouseContext';
 import { HelpOverlayProvider } from './context/HelpOverlayContext';
@@ -17,7 +17,7 @@ import Snowfall from 'react-snowfall';
 import DataFilterPanel from './components/data_management/DataFilterPanel';
 import './App.css';
 import { MuiThemeContext } from './context/MuiThemeContext';
-import { WindowProvider, useWindowContext } from './context/WindowContext';
+import { useWindowContext } from './context/WindowContext';
 import { runDecisionPipeline } from './features/business/decision/decisionApi';
 
 const parseRecords = (source) => {
@@ -40,6 +40,13 @@ const DESTINATIONS = {
   DASHBOARDS: 'dashboards',
   DECISIONS: 'decisions',
   AI: 'ai',
+};
+
+const EMPTY_DECISION_READINESS = {
+  dataset_loaded: false,
+  semantic_ready: false,
+  decision_ready: false,
+  missing_requirements: ['dataset', 'semantic_model', 'metrics'],
 };
 
 function AppContent() {
@@ -113,12 +120,7 @@ function AppContent() {
   const [aiChartType, setAiChartType] = useState('Bar');
   const [showDecisionPanel, setShowDecisionPanel] = useState(false);
   const [decisionBundle, setDecisionBundle] = useState(null);
-  const [decisionReadiness, setDecisionReadiness] = useState({
-    dataset_loaded: false,
-    semantic_ready: false,
-    decision_ready: false,
-    missing_requirements: ['dataset', 'semantic_model', 'metrics'],
-  });
+  const [decisionReadiness, setDecisionReadiness] = useState(EMPTY_DECISION_READINESS);
   const [decisionWarnings, setDecisionWarnings] = useState([]);
 
   const sensors = useSensors(
@@ -294,17 +296,46 @@ function AppContent() {
   }, [activeWorkflow, openDashboard, setDashboardFilters]);
 
   // Decision Intelligence Actions
+  const getExplicitDecisionRows = useCallback(() => {
+    const cleanedRows = normalizeDatasetRows(cleanedData);
+    if (cleanedRows.length > 0) return cleanedRows;
+
+    const fullRows = normalizeDatasetRows(fullData);
+    if (fullRows.length > 0) return fullRows;
+
+    return normalizeDatasetRows(uploadedData);
+  }, [cleanedData, fullData, uploadedData]);
+
+  const resetDecisionStateToNoDataset = useCallback(() => {
+    setDecisionBundle(null);
+    setDecisionWarnings([]);
+    setDecisionReadiness(EMPTY_DECISION_READINESS);
+  }, []);
+
   const getDecisionPayloadBase = useCallback(() => {
+    const datasetRows = getExplicitDecisionRows();
+    const resolvedSemanticModel = semanticModel || uploadedData?.semantic_model || null;
+    const semanticDataset = resolvedSemanticModel?.dataset;
+
     return {
-      dataset_ref: uploadedData?.semantic_model?.dataset?.id ? {
+      dataset: datasetRows.length > 0 ? datasetRows : null,
+      semantic_model: datasetRows.length > 0 ? resolvedSemanticModel : null,
+      dataset_ref: datasetRows.length > 0 && semanticDataset?.id ? {
         source: 'datahub',
-        dataset_id: uploadedData.semantic_model.dataset.id,
+        dataset_id: semanticDataset.id,
+        dataset_name: semanticDataset.name,
       } : null,
     };
-  }, [uploadedData]);
+  }, [getExplicitDecisionRows, semanticModel, uploadedData]);
 
   const fetchDecisionReadiness = useCallback(async () => {
     try {
+      const datasetRows = getExplicitDecisionRows();
+      if (datasetRows.length === 0) {
+        resetDecisionStateToNoDataset();
+        return;
+      }
+
       const payload = getDecisionPayloadBase();
       const result = await runDecisionPipeline(payload);
       if (result.readiness) setDecisionReadiness(result.readiness);
@@ -312,10 +343,16 @@ function AppContent() {
     } catch (err) {
       console.error('[DecisionIntelligence] Readiness fetch failed:', err);
     }
-  }, [getDecisionPayloadBase]);
+  }, [getDecisionPayloadBase, getExplicitDecisionRows, resetDecisionStateToNoDataset]);
 
   const handleRunDecision = useCallback(async () => {
     try {
+      const datasetRows = getExplicitDecisionRows();
+      if (datasetRows.length === 0) {
+        resetDecisionStateToNoDataset();
+        return;
+      }
+
       const payload = {
         ...getDecisionPayloadBase(),
         include_anomaly_detection: true,
@@ -332,7 +369,13 @@ function AppContent() {
     } catch (err) {
       console.error('[DecisionIntelligence] Execution failed:', err);
     }
-  }, [getDecisionPayloadBase, restoreWindow]);
+  }, [getDecisionPayloadBase, getExplicitDecisionRows, resetDecisionStateToNoDataset, restoreWindow]);
+
+  useEffect(() => {
+    if (getExplicitDecisionRows().length === 0) {
+      resetDecisionStateToNoDataset();
+    }
+  }, [getExplicitDecisionRows, resetDecisionStateToNoDataset]);
 
   const handleDecisionAction = useCallback((action) => {
     if (action.action_type === 'break_down_metric') {
@@ -610,6 +653,7 @@ function AppContent() {
               decisionWarnings={decisionWarnings}
               onOpenAiChat={handleOpenAiChat}
               onRunDecision={handleRunDecision}
+              onDestinationSelect={handleDestinationSelect}
               setShowDataVisual={setShowDataVisual}
               setIsDataPaneOpen={setIsDataPaneOpen}
             >
@@ -644,13 +688,11 @@ function App() {
   return (
     <ThemeProvider>
       <MuiThemeContext>
-        <WindowProvider>
-          <WarehouseProvider>
-            <HelpOverlayProvider>
-              <AppContent />
-            </HelpOverlayProvider>
-          </WarehouseProvider>
-        </WindowProvider>
+        <WarehouseProvider>
+          <HelpOverlayProvider>
+            <AppContent />
+          </HelpOverlayProvider>
+        </WarehouseProvider>
       </MuiThemeContext>
     </ThemeProvider>
   );

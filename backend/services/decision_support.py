@@ -146,6 +146,7 @@ def resolve_decision_context(
             dataset_ref=dataset_ref,
             semantic_model=semantic_model,
             source=source,
+            allow_active_fallback=False,
         )
     except ValueError as exc:
         raise DecisionServiceError(str(exc)) from exc
@@ -536,6 +537,86 @@ def build_time_context(change: Optional[Dict[str, Any]], time_dimension: Optiona
         "grain": infer_time_grain(current_value, previous_value) if change is not None else None,
         "current_value": current_value,
         "previous_value": previous_value,
+    }
+
+
+def _format_calendar_label(timestamp: pd.Timestamp, grain: Optional[str]) -> str:
+    normalized_grain = str(grain or "").strip().lower()
+    if normalized_grain == "year":
+        return str(timestamp.year)
+    if normalized_grain == "quarter":
+        quarter = ((int(timestamp.month) - 1) // 3) + 1
+        return f"Q{quarter} {timestamp.year}"
+    if normalized_grain == "month":
+        return f"{timestamp.strftime('%b')} {timestamp.year}"
+    if normalized_grain == "week":
+        iso_week = timestamp.isocalendar()
+        return f"Week {int(iso_week.week)}, {int(iso_week.year)}"
+    return f"{timestamp.strftime('%b')} {int(timestamp.day)}, {timestamp.year}"
+
+
+def format_period_label(value: Any, grain: Optional[str]) -> Optional[str]:
+    serialized = serialize_value(value)
+    if serialized is None:
+        return None
+
+    try:
+        timestamp = pd.to_datetime(serialized, errors="coerce")
+    except Exception:
+        timestamp = pd.NaT
+
+    if pd.isna(timestamp):
+        text = str(serialized).strip()
+        return text or None
+    return _format_calendar_label(timestamp, grain)
+
+
+def build_period_context(
+    time_context: Optional[Dict[str, Any]],
+    fiscal_calendar: Optional[Dict[str, Any]] = None,
+) -> Optional[Dict[str, Any]]:
+    if not isinstance(time_context, dict):
+        return None
+
+    grain = time_context.get("grain")
+    current_label = format_period_label(time_context.get("current_value"), grain)
+    previous_label = format_period_label(time_context.get("previous_value"), grain)
+    has_calendar_values = bool(current_label or previous_label) and grain in {"day", "week", "month", "quarter", "year"}
+
+    fallback_label = None
+    if grain:
+        normalized_grain = str(grain).replace("_", " ").strip()
+        fallback_label = f"Latest {normalized_grain} period"
+
+    return {
+        "label": current_label or fallback_label,
+        "comparison_label": previous_label or ("Previous period" if time_context.get("previous_value") is not None else None),
+        "current_label": current_label,
+        "previous_label": previous_label,
+        "grain": grain,
+        "comparison_type": "sequential_period" if time_context.get("previous_value") is not None else None,
+        "calendar_type": "calendar" if has_calendar_values else ("observed_value" if (current_label or previous_label) else None),
+        "fiscal_calendar": fiscal_calendar if isinstance(fiscal_calendar, dict) else None,
+    }
+
+
+def build_projection_labels(period_context: Optional[Dict[str, Any]]) -> Dict[str, str]:
+    if not isinstance(period_context, dict):
+        return {
+            "baseline_label": "Current Context",
+            "projected_label": "Projected Context",
+        }
+
+    period_label = str(period_context.get("label") or "").strip()
+    if not period_label:
+        return {
+            "baseline_label": "Current Context",
+            "projected_label": "Projected Context",
+        }
+
+    return {
+        "baseline_label": f"Current Context ({period_label})",
+        "projected_label": f"Projected Context ({period_label})",
     }
 
 

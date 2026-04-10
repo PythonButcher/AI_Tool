@@ -5,6 +5,7 @@ from typing import Any, Dict, List
 from backend.services.decision_signal_service import generate_decision_signals
 from backend.services.decision_support import (
     build_metric_ref,
+    build_period_context,
     build_semantic_summary,
     build_time_context,
     derive_themes,
@@ -69,6 +70,8 @@ def _build_key_metrics(context: Dict[str, Any], metrics: List[Dict[str, Any]], f
         metric_ref = build_metric_ref(metric)
         result = resolve_metric_result(context, metric, filters=filters)
         change = latest_metric_change(context, metric, filters=filters)
+        time_context = build_time_context(change, context.get("time_dimension"))
+        period_context = build_period_context(time_context)
         delta_pct = change.get("delta_pct") if change else None
         status = "baseline_only"
         if change:
@@ -81,6 +84,8 @@ def _build_key_metrics(context: Dict[str, Any], metrics: List[Dict[str, Any]], f
                 "previous_value": change.get("previous_value") if change else None,
                 "delta_value": change.get("delta_value") if change else None,
                 "delta_pct": delta_pct,
+                "period_label": period_context.get("label") if period_context else None,
+                "comparison_label": period_context.get("comparison_label") if period_context else None,
                 "status": status,
             }
         )
@@ -137,17 +142,20 @@ def build_decision_brief_artifacts(
     resolved_generated_at = generated_at or iso_timestamp()
     themes = derive_themes(ordered_signals)
     summary = _build_brief_summary(context, ordered_signals, themes)
+    brief_time_context = (
+        ordered_signals[0].get("time_context")
+        if ordered_signals and ordered_signals[0].get("time_context")
+        else build_time_context(primary_change, context.get("time_dimension"))
+    )
+    period_context = build_period_context(brief_time_context)
 
     brief = {
         "brief_id": make_identifier("brief", context["dataset"]["dataset_name"], resolved_generated_at),
         "title": ordered_signals[0]["title"] if ordered_signals else f"Decision brief for {context['dataset']['dataset_name']}",
         "summary": summary,
         "dataset": context["dataset"],
-        "time_context": (
-            ordered_signals[0].get("time_context")
-            if ordered_signals and ordered_signals[0].get("time_context")
-            else build_time_context(primary_change, context.get("time_dimension"))
-        ),
+        "time_context": brief_time_context,
+        "period_context": period_context,
         "headline_signal_ids": [signal["signal_id"] for signal in ordered_signals[:3]],
         "key_metrics": key_metrics,
         "themes": themes,

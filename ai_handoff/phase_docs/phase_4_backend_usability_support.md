@@ -17,12 +17,29 @@ New response behavior:
 - `readiness` is now included on successful responses
 - `decision_bundle` is always present, including guided empty or partial states
 - `warnings` are now intended to be human-readable and UI-safe
+- `brief.period_context` is now included when the backend can derive comparison labels from the time context
+- `brief.key_metrics[]` may now include `period_label` and `comparison_label`
+- `scenario_preview.period_context` may now be included for scenario-level time context
+- `scenario_preview.projections[]` may now include `baseline_label` and `projected_label`
 
 New expectations:
 
 - missing dataset no longer needs to surface as a blocking backend failure for `/api/decision/run`
 - missing metrics now returns a valid success response with an empty decision experience
 - frontend should treat readiness plus warnings as the source of truth for setup guidance
+
+Additional product requirement:
+
+- Decision Intelligence should be able to support time-aware business comparisons, including fiscal-period comparisons, as the system evolves
+- frontend should not assume that generic "latest period" language is always sufficient for business users
+
+Current backend reality:
+
+- the new period/comparison fields are additive and safe to consume now
+- current labels describe the existing sequential period comparison logic
+- `fiscal_calendar` remains `null` until real fiscal-calendar support is implemented
+- Decision services no longer accept implicit backend active-dataset fallback for the main app workflow
+- no explicit dataset in the current UI context must be treated as `missing_requirements: ["dataset", "semantic_model", "metrics"]`
 
 ## Section 2 - Readiness Contract (CRITICAL)
 
@@ -144,6 +161,13 @@ Use warnings as helper copy, for example:
 - `No semantic metrics are defined.`
 - `Decision Intelligence requires at least one metric.`
 
+Time-intelligence note for Gemini:
+
+- do not fabricate fiscal-year or fiscal-quarter comparisons in the frontend
+- do not assume the current backend always has the business time context users want
+- design the UI so it can absorb richer comparison context later without redoing the whole destination
+- if backend comparison metadata is insufficient for a required fiscal/calendar workflow, report the gap back to Codex
+
 ## Section 5 - Decision Bundle Usage Reminder
 
 Gemini should keep this usage model unchanged while implementing frontend flow improvements.
@@ -159,3 +183,76 @@ Notes:
 
 - `decision_bundle` is always present on successful `/api/decision/run` responses
 - empty or partial states are valid and should be rendered as guided UI states, not failures
+- `period_context` is additive and should be treated as display metadata, not as a new source of filtering logic
+- `period_label`, `comparison_label`, `baseline_label`, and `projected_label` should be preferred over frontend-invented fallback copy when present
+
+Feature-preservation reminder:
+
+- do not remove scenario preview, recommendations, or chart-launch actions to make the frontend simpler
+- do not hide decision capability because time-intelligence support is still evolving
+
+## Section 6 - Time Metadata Shape
+
+Gemini should expect the following additive shape:
+
+```json
+{
+  "decision_bundle": {
+    "brief": {
+      "time_context": {
+        "dimension_id": "dimension_order_date",
+        "field": "Order Date",
+        "grain": "month",
+        "current_value": "2026-03-31T00:00:00",
+        "previous_value": "2026-02-28T00:00:00"
+      },
+      "period_context": {
+        "label": "Mar 2026",
+        "comparison_label": "Feb 2026",
+        "current_label": "Mar 2026",
+        "previous_label": "Feb 2026",
+        "grain": "month",
+        "comparison_type": "sequential_period",
+        "calendar_type": "calendar",
+        "fiscal_calendar": null
+      },
+      "key_metrics": [
+        {
+          "period_label": "Mar 2026",
+          "comparison_label": "Feb 2026"
+        }
+      ]
+    },
+    "scenario_preview": {
+      "period_context": {
+        "label": "Mar 2026",
+        "comparison_label": "Feb 2026",
+        "fiscal_calendar": null
+      },
+      "projections": [
+        {
+          "baseline_label": "Current Context (Mar 2026)",
+          "projected_label": "Projected Context (Mar 2026)"
+        }
+      ]
+    }
+  }
+}
+```
+
+Interpretation rules:
+
+- use the provided labels directly when present
+- keep fallback UI copy for truly missing values only
+- do not treat `fiscal_calendar: null` as an error state
+- do not pretend sequential calendar/observed labels are the same thing as full fiscal intelligence
+
+## Section 7 - Emergency No-Data Rule
+
+This is now a hard product rule for Gemini:
+
+- if the current app session has no explicit dataset rows, `Decisions` must not present a connected or ready state
+- if the app has no explicit dataset rows, `Run Intelligence` must not produce a stale generic result from old backend memory
+- if the app has no explicit dataset rows, the correct user-facing state is setup guidance
+
+Gemini should preserve this behavior and verify it explicitly after any Decisions-related frontend work.
