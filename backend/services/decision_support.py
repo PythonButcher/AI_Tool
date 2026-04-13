@@ -600,6 +600,33 @@ def build_period_context(
     }
 
 
+def describe_period_window(period_context: Optional[Dict[str, Any]]) -> str:
+    if not isinstance(period_context, dict):
+        return "in the latest observed period"
+
+    current_label = str(
+        period_context.get("current_label")
+        or period_context.get("label")
+        or ""
+    ).strip()
+    previous_label = str(
+        period_context.get("previous_label")
+        or period_context.get("comparison_label")
+        or ""
+    ).strip()
+    grain = str(period_context.get("grain") or "").strip().lower()
+
+    if current_label and previous_label:
+        return f"between {previous_label} and {current_label}"
+    if current_label:
+        return f"in {current_label}"
+    if grain == "day":
+        return "in the latest observed date"
+    if grain:
+        return f"in the latest observed {grain}"
+    return "in the latest observed period"
+
+
 def build_projection_labels(period_context: Optional[Dict[str, Any]]) -> Dict[str, str]:
     if not isinstance(period_context, dict):
         return {

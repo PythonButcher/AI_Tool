@@ -383,6 +383,46 @@
 .decision-metric-delta.down { color: #ef4444; }
 
 /* Grid Layout */
+.decision-panel__legacy-results {
+  margin-top: 48px;
+  padding-top: 32px;
+  border-top: 1px solid var(--border-color);
+  opacity: 0.8;
+  transition: opacity 0.3s ease;
+}
+
+.decision-panel__legacy-results:hover {
+  opacity: 1;
+}
+
+.legacy-divider {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.legacy-divider::before,
+.legacy-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to right, transparent, var(--border-color), transparent);
+}
+
+.legacy-divider span {
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  background: var(--bg-secondary);
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+}
+
 .decision-panel__grid {
   display: grid;
   grid-template-columns: 1fr 1.2fr;

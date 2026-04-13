@@ -69,11 +69,15 @@ function CanvasContainer({
   showDecisionPanel,
   setShowDecisionPanel,
   decisionBundle,
+  decisionWorkspace,
+  onCreateDecisionWorkspace,
+  getDecisionPayloadBase,
   onDecisionAction,
   decisionReadiness,
   decisionWarnings,
   onOpenAiChat,
   onRunDecision,
+  onResetDecisionWorkspace,
   onDestinationSelect,
   setShowDataVisual,
   setIsDataPaneOpen,
@@ -785,6 +789,10 @@ function CanvasContainer({
         onRunDecision={onRunDecision}
         onOpenAiChat={onOpenAiChat}
         setIsDataPaneOpen={setIsDataPaneOpen}
+        workspace={decisionWorkspace}
+        onCreateWorkspace={onCreateDecisionWorkspace}
+        onResetWorkspace={onResetDecisionWorkspace}
+        datasetContext={getDecisionPayloadBase ? getDecisionPayloadBase() : {}}
       />
     </WindowFrame>
   ) : null;

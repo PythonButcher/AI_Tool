@@ -18,7 +18,9 @@ import DataFilterPanel from './components/data_management/DataFilterPanel';
 import './App.css';
 import { MuiThemeContext } from './context/MuiThemeContext';
 import { useWindowContext } from './context/WindowContext';
-import { runDecisionPipeline } from './features/business/decision/decisionApi';
+import { runDecisionPipeline, createDecisionWorkspace } from './features/business/decision/decisionApi';
+
+// ... (keep the rest of imports)
 
 const parseRecords = (source) => {
   if (!source) return [];
@@ -120,6 +122,7 @@ function AppContent() {
   const [aiChartType, setAiChartType] = useState('Bar');
   const [showDecisionPanel, setShowDecisionPanel] = useState(false);
   const [decisionBundle, setDecisionBundle] = useState(null);
+  const [decisionWorkspace, setDecisionWorkspace] = useState(null);
   const [decisionReadiness, setDecisionReadiness] = useState(EMPTY_DECISION_READINESS);
   const [decisionWarnings, setDecisionWarnings] = useState([]);
 
@@ -391,6 +394,25 @@ function AppContent() {
     }
   }, [addChart]);
 
+  const handleCreateDecisionWorkspace = useCallback(async (payload) => {
+    try {
+      const result = await createDecisionWorkspace(payload);
+      if (result.status === 'success') {
+        setDecisionWorkspace(result.decision_workspace);
+        setDecisionReadiness(result.decision_workspace.readiness);
+        if (result.warnings) setDecisionWarnings(result.warnings);
+      }
+    } catch (err) {
+      console.error('[DecisionIntelligence] Workspace creation failed:', err);
+    }
+  }, []);
+
+  const handleResetDecisionWorkspace = useCallback(() => {
+    setDecisionWorkspace(null);
+    setDecisionBundle(null);
+    fetchDecisionReadiness();
+  }, [fetchDecisionReadiness]);
+
   /**
    * 3. EFFECTS & SUBSCRIPTIONS
    */
@@ -648,11 +670,15 @@ function AppContent() {
               showDecisionPanel={showDecisionPanel}
               setShowDecisionPanel={setShowDecisionPanel}
               decisionBundle={decisionBundle}
+              decisionWorkspace={decisionWorkspace}
+              onCreateDecisionWorkspace={handleCreateDecisionWorkspace}
+              getDecisionPayloadBase={getDecisionPayloadBase}
               onDecisionAction={handleDecisionAction}
               decisionReadiness={decisionReadiness}
               decisionWarnings={decisionWarnings}
               onOpenAiChat={handleOpenAiChat}
               onRunDecision={handleRunDecision}
+              onResetDecisionWorkspace={handleResetDecisionWorkspace}
               onDestinationSelect={handleDestinationSelect}
               setShowDataVisual={setShowDataVisual}
               setIsDataPaneOpen={setIsDataPaneOpen}

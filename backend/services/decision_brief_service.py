@@ -77,11 +77,14 @@ def _build_key_metrics(context: Dict[str, Any], metrics: List[Dict[str, Any]], f
         if change:
             status = "steady" if delta_pct is not None and abs(delta_pct) < 0.03 else "changed"
 
+        current_value = change.get("current_value") if change else result.get("summary", {}).get("value")
+        previous_value = change.get("previous_value") if change else None
+
         key_metrics.append(
             {
                 "metric_ref": metric_ref,
-                "current_value": result.get("summary", {}).get("value"),
-                "previous_value": change.get("previous_value") if change else None,
+                "current_value": current_value,
+                "previous_value": previous_value,
                 "delta_value": change.get("delta_value") if change else None,
                 "delta_pct": delta_pct,
                 "period_label": period_context.get("label") if period_context else None,

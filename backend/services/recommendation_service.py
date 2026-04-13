@@ -118,9 +118,9 @@ def _recommendation_from_signal(context: Dict[str, Any], signal: Dict[str, Any],
         direction = signal.get("direction")
         recommendation_type = "optimize" if direction == "up" else "investigate"
         title = (
-            f"Break down the latest {metric_ref['label']} increase"
+            f"Break down the {metric_ref['label']} increase"
             if direction == "up"
-            else f"Break down the latest {metric_ref['label']} decline"
+            else f"Break down the {metric_ref['label']} decline"
         )
         actions = []
         if resolved_dimension_ref:
