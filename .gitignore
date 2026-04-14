@@ -36,6 +36,7 @@ venv/
 .venv/
 env/
 ENV/
+.codex_tmp_py/
 
 # Python build artifacts
 build/
@@ -64,6 +65,7 @@ instance/
 # =========================
 # Uploaded or generated data
 uploads/
+Uploads/
 data/
 *.csv
 *.xlsx
@@ -97,6 +99,7 @@ desktop.ini
 ai_tool_export/
 drive_export/
 .backup_project_files/
+.tmp.driveupload/
 
 
 

@@ -8,7 +8,7 @@ import { DndContext, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import DataVisualizations from './features/charts/DataVisualization';
 import { transformToChartData } from './utils/chartDataUtils';
 import AIChat from './features/ai/AIChat';
-import { DataContext } from './context/DataContext';
+import { DataContext, normalizeDatasetRows } from './context/DataContext';
 import { ThemeContext, ThemeProvider } from './context/ThemeContext';
 import { WarehouseProvider } from './context/WarehouseContext';
 import { HelpOverlayProvider } from './context/HelpOverlayContext';
@@ -17,8 +17,10 @@ import Snowfall from 'react-snowfall';
 import DataFilterPanel from './components/data_management/DataFilterPanel';
 import './App.css';
 import { MuiThemeContext } from './context/MuiThemeContext';
-import { WindowProvider, useWindowContext } from './context/WindowContext';
-import { runDecisionPipeline } from './features/business/decision/decisionApi';
+import { useWindowContext } from './context/WindowContext';
+import { runDecisionPipeline, createDecisionWorkspace } from './features/business/decision/decisionApi';
+
+// ... (keep the rest of imports)
 
 const parseRecords = (source) => {
   if (!source) return [];
@@ -42,7 +44,18 @@ const DESTINATIONS = {
   AI: 'ai',
 };
 
+const EMPTY_DECISION_READINESS = {
+  dataset_loaded: false,
+  semantic_ready: false,
+  decision_ready: false,
+  missing_requirements: ['dataset', 'semantic_model', 'metrics'],
+};
+
 function AppContent() {
+  /**
+   * 1. CONTEXT & STATE INITIALIZATION
+   * All state and context hooks MUST be at the top level of the component.
+   */
   const {
     uploadedData, setUploadedData,
     fullData, setFullData,
@@ -70,17 +83,21 @@ function AppContent() {
     setDashboardFilters,
   } = useWindowContext();
 
+  // Navigation & Workflow State
   const [activeDestination, setActiveDestination] = useState(DESTINATIONS.WORKSPACE);
+  const [activeWorkflow, setActiveWorkflow] = useState(null);
+  
+  // UI & Layout State
   const [selectedStat, setSelectedStat] = useState(null);
   const [chartData, setChartData] = useState(null);
   const [chartMapping, setChartMapping] = useState({});
+  const [isSnowing, setIsSnowing] = useState(false);
+  const [activeRibbonTab, setActiveRibbonTab] = useState('Home');
+  const [aiChatOpenRequestKey, setAiChatOpenRequestKey] = useState(0);
+  const [menuBarHeight, setMenuBarHeight] = useState(64);
+  const [isDataPaneOpen, setIsDataPaneOpen] = useState(true);
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
-  );
-
-  const [aiChartData, setAiChartData] = useState(null);
-  const [aiChartType, setAiChartType] = useState('Bar');
+  // Feature Windows & Visibility State
   const [showWhiteBoard, setShowWhiteBoard] = useState(null);
   const [openDataFilter, setOpenDataFilter] = useState(false);
   const [showDataPreview, setShowDataPreview] = useState(false);
@@ -96,127 +113,29 @@ function AppContent() {
   const [storyData, setStoryData] = useState(undefined);
   const [storyModel, setStoryModel] = useState('openai');
   const [showStoryPanel, setShowStoryPanel] = useState(false);
-  const [outputWindows, setOutputWindows] = useState([]);
   const [rawUploadFile, setRawUploadFile] = useState(null);
   const [showMachineLearning, setShowMachineLearning] = useState(false);
+  const [outputWindows, setOutputWindows] = useState([]);
+
+  // AI & Decision Intelligence State
+  const [aiChartData, setAiChartData] = useState(null);
+  const [aiChartType, setAiChartType] = useState('Bar');
   const [showDecisionPanel, setShowDecisionPanel] = useState(false);
   const [decisionBundle, setDecisionBundle] = useState(null);
-  const [decisionReadiness, setDecisionReadiness] = useState({
-    dataset_loaded: false,
-    semantic_ready: false,
-    decision_ready: false,
-    missing_requirements: ['dataset', 'semantic_model', 'metrics'],
-  });
+  const [decisionWorkspace, setDecisionWorkspace] = useState(null);
+  const [decisionReadiness, setDecisionReadiness] = useState(EMPTY_DECISION_READINESS);
   const [decisionWarnings, setDecisionWarnings] = useState([]);
-  const [isSnowing, setIsSnowing] = useState(false);
-  const [activeRibbonTab, setActiveRibbonTab] = useState('Home');
-  const [activeWorkflow, setActiveWorkflow] = useState(null);
-  const [aiChatOpenRequestKey, setAiChatOpenRequestKey] = useState(0);
-  const [menuBarHeight, setMenuBarHeight] = useState(64);
-  const [isDataPaneOpen, setIsDataPaneOpen] = useState(true);
 
-  const handleCreateSemanticChart = useCallback((semanticOverrides = {}) => {
-    addChart({
-      type: 'Bar',
-      dataSourceMode: 'semantic',
-      semanticConfig: {
-        metricId: '',
-        groupBy: '',
-        ...semanticOverrides,
-      },
-    });
-  }, [addChart]);
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+  );
 
-  const handleCreateSemanticKpi = useCallback((semanticOverrides = {}) => {
-    addDashboardKpi({
-      semanticConfig: {
-        metricId: '',
-        groupBy: '',
-        ...semanticOverrides,
-      },
-    });
-    if (activeWorkflow !== 'dashboard') {
-      setActiveWorkflow('dashboard');
-    }
-  }, [activeWorkflow, addDashboardKpi]);
+  /**
+   * 2. HANDLERS (useCallback)
+   * These MUST be defined before they are used in any useEffect or passed to children.
+   */
 
-  const handleAddSemanticFilter = useCallback((semanticObject) => {
-    openDashboard();
-    // Simplified filter logic for App context
-    setDashboardFilters((prev) => ({
-      ...prev,
-      dimensionFilters: [
-        ...prev.dimensionFilters,
-        {
-          id: `dashboard-filter-${Date.now()}`,
-          dimensionId: semanticObject.id || '',
-          values: [],
-        },
-      ],
-    }));
-    if (activeWorkflow !== 'dashboard') {
-      setActiveWorkflow('dashboard');
-    }
-  }, [activeWorkflow, openDashboard, setDashboardFilters]);
-
-  useLoadRawData(showRawViewer, rawUploadFile, setFullData);
-
-  useEffect(() => {
-    if (pipelineResults?.ai_report?.status === 'completed' || pipelineResults?.ai_report?.status === 'success') {
-      setAiReportReady(true);
-    }
-  }, [pipelineResults, setAiReportReady]);
-
-  useEffect(() => {
-    if (!cleanedData || !chartMapping['X-Axis'] || !chartMapping['Y-Axis']) return;
-    const transformed = transformToChartData(cleanedData, {
-      labelField: chartMapping['X-Axis'] || chartMapping.Category,
-      dataFields: [chartMapping['Y-Axis'] || chartMapping.Value],
-    });
-    if (transformed) setChartData(transformed);
-  }, [cleanedData, chartMapping]);
-
-  const handleStatsSelect = useCallback((statType) => setSelectedStat(statType), []);
-
-  const handleDataCleaned = useCallback((newData) => {
-    if (!newData || newData.length === 0) {
-      setCleanedData(null);
-      setChartData(null);
-      return;
-    }
-    setCleanedData(newData);
-  }, [setCleanedData]);
-
-  const handleFileUpload = useCallback((raw, file = null) => {
-    const previewRows = parseRecords(raw?.data_preview);
-    const datasetRows = parseRecords(raw?.full_data ?? raw?.raw_data);
-    const finalDataset = datasetRows.length ? datasetRows : previewRows;
-    setUploadedData({
-      data_preview: previewRows,
-      semantic_model: raw?.semantic_model || null,
-    });
-    setFullData(finalDataset);
-    setCleanedData(finalDataset);
-    if (raw?.semantic_model) {
-      setSemanticModel(raw.semantic_model);
-    } else if (finalDataset.length > 0) {
-      refreshSemanticModelFromDataset(finalDataset, {
-        datasetName: file?.name || raw?.name,
-        source: 'app_handle_upload',
-      });
-    }
-    setShowDataPreview(true);
-    if (file) setRawUploadFile(file);
-  }, [setUploadedData, setFullData, setCleanedData, setSemanticModel, refreshSemanticModelFromDataset]);
-
-  const handleApiData = (data) => {
-    handleFileUpload(data);
-  };
-
-  const handleDatabaseData = (data) => {
-    handleFileUpload(data);
-  };
-
+  // Navigation & Orchestration
   const handleOpenAiChat = useCallback(() => {
     setAiChatOpenRequestKey((prev) => prev + 1);
   }, []);
@@ -224,28 +143,29 @@ function AppContent() {
   const handleDestinationSelect = useCallback((destination) => {
     setActiveDestination(destination);
     
-    // Manage side effects of destination transitions
     if (destination === DESTINATIONS.EXPLORE) {
       setIsDataPaneOpen(true);
       setActiveWorkflow('explore');
-      closeDashboard(); // Transitioning away from dashboard
+      closeDashboard();
     } else if (destination === DESTINATIONS.DASHBOARDS) {
       setActiveWorkflow('dashboard');
       openDashboard();
-      setIsDataPaneOpen(true); // Open data pane to show semantic seeds
+      setIsDataPaneOpen(true);
     } else if (destination === DESTINATIONS.DECISIONS) {
       setActiveWorkflow('business');
       closeDashboard();
-      setIsDataPaneOpen(true); // Open data pane for semantic definitions
+      setIsDataPaneOpen(true);
+      setShowDecisionPanel(true);
+      restoreWindow('decisionPanel');
     } else if (destination === DESTINATIONS.AI) {
       setActiveWorkflow('ai');
       closeDashboard();
-      handleOpenAiChat(); // Auto-open AI chat when entering AI destination
+      handleOpenAiChat();
     } else {
       setActiveWorkflow(null);
       closeDashboard();
     }
-  }, [openDashboard, closeDashboard, handleOpenAiChat]);
+  }, [openDashboard, closeDashboard, handleOpenAiChat, restoreWindow]);
 
   const handleRibbonTabChange = useCallback((tab) => {
     const tabToDest = {
@@ -273,6 +193,47 @@ function AppContent() {
       handleDestinationSelect(workflowToDest[workflow]);
     }
   }, [handleDestinationSelect]);
+
+  // Data Lifecycle
+  const handleStatsSelect = useCallback((statType) => setSelectedStat(statType), []);
+
+  const handleDataCleaned = useCallback((newData) => {
+    if (!newData || newData.length === 0) {
+      setCleanedData(null);
+      setChartData(null);
+      return;
+    }
+    setCleanedData(newData);
+  }, [setCleanedData]);
+
+  const handleFileUpload = useCallback((raw, file = null) => {
+    const previewRows = parseRecords(raw?.data_preview);
+    const datasetRows = parseRecords(raw?.full_data ?? raw?.raw_data);
+    const finalDataset = datasetRows.length ? datasetRows : previewRows;
+    
+    setUploadedData({
+      data_preview: previewRows,
+      semantic_model: raw?.semantic_model || null,
+    });
+    setFullData(finalDataset);
+    setCleanedData(finalDataset);
+
+    if (raw?.semantic_model) {
+      setSemanticModel(raw.semantic_model);
+    } else if (finalDataset.length > 0) {
+      refreshSemanticModelFromDataset(finalDataset, {
+        datasetName: file?.name || raw?.name,
+        source: 'app_handle_upload',
+      });
+    }
+    setShowDataPreview(true);
+    if (file) setRawUploadFile(file);
+  }, [setUploadedData, setFullData, setCleanedData, setSemanticModel, refreshSemanticModelFromDataset]);
+
+  const handleApiData = (data) => handleFileUpload(data);
+  const handleDatabaseData = (data) => handleFileUpload(data);
+
+  // UI Component Handlers
   const handleClosePreview = useCallback(() => setShowDataPreview(false), []);
   const handleCloseRawViewer = useCallback(() => setShowRawViewer(false), []);
   const handleCloseCanvas = useCallback(() => setShowCanvasContainer(false), []);
@@ -293,64 +254,131 @@ function AppContent() {
   const handleCloseChartWindow = useCallback(() => setShowChartWindow(false), []);
   const handleStoryModelChange = (newModel) => setStoryModel(newModel);
 
+  // Semantic Object Handlers
+  const handleCreateSemanticChart = useCallback((semanticOverrides = {}) => {
+    addChart({
+      type: 'Bar',
+      dataSourceMode: 'semantic',
+      semanticConfig: {
+        metricId: '',
+        groupBy: '',
+        ...semanticOverrides,
+      },
+    });
+  }, [addChart]);
+
+  const handleCreateSemanticKpi = useCallback((semanticOverrides = {}) => {
+    addDashboardKpi({
+      semanticConfig: {
+        metricId: '',
+        groupBy: '',
+        ...semanticOverrides,
+      },
+    });
+    if (activeWorkflow !== 'dashboard') {
+      setActiveWorkflow('dashboard');
+    }
+  }, [activeWorkflow, addDashboardKpi]);
+
+  const handleAddSemanticFilter = useCallback((semanticObject) => {
+    openDashboard();
+    setDashboardFilters((prev) => ({
+      ...prev,
+      dimensionFilters: [
+        ...prev.dimensionFilters,
+        {
+          id: `dashboard-filter-${Date.now()}`,
+          dimensionId: semanticObject.id || '',
+          values: [],
+        },
+      ],
+    }));
+    if (activeWorkflow !== 'dashboard') {
+      setActiveWorkflow('dashboard');
+    }
+  }, [activeWorkflow, openDashboard, setDashboardFilters]);
+
+  // Decision Intelligence Actions
+  const getExplicitDecisionRows = useCallback(() => {
+    const cleanedRows = normalizeDatasetRows(cleanedData);
+    if (cleanedRows.length > 0) return cleanedRows;
+
+    const fullRows = normalizeDatasetRows(fullData);
+    if (fullRows.length > 0) return fullRows;
+
+    return normalizeDatasetRows(uploadedData);
+  }, [cleanedData, fullData, uploadedData]);
+
+  const resetDecisionStateToNoDataset = useCallback(() => {
+    setDecisionBundle(null);
+    setDecisionWarnings([]);
+    setDecisionReadiness(EMPTY_DECISION_READINESS);
+  }, []);
+
+  const getDecisionPayloadBase = useCallback(() => {
+    const datasetRows = getExplicitDecisionRows();
+    const resolvedSemanticModel = semanticModel || uploadedData?.semantic_model || null;
+    const semanticDataset = resolvedSemanticModel?.dataset;
+
+    return {
+      dataset: datasetRows.length > 0 ? datasetRows : null,
+      semantic_model: datasetRows.length > 0 ? resolvedSemanticModel : null,
+      dataset_ref: datasetRows.length > 0 && semanticDataset?.id ? {
+        source: 'datahub',
+        dataset_id: semanticDataset.id,
+        dataset_name: semanticDataset.name,
+      } : null,
+    };
+  }, [getExplicitDecisionRows, semanticModel, uploadedData]);
+
   const fetchDecisionReadiness = useCallback(async () => {
     try {
-      const payload = {
-        dataset_ref: uploadedData?.semantic_model?.dataset?.id ? {
-          source: 'datahub',
-          dataset_id: uploadedData.semantic_model.dataset.id,
-        } : null,
-      };
+      const datasetRows = getExplicitDecisionRows();
+      if (datasetRows.length === 0) {
+        resetDecisionStateToNoDataset();
+        return;
+      }
 
+      const payload = getDecisionPayloadBase();
       const result = await runDecisionPipeline(payload);
-      if (result.readiness) {
-        setDecisionReadiness(result.readiness);
-      }
-      if (result.warnings) {
-        setDecisionWarnings(result.warnings);
-      }
+      if (result.readiness) setDecisionReadiness(result.readiness);
+      if (result.warnings) setDecisionWarnings(result.warnings);
     } catch (err) {
-      console.error('Failed to fetch decision readiness:', err);
+      console.error('[DecisionIntelligence] Readiness fetch failed:', err);
     }
-  }, [uploadedData]);
-
-  useEffect(() => {
-    if (activeWorkflow === 'business') {
-      fetchDecisionReadiness();
-    }
-  }, [activeWorkflow, fetchDecisionReadiness, uploadedData, semanticModel]);
+  }, [getDecisionPayloadBase, getExplicitDecisionRows, resetDecisionStateToNoDataset]);
 
   const handleRunDecision = useCallback(async () => {
     try {
+      const datasetRows = getExplicitDecisionRows();
+      if (datasetRows.length === 0) {
+        resetDecisionStateToNoDataset();
+        return;
+      }
+
       const payload = {
-        dataset_ref: uploadedData?.semantic_model?.dataset?.id ? {
-          source: 'datahub',
-          dataset_id: uploadedData.semantic_model.dataset.id,
-        } : null,
+        ...getDecisionPayloadBase(),
         include_anomaly_detection: true,
         include_scenario_preview: true,
       };
-
       const result = await runDecisionPipeline(payload);
-      
-      // Update readiness even on partial/failed runs
-      if (result.readiness) {
-        setDecisionReadiness(result.readiness);
-      }
-      if (result.warnings) {
-        setDecisionWarnings(result.warnings);
-      }
-
+      if (result.readiness) setDecisionReadiness(result.readiness);
+      if (result.warnings) setDecisionWarnings(result.warnings);
       if (result.status === 'success') {
         setDecisionBundle(result.decision_bundle);
         setShowDecisionPanel(true);
         restoreWindow('decisionPanel');
       }
     } catch (err) {
-      console.error('Failed to run decision pipeline:', err);
-      // No blocking alert here, readiness state handles the UI
+      console.error('[DecisionIntelligence] Execution failed:', err);
     }
-  }, [uploadedData, restoreWindow]);
+  }, [getDecisionPayloadBase, getExplicitDecisionRows, resetDecisionStateToNoDataset, restoreWindow]);
+
+  useEffect(() => {
+    if (getExplicitDecisionRows().length === 0) {
+      resetDecisionStateToNoDataset();
+    }
+  }, [getExplicitDecisionRows, resetDecisionStateToNoDataset]);
 
   const handleDecisionAction = useCallback((action) => {
     if (action.action_type === 'break_down_metric') {
@@ -366,71 +394,88 @@ function AppContent() {
     }
   }, [addChart]);
 
+  const handleCreateDecisionWorkspace = useCallback(async (payload) => {
+    try {
+      const result = await createDecisionWorkspace(payload);
+      if (result.status === 'success') {
+        setDecisionWorkspace(result.decision_workspace);
+        setDecisionReadiness(result.decision_workspace.readiness);
+        if (result.warnings) setDecisionWarnings(result.warnings);
+      }
+    } catch (err) {
+      console.error('[DecisionIntelligence] Workspace creation failed:', err);
+    }
+  }, []);
+
+  const handleResetDecisionWorkspace = useCallback(() => {
+    setDecisionWorkspace(null);
+    setDecisionBundle(null);
+    fetchDecisionReadiness();
+  }, [fetchDecisionReadiness]);
+
+  /**
+   * 3. EFFECTS & SUBSCRIPTIONS
+   */
+  useLoadRawData(showRawViewer, rawUploadFile, setFullData);
+
+  useEffect(() => {
+    if (pipelineResults?.ai_report?.status === 'completed' || pipelineResults?.ai_report?.status === 'success') {
+      setAiReportReady(true);
+    }
+  }, [pipelineResults, setAiReportReady]);
+
+  useEffect(() => {
+    if (!cleanedData || !chartMapping['X-Axis'] || !chartMapping['Y-Axis']) return;
+    const transformed = transformToChartData(cleanedData, {
+      labelField: chartMapping['X-Axis'] || chartMapping.Category,
+      dataFields: [chartMapping['Y-Axis'] || chartMapping.Value],
+    });
+    if (transformed) setChartData(transformed);
+  }, [cleanedData, chartMapping]);
+
+  useEffect(() => {
+    if (activeWorkflow === 'business') {
+      fetchDecisionReadiness();
+    }
+  }, [activeWorkflow, fetchDecisionReadiness, uploadedData, semanticModel]);
+
+  // Drag and Drop Logic
   const handleFieldDrop = useCallback((axis, field) => {
     setChartMapping((prev) => {
       const updated = { ...prev };
-      if (axis === 'x') {
-        updated['X-Axis'] = field;
-      } else if (axis === 'y') {
-        updated['Y-Axis'] = field;
-      }
+      if (axis === 'x') updated['X-Axis'] = field;
+      else if (axis === 'y') updated['Y-Axis'] = field;
       return updated;
     });
   }, []);
 
   const handleDashboardToggle = useCallback(() => {
-    if (dashboardState.isVisible) {
-      closeDashboard();
-      return;
-    }
-    openDashboard();
+    if (dashboardState.isVisible) closeDashboard();
+    else openDashboard();
   }, [closeDashboard, dashboardState.isVisible, openDashboard]);
 
   const handleDragEnd = useCallback(({ active, over }) => {
-    console.log('Drag End:', { active, over });
-
-    if (!over) {
-      return;
-    }
-
+    if (!over) return;
     const activePayload = active.data?.current;
-    if (!activePayload) {
-      return;
-    }
+    if (!activePayload) return;
 
     if (activePayload.type === 'semantic-object') {
       const dashboardItemId = over.data?.current?.dashboardItemId;
       const dashboardRole = over.data?.current?.dashboardRole;
       const acceptedObjectKinds = over.data?.current?.acceptedObjectKinds;
 
-      if (
-        acceptedObjectKinds
-        && acceptedObjectKinds.length > 0
-        && activePayload.objectKind
-        && !acceptedObjectKinds.includes(activePayload.objectKind)
-      ) {
-        console.warn('Semantic object mismatch:', {
-          objectKind: activePayload.objectKind,
-          acceptedObjectKinds,
-        });
-        return;
-      }
+      if (acceptedObjectKinds && acceptedObjectKinds.length > 0 && activePayload.objectKind && !acceptedObjectKinds.includes(activePayload.objectKind)) return;
 
       if (dashboardItemId && dashboardRole === 'metric') {
         updateDashboardItem(dashboardItemId, {
-          semanticConfig: {
-            metricId: activePayload.semanticId || activePayload.metadata?.id || '',
-          },
+          semanticConfig: { metricId: activePayload.semanticId || activePayload.metadata?.id || '' },
         });
         return;
       }
 
       const targetChartId = over.data?.current?.targetChartId;
       const semanticRole = over.data?.current?.semanticRole;
-
-      if (!targetChartId || !semanticRole) {
-        return;
-      }
+      if (!targetChartId || !semanticRole) return;
 
       const chart = charts.find((entry) => entry.id === targetChartId);
       const dashboardChart = dashboardItems.find((entry) => entry.id === targetChartId && entry.itemType === 'chart');
@@ -441,44 +486,25 @@ function AppContent() {
         groupBy: chartSemanticConfig.groupBy || '',
       };
 
-      if (semanticRole === 'metric') {
-        nextSemanticConfig.metricId = activePayload.semanticId || activePayload.metadata?.id || '';
-      }
-
-      if (semanticRole === 'dimension') {
-        nextSemanticConfig.groupBy = activePayload.semanticId || activePayload.metadata?.id || '';
-      }
+      if (semanticRole === 'metric') nextSemanticConfig.metricId = activePayload.semanticId || activePayload.metadata?.id || '';
+      if (semanticRole === 'dimension') nextSemanticConfig.groupBy = activePayload.semanticId || activePayload.metadata?.id || '';
 
       if (dashboardChart) {
-        updateDashboardItem(targetChartId, {
-          dataSourceMode: 'semantic',
-          semanticConfig: nextSemanticConfig,
-        });
+        updateDashboardItem(targetChartId, { dataSourceMode: 'semantic', semanticConfig: nextSemanticConfig });
         return;
       }
-
       if (chart) {
-        updateChart(targetChartId, {
-          dataSourceMode: 'semantic',
-          semanticConfig: nextSemanticConfig,
-        });
+        updateChart(targetChartId, { dataSourceMode: 'semantic', semanticConfig: nextSemanticConfig });
       }
       return;
     }
 
-    if (activePayload.type !== 'field') {
-      console.warn('Invalid drop:', { over, type: activePayload.type });
-      return;
-    }
-
+    if (activePayload.type !== 'field') return;
     const fieldName = activePayload.field;
     const fieldType = activePayload.fieldType;
     const allowedTypes = over.data?.current?.allowedTypes;
 
-    if (allowedTypes && allowedTypes.length > 0 && fieldType && !allowedTypes.includes(fieldType)) {
-      console.warn('Type Mismatch:', { fieldType, allowedTypes });
-      return;
-    }
+    if (allowedTypes && allowedTypes.length > 0 && fieldType && !allowedTypes.includes(fieldType)) return;
 
     const targetChartId = over.data?.current?.targetChartId;
     const axisKey = over.data?.current?.axis;
@@ -490,19 +516,12 @@ function AppContent() {
 
       if (dashboardChart) {
         const newMapping = { ...(dashboardChart.mapping || {}), [axisLabel]: fieldName };
-        updateDashboardItem(targetChartId, {
-          dataSourceMode: 'raw',
-          mapping: newMapping,
-        });
+        updateDashboardItem(targetChartId, { dataSourceMode: 'raw', mapping: newMapping });
         return;
       }
-
       if (chart) {
         const newMapping = { ...chart.mapping, [axisLabel]: fieldName };
-        updateChart(targetChartId, {
-          dataSourceMode: 'raw',
-          mapping: newMapping,
-        });
+        updateChart(targetChartId, { dataSourceMode: 'raw', mapping: newMapping });
       }
       return;
     }
@@ -513,11 +532,13 @@ function AppContent() {
       if (id?.includes('x')) axis = 'x';
       else if (id?.includes('y')) axis = 'y';
     }
-
     if (axis === 'x') handleFieldDrop('x', fieldName);
     else if (axis === 'y') handleFieldDrop('y', fieldName);
   }, [charts, dashboardItems, handleFieldDrop, updateChart, updateDashboardItem]);
 
+  /**
+   * 4. FINAL RENDER
+   */
   return (
     <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
       <div className="app-container">
@@ -649,11 +670,16 @@ function AppContent() {
               showDecisionPanel={showDecisionPanel}
               setShowDecisionPanel={setShowDecisionPanel}
               decisionBundle={decisionBundle}
+              decisionWorkspace={decisionWorkspace}
+              onCreateDecisionWorkspace={handleCreateDecisionWorkspace}
+              getDecisionPayloadBase={getDecisionPayloadBase}
               onDecisionAction={handleDecisionAction}
               decisionReadiness={decisionReadiness}
               decisionWarnings={decisionWarnings}
               onOpenAiChat={handleOpenAiChat}
               onRunDecision={handleRunDecision}
+              onResetDecisionWorkspace={handleResetDecisionWorkspace}
+              onDestinationSelect={handleDestinationSelect}
               setShowDataVisual={setShowDataVisual}
               setIsDataPaneOpen={setIsDataPaneOpen}
             >
@@ -688,17 +714,14 @@ function App() {
   return (
     <ThemeProvider>
       <MuiThemeContext>
-        <WindowProvider>
-          <WarehouseProvider>
-            <HelpOverlayProvider>
-              <AppContent />
-            </HelpOverlayProvider>
-          </WarehouseProvider>
-        </WindowProvider>
+        <WarehouseProvider>
+          <HelpOverlayProvider>
+            <AppContent />
+          </HelpOverlayProvider>
+        </WarehouseProvider>
       </MuiThemeContext>
     </ThemeProvider>
   );
 }
 
 export default App;
-

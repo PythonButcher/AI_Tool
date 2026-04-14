@@ -4,12 +4,14 @@ from typing import Any, Dict, List
 
 from backend.services.decision_support import (
     build_dimension_profile,
+    build_period_context,
     build_dimension_ref,
     build_dimension_semantic_context,
     build_metric_semantic_context,
     build_metric_ref,
     build_semantic_summary,
     build_time_context,
+    describe_period_window,
     iso_timestamp,
     latest_metric_change,
     list_candidate_dimensions,
@@ -149,6 +151,7 @@ def _build_metric_delta_signals(context: Dict[str, Any], metrics: List[Dict[str,
         metric_ref = build_metric_ref(metric)
         metric_semantics = build_metric_semantic_context(context, metric)
         time_context = build_time_context(change, context.get("time_dimension"))
+        period_context = build_period_context(time_context)
         severity = _severity_from_metric_change(delta_pct, metric)
         magnitude = abs(delta_pct or 0.0)
         importance_score = _importance_from_components(
@@ -161,13 +164,13 @@ def _build_metric_delta_signals(context: Dict[str, Any], metrics: List[Dict[str,
         current_value = change["current_value"]
         previous_value = change["previous_value"]
         percentage_text = f"{abs((delta_pct or 0.0) * 100):.1f}%" if delta_pct is not None else "from a zero baseline"
-        time_phrase = f"{time_context.get('grain')} " if time_context and time_context.get("grain") and time_context.get("grain") != "observed_value" else ""
         metric_type = metric_semantics.get("metric_type") or "metric"
+        period_window = describe_period_window(period_context)
 
-        title = f"{metric_ref['label']} {'increased' if direction == 'up' else 'decreased'} in the latest {time_phrase}period".replace("  ", " ")
+        title = f"{metric_ref['label']} {'increased' if direction == 'up' else 'decreased'} {period_window}"
         summary = (
             f"{metric_ref['label']} moved from {previous_value} to {current_value} "
-            f"({percentage_text}) between the two latest observed time values. "
+            f"({percentage_text}) {period_window}. "
             f"This is treated as a {metric_type} metric with {metric_ref.get('default_aggregation') or 'resolved'} aggregation."
         )
 
@@ -361,7 +364,7 @@ def _build_anomaly_signal(context: Dict[str, Any]) -> List[Dict[str, Any]]:
         title=f"Detected {anomaly_count} anomalous rows",
         summary=(
             f"{anomaly_count} of {row_count} rows ({anomaly_rate:.1%}) look atypical across numeric fields, "
-            f"suggesting an operational shift or data inconsistency worth validating."
+            f"suggesting either an operational shift or data inconsistency worth validating."
         ),
         severity=severity,
         direction="mixed",

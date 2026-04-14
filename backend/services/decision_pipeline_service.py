@@ -6,6 +6,8 @@ from backend.services.decision_brief_service import build_decision_brief_artifac
 from backend.services.decision_signal_service import generate_decision_signals
 from backend.services.decision_support import (
     DecisionServiceError,
+    build_period_context,
+    build_projection_labels,
     build_semantic_summary,
     iso_timestamp,
     normalize_bool,
@@ -52,6 +54,7 @@ def _empty_scenario_preview(summary: str, generated_at: str, status: str = "not_
         "summary": summary,
         "based_on_recommendation_ids": [],
         "based_on_signal_ids": [],
+        "period_context": None,
         "suggested_inputs": {
             "name": "Decision pipeline preview",
             "filters": [],
@@ -79,6 +82,7 @@ def _empty_decision_bundle(
             "summary": brief_summary,
             "dataset": dataset_summary,
             "time_context": None,
+            "period_context": None,
             "headline_signal_ids": [],
             "key_metrics": [],
             "themes": [],
@@ -215,6 +219,7 @@ def _build_scenario_preview(
     recommendations: List[Dict[str, Any]],
     include_scenario_preview: bool,
     max_preview_targets: int,
+    period_context: Dict[str, Any] | None = None,
 ) -> tuple[Dict[str, Any], List[str]]:
     generated_at = iso_timestamp()
     filters = list(payload.get("filters") or [])
@@ -233,6 +238,7 @@ def _build_scenario_preview(
         ),
         "based_on_recommendation_ids": [],
         "based_on_signal_ids": [],
+        "period_context": period_context,
         "suggested_inputs": suggested_inputs,
         "projections": [],
         "assumptions": [],
@@ -290,6 +296,7 @@ def _build_scenario_preview(
     }
     scenario_response = evaluate_scenario(preview_payload)
     scenario = scenario_response.get("scenario") or {}
+    projection_labels = build_projection_labels(period_context)
 
     return (
         {
@@ -300,13 +307,16 @@ def _build_scenario_preview(
             ),
             "based_on_recommendation_ids": based_on_recommendation_ids,
             "based_on_signal_ids": based_on_signal_ids,
+            "period_context": period_context,
             "suggested_inputs": suggested_inputs,
             "projections": [
                 {
                     "metric_ref": projected_metric.get("metric_ref"),
                     "adjustment": projected_metric.get("adjustment"),
                     "baseline_value": projected_metric.get("baseline_value"),
+                    "baseline_label": projection_labels["baseline_label"],
                     "projected_value": projected_metric.get("projected_value"),
+                    "projected_label": projection_labels["projected_label"],
                     "delta_value": projected_metric.get("delta_value"),
                     "delta_pct": projected_metric.get("delta_pct"),
                     "comparison_summary": projected_metric.get("comparison_summary"),
@@ -422,6 +432,7 @@ def run_decision_pipeline(payload: Dict[str, Any]) -> Dict[str, Any]:
         signals=signals,
         generated_at=generated_at,
     )
+    period_context = build_period_context(brief_artifacts["brief"].get("time_context"))
     recommendation_artifacts = build_recommendation_artifacts(
         context=context,
         signals=signals,
@@ -438,6 +449,7 @@ def run_decision_pipeline(payload: Dict[str, Any]) -> Dict[str, Any]:
         recommendations=recommendation_artifacts["recommendations"],
         include_scenario_preview=include_scenario_preview,
         max_preview_targets=max_preview_targets,
+        period_context=period_context,
     )
 
     return {
