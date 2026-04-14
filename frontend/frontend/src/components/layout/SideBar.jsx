@@ -465,35 +465,76 @@ function SideBar({
       );
     }
 
+    /**
+     * DECISIONS DRAWER
+     * 
+     * Redesigned for Phase 4 to be a 'Requirement Checklist' surface.
+     * It explains the engine's logic and provides real-time feedback on readiness.
+     */
     if (activeDrawer === DESTINATIONS.DECISIONS) {
+      const missingRequirements = decisionReadiness?.missing_requirements || [];
+      const isReady = decisionReadiness?.decision_ready && missingRequirements.length === 0;
+
       return (
         <>
           <DrawerHeader
             eyebrow="Destination"
             title="Decisions"
-            description="Engagement with Decision Intelligence reports, signals, and recommendations."
+            description="Intelligent signals, automated recommendations, and outcome projections."
             onClose={() => setActiveDrawer(null)}
           />
 
           <div className="workflow-action-grid">
+            {/* 
+                Primary Action: Run Intelligence.
+                Disabled until prerequisites are met, with contextual help text.
+            */}
             <button
               type="button"
-              className="workflow-action-card workflow-action-card--primary"
+              className={`workflow-action-card ${isReady ? 'workflow-action-card--primary' : ''}`}
               onClick={onRunDecision}
-              disabled={!decisionReadiness?.decision_ready || decisionReadiness?.missing_requirements?.includes('metrics')}
+              disabled={!isReady}
             >
               <FaLightbulb />
               <span>Run Intelligence</span>
-              <small>{!decisionReadiness?.decision_ready ? 'Setup required.' : 'Analyze scenarios and signals.'}</small>
+              <small>{!isReady ? 'Satisfy requirements below.' : 'Evaluate scenarios and signals.'}</small>
             </button>
           </div>
 
-          <p className="workflow-drawer__copy" style={{ marginTop: '24px', fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
-            Business definitions and semantic metrics are available in the right-side <strong>Definitions</strong> pane for quick reference and management without cluttering the intelligence canvas.
+          <div className="workflow-drawer__guidance">
+            <h4 className="guidance-title">Status Checklist</h4>
+            <ul className="guidance-list">
+              {/* Dynamic checklist classes (is-ready / is-missing) provide visual reinforcement */}
+              <li className={missingRequirements.includes('dataset') ? 'is-missing' : 'is-ready'}>
+                <strong>Data Context:</strong> 
+                {missingRequirements.includes('dataset') ? 'Connect a source.' : 'Connected.'}
+              </li>
+              <li className={missingRequirements.includes('semantic_model') ? 'is-missing' : 'is-ready'}>
+                <strong>Semantic Logic:</strong> 
+                {missingRequirements.includes('semantic_model') ? 'Define field meanings.' : 'Model Active.'}
+              </li>
+              <li className={missingRequirements.includes('metrics') ? 'is-missing' : 'is-ready'}>
+                <strong>Business Goals:</strong> 
+                {missingRequirements.includes('metrics') ? 'Define KPI metrics.' : 'Metrics Ready.'}
+              </li>
+            </ul>
+            
+            <div className="workflow-drawer__info-box">
+              <h5 className="info-title">How it works</h5>
+              <p className="workflow-drawer__copy">
+                The engine evaluates recent anomalies against your defined metrics, 
+                detects cross-field trends, and ranks recommendations based on statistical importance.
+              </p>
+            </div>
+          </div>
+
+          <p className="workflow-drawer__copy" style={{ marginTop: '24px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+            Manage your metrics and field definitions in the right-side <strong>Definitions</strong> pane.
           </p>
         </>
       );
     }
+
 
     return null;
   };

@@ -69,11 +69,16 @@ function CanvasContainer({
   showDecisionPanel,
   setShowDecisionPanel,
   decisionBundle,
+  decisionWorkspace,
+  onCreateDecisionWorkspace,
+  getDecisionPayloadBase,
   onDecisionAction,
   decisionReadiness,
   decisionWarnings,
   onOpenAiChat,
   onRunDecision,
+  onResetDecisionWorkspace,
+  onDestinationSelect,
   setShowDataVisual,
   setIsDataPaneOpen,
 }) {
@@ -114,7 +119,13 @@ function CanvasContainer({
         restoreWindow('aiWorkflowLab');
         break;
       case 'run_intelligence':
+        if (activeDestination !== DESTINATIONS.DECISIONS) {
+          onDestinationSelect(DESTINATIONS.DECISIONS);
+        }
         onRunDecision();
+        break;
+      case 'go_to_decisions':
+        onDestinationSelect(DESTINATIONS.DECISIONS);
         break;
       case 'ai_chart':
         onOpenAiChat();
@@ -151,6 +162,8 @@ function CanvasContainer({
     setShowAiWorkflow, 
     restoreWindow, 
     onRunDecision, 
+    onDestinationSelect,
+    activeDestination,
     setShowDataPreview, 
     setShowDecisionPanel,
     addDashboardKpi,
@@ -773,6 +786,13 @@ function CanvasContainer({
         onActionClick={onDecisionAction}
         readiness={decisionReadiness}
         warnings={decisionWarnings}
+        onRunDecision={onRunDecision}
+        onOpenAiChat={onOpenAiChat}
+        setIsDataPaneOpen={setIsDataPaneOpen}
+        workspace={decisionWorkspace}
+        onCreateWorkspace={onCreateDecisionWorkspace}
+        onResetWorkspace={onResetDecisionWorkspace}
+        datasetContext={getDecisionPayloadBase ? getDecisionPayloadBase() : {}}
       />
     </WindowFrame>
   ) : null;
@@ -818,6 +838,7 @@ function CanvasContainer({
           <DestinationHome 
             activeDestination={activeDestination} 
             onAction={handleDestinationHomeAction} 
+            readiness={decisionReadiness}
           />
         )}
         
