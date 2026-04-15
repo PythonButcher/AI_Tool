@@ -11,6 +11,14 @@ Use it to understand:
 - where Gemini should resume frontend work next
 - where Codex should resume backend and contract work next
 
+## Codex Guardrail
+
+Before any Codex session touches frontend files for this initiative, read:
+
+- `ai_handoff/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md`
+
+That guardrail is mandatory unless the user explicitly authorizes Codex to make frontend changes in the current session.
+
 ## Current Status Snapshot
 
 ## Phase 0
@@ -128,6 +136,22 @@ Status:
 - High-fidelity "Decision Brief" rendering in Workspace View
 - Legacy broad-scan bleed is removed; diagnostic signals are additive and secondary
 - Phase 4 (V2) simulation/trade-off work is ready for architectural planning
+
+## Chat-First Decision Intelligence (Current Priority)
+
+Primary file:
+- `ai_handoff/phase_docs/decision_intelligence_chat_first_v2_execution_plan.md`
+
+Frontend handoff:
+- `ai_handoff/ui_overhaul/decision_intelligence_chat_shell_gemini_handoff_01.md`
+
+Status:
+- **PHASE 1 COMPLETE**: New AI destination shell implemented.
+- Core chat logic relocated from floating `AIChat.jsx` to dedicated `AIShell.jsx`.
+- Three-region layout established: Navigation Rail, Conversation Area, and Context/Artifact Pane.
+- Floating `AIChat` icon converted to a global navigation shortcut for the AI destination.
+- Preserved all existing AI capabilities: natural language charting, dataset mentions, and `/charts` / `/clean` commands.
+- Truth-aligned placeholders added for Skills, Recipes, Sources, and Decision Drafting.
 
 ## Phase 4 (Decision Intelligence 2.0)
 
