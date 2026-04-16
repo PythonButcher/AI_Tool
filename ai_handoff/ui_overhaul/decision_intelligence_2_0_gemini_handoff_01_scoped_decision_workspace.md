@@ -1,5 +1,15 @@
 # Decision Intelligence 2.0 Gemini Handoff 01
 
+## Status Notice
+
+This file remains useful as historical V2 implementation context.
+
+Decision Intelligence V2 is closed as-is.
+
+Any new continuation work should now be framed as **V3** work and resumed from:
+
+- `ai_handoff/ui_overhaul/decision_intelligence_v3_resume_handoff.md`
+
 ## Status
 
 This file is now the historical first-slice handoff for the scoped workspace build.

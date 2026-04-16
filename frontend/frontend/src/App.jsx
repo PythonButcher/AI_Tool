@@ -137,8 +137,11 @@ function AppContent() {
 
   // Navigation & Orchestration
   const handleOpenAiChat = useCallback(() => {
+    setActiveDestination(DESTINATIONS.AI);
+    setActiveWorkflow('ai');
+    closeDashboard();
     setAiChatOpenRequestKey((prev) => prev + 1);
-  }, []);
+  }, [closeDashboard]);
 
   const handleDestinationSelect = useCallback((destination) => {
     setActiveDestination(destination);
@@ -688,14 +691,6 @@ function AppContent() {
           )}
         </div>
 
-        <AIChat
-          setShowAIChart={setShowAIChart}
-          setAiChartType={setAiChartType}
-          setAiChartData={setAiChartData}
-          openRequestKey={aiChatOpenRequestKey}
-          topOffset={menuBarHeight}
-        />
-
         <DataPane
           activeDestination={activeDestination}
           cleanedData={cleanedData}
@@ -705,6 +700,11 @@ function AppContent() {
           onCreateSemanticKpi={handleCreateSemanticKpi}
           onAddDashboardFilter={handleAddSemanticFilter}
         />
+
+        {/* Global AI Shortcut Icon - Only visible when not in the dedicated AI Shell */}
+        {activeDestination !== DESTINATIONS.AI && (
+          <AIChat onOpenAiChat={handleOpenAiChat} />
+        )}
       </div>
     </DndContext>
   );

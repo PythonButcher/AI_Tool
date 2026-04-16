@@ -1,5 +1,17 @@
 # Decision Intelligence 2.0 Gemini Handoff 02
 
+## Status Notice
+
+This file is now a historical V2 planning handoff.
+
+Decision Intelligence V2 is closed as-is.
+
+Do not treat this blocked V2 simulation handoff as the active resume point.
+
+Any future simulation/trade-off continuation should now be framed as **V3** work and resumed from:
+
+- `ai_handoff/ui_overhaul/decision_intelligence_v3_resume_handoff.md`
+
 ## Status
 
 This handoff is currently **blocked**.

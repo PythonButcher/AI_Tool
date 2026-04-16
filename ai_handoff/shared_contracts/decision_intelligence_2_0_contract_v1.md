@@ -1,5 +1,13 @@
 # Decision Intelligence 2.0 Contract V1
 
+## Status Notice
+
+This contract remains important as historical V2 backend context.
+
+Decision Intelligence V2 is closed as-is.
+
+Use this file as a baseline reference, but treat any further completion or extension work as **V3** work.
+
 ## Purpose
 
 This file defines the first backend and product contract for Decision Intelligence 2.0.
