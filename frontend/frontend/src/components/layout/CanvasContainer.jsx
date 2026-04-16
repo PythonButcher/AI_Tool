@@ -4,6 +4,7 @@ import WindowFrame from './WindowFrame';
 import MinimizedDock from './MinimizedDock';
 import SmartChartWindow from '../../features/charts/SmartChartWindow';
 import AICharts from '../../features/ai/AICharts';
+import AIShell from '../../features/ai/AIShell';
 import AiAutopilot from '../../features/ai/AiAutopilot';
 import AiWorkflowLab from '../../features/workflow/AiWorkflowLab';
 import PreviewModeSelector from '../../features/viewing/PreviewModeSelector';
@@ -45,6 +46,8 @@ function CanvasContainer({
   chartData,
   aiChartData,
   aiChartType,
+  setAiChartData,
+  setAiChartType,
   showStoryPanel,
   setShowStoryPanel,
   showAIChart,
@@ -826,6 +829,8 @@ function CanvasContainer({
     showDecisionPanel,
   ]);
 
+  const shouldShowAIShell = isAiDest;
+
   return (
     <div className="canvas-dnd-wrapper" style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden' }}>
       <div
@@ -834,11 +839,19 @@ function CanvasContainer({
         style={{ width: '100%', height: '100%', position: 'relative' }}
       >
         {isDashboardDest && <DashboardFilterBar />}
-        {shouldShowHome && (
+        {shouldShowHome && !shouldShowAIShell && (
           <DestinationHome 
             activeDestination={activeDestination} 
             onAction={handleDestinationHomeAction} 
             readiness={decisionReadiness}
+          />
+        )}
+
+        {shouldShowAIShell && (
+          <AIShell 
+            setShowAIChart={setShowAIChart}
+            setAiChartType={setAiChartType}
+            setAiChartData={setAiChartData}
           />
         )}
         

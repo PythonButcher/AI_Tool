@@ -1,5 +1,15 @@
 # Decision Intelligence 2.0 Contract V2 (Simulation & Trade-offs)
 
+## Status Notice
+
+This file is now a historical V2 contract draft.
+
+Decision Intelligence V2 is closed as-is.
+
+Do not treat this contract as the active project label for unfinished simulation or trade-off work.
+
+Any future completion of this direction should now be framed as **V3** work, using this file only as reference context.
+
 ## Purpose
 
 This contract extends DI 2.0 to support simulation execution and trade-off analysis within a scoped decision workspace.
@@ -8,8 +18,9 @@ It moves the system from "Workspace Definition" to "Path Exploration".
 
 ## Status
 
-- **DRAFT** (For Codex Review)
-- **BLOCKED** until V1 scoped-workspace completion is genuinely closed
+- **HISTORICAL V2 DRAFT**
+- V2 is closed as-is
+- carry forward into V3 only if and when this direction is reopened
 - Extends `di_2_0_v1`
 - Introduces simulation results and trade-off objects
 
