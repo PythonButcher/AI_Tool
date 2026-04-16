@@ -19,6 +19,22 @@ Before any Codex session touches frontend files for this initiative, read:
 
 That guardrail is mandatory unless the user explicitly authorizes Codex to make frontend changes in the current session.
 
+## Critical Transition Notice
+
+Decision Intelligence V2 is now closed **as-is**.
+
+This is a project-label and handoff decision, not a claim that the feature vision is complete.
+
+From this point forward:
+
+- V2 should be treated as the frozen baseline
+- V3 is the active continuation path
+- Codex and Gemini should both resume remaining Decision Intelligence work under V3
+
+Primary V3 resume file:
+
+- `ai_handoff/ui_overhaul/decision_intelligence_v3_resume_handoff.md`
+
 ## Current Status Snapshot
 
 ## Phase 0
@@ -104,7 +120,7 @@ Status:
 - baseline implementation work appears in code
 - keep this file as a quality constraint reference, not as the active resume point
 
-## Decision Intelligence 2.0 (Current Priority)
+## Decision Intelligence 2.0 (Historical Baseline)
 
 Primary file:
 
@@ -114,14 +130,6 @@ Primary backend/product contract:
 
 - `ai_handoff/shared_contracts/decision_intelligence_2_0_contract_v1.md`
 
-Current Codex focus:
-
-- backend V1 follow-up only if frontend integration or contract bugs are discovered
-
-Current Gemini handoff:
-
-- `decision_intelligence_2_0_gemini_handoff_04_v1_frontend_contract_alignment.md`
-
 Role:
 
 - full overhaul of the decision-making architecture
@@ -130,14 +138,12 @@ Role:
 - preserve the broader app shell, theme, and non-relevant features while replacing the weak decision paradigm
 
 Status:
-- **POLISHED & STABLE** (Frontend layout rebuilt for product-grade UX)
-- Decision composer transformed from schema form to "Guided Brief" UX
-- Rebuilt compound-input patterns to eliminate layout overlap and improve responsive stacking
-- High-fidelity "Decision Brief" rendering in Workspace View
-- Legacy broad-scan bleed is removed; diagnostic signals are additive and secondary
-- Phase 4 (V2) simulation/trade-off work is ready for architectural planning
+- **CLOSED AS V2 BASELINE**
+- keep as historical implementation context
+- do not treat this label as the active continuation target
+- remaining work moves to V3
 
-## Chat-First Decision Intelligence (Current Priority)
+## Chat-First Decision Intelligence (Historical V2 Record)
 
 Primary file:
 - `ai_handoff/phase_docs/decision_intelligence_chat_first_v2_execution_plan.md`
@@ -152,8 +158,9 @@ Status:
 - Floating `AIChat` icon converted to a global navigation shortcut for the AI destination.
 - Preserved all existing AI capabilities: natural language charting, dataset mentions, and `/charts` / `/clean` commands.
 - Truth-aligned placeholders added for Skills, Recipes, Sources, and Decision Drafting.
+- Treat this as V2 recordkeeping only; further completion/polish belongs to V3.
 
-## Phase 4 (Decision Intelligence 2.0)
+## Phase 4 (Decision Intelligence 2.0 Historical Record)
 
 Primary file:
 
@@ -161,36 +168,29 @@ Primary file:
 
 Contracts:
 
-- `ai_handoff/shared_contracts/decision_intelligence_2_0_contract_v1.md` (active)
-- `ai_handoff/shared_contracts/decision_intelligence_2_0_contract_v2.md` (draft)
+- `ai_handoff/shared_contracts/decision_intelligence_2_0_contract_v1.md` (historical baseline)
+- `ai_handoff/shared_contracts/decision_intelligence_2_0_contract_v2.md` (historical draft)
 
 Frontend handoffs:
 
 - `decision_intelligence_2_0_gemini_handoff_01_scoped_decision_workspace.md` (historical)
-- `decision_intelligence_2_0_gemini_handoff_02_simulation_and_tradeoffs.md` (unblocked for planning)
-- `decision_intelligence_2_0_gemini_handoff_04_v1_frontend_contract_alignment.md` (POLISHED)
+- `decision_intelligence_2_0_gemini_handoff_02_simulation_and_tradeoffs.md` (historical blocked planning handoff)
+- `decision_intelligence_2_0_gemini_handoff_04_v1_frontend_contract_alignment.md` (historical V2 completion handoff)
 
 Status:
-
-- **POLISHED: V1 decision surface is visually stable and product-grade**
-- Layout regressions from initial contract alignment are resolved
-- Composer uses guided patterns rather than raw schema fields
-- View emphasizes strategic objective and levers as a cohesive brief
-- Readiness architecture is explicitly rendered to guide user input
+- **CLOSED AS-IS UNDER V2**
+- useful baseline, not final completion state
+- any remaining UI/product/backend follow-up continues under V3
 
 
 Active Codex work:
 
-- monitor and support frontend integration if contract bugs are discovered
-- maintain the handoff and contract docs as the source of truth
-- keep legacy decision-bundle behavior additive rather than primary
+- none under the V2 label beyond historical maintenance
+- new work should be framed as V3 work
 
 Frontend follow-up after Codex:
 
-- consume the corrected backend contract behavior
-- finish the remaining V1 request-shape and rendering gaps
-- remove legacy bundle bleed from the primary DI 2.0 flow
-- keep reset and create-new-workspace paths clean and trustworthy
+- move to V3 planning and execution instead of continuing V2 completion language
 
 ## What Is Actually Implemented Today
 
@@ -216,32 +216,27 @@ The backend already has:
 
 ## Resume Point For Gemini
 
-Gemini should **not** resume from V2 yet.
+Gemini should not resume under the V2 label.
 
-Gemini should resume now from:
+Gemini should resume from:
 
-- `ai_handoff/ui_overhaul/decision_intelligence_2_0_gemini_handoff_04_v1_frontend_contract_alignment.md`
+- `ai_handoff/ui_overhaul/decision_intelligence_v3_resume_handoff.md`
 
-Priority work for that Gemini session:
-
-- finish the remaining V1 frontend request fields that matter for honest workspace resolution
-- render the remaining V1 scoped-context fields
-- remove legacy broad-scan bleed from the primary DI 2.0 path
-- align the UI behavior with the corrected backend `ready` / `needs_input` / `limited` semantics
+Use the older V2 Gemini files only as historical implementation references.
 
 ## Resume Point For Next Codex Branch
 
 When starting the next branch or fresh Codex session, begin from:
 
-- `ai_handoff/shared_contracts/decision_intelligence_2_0_contract_v1.md`
-- `backend/services/decision_workspace_service.py`
-- `ai_handoff/ui_overhaul/decision_intelligence_2_0_overhaul.md`
+- `ai_handoff/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md`
+- `ai_handoff/ui_overhaul/ui_overhaul_execution_status.md`
+- `ai_handoff/ui_overhaul/decision_intelligence_v3_resume_handoff.md`
 
 Then use:
 
-- `decision_intelligence_2_0_gemini_handoff_04_v1_frontend_contract_alignment.md`
+- the relevant V2 historical contract/handoff files only as supporting context
 
-Treat those files as the active execution set for supporting Gemini’s frontend completion pass and for policing any backend regressions before V2 work begins.
+Treat those files as the active execution set for beginning V3 from the frozen V2 baseline.
 
 ## Guidance For Codex
 

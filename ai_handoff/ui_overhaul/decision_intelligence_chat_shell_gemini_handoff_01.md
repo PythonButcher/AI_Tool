@@ -1,5 +1,17 @@
 # Decision Intelligence Chat Shell Gemini Handoff 01
 
+## Status Notice
+
+This file remains useful as a historical V2 implementation handoff.
+
+Decision Intelligence V2 is now closed as-is.
+
+Gemini should not treat this file as the active project label for unfinished work.
+
+Any remaining shell cleanup, UI straightening, truth-alignment tightening, or product completion should now be framed as **V3** work and resumed from:
+
+- `ai_handoff/ui_overhaul/decision_intelligence_v3_resume_handoff.md`
+
 ## Goal
 
 Build the first version of the new AI destination shell.

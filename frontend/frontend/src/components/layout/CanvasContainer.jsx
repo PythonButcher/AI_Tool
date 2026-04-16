@@ -829,7 +829,7 @@ function CanvasContainer({
     showDecisionPanel,
   ]);
 
-  const shouldShowAIShell = isAiDest && !showAiWorkflow && !showAIChart && !showStoryPanel && !showWhiteBoard && outputWindows.length === 0;
+  const shouldShowAIShell = isAiDest;
 
   return (
     <div className="canvas-dnd-wrapper" style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden' }}>

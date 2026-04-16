@@ -181,7 +181,8 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
       setIsMentionOpen(true);
       const textBefore = newValue.substring(0, newCursorPos);
       setMentionStartIndex(textBefore.lastIndexOf('@'));
-      setMentionPosition({ bottom: 85, left: 15 });
+      // Fixed: MentionDropdown expects 'top' coordinate for absolute positioning above the bar
+      setMentionPosition({ top: -180, left: 15 });
     } else {
       setIsMentionOpen(false);
       setMentionStartIndex(-1);
@@ -285,13 +286,25 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
           setCleanedData(result);
           await refreshSemanticModelFromDataset(result, { source: 'ai_shell_clean', preserveUserMetrics: true });
           responseText = "Dataset optimized and semantic model refreshed.";
+          setAwaitingCleanInstructions(false);
         } else {
           responseText = "Unable to process cleaning instructions.";
         }
       } else {
-        responseText = result || "No optimization suggestions available.";
+        responseText = result || "No optimization suggestions available. Please provide specific cleaning instructions.";
         setAwaitingCleanInstructions(true);
       }
+    } else if (awaitingCleanInstructions) {
+      // Restore follow-up logic: treat non-command message as instructions
+      const result = await handleUserCommand("/clean", datasetContext, userInput);
+      if (result && Array.isArray(result)) {
+        setCleanedData(result);
+        await refreshSemanticModelFromDataset(result, { source: 'ai_shell_clean_followup', preserveUserMetrics: true });
+        responseText = "Dataset optimized based on your instructions.";
+      } else {
+        responseText = typeof result === 'string' ? result : "Unable to process optimization.";
+      }
+      setAwaitingCleanInstructions(false);
     } else if (AICommands.isCommand(userInput)) {
       responseText = await handleUserCommand(userInput.split(" ")[0], datasetContext);
     } else {
@@ -479,14 +492,14 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
           <div className="ai-shell__ghost-item">
             <div className="ai-shell__ghost-label"><FaLightbulb /> Decision Bridge</div>
             <div className="ai-shell__ghost-draft">
-              <Typography variant="subtitle2">Draft Pending</Typography>
-              <Typography variant="caption">Framing will activate when intent is detected.</Typography>
+              <Typography variant="subtitle2">Workspace Bridge</Typography>
+              <Typography variant="caption">Reserved for structured decision framing.</Typography>
             </div>
           </div>
         </div>
 
         <div className="ai-shell__pane-footer">
-          <Typography variant="caption">Phase 4 Ready • Simulation Locked</Typography>
+          <Typography variant="caption">Reserved for V2 Simulation & Trade-offs</Typography>
         </div>
       </aside>
     </div>

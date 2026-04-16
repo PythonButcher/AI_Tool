@@ -1,5 +1,17 @@
 # Decision Intelligence Chat-First V2 Execution Plan
 
+## Status Notice
+
+This file is now a **historical V2 planning record**.
+
+Decision Intelligence V2 is closed as-is.
+
+Any remaining completion, polish, straightening, or expansion work should now be framed as **V3** work.
+
+For active resume guidance, read:
+
+- `ai_handoff/ui_overhaul/decision_intelligence_v3_resume_handoff.md`
+
 ## Objective
 
 Shift the product toward a chat-first Decision Intelligence experience without breaking the current AI chat behavior or pretending V2 decision math already exists.

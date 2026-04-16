@@ -1,5 +1,17 @@
 # Decision Intelligence 2.0 Gemini Handoff 04
 
+## Status Notice
+
+This file is now a historical V2 Gemini handoff.
+
+Decision Intelligence V2 is closed as-is.
+
+Do not resume work from this file as an active V2 completion target.
+
+Any remaining UI cleanup or completion should now be framed as **V3** work and resumed from:
+
+- `ai_handoff/ui_overhaul/decision_intelligence_v3_resume_handoff.md`
+
 ## 1. Goal
 
 Finish the remaining frontend work needed to make the first scoped Decision Intelligence 2.0 workspace honestly V1-complete now that Codex has landed the backend contract correction pass.

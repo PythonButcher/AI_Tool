@@ -16,7 +16,8 @@ Before changing anything under `frontend/frontend/src/`:
 
 1. re-read this file
 2. re-read `ai_handoff/ui_overhaul/ui_overhaul_execution_status.md`
-3. confirm the user explicitly asked Codex to make frontend changes in the current session
+3. re-read `ai_handoff/ui_overhaul/decision_intelligence_v3_resume_handoff.md` if the task touches Decision Intelligence
+4. confirm the user explicitly asked Codex to make frontend changes in the current session
 
 If that explicit permission is missing:
 

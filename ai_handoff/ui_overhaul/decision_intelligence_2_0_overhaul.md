@@ -1,5 +1,17 @@
 # Decision Intelligence 2.0 Overhaul
 
+## Status Notice
+
+Decision Intelligence V2 is closed as-is and should now be treated as a historical baseline.
+
+This file still matters for product direction and constraints, but it is no longer the active completion label.
+
+All unfinished continuation work should now move forward as **V3** work.
+
+Active resume file:
+
+- `ai_handoff/ui_overhaul/decision_intelligence_v3_resume_handoff.md`
+
 ## Purpose
 
 This file replaces the older Phase 4 decision redesign and scoped-decision planning docs.

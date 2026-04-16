@@ -1,5 +1,17 @@
 # Decision Intelligence Chat-First Consultant Handoff
 
+## Status Notice
+
+This file is historical strategy context from the V2 era.
+
+Decision Intelligence V2 is now closed as-is.
+
+Use this file for background only.
+
+Any remaining execution should now be framed under **V3** and resumed from:
+
+- `ai_handoff/ui_overhaul/decision_intelligence_v3_resume_handoff.md`
+
 ## Goal
 
 We want to refine the DI roadmap without throwing away the earlier architecture work.
