@@ -196,6 +196,11 @@ Frontend follow-up after Codex:
 
 The live frontend already has:
 
+- **Sidebar Consolidation and Ribbon Rebalance (IMPLEMENTED)**: 
+    - Consistently narrow 72px left navigation rail (SideBar.jsx).
+    - Context-aware top command ribbon (MenuBar.jsx) hosting all destination-specific actions.
+    - Large destination-specific left drawers removed to reclaim horizontal space.
+    - Decisions checklist and guidance moved into the Decision Intelligence workspace.
 - destination-based app state in `App.jsx`
 - left-rail destination navigation in `SideBar.jsx`
 - context/setup menu bar in `MenuBar.jsx`
