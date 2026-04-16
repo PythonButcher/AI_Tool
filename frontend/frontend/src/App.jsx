@@ -19,6 +19,7 @@ import './App.css';
 import { MuiThemeContext } from './context/MuiThemeContext';
 import { useWindowContext } from './context/WindowContext';
 import { runDecisionPipeline, createDecisionWorkspace } from './features/business/decision/decisionApi';
+import GlobalDragOverlay from './components/layout/GlobalDragOverlay';
 
 const parseRecords = (source) => {
   if (!source) return [];
@@ -468,6 +469,7 @@ function AppContent() {
 
   return (
     <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+      <GlobalDragOverlay />
       <div className="app-container">
         {theme === 'dark' && isSnowing && <Snowfall style={{ zIndex: 1000, pointerEvents: 'none' }} />}
         <SideBar
