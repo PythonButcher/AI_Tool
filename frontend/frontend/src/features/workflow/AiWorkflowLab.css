@@ -16,6 +16,19 @@
   --wf-radius-lg: 12px;
 }
 
+[data-theme='dark'] {
+  --wf-bg-main: var(--bg-primary);
+  --wf-bg-sidebar: var(--bg-secondary);
+  --wf-bg-card: var(--bg-primary-soft);
+  --wf-border-color: var(--border-color);
+  --wf-text-primary: var(--text-primary);
+  --wf-text-secondary: var(--text-secondary);
+  --wf-accent-primary: var(--accent-blue);
+  --wf-accent-primary-hover: var(--accent-blue-strong);
+  --wf-accent-success: var(--accent-green);
+  --wf-accent-danger: var(--accent-red);
+}
+
 .ai-workflow-lab-container {
   display: flex;
   flex-direction: column;
@@ -75,12 +88,12 @@
 }
 
 .wf-name-input:hover {
-  background: #f1f5f9;
+  background: var(--wf-bg-main);
 }
 
 .wf-name-input:focus {
   outline: none;
-  background: #ffffff;
+  background: var(--wf-bg-sidebar);
   border-color: var(--wf-accent-primary);
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
@@ -158,7 +171,7 @@
 .wf-canvas-area {
   flex: 1;
   position: relative;
-  background-color: #f1f5f9;
+  background-color: var(--wf-bg-main);
 }
 
 /* Form Elements */
@@ -181,7 +194,7 @@
   border: 1px solid var(--wf-border-color);
   border-radius: var(--wf-radius-md);
   font-size: 14px;
-  background: #ffffff;
+  background: var(--wf-bg-sidebar);
   color: var(--wf-text-primary);
   transition: border-color 0.2s, box-shadow 0.2s;
 }
@@ -209,7 +222,7 @@
   cursor: pointer;
   transition: all 0.2s;
   border: 1px solid var(--wf-border-color);
-  background: #ffffff;
+  background: var(--wf-bg-sidebar);
   color: var(--wf-text-primary);
 }
 
@@ -235,7 +248,7 @@
 }
 
 .wf-btn.subtle:hover {
-  background: #f1f5f9;
+  background: var(--wf-bg-main);
   color: var(--wf-text-primary);
 }
 
@@ -266,7 +279,7 @@
   padding: 12px;
   border: 1px solid var(--wf-border-color);
   border-radius: var(--wf-radius-md);
-  background: #ffffff;
+  background: var(--wf-bg-sidebar);
   cursor: pointer;
   transition: all 0.2s;
   text-align: left;
@@ -343,7 +356,7 @@
   counter-increment: wf-exec-counter;
   width: 20px;
   height: 20px;
-  background: #f1f5f9;
+  background: var(--wf-bg-main);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -364,7 +377,7 @@
 }
 
 .help-overlay-content {
-  background: #ffffff;
+  background: var(--wf-bg-sidebar);
   border-radius: var(--wf-radius-lg);
   box-shadow: var(--wf-shadow-lg);
   padding: 32px;
@@ -373,7 +386,7 @@
 
 /* ReactFlow Overrides */
 .react-flow__background {
-  background-color: #f8fafc;
+  background-color: var(--wf-bg-main);
 }
 
 .react-flow__controls {
@@ -384,10 +397,10 @@
 }
 
 .react-flow__controls-button {
-  background: #ffffff;
+  background: var(--wf-bg-sidebar);
   border-bottom: 1px solid var(--wf-border-color);
 }
 
 .react-flow__controls-button:hover {
-  background: #f1f5f9;
+  background: var(--wf-bg-main);
 }

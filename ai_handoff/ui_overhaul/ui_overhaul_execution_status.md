@@ -183,6 +183,8 @@ Status:
 - any remaining UI/product/backend follow-up continues under V3
 
 
+## Decision Intelligence V3 (Active Continuation)
+
 Active Codex work:
 
 - none under the V2 label beyond historical maintenance
@@ -190,6 +192,11 @@ Active Codex work:
 
 Frontend follow-up after Codex:
 
+- **Theme Polish & Refinement (COMPLETE)**:
+    - Updated dark theme with a pure black workspace middle (`#000000`) for maximum contrast.
+    - Established consistent bluish-grey sidebars and menu bars using Slate 900 (`#0f172a`).
+    - Boosted vibrancy of accent colors (Blue/Green) and added soft color variations for better component depth.
+    - Standardized global CSS variables across Sidebar, MenuBar, DataPane, and AI Workflow Lab.
 - move to V3 planning and execution instead of continuing V2 completion language
 
 ## What Is Actually Implemented Today
