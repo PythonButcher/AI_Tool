@@ -19,8 +19,7 @@ import './App.css';
 import { MuiThemeContext } from './context/MuiThemeContext';
 import { useWindowContext } from './context/WindowContext';
 import { runDecisionPipeline, createDecisionWorkspace } from './features/business/decision/decisionApi';
-
-// ... (keep the rest of imports)
+import GlobalDragOverlay from './components/layout/GlobalDragOverlay';
 
 const parseRecords = (source) => {
   if (!source) return [];
@@ -52,10 +51,6 @@ const EMPTY_DECISION_READINESS = {
 };
 
 function AppContent() {
-  /**
-   * 1. CONTEXT & STATE INITIALIZATION
-   * All state and context hooks MUST be at the top level of the component.
-   */
   const {
     uploadedData, setUploadedData,
     fullData, setFullData,
@@ -80,6 +75,7 @@ function AppContent() {
     restoreWindow,
     addChart,
     addDashboardKpi,
+    addDashboardChart,
     setDashboardFilters,
   } = useWindowContext();
 
@@ -92,10 +88,9 @@ function AppContent() {
   const [chartData, setChartData] = useState(null);
   const [chartMapping, setChartMapping] = useState({});
   const [isSnowing, setIsSnowing] = useState(false);
-  const [activeRibbonTab, setActiveRibbonTab] = useState('Home');
   const [aiChatOpenRequestKey, setAiChatOpenRequestKey] = useState(0);
   const [menuBarHeight, setMenuBarHeight] = useState(64);
-  const [isDataPaneOpen, setIsDataPaneOpen] = useState(true);
+  const [isDataPaneOpen, setIsDataPaneOpen] = useState(false);
 
   // Feature Windows & Visibility State
   const [showWhiteBoard, setShowWhiteBoard] = useState(null);
@@ -116,6 +111,10 @@ function AppContent() {
   const [rawUploadFile, setRawUploadFile] = useState(null);
   const [showMachineLearning, setShowMachineLearning] = useState(false);
   const [outputWindows, setOutputWindows] = useState([]);
+  
+  // Panel states moved from Sidebar
+  const [showCleaningForm, setShowCleaningForm] = useState(false);
+  const [showExportPanel, setShowExportPanel] = useState(false);
 
   // AI & Decision Intelligence State
   const [aiChartData, setAiChartData] = useState(null);
@@ -130,12 +129,6 @@ function AppContent() {
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
   );
 
-  /**
-   * 2. HANDLERS (useCallback)
-   * These MUST be defined before they are used in any useEffect or passed to children.
-   */
-
-  // Navigation & Orchestration
   const handleOpenAiChat = useCallback(() => {
     setActiveDestination(DESTINATIONS.AI);
     setActiveWorkflow('ai');
@@ -143,21 +136,20 @@ function AppContent() {
     setAiChatOpenRequestKey((prev) => prev + 1);
   }, [closeDashboard]);
 
+  const handleStatsSelect = useCallback((statType) => setSelectedStat(statType), []);
+
   const handleDestinationSelect = useCallback((destination) => {
     setActiveDestination(destination);
     
     if (destination === DESTINATIONS.EXPLORE) {
-      setIsDataPaneOpen(true);
       setActiveWorkflow('explore');
       closeDashboard();
     } else if (destination === DESTINATIONS.DASHBOARDS) {
       setActiveWorkflow('dashboard');
       openDashboard();
-      setIsDataPaneOpen(true);
     } else if (destination === DESTINATIONS.DECISIONS) {
       setActiveWorkflow('business');
       closeDashboard();
-      setIsDataPaneOpen(true);
       setShowDecisionPanel(true);
       restoreWindow('decisionPanel');
     } else if (destination === DESTINATIONS.AI) {
@@ -169,36 +161,6 @@ function AppContent() {
       closeDashboard();
     }
   }, [openDashboard, closeDashboard, handleOpenAiChat, restoreWindow]);
-
-  const handleRibbonTabChange = useCallback((tab) => {
-    const tabToDest = {
-      'Home': DESTINATIONS.WORKSPACE,
-      'Visualise': DESTINATIONS.EXPLORE,
-      'Explore': DESTINATIONS.EXPLORE,
-      'Dashboard': DESTINATIONS.DASHBOARDS,
-      'Business': DESTINATIONS.DECISIONS,
-      'AI': DESTINATIONS.AI,
-    };
-    if (tabToDest[tab]) {
-      handleDestinationSelect(tabToDest[tab]);
-    }
-  }, [handleDestinationSelect]);
-
-  const handleWorkflowSelect = useCallback((workflow) => {
-    const workflowToDest = {
-      'data': DESTINATIONS.WORKSPACE,
-      'explore': DESTINATIONS.EXPLORE,
-      'visualise': DESTINATIONS.EXPLORE,
-      'dashboard': DESTINATIONS.DASHBOARDS,
-      'business': DESTINATIONS.DECISIONS,
-    };
-    if (workflowToDest[workflow]) {
-      handleDestinationSelect(workflowToDest[workflow]);
-    }
-  }, [handleDestinationSelect]);
-
-  // Data Lifecycle
-  const handleStatsSelect = useCallback((statType) => setSelectedStat(statType), []);
 
   const handleDataCleaned = useCallback((newData) => {
     if (!newData || newData.length === 0) {
@@ -236,7 +198,6 @@ function AppContent() {
   const handleApiData = (data) => handleFileUpload(data);
   const handleDatabaseData = (data) => handleFileUpload(data);
 
-  // UI Component Handlers
   const handleClosePreview = useCallback(() => setShowDataPreview(false), []);
   const handleCloseRawViewer = useCallback(() => setShowRawViewer(false), []);
   const handleCloseCanvas = useCallback(() => setShowCanvasContainer(false), []);
@@ -255,28 +216,18 @@ function AppContent() {
     setShowDataVisual(false);
   }, []);
   const handleCloseChartWindow = useCallback(() => setShowChartWindow(false), []);
-  const handleStoryModelChange = (newModel) => setStoryModel(newModel);
 
-  // Semantic Object Handlers
   const handleCreateSemanticChart = useCallback((semanticOverrides = {}) => {
     addChart({
       type: 'Bar',
       dataSourceMode: 'semantic',
-      semanticConfig: {
-        metricId: '',
-        groupBy: '',
-        ...semanticOverrides,
-      },
+      semanticConfig: { metricId: '', groupBy: '', ...semanticOverrides },
     });
   }, [addChart]);
 
   const handleCreateSemanticKpi = useCallback((semanticOverrides = {}) => {
     addDashboardKpi({
-      semanticConfig: {
-        metricId: '',
-        groupBy: '',
-        ...semanticOverrides,
-      },
+      semanticConfig: { metricId: '', groupBy: '', ...semanticOverrides },
     });
     if (activeWorkflow !== 'dashboard') {
       setActiveWorkflow('dashboard');
@@ -301,14 +252,11 @@ function AppContent() {
     }
   }, [activeWorkflow, openDashboard, setDashboardFilters]);
 
-  // Decision Intelligence Actions
   const getExplicitDecisionRows = useCallback(() => {
     const cleanedRows = normalizeDatasetRows(cleanedData);
     if (cleanedRows.length > 0) return cleanedRows;
-
     const fullRows = normalizeDatasetRows(fullData);
     if (fullRows.length > 0) return fullRows;
-
     return normalizeDatasetRows(uploadedData);
   }, [cleanedData, fullData, uploadedData]);
 
@@ -341,7 +289,6 @@ function AppContent() {
         resetDecisionStateToNoDataset();
         return;
       }
-
       const payload = getDecisionPayloadBase();
       const result = await runDecisionPipeline(payload);
       if (result.readiness) setDecisionReadiness(result.readiness);
@@ -358,7 +305,6 @@ function AppContent() {
         resetDecisionStateToNoDataset();
         return;
       }
-
       const payload = {
         ...getDecisionPayloadBase(),
         include_anomaly_detection: true,
@@ -416,9 +362,6 @@ function AppContent() {
     fetchDecisionReadiness();
   }, [fetchDecisionReadiness]);
 
-  /**
-   * 3. EFFECTS & SUBSCRIPTIONS
-   */
   useLoadRawData(showRawViewer, rawUploadFile, setFullData);
 
   useEffect(() => {
@@ -442,7 +385,6 @@ function AppContent() {
     }
   }, [activeWorkflow, fetchDecisionReadiness, uploadedData, semanticModel]);
 
-  // Drag and Drop Logic
   const handleFieldDrop = useCallback((axis, field) => {
     setChartMapping((prev) => {
       const updated = { ...prev };
@@ -461,37 +403,29 @@ function AppContent() {
     if (!over) return;
     const activePayload = active.data?.current;
     if (!activePayload) return;
-
     if (activePayload.type === 'semantic-object') {
       const dashboardItemId = over.data?.current?.dashboardItemId;
       const dashboardRole = over.data?.current?.dashboardRole;
       const acceptedObjectKinds = over.data?.current?.acceptedObjectKinds;
-
       if (acceptedObjectKinds && acceptedObjectKinds.length > 0 && activePayload.objectKind && !acceptedObjectKinds.includes(activePayload.objectKind)) return;
-
       if (dashboardItemId && dashboardRole === 'metric') {
         updateDashboardItem(dashboardItemId, {
           semanticConfig: { metricId: activePayload.semanticId || activePayload.metadata?.id || '' },
         });
         return;
       }
-
       const targetChartId = over.data?.current?.targetChartId;
       const semanticRole = over.data?.current?.semanticRole;
       if (!targetChartId || !semanticRole) return;
-
       const chart = charts.find((entry) => entry.id === targetChartId);
       const dashboardChart = dashboardItems.find((entry) => entry.id === targetChartId && entry.itemType === 'chart');
       const chartSemanticConfig = chart?.semanticConfig || dashboardChart?.semanticConfig || {};
-
       const nextSemanticConfig = {
         metricId: chartSemanticConfig.metricId || '',
         groupBy: chartSemanticConfig.groupBy || '',
       };
-
       if (semanticRole === 'metric') nextSemanticConfig.metricId = activePayload.semanticId || activePayload.metadata?.id || '';
       if (semanticRole === 'dimension') nextSemanticConfig.groupBy = activePayload.semanticId || activePayload.metadata?.id || '';
-
       if (dashboardChart) {
         updateDashboardItem(targetChartId, { dataSourceMode: 'semantic', semanticConfig: nextSemanticConfig });
         return;
@@ -501,22 +435,17 @@ function AppContent() {
       }
       return;
     }
-
     if (activePayload.type !== 'field') return;
     const fieldName = activePayload.field;
     const fieldType = activePayload.fieldType;
     const allowedTypes = over.data?.current?.allowedTypes;
-
     if (allowedTypes && allowedTypes.length > 0 && fieldType && !allowedTypes.includes(fieldType)) return;
-
     const targetChartId = over.data?.current?.targetChartId;
     const axisKey = over.data?.current?.axis;
-
     if (targetChartId && axisKey) {
       const chart = charts.find((item) => item.id === targetChartId);
       const dashboardChart = dashboardItems.find((item) => item.id === targetChartId && item.itemType === 'chart');
       const axisLabel = axisKey === 'x' ? 'X-Axis' : 'Y-Axis';
-
       if (dashboardChart) {
         const newMapping = { ...(dashboardChart.mapping || {}), [axisLabel]: fieldName };
         updateDashboardItem(targetChartId, { dataSourceMode: 'raw', mapping: newMapping });
@@ -528,7 +457,6 @@ function AppContent() {
       }
       return;
     }
-
     let axis = over.data?.current?.axis;
     if (!axis) {
       const id = over.id?.toString().toLowerCase();
@@ -539,38 +467,14 @@ function AppContent() {
     else if (axis === 'y') handleFieldDrop('y', fieldName);
   }, [charts, dashboardItems, handleFieldDrop, updateChart, updateDashboardItem]);
 
-  /**
-   * 4. FINAL RENDER
-   */
   return (
     <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+      <GlobalDragOverlay />
       <div className="app-container">
         {theme === 'dark' && isSnowing && <Snowfall style={{ zIndex: 1000, pointerEvents: 'none' }} />}
         <SideBar
           activeDestination={activeDestination}
           onDestinationSelect={handleDestinationSelect}
-          onDataCleaned={handleDataCleaned}
-          uploadedData={uploadedData}
-          cleanedData={cleanedData}
-          showAiWorkflow={showAiWorkflow}
-          setShowAiWorkflow={setShowAiWorkflow}
-          setShowDataPreview={setShowDataPreview}
-          setShowRawViewer={setShowRawViewer}
-          setOpenDataFilter={setOpenDataFilter}
-          onDashboardToggle={handleDashboardToggle}
-          isDashboardVisible={dashboardState.isVisible}
-          aiReportReady={aiReportReady}
-          onAiReportClick={handleAiReportOpen}
-          onOpenAiChat={handleOpenAiChat}
-          setStoryData={setStoryData}
-          setShowStoryPanel={setShowStoryPanel}
-          showWhiteBoard={showWhiteBoard}
-          setShowWhiteBoard={setShowWhiteBoard}
-          setShowDataVisual={setShowDataVisual}
-          onStoryModelChange={handleStoryModelChange}
-          setShowMachineLearning={setShowMachineLearning}
-          onRunDecision={handleRunDecision}
-          decisionReadiness={decisionReadiness}
         />
 
         <div className="main-content">
@@ -579,7 +483,6 @@ function AppContent() {
             onDestinationSelect={handleDestinationSelect}
             onFileUploadSuccess={handleFileUpload}
             onStatsSelect={handleStatsSelect}
-            showDataPreview={showDataPreview}
             setShowDataPreview={setShowDataPreview}
             setShowRawViewer={setShowRawViewer}
             handleApiData={handleApiData}
@@ -612,6 +515,16 @@ function AppContent() {
               handleDestinationSelect(DESTINATIONS.EXPLORE);
             }}
             onHeightChange={setMenuBarHeight}
+            // Consolidated Props
+            showCleaningForm={showCleaningForm}
+            setShowCleaningForm={setShowCleaningForm}
+            showExportPanel={showExportPanel}
+            setShowExportPanel={setShowExportPanel}
+            onRunDecision={handleRunDecision}
+            decisionReadiness={decisionReadiness}
+            addChart={addChart}
+            addDashboardKpi={addDashboardKpi}
+            addDashboardChart={addDashboardChart}
           />
 
           <DataFilterPanel openDataFilter={openDataFilter} setOpenDataFilter={setOpenDataFilter} />
@@ -687,6 +600,14 @@ function AppContent() {
               setIsDataPaneOpen={setIsDataPaneOpen}
             >
               <DatasetInfo selectedStat={selectedStat} />
+              {showCleaningForm && (
+                <div style={{ position: 'fixed', bottom: 20, left: 92, zIndex: 100, width: 400, background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: 12, padding: 16, boxShadow: '0 8px 32px var(--shadow-color)' }}>
+                  <h4 style={{ margin: '0 0 12px 0' }}>Data Cleaning Engine</h4>
+                  <p style={{ fontSize: '0.8rem', opacity: 0.7 }}>Launch full optimization from the workspace context.</p>
+                  <button onClick={() => setShowCleaningForm(false)} style={{ position: 'absolute', top: 12, right: 12, background: 'none', border: 'none', cursor: 'pointer' }}>×</button>
+                  {/* ... inline cleaning form could go here or as a window ... */}
+                </div>
+              )}
             </CanvasContainer>
           )}
         </div>
@@ -701,7 +622,6 @@ function AppContent() {
           onAddDashboardFilter={handleAddSemanticFilter}
         />
 
-        {/* Global AI Shortcut Icon - Only visible when not in the dedicated AI Shell */}
         {activeDestination !== DESTINATIONS.AI && (
           <AIChat onOpenAiChat={handleOpenAiChat} />
         )}

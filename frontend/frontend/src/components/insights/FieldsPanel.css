@@ -138,28 +138,50 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 3px 8px;
-  margin: 0 4px 1px;
-  border-radius: 4px;
+  padding: 4px 10px;
+  margin: 1px 4px;
+  border-radius: 6px;
   cursor: grab;
-  transition: all 0.15s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   background: transparent;
   position: relative;
+  border: 1px solid transparent;
 }
 
 .field-row:hover {
   background: var(--bg-secondary-soft);
+  border-color: var(--border-color-soft);
 }
 
-.field-row.is-dragging {
-  opacity: 0.4;
+.field-row:active {
   cursor: grabbing;
 }
 
+.field-row-drag-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-tertiary);
+  opacity: 0.3;
+  font-size: 0.9rem;
+  transition: opacity 0.2s;
+  margin-left: -2px;
+}
+
+.field-row:hover .field-row-drag-handle {
+  opacity: 0.8;
+  color: var(--accent-blue);
+}
+
+.field-row.is-dragging {
+  opacity: 0.2;
+  background: var(--bg-secondary);
+}
+
 .field-type-marker {
-  width: 3px;
-  height: 10px;
-  border-radius: 1px;
+  width: 4px;
+  height: 12px;
+  border-radius: 2px;
   flex-shrink: 0;
 }
 
