@@ -220,6 +220,66 @@ class DecisionWorkspaceServiceTests(unittest.TestCase):
             any(item["category"] == "constraint_gap" and item["blocks_simulation"] for item in workspace["unknowns"])
         )
 
+    def test_workspace_analysis_returns_scoped_diagnostics_with_secondary_legacy_signals(self):
+        result = DecisionWorkspaceService.analyze_workspace(build_payload())
+
+        workspace = result["decision_workspace"]
+        analysis = result["workspace_analysis"]
+        scoped_diagnostics = analysis["scoped_diagnostics"]
+        legacy_diagnostics = analysis["legacy_diagnostics"]
+        workspace_metric_ids = {
+            item["metric_id"]
+            for item in workspace["scoped_context"]["relevant_metrics"]
+        }
+        workspace_dimension_ids = {
+            item["dimension_id"]
+            for item in workspace["scoped_context"]["relevant_dimensions"]
+        } | {
+            item["dimension_id"]
+            for item in workspace["scoped_context"]["comparison_dimensions"]
+        }
+
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(analysis["analysis_mode"], "scoped_observational")
+        self.assertEqual(analysis["status"], "ready")
+        self.assertTrue(any(item["status"] == "observed_change" for item in scoped_diagnostics))
+        self.assertIn("not a simulation or trade-off result", analysis["truthfulness_note"])
+        self.assertEqual(legacy_diagnostics["status"], "secondary")
+        self.assertGreaterEqual(len(legacy_diagnostics["signals"]), 1)
+
+        for signal in legacy_diagnostics["signals"]:
+            metric_ref = signal.get("metric_ref") or {}
+            dimension_ref = signal.get("dimension_ref") or {}
+            self.assertTrue(
+                metric_ref.get("metric_id") in workspace_metric_ids
+                or dimension_ref.get("dimension_id") in workspace_dimension_ids
+            )
+
+    def test_workspace_analysis_accepts_existing_workspace_and_keeps_limited_truthful(self):
+        payload = build_payload()
+        payload["objective"] = {
+            **payload["objective"],
+            "metric_id": "metric_not_found",
+        }
+        workspace_result = DecisionWorkspaceService.create_workspace(payload)
+
+        analysis_result = DecisionWorkspaceService.analyze_workspace(
+            {
+                "dataset": DATASET,
+                "dataset_ref": {"source": "inline", "dataset_id": "sales_q1", "dataset_name": "Q1 Sales"},
+                "semantic_model": SEMANTIC_MODEL,
+                "decision_workspace": workspace_result["decision_workspace"],
+            }
+        )
+
+        analysis = analysis_result["workspace_analysis"]
+
+        self.assertEqual(analysis["status"], "limited")
+        self.assertIn("Returned diagnostics are descriptive only.", analysis["summary"])
+        self.assertIn("objective.metric_id_or_metric_name", analysis_result["decision_workspace"]["readiness"]["missing_inputs"])
+        self.assertIn("not a simulation or trade-off result", analysis["truthfulness_note"])
+        self.assertNotIn("Ready for simulation", analysis["summary"])
+
 
 if __name__ == "__main__":
     unittest.main()

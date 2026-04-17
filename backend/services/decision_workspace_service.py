@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 import pandas as pd
 
+from backend.services.decision_signal_service import generate_decision_signals
 from backend.services.decision_support import (
     DecisionServiceError,
     build_dimension_ref,
@@ -11,6 +12,7 @@ from backend.services.decision_support import (
     build_period_context,
     build_semantic_summary,
     build_time_context,
+    describe_period_window,
     iso_timestamp,
     latest_metric_change,
     make_identifier,
@@ -33,15 +35,84 @@ class DecisionWorkspaceService:
     DEFAULT_MAX_DIMENSIONS = 6
     MAX_METRICS = 20
     MAX_DIMENSIONS = 12
+    DEFAULT_MAX_SECONDARY_SIGNALS = 3
+    MAX_SECONDARY_SIGNALS = 6
 
     @staticmethod
     def create_workspace(payload: Dict[str, Any]) -> Dict[str, Any]:
+        workspace_artifacts = DecisionWorkspaceService._build_workspace_artifacts(payload)
+        context = workspace_artifacts["context"]
+        workspace = workspace_artifacts["workspace"]
+        generated_at = workspace_artifacts["generated_at"]
+        scoped_context = workspace["scoped_context"]
+        unknowns = workspace["unknowns"]
+
+        return {
+            "status": "success",
+            "contract_version": "di_2_0_v1",
+            "dataset": context["dataset"],
+            "semantic_model": build_semantic_summary(context["semantic_model"]),
+            "decision_workspace": workspace,
+            "meta": {
+                "relevant_metric_count": len(scoped_context["relevant_metrics"]),
+                "relevant_dimension_count": len(scoped_context["relevant_dimensions"]),
+                "unknown_count": len(unknowns),
+                "generated_at": generated_at,
+            },
+            "warnings": [],
+        }
+
+    @staticmethod
+    def analyze_workspace(payload: Dict[str, Any]) -> Dict[str, Any]:
         payload = payload if isinstance(payload, dict) else {}
         generated_at = iso_timestamp()
         context = resolve_decision_context(
             dataset=payload.get("dataset"),
-            dataset_ref=payload.get("dataset_ref"),
-            semantic_model=payload.get("semantic_model"),
+            dataset_ref=payload.get("dataset_ref") or payload.get("datasetRef"),
+            semantic_model=payload.get("semantic_model") or payload.get("semanticModel"),
+            source="decision_workspace_analysis",
+        )
+        workspace = DecisionWorkspaceService._resolve_workspace_for_analysis(payload, context)
+        analysis_preferences = DecisionWorkspaceService._normalize_analysis_preferences(
+            payload.get("analysis_preferences")
+        )
+        workspace_analysis, warnings = DecisionWorkspaceService._build_workspace_analysis(
+            payload=payload,
+            context=context,
+            workspace=workspace,
+            analysis_preferences=analysis_preferences,
+            generated_at=generated_at,
+        )
+
+        return {
+            "status": "success",
+            "contract_version": "di_2_0_v1",
+            "dataset": context["dataset"],
+            "semantic_model": build_semantic_summary(context["semantic_model"]),
+            "decision_workspace": workspace,
+            "workspace_analysis": workspace_analysis,
+            "meta": {
+                "relevant_metric_count": len(workspace["scoped_context"]["relevant_metrics"]),
+                "relevant_dimension_count": len(workspace["scoped_context"]["relevant_dimensions"]),
+                "unknown_count": len(workspace["unknowns"]),
+                "scoped_diagnostic_count": len(workspace_analysis["scoped_diagnostics"]),
+                "secondary_legacy_signal_count": len(workspace_analysis["legacy_diagnostics"]["signals"]),
+                "generated_at": generated_at,
+            },
+            "warnings": warnings,
+        }
+
+    @staticmethod
+    def _build_workspace_artifacts(
+        payload: Dict[str, Any],
+        context: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        payload = payload if isinstance(payload, dict) else {}
+        generated_at = iso_timestamp()
+        resolved_context = context or resolve_decision_context(
+            dataset=payload.get("dataset"),
+            dataset_ref=payload.get("dataset_ref") or payload.get("datasetRef"),
+            semantic_model=payload.get("semantic_model") or payload.get("semanticModel"),
             source="decision_workspace",
         )
 
@@ -67,18 +138,18 @@ class DecisionWorkspaceService:
 
         applied_filters = normalize_filters(payload)
         scope_preferences = DecisionWorkspaceService._normalize_scope_preferences(payload.get("scope_preferences"))
-        normalized_objective = DecisionWorkspaceService._normalize_objective(raw_objective, context)
+        normalized_objective = DecisionWorkspaceService._normalize_objective(raw_objective, resolved_context)
         normalized_levers = [
-            DecisionWorkspaceService._normalize_lever(item, context, index)
+            DecisionWorkspaceService._normalize_lever(item, resolved_context, index)
             for index, item in enumerate(raw_levers)
         ]
         normalized_constraints = [
-            DecisionWorkspaceService._normalize_constraint(item, context, index)
+            DecisionWorkspaceService._normalize_constraint(item, resolved_context, index)
             for index, item in enumerate(raw_constraints)
         ]
 
         scoped_context = DecisionWorkspaceService._build_scoped_context(
-            context=context,
+            context=resolved_context,
             objective=normalized_objective,
             levers=normalized_levers,
             constraints=normalized_constraints,
@@ -103,7 +174,6 @@ class DecisionWorkspaceService:
             unknowns=unknowns,
         )
         workspace_status = DecisionWorkspaceService._derive_workspace_status(readiness)
-
         workspace = {
             "workspace_id": make_identifier(
                 "decision_workspace",
@@ -114,7 +184,7 @@ class DecisionWorkspaceService:
             "status": workspace_status,
             "title": DecisionWorkspaceService._generate_title(normalized_objective),
             "decision_prompt": decision_prompt,
-            "dataset": context["dataset"],
+            "dataset": resolved_context["dataset"],
             "decision_scope": {
                 "objective": normalized_objective,
                 "levers": normalized_levers,
@@ -131,20 +201,11 @@ class DecisionWorkspaceService:
             "readiness": readiness,
             "created_at": generated_at,
         }
-
         return {
-            "status": "success",
-            "contract_version": "di_2_0_v1",
-            "dataset": context["dataset"],
-            "semantic_model": build_semantic_summary(context["semantic_model"]),
-            "decision_workspace": workspace,
-            "meta": {
-                "relevant_metric_count": len(scoped_context["relevant_metrics"]),
-                "relevant_dimension_count": len(scoped_context["relevant_dimensions"]),
-                "unknown_count": len(unknowns),
-                "generated_at": generated_at,
-            },
-            "warnings": [],
+            "context": resolved_context,
+            "workspace": workspace,
+            "generated_at": generated_at,
+            "scope_preferences": scope_preferences,
         }
 
     @staticmethod
@@ -164,6 +225,24 @@ class DecisionWorkspaceService:
                 maximum=DecisionWorkspaceService.MAX_DIMENSIONS,
             ),
             "include_diagnostics": bool(raw.get("include_diagnostics", False)),
+        }
+
+    @staticmethod
+    def _normalize_analysis_preferences(raw: Any) -> Dict[str, Any]:
+        raw = raw if isinstance(raw, dict) else {}
+        include_secondary = raw.get("include_secondary_legacy_diagnostics")
+        if include_secondary is None:
+            include_secondary = raw.get("include_legacy_diagnostics")
+        if include_secondary is None:
+            include_secondary = True
+        return {
+            "include_secondary_legacy_diagnostics": bool(include_secondary),
+            "max_secondary_signals": DecisionWorkspaceService._clamp_int(
+                raw.get("max_secondary_signals"),
+                default=DecisionWorkspaceService.DEFAULT_MAX_SECONDARY_SIGNALS,
+                minimum=0,
+                maximum=DecisionWorkspaceService.MAX_SECONDARY_SIGNALS,
+            ),
         }
 
     @staticmethod
@@ -428,6 +507,392 @@ class DecisionWorkspaceService:
             "field": None,
             "reason": "No binding was provided.",
         }
+
+    @staticmethod
+    def _resolve_workspace_for_analysis(payload: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
+        existing_workspace = payload.get("decision_workspace")
+        if isinstance(existing_workspace, dict):
+            return DecisionWorkspaceService._normalize_existing_workspace(existing_workspace, context)
+        return DecisionWorkspaceService._build_workspace_artifacts(payload, context=context)["workspace"]
+
+    @staticmethod
+    def _normalize_existing_workspace(workspace: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
+        decision_scope = workspace.get("decision_scope")
+        if not isinstance(decision_scope, dict):
+            raise DecisionServiceError("decision_workspace.decision_scope is required for workspace analysis.")
+
+        objective = decision_scope.get("objective")
+        levers = decision_scope.get("levers")
+        constraints = decision_scope.get("constraints")
+        if not isinstance(objective, dict):
+            raise DecisionServiceError("decision_workspace.decision_scope.objective is required for workspace analysis.")
+        if not isinstance(levers, list):
+            raise DecisionServiceError("decision_workspace.decision_scope.levers must be an array for workspace analysis.")
+        if not isinstance(constraints, list):
+            raise DecisionServiceError(
+                "decision_workspace.decision_scope.constraints must be an array for workspace analysis."
+            )
+
+        scoped_context = workspace.get("scoped_context") if isinstance(workspace.get("scoped_context"), dict) else {}
+        unknowns = workspace.get("unknowns") if isinstance(workspace.get("unknowns"), list) else []
+        readiness = workspace.get("readiness") if isinstance(workspace.get("readiness"), dict) else None
+        if readiness is None:
+            readiness = DecisionWorkspaceService._evaluate_readiness(
+                objective=objective,
+                levers=levers,
+                constraints=constraints,
+                unknowns=unknowns,
+            )
+
+        return {
+            "workspace_id": workspace.get("workspace_id")
+            or make_identifier("decision_workspace", objective.get("objective_id") or objective.get("statement")),
+            "workspace_type": workspace.get("workspace_type") or "scoped_decision",
+            "status": workspace.get("status") or DecisionWorkspaceService._derive_workspace_status(readiness),
+            "title": workspace.get("title") or DecisionWorkspaceService._generate_title(objective),
+            "decision_prompt": str(workspace.get("decision_prompt") or "").strip(),
+            "dataset": context["dataset"],
+            "decision_scope": {
+                "objective": objective,
+                "levers": levers,
+                "constraints": constraints,
+            },
+            "scope_summary": workspace.get("scope_summary")
+            or DecisionWorkspaceService._generate_scope_summary(objective, levers, constraints),
+            "scoped_context": {
+                "relevant_metrics": list(scoped_context.get("relevant_metrics") or []),
+                "relevant_dimensions": list(scoped_context.get("relevant_dimensions") or []),
+                "comparison_dimensions": list(scoped_context.get("comparison_dimensions") or []),
+                "applied_filters": list(scoped_context.get("applied_filters") or []),
+                "time_context": scoped_context.get("time_context"),
+                "period_context": scoped_context.get("period_context"),
+                "notes": list(scoped_context.get("notes") or []),
+            },
+            "assumptions": list(workspace.get("assumptions") or []),
+            "unknowns": unknowns,
+            "readiness": readiness,
+            "created_at": workspace.get("created_at") or iso_timestamp(),
+        }
+
+    @staticmethod
+    def _build_workspace_analysis(
+        payload: Dict[str, Any],
+        context: Dict[str, Any],
+        workspace: Dict[str, Any],
+        analysis_preferences: Dict[str, Any],
+        generated_at: str,
+    ) -> Tuple[Dict[str, Any], List[str]]:
+        scoped_diagnostics = DecisionWorkspaceService._build_scoped_diagnostics(
+            context=context,
+            workspace=workspace,
+            generated_at=generated_at,
+        )
+        legacy_diagnostics, legacy_warnings = DecisionWorkspaceService._build_secondary_legacy_diagnostics(
+            payload=payload,
+            workspace=workspace,
+            analysis_preferences=analysis_preferences,
+        )
+        notes = [
+            "This continuation path provides scoped observational diagnostics only.",
+            "It does not execute simulation, trade-off analysis, or goal-seeking.",
+        ]
+        if legacy_diagnostics["status"] == "secondary":
+            notes.append(
+                "Legacy diagnostics were filtered to workspace-relevant metrics and dimensions so they remain additive evidence."
+            )
+
+        return (
+            {
+                "analysis_id": make_identifier("workspace_analysis", workspace.get("workspace_id"), generated_at),
+                "analysis_mode": "scoped_observational",
+                "status": workspace.get("status"),
+                "summary": DecisionWorkspaceService._build_workspace_analysis_summary(
+                    workspace=workspace,
+                    scoped_diagnostics=scoped_diagnostics,
+                    legacy_diagnostics=legacy_diagnostics,
+                ),
+                "truthfulness_note": "This response is descriptive and scope-grounded. It is not a simulation or trade-off result.",
+                "scoped_diagnostics": scoped_diagnostics,
+                "legacy_diagnostics": legacy_diagnostics,
+                "notes": notes,
+                "generated_at": generated_at,
+            },
+            legacy_warnings,
+        )
+
+    @staticmethod
+    def _build_scoped_diagnostics(
+        context: Dict[str, Any],
+        workspace: Dict[str, Any],
+        generated_at: str,
+    ) -> List[Dict[str, Any]]:
+        filters = list((workspace.get("scoped_context") or {}).get("applied_filters") or [])
+        time_dimension = context.get("time_dimension")
+        diagnostics: List[Dict[str, Any]] = []
+
+        for item in DecisionWorkspaceService._collect_scoped_metric_refs(workspace):
+            metric_ref = item["metric_ref"]
+            metric = DecisionWorkspaceService._find_metric(context, metric_ref.get("metric_id"))
+            diagnostic_id = make_identifier(
+                "workspace_diagnostic",
+                item["primary_role"],
+                metric_ref.get("metric_id") or metric_ref.get("label"),
+                generated_at,
+            )
+            if metric is None:
+                diagnostics.append(
+                    {
+                        "diagnostic_id": diagnostic_id,
+                        "diagnostic_type": "metric_observation",
+                        "status": "metric_unavailable",
+                        "focus_role": item["primary_role"],
+                        "role_tags": item["roles"],
+                        "metric_ref": metric_ref,
+                        "summary": (
+                            f"{metric_ref.get('label') or 'A scoped metric'} is part of this workspace, "
+                            "but it is not available in the current semantic model."
+                        ),
+                        "time_context": None,
+                        "period_context": None,
+                        "evidence": None,
+                    }
+                )
+                continue
+
+            change = latest_metric_change(context, metric, filters=filters)
+            if change is None:
+                diagnostics.append(
+                    {
+                        "diagnostic_id": diagnostic_id,
+                        "diagnostic_type": "metric_observation",
+                        "status": "insufficient_history",
+                        "focus_role": item["primary_role"],
+                        "role_tags": item["roles"],
+                        "metric_ref": build_metric_ref(metric),
+                        "summary": (
+                            f"{build_metric_ref(metric)['label']} is in scope, but the current dataset cannot produce "
+                            "a reliable period-over-period comparison inside this workspace."
+                        ),
+                        "time_context": (workspace.get("scoped_context") or {}).get("time_context"),
+                        "period_context": (workspace.get("scoped_context") or {}).get("period_context"),
+                        "evidence": None,
+                    }
+                )
+                continue
+
+            time_context = build_time_context(change, time_dimension) if isinstance(time_dimension, dict) else None
+            period_context = build_period_context(time_context)
+            diagnostics.append(
+                {
+                    "diagnostic_id": diagnostic_id,
+                    "diagnostic_type": "metric_observation",
+                    "status": "observed_change",
+                    "focus_role": item["primary_role"],
+                    "role_tags": item["roles"],
+                    "metric_ref": build_metric_ref(metric),
+                    "summary": DecisionWorkspaceService._build_metric_change_summary(
+                        metric_ref=build_metric_ref(metric),
+                        change=change,
+                        period_context=period_context,
+                    ),
+                    "time_context": time_context,
+                    "period_context": period_context,
+                    "evidence": {
+                        "current_value": change.get("current_value"),
+                        "previous_value": change.get("previous_value"),
+                        "delta_value": change.get("delta_value"),
+                        "delta_pct": change.get("delta_pct"),
+                        "current_period": change.get("current_period"),
+                        "previous_period": change.get("previous_period"),
+                        "row_count": change.get("row_count"),
+                    },
+                }
+            )
+
+        return diagnostics
+
+    @staticmethod
+    def _collect_scoped_metric_refs(workspace: Dict[str, Any]) -> List[Dict[str, Any]]:
+        decision_scope = workspace.get("decision_scope") if isinstance(workspace.get("decision_scope"), dict) else {}
+        relevant_metrics = {
+            item.get("metric_id"): item
+            for item in (workspace.get("scoped_context") or {}).get("relevant_metrics") or []
+            if isinstance(item, dict) and item.get("metric_id")
+        }
+        ordered: List[Dict[str, Any]] = []
+        index_by_metric_id: Dict[str, int] = {}
+
+        def add_metric(metric_ref: Optional[Dict[str, Any]], role: str) -> None:
+            if not isinstance(metric_ref, dict):
+                return
+            metric_id = metric_ref.get("metric_id")
+            if not metric_id:
+                return
+            if metric_id in index_by_metric_id:
+                existing = ordered[index_by_metric_id[metric_id]]
+                if role not in existing["roles"]:
+                    existing["roles"].append(role)
+                return
+            index_by_metric_id[metric_id] = len(ordered)
+            ordered.append(
+                {
+                    "metric_ref": metric_ref,
+                    "primary_role": role,
+                    "roles": [role],
+                }
+            )
+
+        objective = decision_scope.get("objective") if isinstance(decision_scope.get("objective"), dict) else {}
+        add_metric(objective.get("metric_ref"), "objective")
+        for lever in decision_scope.get("levers") or []:
+            binding = lever.get("binding") if isinstance(lever.get("binding"), dict) else {}
+            add_metric(binding.get("metric_ref"), "lever")
+        for constraint in decision_scope.get("constraints") or []:
+            binding = constraint.get("binding") if isinstance(constraint.get("binding"), dict) else {}
+            add_metric(binding.get("metric_ref"), "constraint")
+        for metric_ref in relevant_metrics.values():
+            add_metric(metric_ref, "context")
+        return ordered
+
+    @staticmethod
+    def _build_metric_change_summary(
+        metric_ref: Dict[str, Any],
+        change: Dict[str, Any],
+        period_context: Optional[Dict[str, Any]],
+    ) -> str:
+        label = metric_ref.get("label") or metric_ref.get("name") or "Scoped metric"
+        current_value = change.get("current_value")
+        previous_value = change.get("previous_value")
+        delta_value = change.get("delta_value")
+        delta_pct = change.get("delta_pct")
+        window = describe_period_window(period_context)
+
+        if delta_value == 0:
+            return f"{label} held flat at {current_value} {window} within the scoped workspace."
+
+        direction = "increased" if (delta_value or 0) > 0 else "decreased"
+        if delta_pct is not None:
+            percent_change = DecisionWorkspaceService._format_percent(abs(delta_pct))
+            return (
+                f"{label} {direction} by {percent_change} {window} within the scoped workspace "
+                f"(from {previous_value} to {current_value})."
+            )
+        return f"{label} {direction} {window} within the scoped workspace (from {previous_value} to {current_value})."
+
+    @staticmethod
+    def _format_percent(value: Any) -> str:
+        try:
+            return f"{float(value) * 100:.1f}%"
+        except (TypeError, ValueError):
+            return "0.0%"
+
+    @staticmethod
+    def _build_secondary_legacy_diagnostics(
+        payload: Dict[str, Any],
+        workspace: Dict[str, Any],
+        analysis_preferences: Dict[str, Any],
+    ) -> Tuple[Dict[str, Any], List[str]]:
+        if (
+            not analysis_preferences.get("include_secondary_legacy_diagnostics")
+            or analysis_preferences.get("max_secondary_signals", 0) <= 0
+        ):
+            return {
+                "status": "not_requested",
+                "signals": [],
+                "notes": ["Secondary legacy diagnostics were not requested for this workspace analysis run."],
+            }, []
+
+        relevant_metrics = [
+            item.get("metric_id")
+            for item in (workspace.get("scoped_context") or {}).get("relevant_metrics") or []
+            if isinstance(item, dict) and item.get("metric_id")
+        ]
+        relevant_dimensions = {
+            item.get("dimension_id")
+            for collection_name in ("relevant_dimensions", "comparison_dimensions")
+            for item in (workspace.get("scoped_context") or {}).get(collection_name) or []
+            if isinstance(item, dict) and item.get("dimension_id")
+        }
+        if not relevant_metrics and not relevant_dimensions:
+            return {
+                "status": "not_applicable",
+                "signals": [],
+                "notes": ["No scoped metrics or dimensions were available for secondary legacy diagnostics."],
+            }, []
+
+        signal_payload = {
+            "dataset": payload.get("dataset"),
+            "dataset_ref": payload.get("dataset_ref") or payload.get("datasetRef"),
+            "semantic_model": payload.get("semantic_model") or payload.get("semanticModel"),
+            "filters": (workspace.get("scoped_context") or {}).get("applied_filters") or [],
+            "metric_ids": relevant_metrics,
+            "max_signals": max(analysis_preferences["max_secondary_signals"] * 2, 4),
+        }
+        signal_response = generate_decision_signals(signal_payload)
+        signals = [
+            signal
+            for signal in signal_response.get("signals") or []
+            if DecisionWorkspaceService._signal_matches_workspace_scope(signal, relevant_metrics, relevant_dimensions)
+        ][: analysis_preferences["max_secondary_signals"]]
+
+        status = "secondary" if signals else "no_scoped_matches"
+        notes = [
+            "Legacy signals were filtered to scoped metrics and dimensions before being attached to this workspace."
+        ]
+        if not signals:
+            notes.append("No legacy signals matched the current workspace scope after filtering.")
+        return {
+            "status": status,
+            "signals": signals,
+            "notes": notes,
+        }, list(signal_response.get("warnings") or [])
+
+    @staticmethod
+    def _signal_matches_workspace_scope(
+        signal: Dict[str, Any],
+        relevant_metric_ids: Sequence[str],
+        relevant_dimension_ids: Sequence[str],
+    ) -> bool:
+        metric_ref = signal.get("metric_ref") if isinstance(signal.get("metric_ref"), dict) else {}
+        if metric_ref.get("metric_id") in set(relevant_metric_ids):
+            return True
+        dimension_ref = signal.get("dimension_ref") if isinstance(signal.get("dimension_ref"), dict) else {}
+        if dimension_ref.get("dimension_id") in set(relevant_dimension_ids):
+            return True
+        return False
+
+    @staticmethod
+    def _build_workspace_analysis_summary(
+        workspace: Dict[str, Any],
+        scoped_diagnostics: Sequence[Dict[str, Any]],
+        legacy_diagnostics: Dict[str, Any],
+    ) -> str:
+        readiness = workspace.get("readiness") if isinstance(workspace.get("readiness"), dict) else {}
+        missing_inputs = list(readiness.get("missing_inputs") or [])
+        observed = next(
+            (item for item in scoped_diagnostics if item.get("status") == "observed_change"),
+            None,
+        )
+        if workspace.get("status") != "ready":
+            missing_text = ", ".join(missing_inputs) if missing_inputs else "additional structural inputs"
+            summary = (
+                f"Workspace analysis remains {workspace.get('status')} because {missing_text} "
+                "is still unresolved. Returned diagnostics are descriptive only."
+            )
+            if observed:
+                summary += f" Latest scoped evidence: {observed.get('summary')}"
+            return summary
+
+        if observed:
+            summary = f"Scoped analysis is anchored on the current workspace definition. {observed.get('summary')}"
+        else:
+            summary = (
+                "Scoped analysis found no period-over-period metric evidence yet, but the workspace remains structurally ready."
+            )
+
+        if legacy_diagnostics.get("status") == "secondary" and legacy_diagnostics.get("signals"):
+            summary += " Secondary legacy signals were attached as additive evidence only."
+        return summary
 
     @staticmethod
     def _build_scoped_context(

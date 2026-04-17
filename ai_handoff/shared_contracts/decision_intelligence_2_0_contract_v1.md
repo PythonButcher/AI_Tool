@@ -51,11 +51,46 @@ It does not yet define:
 
 - `POST /api/decision/workspaces`
 
+## V3 Additive Continuation Endpoint
+
+V3 now adds a backend continuation path for scoped observational diagnostics:
+
+- `POST /api/decision/workspaces/analyze`
+
+This continuation path is additive and intentionally narrower than the historical V2 simulation draft.
+
+It accepts either:
+
+- the same scoped workspace creation request shape defined in this file
+- or a payload containing `dataset` / `dataset_ref`, optional `semantic_model`, and an existing normalized `decision_workspace`
+
+It returns the standard top-level dataset and semantic metadata plus:
+
+- `decision_workspace`
+- `workspace_analysis`
+
+`workspace_analysis` is expected to contain:
+
+- `analysis_mode: "scoped_observational"`
+- `status` aligned to the workspace status (`ready`, `needs_input`, or `limited`)
+- `summary`
+- `truthfulness_note`
+- `scoped_diagnostics`
+- `legacy_diagnostics`
+- `generated_at`
+
+Interpretation rules for this continuation path:
+
+- `scoped_diagnostics` must be grounded in the scoped workspace metrics, filters, and available temporal evidence
+- `legacy_diagnostics` must remain filtered, additive, and secondary
+- this endpoint must not claim simulation, trade-off execution, recommendation completion, or goal-seeking completion
+
 ## Status
 
 - additive to the current backend
 - intended to become the primary DI 2.0 entry contract
 - current `POST /api/decision/run` remains supported as a legacy decision-bundle endpoint during migration
+- V3 now also includes a scoped observational analysis continuation path through `POST /api/decision/workspaces/analyze`
 
 ## Shared Objects Reused From The Existing Decision Contract
 

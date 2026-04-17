@@ -49,6 +49,19 @@ That includes:
 - tightening placeholders, truth alignment, and user trust
 - resolving any remaining contract gaps between backend and frontend
 
+## Current Backend V3 Checkpoint
+
+The backend now supports:
+
+- `POST /api/decision/workspaces` for scoped workspace creation
+- `POST /api/decision/workspaces/analyze` for workspace-native observational diagnostics
+
+Important truth rule:
+
+- the analysis endpoint is descriptive and scope-grounded
+- it does **not** mean simulation, trade-off execution, or goal-seeking is complete
+- any reused legacy signals must remain filtered, additive, and clearly secondary to the scoped workspace
+
 ## Rules For Codex
 
 Codex should treat V3 as the active workstream.

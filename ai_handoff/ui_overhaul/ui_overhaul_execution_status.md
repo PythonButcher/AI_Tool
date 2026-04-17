@@ -219,11 +219,13 @@ The live frontend already has:
 The backend already has:
 
 - `POST /api/decision/workspaces`
+- `POST /api/decision/workspaces/analyze`
 - normalization for objective, levers, and constraints
 - contract-faithful `ready` / `needs_input` / `limited` status classification
 - honest scoped metric and dimension selection anchored on objective, levers, constraints, and applied filters
 - contract-faithful `time_context` and `period_context` with metric-first, scoped-slice, and time-horizon fallback behavior
 - stronger unknown and blocker generation for unresolved objective, lever, and hard-constraint gaps
+- workspace-native observational diagnostics anchored on the scoped workspace, with filtered legacy signals kept additive and secondary
 - additive legacy-path preservation without using the legacy decision bundle as the primary DI 2.0 model
 
 ## Resume Point For Gemini
