@@ -308,6 +308,32 @@ const DecisionWorkspaceView = ({ workspace, onCreateNew }) => {
               {unknowns.length === 0 && <div className="simulation-notice" style={{ padding: '12px', fontSize: '0.85rem' }}>All required information resolved.</div>}
             </div>
           </section>
+
+          <section className="context-section di-checklist-section" style={{ marginTop: '32px', padding: '20px', background: 'var(--bg-secondary)', borderRadius: '16px', border: '1px solid var(--border-color)' }}>
+            <h3 className="section-label" style={{ margin: '0 0 16px 0', fontSize: '0.85rem', letterSpacing: '0.05em' }}>Engine Readiness Checklist</h3>
+            <ul className="di-checklist" style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <li style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.85rem' }}>
+                <FaCircleCheck style={{ color: readiness.dataset_ready ? 'var(--accent-green)' : 'var(--text-secondary)', opacity: readiness.dataset_ready ? 1 : 0.3 }} />
+                <span style={{ opacity: readiness.dataset_ready ? 1 : 0.6 }}>Data Context Loaded</span>
+              </li>
+              <li style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.85rem' }}>
+                <FaCircleCheck style={{ color: readiness.semantic_ready ? 'var(--accent-green)' : 'var(--text-secondary)', opacity: readiness.semantic_ready ? 1 : 0.3 }} />
+                <span style={{ opacity: readiness.semantic_ready ? 1 : 0.6 }}>Semantic Logic Active</span>
+              </li>
+              <li style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.85rem' }}>
+                <FaCircleCheck style={{ color: readiness.objective_ready ? 'var(--accent-green)' : 'var(--text-secondary)', opacity: readiness.objective_ready ? 1 : 0.3 }} />
+                <span style={{ opacity: readiness.objective_ready ? 1 : 0.6 }}>Business Goals Defined</span>
+              </li>
+            </ul>
+
+            <div style={{ marginTop: '24px', paddingTop: '16px', borderTop: '1px solid color-mix(in srgb, var(--border-color) 50%, transparent)' }}>
+              <h4 style={{ fontSize: '0.75rem', textTransform: 'uppercase', opacity: 0.5, marginBottom: '8px' }}>How it works</h4>
+              <p style={{ fontSize: '0.8rem', lineHeight: '1.5', margin: 0, opacity: 0.8 }}>
+                The engine evaluates recent anomalies against your defined metrics, 
+                detects cross-field trends, and ranks recommendations based on statistical importance.
+              </p>
+            </div>
+          </section>
         </div>
       </div>
 

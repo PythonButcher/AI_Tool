@@ -229,6 +229,9 @@ SemanticQuickActions.defaultProps = {
 
 const AnalysisRowContent = ({ item, actions }) => (
   <>
+    <div className="field-row-drag-handle" aria-hidden="true">
+      <AiOutlineHolder />
+    </div>
     <span className={`field-type-marker ${item.type}`} aria-hidden="true" />
     <div className="field-row-main">
       <div className="field-row-heading">
@@ -244,9 +247,6 @@ const AnalysisRowContent = ({ item, actions }) => (
     </div>
     <div className="field-row-trailing">
       {actions}
-      <div className="field-row-drag-hint" aria-hidden="true">
-        <AiOutlineHolder />
-      </div>
     </div>
   </>
 );
@@ -609,22 +609,6 @@ function FieldsPanel({
           ) : renderEmptyState()}
         </div>
       </div>
-
-      <DragOverlay>
-        {activeItem ? (
-          <div className="field-row field-row-overlay" title={activeItem.title || activeItem.label}>
-            <AnalysisRowContent 
-              item={{
-                ...activeItem,
-                type: activeItem.type || (activeItem.objectKind === 'metric' ? 'numeric' : 'categorical'),
-                source: activeItem.source || 'semantic',
-                sourceLabel: activeItem.sourceLabel || (activeItem.objectKind === 'metric' ? 'Metric' : 'Dimension'),
-                helperLabel: activeItem.helperLabel || activeItem.type || 'categorical',
-              }} 
-            />
-          </div>
-        ) : null}
-      </DragOverlay>
     </>
   );
 }

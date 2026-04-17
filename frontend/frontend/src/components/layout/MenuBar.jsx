@@ -5,15 +5,22 @@ import ApiDataForm from '../../features/api/APiDataForm';
 import DatabaseConnectForm from '../../features/database/DatabaseConnectForm';
 import DataHubWindow from '../../features/database/DataHubWindow';
 import {
+  FaBook,
+  FaBrain,
+  FaBroom,
   FaChartBar,
   FaChevronDown,
   FaChevronUp,
   FaCogs,
   FaDatabase,
   FaFileAlt,
+  FaFileExport,
   FaFilter,
+  FaLightbulb,
   FaMagic,
   FaMoon,
+  FaPen,
+  FaPlus,
   FaRedoAlt,
   FaRobot,
   FaServer,
@@ -66,6 +73,7 @@ function RibbonCommand({
   emphasized,
   badge,
   disabled,
+  title,
 }) {
   return (
     <button
@@ -73,6 +81,7 @@ function RibbonCommand({
       className={`ribbon-command ${active ? 'is-active' : ''} ${emphasized ? 'is-emphasized' : ''}`}
       onClick={onClick}
       disabled={disabled}
+      title={title || description}
     >
       <span className="ribbon-command__icon" aria-hidden="true">{icon}</span>
       <span className="ribbon-command__copy">
@@ -120,6 +129,16 @@ function MenuBar({
   onOpenWhiteboard,
   onOpenChartGallery,
   onHeightChange,
+  // New props for consolidated actions
+  setShowCleaningForm,
+  showCleaningForm,
+  setShowExportPanel,
+  showExportPanel,
+  onRunDecision,
+  decisionReadiness,
+  addChart,
+  addDashboardKpi,
+  addDashboardChart,
 }) {
   const [activeSurface, setActiveSurface] = useState(null);
   const [isRibbonCollapsed, setIsRibbonCollapsed] = useState(true);
@@ -205,53 +224,194 @@ function MenuBar({
     );
   };
 
+  const renderWorkspaceRibbon = () => (
+    <RibbonGroup title="Workspace Tools" caption="Data lifecycle management">
+      <RibbonCommand
+        icon={<TbCloudDataConnection />}
+        label="Data Hub"
+        description="Dataset catalog"
+        onClick={() => {
+          setShowDataPreview(true);
+        }}
+        emphasized
+      />
+      <RibbonCommand
+        icon={<FaTable />}
+        label="Raw Inspection"
+        description="Spreadsheet view"
+        onClick={() => setShowRawViewer(true)}
+      />
+      <RibbonCommand
+        icon={<FaBroom />}
+        label="Clean Data"
+        description="Data optimization"
+        onClick={() => setShowCleaningForm(!showCleaningForm)}
+        active={showCleaningForm}
+      />
+      <RibbonCommand
+        icon={<FaFileExport />}
+        label="Export"
+        description="Download results"
+        onClick={() => setShowExportPanel(!showExportPanel)}
+        active={showExportPanel}
+      />
+    </RibbonGroup>
+  );
+
+  const renderExploreRibbon = () => (
+    <RibbonGroup title="Explore Tools" caption="Analysis & Visualization">
+      <RibbonCommand
+        icon={<FaChartBar />}
+        label="Gallery"
+        description="Templates"
+        onClick={onOpenChartGallery}
+        emphasized
+      />
+      <RibbonCommand
+        icon={<FaPen />}
+        label="Sandbox"
+        description="Visual whiteboard"
+        onClick={onOpenWhiteboard}
+      />
+      <div className="ribbon-divider-v" />
+      <RibbonCommand
+        icon={<FaPlus />}
+        label="Bar"
+        description="Quick chart"
+        onClick={() => addChart({ type: 'Bar' })}
+      />
+      <RibbonCommand
+        icon={<FaPlus />}
+        label="Line"
+        description="Quick chart"
+        onClick={() => addChart({ type: 'Line' })}
+      />
+    </RibbonGroup>
+  );
+
+  const renderDashboardRibbon = () => (
+    <RibbonGroup title="Dashboard Controls" caption="Monitoring layout">
+      <RibbonCommand
+        icon={<FaTachometerAlt />}
+        label={isDashboardVisible ? 'Hide Canvas' : 'Show Canvas'}
+        description="Toggle dashboard"
+        onClick={onDashboardToggle}
+        active={isDashboardVisible}
+        emphasized
+      />
+      <RibbonCommand
+        icon={<FaPlus />}
+        label="New KPI"
+        description="Metric card"
+        onClick={() => addDashboardKpi()}
+      />
+      <RibbonCommand
+        icon={<FaChartBar />}
+        label="New Chart"
+        description="Data tile"
+        onClick={() => addDashboardChart({ chartType: 'Bar' })}
+      />
+      <RibbonCommand
+        icon={<FaFilter />}
+        label="Filters"
+        description="Global slices"
+        onClick={() => setOpenDataFilter(true)}
+      />
+    </RibbonGroup>
+  );
+
+  const renderDecisionRibbon = () => {
+    const isReady = decisionReadiness?.decision_ready && (decisionReadiness?.missing_requirements?.length || 0) === 0;
+    return (
+      <RibbonGroup title="Decision Engine" caption="Signals & Scenarios">
+        <RibbonCommand
+          icon={<FaLightbulb />}
+          label="Run Intelligence"
+          description={isReady ? 'Evaluate scenarios' : 'Prerequisites missing'}
+          onClick={onRunDecision}
+          disabled={!isReady}
+          emphasized={isReady}
+        />
+      </RibbonGroup>
+    );
+  };
+
+  const renderAiRibbon = () => (
+    <RibbonGroup title="AI Suite" caption="Intelligence tools">
+      <RibbonCommand
+        icon={<FaRobot />}
+        label="AI Analysis"
+        description="Chat explorer"
+        onClick={onOpenAiChat}
+        emphasized
+      />
+      <RibbonCommand
+        icon={<FaPlus />}
+        label="Workflow Lab"
+        description="Automation"
+        onClick={onOpenAiWorkflow}
+      />
+      <RibbonCommand
+        icon={<FaFileAlt />}
+        label="AI Report"
+        description="Latest insights"
+        onClick={onAiReportClick}
+        disabled={!aiReportReady}
+      />
+      <RibbonCommand
+        icon={<FaBook />}
+        label="Story Gen"
+        description="Narrative"
+        onClick={() => onOpenStoryboard()}
+      />
+      <RibbonCommand
+        icon={<FaPen />}
+        label="Whiteboard"
+        description="Brainstorming"
+        onClick={onOpenWhiteboard}
+      />
+    </RibbonGroup>
+  );
+
   const renderActiveRibbon = () => {
     return (
       <>
-        <RibbonGroup title="Data Sources" caption="Import or connect datasets">
+        {/* Contextual Group Based on Destination */}
+        {activeDestination === DESTINATIONS.WORKSPACE && renderWorkspaceRibbon()}
+        {activeDestination === DESTINATIONS.EXPLORE && renderExploreRibbon()}
+        {activeDestination === DESTINATIONS.DASHBOARDS && renderDashboardRibbon()}
+        {activeDestination === DESTINATIONS.DECISIONS && renderDecisionRibbon()}
+        {activeDestination === DESTINATIONS.AI && renderAiRibbon()}
+
+        <RibbonGroup title="Data Sources" caption="Import datasets">
           <RibbonCommand
             icon={<FaUpload />}
-            label="Upload File"
-            description="Local CSV/JSON"
+            label="Upload"
+            description="Local file"
             onClick={() => toggleSurface('upload')}
             active={activeSurface === 'upload'}
-            emphasized
-          />
-          <RibbonCommand
-            icon={<TbCloudDataConnection />}
-            label="Data Hub"
-            description="Managed catalog"
-            onClick={() => toggleSurface('hub')}
-            active={activeSurface === 'hub'}
           />
           <RibbonCommand
             icon={<FaServer />}
             label="API"
-            description="External endpoint"
+            description="External"
             onClick={() => toggleSurface('api')}
             active={activeSurface === 'api'}
           />
           <RibbonCommand
             icon={<FaDatabase />}
-            label="Database"
-            description="Warehouse table"
+            label="DB"
+            description="Warehouse"
             onClick={() => toggleSurface('db')}
             active={activeSurface === 'db'}
           />
         </RibbonGroup>
 
-        <RibbonGroup title="App" caption="Workspace settings">
+        <RibbonGroup title="System" caption="App settings">
           <RibbonCommand
             icon={theme === 'dark' ? <FaSun /> : <FaMoon />}
-            label={theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+            label="Theme"
             onClick={toggleTheme}
-          />
-          <RibbonCommand
-            icon={<FaSnowflake />}
-            label="Snow"
-            onClick={onSnowToggle}
-            active={isSnowing}
-            disabled={theme !== 'dark'}
           />
           <RibbonCommand
             icon={<FaRedoAlt />}
@@ -288,7 +448,7 @@ function MenuBar({
             onClick={() => setIsRibbonCollapsed((prev) => !prev)}
           >
             <FaCogs />
-            <span>Data & Setup</span>
+            <span>Commands</span>
             {isRibbonCollapsed ? <FaChevronDown /> : <FaChevronUp />}
           </button>
 
