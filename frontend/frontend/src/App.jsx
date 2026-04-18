@@ -15,6 +15,7 @@ import { HelpOverlayProvider } from './context/HelpOverlayContext';
 import useLoadRawData from './hooks/useLoadRawData';
 import Snowfall from 'react-snowfall';
 import DataFilterPanel from './components/data_management/DataFilterPanel';
+import DataCleaningForm from './components/data_management/DataCleaningForm';
 import './App.css';
 import { MuiThemeContext } from './context/MuiThemeContext';
 import { useWindowContext } from './context/WindowContext';
@@ -555,6 +556,17 @@ function AppContent() {
 
           <DataFilterPanel openDataFilter={openDataFilter} setOpenDataFilter={setOpenDataFilter} />
 
+          {showCleaningForm && (
+            <DataCleaningForm
+              closeForm={() => setShowCleaningForm(false)}
+              setShowDataPreview={setShowDataPreview}
+              onProceedToTraining={() => {
+                setShowMachineLearning(true);
+                setShowCleaningForm(false);
+              }}
+            />
+          )}
+
           {showDataVisual && (
             <DataVisualizations
               onDataCleaned={cleanedData}
@@ -628,14 +640,6 @@ function AppContent() {
               setIsDataPaneOpen={setIsDataPaneOpen}
             >
               <DatasetInfo selectedStat={selectedStat} />
-              {showCleaningForm && (
-                <div style={{ position: 'fixed', bottom: 20, left: 92, zIndex: 100, width: 400, background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: 12, padding: 16, boxShadow: '0 8px 32px var(--shadow-color)' }}>
-                  <h4 style={{ margin: '0 0 12px 0' }}>Data Cleaning Engine</h4>
-                  <p style={{ fontSize: '0.8rem', opacity: 0.7 }}>Launch full optimization from the workspace context.</p>
-                  <button onClick={() => setShowCleaningForm(false)} style={{ position: 'absolute', top: 12, right: 12, background: 'none', border: 'none', cursor: 'pointer' }}>×</button>
-                  {/* ... inline cleaning form could go here or as a window ... */}
-                </div>
-              )}
             </CanvasContainer>
           )}
         </div>

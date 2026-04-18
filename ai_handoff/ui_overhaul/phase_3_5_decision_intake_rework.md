@@ -106,6 +106,41 @@ Once the user is comfortable, open the full decision workspace.
 
 The workspace should feel like the deeper layer, not the first burden.
 
+## Backend Support Now Available
+
+Phase 3.5 now has additive backend support on:
+
+- `POST /api/decision/workspaces`
+
+New prompt-first request support:
+
+- `intake_mode: "prompt_first"`
+- `decision_prompt`
+- optional `decision_intake.what_matters`
+- optional `decision_intake.what_to_avoid`
+- optional `decision_intake.additional_context`
+
+In prompt-first mode:
+
+- `objective` is optional
+- `levers` are optional
+- `constraints` are optional
+- backend drafts missing structure from the plain-English intake plus semantic context
+
+The response now includes additive draft metadata at:
+
+- `decision_workspace.drafting`
+
+That object includes:
+
+- `intake_mode`
+- `helper_prompts`
+- `source_summary`
+- `prompt_matches`
+- `clarification_hints`
+
+Gemini should use that object to power the draft-preview step instead of forcing users into the old structured composer first.
+
 ## UX Rules
 
 - use plain English
@@ -177,6 +212,12 @@ Gemini should handle:
 - making it feel attractive and high quality
 - preserving truthfulness
 - keeping advanced structure accessible without making it the default burden
+
+Gemini should now design against the prompt-first backend support described above.
+
+Recommended backend handoff for Gemini:
+
+- `ai_handoff/ui_overhaul/decision_intelligence_v3_gemini_handoff_03_phase_3_5_prompt_first_intake.md`
 
 ## Verification Standard
 

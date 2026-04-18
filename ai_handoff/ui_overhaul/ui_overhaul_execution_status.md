@@ -117,8 +117,9 @@ Role:
 
 Status:
 
-- **ACTIVE NEXT PRIORITY**
-- should be completed before major Phase 4 chat-first work begins
+- **COMPLETE** (implementation active in code)
+- prompt-first intake flow (Hero -> Draft -> Workspace) established
+- existing composer preserved as "Advanced Setup" refinement layer
 
 ## Intermission Cleanup
 
@@ -252,6 +253,10 @@ The live frontend already has:
 - backend-driven readiness metadata wired into frontend state
 - AI destination shell with current chat behavior preserved
 - **finished contract-correct render for workspace-native scoped diagnostics**
+- **Data Cleaning Tool Restoration (COMPLETE)**:
+    - Restored the real Power Query-style `DataCleaningForm` as a global overlay.
+    - Removed placeholder stub behavior and moved the tool to the top-level app structure for consistent access.
+    - Wired "Clean Data" ribbon command to the full optimization workflow and connected it to the ML panel.
 
 The live frontend does **not** yet have:
 
@@ -268,6 +273,7 @@ Separate later planning docs for after the cleanup:
 The backend already has:
 
 - `POST /api/decision/workspaces`
+- additive prompt-first drafting on `POST /api/decision/workspaces` using `intake_mode: "prompt_first"` plus `decision_intake`
 - `POST /api/decision/workspaces/analyze`
 - normalization for objective, levers, and constraints
 - contract-faithful `ready` / `needs_input` / `limited` status classification

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { 
-  FaPlus, FaTrash, FaCheck, FaXmark, FaArrowRight, FaLightbulb, 
+  FaPlus, FaTrash, FaCheck, FaCircleXmark, FaArrowRight, FaLightbulb, 
   FaGears, FaShieldHalved, FaClock, FaBullseye, FaLink, FaCircleInfo,
   FaCircleCheck, FaCircleExclamation
 } from 'react-icons/fa6';
@@ -12,34 +12,62 @@ import './DecisionWorkspace.css';
  * Rebuilt for DI 2.0 V1 with a "Guided Brief" UX.
  * Collects objective, levers, and constraints with high-fidelity layout and polish.
  */
-const DecisionWorkspaceComposer = ({ onCreateWorkspace, datasetContext }) => {
-  const [prompt, setPrompt] = useState('');
+const DecisionWorkspaceComposer = ({ onCreateWorkspace, datasetContext, initialData }) => {
+  const [prompt, setPrompt] = useState(initialData?.decision_prompt || '');
   
   // Objective State
   const [objective, setObjective] = useState({
-    statement: '',
-    metric_id: '',
-    direction: 'maximize',
-    target_value: '',
-    target_secondary_value: '',
-    target_operator: 'gte',
-    target_unit: 'ratio',
-    time_horizon_label: 'Next quarter',
-    time_horizon_kind: 'relative_period',
-    time_horizon_grain: 'quarter',
-    time_horizon_start: '',
-    time_horizon_end: ''
+    statement: initialData?.decision_scope?.objective?.statement || '',
+    metric_id: initialData?.decision_scope?.objective?.metric_ref?.metric_id || initialData?.decision_scope?.objective?.metric_id || '',
+    direction: initialData?.decision_scope?.objective?.direction || 'maximize',
+    target_value: initialData?.decision_scope?.objective?.target?.value || '',
+    target_secondary_value: initialData?.decision_scope?.objective?.target?.secondary_value || '',
+    target_operator: initialData?.decision_scope?.objective?.target?.operator || 'gte',
+    target_unit: initialData?.decision_scope?.objective?.target?.unit || 'ratio',
+    time_horizon_label: initialData?.decision_scope?.objective?.time_horizon?.label || 'Next quarter',
+    time_horizon_kind: initialData?.decision_scope?.objective?.time_horizon?.kind || 'relative_period',
+    time_horizon_grain: initialData?.decision_scope?.objective?.time_horizon?.grain || 'quarter',
+    time_horizon_start: initialData?.decision_scope?.objective?.time_horizon?.start || '',
+    time_horizon_end: initialData?.decision_scope?.objective?.time_horizon?.end || ''
   });
 
   // Levers State
-  const [levers, setLevers] = useState([]);
+  const [levers, setLevers] = useState(initialData?.decision_scope?.levers?.map(l => ({
+    id: l.lever_id || `lever_${Math.random().toString(36).substr(2, 9)}`,
+    label: l.label || '',
+    description: l.description || '',
+    lever_type: l.lever_type || 'numeric_input',
+    binding_type: l.binding?.binding_type || 'metric',
+    binding_id: l.binding?.metric_ref?.metric_id || l.binding?.dimension_ref?.dimension_id || l.binding?.field || '',
+    desired_change: l.desired_change || 'increase',
+    current_value: l.current_value || '',
+    min_value: l.bounds?.min_value || '',
+    max_value: l.bounds?.max_value || '',
+    allowed_values: l.bounds?.allowed_values?.join(', ') || '',
+    unit: l.bounds?.unit || l.unit || '',
+    controllable: l.controllable !== undefined ? l.controllable : true
+  })) || []);
   
   // Constraints State
-  const [constraints, setConstraints] = useState([]);
+  const [constraints, setConstraints] = useState(initialData?.decision_scope?.constraints?.map(c => ({
+    id: c.constraint_id || `constraint_${Math.random().toString(36).substr(2, 9)}`,
+    label: c.label || '',
+    description: c.description || '',
+    rationale: c.rationale || '',
+    constraint_type: c.constraint_type || 'metric_guardrail',
+    binding_type: c.binding?.binding_type || 'metric',
+    binding_id: c.binding?.metric_ref?.metric_id || c.binding?.dimension_ref?.dimension_id || c.binding?.field || '',
+    operator: c.condition?.operator || 'gte',
+    value: c.condition?.value || '',
+    secondary_value: c.condition?.secondary_value || '',
+    values: c.condition?.values?.join(', ') || '',
+    unit: c.condition?.unit || '',
+    hardness: c.hardness || 'hard'
+  })) || []);
 
   // Global Context & Preferences
-  const [filters, setFilters] = useState([]);
-  const [scopePreferences, setScopePreferences] = useState({
+  const [filters, setFilters] = useState(initialData?.scoped_context?.applied_filters || initialData?.decision_scope?.filters || []);
+  const [scopePreferences, setScopePreferences] = useState(initialData?.scope_preferences || {
     max_candidate_metrics: 8,
     max_candidate_dimensions: 6,
     include_diagnostics: false

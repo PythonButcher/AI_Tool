@@ -145,6 +145,20 @@ def build_payload():
     }
 
 
+def build_prompt_first_payload():
+    return {
+        "dataset": DATASET,
+        "dataset_ref": {"source": "inline", "dataset_id": "sales_q1", "dataset_name": "Q1 Sales"},
+        "semantic_model": SEMANTIC_MODEL,
+        "decision_prompt": "How should we grow revenue next quarter without hurting gross margin?",
+        "decision_intake": {
+            "what_matters": "Grow revenue next quarter",
+            "what_to_avoid": "Protect gross margin",
+            "additional_context": "We can change discounting and regional mix.",
+        },
+    }
+
+
 class DecisionWorkspaceServiceTests(unittest.TestCase):
     def test_ready_workspace_uses_scoped_context_and_time_metadata(self):
         result = DecisionWorkspaceService.create_workspace(build_payload())
@@ -279,6 +293,63 @@ class DecisionWorkspaceServiceTests(unittest.TestCase):
         self.assertIn("objective.metric_id_or_metric_name", analysis_result["decision_workspace"]["readiness"]["missing_inputs"])
         self.assertIn("not a simulation or trade-off result", analysis["truthfulness_note"])
         self.assertNotIn("Ready for simulation", analysis["summary"])
+
+    def test_prompt_first_intake_drafts_workspace_from_plain_english(self):
+        result = DecisionWorkspaceService.create_workspace(build_prompt_first_payload())
+
+        workspace = result["decision_workspace"]
+        drafting = workspace["drafting"]
+        levers = workspace["decision_scope"]["levers"]
+        constraints = workspace["decision_scope"]["constraints"]
+
+        self.assertEqual(result["meta"]["intake_mode"], "prompt_first")
+        self.assertEqual(drafting["intake_mode"], "prompt_first")
+        self.assertEqual(drafting["source_summary"]["objective"], "system_draft")
+        self.assertEqual(workspace["decision_scope"]["objective"]["metric_ref"]["metric_id"], "metric_revenue_sum")
+        self.assertTrue(any(item["metric_id"] == "metric_revenue_sum" for item in drafting["prompt_matches"]["metrics"]))
+        self.assertTrue(
+            any(
+                (lever.get("binding") or {}).get("metric_ref", {}).get("metric_id") == "metric_discount_rate"
+                or (lever.get("binding") or {}).get("dimension_ref", {}).get("dimension_id") == "dimension_region"
+                for lever in levers
+            )
+        )
+        self.assertTrue(
+            any(
+                (constraint.get("binding") or {}).get("metric_ref", {}).get("metric_id") == "metric_margin_pct"
+                for constraint in constraints
+            )
+        )
+
+    def test_prompt_first_intake_respects_explicit_objective(self):
+        payload = build_prompt_first_payload()
+        payload["objective"] = {
+            "statement": "Maintain gross margin while we grow revenue",
+            "metric_id": "metric_margin_pct",
+            "direction": "maintain",
+        }
+
+        result = DecisionWorkspaceService.create_workspace(payload)
+
+        workspace = result["decision_workspace"]
+        self.assertEqual(workspace["drafting"]["source_summary"]["objective"], "user_input")
+        self.assertEqual(workspace["decision_scope"]["objective"]["statement"], payload["objective"]["statement"])
+        self.assertEqual(workspace["decision_scope"]["objective"]["metric_ref"]["metric_id"], "metric_margin_pct")
+
+    def test_workspace_analysis_preserves_prompt_first_drafting_metadata(self):
+        workspace_result = DecisionWorkspaceService.create_workspace(build_prompt_first_payload())
+
+        analysis_result = DecisionWorkspaceService.analyze_workspace(
+            {
+                "dataset": DATASET,
+                "dataset_ref": {"source": "inline", "dataset_id": "sales_q1", "dataset_name": "Q1 Sales"},
+                "semantic_model": SEMANTIC_MODEL,
+                "decision_workspace": workspace_result["decision_workspace"],
+            }
+        )
+
+        self.assertEqual(analysis_result["decision_workspace"]["drafting"]["intake_mode"], "prompt_first")
+        self.assertEqual(analysis_result["meta"]["intake_mode"], "prompt_first")
 
 
 if __name__ == "__main__":

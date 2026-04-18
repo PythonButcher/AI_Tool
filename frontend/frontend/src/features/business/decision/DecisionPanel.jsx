@@ -5,7 +5,7 @@ import DecisionBrief from './DecisionBrief';
 import DecisionSignals from './DecisionSignals';
 import DecisionRecommendations from './DecisionRecommendations';
 import ScenarioPreview from './ScenarioPreview';
-import DecisionWorkspaceComposer from './DecisionWorkspaceComposer';
+import DecisionIntakeFlow from './DecisionIntakeFlow';
 import DecisionWorkspaceView from './DecisionWorkspaceView';
 import { FaLightbulb, FaDatabase, FaBrain, FaChartBar, FaArrowRight } from 'react-icons/fa';
 
@@ -89,15 +89,15 @@ const DecisionPanel = ({
 
   /**
    * DI 2.0 FLOW: Scoped Workspace
-   * If we have a dataset but no workspace yet, show the Composer.
-   * If we have a workspace, show the Workspace View.
+   * Phase 3.5: Use DecisionIntakeFlow if no workspace exists.
    */
   if (!workspace) {
     return (
       <div className="decision-panel">
-        <DecisionWorkspaceComposer 
+        <DecisionIntakeFlow 
           onCreateWorkspace={onCreateWorkspace} 
           datasetContext={datasetContext}
+          onReset={onResetWorkspace}
         />
       </div>
     );

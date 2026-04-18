@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 import pandas as pd
@@ -37,6 +38,37 @@ class DecisionWorkspaceService:
     MAX_DIMENSIONS = 12
     DEFAULT_MAX_SECONDARY_SIGNALS = 3
     MAX_SECONDARY_SIGNALS = 6
+    PROMPT_MATCH_STOPWORDS = {
+        "a",
+        "an",
+        "and",
+        "are",
+        "as",
+        "at",
+        "be",
+        "by",
+        "for",
+        "from",
+        "how",
+        "in",
+        "into",
+        "is",
+        "it",
+        "of",
+        "on",
+        "or",
+        "our",
+        "should",
+        "the",
+        "this",
+        "to",
+        "we",
+        "what",
+        "which",
+        "while",
+        "with",
+        "without",
+    }
 
     @staticmethod
     def create_workspace(payload: Dict[str, Any]) -> Dict[str, Any]:
@@ -54,6 +86,7 @@ class DecisionWorkspaceService:
             "semantic_model": build_semantic_summary(context["semantic_model"]),
             "decision_workspace": workspace,
             "meta": {
+                "intake_mode": ((workspace.get("drafting") or {}).get("intake_mode") or "structured"),
                 "relevant_metric_count": len(scoped_context["relevant_metrics"]),
                 "relevant_dimension_count": len(scoped_context["relevant_dimensions"]),
                 "unknown_count": len(unknowns),
@@ -92,6 +125,7 @@ class DecisionWorkspaceService:
             "decision_workspace": workspace,
             "workspace_analysis": workspace_analysis,
             "meta": {
+                "intake_mode": ((workspace.get("drafting") or {}).get("intake_mode") or "structured"),
                 "relevant_metric_count": len(workspace["scoped_context"]["relevant_metrics"]),
                 "relevant_dimension_count": len(workspace["scoped_context"]["relevant_dimensions"]),
                 "unknown_count": len(workspace["unknowns"]),
@@ -120,19 +154,40 @@ class DecisionWorkspaceService:
         if not decision_prompt:
             raise DecisionServiceError("decision_prompt is required to create a workspace.")
 
+        decision_intake = DecisionWorkspaceService._normalize_decision_intake(
+            payload.get("decision_intake") or payload.get("decisionIntake")
+        )
+        intake_mode = DecisionWorkspaceService._resolve_intake_mode(payload, decision_intake)
+        prompt_matches = DecisionWorkspaceService._build_prompt_matches(
+            decision_prompt=decision_prompt,
+            decision_intake=decision_intake,
+            context=resolved_context,
+        )
+        prompt_first_draft = DecisionWorkspaceService._build_prompt_first_draft(
+            decision_prompt=decision_prompt,
+            decision_intake=decision_intake,
+            intake_mode=intake_mode,
+            prompt_matches=prompt_matches,
+        )
+
         raw_objective = payload.get("objective")
+        objective_was_user_supplied = isinstance(raw_objective, dict)
+        if raw_objective is None:
+            raw_objective = prompt_first_draft.get("objective")
         if not isinstance(raw_objective, dict):
             raise DecisionServiceError("objective is required to create a workspace.")
 
         raw_levers = payload.get("levers")
+        levers_were_user_supplied = isinstance(raw_levers, list)
         if raw_levers is None:
-            raw_levers = []
+            raw_levers = prompt_first_draft.get("levers") or []
         if not isinstance(raw_levers, list):
             raise DecisionServiceError("levers must be an array when provided.")
 
         raw_constraints = payload.get("constraints")
+        constraints_were_user_supplied = isinstance(raw_constraints, list)
         if raw_constraints is None:
-            raw_constraints = []
+            raw_constraints = prompt_first_draft.get("constraints") or []
         if not isinstance(raw_constraints, list):
             raise DecisionServiceError("constraints must be an array when provided.")
 
@@ -199,6 +254,15 @@ class DecisionWorkspaceService:
             "assumptions": assumptions,
             "unknowns": unknowns,
             "readiness": readiness,
+            "drafting": DecisionWorkspaceService._build_drafting_summary(
+                intake_mode=intake_mode,
+                decision_intake=decision_intake,
+                prompt_matches=prompt_matches,
+                clarification_hints=prompt_first_draft.get("clarification_hints") or [],
+                objective_source="user_input" if objective_was_user_supplied else "system_draft",
+                levers_source="user_input" if levers_were_user_supplied else ("system_draft" if normalized_levers else "none"),
+                constraints_source="user_input" if constraints_were_user_supplied else ("system_draft" if normalized_constraints else "none"),
+            ),
             "created_at": generated_at,
         }
         return {
@@ -254,6 +318,526 @@ class DecisionWorkspaceService:
         except (TypeError, ValueError) as exc:
             raise DecisionServiceError("Scope preference values must be integers.") from exc
         return max(minimum, min(maximum, parsed))
+
+    @staticmethod
+    def _normalize_decision_intake(raw: Any) -> Dict[str, Optional[str]]:
+        raw = raw if isinstance(raw, dict) else {}
+        return {
+            "what_matters": DecisionWorkspaceService._clean_text(
+                raw.get("what_matters") or raw.get("whatMatters")
+            ),
+            "what_to_avoid": DecisionWorkspaceService._clean_text(
+                raw.get("what_to_avoid") or raw.get("whatToAvoid")
+            ),
+            "additional_context": DecisionWorkspaceService._clean_text(
+                raw.get("additional_context") or raw.get("additionalContext")
+            ),
+        }
+
+    @staticmethod
+    def _resolve_intake_mode(
+        payload: Dict[str, Any],
+        decision_intake: Dict[str, Optional[str]],
+    ) -> str:
+        requested_mode = DecisionWorkspaceService._normalize_text(
+            payload.get("intake_mode") or payload.get("intakeMode")
+        )
+        if requested_mode in {"prompt_first", "structured"}:
+            return requested_mode
+        if any(decision_intake.values()):
+            return "prompt_first"
+        if not isinstance(payload.get("objective"), dict):
+            return "prompt_first"
+        return "structured"
+
+    @staticmethod
+    def _build_prompt_matches(
+        decision_prompt: str,
+        decision_intake: Dict[str, Optional[str]],
+        context: Dict[str, Any],
+    ) -> Dict[str, List[Dict[str, Any]]]:
+        text_blob = DecisionWorkspaceService._build_prompt_text_blob(decision_prompt, decision_intake)
+        tokens = DecisionWorkspaceService._tokenize_prompt_text(text_blob)
+
+        metric_matches = DecisionWorkspaceService._rank_prompt_candidates(
+            candidates=context.get("metrics") or [],
+            tokens=tokens,
+            text_blob=text_blob,
+            ref_builder=build_metric_ref,
+        )
+        dimension_matches = DecisionWorkspaceService._rank_prompt_candidates(
+            candidates=context.get("dimensions") or [],
+            tokens=tokens,
+            text_blob=text_blob,
+            ref_builder=build_dimension_ref,
+        )
+
+        return {
+            "metrics": metric_matches[:5],
+            "dimensions": dimension_matches[:4],
+        }
+
+    @staticmethod
+    def _build_prompt_text_blob(
+        decision_prompt: str,
+        decision_intake: Dict[str, Optional[str]],
+    ) -> str:
+        return " ".join(
+            part.strip()
+            for part in [
+                decision_prompt,
+                decision_intake.get("what_matters"),
+                decision_intake.get("what_to_avoid"),
+                decision_intake.get("additional_context"),
+            ]
+            if str(part or "").strip()
+        )
+
+    @staticmethod
+    def _tokenize_prompt_text(text: str) -> List[str]:
+        return [
+            token
+            for token in re.findall(r"[a-z0-9%]+", str(text or "").lower())
+            if len(token) > 2 and token not in DecisionWorkspaceService.PROMPT_MATCH_STOPWORDS
+        ]
+
+    @staticmethod
+    def _rank_prompt_candidates(
+        candidates: Sequence[Dict[str, Any]],
+        tokens: Sequence[str],
+        text_blob: str,
+        ref_builder,
+    ) -> List[Dict[str, Any]]:
+        ranked: List[Tuple[int, Dict[str, Any]]] = []
+        normalized_blob = DecisionWorkspaceService._normalize_phrase(text_blob)
+        for candidate in candidates:
+            score = DecisionWorkspaceService._score_prompt_candidate(candidate, tokens, normalized_blob)
+            if score <= 0:
+                continue
+            ranked.append((score, ref_builder(candidate)))
+
+        ranked.sort(
+            key=lambda item: (
+                -item[0],
+                str(item[1].get("label") or item[1].get("name") or ""),
+            )
+        )
+        return [item[1] for item in ranked]
+
+    @staticmethod
+    def _score_prompt_candidate(
+        candidate: Dict[str, Any],
+        tokens: Sequence[str],
+        normalized_blob: str,
+    ) -> int:
+        score = 0
+        candidate_tokens: List[str] = []
+        for key in ("label", "name", "field", "id"):
+            normalized_value = DecisionWorkspaceService._normalize_phrase(candidate.get(key))
+            if not normalized_value:
+                continue
+            value_tokens = [
+                token
+                for token in normalized_value.split()
+                if token not in DecisionWorkspaceService.PROMPT_MATCH_STOPWORDS
+            ]
+            candidate_tokens.extend(value_tokens)
+            if normalized_value in normalized_blob:
+                score += 6 + len(value_tokens)
+
+        if not candidate_tokens:
+            return score
+
+        overlap = set(candidate_tokens).intersection(tokens)
+        score += len(overlap) * 3
+        if len(overlap) == len(set(candidate_tokens)) and overlap:
+            score += 2
+        return score
+
+    @staticmethod
+    def _build_prompt_first_draft(
+        decision_prompt: str,
+        decision_intake: Dict[str, Optional[str]],
+        intake_mode: str,
+        prompt_matches: Dict[str, List[Dict[str, Any]]],
+    ) -> Dict[str, Any]:
+        if intake_mode != "prompt_first":
+            return {
+                "objective": None,
+                "levers": [],
+                "constraints": [],
+                "clarification_hints": [],
+            }
+
+        objective = DecisionWorkspaceService._draft_objective(
+            decision_prompt=decision_prompt,
+            decision_intake=decision_intake,
+            prompt_matches=prompt_matches,
+        )
+        constraints = DecisionWorkspaceService._draft_constraints(
+            decision_prompt=decision_prompt,
+            decision_intake=decision_intake,
+            prompt_matches=prompt_matches,
+        )
+        levers = DecisionWorkspaceService._draft_levers(
+            decision_prompt=decision_prompt,
+            decision_intake=decision_intake,
+            prompt_matches=prompt_matches,
+            objective=objective,
+            constraints=constraints,
+        )
+
+        return {
+            "objective": objective,
+            "levers": levers,
+            "constraints": constraints,
+            "clarification_hints": DecisionWorkspaceService._build_prompt_first_clarification_hints(
+                decision_intake=decision_intake,
+                prompt_matches=prompt_matches,
+                objective=objective,
+                levers=levers,
+                constraints=constraints,
+            ),
+        }
+
+    @staticmethod
+    def _draft_objective(
+        decision_prompt: str,
+        decision_intake: Dict[str, Optional[str]],
+        prompt_matches: Dict[str, List[Dict[str, Any]]],
+    ) -> Dict[str, Any]:
+        objective_metric = next(iter(prompt_matches.get("metrics") or []), None)
+        objective_text = decision_intake.get("what_matters")
+        direction = DecisionWorkspaceService._infer_objective_direction(
+            " ".join(
+                part
+                for part in [objective_text, decision_prompt]
+                if part
+            )
+        )
+
+        if objective_text:
+            statement = objective_text
+        elif objective_metric:
+            leading_verb = {
+                "maximize": "Increase",
+                "minimize": "Reduce",
+                "maintain": "Maintain",
+                "achieve_target": "Hit",
+            }.get(direction, "Improve")
+            statement = f"{leading_verb} {objective_metric.get('label') or objective_metric.get('name')}"
+        else:
+            statement = decision_prompt
+
+        return {
+            "statement": statement,
+            "metric_id": objective_metric.get("metric_id") if objective_metric else None,
+            "direction": direction,
+            "time_horizon": DecisionWorkspaceService._infer_time_horizon_from_text(
+                DecisionWorkspaceService._build_prompt_text_blob(decision_prompt, decision_intake)
+            ),
+        }
+
+    @staticmethod
+    def _draft_levers(
+        decision_prompt: str,
+        decision_intake: Dict[str, Optional[str]],
+        prompt_matches: Dict[str, List[Dict[str, Any]]],
+        objective: Dict[str, Any],
+        constraints: Sequence[Dict[str, Any]],
+    ) -> List[Dict[str, Any]]:
+        text_blob = DecisionWorkspaceService._build_prompt_text_blob(decision_prompt, decision_intake)
+        objective_metric_id = objective.get("metric_id")
+        constraint_metric_ids = {
+            (constraint.get("binding") or {}).get("metric_id")
+            for constraint in constraints
+            if isinstance((constraint.get("binding") or {}), dict)
+        }
+        levers: List[Dict[str, Any]] = []
+
+        for metric_ref in prompt_matches.get("metrics") or []:
+            metric_id = metric_ref.get("metric_id")
+            if not metric_id or metric_id == objective_metric_id or metric_id in constraint_metric_ids:
+                continue
+            label = metric_ref.get("label") or metric_ref.get("name") or "Draft lever"
+            levers.append(
+                {
+                    "label": label,
+                    "lever_type": DecisionWorkspaceService._infer_lever_type(label),
+                    "binding": {"metric_id": metric_id},
+                    "desired_change": DecisionWorkspaceService._infer_desired_change(text_blob),
+                }
+            )
+            if len(levers) >= 2:
+                break
+
+        dimension_keywords_present = any(
+            keyword in DecisionWorkspaceService._normalize_phrase(text_blob)
+            for keyword in ("mix", "region", "channel", "segment", "allocation")
+        )
+        if dimension_keywords_present:
+            for dimension_ref in prompt_matches.get("dimensions") or []:
+                dimension_id = dimension_ref.get("dimension_id")
+                if not dimension_id:
+                    continue
+                levers.append(
+                    {
+                        "label": f"{dimension_ref.get('label') or dimension_ref.get('name')} mix",
+                        "lever_type": "mix",
+                        "binding": {"dimension_id": dimension_id},
+                        "desired_change": "shift",
+                    }
+                )
+                break
+
+        return levers
+
+    @staticmethod
+    def _draft_constraints(
+        decision_prompt: str,
+        decision_intake: Dict[str, Optional[str]],
+        prompt_matches: Dict[str, List[Dict[str, Any]]],
+    ) -> List[Dict[str, Any]]:
+        clauses = DecisionWorkspaceService._extract_constraint_clauses(
+            decision_prompt=decision_prompt,
+            decision_intake=decision_intake,
+        )
+        constraints: List[Dict[str, Any]] = []
+        used_metric_ids = set()
+
+        for clause in clauses:
+            metric_ref = DecisionWorkspaceService._find_best_prompt_metric_match(
+                clause,
+                prompt_matches.get("metrics") or [],
+            )
+            metric_id = metric_ref.get("metric_id") if isinstance(metric_ref, dict) else None
+            if not metric_id or metric_id in used_metric_ids:
+                continue
+            used_metric_ids.add(metric_id)
+            operator = "gte"
+            normalized_clause = DecisionWorkspaceService._normalize_phrase(clause)
+            if any(word in normalized_clause for word in ("cap", "limit", "under", "below")):
+                operator = "lte"
+            constraints.append(
+                {
+                    "label": f"Protect {metric_ref.get('label') or metric_ref.get('name')}",
+                    "description": clause,
+                    "constraint_type": "metric_guardrail",
+                    "binding": {"metric_id": metric_id},
+                    "condition": {
+                        "operator": operator,
+                        "value": None,
+                        "secondary_value": None,
+                        "values": None,
+                        "unit": None,
+                    },
+                    "hardness": "hard" if any(
+                        word in normalized_clause for word in ("must", "cannot", "never", "stay within")
+                    ) else "soft",
+                }
+            )
+            if len(constraints) >= 2:
+                break
+
+        return constraints
+
+    @staticmethod
+    def _build_prompt_first_clarification_hints(
+        decision_intake: Dict[str, Optional[str]],
+        prompt_matches: Dict[str, List[Dict[str, Any]]],
+        objective: Dict[str, Any],
+        levers: Sequence[Dict[str, Any]],
+        constraints: Sequence[Dict[str, Any]],
+    ) -> List[str]:
+        hints: List[str] = []
+        if not objective.get("metric_id"):
+            hints.append("Confirm which metric should define success for this decision.")
+        if not levers:
+            hints.append("Add at least one controllable lever the team can change.")
+        if decision_intake.get("what_to_avoid") and not constraints:
+            hints.append("Clarify the main guardrail in metric or business terms so the draft can bind it.")
+        if not prompt_matches.get("metrics"):
+            hints.append("No strong metric match was found from the prompt, so expect metric binding follow-up.")
+        return DecisionWorkspaceService._dedupe_strings(hints)
+
+    @staticmethod
+    def _extract_constraint_clauses(
+        decision_prompt: str,
+        decision_intake: Dict[str, Optional[str]],
+    ) -> List[str]:
+        clauses: List[str] = []
+        what_to_avoid = decision_intake.get("what_to_avoid")
+        if what_to_avoid:
+            clauses.append(what_to_avoid)
+
+        prompt = str(decision_prompt or "")
+        patterns = [
+            r"without\s+([^,.;!?]+)",
+            r"protect(?:ing)?\s+([^,.;!?]+)",
+            r"avoid(?:ing)?\s+([^,.;!?]+)",
+            r"stay within\s+([^,.;!?]+)",
+            r"keep\s+([^,.;!?]+)",
+        ]
+        for pattern in patterns:
+            for match in re.findall(pattern, prompt, flags=re.IGNORECASE):
+                cleaned = DecisionWorkspaceService._clean_text(match)
+                if cleaned:
+                    clauses.append(cleaned)
+        return DecisionWorkspaceService._dedupe_strings(clauses)
+
+    @staticmethod
+    def _find_best_prompt_metric_match(
+        text: str,
+        metric_refs: Sequence[Dict[str, Any]],
+    ) -> Optional[Dict[str, Any]]:
+        text_tokens = DecisionWorkspaceService._tokenize_prompt_text(text)
+        normalized_text = DecisionWorkspaceService._normalize_phrase(text)
+        best_score = 0
+        best_match: Optional[Dict[str, Any]] = None
+        for metric_ref in metric_refs:
+            score = DecisionWorkspaceService._score_prompt_candidate(metric_ref, text_tokens, normalized_text)
+            if score > best_score:
+                best_score = score
+                best_match = metric_ref
+        return best_match
+
+    @staticmethod
+    def _infer_objective_direction(text: str) -> str:
+        normalized = DecisionWorkspaceService._normalize_phrase(text)
+        if any(word in normalized for word in ("reduce", "decrease", "lower", "cut", "minimize")):
+            return "minimize"
+        if any(word in normalized for word in ("maintain", "protect", "preserve", "keep", "avoid")):
+            return "maintain"
+        if any(word in normalized for word in ("target", "hit", "reach", "achieve")):
+            return "achieve_target"
+        return "maximize"
+
+    @staticmethod
+    def _infer_desired_change(text: str) -> str:
+        normalized = DecisionWorkspaceService._normalize_phrase(text)
+        if any(word in normalized for word in ("reduce", "decrease", "lower", "cut")):
+            return "decrease"
+        if any(word in normalized for word in ("shift", "rebalance", "reallocate")):
+            return "shift"
+        if any(word in normalized for word in ("tighten", "limit", "cap")):
+            return "tighten"
+        return "increase"
+
+    @staticmethod
+    def _infer_lever_type(label: str) -> str:
+        normalized = DecisionWorkspaceService._normalize_phrase(label)
+        if any(word in normalized for word in ("policy", "discount")):
+            return "policy_choice"
+        if any(word in normalized for word in ("mix", "share", "allocation")):
+            return "mix"
+        if "tim" in normalized:
+            return "timing"
+        return "numeric_input"
+
+    @staticmethod
+    def _infer_time_horizon_from_text(text: str) -> Optional[Dict[str, Any]]:
+        normalized = DecisionWorkspaceService._normalize_phrase(text)
+        if "next quarter" in normalized:
+            return {
+                "kind": "relative_period",
+                "label": "Next quarter",
+                "start": None,
+                "end": None,
+                "grain": "quarter",
+            }
+        if "next month" in normalized:
+            return {
+                "kind": "relative_period",
+                "label": "Next month",
+                "start": None,
+                "end": None,
+                "grain": "month",
+            }
+        if "next week" in normalized:
+            return {
+                "kind": "relative_period",
+                "label": "Next week",
+                "start": None,
+                "end": None,
+                "grain": "week",
+            }
+        if "this year" in normalized or "next year" in normalized:
+            return {
+                "kind": "relative_period",
+                "label": "This year" if "this year" in normalized else "Next year",
+                "start": None,
+                "end": None,
+                "grain": "year",
+            }
+        return None
+
+    @staticmethod
+    def _build_drafting_summary(
+        intake_mode: str,
+        decision_intake: Dict[str, Optional[str]],
+        prompt_matches: Dict[str, List[Dict[str, Any]]],
+        clarification_hints: Sequence[str],
+        objective_source: str,
+        levers_source: str,
+        constraints_source: str,
+    ) -> Dict[str, Any]:
+        return {
+            "intake_mode": intake_mode,
+            "helper_prompts": {
+                "what_matters": decision_intake.get("what_matters"),
+                "what_to_avoid": decision_intake.get("what_to_avoid"),
+                "additional_context": decision_intake.get("additional_context"),
+            },
+            "source_summary": {
+                "objective": objective_source,
+                "levers": levers_source,
+                "constraints": constraints_source,
+            },
+            "prompt_matches": {
+                "metrics": list(prompt_matches.get("metrics") or []),
+                "dimensions": list(prompt_matches.get("dimensions") or []),
+            },
+            "clarification_hints": list(DecisionWorkspaceService._dedupe_strings(clarification_hints)),
+        }
+
+    @staticmethod
+    def _normalize_existing_drafting(
+        raw: Any,
+        objective_present: bool,
+        levers_present: bool,
+        constraints_present: bool,
+    ) -> Dict[str, Any]:
+        raw = raw if isinstance(raw, dict) else {}
+        helper_prompts = raw.get("helper_prompts") if isinstance(raw.get("helper_prompts"), dict) else {}
+        source_summary = raw.get("source_summary") if isinstance(raw.get("source_summary"), dict) else {}
+        prompt_matches = raw.get("prompt_matches") if isinstance(raw.get("prompt_matches"), dict) else {}
+        return {
+            "intake_mode": raw.get("intake_mode") or "structured",
+            "helper_prompts": {
+                "what_matters": DecisionWorkspaceService._clean_text(helper_prompts.get("what_matters")),
+                "what_to_avoid": DecisionWorkspaceService._clean_text(helper_prompts.get("what_to_avoid")),
+                "additional_context": DecisionWorkspaceService._clean_text(helper_prompts.get("additional_context")),
+            },
+            "source_summary": {
+                "objective": source_summary.get("objective") or ("user_input" if objective_present else "none"),
+                "levers": source_summary.get("levers") or ("user_input" if levers_present else "none"),
+                "constraints": source_summary.get("constraints") or ("user_input" if constraints_present else "none"),
+            },
+            "prompt_matches": {
+                "metrics": list(prompt_matches.get("metrics") or []),
+                "dimensions": list(prompt_matches.get("dimensions") or []),
+            },
+            "clarification_hints": list(raw.get("clarification_hints") or []),
+        }
+
+    @staticmethod
+    def _clean_text(value: Any) -> Optional[str]:
+        text = str(value or "").strip()
+        return text if text else None
+
+    @staticmethod
+    def _normalize_phrase(value: Any) -> str:
+        return " ".join(re.findall(r"[a-z0-9%]+", str(value or "").lower()))
 
     @staticmethod
     def _normalize_objective(raw: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
@@ -543,6 +1127,12 @@ class DecisionWorkspaceService:
                 constraints=constraints,
                 unknowns=unknowns,
             )
+        drafting = DecisionWorkspaceService._normalize_existing_drafting(
+            workspace.get("drafting"),
+            objective_present=bool(objective),
+            levers_present=bool(levers),
+            constraints_present=bool(constraints),
+        )
 
         return {
             "workspace_id": workspace.get("workspace_id")
@@ -571,6 +1161,7 @@ class DecisionWorkspaceService:
             "assumptions": list(workspace.get("assumptions") or []),
             "unknowns": unknowns,
             "readiness": readiness,
+            "drafting": drafting,
             "created_at": workspace.get("created_at") or iso_timestamp(),
         }
 

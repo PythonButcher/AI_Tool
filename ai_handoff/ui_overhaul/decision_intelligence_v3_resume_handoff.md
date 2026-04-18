@@ -54,6 +54,7 @@ That includes:
 The backend now supports:
 
 - `POST /api/decision/workspaces` for scoped workspace creation
+- additive prompt-first drafting through `POST /api/decision/workspaces` using `intake_mode: "prompt_first"` and `decision_intake`
 - `POST /api/decision/workspaces/analyze` for workspace-native observational diagnostics
 
 Immediate cleanup handoff:
@@ -72,6 +73,7 @@ Separate Phase 4 planning files:
 Required pre-Phase-4 plan:
 
 - `ai_handoff/ui_overhaul/phase_3_5_decision_intake_rework.md`
+- `ai_handoff/ui_overhaul/decision_intelligence_v3_gemini_handoff_03_phase_3_5_prompt_first_intake.md`
 
 Important truth rule:
 

@@ -265,49 +265,76 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
       { role: "user", content: userInput }
     ];
 
-    if (AICommands.isCommand(userInput) && userInput.startsWith("/charts")) {
-      const aiChartResponse = await handleUserCommand("/charts", datasetContext);
-      if (aiChartResponse && Array.isArray(aiChartResponse.chartData)) {
-        const formattedChartData = formatChartData(aiChartResponse);
-        setAiChartType(formattedChartData.datasets[0]?.label || "Bar Chart");
-        setAiChartData(formattedChartData);
-        setShowAIChart(true);
-        setLoading(false);
-        return;
-      }
-    }
+    // --- Command Routing ---
 
-    if (AICommands.isCommand(userInput) && userInput.startsWith("/clean")) {
+    if (AICommands.isCommand(userInput)) {
       const parts = userInput.split(" ");
+      const cmd = parts[0];
       const instructions = parts.length > 1 ? parts.slice(1).join(" ") : null;
-      const result = await handleUserCommand("/clean", datasetContext, instructions);
-      if (instructions) {
-        if (Array.isArray(result)) {
-          setCleanedData(result);
-          await refreshSemanticModelFromDataset(result, { source: 'ai_shell_clean', preserveUserMetrics: true });
-          responseText = "Dataset optimized and semantic model refreshed.";
-          setAwaitingCleanInstructions(false);
-        } else {
-          responseText = "Unable to process cleaning instructions.";
+
+      if (cmd === "/charts") {
+        const aiChartResponse = await handleUserCommand("/charts", datasetContext);
+        if (aiChartResponse && Array.isArray(aiChartResponse.chartData)) {
+          const formattedChartData = formatChartData(aiChartResponse);
+          setAiChartType(formattedChartData.datasets[0]?.label || "Bar Chart");
+          setAiChartData(formattedChartData);
+          setShowAIChart(true);
+          setLoading(false);
+          return;
+        }
+      }
+
+      if (cmd === "/clean") {
+        try {
+          const response = await axios.post(`${API_URL}/ai_cmd`, { 
+            command: "/clean", 
+            dataset: datasetContext,
+            instructions 
+          });
+          
+          if (response.data.cleaned_data) {
+            const newData = response.data.cleaned_data;
+            setCleanedData(newData);
+            await refreshSemanticModelFromDataset(newData, { source: 'ai_shell_clean', preserveUserMetrics: true });
+            responseText = "Dataset optimized and semantic model refreshed.";
+            setAwaitingCleanInstructions(false);
+          } else if (response.data.suggestions) {
+            responseText = response.data.suggestions;
+            setAwaitingCleanInstructions(true);
+          } else {
+            responseText = "Optimization complete. No changes were found necessary.";
+            setAwaitingCleanInstructions(false);
+          }
+        } catch (err) {
+          responseText = "Failed to process cleaning command.";
         }
       } else {
-        responseText = result || "No optimization suggestions available. Please provide specific cleaning instructions.";
-        setAwaitingCleanInstructions(true);
+        responseText = await handleUserCommand(cmd, datasetContext);
       }
     } else if (awaitingCleanInstructions) {
-      // Restore follow-up logic: treat non-command message as instructions
-      const result = await handleUserCommand("/clean", datasetContext, userInput);
-      if (result && Array.isArray(result)) {
-        setCleanedData(result);
-        await refreshSemanticModelFromDataset(result, { source: 'ai_shell_clean_followup', preserveUserMetrics: true });
-        responseText = "Dataset optimized based on your instructions.";
-      } else {
-        responseText = typeof result === 'string' ? result : "Unable to process optimization.";
+      // Treat the next message as cleaning instructions
+      try {
+        const response = await axios.post(`${API_URL}/ai_cmd`, { 
+          command: "/clean", 
+          dataset: datasetContext, 
+          instructions: userInput 
+        });
+        
+        if (response.data.cleaned_data) {
+          const newData = response.data.cleaned_data;
+          setCleanedData(newData);
+          await refreshSemanticModelFromDataset(newData, { source: 'ai_shell_clean_followup', preserveUserMetrics: true });
+          responseText = "Dataset optimized based on your instructions.";
+          setAwaitingCleanInstructions(false);
+        } else {
+          responseText = response.data.suggestions || "Unable to apply those instructions. Please refine and try again.";
+        }
+      } catch (err) {
+        responseText = "Error applying cleaning instructions.";
+        setAwaitingCleanInstructions(false);
       }
-      setAwaitingCleanInstructions(false);
-    } else if (AICommands.isCommand(userInput)) {
-      responseText = await handleUserCommand(userInput.split(" ")[0], datasetContext);
     } else {
+      // General AI Chat
       try {
         const response = await axios.post(`${API_URL}/ai`, { conversation_history, resolvedDatasets });
         responseText = response.data.reply;
