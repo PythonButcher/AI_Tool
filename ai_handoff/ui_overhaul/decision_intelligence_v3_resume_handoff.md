@@ -56,11 +56,39 @@ The backend now supports:
 - `POST /api/decision/workspaces` for scoped workspace creation
 - `POST /api/decision/workspaces/analyze` for workspace-native observational diagnostics
 
+Immediate cleanup handoff:
+
+- `ai_handoff/ui_overhaul/decision_intelligence_v3_gemini_handoff_01_workspace_analysis_continuation.md`
+
+For the current Gemini task, stop there.
+
+Do not mix the cleanup handoff with later Phase 4 work in the same execution prompt.
+
+Separate Phase 4 planning files:
+
+- `ai_handoff/ui_overhaul/decision_intelligence_v3_gemini_handoff_02_chat_decision_bridge.md`
+- `ai_handoff/phase_docs/decision_intelligence_v3_phase_4_chat_engine_execution_plan.md`
+
+Required pre-Phase-4 plan:
+
+- `ai_handoff/ui_overhaul/phase_3_5_decision_intake_rework.md`
+
 Important truth rule:
 
 - the analysis endpoint is descriptive and scope-grounded
 - it does **not** mean simulation, trade-off execution, or goal-seeking is complete
 - any reused legacy signals must remain filtered, additive, and clearly secondary to the scoped workspace
+
+## Immediate Priority
+
+The current immediate product priority is:
+
+1. complete the workspace-analysis cleanup if anything is still open
+2. rework the Decision Intelligence intake experience under Phase 3.5
+
+The intake rework now matters more than moving straight into chat.
+
+Phase 4 chat-first work is important, but it should be started in a separate step with a separate prompt.
 
 ## Rules For Codex
 

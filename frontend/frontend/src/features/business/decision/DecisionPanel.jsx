@@ -24,7 +24,9 @@ const DecisionPanel = ({
   onOpenAiChat,
   setIsDataPaneOpen,
   workspace,
+  workspaceAnalysis,
   onCreateWorkspace,
+  onAnalyzeWorkspace,
   onResetWorkspace,
   datasetContext
 }) => {
@@ -106,11 +108,13 @@ const DecisionPanel = ({
     <div className="decision-panel">
       <DecisionWorkspaceView 
         workspace={workspace} 
+        analysis={workspaceAnalysis}
         onCreateNew={onResetWorkspace}
+        onAnalyze={onAnalyzeWorkspace}
       />
       
       {/* Optional Legacy Bundle Support: If a bundle exists, we can still show signals below the workspace */}
-      {bundle && (
+      {bundle && !workspaceAnalysis && (
         <div className="decision-panel__legacy-results">
           <div className="legacy-divider">
             <span>Diagnostic Signals</span>

@@ -18,7 +18,7 @@ import DataFilterPanel from './components/data_management/DataFilterPanel';
 import './App.css';
 import { MuiThemeContext } from './context/MuiThemeContext';
 import { useWindowContext } from './context/WindowContext';
-import { runDecisionPipeline, createDecisionWorkspace } from './features/business/decision/decisionApi';
+import { runDecisionPipeline, createDecisionWorkspace, analyzeDecisionWorkspace } from './features/business/decision/decisionApi';
 import GlobalDragOverlay from './components/layout/GlobalDragOverlay';
 
 const parseRecords = (source) => {
@@ -122,6 +122,7 @@ function AppContent() {
   const [showDecisionPanel, setShowDecisionPanel] = useState(false);
   const [decisionBundle, setDecisionBundle] = useState(null);
   const [decisionWorkspace, setDecisionWorkspace] = useState(null);
+  const [workspaceAnalysis, setWorkspaceAnalysis] = useState(null);
   const [decisionReadiness, setDecisionReadiness] = useState(EMPTY_DECISION_READINESS);
   const [decisionWarnings, setDecisionWarnings] = useState([]);
 
@@ -350,14 +351,39 @@ function AppContent() {
         setDecisionWorkspace(result.decision_workspace);
         setDecisionReadiness(result.decision_workspace.readiness);
         if (result.warnings) setDecisionWarnings(result.warnings);
+        // Clear old analysis when a new workspace is created
+        setWorkspaceAnalysis(null);
       }
     } catch (err) {
       console.error('[DecisionIntelligence] Workspace creation failed:', err);
     }
   }, []);
 
+  const handleAnalyzeWorkspace = useCallback(async () => {
+    try {
+      if (!decisionWorkspace) return;
+      
+      const payload = {
+        ...getDecisionPayloadBase(),
+        decision_workspace: decisionWorkspace
+      };
+      
+      const result = await analyzeDecisionWorkspace(payload);
+      if (result.status === 'success') {
+        setWorkspaceAnalysis(result.workspace_analysis);
+        // Sync workspace status if it changed during analysis
+        if (result.decision_workspace) {
+          setDecisionWorkspace(result.decision_workspace);
+        }
+      }
+    } catch (err) {
+      console.error('[DecisionIntelligence] Workspace analysis failed:', err);
+    }
+  }, [decisionWorkspace, getDecisionPayloadBase]);
+
   const handleResetDecisionWorkspace = useCallback(() => {
     setDecisionWorkspace(null);
+    setWorkspaceAnalysis(null);
     setDecisionBundle(null);
     fetchDecisionReadiness();
   }, [fetchDecisionReadiness]);
@@ -587,7 +613,9 @@ function AppContent() {
               setShowDecisionPanel={setShowDecisionPanel}
               decisionBundle={decisionBundle}
               decisionWorkspace={decisionWorkspace}
+              workspaceAnalysis={workspaceAnalysis}
               onCreateDecisionWorkspace={handleCreateDecisionWorkspace}
+              onAnalyzeWorkspace={handleAnalyzeWorkspace}
               getDecisionPayloadBase={getDecisionPayloadBase}
               onDecisionAction={handleDecisionAction}
               decisionReadiness={decisionReadiness}

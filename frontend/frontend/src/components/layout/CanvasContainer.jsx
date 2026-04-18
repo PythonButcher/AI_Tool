@@ -73,7 +73,9 @@ function CanvasContainer({
   setShowDecisionPanel,
   decisionBundle,
   decisionWorkspace,
+  workspaceAnalysis,
   onCreateDecisionWorkspace,
+  onAnalyzeWorkspace,
   getDecisionPayloadBase,
   onDecisionAction,
   decisionReadiness,
@@ -793,7 +795,9 @@ function CanvasContainer({
         onOpenAiChat={onOpenAiChat}
         setIsDataPaneOpen={setIsDataPaneOpen}
         workspace={decisionWorkspace}
+        workspaceAnalysis={workspaceAnalysis}
         onCreateWorkspace={onCreateDecisionWorkspace}
+        onAnalyzeWorkspace={onAnalyzeWorkspace}
         onResetWorkspace={onResetDecisionWorkspace}
         datasetContext={getDecisionPayloadBase ? getDecisionPayloadBase() : {}}
       />

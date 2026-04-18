@@ -102,6 +102,24 @@ Status:
 
 - **COMPLETE** (implementation active in code)
 
+## Phase 3.5
+
+File:
+
+- `phase_3_5_decision_intake_rework.md`
+
+Role:
+
+- redesign the Decision Intelligence intake experience before Phase 4
+- replace the heavy structured form as the primary entry
+- make the first step simpler, more helpful, and more visually compelling
+- shift structure drafting work from the user toward the product
+
+Status:
+
+- **ACTIVE NEXT PRIORITY**
+- should be completed before major Phase 4 chat-first work begins
+
 ## Intermission Cleanup
 
 File:
@@ -198,6 +216,23 @@ Frontend follow-up after Codex:
     - Boosted vibrancy of accent colors (Blue/Green) and added soft color variations for better component depth.
     - Standardized global CSS variables across Sidebar, MenuBar, DataPane, and AI Workflow Lab.
 - move to V3 planning and execution instead of continuing V2 completion language
+- **DI V3: Workspace Analysis Wiring (COMPLETE)**:
+    - [x] Frontend call to `POST /api/decision/workspaces/analyze`.
+    - [x] `workspaceAnalysis` state and analyze handler wired through the Decisions flow.
+    - [x] Truthful “Analyze Workspace” interaction added.
+    - [x] Finish contract-correct rendering of `workspace_analysis.scoped_diagnostics`.
+    - [x] Re-verify that legacy evidence stays secondary.
+- immediate cleanup handoff:
+  - `ai_handoff/ui_overhaul/decision_intelligence_v3_gemini_handoff_01_workspace_analysis_continuation.md`
+
+Important execution note:
+
+- the current Gemini task should only use the cleanup handoff above
+- do not mix the small cleanup task with later Phase 4 chat-first work in the same prompt
+
+Next product planning file after cleanup:
+
+- `ai_handoff/ui_overhaul/phase_3_5_decision_intake_rework.md`
 
 ## What Is Actually Implemented Today
 
@@ -215,6 +250,20 @@ The live frontend already has:
 - DI 2.0 scoped decision workspace flow (composer + view)
 - active Decision Intelligence run flow and panel rendering
 - backend-driven readiness metadata wired into frontend state
+- AI destination shell with current chat behavior preserved
+- **finished contract-correct render for workspace-native scoped diagnostics**
+
+The live frontend does **not** yet have:
+
+- a real chat-to-decision workspace bridge
+- real decision tools inside AI chat
+- a simple, inviting, plain-English Decision Intelligence intake flow
+
+Separate later planning docs for after the cleanup:
+
+- `ai_handoff/ui_overhaul/phase_3_5_decision_intake_rework.md`
+- `ai_handoff/ui_overhaul/decision_intelligence_v3_gemini_handoff_02_chat_decision_bridge.md`
+- `ai_handoff/phase_docs/decision_intelligence_v3_phase_4_chat_engine_execution_plan.md`
 
 The backend already has:
 
