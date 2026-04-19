@@ -14,6 +14,49 @@ The operating rule for this phase is strict:
 
 The model can help with framing, clarification, and explanation, but grounded state, tool execution, workspace drafting, and workspace analysis must remain deterministic backend responsibilities.
 
+## Current Backend Checkpoint
+
+Backend slice 1 and slice 2 are now in place.
+
+What is already real:
+
+- `backend/decision_engine/` now exists as the Phase 4 backend package
+- `POST /api/decision/chat/turns` exists
+- `POST /api/decision/chat/actions` exists
+- the chat contract now supports:
+  - `ask`
+  - `explore`
+  - `decide`
+- explore mode now supports:
+  - deterministic chart routing
+  - semantic metric answers without requiring explicit chart language
+  - follow-up state carried through `session_state.last_analytic_context`
+- decide mode now supports:
+  - prompt-first draft workspace preview
+  - `show_assumptions`
+  - `show_blockers`
+  - `analyze_workspace`
+  - `open_workspace`
+
+Current backend files added for Phase 4:
+
+- `backend/decision_engine/__init__.py`
+- `backend/decision_engine/mode_detection.py`
+- `backend/decision_engine/grounding.py`
+- `backend/decision_engine/chat_service.py`
+
+Current backend file updated for Phase 4:
+
+- `backend/routes/decision.py`
+
+Current test coverage added:
+
+- `tests/test_decision_chat_service.py`
+
+Current verification status:
+
+- targeted backend tests for decision chat and decision workspace services are passing
+
 ## Core Phase Direction
 
 Phase 4 should be executed as a backend-first, hybrid-grounded program.
@@ -39,9 +82,9 @@ But for Phase 4, that should remain a clearly labeled placeholder surface rather
 
 ### 1. Backend Foundation: Dedicated Decision Engine
 
-- [ ] Create a dedicated `backend/decision_engine/` package as the single owner of Phase 4 chat-to-decision orchestration.
-- [ ] Keep current generic AI routes and older decision services available, but treat them as legacy paths rather than the new chat foundation.
-- [ ] Split the new backend engine into clear subsystems:
+- [x] Create a dedicated `backend/decision_engine/` package as the single owner of Phase 4 chat-to-decision orchestration.
+- [x] Keep current generic AI routes and older decision services available, but treat them as legacy paths rather than the new chat foundation.
+- [x] Split the new backend engine into clear subsystems:
   - contract and state handling
   - intent and mode detection
   - context grounding
@@ -49,30 +92,30 @@ But for Phase 4, that should remain a clearly labeled placeholder surface rather
   - workspace draft generation
   - workspace analysis bridging
   - artifact formatting for chat
-- [ ] Use a hybrid-grounded design:
+- [x] Use a hybrid-grounded design:
   - LLM handles intent reading, clarifying questions, and explanation copy
   - deterministic services handle decision state, scoped context, workspace drafting, workspace analysis, and tool execution
-- [ ] Use a stateless turn contract for Phase 4:
+- [x] Use a stateless turn contract for Phase 4:
   - backend returns `session_state`
   - frontend sends `session_state` back on the next turn
   - no server-side persistence is required in this phase
-- [ ] Define explicit engine modes:
+- [x] Define explicit engine modes:
   - `ask`
   - `explore`
   - `decide`
-- [ ] Require every turn response to declare its current mode.
+- [x] Require every turn response to declare its current mode.
 
 ### 2. Public Contract: New Decision Chat API
 
-- [ ] Add `POST /api/decision/chat/turns` as the primary Phase 4 chat contract.
-- [ ] Request payload should include:
+- [x] Add `POST /api/decision/chat/turns` as the primary Phase 4 chat contract.
+- [x] Request payload should include:
   - dataset context
   - semantic model context
   - `user_message`
   - `conversation_history`
   - `session_state`
   - optional active decision workspace context
-- [ ] Response payload should include:
+- [x] Response payload should include:
   - `assistant_message`
   - `mode`
   - `suggested_actions`
@@ -81,31 +124,31 @@ But for Phase 4, that should remain a clearly labeled placeholder surface rather
   - updated `session_state`
   - `grounding_summary`
   - `warnings`
-- [ ] Add `POST /api/decision/chat/actions` for explicit tool actions from the UI so Gemini does not need prompt-hack buttons for:
+- [x] Add `POST /api/decision/chat/actions` for explicit tool actions from the UI so Gemini does not need prompt-hack buttons for:
   - `Draft workspace`
   - `Show blockers`
   - `Show assumptions`
   - `Analyze workspace`
   - `Open workspace`
-- [ ] Keep `POST /api/decision/workspaces` and `POST /api/decision/workspaces/analyze` as underlying engine tools rather than primary chat endpoints.
-- [ ] Do not build a real decision-context upload ingestion API in Phase 4.
+- [x] Keep `POST /api/decision/workspaces` and `POST /api/decision/workspaces/analyze` as underlying engine tools rather than primary chat endpoints.
+- [x] Do not build a real decision-context upload ingestion API in Phase 4.
 
 ### 3. Decision Engine Behavior
 
-- [ ] Support conversational analytics:
+- [~] Support conversational analytics:
   - answer grounded questions about the active dataset and semantic model
   - support follow-up turns without restarting context
   - route chart requests through existing grounded chart and NLP capabilities
   - return chart artifacts with clear explanation of what data and logic were used
-- [ ] Support decision framing:
+- [~] Support decision framing:
   - detect when the user is moving from analysis into decision work
   - extract or propose objective, levers, constraints, and missing inputs
   - ask plain-English follow-up questions when scope is incomplete
-- [ ] Support workspace handoff:
+- [x] Support workspace handoff:
   - generate a draft workspace preview from chat state
   - show assumptions, blockers, and missing inputs before opening the workspace
   - support clean handoff into the Decisions destination
-- [ ] Enforce honest boundaries:
+- [x] Enforce honest boundaries:
   - explicitly label simulation, trade-off execution, and goal-seeking as not yet implemented
   - never imply modeled recommendation quality when only observational analysis exists
 
@@ -155,24 +198,24 @@ But for Phase 4, that should remain a clearly labeled placeholder surface rather
 
 ### Backend Tests
 
-- [ ] Unit tests for mode detection across `ask`, `explore`, and `decide`
-- [ ] Unit tests for tool routing for chart generation, workspace drafting, and workspace analysis actions
-- [ ] Unit tests for `session_state` carry-forward across follow-up turns
+- [x] Unit tests for mode detection across `ask`, `explore`, and `decide`
+- [x] Unit tests for tool routing for chart generation, workspace drafting, and workspace analysis actions
+- [x] Unit tests for `session_state` carry-forward across follow-up turns
 - [ ] Unit tests for honest fallback when a requested capability is not implemented
 
 ### API Tests
 
-- [ ] Grounded analytics question on active dataset returns a grounded answer
-- [ ] Follow-up question reuses prior session state cleanly
-- [ ] Decision-framing prompt produces objective, levers, guardrails, and missing-input handling
-- [ ] Draft workspace preview is generated from chat state
-- [ ] Explicit actions like `Show blockers` and `Show assumptions` return structured results
+- [x] Grounded analytics question on active dataset returns a grounded answer
+- [x] Follow-up question reuses prior session state cleanly
+- [x] Decision-framing prompt produces objective, levers, guardrails, and missing-input handling
+- [x] Draft workspace preview is generated from chat state
+- [x] Explicit actions like `Show blockers` and `Show assumptions` return structured results
 
 ### Regression Tests
 
-- [ ] Prompt-first workspace drafting still works
-- [ ] Workspace analysis still works
-- [ ] Natural-language chart routing still works
+- [x] Prompt-first workspace drafting still works
+- [x] Workspace analysis still works
+- [x] Natural-language chart routing still works
 
 ### Frontend Verification
 
