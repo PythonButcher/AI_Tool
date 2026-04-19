@@ -104,6 +104,7 @@ function AppContent() {
   const [showChartWindow, setShowChartWindow] = useState(false);
   const [showAIChart, setShowAIChart] = useState(false);
   const [showAiWorkflow, setShowAiWorkflow] = useState(false);
+  const [showAiChat, setShowAiChat] = useState(false);
   const [showCanvasMinimized, setShowCanvasMinimized] = useState(false);
   const [previewMode, setPreviewMode] = useState('table');
   const [storyData, setStoryData] = useState(undefined);
@@ -132,11 +133,10 @@ function AppContent() {
   );
 
   const handleOpenAiChat = useCallback(() => {
-    setActiveDestination(DESTINATIONS.AI);
-    setActiveWorkflow('ai');
-    closeDashboard();
+    setShowAiChat(true);
+    restoreWindow('aiChat');
     setAiChatOpenRequestKey((prev) => prev + 1);
-  }, [closeDashboard]);
+  }, [restoreWindow]);
 
   const handleStatsSelect = useCallback((statType) => setSelectedStat(statType), []);
 
@@ -621,6 +621,8 @@ function AppContent() {
               handleCloseRawViewer={handleCloseRawViewer}
               showMachineLearning={showMachineLearning}
               setShowMachineLearning={setShowMachineLearning}
+              showAiChat={showAiChat}
+              setShowAiChat={setShowAiChat}
               showDecisionPanel={showDecisionPanel}
               setShowDecisionPanel={setShowDecisionPanel}
               decisionBundle={decisionBundle}

@@ -260,6 +260,19 @@ The live frontend already has:
     - Restored the real Power Query-style `DataCleaningForm` as a global overlay.
     - Removed placeholder stub behavior and moved the tool to the top-level app structure for consistent access.
     - Wired "Clean Data" ribbon command to the full optimization workflow and connected it to the ML panel.
+- **Better UI Polish Pass (COMPLETE & HARDENED)**:
+    - **Fixed AI Chat Initialization**: Restoration of global windowing logic ensures AI Chat opens reliably from any destination via shortcut or ribbon.
+    - **Ultra-Compact Command Ribbon**: Reduced ribbon height and button footprint for maximum canvas space. 
+    - **High-Density Simplified Copy**: Shortened all button labels to single-word descriptions (e.g., "Refine", "Library", "Analyze") and moved long descriptions to tooltips.
+    - **Disciplined Proportions**: Overhauled button padding, font sizes, and container spacing to ensure a mature, professional aesthetic without bloat.
+    - **Premium Neutral Aesthetic**: Established a sophisticated high-contrast theme using primary dark neutrals and subtle transitions.
+    - **Neutralized Selection Highlights**: Replaced all blue selection and hover highlights in the Sidebar and AI Chat with high-contrast premium neutrals.
+    - **Data Intake Form Redesign**:
+        - **FileUpload**: Fixed to a centered 520px width with a robust, inviting drop-zone makeover.
+        - **API Form**: Completely redesigned as a compact, integrated inline interface.
+        - **Database Form**: Transformed into a technical 2-column grid layout for complex configurations.
+    - **AI Chat "Once Over"**: Neutralized the robot icon and user message bubbles from bright blue to a cohesive dark neutral theme.
+    - **Decision Intelligence Opening Polish**: Neutralized the Decision Intelligence setup guidance window (icons, badges, and prompt boxes) from bright blue to the premium neutral aesthetic, ensuring a consistent high-contrast professional look upon entry.
 
 The live frontend does **not** yet have:
 

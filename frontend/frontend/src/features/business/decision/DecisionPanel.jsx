@@ -49,10 +49,10 @@ const DecisionPanel = ({
             <h3>Connect your data</h3>
             <p>Decision Intelligence requires an active dataset to begin structuring your workspace.</p>
             <div className="decision-setup-actions">
-              <button className="decision-setup-btn decision-setup-btn--primary" onClick={() => onOpenAiChat()}>
-                Ask AI to help load data
+              <button className="create-workspace-btn" onClick={() => onOpenAiChat()}>
+                Load data with AI
               </button>
-              <small>Or visit the <strong>Workspace</strong> to perform a manual intake.</small>
+              <small>Or perform a manual intake in the <strong>Workspace</strong>.</small>
             </div>
           </div>
         </div>

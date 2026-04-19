@@ -2,133 +2,106 @@
   position: absolute;
   top: 50%;
   left: 50%;
-  transform: translate(-50%, -55%);
-  width: min(700px, calc(100% - 64px));
-  padding: 48px;
+  transform: translate(-50%, -52%);
+  width: min(640px, calc(100% - 64px));
+  padding: 40px;
   text-align: center;
   z-index: 5;
-  background: rgba(255, 255, 255, 0.03);
-  backdrop-filter: blur(8px);
-  border-radius: 40px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  animation: dest-home-fade-in 0.8s cubic-bezier(0.2, 0, 0.2, 1);
+  background: color-mix(in srgb, var(--bg-primary) 50%, transparent);
+  backdrop-filter: blur(12px);
+  border-radius: 24px;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
+  animation: dest-home-fade-in 0.6s cubic-bezier(0.2, 0, 0, 1);
 }
 
 @keyframes dest-home-fade-in {
-  from { opacity: 0; transform: translate(-50%, -50%) scale(0.95); }
-  to { opacity: 1; transform: translate(-50%, -55%) scale(1); }
+  from { opacity: 0; transform: translate(-50%, -48%) scale(0.98); }
+  to { opacity: 1; transform: translate(-50%, -52%) scale(1); }
 }
 
 .dest-home__icon-orbit {
   position: relative;
-  width: 120px;
-  height: 120px;
-  margin: 0 auto 32px;
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 24px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, rgba(59, 109, 87, 0.1), rgba(59, 109, 87, 0.05));
+  background: var(--bg-secondary);
   border-radius: 50%;
-  box-shadow: 0 0 40px rgba(59, 109, 87, 0.1);
+  border: 1px solid var(--border-color);
 }
 
 .dest-home__main-icon {
-  font-size: 56px;
-  color: #3b6d57;
-  filter: drop-shadow(0 4px 12px rgba(59, 109, 87, 0.3));
-}
-
-.dest-home--ai .dest-home__main-icon {
-  color: #6366f1;
-  filter: drop-shadow(0 4px 12px rgba(99, 102, 241, 0.3));
+  font-size: 32px;
+  color: var(--text-primary);
+  opacity: 0.8;
 }
 
 .dest-home__title {
-  font-size: 2.5rem;
-  font-weight: 800;
-  margin: 0 0 16px;
-  color: #1a2a22;
-  letter-spacing: -0.02em;
-}
-
-.dark .dest-home__title {
-  color: #e2e8f0;
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin: 0 0 12px;
+  color: var(--text-primary);
+  letter-spacing: -0.015em;
 }
 
 .dest-home__description {
-  font-size: 1.15rem;
-  line-height: 1.6;
-  color: #5d6d63;
-  margin-bottom: 40px;
-  max-width: 520px;
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  margin-bottom: 32px;
+  max-width: 440px;
   margin-left: auto;
   margin-right: auto;
 }
 
-.dark .dest-home__description {
-  color: #94a3b8;
-}
-
 .dest-home__actions {
   display: flex;
-  gap: 16px;
+  gap: 12px;
   justify-content: center;
 }
 
 .dest-home__button {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 14px 28px;
-  border-radius: 14px;
-  font-size: 1rem;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 0.95rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  background: white;
-  color: #31453a;
+  transition: all 0.2s ease;
+  border: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--text-primary);
 }
 
 .dest-home__button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-  border-color: rgba(59, 109, 87, 0.3);
+  background: var(--bg-secondary);
+  border-color: var(--text-secondary);
 }
 
-.dest-home__button--primary {
-  background: #3b6d57;
-  color: white;
-  border: none;
-}
-
-.dest-home__button--primary:hover {
-  background: #2f5645;
-  box-shadow: 0 8px 32px rgba(59, 109, 87, 0.3);
-}
-
+.dest-home__button--primary,
 .dest-home__button--ai {
-  background: #6366f1;
-  color: white;
-  border: none;
+  background: var(--text-primary);
+  color: var(--bg-primary);
+  border-color: transparent;
 }
 
+.dest-home__button--primary:hover,
 .dest-home__button--ai:hover {
-  background: #4f46e5;
-  box-shadow: 0 8px 32px rgba(99, 102, 241, 0.3);
+  background: var(--text-secondary);
 }
 
 .dest-home__feature-grid {
   display: flex;
   justify-content: center;
   gap: 32px;
-  margin-top: 48px;
-  padding-top: 32px;
-  border-top: 1px solid rgba(0, 0, 0, 0.05);
-}
-
-.dark .dest-home__feature-grid {
-  border-top-color: rgba(255, 255, 255, 0.05);
+  margin-top: 40px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border-color);
 }
 
 .dest-home__feature {
@@ -136,54 +109,28 @@
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  color: #5d6d63;
+  color: var(--text-secondary);
   font-size: 0.85rem;
   font-weight: 500;
 }
 
-.dark .dest-home__feature {
-  color: #94a3b8;
-}
-
 .dest-home__feature svg {
   font-size: 1.25rem;
-  color: #3b6d57;
+  color: var(--text-primary);
 }
 
-.dest-home--ai .dest-home__feature svg {
-  color: #6366f1;
-}
-
-/* Phase 4 Bridge and Ready Orbit */
-.dest-home__icon-orbit--ready::after {
-  content: '';
-  position: absolute;
-  top: -10px;
-  left: -10px;
-  right: -10px;
-  bottom: -10px;
-  border-radius: 50%;
-  border: 2px dashed color-mix(in srgb, var(--accent-green) 40%, transparent);
-  animation: destOrbitRotate 20s linear infinite;
-}
-
-@keyframes destOrbitRotate {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
+/* Phase 4 Bridge */
 .dest-home__bridge {
-  margin-top: 40px;
-  padding: 16px 24px;
-  border-radius: 16px;
-  background: color-mix(in srgb, var(--accent-blue-soft) 5%, var(--bg-primary));
-  border: 1px solid color-mix(in srgb, var(--border-color) 40%, transparent);
+  margin-top: 32px;
+  padding: 12px 20px;
+  border-radius: 12px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
   display: flex;
   align-items: center;
-  gap: 16px;
-  font-size: 0.95rem;
+  gap: 12px;
+  font-size: 0.9rem;
   color: var(--text-secondary);
-  animation: bridgeFadeIn 0.8s ease;
 }
 
 .dest-home__bridge strong {
@@ -191,27 +138,25 @@
 }
 
 .dest-home__bridge svg {
-  color: var(--accent-blue);
-  font-size: 1.2rem;
+  color: var(--text-primary);
 }
 
 .dest-home__bridge button {
   margin-left: auto;
-  padding: 8px 16px;
-  border-radius: 8px;
-  border: 1px solid var(--accent-blue);
-  background: transparent;
-  color: var(--accent-blue);
-  font-weight: 700;
-  font-size: 0.85rem;
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-weight: 600;
+  font-size: 0.8rem;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .dest-home__bridge button:hover {
-  background: var(--accent-blue);
-  color: white;
-  transform: translateX(4px);
+  background: var(--text-primary);
+  color: var(--bg-primary);
 }
 
 @keyframes bridgeFadeIn {

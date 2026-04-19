@@ -218,7 +218,7 @@ const DecisionIntakeFlow = ({ onCreateWorkspace, datasetContext, onReset }) => {
               onClick={() => handleStartDraft()}
               disabled={!intake.decision_prompt || loading}
             >
-              {loading ? 'Drafting Strategy...' : 'Draft Decision Strategy'} <FaWandMagic />
+              {loading ? 'Drafting...' : 'Draft Strategy'} <FaWandMagic />
             </button>
             {error && <div className="intake-error"><FaCircleExclamation /> {error}</div>}
           </div>

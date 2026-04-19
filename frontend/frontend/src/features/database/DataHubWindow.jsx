@@ -138,7 +138,7 @@ function DataHubWindow() {
   return (
     <div className="datahub-window">
       <header className="datahub-header">
-        <h3>Data Hub</h3>
+        <h3>Hub</h3>
         <button
           className="refresh-btn"
           onClick={() => fetchDatasets()}
@@ -154,7 +154,7 @@ function DataHubWindow() {
             type="text"
             value={searchTerm}
             onChange={handleSearchInputChange}
-            placeholder="Search by name, path, or ID"
+            placeholder="Search datasets"
             disabled={isLoading}
           />
           <button type="submit" disabled={isLoading}>
@@ -164,13 +164,13 @@ function DataHubWindow() {
       </section>
 
       <section className="datahub-status">
-        {isLoading && <p className="status loading">Loading datasets…</p>}
+        {isLoading && <p className="status loading">Loading...</p>}
         {!isLoading && !hasSearched && !error && (
-          <p className="status empty">Search for a dataset by name, path, or ID.</p>
+          <p className="status empty">Search for a dataset.</p>
         )}
         {!isLoading && hasSearched && !sortedDatasets.length && !error && (
           <p className="status empty">
-            {lastQuery ? `No datasets matched "${lastQuery}".` : "No datasets found."}
+            No results found.
           </p>
         )}
         {error && <p className="status error">{error}</p>}
@@ -184,7 +184,6 @@ function DataHubWindow() {
               <tr>
                 <th>Name</th>
                 <th>Path</th>
-                <th>ID</th>
                 <th></th>
               </tr>
             </thead>
@@ -193,7 +192,6 @@ function DataHubWindow() {
                 <tr key={dataset.id}>
                   <td>{dataset.name}</td>
                   <td className="truncate">{dataset.path}</td>
-                  <td>{dataset.id}</td>
                   <td>
                     <button
                       className="danger"
@@ -211,10 +209,10 @@ function DataHubWindow() {
       </section>
 
       <section className="datahub-form-section">
-        <h4>Register Dataset</h4>
+        <h4>Register</h4>
         <form className="datahub-form" onSubmit={handleRegister}>
           <label>
-            Dataset ID
+            ID
             <input
               type="text"
               name="id"
@@ -231,18 +229,18 @@ function DataHubWindow() {
               name="name"
               value={formState.name}
               onChange={handleInputChange}
-              placeholder="my_dataset.csv"
+              placeholder="dataset.csv"
               disabled={isLoading}
             />
           </label>
           <label>
-            Storage Path
+            Path
             <input
               type="text"
               name="path"
               value={formState.path}
               onChange={handleInputChange}
-              placeholder="/uploads/my_dataset.csv"
+              placeholder="/uploads/dataset.csv"
               disabled={isLoading}
             />
           </label>
