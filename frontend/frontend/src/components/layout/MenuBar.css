@@ -9,84 +9,60 @@
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Glassmorphism effect for the bar */
-.menu-bar::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    to bottom,
-    color-mix(in srgb, var(--menu-bar-surface) 80%, transparent),
-    var(--menu-bar-surface)
-  );
-  backdrop-filter: blur(8px);
-  z-index: -1;
-}
-
 .menu-bar__topline {
   display: flex;
   align-items: center;
-  height: 52px;
-  padding: 0 20px;
-  gap: 24px;
+  height: 48px;
+  padding: 0 16px;
+  gap: 16px;
 }
 
 .menu-bar__identity {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding-right: 24px;
-  border-right: 1px solid color-mix(in srgb, var(--border-color) 40%, transparent);
-  transition: opacity 0.2s ease;
-}
-
-.menu-bar__identity:hover {
-  opacity: 0.8;
+  gap: 10px;
+  padding-right: 16px;
+  border-right: 1px solid var(--border-color);
 }
 
 .menu-bar__app-dot {
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
-  background: var(--accent-blue);
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent-blue) 15%, transparent);
+  background: var(--text-primary);
 }
 
 .menu-bar__app-name {
   font-size: 0.85rem;
-  font-weight: 800;
-  letter-spacing: 0.05em;
+  font-weight: 700;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--text-primary);
 }
 
-/* Breadcrumb Context Area */
 .menu-bar__context {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   flex: 1;
 }
 
 .menu-bar__breadcrumb-sep {
   color: var(--text-secondary);
   opacity: 0.4;
-  font-size: 1.2rem;
-  font-weight: 300;
+  font-size: 0.9rem;
 }
 
 .menu-bar__active-dest {
-  font-size: 0.95rem;
-  font-weight: 600;
+  font-size: 0.9rem;
+  font-weight: 500;
   color: var(--text-primary);
-  letter-spacing: -0.01em;
 }
 
-/* Utility Area */
 .menu-bar__utility {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
 }
 
 .menu-bar__divider {
@@ -95,199 +71,145 @@
   background: var(--border-color);
 }
 
-/* Setup Trigger - HIGH QUALITY REDESIGN */
 .menu-bar__setup-trigger {
   display: flex;
   align-items: center;
-  gap: 10px;
-  height: 36px;
-  padding: 0 14px;
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--bg-secondary) 80%, transparent);
+  gap: 8px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 6px;
+  background: transparent;
   border: 1px solid var(--border-color);
   color: var(--text-primary);
-  font-size: 0.85rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.menu-bar__setup-trigger svg:first-child {
-  font-size: 1rem;
-  color: var(--accent-blue);
-  transition: transform 0.4s ease;
-}
-
-.menu-bar__setup-trigger:hover {
-  background: var(--bg-secondary);
-  border-color: color-mix(in srgb, var(--accent-blue) 40%, var(--border-color));
-  transform: translateY(-1px);
-}
-
-.menu-bar__setup-trigger.is-active {
-  background: var(--accent-blue);
-  border-color: var(--accent-blue);
-  color: white;
-  box-shadow: 0 4px 12px color-mix(in srgb, var(--accent-blue) 30%, transparent);
-}
-
-.menu-bar__setup-trigger.is-active svg:first-child {
-  color: white;
-  transform: rotate(90deg);
-}
-
-.menu-bar__setup-trigger.is-active svg:last-child {
-  transform: rotate(180deg);
-}
-
-/* Utility Pill */
-.menu-bar__utility-pill {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  height: 36px;
-  padding: 0 12px;
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--accent-green-soft) 20%, transparent);
-  border: 1px solid color-mix(in srgb, var(--accent-green) 20%, var(--border-color));
-  color: var(--text-primary);
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
-.menu-bar__utility-pill:hover {
-  background: color-mix(in srgb, var(--accent-green-soft) 30%, transparent);
-  transform: translateY(-1px);
+.menu-bar__setup-trigger:hover {
+  background: var(--bg-secondary);
 }
 
-/* Ribbon Area */
+.menu-bar__setup-trigger.is-active {
+  background: var(--text-primary);
+  color: var(--bg-primary);
+}
+
 .menu-ribbon {
-  padding: 20px;
-  background: color-mix(in srgb, var(--bg-secondary) 50%, transparent);
+  padding: 8px 16px;
+  background: var(--bg-primary);
   border-top: 1px solid var(--border-color);
-  animation: slideDown 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: slideDown 0.2s ease-out;
 }
 
 @keyframes slideDown {
-  from { opacity: 0; transform: translateY(-10px); }
+  from { opacity: 0; transform: translateY(-4px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
 .menu-ribbon__groups {
   display: flex;
-  gap: 32px;
+  gap: 20px;
 }
 
 .ribbon-group {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-}
-
-.ribbon-group__title {
-  font-size: 0.75rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--text-secondary);
-}
-
-.ribbon-group__body {
-  display: flex;
-  gap: 8px;
-}
-
-/* Ribbon Command */
-.ribbon-command {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  width: 90px;
-  height: 80px;
-  padding: 8px;
-  border-radius: 12px;
-  background: var(--bg-primary);
-  border: 1px solid var(--border-color);
-  color: var(--text-primary);
-  cursor: pointer;
-  transition: all 0.2s ease;
-  gap: 8px;
-}
-
-.ribbon-command:hover {
-  border-color: var(--accent-blue);
-  background: color-mix(in srgb, var(--accent-blue) 5%, var(--bg-primary));
-  transform: translateY(-2px);
-}
-
-.ribbon-command__icon {
-  font-size: 1.4rem;
-  color: var(--accent-blue);
-}
-
-.ribbon-command__label {
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-align: center;
-}
-
-.ribbon-command__description {
-  display: none; /* Keep it clean in the new slim ribbon */
-}
-
-/* Inline Panel (Data Intake etc) */
-.ribbon-inline-panel {
-  margin-top: 20px;
-  padding: 20px;
-  border-radius: 16px;
-  background: var(--bg-primary);
-  border: 1px solid var(--border-color);
-  box-shadow: 0 12px 32px var(--shadow-color-soft);
-}
-
-.ribbon-inline-panel__header {
-  margin-bottom: 20px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--border-color);
-}
-
-.ribbon-inline-panel__title {
-  font-size: 1.1rem;
-  font-weight: 700;
-  margin: 0;
-}
-
-.ribbon-divider-v {
-  width: 1px;
-  height: 40px;
-  background: var(--border-color);
-  align-self: center;
-  margin: 0 12px;
-  opacity: 0.5;
-}
-
-.ribbon-group {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding-right: 24px;
-  border-right: 1px solid color-mix(in srgb, var(--border-color) 40%, transparent);
+  gap: 4px;
+  padding-right: 16px;
+  border-right: 1px solid var(--border-color);
 }
 
 .ribbon-group:last-child {
   border-right: none;
 }
 
-.ribbon-group__footer {
-  margin-top: 4px;
+.ribbon-group__title {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+  text-align: center;
+  opacity: 0.7;
 }
 
-.ribbon-group__caption {
-  font-size: 0.7rem;
+.ribbon-group__body {
+  display: flex;
+  gap: 4px;
+}
+
+.ribbon-command {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 56px;
+  height: 52px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  gap: 2px;
+}
+
+.ribbon-command:hover:not(:disabled) {
+  background: var(--bg-secondary);
+  border-color: var(--border-color);
+}
+
+.ribbon-command.is-active {
+  background: var(--bg-secondary);
+  border-color: var(--text-primary);
+}
+
+.ribbon-command__icon {
+  font-size: 1rem;
   color: var(--text-secondary);
-  opacity: 0.6;
-  font-weight: 500;
+}
+
+.ribbon-command:hover:not(:disabled) .ribbon-command__icon,
+.ribbon-command.is-active .ribbon-command__icon {
+  color: var(--text-primary);
+}
+
+.ribbon-command.is-emphasized {
+  background: color-mix(in srgb, var(--text-primary) 5%, transparent);
+  border-color: color-mix(in srgb, var(--text-primary) 10%, transparent);
+}
+
+.ribbon-command__label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.ribbon-divider-v {
+  width: 1px;
+  height: 32px;
+  background: var(--border-color);
+  align-self: center;
+  margin: 0 8px;
+  opacity: 0.5;
+}
+
+.ribbon-inline-panel {
+  margin-top: 12px;
+  padding: 16px;
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  box-shadow: 0 4px 12px var(--shadow-color-soft);
+}
+
+.ribbon-inline-panel__title {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0 0 12px 0;
+  color: var(--text-primary);
 }

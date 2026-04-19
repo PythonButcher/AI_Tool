@@ -49,6 +49,59 @@ That includes:
 - tightening placeholders, truth alignment, and user trust
 - resolving any remaining contract gaps between backend and frontend
 
+## Current Backend V3 Checkpoint
+
+The backend now supports:
+
+- `POST /api/decision/workspaces` for scoped workspace creation
+- additive prompt-first drafting through `POST /api/decision/workspaces` using `intake_mode: "prompt_first"` and `decision_intake`
+- Phase 3.6 current-intake hardening so prompts with a goal, multiple levers, and a guardrail are split into separate drafting clauses before objective/lever/constraint selection
+- `POST /api/decision/workspaces/analyze` for workspace-native observational diagnostics
+
+Immediate cleanup handoff:
+
+- `ai_handoff/ui_overhaul/decision_intelligence_v3_gemini_handoff_01_workspace_analysis_continuation.md`
+
+For the current Gemini task, stop there.
+
+Do not mix the cleanup handoff with later Phase 4 work in the same execution prompt.
+
+Separate Phase 4 planning files:
+
+- `ai_handoff/ui_overhaul/decision_intelligence_v3_gemini_handoff_02_chat_decision_bridge.md`
+- `ai_handoff/phase_docs/decision_intelligence_v3_phase_4_chat_engine_execution_plan.md`
+
+Required pre-Phase-4 plan:
+
+- `ai_handoff/ui_overhaul/phase_3_5_decision_intake_rework.md`
+- `ai_handoff/ui_overhaul/decision_intelligence_v3_gemini_handoff_03_phase_3_5_prompt_first_intake.md`
+
+Important truth rule:
+
+- the analysis endpoint is descriptive and scope-grounded
+- it does **not** mean simulation, trade-off execution, or goal-seeking is complete
+- any reused legacy signals must remain filtered, additive, and clearly secondary to the scoped workspace
+
+## Immediate Priority
+
+The current immediate product priority is:
+
+1. complete the workspace-analysis cleanup if anything is still open
+2. keep hardening the Decision Intelligence intake under V3 Phase 3.6 until prompt-first drafting is reliable on real prompts
+
+The intake path still matters more than moving straight into chat.
+
+Current Phase 3.6 truth:
+
+- the frontend intake exists, but real prompt failures surfaced after rollout
+- backend hardening is now in place for the most important failure mode: goal metric vs lever metric confusion
+- the exact prompt `How should we grow revenue next quarter using discount rate and marketing spend changes by region without hurting gross margin?` is now covered by backend regression tests and should draft:
+  - objective: `Revenue`
+  - lever candidates: `Discount Rate`, `Marketing Spend`, `Region mix`
+  - guardrail: `Gross Margin %`
+
+Phase 4 chat-first work is important, but it should be started in a separate step with a separate prompt.
+
 ## Rules For Codex
 
 Codex should treat V3 as the active workstream.

@@ -15,10 +15,11 @@ import { HelpOverlayProvider } from './context/HelpOverlayContext';
 import useLoadRawData from './hooks/useLoadRawData';
 import Snowfall from 'react-snowfall';
 import DataFilterPanel from './components/data_management/DataFilterPanel';
+import DataCleaningForm from './components/data_management/DataCleaningForm';
 import './App.css';
 import { MuiThemeContext } from './context/MuiThemeContext';
 import { useWindowContext } from './context/WindowContext';
-import { runDecisionPipeline, createDecisionWorkspace } from './features/business/decision/decisionApi';
+import { runDecisionPipeline, createDecisionWorkspace, analyzeDecisionWorkspace } from './features/business/decision/decisionApi';
 import GlobalDragOverlay from './components/layout/GlobalDragOverlay';
 
 const parseRecords = (source) => {
@@ -103,6 +104,7 @@ function AppContent() {
   const [showChartWindow, setShowChartWindow] = useState(false);
   const [showAIChart, setShowAIChart] = useState(false);
   const [showAiWorkflow, setShowAiWorkflow] = useState(false);
+  const [showAiChat, setShowAiChat] = useState(false);
   const [showCanvasMinimized, setShowCanvasMinimized] = useState(false);
   const [previewMode, setPreviewMode] = useState('table');
   const [storyData, setStoryData] = useState(undefined);
@@ -122,6 +124,7 @@ function AppContent() {
   const [showDecisionPanel, setShowDecisionPanel] = useState(false);
   const [decisionBundle, setDecisionBundle] = useState(null);
   const [decisionWorkspace, setDecisionWorkspace] = useState(null);
+  const [workspaceAnalysis, setWorkspaceAnalysis] = useState(null);
   const [decisionReadiness, setDecisionReadiness] = useState(EMPTY_DECISION_READINESS);
   const [decisionWarnings, setDecisionWarnings] = useState([]);
 
@@ -130,11 +133,10 @@ function AppContent() {
   );
 
   const handleOpenAiChat = useCallback(() => {
-    setActiveDestination(DESTINATIONS.AI);
-    setActiveWorkflow('ai');
-    closeDashboard();
+    setShowAiChat(true);
+    restoreWindow('aiChat');
     setAiChatOpenRequestKey((prev) => prev + 1);
-  }, [closeDashboard]);
+  }, [restoreWindow]);
 
   const handleStatsSelect = useCallback((statType) => setSelectedStat(statType), []);
 
@@ -350,14 +352,39 @@ function AppContent() {
         setDecisionWorkspace(result.decision_workspace);
         setDecisionReadiness(result.decision_workspace.readiness);
         if (result.warnings) setDecisionWarnings(result.warnings);
+        // Clear old analysis when a new workspace is created
+        setWorkspaceAnalysis(null);
       }
     } catch (err) {
       console.error('[DecisionIntelligence] Workspace creation failed:', err);
     }
   }, []);
 
+  const handleAnalyzeWorkspace = useCallback(async () => {
+    try {
+      if (!decisionWorkspace) return;
+      
+      const payload = {
+        ...getDecisionPayloadBase(),
+        decision_workspace: decisionWorkspace
+      };
+      
+      const result = await analyzeDecisionWorkspace(payload);
+      if (result.status === 'success') {
+        setWorkspaceAnalysis(result.workspace_analysis);
+        // Sync workspace status if it changed during analysis
+        if (result.decision_workspace) {
+          setDecisionWorkspace(result.decision_workspace);
+        }
+      }
+    } catch (err) {
+      console.error('[DecisionIntelligence] Workspace analysis failed:', err);
+    }
+  }, [decisionWorkspace, getDecisionPayloadBase]);
+
   const handleResetDecisionWorkspace = useCallback(() => {
     setDecisionWorkspace(null);
+    setWorkspaceAnalysis(null);
     setDecisionBundle(null);
     fetchDecisionReadiness();
   }, [fetchDecisionReadiness]);
@@ -529,6 +556,17 @@ function AppContent() {
 
           <DataFilterPanel openDataFilter={openDataFilter} setOpenDataFilter={setOpenDataFilter} />
 
+          {showCleaningForm && (
+            <DataCleaningForm
+              closeForm={() => setShowCleaningForm(false)}
+              setShowDataPreview={setShowDataPreview}
+              onProceedToTraining={() => {
+                setShowMachineLearning(true);
+                setShowCleaningForm(false);
+              }}
+            />
+          )}
+
           {showDataVisual && (
             <DataVisualizations
               onDataCleaned={cleanedData}
@@ -583,11 +621,15 @@ function AppContent() {
               handleCloseRawViewer={handleCloseRawViewer}
               showMachineLearning={showMachineLearning}
               setShowMachineLearning={setShowMachineLearning}
+              showAiChat={showAiChat}
+              setShowAiChat={setShowAiChat}
               showDecisionPanel={showDecisionPanel}
               setShowDecisionPanel={setShowDecisionPanel}
               decisionBundle={decisionBundle}
               decisionWorkspace={decisionWorkspace}
+              workspaceAnalysis={workspaceAnalysis}
               onCreateDecisionWorkspace={handleCreateDecisionWorkspace}
+              onAnalyzeWorkspace={handleAnalyzeWorkspace}
               getDecisionPayloadBase={getDecisionPayloadBase}
               onDecisionAction={handleDecisionAction}
               decisionReadiness={decisionReadiness}
@@ -600,14 +642,6 @@ function AppContent() {
               setIsDataPaneOpen={setIsDataPaneOpen}
             >
               <DatasetInfo selectedStat={selectedStat} />
-              {showCleaningForm && (
-                <div style={{ position: 'fixed', bottom: 20, left: 92, zIndex: 100, width: 400, background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: 12, padding: 16, boxShadow: '0 8px 32px var(--shadow-color)' }}>
-                  <h4 style={{ margin: '0 0 12px 0' }}>Data Cleaning Engine</h4>
-                  <p style={{ fontSize: '0.8rem', opacity: 0.7 }}>Launch full optimization from the workspace context.</p>
-                  <button onClick={() => setShowCleaningForm(false)} style={{ position: 'absolute', top: 12, right: 12, background: 'none', border: 'none', cursor: 'pointer' }}>×</button>
-                  {/* ... inline cleaning form could go here or as a window ... */}
-                </div>
-              )}
             </CanvasContainer>
           )}
         </div>

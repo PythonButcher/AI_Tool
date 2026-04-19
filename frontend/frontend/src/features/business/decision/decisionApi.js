@@ -40,3 +40,24 @@ export const createDecisionWorkspace = async (payload) => {
     throw error?.response?.data || error;
   }
 };
+
+/**
+ * Analyzes a scoped decision workspace (DI 2.0 V3).
+ * 
+ * @param {Object} payload - The analysis request payload.
+ * @param {Object} payload.decision_workspace - The workspace to analyze.
+ * @param {Object} [payload.analysis_preferences] - Optional analysis hints.
+ * @returns {Promise<Object>} The workspace analysis response.
+ */
+export const analyzeDecisionWorkspace = async (payload) => {
+  try {
+    const response = await axios.post(`${API_URL}/api/decision/workspaces/analyze`, {
+      ...payload,
+      contract_version: 'di_2_0_v1'
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error analyzing decision workspace:', error);
+    throw error?.response?.data || error;
+  }
+};

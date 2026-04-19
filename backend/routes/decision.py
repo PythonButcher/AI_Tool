@@ -29,6 +29,16 @@ def create_workspace_route():
     except Exception as exc:
         return jsonify(_error_payload("DECISION_WORKSPACE_CREATION_FAILED", f"Failed to create decision workspace: {exc}")), 500
 
+@decision_bp.route("/workspaces/analyze", methods=["POST"])
+def analyze_workspace_route():
+    payload = request.get_json(silent=True) or {}
+    try:
+        return jsonify(DecisionWorkspaceService.analyze_workspace(payload)), 200
+    except DecisionServiceError as exc:
+        return jsonify(_error_payload("INVALID_DECISION_WORKSPACE_ANALYSIS_REQUEST", str(exc))), 400
+    except Exception as exc:
+        return jsonify(_error_payload("DECISION_WORKSPACE_ANALYSIS_FAILED", f"Failed to analyze decision workspace: {exc}")), 500
+
 @decision_bp.route("/signals/generate", methods=["POST"])
 def generate_signals_route():
     payload = request.get_json(silent=True) or {}

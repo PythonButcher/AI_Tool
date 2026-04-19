@@ -37,23 +37,22 @@ function ApiDataForm({ handleApiData }) {
   return (
     <div className="api-data-form">
       <div className="api-data-form__header">
-        <p className="api-data-form__eyebrow">Remote Data Source</p>
-        <h3 className="api-data-form__title">Connect to an API endpoint</h3>
+        <p className="api-data-form__eyebrow">Interface</p>
+        <h3 className="api-data-form__title">Connect Endpoint</h3>
       </div>
-      <label className="api-data-form__field">
-        <span className="api-data-form__label">API Endpoint</span>
+      <div className="api-data-form__row">
         <input
           className="api-data-form__input"
           type="text"
           value={apiUrl}
           onChange={(e) => setApiUrl(e.target.value)}
           disabled={isLoading}
-          placeholder="https://api.example.com/data"
+          placeholder="Enter API URL"
         />
-      </label>
-      <button className="api-data-form__button" onClick={fetchData} disabled={isLoading}>
-        {isLoading ? "Fetching..." : "Fetch Data"}
-      </button>
+        <button className="api-data-form__submit" onClick={fetchData} disabled={isLoading}>
+          {isLoading ? "..." : "Connect"}
+        </button>
+      </div>
       {error && <p className="api-data-form__error">{error}</p>}
     </div>
   );

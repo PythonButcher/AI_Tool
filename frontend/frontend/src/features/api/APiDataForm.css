@@ -1,15 +1,13 @@
 .api-data-form {
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  min-width: min(400px, calc(100vw - 64px));
-  padding: 16px;
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--bg-secondary) 86%, transparent), transparent 38%),
-    var(--bg-primary);
+  gap: 20px;
+  min-width: 480px;
+  padding: 32px;
+  background: var(--bg-primary);
   border: 1px solid var(--border-color);
-  border-radius: 10px;
-  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--accent-white-soft) 50%, transparent);
+  border-radius: 12px;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.12);
 }
 
 .api-data-form__header {
@@ -21,93 +19,67 @@
 .api-data-form__eyebrow {
   margin: 0;
   color: var(--text-secondary);
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   font-weight: 700;
-  letter-spacing: 0.09em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
 }
 
 .api-data-form__title {
   margin: 0;
   color: var(--text-primary);
-  font-size: 1rem;
-  font-weight: 700;
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
 }
 
-.api-data-form__field {
+.api-data-form__row {
   display: flex;
-  flex-direction: column;
   gap: 8px;
-}
-
-.api-data-form__label {
-  color: var(--text-secondary);
-  font-size: 0.82rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  background: var(--bg-secondary);
+  padding: 6px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
 }
 
 .api-data-form__input {
-  width: 100%;
-  padding: 10px 12px;
-  border-radius: 8px;
-  border: 1px solid var(--border-color);
-  background: var(--bg-secondary);
-  color: var(--text-primary);
-  font-size: 0.92rem;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
-}
-
-.api-data-form__input::placeholder {
-  color: var(--text-secondary);
-  opacity: 0.85;
-}
-
-.api-data-form__input:focus {
+  flex: 1;
+  background: transparent;
+  border: none;
   outline: none;
-  border-color: color-mix(in srgb, var(--accent-blue) 50%, var(--border-color));
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-blue-soft) 72%, transparent);
+  padding: 8px 12px;
+  color: var(--text-primary);
+  font-size: 0.95rem;
 }
 
-.api-data-form__button {
-  width: 100%;
-  min-height: 40px;
-  border: 1px solid color-mix(in srgb, var(--accent-blue) 22%, transparent);
-  border-radius: 8px;
-  background: var(--accent-blue);
-  color: var(--text-on-accent);
+.api-data-form__submit {
+  padding: 8px 24px;
+  border: none;
+  border-radius: 6px;
+  background: var(--text-primary);
+  color: var(--bg-primary);
   font-size: 0.9rem;
   font-weight: 700;
   cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.2s ease, filter 0.2s ease;
-  box-shadow: 0 6px 16px color-mix(in srgb, var(--accent-blue-soft) 35%, transparent);
+  transition: all 0.2s ease;
 }
 
-.api-data-form__button:hover:not(:disabled) {
+.api-data-form__submit:hover:not(:disabled) {
+  opacity: 0.9;
   transform: translateY(-1px);
-  filter: saturate(1.05);
 }
 
-.api-data-form__button:disabled {
-  opacity: 0.72;
+.api-data-form__submit:disabled {
+  opacity: 0.4;
   cursor: not-allowed;
-  box-shadow: none;
 }
 
 .api-data-form__error {
   margin: 0;
-  padding: 10px 12px;
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--accent-red-soft) 75%, transparent);
+  padding: 10px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--accent-red) 8%, transparent);
   color: var(--accent-red);
-  font-size: 0.82rem;
+  font-size: 0.85rem;
   font-weight: 600;
-}
-
-@media (max-width: 640px) {
-  .api-data-form {
-    min-width: 0;
-    padding: 16px;
-  }
 }

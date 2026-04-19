@@ -102,6 +102,28 @@ Status:
 
 - **COMPLETE** (implementation active in code)
 
+## Phase 3.5
+
+File:
+
+- `phase_3_5_decision_intake_rework.md`
+
+Role:
+
+- redesign the Decision Intelligence intake experience before Phase 4
+- replace the heavy structured form as the primary entry
+- make the first step simpler, more helpful, and more visually compelling
+- shift structure drafting work from the user toward the product
+
+Status:
+
+- **UI IMPLEMENTED; PHASE 3.6 HARDENING ACTIVE**
+- prompt-first intake flow (Hero -> Draft -> Workspace) established
+- existing composer preserved as "Advanced Setup" refinement layer
+- backend intake drafting required post-launch hardening after real prompt failures in objective-vs-lever parsing
+- exact failing prompt coverage now exists for prompts like:
+  - `How should we grow revenue next quarter using discount rate and marketing spend changes by region without hurting gross margin?`
+
 ## Intermission Cleanup
 
 File:
@@ -198,6 +220,23 @@ Frontend follow-up after Codex:
     - Boosted vibrancy of accent colors (Blue/Green) and added soft color variations for better component depth.
     - Standardized global CSS variables across Sidebar, MenuBar, DataPane, and AI Workflow Lab.
 - move to V3 planning and execution instead of continuing V2 completion language
+- **DI V3: Workspace Analysis Wiring (COMPLETE)**:
+    - [x] Frontend call to `POST /api/decision/workspaces/analyze`.
+    - [x] `workspaceAnalysis` state and analyze handler wired through the Decisions flow.
+    - [x] Truthful “Analyze Workspace” interaction added.
+    - [x] Finish contract-correct rendering of `workspace_analysis.scoped_diagnostics`.
+    - [x] Re-verify that legacy evidence stays secondary.
+- immediate cleanup handoff:
+  - `ai_handoff/ui_overhaul/decision_intelligence_v3_gemini_handoff_01_workspace_analysis_continuation.md`
+
+Important execution note:
+
+- the current Gemini task should only use the cleanup handoff above
+- do not mix the small cleanup task with later Phase 4 chat-first work in the same prompt
+
+Next product planning file after cleanup:
+
+- `ai_handoff/ui_overhaul/phase_3_5_decision_intake_rework.md`
 
 ## What Is Actually Implemented Today
 
@@ -215,15 +254,50 @@ The live frontend already has:
 - DI 2.0 scoped decision workspace flow (composer + view)
 - active Decision Intelligence run flow and panel rendering
 - backend-driven readiness metadata wired into frontend state
+- AI destination shell with current chat behavior preserved
+- **finished contract-correct render for workspace-native scoped diagnostics**
+- **Data Cleaning Tool Restoration (COMPLETE)**:
+    - Restored the real Power Query-style `DataCleaningForm` as a global overlay.
+    - Removed placeholder stub behavior and moved the tool to the top-level app structure for consistent access.
+    - Wired "Clean Data" ribbon command to the full optimization workflow and connected it to the ML panel.
+- **Better UI Polish Pass (COMPLETE & HARDENED)**:
+    - **Fixed AI Chat Initialization**: Restoration of global windowing logic ensures AI Chat opens reliably from any destination via shortcut or ribbon.
+    - **Ultra-Compact Command Ribbon**: Reduced ribbon height and button footprint for maximum canvas space. 
+    - **High-Density Simplified Copy**: Shortened all button labels to single-word descriptions (e.g., "Refine", "Library", "Analyze") and moved long descriptions to tooltips.
+    - **Disciplined Proportions**: Overhauled button padding, font sizes, and container spacing to ensure a mature, professional aesthetic without bloat.
+    - **Premium Neutral Aesthetic**: Established a sophisticated high-contrast theme using primary dark neutrals and subtle transitions.
+    - **Neutralized Selection Highlights**: Replaced all blue selection and hover highlights in the Sidebar and AI Chat with high-contrast premium neutrals.
+    - **Data Intake Form Redesign**:
+        - **FileUpload**: Fixed to a centered 520px width with a robust, inviting drop-zone makeover.
+        - **API Form**: Completely redesigned as a compact, integrated inline interface.
+        - **Database Form**: Transformed into a technical 2-column grid layout for complex configurations.
+    - **AI Chat "Once Over"**: Neutralized the robot icon and user message bubbles from bright blue to a cohesive dark neutral theme.
+    - **Decision Intelligence Opening Polish**: Neutralized the Decision Intelligence setup guidance window (icons, badges, and prompt boxes) from bright blue to the premium neutral aesthetic, ensuring a consistent high-contrast professional look upon entry.
+
+The live frontend does **not** yet have:
+
+- a real chat-to-decision workspace bridge
+- real decision tools inside AI chat
+- a simple, inviting, plain-English Decision Intelligence intake flow
+
+Separate later planning docs for after the cleanup:
+
+- `ai_handoff/ui_overhaul/phase_3_5_decision_intake_rework.md`
+- `ai_handoff/ui_overhaul/decision_intelligence_v3_gemini_handoff_02_chat_decision_bridge.md`
+- `ai_handoff/phase_docs/decision_intelligence_v3_phase_4_chat_engine_execution_plan.md`
 
 The backend already has:
 
 - `POST /api/decision/workspaces`
+- additive prompt-first drafting on `POST /api/decision/workspaces` using `intake_mode: "prompt_first"` plus `decision_intake`
+- Phase 3.6 hardening for prompt-first drafting so objective, levers, and guardrails are parsed from separate intent clauses instead of one broad metric ranking
+- `POST /api/decision/workspaces/analyze`
 - normalization for objective, levers, and constraints
 - contract-faithful `ready` / `needs_input` / `limited` status classification
 - honest scoped metric and dimension selection anchored on objective, levers, constraints, and applied filters
 - contract-faithful `time_context` and `period_context` with metric-first, scoped-slice, and time-horizon fallback behavior
 - stronger unknown and blocker generation for unresolved objective, lever, and hard-constraint gaps
+- workspace-native observational diagnostics anchored on the scoped workspace, with filtered legacy signals kept additive and secondary
 - additive legacy-path preservation without using the legacy decision bundle as the primary DI 2.0 model
 
 ## Resume Point For Gemini

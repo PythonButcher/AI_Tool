@@ -126,16 +126,15 @@ function FileUpload({
         onClick={() => setIsPanelOpen((prev) => !prev)}
       >
         <FaCloudUploadAlt className="open-panel-icon" />
-        {isPanelOpen ? 'Hide Import Panel' : 'Open Import Panel'}
+        {isPanelOpen ? 'Minimize' : 'Import'}
       </button>
 
       {isPanelOpen && (
         <div className="file-upload-panel">
           <div className="panel-header">
             <div className="panel-title">
-              <FaCloudUploadAlt className="panel-title-icon" />
               <div>
-                <p className="panel-eyebrow">Data Import</p>
+                <p className="panel-eyebrow">Source</p>
                 <h3>{label}</h3>
               </div>
             </div>
@@ -146,13 +145,13 @@ function FileUpload({
                 aria-label="Toggle help"
                 onClick={() => toggleHelp(helpId)}
               >
-                ❓
+                ?
               </button>
               <button
                 type="button"
                 className="close-panel"
                 onClick={() => setIsPanelOpen(false)}
-                aria-label="Close upload panel"
+                aria-label="Close"
               >
                 <FaTimes />
               </button>
@@ -165,13 +164,13 @@ function FileUpload({
                 className={`tab ${activeTab === 'upload' ? 'active' : ''}`}
                 onClick={() => setActiveTab('upload')}
               >
-                Upload New
+                Upload
               </button>
               <button
                 className={`tab ${activeTab === 'search' ? 'active' : ''}`}
                 onClick={() => setActiveTab('search')}
               >
-                Search Data Hub
+                Search
               </button>
             </div>
 
@@ -187,8 +186,8 @@ function FileUpload({
                     <div className="drop-inner">
                       <FaCloudUploadAlt className="drop-icon" />
                       <div className="drop-copy">
-                        <p className="drop-title">Drag & Drop your file</p>
-                        <p className="drop-subtitle">Supported formats: {allowedExtensions.join(', ')}</p>
+                        <p className="drop-title">Drop file here</p>
+                        <p className="drop-subtitle">{allowedExtensions.join(', ')}</p>
                       </div>
                       <div className="drop-actions">
                         <input
@@ -202,7 +201,7 @@ function FileUpload({
                           className="ghost-button"
                           onClick={() => hiddenFileInput.current?.click()}
                         >
-                          Browse Files
+                          Browse
                         </button>
                         {file && (
                           <span className="file-chip">
@@ -222,7 +221,7 @@ function FileUpload({
                       onClick={handleFileUpload}
                       disabled={isUploading}
                     >
-                      {isUploading ? 'Uploading...' : 'Upload File'}
+                      {isUploading ? 'Uploading...' : 'Upload'}
                     </button>
                   )}
                 </div>
@@ -232,7 +231,7 @@ function FileUpload({
                     <FaSearch className="search-icon" />
                     <input
                       type="text"
-                      placeholder="Search Data Hub datasets"
+                      placeholder="Search Hub"
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                     />
