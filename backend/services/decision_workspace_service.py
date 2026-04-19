@@ -396,7 +396,7 @@ class DecisionWorkspaceService:
     @staticmethod
     def _tokenize_prompt_text(text: str) -> List[str]:
         return [
-            token
+            DecisionWorkspaceService._normalize_prompt_token(token)
             for token in re.findall(r"[a-z0-9%]+", str(text or "").lower())
             if len(token) > 2 and token not in DecisionWorkspaceService.PROMPT_MATCH_STOPWORDS
         ]
@@ -437,7 +437,7 @@ class DecisionWorkspaceService:
             if not normalized_value:
                 continue
             value_tokens = [
-                token
+                DecisionWorkspaceService._normalize_prompt_token(token)
                 for token in normalized_value.split()
                 if token not in DecisionWorkspaceService.PROMPT_MATCH_STOPWORDS
             ]
@@ -506,15 +506,15 @@ class DecisionWorkspaceService:
         decision_intake: Dict[str, Optional[str]],
         prompt_matches: Dict[str, List[Dict[str, Any]]],
     ) -> Dict[str, Any]:
-        objective_metric = next(iter(prompt_matches.get("metrics") or []), None)
-        objective_text = decision_intake.get("what_matters")
-        direction = DecisionWorkspaceService._infer_objective_direction(
-            " ".join(
-                part
-                for part in [objective_text, decision_prompt]
-                if part
-            )
+        objective_text = DecisionWorkspaceService._extract_objective_clause(
+            decision_prompt=decision_prompt,
+            decision_intake=decision_intake,
         )
+        objective_metric = DecisionWorkspaceService._find_best_prompt_metric_match(
+            objective_text or decision_prompt,
+            prompt_matches.get("metrics") or [],
+        ) or next(iter(prompt_matches.get("metrics") or []), None)
+        direction = DecisionWorkspaceService._infer_objective_direction(objective_text or decision_prompt)
 
         if objective_text:
             statement = objective_text
@@ -547,6 +547,10 @@ class DecisionWorkspaceService:
         constraints: Sequence[Dict[str, Any]],
     ) -> List[Dict[str, Any]]:
         text_blob = DecisionWorkspaceService._build_prompt_text_blob(decision_prompt, decision_intake)
+        lever_text = DecisionWorkspaceService._extract_lever_clause(
+            decision_prompt=decision_prompt,
+            decision_intake=decision_intake,
+        ) or text_blob
         objective_metric_id = objective.get("metric_id")
         constraint_metric_ids = {
             (constraint.get("binding") or {}).get("metric_id")
@@ -554,8 +558,12 @@ class DecisionWorkspaceService:
             if isinstance((constraint.get("binding") or {}), dict)
         }
         levers: List[Dict[str, Any]] = []
+        ranked_metric_refs = DecisionWorkspaceService._rank_prompt_refs(
+            lever_text,
+            prompt_matches.get("metrics") or [],
+        ) or list(prompt_matches.get("metrics") or [])
 
-        for metric_ref in prompt_matches.get("metrics") or []:
+        for metric_ref in ranked_metric_refs:
             metric_id = metric_ref.get("metric_id")
             if not metric_id or metric_id == objective_metric_id or metric_id in constraint_metric_ids:
                 continue
@@ -571,12 +579,17 @@ class DecisionWorkspaceService:
             if len(levers) >= 2:
                 break
 
+        normalized_lever_text = DecisionWorkspaceService._normalize_phrase(lever_text)
         dimension_keywords_present = any(
-            keyword in DecisionWorkspaceService._normalize_phrase(text_blob)
+            keyword in normalized_lever_text
             for keyword in ("mix", "region", "channel", "segment", "allocation")
         )
         if dimension_keywords_present:
-            for dimension_ref in prompt_matches.get("dimensions") or []:
+            ranked_dimension_refs = DecisionWorkspaceService._rank_prompt_refs(
+                lever_text,
+                prompt_matches.get("dimensions") or [],
+            ) or list(prompt_matches.get("dimensions") or [])
+            for dimension_ref in ranked_dimension_refs:
                 dimension_id = dimension_ref.get("dimension_id")
                 if not dimension_id:
                     continue
@@ -684,6 +697,85 @@ class DecisionWorkspaceService:
                 if cleaned:
                     clauses.append(cleaned)
         return DecisionWorkspaceService._dedupe_strings(clauses)
+
+    @staticmethod
+    def _extract_objective_clause(
+        decision_prompt: str,
+        decision_intake: Dict[str, Optional[str]],
+    ) -> str:
+        objective_text = DecisionWorkspaceService._clean_text(decision_intake.get("what_matters"))
+        if objective_text:
+            return objective_text
+
+        prompt = DecisionWorkspaceService._clean_text(decision_prompt) or ""
+        if not prompt:
+            return ""
+
+        cleaned_prompt = re.sub(
+            r"^(how should we|how do we|what should we do to|what can we do to|help us)\s+",
+            "",
+            prompt,
+            flags=re.IGNORECASE,
+        )
+        return DecisionWorkspaceService._split_on_intent_boundary(cleaned_prompt)
+
+    @staticmethod
+    def _extract_lever_clause(
+        decision_prompt: str,
+        decision_intake: Dict[str, Optional[str]],
+    ) -> str:
+        additional_context = DecisionWorkspaceService._clean_text(decision_intake.get("additional_context"))
+        prompt = DecisionWorkspaceService._clean_text(decision_prompt) or ""
+        clauses: List[str] = []
+        if additional_context:
+            clauses.append(additional_context)
+
+        lever_match = re.search(
+            r"\b(?:using|via|through|with)\s+(.+?)(?:\bwithout\b|\bwhile\b|\bbut\b|[?.!]|$)",
+            prompt,
+            flags=re.IGNORECASE,
+        )
+        if lever_match:
+            clause = DecisionWorkspaceService._clean_text(lever_match.group(1))
+            if clause:
+                clauses.append(clause)
+
+        return " ".join(DecisionWorkspaceService._dedupe_strings(clauses))
+
+    @staticmethod
+    def _split_on_intent_boundary(text: str) -> str:
+        cleaned = DecisionWorkspaceService._clean_text(text) or ""
+        if not cleaned:
+            return ""
+        boundary_match = re.search(
+            r"\b(?:using|via|through|with|without|while|but)\b",
+            cleaned,
+            flags=re.IGNORECASE,
+        )
+        if boundary_match:
+            cleaned = cleaned[: boundary_match.start()]
+        return DecisionWorkspaceService._clean_text(cleaned.rstrip(" ,.;:?!")) or ""
+
+    @staticmethod
+    def _rank_prompt_refs(
+        text: str,
+        refs: Sequence[Dict[str, Any]],
+    ) -> List[Dict[str, Any]]:
+        tokens = DecisionWorkspaceService._tokenize_prompt_text(text)
+        normalized_text = DecisionWorkspaceService._normalize_phrase(text)
+        ranked: List[Tuple[int, Dict[str, Any]]] = []
+        for ref in refs:
+            score = DecisionWorkspaceService._score_prompt_candidate(ref, tokens, normalized_text)
+            if score <= 0:
+                continue
+            ranked.append((score, ref))
+        ranked.sort(
+            key=lambda item: (
+                -item[0],
+                str(item[1].get("label") or item[1].get("name") or ""),
+            )
+        )
+        return [item[1] for item in ranked]
 
     @staticmethod
     def _find_best_prompt_metric_match(
@@ -838,6 +930,19 @@ class DecisionWorkspaceService:
     @staticmethod
     def _normalize_phrase(value: Any) -> str:
         return " ".join(re.findall(r"[a-z0-9%]+", str(value or "").lower()))
+
+    @staticmethod
+    def _normalize_prompt_token(token: str) -> str:
+        normalized = str(token or "").strip().lower()
+        if len(normalized) > 5 and normalized.endswith("ing"):
+            normalized = normalized[:-3]
+        elif len(normalized) > 4 and normalized.endswith("ed"):
+            normalized = normalized[:-2]
+        elif len(normalized) > 4 and normalized.endswith("es"):
+            normalized = normalized[:-2]
+        elif len(normalized) > 3 and normalized.endswith("s") and not normalized.endswith("%"):
+            normalized = normalized[:-1]
+        return normalized
 
     @staticmethod
     def _normalize_objective(raw: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:

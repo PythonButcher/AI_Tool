@@ -11,6 +11,7 @@ DATASET = [
         "Revenue": 100.0,
         "Gross Margin %": 0.35,
         "Discount Rate": 0.10,
+        "Marketing Spend": 24.0,
     },
     {
         "Order Date": "2026-02-28",
@@ -19,6 +20,7 @@ DATASET = [
         "Revenue": 120.0,
         "Gross Margin %": 0.34,
         "Discount Rate": 0.09,
+        "Marketing Spend": 28.0,
     },
     {
         "Order Date": "2026-03-31",
@@ -27,6 +29,7 @@ DATASET = [
         "Revenue": 135.0,
         "Gross Margin %": 0.33,
         "Discount Rate": 0.08,
+        "Marketing Spend": 35.0,
     },
     {
         "Order Date": "2026-04-30",
@@ -35,6 +38,7 @@ DATASET = [
         "Revenue": 150.0,
         "Gross Margin %": 0.32,
         "Discount Rate": 0.07,
+        "Marketing Spend": 41.0,
     },
 ]
 
@@ -94,6 +98,15 @@ SEMANTIC_MODEL = {
             "default_aggregation": "mean",
             "format_hint": "percentage",
             "expression": {"type": "column_aggregation", "column": "Discount Rate", "aggregation": "mean"},
+        },
+        {
+            "id": "metric_marketing_spend",
+            "name": "Marketing Spend",
+            "label": "Marketing Spend",
+            "field": "Marketing Spend",
+            "default_aggregation": "sum",
+            "format_hint": "currency",
+            "expression": {"type": "column_aggregation", "column": "Marketing Spend", "aggregation": "sum"},
         },
     ],
 }
@@ -156,6 +169,18 @@ def build_prompt_first_payload():
             "what_to_avoid": "Protect gross margin",
             "additional_context": "We can change discounting and regional mix.",
         },
+    }
+
+
+def build_compound_prompt_first_payload():
+    return {
+        "dataset": DATASET,
+        "dataset_ref": {"source": "inline", "dataset_id": "sales_q1", "dataset_name": "Q1 Sales"},
+        "semantic_model": SEMANTIC_MODEL,
+        "decision_prompt": (
+            "How should we grow revenue next quarter using discount rate and "
+            "marketing spend changes by region without hurting gross margin?"
+        ),
     }
 
 
@@ -309,8 +334,8 @@ class DecisionWorkspaceServiceTests(unittest.TestCase):
         self.assertTrue(any(item["metric_id"] == "metric_revenue_sum" for item in drafting["prompt_matches"]["metrics"]))
         self.assertTrue(
             any(
-                (lever.get("binding") or {}).get("metric_ref", {}).get("metric_id") == "metric_discount_rate"
-                or (lever.get("binding") or {}).get("dimension_ref", {}).get("dimension_id") == "dimension_region"
+                (((lever.get("binding") or {}).get("metric_ref")) or {}).get("metric_id") == "metric_discount_rate"
+                or (((lever.get("binding") or {}).get("dimension_ref")) or {}).get("dimension_id") == "dimension_region"
                 for lever in levers
             )
         )
@@ -335,6 +360,39 @@ class DecisionWorkspaceServiceTests(unittest.TestCase):
         self.assertEqual(workspace["drafting"]["source_summary"]["objective"], "user_input")
         self.assertEqual(workspace["decision_scope"]["objective"]["statement"], payload["objective"]["statement"])
         self.assertEqual(workspace["decision_scope"]["objective"]["metric_ref"]["metric_id"], "metric_margin_pct")
+
+    def test_prompt_first_intake_separates_objective_from_levers_and_guardrails(self):
+        result = DecisionWorkspaceService.create_workspace(build_compound_prompt_first_payload())
+
+        workspace = result["decision_workspace"]
+        objective = workspace["decision_scope"]["objective"]
+        levers = workspace["decision_scope"]["levers"]
+        constraints = workspace["decision_scope"]["constraints"]
+
+        lever_metric_ids = {
+            (((lever.get("binding") or {}).get("metric_ref")) or {}).get("metric_id")
+            for lever in levers
+            if isinstance(lever.get("binding"), dict)
+        }
+        lever_dimension_ids = {
+            (((lever.get("binding") or {}).get("dimension_ref")) or {}).get("dimension_id")
+            for lever in levers
+            if isinstance(lever.get("binding"), dict)
+        }
+        constraint_metric_ids = {
+            (((constraint.get("binding") or {}).get("metric_ref")) or {}).get("metric_id")
+            for constraint in constraints
+            if isinstance(constraint.get("binding"), dict)
+        }
+
+        self.assertEqual(objective["metric_ref"]["metric_id"], "metric_revenue_sum")
+        self.assertEqual(objective["direction"], "maximize")
+        self.assertIn("revenue", objective["statement"].lower())
+        self.assertIn("metric_discount_rate", lever_metric_ids)
+        self.assertIn("metric_marketing_spend", lever_metric_ids)
+        self.assertNotIn("metric_revenue_sum", lever_metric_ids)
+        self.assertIn("dimension_region", lever_dimension_ids)
+        self.assertEqual(constraint_metric_ids, {"metric_margin_pct"})
 
     def test_workspace_analysis_preserves_prompt_first_drafting_metadata(self):
         workspace_result = DecisionWorkspaceService.create_workspace(build_prompt_first_payload())

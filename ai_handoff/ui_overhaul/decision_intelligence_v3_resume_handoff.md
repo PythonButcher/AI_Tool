@@ -55,6 +55,7 @@ The backend now supports:
 
 - `POST /api/decision/workspaces` for scoped workspace creation
 - additive prompt-first drafting through `POST /api/decision/workspaces` using `intake_mode: "prompt_first"` and `decision_intake`
+- Phase 3.6 current-intake hardening so prompts with a goal, multiple levers, and a guardrail are split into separate drafting clauses before objective/lever/constraint selection
 - `POST /api/decision/workspaces/analyze` for workspace-native observational diagnostics
 
 Immediate cleanup handoff:
@@ -86,9 +87,18 @@ Important truth rule:
 The current immediate product priority is:
 
 1. complete the workspace-analysis cleanup if anything is still open
-2. rework the Decision Intelligence intake experience under Phase 3.5
+2. keep hardening the Decision Intelligence intake under V3 Phase 3.6 until prompt-first drafting is reliable on real prompts
 
-The intake rework now matters more than moving straight into chat.
+The intake path still matters more than moving straight into chat.
+
+Current Phase 3.6 truth:
+
+- the frontend intake exists, but real prompt failures surfaced after rollout
+- backend hardening is now in place for the most important failure mode: goal metric vs lever metric confusion
+- the exact prompt `How should we grow revenue next quarter using discount rate and marketing spend changes by region without hurting gross margin?` is now covered by backend regression tests and should draft:
+  - objective: `Revenue`
+  - lever candidates: `Discount Rate`, `Marketing Spend`, `Region mix`
+  - guardrail: `Gross Margin %`
 
 Phase 4 chat-first work is important, but it should be started in a separate step with a separate prompt.
 

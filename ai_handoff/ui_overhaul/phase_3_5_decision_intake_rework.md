@@ -141,6 +141,30 @@ That object includes:
 
 Gemini should use that object to power the draft-preview step instead of forcing users into the old structured composer first.
 
+## Phase 3.6 Hardening Note
+
+The prompt-first contract is now implemented, but the first live pass exposed a backend drafting failure:
+
+- prompts that mixed a goal metric, lever metrics, and a guardrail in one sentence could incorrectly promote a lever metric into the drafted goal
+
+Phase 3.6 backend hardening now addresses that by:
+
+- extracting the objective clause separately from lever and guardrail clauses
+- ranking objective matches against the objective clause instead of the whole prompt
+- ranking lever candidates against the lever clause instead of the whole prompt
+- excluding objective and guardrail metrics from drafted levers
+- lightly normalizing prompt tokens so phrasing like `discounting` still matches `Discount Rate`
+
+Practical expectation for prompts like:
+
+- `How should we grow revenue next quarter using discount rate and marketing spend changes by region without hurting gross margin?`
+
+Expected draft shape:
+
+- objective: `Revenue`
+- levers: `Discount Rate`, `Marketing Spend`, `Region mix`
+- guardrail: `Gross Margin %`
+
 ## UX Rules
 
 - use plain English

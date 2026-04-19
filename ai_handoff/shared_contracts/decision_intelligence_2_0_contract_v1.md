@@ -129,6 +129,17 @@ This object is intended to help frontend render a draft-preview and guided refin
 
 - additive to the current backend
 - intended to become the primary DI 2.0 entry contract
+
+## Prompt-First Drafting Notes
+
+Current backend drafting behavior is intentionally additive and heuristic, but it now follows these Phase 3.6 rules:
+
+- objective drafting should prioritize the leading goal clause or `decision_intake.what_matters`
+- lever drafting should prioritize the explicit lever/change clause or `decision_intake.additional_context`
+- guardrail drafting should prioritize `decision_intake.what_to_avoid` plus prompt phrases such as `without`, `protect`, `avoid`, and `keep`
+- drafted levers should not re-use the chosen objective metric or drafted guardrail metric
+
+This note is here so frontend and backend both treat prompt-first drafting as clause-aware guidance, not as a single full-prompt metric ranking.
 - current `POST /api/decision/run` remains supported as a legacy decision-bundle endpoint during migration
 - V3 now also includes a scoped observational analysis continuation path through `POST /api/decision/workspaces/analyze`
 

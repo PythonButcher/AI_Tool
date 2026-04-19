@@ -117,9 +117,12 @@ Role:
 
 Status:
 
-- **COMPLETE** (implementation active in code)
+- **UI IMPLEMENTED; PHASE 3.6 HARDENING ACTIVE**
 - prompt-first intake flow (Hero -> Draft -> Workspace) established
 - existing composer preserved as "Advanced Setup" refinement layer
+- backend intake drafting required post-launch hardening after real prompt failures in objective-vs-lever parsing
+- exact failing prompt coverage now exists for prompts like:
+  - `How should we grow revenue next quarter using discount rate and marketing spend changes by region without hurting gross margin?`
 
 ## Intermission Cleanup
 
@@ -274,6 +277,7 @@ The backend already has:
 
 - `POST /api/decision/workspaces`
 - additive prompt-first drafting on `POST /api/decision/workspaces` using `intake_mode: "prompt_first"` plus `decision_intake`
+- Phase 3.6 hardening for prompt-first drafting so objective, levers, and guardrails are parsed from separate intent clauses instead of one broad metric ranking
 - `POST /api/decision/workspaces/analyze`
 - normalization for objective, levers, and constraints
 - contract-faithful `ready` / `needs_input` / `limited` status classification
