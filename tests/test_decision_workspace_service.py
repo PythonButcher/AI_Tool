@@ -11,6 +11,7 @@ DATASET = [
         "Revenue": 100.0,
         "Gross Margin %": 0.35,
         "Discount Rate": 0.10,
+        "Marketing Spend": 24.0,
     },
     {
         "Order Date": "2026-02-28",
@@ -19,6 +20,7 @@ DATASET = [
         "Revenue": 120.0,
         "Gross Margin %": 0.34,
         "Discount Rate": 0.09,
+        "Marketing Spend": 28.0,
     },
     {
         "Order Date": "2026-03-31",
@@ -27,6 +29,7 @@ DATASET = [
         "Revenue": 135.0,
         "Gross Margin %": 0.33,
         "Discount Rate": 0.08,
+        "Marketing Spend": 35.0,
     },
     {
         "Order Date": "2026-04-30",
@@ -35,6 +38,7 @@ DATASET = [
         "Revenue": 150.0,
         "Gross Margin %": 0.32,
         "Discount Rate": 0.07,
+        "Marketing Spend": 41.0,
     },
 ]
 
@@ -95,6 +99,15 @@ SEMANTIC_MODEL = {
             "format_hint": "percentage",
             "expression": {"type": "column_aggregation", "column": "Discount Rate", "aggregation": "mean"},
         },
+        {
+            "id": "metric_marketing_spend",
+            "name": "Marketing Spend",
+            "label": "Marketing Spend",
+            "field": "Marketing Spend",
+            "default_aggregation": "sum",
+            "format_hint": "currency",
+            "expression": {"type": "column_aggregation", "column": "Marketing Spend", "aggregation": "sum"},
+        },
     ],
 }
 
@@ -142,6 +155,32 @@ def build_payload():
             }
         ],
         "filters": [{"field": "Region", "operator": "neq", "value": "Unknown"}],
+    }
+
+
+def build_prompt_first_payload():
+    return {
+        "dataset": DATASET,
+        "dataset_ref": {"source": "inline", "dataset_id": "sales_q1", "dataset_name": "Q1 Sales"},
+        "semantic_model": SEMANTIC_MODEL,
+        "decision_prompt": "How should we grow revenue next quarter without hurting gross margin?",
+        "decision_intake": {
+            "what_matters": "Grow revenue next quarter",
+            "what_to_avoid": "Protect gross margin",
+            "additional_context": "We can change discounting and regional mix.",
+        },
+    }
+
+
+def build_compound_prompt_first_payload():
+    return {
+        "dataset": DATASET,
+        "dataset_ref": {"source": "inline", "dataset_id": "sales_q1", "dataset_name": "Q1 Sales"},
+        "semantic_model": SEMANTIC_MODEL,
+        "decision_prompt": (
+            "How should we grow revenue next quarter using discount rate and "
+            "marketing spend changes by region without hurting gross margin?"
+        ),
     }
 
 
@@ -219,6 +258,156 @@ class DecisionWorkspaceServiceTests(unittest.TestCase):
         self.assertTrue(
             any(item["category"] == "constraint_gap" and item["blocks_simulation"] for item in workspace["unknowns"])
         )
+
+    def test_workspace_analysis_returns_scoped_diagnostics_with_secondary_legacy_signals(self):
+        result = DecisionWorkspaceService.analyze_workspace(build_payload())
+
+        workspace = result["decision_workspace"]
+        analysis = result["workspace_analysis"]
+        scoped_diagnostics = analysis["scoped_diagnostics"]
+        legacy_diagnostics = analysis["legacy_diagnostics"]
+        workspace_metric_ids = {
+            item["metric_id"]
+            for item in workspace["scoped_context"]["relevant_metrics"]
+        }
+        workspace_dimension_ids = {
+            item["dimension_id"]
+            for item in workspace["scoped_context"]["relevant_dimensions"]
+        } | {
+            item["dimension_id"]
+            for item in workspace["scoped_context"]["comparison_dimensions"]
+        }
+
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(analysis["analysis_mode"], "scoped_observational")
+        self.assertEqual(analysis["status"], "ready")
+        self.assertTrue(any(item["status"] == "observed_change" for item in scoped_diagnostics))
+        self.assertIn("not a simulation or trade-off result", analysis["truthfulness_note"])
+        self.assertEqual(legacy_diagnostics["status"], "secondary")
+        self.assertGreaterEqual(len(legacy_diagnostics["signals"]), 1)
+
+        for signal in legacy_diagnostics["signals"]:
+            metric_ref = signal.get("metric_ref") or {}
+            dimension_ref = signal.get("dimension_ref") or {}
+            self.assertTrue(
+                metric_ref.get("metric_id") in workspace_metric_ids
+                or dimension_ref.get("dimension_id") in workspace_dimension_ids
+            )
+
+    def test_workspace_analysis_accepts_existing_workspace_and_keeps_limited_truthful(self):
+        payload = build_payload()
+        payload["objective"] = {
+            **payload["objective"],
+            "metric_id": "metric_not_found",
+        }
+        workspace_result = DecisionWorkspaceService.create_workspace(payload)
+
+        analysis_result = DecisionWorkspaceService.analyze_workspace(
+            {
+                "dataset": DATASET,
+                "dataset_ref": {"source": "inline", "dataset_id": "sales_q1", "dataset_name": "Q1 Sales"},
+                "semantic_model": SEMANTIC_MODEL,
+                "decision_workspace": workspace_result["decision_workspace"],
+            }
+        )
+
+        analysis = analysis_result["workspace_analysis"]
+
+        self.assertEqual(analysis["status"], "limited")
+        self.assertIn("Returned diagnostics are descriptive only.", analysis["summary"])
+        self.assertIn("objective.metric_id_or_metric_name", analysis_result["decision_workspace"]["readiness"]["missing_inputs"])
+        self.assertIn("not a simulation or trade-off result", analysis["truthfulness_note"])
+        self.assertNotIn("Ready for simulation", analysis["summary"])
+
+    def test_prompt_first_intake_drafts_workspace_from_plain_english(self):
+        result = DecisionWorkspaceService.create_workspace(build_prompt_first_payload())
+
+        workspace = result["decision_workspace"]
+        drafting = workspace["drafting"]
+        levers = workspace["decision_scope"]["levers"]
+        constraints = workspace["decision_scope"]["constraints"]
+
+        self.assertEqual(result["meta"]["intake_mode"], "prompt_first")
+        self.assertEqual(drafting["intake_mode"], "prompt_first")
+        self.assertEqual(drafting["source_summary"]["objective"], "system_draft")
+        self.assertEqual(workspace["decision_scope"]["objective"]["metric_ref"]["metric_id"], "metric_revenue_sum")
+        self.assertTrue(any(item["metric_id"] == "metric_revenue_sum" for item in drafting["prompt_matches"]["metrics"]))
+        self.assertTrue(
+            any(
+                (((lever.get("binding") or {}).get("metric_ref")) or {}).get("metric_id") == "metric_discount_rate"
+                or (((lever.get("binding") or {}).get("dimension_ref")) or {}).get("dimension_id") == "dimension_region"
+                for lever in levers
+            )
+        )
+        self.assertTrue(
+            any(
+                (constraint.get("binding") or {}).get("metric_ref", {}).get("metric_id") == "metric_margin_pct"
+                for constraint in constraints
+            )
+        )
+
+    def test_prompt_first_intake_respects_explicit_objective(self):
+        payload = build_prompt_first_payload()
+        payload["objective"] = {
+            "statement": "Maintain gross margin while we grow revenue",
+            "metric_id": "metric_margin_pct",
+            "direction": "maintain",
+        }
+
+        result = DecisionWorkspaceService.create_workspace(payload)
+
+        workspace = result["decision_workspace"]
+        self.assertEqual(workspace["drafting"]["source_summary"]["objective"], "user_input")
+        self.assertEqual(workspace["decision_scope"]["objective"]["statement"], payload["objective"]["statement"])
+        self.assertEqual(workspace["decision_scope"]["objective"]["metric_ref"]["metric_id"], "metric_margin_pct")
+
+    def test_prompt_first_intake_separates_objective_from_levers_and_guardrails(self):
+        result = DecisionWorkspaceService.create_workspace(build_compound_prompt_first_payload())
+
+        workspace = result["decision_workspace"]
+        objective = workspace["decision_scope"]["objective"]
+        levers = workspace["decision_scope"]["levers"]
+        constraints = workspace["decision_scope"]["constraints"]
+
+        lever_metric_ids = {
+            (((lever.get("binding") or {}).get("metric_ref")) or {}).get("metric_id")
+            for lever in levers
+            if isinstance(lever.get("binding"), dict)
+        }
+        lever_dimension_ids = {
+            (((lever.get("binding") or {}).get("dimension_ref")) or {}).get("dimension_id")
+            for lever in levers
+            if isinstance(lever.get("binding"), dict)
+        }
+        constraint_metric_ids = {
+            (((constraint.get("binding") or {}).get("metric_ref")) or {}).get("metric_id")
+            for constraint in constraints
+            if isinstance(constraint.get("binding"), dict)
+        }
+
+        self.assertEqual(objective["metric_ref"]["metric_id"], "metric_revenue_sum")
+        self.assertEqual(objective["direction"], "maximize")
+        self.assertIn("revenue", objective["statement"].lower())
+        self.assertIn("metric_discount_rate", lever_metric_ids)
+        self.assertIn("metric_marketing_spend", lever_metric_ids)
+        self.assertNotIn("metric_revenue_sum", lever_metric_ids)
+        self.assertIn("dimension_region", lever_dimension_ids)
+        self.assertEqual(constraint_metric_ids, {"metric_margin_pct"})
+
+    def test_workspace_analysis_preserves_prompt_first_drafting_metadata(self):
+        workspace_result = DecisionWorkspaceService.create_workspace(build_prompt_first_payload())
+
+        analysis_result = DecisionWorkspaceService.analyze_workspace(
+            {
+                "dataset": DATASET,
+                "dataset_ref": {"source": "inline", "dataset_id": "sales_q1", "dataset_name": "Q1 Sales"},
+                "semantic_model": SEMANTIC_MODEL,
+                "decision_workspace": workspace_result["decision_workspace"],
+            }
+        )
+
+        self.assertEqual(analysis_result["decision_workspace"]["drafting"]["intake_mode"], "prompt_first")
+        self.assertEqual(analysis_result["meta"]["intake_mode"], "prompt_first")
 
 
 if __name__ == "__main__":

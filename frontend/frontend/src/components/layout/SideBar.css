@@ -44,14 +44,15 @@
 }
 
 .workflow-rail__button:hover {
-  background: color-mix(in srgb, var(--accent-blue) 10%, transparent);
+  background: var(--bg-primary);
+  border-color: var(--border-color);
   color: var(--text-primary);
 }
 
 .workflow-rail__button.is-active {
-  background: var(--accent-blue);
-  color: white;
-  box-shadow: 0 4px 12px color-mix(in srgb, var(--accent-blue) 30%, transparent);
+  background: var(--text-primary);
+  color: var(--bg-primary);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .workflow-rail__icon {

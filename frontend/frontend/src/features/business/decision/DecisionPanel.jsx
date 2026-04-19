@@ -5,7 +5,7 @@ import DecisionBrief from './DecisionBrief';
 import DecisionSignals from './DecisionSignals';
 import DecisionRecommendations from './DecisionRecommendations';
 import ScenarioPreview from './ScenarioPreview';
-import DecisionWorkspaceComposer from './DecisionWorkspaceComposer';
+import DecisionIntakeFlow from './DecisionIntakeFlow';
 import DecisionWorkspaceView from './DecisionWorkspaceView';
 import { FaLightbulb, FaDatabase, FaBrain, FaChartBar, FaArrowRight } from 'react-icons/fa';
 
@@ -24,7 +24,9 @@ const DecisionPanel = ({
   onOpenAiChat,
   setIsDataPaneOpen,
   workspace,
+  workspaceAnalysis,
   onCreateWorkspace,
+  onAnalyzeWorkspace,
   onResetWorkspace,
   datasetContext
 }) => {
@@ -47,10 +49,10 @@ const DecisionPanel = ({
             <h3>Connect your data</h3>
             <p>Decision Intelligence requires an active dataset to begin structuring your workspace.</p>
             <div className="decision-setup-actions">
-              <button className="decision-setup-btn decision-setup-btn--primary" onClick={() => onOpenAiChat()}>
-                Ask AI to help load data
+              <button className="create-workspace-btn" onClick={() => onOpenAiChat()}>
+                Load data with AI
               </button>
-              <small>Or visit the <strong>Workspace</strong> to perform a manual intake.</small>
+              <small>Or perform a manual intake in the <strong>Workspace</strong>.</small>
             </div>
           </div>
         </div>
@@ -87,15 +89,15 @@ const DecisionPanel = ({
 
   /**
    * DI 2.0 FLOW: Scoped Workspace
-   * If we have a dataset but no workspace yet, show the Composer.
-   * If we have a workspace, show the Workspace View.
+   * Phase 3.5: Use DecisionIntakeFlow if no workspace exists.
    */
   if (!workspace) {
     return (
       <div className="decision-panel">
-        <DecisionWorkspaceComposer 
+        <DecisionIntakeFlow 
           onCreateWorkspace={onCreateWorkspace} 
           datasetContext={datasetContext}
+          onReset={onResetWorkspace}
         />
       </div>
     );
@@ -106,11 +108,13 @@ const DecisionPanel = ({
     <div className="decision-panel">
       <DecisionWorkspaceView 
         workspace={workspace} 
+        analysis={workspaceAnalysis}
         onCreateNew={onResetWorkspace}
+        onAnalyze={onAnalyzeWorkspace}
       />
       
       {/* Optional Legacy Bundle Support: If a bundle exists, we can still show signals below the workspace */}
-      {bundle && (
+      {bundle && !workspaceAnalysis && (
         <div className="decision-panel__legacy-results">
           <div className="legacy-divider">
             <span>Diagnostic Signals</span>

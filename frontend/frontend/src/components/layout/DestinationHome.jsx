@@ -49,10 +49,10 @@ const DestinationHome = ({ activeDestination, onAction, readiness }) => {
       </p>
       <div className="dest-home__actions">
         <button className="dest-home__button dest-home__button--primary" onClick={() => onAction('upload')}>
-          <FaPlus /> Start New Intake
+          <FaPlus /> Upload
         </button>
         <button className="dest-home__button" onClick={() => onAction('hub')}>
-          Browse Data Hub <FaArrowRight />
+          Data Hub <FaArrowRight />
         </button>
       </div>
 
@@ -61,7 +61,7 @@ const DestinationHome = ({ activeDestination, onAction, readiness }) => {
         <div className="dest-home__bridge">
           <FaLightbulb />
           <span>Your data is prepared for <strong>Decision Intelligence</strong>.</span>
-          <button onClick={() => onAction('run_intelligence')}>Run Now</button>
+          <button onClick={() => onAction('run_intelligence')}>Analyze</button>
         </div>
       )}
     </div>
@@ -79,10 +79,10 @@ const DestinationHome = ({ activeDestination, onAction, readiness }) => {
       </p>
       <div className="dest-home__actions">
         <button className="dest-home__button dest-home__button--primary" onClick={() => onAction('gallery')}>
-          <FaChartBar /> Open Chart Gallery
+          <FaChartBar /> Gallery
         </button>
         <button className="dest-home__button" onClick={() => onAction('ai_chart')}>
-          Try AI Charting <FaMagic />
+          AI Chart <FaMagic />
         </button>
       </div>
     </div>
@@ -100,10 +100,10 @@ const DestinationHome = ({ activeDestination, onAction, readiness }) => {
       </p>
       <div className="dest-home__actions">
         <button className="dest-home__button dest-home__button--ai" onClick={() => onAction('ai_chat')}>
-          <FaRobot /> Launch AI Chat
+          <FaRobot /> Chat
         </button>
         <button className="dest-home__button" onClick={() => onAction('workflow_lab')}>
-          Enter Workflow Lab <FaMagic />
+          Workflows <FaMagic />
         </button>
       </div>
     </div>
@@ -128,7 +128,7 @@ const DestinationHome = ({ activeDestination, onAction, readiness }) => {
           </p>
           <div className="dest-home__actions">
             <button className="dest-home__button dest-home__button--primary" onClick={() => onAction('upload')}>
-              <FaPlus /> Load Dataset
+              <FaPlus /> Upload
             </button>
           </div>
         </div>
@@ -148,7 +148,7 @@ const DestinationHome = ({ activeDestination, onAction, readiness }) => {
           </p>
           <div className="dest-home__actions">
             <button className="dest-home__button dest-home__button--primary" onClick={() => onAction('definitions')}>
-              Review Definitions <FaArrowRight />
+              Definitions <FaArrowRight />
             </button>
           </div>
         </div>
@@ -168,7 +168,7 @@ const DestinationHome = ({ activeDestination, onAction, readiness }) => {
         </p>
         <div className="dest-home__actions">
           <button className="dest-home__button dest-home__button--primary" onClick={() => onAction('run_intelligence')}>
-            <FaLightbulb /> Run Intelligence
+            <FaLightbulb /> Analyze
           </button>
         </div>
       </div>
@@ -191,10 +191,10 @@ const DestinationHome = ({ activeDestination, onAction, readiness }) => {
       </p>
       <div className="dest-home__actions">
         <button className="dest-home__button dest-home__button--primary" onClick={() => onAction('new_kpi')}>
-          <FaPlus /> New KPI Card
+          <FaPlus /> KPI
         </button>
         <button className="dest-home__button" onClick={() => onAction('new_chart')}>
-          Add Dashboard Chart <FaArrowRight />
+          Chart <FaArrowRight />
         </button>
       </div>
 
@@ -202,7 +202,7 @@ const DestinationHome = ({ activeDestination, onAction, readiness }) => {
         <div className="dest-home__bridge">
           <FaBrain />
           <span>Setup complete. <strong>Decision Intelligence</strong> can now analyze these metrics.</span>
-          <button onClick={() => onAction('go_to_decisions')}>Go to Decisions</button>
+          <button onClick={() => onAction('go_to_decisions')}>Decisions</button>
         </div>
       )}
     </div>

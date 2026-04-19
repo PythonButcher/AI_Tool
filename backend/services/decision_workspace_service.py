@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import re
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 import pandas as pd
 
+from backend.services.decision_signal_service import generate_decision_signals
 from backend.services.decision_support import (
     DecisionServiceError,
     build_dimension_ref,
@@ -11,6 +13,7 @@ from backend.services.decision_support import (
     build_period_context,
     build_semantic_summary,
     build_time_context,
+    describe_period_window,
     iso_timestamp,
     latest_metric_change,
     make_identifier,
@@ -33,15 +36,117 @@ class DecisionWorkspaceService:
     DEFAULT_MAX_DIMENSIONS = 6
     MAX_METRICS = 20
     MAX_DIMENSIONS = 12
+    DEFAULT_MAX_SECONDARY_SIGNALS = 3
+    MAX_SECONDARY_SIGNALS = 6
+    PROMPT_MATCH_STOPWORDS = {
+        "a",
+        "an",
+        "and",
+        "are",
+        "as",
+        "at",
+        "be",
+        "by",
+        "for",
+        "from",
+        "how",
+        "in",
+        "into",
+        "is",
+        "it",
+        "of",
+        "on",
+        "or",
+        "our",
+        "should",
+        "the",
+        "this",
+        "to",
+        "we",
+        "what",
+        "which",
+        "while",
+        "with",
+        "without",
+    }
 
     @staticmethod
     def create_workspace(payload: Dict[str, Any]) -> Dict[str, Any]:
+        workspace_artifacts = DecisionWorkspaceService._build_workspace_artifacts(payload)
+        context = workspace_artifacts["context"]
+        workspace = workspace_artifacts["workspace"]
+        generated_at = workspace_artifacts["generated_at"]
+        scoped_context = workspace["scoped_context"]
+        unknowns = workspace["unknowns"]
+
+        return {
+            "status": "success",
+            "contract_version": "di_2_0_v1",
+            "dataset": context["dataset"],
+            "semantic_model": build_semantic_summary(context["semantic_model"]),
+            "decision_workspace": workspace,
+            "meta": {
+                "intake_mode": ((workspace.get("drafting") or {}).get("intake_mode") or "structured"),
+                "relevant_metric_count": len(scoped_context["relevant_metrics"]),
+                "relevant_dimension_count": len(scoped_context["relevant_dimensions"]),
+                "unknown_count": len(unknowns),
+                "generated_at": generated_at,
+            },
+            "warnings": [],
+        }
+
+    @staticmethod
+    def analyze_workspace(payload: Dict[str, Any]) -> Dict[str, Any]:
         payload = payload if isinstance(payload, dict) else {}
         generated_at = iso_timestamp()
         context = resolve_decision_context(
             dataset=payload.get("dataset"),
-            dataset_ref=payload.get("dataset_ref"),
-            semantic_model=payload.get("semantic_model"),
+            dataset_ref=payload.get("dataset_ref") or payload.get("datasetRef"),
+            semantic_model=payload.get("semantic_model") or payload.get("semanticModel"),
+            source="decision_workspace_analysis",
+        )
+        workspace = DecisionWorkspaceService._resolve_workspace_for_analysis(payload, context)
+        analysis_preferences = DecisionWorkspaceService._normalize_analysis_preferences(
+            payload.get("analysis_preferences")
+        )
+        workspace_analysis, warnings = DecisionWorkspaceService._build_workspace_analysis(
+            payload=payload,
+            context=context,
+            workspace=workspace,
+            analysis_preferences=analysis_preferences,
+            generated_at=generated_at,
+        )
+
+        return {
+            "status": "success",
+            "contract_version": "di_2_0_v1",
+            "dataset": context["dataset"],
+            "semantic_model": build_semantic_summary(context["semantic_model"]),
+            "decision_workspace": workspace,
+            "workspace_analysis": workspace_analysis,
+            "meta": {
+                "intake_mode": ((workspace.get("drafting") or {}).get("intake_mode") or "structured"),
+                "relevant_metric_count": len(workspace["scoped_context"]["relevant_metrics"]),
+                "relevant_dimension_count": len(workspace["scoped_context"]["relevant_dimensions"]),
+                "unknown_count": len(workspace["unknowns"]),
+                "scoped_diagnostic_count": len(workspace_analysis["scoped_diagnostics"]),
+                "secondary_legacy_signal_count": len(workspace_analysis["legacy_diagnostics"]["signals"]),
+                "generated_at": generated_at,
+            },
+            "warnings": warnings,
+        }
+
+    @staticmethod
+    def _build_workspace_artifacts(
+        payload: Dict[str, Any],
+        context: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        payload = payload if isinstance(payload, dict) else {}
+        generated_at = iso_timestamp()
+        resolved_context = context or resolve_decision_context(
+            dataset=payload.get("dataset"),
+            dataset_ref=payload.get("dataset_ref") or payload.get("datasetRef"),
+            semantic_model=payload.get("semantic_model") or payload.get("semanticModel"),
             source="decision_workspace",
         )
 
@@ -49,36 +154,57 @@ class DecisionWorkspaceService:
         if not decision_prompt:
             raise DecisionServiceError("decision_prompt is required to create a workspace.")
 
+        decision_intake = DecisionWorkspaceService._normalize_decision_intake(
+            payload.get("decision_intake") or payload.get("decisionIntake")
+        )
+        intake_mode = DecisionWorkspaceService._resolve_intake_mode(payload, decision_intake)
+        prompt_matches = DecisionWorkspaceService._build_prompt_matches(
+            decision_prompt=decision_prompt,
+            decision_intake=decision_intake,
+            context=resolved_context,
+        )
+        prompt_first_draft = DecisionWorkspaceService._build_prompt_first_draft(
+            decision_prompt=decision_prompt,
+            decision_intake=decision_intake,
+            intake_mode=intake_mode,
+            prompt_matches=prompt_matches,
+        )
+
         raw_objective = payload.get("objective")
+        objective_was_user_supplied = isinstance(raw_objective, dict)
+        if raw_objective is None:
+            raw_objective = prompt_first_draft.get("objective")
         if not isinstance(raw_objective, dict):
             raise DecisionServiceError("objective is required to create a workspace.")
 
         raw_levers = payload.get("levers")
+        levers_were_user_supplied = isinstance(raw_levers, list)
         if raw_levers is None:
-            raw_levers = []
+            raw_levers = prompt_first_draft.get("levers") or []
         if not isinstance(raw_levers, list):
             raise DecisionServiceError("levers must be an array when provided.")
 
         raw_constraints = payload.get("constraints")
+        constraints_were_user_supplied = isinstance(raw_constraints, list)
         if raw_constraints is None:
-            raw_constraints = []
+            raw_constraints = prompt_first_draft.get("constraints") or []
         if not isinstance(raw_constraints, list):
             raise DecisionServiceError("constraints must be an array when provided.")
 
         applied_filters = normalize_filters(payload)
         scope_preferences = DecisionWorkspaceService._normalize_scope_preferences(payload.get("scope_preferences"))
-        normalized_objective = DecisionWorkspaceService._normalize_objective(raw_objective, context)
+        normalized_objective = DecisionWorkspaceService._normalize_objective(raw_objective, resolved_context)
         normalized_levers = [
-            DecisionWorkspaceService._normalize_lever(item, context, index)
+            DecisionWorkspaceService._normalize_lever(item, resolved_context, index)
             for index, item in enumerate(raw_levers)
         ]
         normalized_constraints = [
-            DecisionWorkspaceService._normalize_constraint(item, context, index)
+            DecisionWorkspaceService._normalize_constraint(item, resolved_context, index)
             for index, item in enumerate(raw_constraints)
         ]
 
         scoped_context = DecisionWorkspaceService._build_scoped_context(
-            context=context,
+            context=resolved_context,
             objective=normalized_objective,
             levers=normalized_levers,
             constraints=normalized_constraints,
@@ -103,7 +229,6 @@ class DecisionWorkspaceService:
             unknowns=unknowns,
         )
         workspace_status = DecisionWorkspaceService._derive_workspace_status(readiness)
-
         workspace = {
             "workspace_id": make_identifier(
                 "decision_workspace",
@@ -114,7 +239,7 @@ class DecisionWorkspaceService:
             "status": workspace_status,
             "title": DecisionWorkspaceService._generate_title(normalized_objective),
             "decision_prompt": decision_prompt,
-            "dataset": context["dataset"],
+            "dataset": resolved_context["dataset"],
             "decision_scope": {
                 "objective": normalized_objective,
                 "levers": normalized_levers,
@@ -129,22 +254,22 @@ class DecisionWorkspaceService:
             "assumptions": assumptions,
             "unknowns": unknowns,
             "readiness": readiness,
+            "drafting": DecisionWorkspaceService._build_drafting_summary(
+                intake_mode=intake_mode,
+                decision_intake=decision_intake,
+                prompt_matches=prompt_matches,
+                clarification_hints=prompt_first_draft.get("clarification_hints") or [],
+                objective_source="user_input" if objective_was_user_supplied else "system_draft",
+                levers_source="user_input" if levers_were_user_supplied else ("system_draft" if normalized_levers else "none"),
+                constraints_source="user_input" if constraints_were_user_supplied else ("system_draft" if normalized_constraints else "none"),
+            ),
             "created_at": generated_at,
         }
-
         return {
-            "status": "success",
-            "contract_version": "di_2_0_v1",
-            "dataset": context["dataset"],
-            "semantic_model": build_semantic_summary(context["semantic_model"]),
-            "decision_workspace": workspace,
-            "meta": {
-                "relevant_metric_count": len(scoped_context["relevant_metrics"]),
-                "relevant_dimension_count": len(scoped_context["relevant_dimensions"]),
-                "unknown_count": len(unknowns),
-                "generated_at": generated_at,
-            },
-            "warnings": [],
+            "context": resolved_context,
+            "workspace": workspace,
+            "generated_at": generated_at,
+            "scope_preferences": scope_preferences,
         }
 
     @staticmethod
@@ -167,6 +292,24 @@ class DecisionWorkspaceService:
         }
 
     @staticmethod
+    def _normalize_analysis_preferences(raw: Any) -> Dict[str, Any]:
+        raw = raw if isinstance(raw, dict) else {}
+        include_secondary = raw.get("include_secondary_legacy_diagnostics")
+        if include_secondary is None:
+            include_secondary = raw.get("include_legacy_diagnostics")
+        if include_secondary is None:
+            include_secondary = True
+        return {
+            "include_secondary_legacy_diagnostics": bool(include_secondary),
+            "max_secondary_signals": DecisionWorkspaceService._clamp_int(
+                raw.get("max_secondary_signals"),
+                default=DecisionWorkspaceService.DEFAULT_MAX_SECONDARY_SIGNALS,
+                minimum=0,
+                maximum=DecisionWorkspaceService.MAX_SECONDARY_SIGNALS,
+            ),
+        }
+
+    @staticmethod
     def _clamp_int(value: Any, default: int, minimum: int, maximum: int) -> int:
         if value is None:
             return default
@@ -175,6 +318,631 @@ class DecisionWorkspaceService:
         except (TypeError, ValueError) as exc:
             raise DecisionServiceError("Scope preference values must be integers.") from exc
         return max(minimum, min(maximum, parsed))
+
+    @staticmethod
+    def _normalize_decision_intake(raw: Any) -> Dict[str, Optional[str]]:
+        raw = raw if isinstance(raw, dict) else {}
+        return {
+            "what_matters": DecisionWorkspaceService._clean_text(
+                raw.get("what_matters") or raw.get("whatMatters")
+            ),
+            "what_to_avoid": DecisionWorkspaceService._clean_text(
+                raw.get("what_to_avoid") or raw.get("whatToAvoid")
+            ),
+            "additional_context": DecisionWorkspaceService._clean_text(
+                raw.get("additional_context") or raw.get("additionalContext")
+            ),
+        }
+
+    @staticmethod
+    def _resolve_intake_mode(
+        payload: Dict[str, Any],
+        decision_intake: Dict[str, Optional[str]],
+    ) -> str:
+        requested_mode = DecisionWorkspaceService._normalize_text(
+            payload.get("intake_mode") or payload.get("intakeMode")
+        )
+        if requested_mode in {"prompt_first", "structured"}:
+            return requested_mode
+        if any(decision_intake.values()):
+            return "prompt_first"
+        if not isinstance(payload.get("objective"), dict):
+            return "prompt_first"
+        return "structured"
+
+    @staticmethod
+    def _build_prompt_matches(
+        decision_prompt: str,
+        decision_intake: Dict[str, Optional[str]],
+        context: Dict[str, Any],
+    ) -> Dict[str, List[Dict[str, Any]]]:
+        text_blob = DecisionWorkspaceService._build_prompt_text_blob(decision_prompt, decision_intake)
+        tokens = DecisionWorkspaceService._tokenize_prompt_text(text_blob)
+
+        metric_matches = DecisionWorkspaceService._rank_prompt_candidates(
+            candidates=context.get("metrics") or [],
+            tokens=tokens,
+            text_blob=text_blob,
+            ref_builder=build_metric_ref,
+        )
+        dimension_matches = DecisionWorkspaceService._rank_prompt_candidates(
+            candidates=context.get("dimensions") or [],
+            tokens=tokens,
+            text_blob=text_blob,
+            ref_builder=build_dimension_ref,
+        )
+
+        return {
+            "metrics": metric_matches[:5],
+            "dimensions": dimension_matches[:4],
+        }
+
+    @staticmethod
+    def _build_prompt_text_blob(
+        decision_prompt: str,
+        decision_intake: Dict[str, Optional[str]],
+    ) -> str:
+        return " ".join(
+            part.strip()
+            for part in [
+                decision_prompt,
+                decision_intake.get("what_matters"),
+                decision_intake.get("what_to_avoid"),
+                decision_intake.get("additional_context"),
+            ]
+            if str(part or "").strip()
+        )
+
+    @staticmethod
+    def _tokenize_prompt_text(text: str) -> List[str]:
+        return [
+            DecisionWorkspaceService._normalize_prompt_token(token)
+            for token in re.findall(r"[a-z0-9%]+", str(text or "").lower())
+            if len(token) > 2 and token not in DecisionWorkspaceService.PROMPT_MATCH_STOPWORDS
+        ]
+
+    @staticmethod
+    def _rank_prompt_candidates(
+        candidates: Sequence[Dict[str, Any]],
+        tokens: Sequence[str],
+        text_blob: str,
+        ref_builder,
+    ) -> List[Dict[str, Any]]:
+        ranked: List[Tuple[int, Dict[str, Any]]] = []
+        normalized_blob = DecisionWorkspaceService._normalize_phrase(text_blob)
+        for candidate in candidates:
+            score = DecisionWorkspaceService._score_prompt_candidate(candidate, tokens, normalized_blob)
+            if score <= 0:
+                continue
+            ranked.append((score, ref_builder(candidate)))
+
+        ranked.sort(
+            key=lambda item: (
+                -item[0],
+                str(item[1].get("label") or item[1].get("name") or ""),
+            )
+        )
+        return [item[1] for item in ranked]
+
+    @staticmethod
+    def _score_prompt_candidate(
+        candidate: Dict[str, Any],
+        tokens: Sequence[str],
+        normalized_blob: str,
+    ) -> int:
+        score = 0
+        candidate_tokens: List[str] = []
+        for key in ("label", "name", "field", "id"):
+            normalized_value = DecisionWorkspaceService._normalize_phrase(candidate.get(key))
+            if not normalized_value:
+                continue
+            value_tokens = [
+                DecisionWorkspaceService._normalize_prompt_token(token)
+                for token in normalized_value.split()
+                if token not in DecisionWorkspaceService.PROMPT_MATCH_STOPWORDS
+            ]
+            candidate_tokens.extend(value_tokens)
+            if normalized_value in normalized_blob:
+                score += 6 + len(value_tokens)
+
+        if not candidate_tokens:
+            return score
+
+        overlap = set(candidate_tokens).intersection(tokens)
+        score += len(overlap) * 3
+        if len(overlap) == len(set(candidate_tokens)) and overlap:
+            score += 2
+        return score
+
+    @staticmethod
+    def _build_prompt_first_draft(
+        decision_prompt: str,
+        decision_intake: Dict[str, Optional[str]],
+        intake_mode: str,
+        prompt_matches: Dict[str, List[Dict[str, Any]]],
+    ) -> Dict[str, Any]:
+        if intake_mode != "prompt_first":
+            return {
+                "objective": None,
+                "levers": [],
+                "constraints": [],
+                "clarification_hints": [],
+            }
+
+        objective = DecisionWorkspaceService._draft_objective(
+            decision_prompt=decision_prompt,
+            decision_intake=decision_intake,
+            prompt_matches=prompt_matches,
+        )
+        constraints = DecisionWorkspaceService._draft_constraints(
+            decision_prompt=decision_prompt,
+            decision_intake=decision_intake,
+            prompt_matches=prompt_matches,
+        )
+        levers = DecisionWorkspaceService._draft_levers(
+            decision_prompt=decision_prompt,
+            decision_intake=decision_intake,
+            prompt_matches=prompt_matches,
+            objective=objective,
+            constraints=constraints,
+        )
+
+        return {
+            "objective": objective,
+            "levers": levers,
+            "constraints": constraints,
+            "clarification_hints": DecisionWorkspaceService._build_prompt_first_clarification_hints(
+                decision_intake=decision_intake,
+                prompt_matches=prompt_matches,
+                objective=objective,
+                levers=levers,
+                constraints=constraints,
+            ),
+        }
+
+    @staticmethod
+    def _draft_objective(
+        decision_prompt: str,
+        decision_intake: Dict[str, Optional[str]],
+        prompt_matches: Dict[str, List[Dict[str, Any]]],
+    ) -> Dict[str, Any]:
+        objective_text = DecisionWorkspaceService._extract_objective_clause(
+            decision_prompt=decision_prompt,
+            decision_intake=decision_intake,
+        )
+        objective_metric = DecisionWorkspaceService._find_best_prompt_metric_match(
+            objective_text or decision_prompt,
+            prompt_matches.get("metrics") or [],
+        ) or next(iter(prompt_matches.get("metrics") or []), None)
+        direction = DecisionWorkspaceService._infer_objective_direction(objective_text or decision_prompt)
+
+        if objective_text:
+            statement = objective_text
+        elif objective_metric:
+            leading_verb = {
+                "maximize": "Increase",
+                "minimize": "Reduce",
+                "maintain": "Maintain",
+                "achieve_target": "Hit",
+            }.get(direction, "Improve")
+            statement = f"{leading_verb} {objective_metric.get('label') or objective_metric.get('name')}"
+        else:
+            statement = decision_prompt
+
+        return {
+            "statement": statement,
+            "metric_id": objective_metric.get("metric_id") if objective_metric else None,
+            "direction": direction,
+            "time_horizon": DecisionWorkspaceService._infer_time_horizon_from_text(
+                DecisionWorkspaceService._build_prompt_text_blob(decision_prompt, decision_intake)
+            ),
+        }
+
+    @staticmethod
+    def _draft_levers(
+        decision_prompt: str,
+        decision_intake: Dict[str, Optional[str]],
+        prompt_matches: Dict[str, List[Dict[str, Any]]],
+        objective: Dict[str, Any],
+        constraints: Sequence[Dict[str, Any]],
+    ) -> List[Dict[str, Any]]:
+        text_blob = DecisionWorkspaceService._build_prompt_text_blob(decision_prompt, decision_intake)
+        lever_text = DecisionWorkspaceService._extract_lever_clause(
+            decision_prompt=decision_prompt,
+            decision_intake=decision_intake,
+        ) or text_blob
+        objective_metric_id = objective.get("metric_id")
+        constraint_metric_ids = {
+            (constraint.get("binding") or {}).get("metric_id")
+            for constraint in constraints
+            if isinstance((constraint.get("binding") or {}), dict)
+        }
+        levers: List[Dict[str, Any]] = []
+        ranked_metric_refs = DecisionWorkspaceService._rank_prompt_refs(
+            lever_text,
+            prompt_matches.get("metrics") or [],
+        ) or list(prompt_matches.get("metrics") or [])
+
+        for metric_ref in ranked_metric_refs:
+            metric_id = metric_ref.get("metric_id")
+            if not metric_id or metric_id == objective_metric_id or metric_id in constraint_metric_ids:
+                continue
+            label = metric_ref.get("label") or metric_ref.get("name") or "Draft lever"
+            levers.append(
+                {
+                    "label": label,
+                    "lever_type": DecisionWorkspaceService._infer_lever_type(label),
+                    "binding": {"metric_id": metric_id},
+                    "desired_change": DecisionWorkspaceService._infer_desired_change(text_blob),
+                }
+            )
+            if len(levers) >= 2:
+                break
+
+        normalized_lever_text = DecisionWorkspaceService._normalize_phrase(lever_text)
+        dimension_keywords_present = any(
+            keyword in normalized_lever_text
+            for keyword in ("mix", "region", "channel", "segment", "allocation")
+        )
+        if dimension_keywords_present:
+            ranked_dimension_refs = DecisionWorkspaceService._rank_prompt_refs(
+                lever_text,
+                prompt_matches.get("dimensions") or [],
+            ) or list(prompt_matches.get("dimensions") or [])
+            for dimension_ref in ranked_dimension_refs:
+                dimension_id = dimension_ref.get("dimension_id")
+                if not dimension_id:
+                    continue
+                levers.append(
+                    {
+                        "label": f"{dimension_ref.get('label') or dimension_ref.get('name')} mix",
+                        "lever_type": "mix",
+                        "binding": {"dimension_id": dimension_id},
+                        "desired_change": "shift",
+                    }
+                )
+                break
+
+        return levers
+
+    @staticmethod
+    def _draft_constraints(
+        decision_prompt: str,
+        decision_intake: Dict[str, Optional[str]],
+        prompt_matches: Dict[str, List[Dict[str, Any]]],
+    ) -> List[Dict[str, Any]]:
+        clauses = DecisionWorkspaceService._extract_constraint_clauses(
+            decision_prompt=decision_prompt,
+            decision_intake=decision_intake,
+        )
+        constraints: List[Dict[str, Any]] = []
+        used_metric_ids = set()
+
+        for clause in clauses:
+            metric_ref = DecisionWorkspaceService._find_best_prompt_metric_match(
+                clause,
+                prompt_matches.get("metrics") or [],
+            )
+            metric_id = metric_ref.get("metric_id") if isinstance(metric_ref, dict) else None
+            if not metric_id or metric_id in used_metric_ids:
+                continue
+            used_metric_ids.add(metric_id)
+            operator = "gte"
+            normalized_clause = DecisionWorkspaceService._normalize_phrase(clause)
+            if any(word in normalized_clause for word in ("cap", "limit", "under", "below")):
+                operator = "lte"
+            constraints.append(
+                {
+                    "label": f"Protect {metric_ref.get('label') or metric_ref.get('name')}",
+                    "description": clause,
+                    "constraint_type": "metric_guardrail",
+                    "binding": {"metric_id": metric_id},
+                    "condition": {
+                        "operator": operator,
+                        "value": None,
+                        "secondary_value": None,
+                        "values": None,
+                        "unit": None,
+                    },
+                    "hardness": "hard" if any(
+                        word in normalized_clause for word in ("must", "cannot", "never", "stay within")
+                    ) else "soft",
+                }
+            )
+            if len(constraints) >= 2:
+                break
+
+        return constraints
+
+    @staticmethod
+    def _build_prompt_first_clarification_hints(
+        decision_intake: Dict[str, Optional[str]],
+        prompt_matches: Dict[str, List[Dict[str, Any]]],
+        objective: Dict[str, Any],
+        levers: Sequence[Dict[str, Any]],
+        constraints: Sequence[Dict[str, Any]],
+    ) -> List[str]:
+        hints: List[str] = []
+        if not objective.get("metric_id"):
+            hints.append("Confirm which metric should define success for this decision.")
+        if not levers:
+            hints.append("Add at least one controllable lever the team can change.")
+        if decision_intake.get("what_to_avoid") and not constraints:
+            hints.append("Clarify the main guardrail in metric or business terms so the draft can bind it.")
+        if not prompt_matches.get("metrics"):
+            hints.append("No strong metric match was found from the prompt, so expect metric binding follow-up.")
+        return DecisionWorkspaceService._dedupe_strings(hints)
+
+    @staticmethod
+    def _extract_constraint_clauses(
+        decision_prompt: str,
+        decision_intake: Dict[str, Optional[str]],
+    ) -> List[str]:
+        clauses: List[str] = []
+        what_to_avoid = decision_intake.get("what_to_avoid")
+        if what_to_avoid:
+            clauses.append(what_to_avoid)
+
+        prompt = str(decision_prompt or "")
+        patterns = [
+            r"without\s+([^,.;!?]+)",
+            r"protect(?:ing)?\s+([^,.;!?]+)",
+            r"avoid(?:ing)?\s+([^,.;!?]+)",
+            r"stay within\s+([^,.;!?]+)",
+            r"keep\s+([^,.;!?]+)",
+        ]
+        for pattern in patterns:
+            for match in re.findall(pattern, prompt, flags=re.IGNORECASE):
+                cleaned = DecisionWorkspaceService._clean_text(match)
+                if cleaned:
+                    clauses.append(cleaned)
+        return DecisionWorkspaceService._dedupe_strings(clauses)
+
+    @staticmethod
+    def _extract_objective_clause(
+        decision_prompt: str,
+        decision_intake: Dict[str, Optional[str]],
+    ) -> str:
+        objective_text = DecisionWorkspaceService._clean_text(decision_intake.get("what_matters"))
+        if objective_text:
+            return objective_text
+
+        prompt = DecisionWorkspaceService._clean_text(decision_prompt) or ""
+        if not prompt:
+            return ""
+
+        cleaned_prompt = re.sub(
+            r"^(how should we|how do we|what should we do to|what can we do to|help us)\s+",
+            "",
+            prompt,
+            flags=re.IGNORECASE,
+        )
+        return DecisionWorkspaceService._split_on_intent_boundary(cleaned_prompt)
+
+    @staticmethod
+    def _extract_lever_clause(
+        decision_prompt: str,
+        decision_intake: Dict[str, Optional[str]],
+    ) -> str:
+        additional_context = DecisionWorkspaceService._clean_text(decision_intake.get("additional_context"))
+        prompt = DecisionWorkspaceService._clean_text(decision_prompt) or ""
+        clauses: List[str] = []
+        if additional_context:
+            clauses.append(additional_context)
+
+        lever_match = re.search(
+            r"\b(?:using|via|through|with)\s+(.+?)(?:\bwithout\b|\bwhile\b|\bbut\b|[?.!]|$)",
+            prompt,
+            flags=re.IGNORECASE,
+        )
+        if lever_match:
+            clause = DecisionWorkspaceService._clean_text(lever_match.group(1))
+            if clause:
+                clauses.append(clause)
+
+        return " ".join(DecisionWorkspaceService._dedupe_strings(clauses))
+
+    @staticmethod
+    def _split_on_intent_boundary(text: str) -> str:
+        cleaned = DecisionWorkspaceService._clean_text(text) or ""
+        if not cleaned:
+            return ""
+        boundary_match = re.search(
+            r"\b(?:using|via|through|with|without|while|but)\b",
+            cleaned,
+            flags=re.IGNORECASE,
+        )
+        if boundary_match:
+            cleaned = cleaned[: boundary_match.start()]
+        return DecisionWorkspaceService._clean_text(cleaned.rstrip(" ,.;:?!")) or ""
+
+    @staticmethod
+    def _rank_prompt_refs(
+        text: str,
+        refs: Sequence[Dict[str, Any]],
+    ) -> List[Dict[str, Any]]:
+        tokens = DecisionWorkspaceService._tokenize_prompt_text(text)
+        normalized_text = DecisionWorkspaceService._normalize_phrase(text)
+        ranked: List[Tuple[int, Dict[str, Any]]] = []
+        for ref in refs:
+            score = DecisionWorkspaceService._score_prompt_candidate(ref, tokens, normalized_text)
+            if score <= 0:
+                continue
+            ranked.append((score, ref))
+        ranked.sort(
+            key=lambda item: (
+                -item[0],
+                str(item[1].get("label") or item[1].get("name") or ""),
+            )
+        )
+        return [item[1] for item in ranked]
+
+    @staticmethod
+    def _find_best_prompt_metric_match(
+        text: str,
+        metric_refs: Sequence[Dict[str, Any]],
+    ) -> Optional[Dict[str, Any]]:
+        text_tokens = DecisionWorkspaceService._tokenize_prompt_text(text)
+        normalized_text = DecisionWorkspaceService._normalize_phrase(text)
+        best_score = 0
+        best_match: Optional[Dict[str, Any]] = None
+        for metric_ref in metric_refs:
+            score = DecisionWorkspaceService._score_prompt_candidate(metric_ref, text_tokens, normalized_text)
+            if score > best_score:
+                best_score = score
+                best_match = metric_ref
+        return best_match
+
+    @staticmethod
+    def _infer_objective_direction(text: str) -> str:
+        normalized = DecisionWorkspaceService._normalize_phrase(text)
+        if any(word in normalized for word in ("reduce", "decrease", "lower", "cut", "minimize")):
+            return "minimize"
+        if any(word in normalized for word in ("maintain", "protect", "preserve", "keep", "avoid")):
+            return "maintain"
+        if any(word in normalized for word in ("target", "hit", "reach", "achieve")):
+            return "achieve_target"
+        return "maximize"
+
+    @staticmethod
+    def _infer_desired_change(text: str) -> str:
+        normalized = DecisionWorkspaceService._normalize_phrase(text)
+        if any(word in normalized for word in ("reduce", "decrease", "lower", "cut")):
+            return "decrease"
+        if any(word in normalized for word in ("shift", "rebalance", "reallocate")):
+            return "shift"
+        if any(word in normalized for word in ("tighten", "limit", "cap")):
+            return "tighten"
+        return "increase"
+
+    @staticmethod
+    def _infer_lever_type(label: str) -> str:
+        normalized = DecisionWorkspaceService._normalize_phrase(label)
+        if any(word in normalized for word in ("policy", "discount")):
+            return "policy_choice"
+        if any(word in normalized for word in ("mix", "share", "allocation")):
+            return "mix"
+        if "tim" in normalized:
+            return "timing"
+        return "numeric_input"
+
+    @staticmethod
+    def _infer_time_horizon_from_text(text: str) -> Optional[Dict[str, Any]]:
+        normalized = DecisionWorkspaceService._normalize_phrase(text)
+        if "next quarter" in normalized:
+            return {
+                "kind": "relative_period",
+                "label": "Next quarter",
+                "start": None,
+                "end": None,
+                "grain": "quarter",
+            }
+        if "next month" in normalized:
+            return {
+                "kind": "relative_period",
+                "label": "Next month",
+                "start": None,
+                "end": None,
+                "grain": "month",
+            }
+        if "next week" in normalized:
+            return {
+                "kind": "relative_period",
+                "label": "Next week",
+                "start": None,
+                "end": None,
+                "grain": "week",
+            }
+        if "this year" in normalized or "next year" in normalized:
+            return {
+                "kind": "relative_period",
+                "label": "This year" if "this year" in normalized else "Next year",
+                "start": None,
+                "end": None,
+                "grain": "year",
+            }
+        return None
+
+    @staticmethod
+    def _build_drafting_summary(
+        intake_mode: str,
+        decision_intake: Dict[str, Optional[str]],
+        prompt_matches: Dict[str, List[Dict[str, Any]]],
+        clarification_hints: Sequence[str],
+        objective_source: str,
+        levers_source: str,
+        constraints_source: str,
+    ) -> Dict[str, Any]:
+        return {
+            "intake_mode": intake_mode,
+            "helper_prompts": {
+                "what_matters": decision_intake.get("what_matters"),
+                "what_to_avoid": decision_intake.get("what_to_avoid"),
+                "additional_context": decision_intake.get("additional_context"),
+            },
+            "source_summary": {
+                "objective": objective_source,
+                "levers": levers_source,
+                "constraints": constraints_source,
+            },
+            "prompt_matches": {
+                "metrics": list(prompt_matches.get("metrics") or []),
+                "dimensions": list(prompt_matches.get("dimensions") or []),
+            },
+            "clarification_hints": list(DecisionWorkspaceService._dedupe_strings(clarification_hints)),
+        }
+
+    @staticmethod
+    def _normalize_existing_drafting(
+        raw: Any,
+        objective_present: bool,
+        levers_present: bool,
+        constraints_present: bool,
+    ) -> Dict[str, Any]:
+        raw = raw if isinstance(raw, dict) else {}
+        helper_prompts = raw.get("helper_prompts") if isinstance(raw.get("helper_prompts"), dict) else {}
+        source_summary = raw.get("source_summary") if isinstance(raw.get("source_summary"), dict) else {}
+        prompt_matches = raw.get("prompt_matches") if isinstance(raw.get("prompt_matches"), dict) else {}
+        return {
+            "intake_mode": raw.get("intake_mode") or "structured",
+            "helper_prompts": {
+                "what_matters": DecisionWorkspaceService._clean_text(helper_prompts.get("what_matters")),
+                "what_to_avoid": DecisionWorkspaceService._clean_text(helper_prompts.get("what_to_avoid")),
+                "additional_context": DecisionWorkspaceService._clean_text(helper_prompts.get("additional_context")),
+            },
+            "source_summary": {
+                "objective": source_summary.get("objective") or ("user_input" if objective_present else "none"),
+                "levers": source_summary.get("levers") or ("user_input" if levers_present else "none"),
+                "constraints": source_summary.get("constraints") or ("user_input" if constraints_present else "none"),
+            },
+            "prompt_matches": {
+                "metrics": list(prompt_matches.get("metrics") or []),
+                "dimensions": list(prompt_matches.get("dimensions") or []),
+            },
+            "clarification_hints": list(raw.get("clarification_hints") or []),
+        }
+
+    @staticmethod
+    def _clean_text(value: Any) -> Optional[str]:
+        text = str(value or "").strip()
+        return text if text else None
+
+    @staticmethod
+    def _normalize_phrase(value: Any) -> str:
+        return " ".join(re.findall(r"[a-z0-9%]+", str(value or "").lower()))
+
+    @staticmethod
+    def _normalize_prompt_token(token: str) -> str:
+        normalized = str(token or "").strip().lower()
+        if len(normalized) > 5 and normalized.endswith("ing"):
+            normalized = normalized[:-3]
+        elif len(normalized) > 4 and normalized.endswith("ed"):
+            normalized = normalized[:-2]
+        elif len(normalized) > 4 and normalized.endswith("es"):
+            normalized = normalized[:-2]
+        elif len(normalized) > 3 and normalized.endswith("s") and not normalized.endswith("%"):
+            normalized = normalized[:-1]
+        return normalized
 
     @staticmethod
     def _normalize_objective(raw: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
@@ -428,6 +1196,399 @@ class DecisionWorkspaceService:
             "field": None,
             "reason": "No binding was provided.",
         }
+
+    @staticmethod
+    def _resolve_workspace_for_analysis(payload: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
+        existing_workspace = payload.get("decision_workspace")
+        if isinstance(existing_workspace, dict):
+            return DecisionWorkspaceService._normalize_existing_workspace(existing_workspace, context)
+        return DecisionWorkspaceService._build_workspace_artifacts(payload, context=context)["workspace"]
+
+    @staticmethod
+    def _normalize_existing_workspace(workspace: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
+        decision_scope = workspace.get("decision_scope")
+        if not isinstance(decision_scope, dict):
+            raise DecisionServiceError("decision_workspace.decision_scope is required for workspace analysis.")
+
+        objective = decision_scope.get("objective")
+        levers = decision_scope.get("levers")
+        constraints = decision_scope.get("constraints")
+        if not isinstance(objective, dict):
+            raise DecisionServiceError("decision_workspace.decision_scope.objective is required for workspace analysis.")
+        if not isinstance(levers, list):
+            raise DecisionServiceError("decision_workspace.decision_scope.levers must be an array for workspace analysis.")
+        if not isinstance(constraints, list):
+            raise DecisionServiceError(
+                "decision_workspace.decision_scope.constraints must be an array for workspace analysis."
+            )
+
+        scoped_context = workspace.get("scoped_context") if isinstance(workspace.get("scoped_context"), dict) else {}
+        unknowns = workspace.get("unknowns") if isinstance(workspace.get("unknowns"), list) else []
+        readiness = workspace.get("readiness") if isinstance(workspace.get("readiness"), dict) else None
+        if readiness is None:
+            readiness = DecisionWorkspaceService._evaluate_readiness(
+                objective=objective,
+                levers=levers,
+                constraints=constraints,
+                unknowns=unknowns,
+            )
+        drafting = DecisionWorkspaceService._normalize_existing_drafting(
+            workspace.get("drafting"),
+            objective_present=bool(objective),
+            levers_present=bool(levers),
+            constraints_present=bool(constraints),
+        )
+
+        return {
+            "workspace_id": workspace.get("workspace_id")
+            or make_identifier("decision_workspace", objective.get("objective_id") or objective.get("statement")),
+            "workspace_type": workspace.get("workspace_type") or "scoped_decision",
+            "status": workspace.get("status") or DecisionWorkspaceService._derive_workspace_status(readiness),
+            "title": workspace.get("title") or DecisionWorkspaceService._generate_title(objective),
+            "decision_prompt": str(workspace.get("decision_prompt") or "").strip(),
+            "dataset": context["dataset"],
+            "decision_scope": {
+                "objective": objective,
+                "levers": levers,
+                "constraints": constraints,
+            },
+            "scope_summary": workspace.get("scope_summary")
+            or DecisionWorkspaceService._generate_scope_summary(objective, levers, constraints),
+            "scoped_context": {
+                "relevant_metrics": list(scoped_context.get("relevant_metrics") or []),
+                "relevant_dimensions": list(scoped_context.get("relevant_dimensions") or []),
+                "comparison_dimensions": list(scoped_context.get("comparison_dimensions") or []),
+                "applied_filters": list(scoped_context.get("applied_filters") or []),
+                "time_context": scoped_context.get("time_context"),
+                "period_context": scoped_context.get("period_context"),
+                "notes": list(scoped_context.get("notes") or []),
+            },
+            "assumptions": list(workspace.get("assumptions") or []),
+            "unknowns": unknowns,
+            "readiness": readiness,
+            "drafting": drafting,
+            "created_at": workspace.get("created_at") or iso_timestamp(),
+        }
+
+    @staticmethod
+    def _build_workspace_analysis(
+        payload: Dict[str, Any],
+        context: Dict[str, Any],
+        workspace: Dict[str, Any],
+        analysis_preferences: Dict[str, Any],
+        generated_at: str,
+    ) -> Tuple[Dict[str, Any], List[str]]:
+        scoped_diagnostics = DecisionWorkspaceService._build_scoped_diagnostics(
+            context=context,
+            workspace=workspace,
+            generated_at=generated_at,
+        )
+        legacy_diagnostics, legacy_warnings = DecisionWorkspaceService._build_secondary_legacy_diagnostics(
+            payload=payload,
+            workspace=workspace,
+            analysis_preferences=analysis_preferences,
+        )
+        notes = [
+            "This continuation path provides scoped observational diagnostics only.",
+            "It does not execute simulation, trade-off analysis, or goal-seeking.",
+        ]
+        if legacy_diagnostics["status"] == "secondary":
+            notes.append(
+                "Legacy diagnostics were filtered to workspace-relevant metrics and dimensions so they remain additive evidence."
+            )
+
+        return (
+            {
+                "analysis_id": make_identifier("workspace_analysis", workspace.get("workspace_id"), generated_at),
+                "analysis_mode": "scoped_observational",
+                "status": workspace.get("status"),
+                "summary": DecisionWorkspaceService._build_workspace_analysis_summary(
+                    workspace=workspace,
+                    scoped_diagnostics=scoped_diagnostics,
+                    legacy_diagnostics=legacy_diagnostics,
+                ),
+                "truthfulness_note": "This response is descriptive and scope-grounded. It is not a simulation or trade-off result.",
+                "scoped_diagnostics": scoped_diagnostics,
+                "legacy_diagnostics": legacy_diagnostics,
+                "notes": notes,
+                "generated_at": generated_at,
+            },
+            legacy_warnings,
+        )
+
+    @staticmethod
+    def _build_scoped_diagnostics(
+        context: Dict[str, Any],
+        workspace: Dict[str, Any],
+        generated_at: str,
+    ) -> List[Dict[str, Any]]:
+        filters = list((workspace.get("scoped_context") or {}).get("applied_filters") or [])
+        time_dimension = context.get("time_dimension")
+        diagnostics: List[Dict[str, Any]] = []
+
+        for item in DecisionWorkspaceService._collect_scoped_metric_refs(workspace):
+            metric_ref = item["metric_ref"]
+            metric = DecisionWorkspaceService._find_metric(context, metric_ref.get("metric_id"))
+            diagnostic_id = make_identifier(
+                "workspace_diagnostic",
+                item["primary_role"],
+                metric_ref.get("metric_id") or metric_ref.get("label"),
+                generated_at,
+            )
+            if metric is None:
+                diagnostics.append(
+                    {
+                        "diagnostic_id": diagnostic_id,
+                        "diagnostic_type": "metric_observation",
+                        "status": "metric_unavailable",
+                        "focus_role": item["primary_role"],
+                        "role_tags": item["roles"],
+                        "metric_ref": metric_ref,
+                        "summary": (
+                            f"{metric_ref.get('label') or 'A scoped metric'} is part of this workspace, "
+                            "but it is not available in the current semantic model."
+                        ),
+                        "time_context": None,
+                        "period_context": None,
+                        "evidence": None,
+                    }
+                )
+                continue
+
+            change = latest_metric_change(context, metric, filters=filters)
+            if change is None:
+                diagnostics.append(
+                    {
+                        "diagnostic_id": diagnostic_id,
+                        "diagnostic_type": "metric_observation",
+                        "status": "insufficient_history",
+                        "focus_role": item["primary_role"],
+                        "role_tags": item["roles"],
+                        "metric_ref": build_metric_ref(metric),
+                        "summary": (
+                            f"{build_metric_ref(metric)['label']} is in scope, but the current dataset cannot produce "
+                            "a reliable period-over-period comparison inside this workspace."
+                        ),
+                        "time_context": (workspace.get("scoped_context") or {}).get("time_context"),
+                        "period_context": (workspace.get("scoped_context") or {}).get("period_context"),
+                        "evidence": None,
+                    }
+                )
+                continue
+
+            time_context = build_time_context(change, time_dimension) if isinstance(time_dimension, dict) else None
+            period_context = build_period_context(time_context)
+            diagnostics.append(
+                {
+                    "diagnostic_id": diagnostic_id,
+                    "diagnostic_type": "metric_observation",
+                    "status": "observed_change",
+                    "focus_role": item["primary_role"],
+                    "role_tags": item["roles"],
+                    "metric_ref": build_metric_ref(metric),
+                    "summary": DecisionWorkspaceService._build_metric_change_summary(
+                        metric_ref=build_metric_ref(metric),
+                        change=change,
+                        period_context=period_context,
+                    ),
+                    "time_context": time_context,
+                    "period_context": period_context,
+                    "evidence": {
+                        "current_value": change.get("current_value"),
+                        "previous_value": change.get("previous_value"),
+                        "delta_value": change.get("delta_value"),
+                        "delta_pct": change.get("delta_pct"),
+                        "current_period": change.get("current_period"),
+                        "previous_period": change.get("previous_period"),
+                        "row_count": change.get("row_count"),
+                    },
+                }
+            )
+
+        return diagnostics
+
+    @staticmethod
+    def _collect_scoped_metric_refs(workspace: Dict[str, Any]) -> List[Dict[str, Any]]:
+        decision_scope = workspace.get("decision_scope") if isinstance(workspace.get("decision_scope"), dict) else {}
+        relevant_metrics = {
+            item.get("metric_id"): item
+            for item in (workspace.get("scoped_context") or {}).get("relevant_metrics") or []
+            if isinstance(item, dict) and item.get("metric_id")
+        }
+        ordered: List[Dict[str, Any]] = []
+        index_by_metric_id: Dict[str, int] = {}
+
+        def add_metric(metric_ref: Optional[Dict[str, Any]], role: str) -> None:
+            if not isinstance(metric_ref, dict):
+                return
+            metric_id = metric_ref.get("metric_id")
+            if not metric_id:
+                return
+            if metric_id in index_by_metric_id:
+                existing = ordered[index_by_metric_id[metric_id]]
+                if role not in existing["roles"]:
+                    existing["roles"].append(role)
+                return
+            index_by_metric_id[metric_id] = len(ordered)
+            ordered.append(
+                {
+                    "metric_ref": metric_ref,
+                    "primary_role": role,
+                    "roles": [role],
+                }
+            )
+
+        objective = decision_scope.get("objective") if isinstance(decision_scope.get("objective"), dict) else {}
+        add_metric(objective.get("metric_ref"), "objective")
+        for lever in decision_scope.get("levers") or []:
+            binding = lever.get("binding") if isinstance(lever.get("binding"), dict) else {}
+            add_metric(binding.get("metric_ref"), "lever")
+        for constraint in decision_scope.get("constraints") or []:
+            binding = constraint.get("binding") if isinstance(constraint.get("binding"), dict) else {}
+            add_metric(binding.get("metric_ref"), "constraint")
+        for metric_ref in relevant_metrics.values():
+            add_metric(metric_ref, "context")
+        return ordered
+
+    @staticmethod
+    def _build_metric_change_summary(
+        metric_ref: Dict[str, Any],
+        change: Dict[str, Any],
+        period_context: Optional[Dict[str, Any]],
+    ) -> str:
+        label = metric_ref.get("label") or metric_ref.get("name") or "Scoped metric"
+        current_value = change.get("current_value")
+        previous_value = change.get("previous_value")
+        delta_value = change.get("delta_value")
+        delta_pct = change.get("delta_pct")
+        window = describe_period_window(period_context)
+
+        if delta_value == 0:
+            return f"{label} held flat at {current_value} {window} within the scoped workspace."
+
+        direction = "increased" if (delta_value or 0) > 0 else "decreased"
+        if delta_pct is not None:
+            percent_change = DecisionWorkspaceService._format_percent(abs(delta_pct))
+            return (
+                f"{label} {direction} by {percent_change} {window} within the scoped workspace "
+                f"(from {previous_value} to {current_value})."
+            )
+        return f"{label} {direction} {window} within the scoped workspace (from {previous_value} to {current_value})."
+
+    @staticmethod
+    def _format_percent(value: Any) -> str:
+        try:
+            return f"{float(value) * 100:.1f}%"
+        except (TypeError, ValueError):
+            return "0.0%"
+
+    @staticmethod
+    def _build_secondary_legacy_diagnostics(
+        payload: Dict[str, Any],
+        workspace: Dict[str, Any],
+        analysis_preferences: Dict[str, Any],
+    ) -> Tuple[Dict[str, Any], List[str]]:
+        if (
+            not analysis_preferences.get("include_secondary_legacy_diagnostics")
+            or analysis_preferences.get("max_secondary_signals", 0) <= 0
+        ):
+            return {
+                "status": "not_requested",
+                "signals": [],
+                "notes": ["Secondary legacy diagnostics were not requested for this workspace analysis run."],
+            }, []
+
+        relevant_metrics = [
+            item.get("metric_id")
+            for item in (workspace.get("scoped_context") or {}).get("relevant_metrics") or []
+            if isinstance(item, dict) and item.get("metric_id")
+        ]
+        relevant_dimensions = {
+            item.get("dimension_id")
+            for collection_name in ("relevant_dimensions", "comparison_dimensions")
+            for item in (workspace.get("scoped_context") or {}).get(collection_name) or []
+            if isinstance(item, dict) and item.get("dimension_id")
+        }
+        if not relevant_metrics and not relevant_dimensions:
+            return {
+                "status": "not_applicable",
+                "signals": [],
+                "notes": ["No scoped metrics or dimensions were available for secondary legacy diagnostics."],
+            }, []
+
+        signal_payload = {
+            "dataset": payload.get("dataset"),
+            "dataset_ref": payload.get("dataset_ref") or payload.get("datasetRef"),
+            "semantic_model": payload.get("semantic_model") or payload.get("semanticModel"),
+            "filters": (workspace.get("scoped_context") or {}).get("applied_filters") or [],
+            "metric_ids": relevant_metrics,
+            "max_signals": max(analysis_preferences["max_secondary_signals"] * 2, 4),
+        }
+        signal_response = generate_decision_signals(signal_payload)
+        signals = [
+            signal
+            for signal in signal_response.get("signals") or []
+            if DecisionWorkspaceService._signal_matches_workspace_scope(signal, relevant_metrics, relevant_dimensions)
+        ][: analysis_preferences["max_secondary_signals"]]
+
+        status = "secondary" if signals else "no_scoped_matches"
+        notes = [
+            "Legacy signals were filtered to scoped metrics and dimensions before being attached to this workspace."
+        ]
+        if not signals:
+            notes.append("No legacy signals matched the current workspace scope after filtering.")
+        return {
+            "status": status,
+            "signals": signals,
+            "notes": notes,
+        }, list(signal_response.get("warnings") or [])
+
+    @staticmethod
+    def _signal_matches_workspace_scope(
+        signal: Dict[str, Any],
+        relevant_metric_ids: Sequence[str],
+        relevant_dimension_ids: Sequence[str],
+    ) -> bool:
+        metric_ref = signal.get("metric_ref") if isinstance(signal.get("metric_ref"), dict) else {}
+        if metric_ref.get("metric_id") in set(relevant_metric_ids):
+            return True
+        dimension_ref = signal.get("dimension_ref") if isinstance(signal.get("dimension_ref"), dict) else {}
+        if dimension_ref.get("dimension_id") in set(relevant_dimension_ids):
+            return True
+        return False
+
+    @staticmethod
+    def _build_workspace_analysis_summary(
+        workspace: Dict[str, Any],
+        scoped_diagnostics: Sequence[Dict[str, Any]],
+        legacy_diagnostics: Dict[str, Any],
+    ) -> str:
+        readiness = workspace.get("readiness") if isinstance(workspace.get("readiness"), dict) else {}
+        missing_inputs = list(readiness.get("missing_inputs") or [])
+        observed = next(
+            (item for item in scoped_diagnostics if item.get("status") == "observed_change"),
+            None,
+        )
+        if workspace.get("status") != "ready":
+            missing_text = ", ".join(missing_inputs) if missing_inputs else "additional structural inputs"
+            summary = (
+                f"Workspace analysis remains {workspace.get('status')} because {missing_text} "
+                "is still unresolved. Returned diagnostics are descriptive only."
+            )
+            if observed:
+                summary += f" Latest scoped evidence: {observed.get('summary')}"
+            return summary
+
+        if observed:
+            summary = f"Scoped analysis is anchored on the current workspace definition. {observed.get('summary')}"
+        else:
+            summary = (
+                "Scoped analysis found no period-over-period metric evidence yet, but the workspace remains structurally ready."
+            )
+
+        if legacy_diagnostics.get("status") == "secondary" and legacy_diagnostics.get("signals"):
+            summary += " Secondary legacy signals were attached as additive evidence only."
+        return summary
 
     @staticmethod
     def _build_scoped_context(

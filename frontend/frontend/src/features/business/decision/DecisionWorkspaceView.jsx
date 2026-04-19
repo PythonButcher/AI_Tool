@@ -1,17 +1,104 @@
 import React from 'react';
 import { 
   FaCircleCheck, FaCircleExclamation, FaTriangleExclamation, FaCircleInfo, 
-  FaGears, FaShieldHalved, FaChartLine, FaLayerGroup, FaPlus, FaCalendarDays, FaFileLines, FaLink, FaClock 
+  FaGears, FaShieldHalved, FaChartLine, FaLayerGroup, FaPlus, FaCalendarDays, FaFileLines, FaLink, FaClock,
+  FaMagnifyingGlassChart, FaFlask, FaScaleBalanced, FaLightbulb
 } from 'react-icons/fa6';
 import './DecisionWorkspace.css';
+import DecisionSignals from './DecisionSignals';
+import DecisionRecommendations from './DecisionRecommendations';
+
+/**
+ * ScopedDiagnosticCard
+ * 
+ * Renders a single structured diagnostic item from the workspace analysis.
+ * Follows the DI 2.0 V3 contract for truthful, scoped observational diagnostics.
+ */
+const ScopedDiagnosticCard = ({ diagnostic }) => {
+  const { summary, metric_ref, status, evidence } = diagnostic;
+  const label = metric_ref?.label || 'Workspace Observation';
+  
+  const getStatusConfig = () => {
+    switch (status) {
+      case 'observed_change':
+        return {
+          icon: <FaChartLine style={{ color: 'var(--accent-blue)' }} />,
+          badgeClass: 'status-badge--info',
+          label: 'Observed Change'
+        };
+      case 'insufficient_history':
+        return {
+          icon: <FaTriangleExclamation style={{ color: '#f59e0b' }} />,
+          badgeClass: 'status-badge--warning',
+          label: 'Insufficient History'
+        };
+      case 'metric_unavailable':
+        return {
+          icon: <FaCircleExclamation style={{ color: '#ef4444' }} />,
+          badgeClass: 'status-badge--critical',
+          label: 'Metric Unavailable'
+        };
+      default:
+        return {
+          icon: <FaCircleInfo style={{ color: 'var(--accent-blue)' }} />,
+          badgeClass: 'status-badge--info',
+          label: status
+        };
+    }
+  };
+
+  const config = getStatusConfig();
+
+  const renderEvidence = () => {
+    if (status !== 'observed_change' || !evidence) return null;
+
+    const { delta_pct, current_value, previous_value, delta_value } = evidence;
+    const isPositive = (delta_value || 0) > 0;
+    
+    return (
+      <div className="diagnostic-evidence">
+        <div className="evidence-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: '12px' }}>
+          <div className="evidence-stat">
+            <label style={{ display: 'block', fontSize: '0.7rem', textTransform: 'uppercase', opacity: 0.6 }}>Current</label>
+            <span style={{ fontWeight: 700 }}>{typeof current_value === 'number' ? current_value.toLocaleString() : current_value}</span>
+          </div>
+          <div className="evidence-stat">
+            <label style={{ display: 'block', fontSize: '0.7rem', textTransform: 'uppercase', opacity: 0.6 }}>Previous</label>
+            <span style={{ fontWeight: 700 }}>{typeof previous_value === 'number' ? previous_value.toLocaleString() : previous_value}</span>
+          </div>
+          {delta_pct !== undefined && (
+            <div className="evidence-stat">
+              <label style={{ display: 'block', fontSize: '0.7rem', textTransform: 'uppercase', opacity: 0.6 }}>Change</label>
+              <span style={{ fontWeight: 900, color: isPositive ? 'var(--accent-green)' : '#ef4444' }}>
+                {isPositive ? '+' : ''}{(delta_pct * 100).toFixed(1)}%
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className={`scoped-diagnostic-card status--${status === 'observed_change' ? 'info' : status === 'insufficient_history' ? 'warning' : 'critical'}`}>
+      <div className="diagnostic-header">
+        <div className="diagnostic-status-icon">{config.icon}</div>
+        <div className="diagnostic-metric-label">{label}</div>
+        <div className={`diagnostic-status-badge ${config.badgeClass}`}>{config.label}</div>
+      </div>
+      <div className="diagnostic-summary">{summary}</div>
+      {renderEvidence()}
+    </div>
+  );
+};
 
 /**
  * DecisionWorkspaceView
  * 
- * High-fidelity "Decision Brief" rendering for DI 2.0 V1.
+ * High-fidelity "Decision Brief" rendering for DI 2.0 V1/V3.
  * Emphasizes the strategic framing over raw data schema.
  */
-const DecisionWorkspaceView = ({ workspace, onCreateNew }) => {
+const DecisionWorkspaceView = ({ workspace, analysis, onCreateNew, onAnalyze }) => {
   if (!workspace) return null;
 
   const {
@@ -36,6 +123,8 @@ const DecisionWorkspaceView = ({ workspace, onCreateNew }) => {
         return <span className="workspace-status workspace-status--needs-input"><FaCircleExclamation /> Definition Incomplete</span>;
       case 'limited':
         return <span className="workspace-status workspace-status--limited"><FaTriangleExclamation /> Structurally Limited</span>;
+      case 'analyzed':
+        return <span className="workspace-status workspace-status--analyzed" style={{ background: 'var(--accent-blue)', color: 'white' }}><FaMagnifyingGlassChart /> Analysis Complete</span>;
       default:
         return <span className="workspace-status">{status}</span>;
     }
@@ -363,13 +452,89 @@ const DecisionWorkspaceView = ({ workspace, onCreateNew }) => {
             </div>
           )}
           
-          {readiness.can_run_simulation && (
-            <div className="simulation-notice" style={{ background: 'color-mix(in srgb, var(--accent-green) 5%, var(--bg-primary))', borderColor: 'var(--accent-green)', color: 'var(--text-primary)' }}>
-              <FaCircleCheck /> Decision architecture is structurally sound. Ready for simulation and objective optimization.
+          {readiness.can_run_simulation && !analysis && (
+            <div className="simulation-notice" style={{ background: 'color-mix(in srgb, var(--accent-green) 5%, var(--bg-primary))', borderColor: 'var(--accent-green)', color: 'var(--text-primary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <FaCircleCheck /> Decision architecture is structurally sound. Ready for observational analysis.
+              </div>
+              <button className="analyze-workspace-btn" onClick={onAnalyze} style={{ padding: '8px 16px', background: 'var(--accent-green)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <FaMagnifyingGlassChart /> Analyze Workspace
+              </button>
             </div>
           )}
         </div>
       </div>
+
+      {/* Analysis Results Area (DI 2.0 V3) */}
+      {analysis && (
+        <div className="workspace-analysis-results" style={{ marginTop: '40px', paddingTop: '40px', borderTop: '2px solid var(--accent-blue)' }}>
+          <div className="analysis-header" style={{ marginBottom: '32px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+              <FaMagnifyingGlassChart style={{ fontSize: '1.5rem', color: 'var(--accent-blue)' }} />
+              <h3 style={{ margin: 0, fontSize: '1.5rem' }}>Workspace Analysis Summary</h3>
+            </div>
+            <p className="analysis-summary" style={{ fontSize: '1.1rem', color: 'var(--text-primary)', opacity: 0.9 }}>
+              {analysis.summary}
+            </p>
+            <div className="truthfulness-note" style={{ padding: '12px 16px', background: 'var(--bg-secondary)', borderLeft: '4px solid var(--accent-blue)', borderRadius: '4px', fontSize: '0.85rem', fontStyle: 'italic', marginTop: '16px' }}>
+              <FaCircleInfo style={{ marginRight: '8px', color: 'var(--accent-blue)' }} />
+              {analysis.truthfulness_note}
+            </div>
+          </div>
+
+          <div className="analysis-grid" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '32px' }}>
+            {/* Scoped Diagnostics: Primary Area */}
+            <section className="analysis-section--primary">
+              <h4 className="section-label" style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--accent-blue)' }}>
+                <FaFlask /> Scoped Diagnostics
+              </h4>
+              
+              <div className="scoped-diagnostics-list">
+                {Array.isArray(analysis.scoped_diagnostics) ? (
+                  analysis.scoped_diagnostics.map((diag, idx) => (
+                    <ScopedDiagnosticCard key={idx} diagnostic={diag} />
+                  ))
+                ) : (
+                  <div className="scoped-diagnostic-card status--info">
+                    <p style={{ margin: 0, fontSize: '1rem', lineHeight: '1.6' }}>{analysis.scoped_diagnostics}</p>
+                  </div>
+                )}
+                {(!analysis.scoped_diagnostics || analysis.scoped_diagnostics.length === 0) && (
+                  <div className="simulation-notice">
+                    No scoped diagnostics were generated for this workspace.
+                  </div>
+                )}
+              </div>
+            </section>
+
+            {/* Legacy Signals: Secondary Area */}
+            {analysis.legacy_diagnostics?.signals && (
+              <section className="analysis-section--secondary" style={{ marginTop: '16px', opacity: 0.85 }}>
+                <h4 className="section-label" style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', opacity: 0.7 }}>
+                  <FaScaleBalanced /> Supporting Observational Evidence (Legacy)
+                </h4>
+                <div style={{ pointerEvents: 'auto' }}>
+                  <DecisionSignals signals={analysis.legacy_diagnostics.signals} />
+                </div>
+              </section>
+            )}
+
+            {/* Recommendations if present in legacy */}
+            {analysis.legacy_diagnostics?.recommendations && (
+              <section className="analysis-section--recommendations" style={{ marginTop: '16px' }}>
+                <h4 className="section-label" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <FaLightbulb style={{ color: 'var(--accent-yellow)' }} /> Strategic Recommendations
+                </h4>
+                <DecisionRecommendations recommendations={analysis.legacy_diagnostics.recommendations} />
+              </section>
+            )}
+          </div>
+          
+          <div className="analysis-footer" style={{ marginTop: '32px', textAlign: 'right', fontSize: '0.75rem', opacity: 0.5 }}>
+            Analysis ID: {analysis.analysis_id} • Generated at: {formatDate(analysis.generated_at)}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

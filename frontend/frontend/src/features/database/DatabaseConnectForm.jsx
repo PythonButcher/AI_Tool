@@ -74,25 +74,71 @@ function DatabaseConnectForm({ handleDatabaseData, onClose }) {
   return (
     <div className="db-form-wrapper">
       <form className="db-form" onSubmit={connectToDatabase}>
-        <h3 className="db-form__title">Connect to PostgreSQL</h3>
+        <div className="db-form__header">
+          <p className="db-form__eyebrow">Database</p>
+          <h3 className="db-form__title">Connect Postgres</h3>
+        </div>
 
-        {['host', 'port', 'dbname', 'user', 'password'].map((field) => (
-          <div className="db-form__row" key={field}>
-            <label className="db-form__label">{field}</label>
+        <div className="db-form__grid">
+          <div className="db-form__field db-form__field--wide">
+            <label>Host</label>
             <input
-              className="db-form__input"
-              type={field === 'password' ? 'password' : 'text'}
-              name={field}
-              value={dbConfig[field]}
+              type="text"
+              name="host"
+              value={dbConfig.host}
               onChange={handleInputChange}
-              placeholder={field === 'host' ? 'localhost' : field}
+              placeholder="localhost"
               required
             />
           </div>
-        ))}
+          <div className="db-form__field">
+            <label>Port</label>
+            <input
+              type="text"
+              name="port"
+              value={dbConfig.port}
+              onChange={handleInputChange}
+              placeholder="5432"
+              required
+            />
+          </div>
+          <div className="db-form__field">
+            <label>Database</label>
+            <input
+              type="text"
+              name="dbname"
+              value={dbConfig.dbname}
+              onChange={handleInputChange}
+              placeholder="db_name"
+              required
+            />
+          </div>
+          <div className="db-form__field">
+            <label>User</label>
+            <input
+              type="text"
+              name="user"
+              value={dbConfig.user}
+              onChange={handleInputChange}
+              placeholder="postgres"
+              required
+            />
+          </div>
+          <div className="db-form__field">
+            <label>Password</label>
+            <input
+              type="password"
+              name="password"
+              value={dbConfig.password}
+              onChange={handleInputChange}
+              placeholder="••••••••"
+              required
+            />
+          </div>
+        </div>
 
         <button
-          className="db-form__button"
+          className="db-form__submit"
           type="submit"
           disabled={isLoading}
         >
@@ -103,10 +149,12 @@ function DatabaseConnectForm({ handleDatabaseData, onClose }) {
       {error && <div className="db-form__error">{error}</div>}
 
       {tables.length > 0 && (
-        <TableListDropdown
-          tables={tables}
-          onSelectTable={handleSelectTable}
-        />
+        <div className="db-form__tables">
+          <TableListDropdown
+            tables={tables}
+            onSelectTable={handleSelectTable}
+          />
+        </div>
       )}
     </div>
   );

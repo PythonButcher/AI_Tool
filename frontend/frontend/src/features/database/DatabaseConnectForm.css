@@ -1,123 +1,119 @@
-/* src/components/css/DatabaseConnectForm.css */
-
-/* Container */
 .db-form-wrapper {
-  padding: 1rem;
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--bg-secondary) 88%, transparent), transparent 42%),
-    var(--bg-primary);
+  padding: 32px;
+  background: var(--bg-primary);
   border: 1px solid var(--border-color);
-  border-radius: 0.7rem;
-  box-shadow: none;
-  max-width: 400px;
+  border-radius: 12px;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.12);
+  width: 100%;
+  max-width: 520px;
   margin: 0 auto;
-  font-family: inherit;
 }
 
-/* Form */
 .db-form {
   display: flex;
   flex-direction: column;
-  gap: 0.85rem;
+  gap: 20px;
+}
+
+.db-form__header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.db-form__eyebrow {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .db-form__title {
-  margin-bottom: 0.15rem;
-  font-size: 1.02rem;
-  font-weight: 700;
-  color: var(--color-text-primary, var(--text-primary));
-  text-align: left;
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
 }
 
-.db-form__row {
+.db-form__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.db-form__field {
   display: flex;
   flex-direction: column;
+  gap: 6px;
 }
 
-.db-form__label {
-  margin-bottom: 0.38rem;
-  font-size: 0.76rem;
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  color: var(--color-text-secondary, var(--text-secondary));
+.db-form__field--wide {
+  grid-column: span 2;
+}
+
+.db-form__field label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-secondary);
   text-transform: uppercase;
+  letter-spacing: 0.02em;
 }
 
-.db-form__input {
-  padding: 0.62rem 0.75rem;
+.db-form__field input {
+  padding: 8px 12px;
   border: 1px solid var(--border-color);
-  border-radius: 0.5rem;
-  font-size: 0.88rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
   background: var(--bg-secondary);
   color: var(--text-primary);
-  transition: border-color 0.2s ease, background-color 0.3s ease,
-    color 0.3s ease, box-shadow 0.2s ease;
+  transition: all 0.2s ease;
 }
 
-.db-form__input:focus {
+.db-form__field input:focus {
   outline: none;
-  border-color: var(--color-accent, var(--accent-blue));
-  box-shadow: 0 0 0 2px var(--accent-blue-soft);
+  border-color: var(--text-secondary);
+  background: var(--bg-primary);
 }
 
-/* Button */
-.db-form__button {
-  padding: 0.7rem 1rem;
-  background: var(--color-accent, var(--accent-blue));
-  color: var(--text-on-accent);
+.db-form__submit {
+  margin-top: 8px;
+  padding: 12px;
+  background: var(--text-primary);
+  color: var(--bg-primary);
   font-weight: 700;
-  border: 1px solid color-mix(in srgb, var(--accent-blue) 18%, transparent);
-  border-radius: 0.5rem;
+  border: none;
+  border-radius: 8px;
   cursor: pointer;
-  transition: background 0.2s ease, color 0.3s ease,
-    border-color 0.3s ease, transform 0.15s ease, box-shadow 0.2s ease;
-  box-shadow: 0 6px 16px var(--accent-blue-soft);
+  transition: all 0.2s ease;
+  font-size: 1rem;
 }
 
-.db-form__button[disabled] {
-  background: var(--text-secondary);
-  cursor: default;
-  box-shadow: none;
-}
-
-.db-form__button:not([disabled]):hover {
-  background: linear-gradient(135deg, var(--accent-blue), color-mix(in srgb, var(--accent-blue) 76%, #ffffff));
+.db-form__submit:hover:not(:disabled) {
+  opacity: 0.9;
   transform: translateY(-1px);
 }
 
-/* Error banner */
+.db-form__submit:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .db-form__error {
-  margin-top: 0.75rem;
-  padding: 0.7rem 0.9rem;
-  background: var(--accent-red-soft);
+  margin-top: 16px;
+  padding: 12px;
+  background: color-mix(in srgb, var(--accent-red) 8%, transparent);
   color: var(--accent-red);
-  border-radius: 0.5rem;
-  font-size: 0.8rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
   font-weight: 600;
+  border: 1px solid color-mix(in srgb, var(--accent-red) 20%, transparent);
 }
 
-/* Table dropdown */
-.table-dropdown {
-  margin-top: 1.15rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-  text-align: left;
-}
-
-.table-dropdown__label {
-  font-size: 0.78rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--color-text-secondary, var(--text-secondary));
-}
-
-.table-dropdown__select {
-  padding: 0.62rem 0.75rem;
-  border: 1px solid var(--border-color);
-  border-radius: 0.5rem;
-  font-size: 0.88rem;
-  background: var(--bg-secondary);
-  color: var(--text-primary);
+.db-form__tables {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border-color);
 }

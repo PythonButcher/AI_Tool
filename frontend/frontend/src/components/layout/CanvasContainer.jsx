@@ -69,11 +69,15 @@ function CanvasContainer({
   handleCloseRawViewer,
   showMachineLearning,
   setShowMachineLearning,
+  showAiChat,
+  setShowAiChat,
   showDecisionPanel,
   setShowDecisionPanel,
   decisionBundle,
   decisionWorkspace,
+  workspaceAnalysis,
   onCreateDecisionWorkspace,
+  onAnalyzeWorkspace,
   getDecisionPayloadBase,
   onDecisionAction,
   decisionReadiness,
@@ -793,9 +797,26 @@ function CanvasContainer({
         onOpenAiChat={onOpenAiChat}
         setIsDataPaneOpen={setIsDataPaneOpen}
         workspace={decisionWorkspace}
+        workspaceAnalysis={workspaceAnalysis}
         onCreateWorkspace={onCreateDecisionWorkspace}
+        onAnalyzeWorkspace={onAnalyzeWorkspace}
         onResetWorkspace={onResetDecisionWorkspace}
         datasetContext={getDecisionPayloadBase ? getDecisionPayloadBase() : {}}
+      />
+    </WindowFrame>
+  ) : null;
+
+  const aiChatElement = (showAiChat && !minimizedWindows.aiChat) ? (
+    <WindowFrame
+      {...getWindowProps('aiChat', '🤖 AI Analysis Suite', () => setShowAiChat(false), () => minimizeWindow('aiChat', 'AI Chat'))}
+      initialState={getInitialState('aiChat', 10, 25, 1100, 800)}
+      minWidth={800}
+      minHeight={600}
+    >
+      <AIShell 
+        setShowAIChart={setShowAIChart}
+        setAiChartType={setAiChartType}
+        setAiChartData={setAiChartData}
       />
     </WindowFrame>
   ) : null;
@@ -806,7 +827,7 @@ function CanvasContainer({
     if (isDashboardDest) return dashboardItems.length === 0;
     if (isAiDest) {
       const hasAiWorkflowWindows = outputWindows.length > 0;
-      return !showAiWorkflow && !showAIChart && !showStoryPanel && !showWhiteBoard && !hasAiWorkflowWindows;
+      return !showAiWorkflow && !showAIChart && !showStoryPanel && !showWhiteBoard && !hasAiWorkflowWindows && !showAiChat;
     }
     if (isDecisionDest) return !showDecisionPanel && charts.length === 0;
     return true;
@@ -827,9 +848,8 @@ function CanvasContainer({
     showWhiteBoard,
     outputWindows.length,
     showDecisionPanel,
+    showAiChat,
   ]);
-
-  const shouldShowAIShell = isAiDest;
 
   return (
     <div className="canvas-dnd-wrapper" style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden' }}>
@@ -839,19 +859,11 @@ function CanvasContainer({
         style={{ width: '100%', height: '100%', position: 'relative' }}
       >
         {isDashboardDest && <DashboardFilterBar />}
-        {shouldShowHome && !shouldShowAIShell && (
+        {shouldShowHome && (
           <DestinationHome 
             activeDestination={activeDestination} 
             onAction={handleDestinationHomeAction} 
             readiness={decisionReadiness}
-          />
-        )}
-
-        {shouldShowAIShell && (
-          <AIShell 
-            setShowAIChart={setShowAIChart}
-            setAiChartType={setAiChartType}
-            setAiChartData={setAiChartData}
           />
         )}
         
@@ -864,6 +876,7 @@ function CanvasContainer({
         {isAiDest && workflowLabElement}
         {isAiDest && whiteBoardElement}
         {isAiDest && storyPanelElement}
+        {aiChatElement}
         {(isExploreDest || isDecisionDest) && chartElements}
         {isDashboardDest && dashboardElements}
         {isDecisionDest && decisionPanelElement}

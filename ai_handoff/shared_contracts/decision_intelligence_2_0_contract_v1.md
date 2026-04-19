@@ -51,11 +51,97 @@ It does not yet define:
 
 - `POST /api/decision/workspaces`
 
+## V3 Additive Continuation Endpoint
+
+V3 now adds a backend continuation path for scoped observational diagnostics:
+
+- `POST /api/decision/workspaces/analyze`
+
+This continuation path is additive and intentionally narrower than the historical V2 simulation draft.
+
+It accepts either:
+
+- the same scoped workspace creation request shape defined in this file
+- or a payload containing `dataset` / `dataset_ref`, optional `semantic_model`, and an existing normalized `decision_workspace`
+
+It returns the standard top-level dataset and semantic metadata plus:
+
+- `decision_workspace`
+- `workspace_analysis`
+
+`workspace_analysis` is expected to contain:
+
+- `analysis_mode: "scoped_observational"`
+- `status` aligned to the workspace status (`ready`, `needs_input`, or `limited`)
+- `summary`
+- `truthfulness_note`
+- `scoped_diagnostics`
+- `legacy_diagnostics`
+- `generated_at`
+
+Interpretation rules for this continuation path:
+
+- `scoped_diagnostics` must be grounded in the scoped workspace metrics, filters, and available temporal evidence
+- `legacy_diagnostics` must remain filtered, additive, and secondary
+- this endpoint must not claim simulation, trade-off execution, recommendation completion, or goal-seeking completion
+
+## V3 Additive Prompt-First Intake Extension
+
+The same primary workspace endpoint now also supports a lighter prompt-first intake path:
+
+- `POST /api/decision/workspaces`
+
+This is still the scoped decision workspace contract.
+
+It is **not** Phase 4 chat-first Decision Intelligence.
+
+Prompt-first mode exists so frontend can begin with:
+
+- one plain-English decision prompt
+- a few optional helper prompts
+- backend-drafted decision structure
+
+Prompt-first request additions:
+
+- `intake_mode: "prompt_first"`
+- `decision_intake.what_matters`
+- `decision_intake.what_to_avoid`
+- `decision_intake.additional_context`
+
+In prompt-first mode:
+
+- `objective` may be omitted
+- `levers` may be omitted
+- `constraints` may be omitted
+- backend drafts any omitted structure from the prompt, helper text, and semantic context
+
+Precedence rule:
+
+- explicit `objective`, `levers`, and `constraints` supplied by the caller always win over drafted values
+
+Response addition:
+
+- `decision_workspace.drafting`
+
+This object is intended to help frontend render a draft-preview and guided refinement layer before the user enters deeper workspace editing.
+
 ## Status
 
 - additive to the current backend
 - intended to become the primary DI 2.0 entry contract
+
+## Prompt-First Drafting Notes
+
+Current backend drafting behavior is intentionally additive and heuristic, but it now follows these Phase 3.6 rules:
+
+- objective drafting should prioritize the leading goal clause or `decision_intake.what_matters`
+- lever drafting should prioritize the explicit lever/change clause or `decision_intake.additional_context`
+- guardrail drafting should prioritize `decision_intake.what_to_avoid` plus prompt phrases such as `without`, `protect`, `avoid`, and `keep`
+- drafted levers should not re-use the chosen objective metric or drafted guardrail metric
+
+This note is here so frontend and backend both treat prompt-first drafting as clause-aware guidance, not as a single full-prompt metric ranking.
 - current `POST /api/decision/run` remains supported as a legacy decision-bundle endpoint during migration
+- V3 now also includes a scoped observational analysis continuation path through `POST /api/decision/workspaces/analyze`
 
 ## Shared Objects Reused From The Existing Decision Contract
 
@@ -163,12 +249,22 @@ Successful callers create a scoped workspace by sending:
 | `dataset` | `object[] \| object \| null` | No | Inline dataset, following the existing dataset-context pattern |
 | `dataset_ref` | `object \| null` | No | Existing dataset reference, following the existing dataset-context pattern |
 | `semantic_model` | `object \| null` | No | Optional explicit semantic model override |
+| `intake_mode` | `string \| null` | No | `structured` or `prompt_first`. Default remains structured when explicit scope fields are present. |
+| `decision_intake` | `Decision Intake \| null` | No | Optional helper-prompt answers for prompt-first drafting. |
 | `decision_prompt` | `string` | Yes | The business problem being framed |
-| `objective` | `Objective Input` | Yes | Primary success definition for the workspace |
-| `levers` | `Lever Input[]` | Yes | Candidate variables the user can control. May be an empty array during draft setup, but that should keep the workspace in `needs_input`. |
-| `constraints` | `Constraint Input[]` | Yes | Guardrails and limits. May be empty, but backend must not invent fake constraints. |
+| `objective` | `Objective Input \| null` | Conditional | Required for structured requests. Optional in prompt-first mode, where backend drafts it if omitted. |
+| `levers` | `Lever Input[] \| null` | Conditional | Required for structured requests. Optional in prompt-first mode, where backend may draft candidate levers if omitted. |
+| `constraints` | `Constraint Input[] \| null` | Conditional | Required for structured requests. Optional in prompt-first mode, where backend may draft guardrails if omitted. |
 | `filters` | `object[]` | No | Existing metric-resolver filter shape. These narrow the workspace scope, not the decision meaning. |
 | `scope_preferences` | `Scope Preferences \| null` | No | Workspace scoping hints only. These do not change the business meaning of the decision. |
+
+## Decision Intake
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `what_matters` | `string \| null` | No | Plain-English success framing to help backend draft the objective. |
+| `what_to_avoid` | `string \| null` | No | Plain-English guardrail prompt used to draft possible constraints. |
+| `additional_context` | `string \| null` | No | Extra business context used for candidate lever or scope drafting. |
 
 ## Scope Preferences
 
@@ -396,7 +492,19 @@ Backend must normalize any objective, lever, or constraint binding into the foll
 | `assumptions` | `Assumption[]` | Yes | Explicit assumptions the workspace currently depends on |
 | `unknowns` | `Unknown[]` | Yes | Explicit gaps and blockers |
 | `readiness` | `Workspace Readiness` | Yes | Controls whether frontend should treat the workspace as runnable |
+| `drafting` | `Workspace Drafting` | Yes | Additive Phase 3.5 metadata describing prompt-first helper inputs, source ownership, prompt matches, and clarification hints. |
 | `created_at` | `string` | Yes | ISO-8601 UTC timestamp |
+
+## Workspace Drafting
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `intake_mode` | `string` | Yes | `structured` or `prompt_first` |
+| `helper_prompts` | `object` | Yes | Echoes `decision_intake.what_matters`, `what_to_avoid`, and `additional_context` when provided |
+| `source_summary` | `object` | Yes | Indicates whether `objective`, `levers`, and `constraints` came from `user_input`, `system_draft`, or `none` |
+| `prompt_matches.metrics` | `Metric Reference[]` | Yes | Ranked semantic metrics that matched the intake text strongly enough to help draft the workspace |
+| `prompt_matches.dimensions` | `Dimension Reference[]` | Yes | Ranked semantic dimensions that matched the intake text strongly enough to help draft the workspace |
+| `clarification_hints` | `string[]` | Yes | Suggested follow-up prompts frontend can surface before advanced editing |
 
 ## Example Response
 
