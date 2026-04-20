@@ -13,9 +13,32 @@ Plain English:
 Current correction:
 
 - the latest frontend pass is not complete yet
+- the latest frontend pass did **not** satisfy the product requirement for a true results pane
 - the three modes are visible, but they still read as mostly cosmetic
 - the legacy chart shortcut path is still bypassing the new Phase 4 chat contract for chart-like prompts
 - `answer` artifacts still need cleaner structured rendering instead of raw object fallback
+
+## Rejection Notice
+
+The current implementation should be treated as **not accepted** for this requirement.
+
+Reason:
+
+- the user asked for a chat-left / result-right analytics-agent workspace pattern
+- the current UI still reads like chat plus sidebar modules
+- the current top-right `Active Result` treatment is too small and too weak to count as a real results pane
+
+Gemini must redo this area more decisively.
+
+Do not interpret this as:
+
+- minor polish
+- spacing cleanup
+- slightly larger cards
+
+Interpret it as:
+
+- the layout still does not deliver the intended product behavior and visual hierarchy
 
 ## Goal
 
@@ -53,6 +76,11 @@ Rules:
 The left conversation area should still feel like the core of the experience.
 Most of the chat window should stay structurally familiar.
 The change is that the workspace around it should feel more like a purpose-built analytics agent.
+
+The most important missing piece is this:
+
+- the right side must read as a **real results pane**
+- not a sidebar with a small result module at the top
 
 ## Backend Contract Gemini Must Use
 
@@ -240,11 +268,26 @@ Do not dump raw structured content as stringified JSON.
 
 The right side should feel more like a live result or inspection surface.
 
+Change the bulky Outcome and Context pane in the ai chat to a slideout window to save space as well. The same way we did it for other part of the app that has a slideout.
+
 That means:
 
 - keep the current context capability
 - preserve the existing placeholder and context features
 - but change the visual hierarchy so the active artifact gets the strongest presentation when one exists
+
+Stronger instruction:
+
+- the active result area must dominate the right pane
+- it must be visually obvious at a glance that this is where the main output is inspected
+- it cannot read as just the first card in a sidebar stack
+
+Minimum bar for success:
+
+- the right pane must have a large dedicated result viewer region
+- that viewer region should occupy most of the above-the-fold height of the pane when an artifact exists
+- supporting context modules should move below it as clearly secondary sections
+- if no artifact exists yet, the empty result viewer should still look like a major product surface waiting for output
 
 Practical direction:
 
@@ -252,6 +295,16 @@ Practical direction:
 - workspace previews should be inspectable in the right pane
 - analysis summaries should be inspectable in the right pane
 - the chat thread should still show inline artifacts, but the right pane should act as the focused detail view
+
+Layout expectation:
+
+- left side remains the dominant conversation workspace
+- right side becomes a strong inspection pane, not a passive metadata rail
+- the split should feel intentional enough that a user immediately understands:
+  - ask on the left
+  - inspect on the right
+
+The current implementation failed this standard.
 
 This is important.
 
@@ -264,6 +317,13 @@ not:
 
 - ask in chat on the left
 - stare at a mostly static sidebar on the right
+
+Do not ship another version where:
+
+- the right pane headline changes
+- but the pane still behaves like a vertical list of small modules
+
+That is specifically what needs to be corrected.
 
 ## Placeholder Decision Context Area
 
@@ -308,8 +368,11 @@ Do not call this handoff complete unless:
 - mode selection is behaviorally honest and not just cosmetic
 - draft workspace preview can hand off to Decisions cleanly
 - the top-row tab system feels intentional and on-brand for this app
-- the right pane behaves like a focused result viewer when artifacts are present
+- the right pane behaves like a **real** focused result viewer when artifacts are present
+- the right pane no longer reads as a sidebar with a small result card at the top
+- the active result area is visually dominant enough that the user can immediately identify it as the main inspection surface
 - placeholder decision-context modules look intentional and honest
+- the "Outcome and Context" pane has been converted into a slideout window to conserve screen space.
 
 ## Read With
 

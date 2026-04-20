@@ -228,6 +228,7 @@ Frontend follow-up after Codex:
     - [~] Legible support for `Ask`, `Explore`, and `Decide` modes is partially visible, but current UI hardening is still required so mode selection is not cosmetic-only.
     - [ ] Remove frontend routing that lets chart-like prompts bypass the Phase 4 chat contract path.
     - [ ] Improve `answer` artifact rendering so structured backend responses do not fall back to raw serialized object output.
+    - [ ] Redo the right pane so it becomes a true results pane rather than a sidebar with a small active-result module.
 - move to V3 planning and execution instead of continuing V2 completion language
 - **DI V3: Workspace Analysis Wiring (COMPLETE)**:
     - [x] Frontend call to `POST /api/decision/workspaces/analyze`.

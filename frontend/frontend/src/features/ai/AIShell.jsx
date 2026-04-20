@@ -2,10 +2,14 @@ import React, { useState, useContext, useEffect, useRef, useMemo } from 'react';
 import axios from 'axios';
 import { 
   FaRobot, FaRegCommentDots, FaTools, FaBook, FaDatabase, FaPlus, FaLightbulb, 
-  FaHistory, FaChartBar, FaShieldAlt, FaCircle, FaInfoCircle, FaBolt,
-  FaCheckCircle, FaExclamationTriangle, FaExternalLinkAlt, FaLayerGroup, FaFileAlt
+  FaHistory, FaChartBar, FaShieldAlt, FaCircle, FaInfoCircle, FaPaperPlane,
+  FaCheckCircle, FaExclamationTriangle, FaExternalLinkAlt, FaLayerGroup, FaFileAlt,
+  FaEye, FaChevronRight, FaTerminal, FaSearch, FaCloud
 } from "react-icons/fa";
-import { TextField, Button, Paper, Box, Typography, Divider, Tooltip, Chip, Avatar, Tabs, Tab } from '@mui/material';
+import { 
+  TextField, Button, Paper, Box, Typography, Divider, Tooltip, Chip, 
+  Avatar, Tabs, Tab, Drawer, IconButton, ToggleButton, ToggleButtonGroup
+} from '@mui/material';
 import { DataContext } from '../../context/DataContext';
 import { WarehouseContext } from '../../context/WarehouseContext';
 import MentionDropdown from '../../components/data_management/MentionDropdown';
@@ -17,6 +21,20 @@ import AICharts from './AICharts';
 import './AIShell.css';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+
+const WORKSPACE_TABS = [
+  { id: 'threads', label: 'Threads', icon: <FaRegCommentDots /> },
+  { id: 'playbooks', label: 'Playbooks', icon: <FaBook /> },
+  { id: 'definitions', label: 'Definitions', icon: <FaDatabase /> },
+  { id: 'briefs', label: 'Briefs', icon: <FaFileAlt /> },
+  { id: 'checks', label: 'Checks', icon: <FaShieldAlt /> },
+];
+
+const MODES = [
+  { id: 'ask', label: 'Inquire', promise: 'Grounded factual analysis' },
+  { id: 'explore', label: 'Explore', promise: 'Visual trend discovery' },
+  { id: 'decide', label: 'Decide', promise: 'Strategic path evaluation' },
+];
 
 const formatChartData = (chartResponse) => {
   const labels = chartResponse.chartData.map(item => {
@@ -48,9 +66,9 @@ const formatChartData = (chartResponse) => {
 };
 
 /**
- * AIShell (Enterprise Polish)
+ * AIShell (Analytics-Agent Workspace)
  * 
- * A unique, high-fidelity Decision Intelligence workspace.
+ * Re-implemented as a high-fidelity workspace with split conversation and inspection.
  */
 function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
   const {
@@ -62,16 +80,20 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
   } = useContext(DataContext);
   const { datasets } = useContext(WarehouseContext);
 
-  // Behavior State
+  // Shell State
   const [userMessages, setUserMessages] = useState([]);
   const [userInput, setUserInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [awaitingCleanInstructions, setAwaitingCleanInstructions] = useState(false);
+  const [activeWorkspaceTab, setActiveWorkspaceTab] = useState('threads');
   
-  // Phase 4 Decision Chat State
+  // Phase 4 Logic State
   const [sessionState, setSessionState] = useState({});
-  const [activeMode, setActiveMode] = useState('ask'); // ask, explore, decide
+  const [activeMode, setActiveMode] = useState('ask'); 
+  const [activeArtifact, setActiveArtifact] = useState(null); 
+  const [isResultsPaneOpen, setIsResultsPaneOpen] = useState(true);
+  const [isContextPaneOpen, setIsContextPaneOpen] = useState(false);
 
   // Mention State
   const [mentionQuery, setMentionQuery] = useState(null);
@@ -80,13 +102,10 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
   const [mentionStartIndex, setMentionStartIndex] = useState(-1);
   const [highlightedIndex, setHighlightedIndex] = useState(0);
 
-  // Shell State
-  const [activeSession, setActiveSession] = useState('Executive Analysis');
-  
   const inputRef = useRef(null);
   const chatBodyRef = useRef(null);
 
-  // Live Connection Status (Truth Alignment)
+  // Connection Metadata
   const connectionStatus = useMemo(() => {
     const isSemanticActive = !!semanticModel;
     const isDataLoaded = (cleanedData?.length > 0) || (fullData?.length > 0);
@@ -96,13 +115,10 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
     };
   }, [semanticModel, cleanedData, fullData]);
 
-  // Auto-scroll chat
+  // Auto-scroll logic
   useEffect(() => {
     if (chatBodyRef.current) {
-      chatBodyRef.current.scrollTo({
-        top: chatBodyRef.current.scrollHeight,
-        behavior: 'smooth'
-      });
+      chatBodyRef.current.scrollTo({ top: chatBodyRef.current.scrollHeight, behavior: 'smooth' });
     }
   }, [userMessages, loading]);
 
@@ -112,33 +128,14 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
     return null;
   };
 
-  const handleUserCommand = async (command, dataset, instructions = null) => {
-    try {
-      const payload = { command, dataset };
-      if (instructions) payload.instructions = instructions;
-      const response = await axios.post(`${API_URL}/ai_cmd`, payload);
-      if (command === "/charts") {
-        if (!response.data.chartType || !response.data.chartData) {
-          return { chartType: "Unknown", chartData: [] };
-        }
-        return response.data;
-      }
-      return response.data.reply;
-    } catch (error) {
-      console.error("AI command error:", error);
-      return { chartType: "Unknown", chartData: [] };
-    }
-  };
-
   const handleActionClick = async (actionId) => {
     setLoading(true);
     setError(null);
 
-    const datasetContext = resolveDatasetForNlp();
     const payload = {
       action: actionId,
       session_state: sessionState,
-      dataset: datasetContext,
+      dataset: resolveDatasetForNlp(),
       semantic_model: semanticModel,
     };
 
@@ -147,28 +144,31 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
       const data = response.data;
 
       if (data.status === 'success') {
-        setUserMessages(prev => [
-          ...prev, 
-          { 
-            role: "assistant", 
-            content: data.assistant_message, 
-            artifacts: data.artifacts,
-            suggested_actions: data.session_state?.available_actions || []
-          }
-        ]);
+        const newAssistantMsg = { 
+          role: "assistant", 
+          content: data.assistant_message, 
+          artifacts: data.artifacts,
+          suggested_actions: data.session_state?.available_actions || []
+        };
+        setUserMessages(prev => [...prev, newAssistantMsg]);
         setSessionState(data.session_state || {});
+        
+        if (data.artifacts && data.artifacts.length > 0) {
+          setActiveArtifact(data.artifacts[data.artifacts.length - 1]);
+          setIsResultsPaneOpen(true);
+        }
       } else {
-        setError(data.error?.message || "Action failed.");
+        setError(data.error?.message || "Action execution failed.");
       }
     } catch (err) {
-      console.error("Decision action error:", err);
-      setError("Failed to execute decision action.");
+      setError("Connectivity failure during action.");
     } finally {
       setLoading(false);
     }
   };
 
   const handleModeChange = (event, newMode) => {
+    if (!newMode) return;
     setActiveMode(newMode);
     setSessionState(prev => ({ ...prev, active_mode: newMode }));
   };
@@ -176,7 +176,7 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
   const renderAnswerArtifact = (content) => {
     if (!content) return null;
 
-    // Case 1: Metric summary (Semantic)
+    // High-fidelity structured rendering
     if (content.metric && content.summary) {
       return (
         <div className="ai-shell__answer-card">
@@ -190,10 +190,10 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
           </div>
           {content.rows && content.rows.length > 0 && (
             <div className="ai-shell__answer-rows">
-               {content.rows.map((row, i) => (
+               {content.rows.slice(0, 15).map((row, i) => (
                  <div key={i} className="ai-shell__answer-row">
                    <span className="ai-shell__answer-row-label">
-                     {row.group_label || (row.group && Object.values(row.group).join(' | ')) || 'Total'}
+                     {row.group_label || (row.group && Object.values(row.group).join(' | ')) || 'Segment'}
                    </span>
                    <span className="ai-shell__answer-row-value">
                      {row.value_formatted || row.value}
@@ -206,7 +206,6 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
       );
     }
 
-    // Case 2: Raw summary
     if (content.fieldsUsed && content.aggregation) {
       return (
         <div className="ai-shell__answer-card">
@@ -220,89 +219,56 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
           </div>
           {content.top_group && (
             <div className="ai-shell__answer-highlight">
-              <Typography variant="caption" sx={{ fontWeight: 700, color: 'var(--text-secondary)' }}>TOP RESULT</Typography>
-              <Typography variant="body2">{content.top_group.label}</Typography>
+              <Typography variant="overline" sx={{ fontWeight: 900, color: 'var(--text-secondary)' }}>PRIMARY ATTRIBUTE</Typography>
+              <Typography variant="h6" sx={{ fontWeight: 800 }}>{content.top_group.label}</Typography>
             </div>
           )}
         </div>
       );
     }
 
-    // Fallback
-    return <Typography variant="body2">{content.message || JSON.stringify(content)}</Typography>;
+    return <Typography variant="body2" sx={{ lineHeight: 1.7 }}>{content.message || JSON.stringify(content)}</Typography>;
   };
 
-  const renderArtifact = (artifact) => {
+  const renderArtifact = (artifact, isInspector = false) => {
     if (!artifact) return null;
+
+    const baseClass = isInspector ? "ai-shell__active-artifact" : "ai-shell__artifact-card";
 
     switch (artifact.type) {
       case 'answer':
         return (
-          <div className="ai-shell__artifact-card is-answer">
-            <div className="ai-shell__artifact-header">
-              <span className="ai-shell__artifact-title"><FaCheckCircle /> {artifact.title || 'Analysis Result'}</span>
-            </div>
-            <div className="ai-shell__artifact-content">
-              {renderAnswerArtifact(artifact.content)}
-            </div>
+          <div className={`${baseClass} is-answer`}>
+            {!isInspector && <div className="ai-shell__artifact-header"><span className="ai-shell__artifact-title"><FaCheckCircle /> Result</span></div>}
+            <div className="ai-shell__artifact-content">{renderAnswerArtifact(artifact.content)}</div>
           </div>
         );
 
       case 'chart':
         return (
-          <div className="ai-shell__artifact-card is-chart">
-            <div className="ai-shell__artifact-header">
-              <span className="ai-shell__artifact-title"><FaChartBar /> {artifact.title || 'Visualization'}</span>
-            </div>
+          <div className={`${baseClass} is-chart`}>
+            {!isInspector && <div className="ai-shell__artifact-header"><span className="ai-shell__artifact-title"><FaChartBar /> Visualization</span></div>}
             <div className="ai-shell__artifact-content">
-              <AICharts 
-                aiChartType={artifact.content?.chartType || 'Bar'} 
-                aiChartData={artifact.content?.chartData} 
-              />
+              <AICharts aiChartType={artifact.content?.chartType || 'Bar'} aiChartData={artifact.content?.chartData} />
               {artifact.content?.explanation && (
-                <Typography variant="caption" sx={{ mt: 1, display: 'block', opacity: 0.8 }}>
-                  {artifact.content.explanation}
-                </Typography>
+                <Typography variant="caption" sx={{ mt: 2, display: 'block', opacity: 0.6 }}>{artifact.content.explanation}</Typography>
               )}
             </div>
           </div>
         );
 
       case 'workspace_preview':
-        const wpData = artifact.content || artifact;
+        const wp = artifact.content || artifact;
         return (
-          <div className="ai-shell__artifact-card is-workspace_preview">
-            <div className="ai-shell__artifact-header">
-              <span className="ai-shell__artifact-title"><FaLayerGroup /> {artifact.title || wpData.title || 'Decision Workspace'}</span>
-              {artifact.handoff && <FaExternalLinkAlt size={12} style={{ opacity: 0.5 }} />}
-            </div>
+          <div className={`${baseClass} is-workspace_preview`}>
+            {!isInspector && <div className="ai-shell__artifact-header"><span className="ai-shell__artifact-title"><FaLayerGroup /> Workspace Draft</span></div>}
             <div className="ai-shell__artifact-content">
-              <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>{wpData.title || 'Untitled Workspace'}</Typography>
-              <Typography variant="caption" sx={{ opacity: 0.7, mb: 2, display: 'block' }}>
-                {wpData.scope_summary || 'No summary available.'}
-              </Typography>
-              
+              <Typography variant="subtitle2" sx={{ fontWeight: 900, mb: 1 }}>{wp.title || 'Decision Path'}</Typography>
+              <Typography variant="body2" sx={{ opacity: 0.7, mb: 3 }}>{wp.scope_summary}</Typography>
               <div className="ai-shell__preview-grid">
-                <div className="ai-shell__preview-metric">
-                  <span className="ai-shell__preview-metric-label">Status</span>
-                  <span className="ai-shell__preview-metric-value" style={{ fontSize: '0.85rem' }}>
-                    {wpData.status || 'Draft'}
-                  </span>
-                </div>
-                <div className="ai-shell__preview-metric">
-                  <span className="ai-shell__preview-metric-label">Missing Inputs</span>
-                  <span className="ai-shell__preview-metric-value" style={{ color: (wpData.missing_inputs?.length > 0 ? 'var(--accent-red)' : 'inherit') }}>
-                    {wpData.missing_inputs?.length || 0}
-                  </span>
-                </div>
-                <div className="ai-shell__preview-metric">
-                  <span className="ai-shell__preview-metric-label">Levers</span>
-                  <span className="ai-shell__preview-metric-value">{wpData.lever_count || 0}</span>
-                </div>
-                <div className="ai-shell__preview-metric">
-                  <span className="ai-shell__preview-metric-label">Unknowns</span>
-                  <span className="ai-shell__preview-metric-value">{wpData.unknown_count || 0}</span>
-                </div>
+                <div className="ai-shell__preview-metric"><span className="ai-shell__preview-metric-label">Status</span><span className="ai-shell__preview-metric-value">{wp.status || 'Draft'}</span></div>
+                <div className="ai-shell__preview-metric"><span className="ai-shell__preview-metric-label">Levers</span><span className="ai-shell__preview-metric-value">{wp.lever_count || 0}</span></div>
+                <div className="ai-shell__preview-metric"><span className="ai-shell__preview-metric-label">Inputs Needed</span><span className="ai-shell__preview-metric-value" style={{ color: (wp.missing_inputs?.length > 0 ? 'var(--accent-red)' : 'inherit') }}>{wp.missing_inputs?.length || 0}</span></div>
               </div>
             </div>
           </div>
@@ -310,10 +276,8 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
 
       case 'workspace_analysis_summary':
         return (
-          <div className="ai-shell__artifact-card is-workspace_analysis_summary">
-            <div className="ai-shell__artifact-header">
-              <span className="ai-shell__artifact-title"><FaFileAlt /> {artifact.title || 'Analysis Summary'}</span>
-            </div>
+          <div className={`${baseClass} is-workspace_analysis_summary`}>
+            {!isInspector && <div className="ai-shell__artifact-header"><span className="ai-shell__artifact-title"><FaFileAlt /> Intelligence Summary</span></div>}
             <div className="ai-shell__artifact-content">
               {artifact.content?.items ? (
                 <div className="ai-shell__analysis-list">
@@ -327,7 +291,7 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
                   ))}
                 </div>
               ) : (
-                <Typography variant="body2">{artifact.content?.summary?.headline || 'Analysis completed.'}</Typography>
+                <Typography variant="body2" sx={{ fontWeight: 700 }}>{artifact.content?.summary?.headline || 'Analysis finalized.'}</Typography>
               )}
             </div>
           </div>
@@ -341,13 +305,11 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
   const handleMentionSelect = (datasetName) => {
     let startIdx = mentionStartIndex;
     if (startIdx === -1) startIdx = userInput.lastIndexOf('@');
-
     const before = userInput.substring(0, startIdx);
     const afterStart = userInput.substring(startIdx + 1);
     const spaceIndex = afterStart.search(/\s/);
     const endIdx = spaceIndex === -1 ? userInput.length : (startIdx + 1 + spaceIndex);
     const after = userInput.substring(endIdx);
-
     setUserInput(`${before}@${datasetName} ${after}`);
     setIsMentionOpen(false);
     setMentionStartIndex(-1);
@@ -355,16 +317,15 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
   };
 
   const handleInputChange = (e) => {
-    const newValue = e.target.value;
-    const newCursorPos = e.target.selectionStart;
-    setUserInput(newValue);
-
-    const token = detectToken(newValue, newCursorPos);
+    const val = e.target.value;
+    const pos = e.target.selectionStart;
+    setUserInput(val);
+    const token = detectToken(val, pos);
     if (token !== null) {
       setMentionQuery(token);
       setIsMentionOpen(true);
-      const textBefore = newValue.substring(0, newCursorPos);
-      setMentionStartIndex(textBefore.lastIndexOf('@'));
+      const before = val.substring(0, pos);
+      setMentionStartIndex(before.lastIndexOf('@'));
       setMentionPosition({ top: -180, left: 15 });
     } else {
       setIsMentionOpen(false);
@@ -381,82 +342,57 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
     setLoading(true);
     setError(null);
 
-    const datasetContext = resolveDatasetForNlp();
-    const messageToSend = userInput;
+    const dsContext = resolveDatasetForNlp();
+    const msg = userInput;
     setUserInput(''); 
 
-    setUserMessages(prev => [...prev, { role: "user", content: messageToSend, grounded: resolvedDatasets.length > 0 }]);
+    setUserMessages(prev => [...prev, { role: "user", content: msg, grounded: resolvedDatasets.length > 0 }]);
 
-    // --- Specialized Command Routing ---
-    if (AICommands.isCommand(messageToSend)) {
-      const parts = messageToSend.split(" ");
+    // --- Commands Routing ---
+    if (AICommands.isCommand(msg)) {
+      const parts = msg.split(" ");
       const cmd = parts[0];
-      const instructions = parts.length > 1 ? parts.slice(1).join(" ") : null;
-
-      if (cmd === "/charts") {
-        const aiChartResponse = await handleUserCommand("/charts", datasetContext);
-        if (aiChartResponse && Array.isArray(aiChartResponse.chartData)) {
-          const formattedChartData = formatChartData(aiChartResponse);
-          setAiChartType(formattedChartData.datasets[0]?.label || "Bar Chart");
-          setAiChartData(formattedChartData);
-          setShowAIChart(true);
-          setLoading(false);
-          return;
-        }
-      }
+      const inst = parts.length > 1 ? parts.slice(1).join(" ") : null;
 
       if (cmd === "/clean") {
         try {
-          const response = await axios.post(`${API_URL}/ai_cmd`, { 
-            command: "/clean", 
-            dataset: datasetContext,
-            instructions 
-          });
-          
-          let earlyResponseText;
-          if (response.data.cleaned_data) {
-            const newData = response.data.cleaned_data;
-            setCleanedData(newData);
-            await refreshSemanticModelFromDataset(newData, { source: 'ai_shell_clean', preserveUserMetrics: true });
-            earlyResponseText = "Dataset optimized and semantic model refreshed.";
+          const resp = await axios.post(`${API_URL}/ai_cmd`, { command: "/clean", dataset: dsContext, instructions: inst });
+          let reply;
+          if (resp.data.cleaned_data) {
+            setCleanedData(resp.data.cleaned_data);
+            await refreshSemanticModelFromDataset(resp.data.cleaned_data, { source: 'ai_shell_clean', preserveUserMetrics: true });
+            reply = "Context optimized. Semantic model refreshed.";
             setAwaitingCleanInstructions(false);
-          } else if (response.data.suggestions) {
-            earlyResponseText = response.data.suggestions;
+          } else if (resp.data.suggestions) {
+            reply = resp.data.suggestions;
             setAwaitingCleanInstructions(true);
           } else {
-            earlyResponseText = "Optimization complete. No changes were found necessary.";
+            reply = "Optimization complete. Context is stable.";
             setAwaitingCleanInstructions(false);
           }
-          setUserMessages(prev => [...prev, { role: "assistant", content: earlyResponseText }]);
+          setUserMessages(prev => [...prev, { role: "assistant", content: reply }]);
         } catch (err) {
-          setError("Failed to process cleaning command.");
+          setError("Command processor failed.");
         } finally {
           setLoading(false);
         }
         return;
       }
     } else if (awaitingCleanInstructions) {
-      // --- RESTORED: Awaiting Clean Instructions ---
       try {
-        const response = await axios.post(`${API_URL}/ai_cmd`, { 
-          command: "/clean", 
-          dataset: datasetContext, 
-          instructions: messageToSend 
-        });
-        
-        let earlyResponseText;
-        if (response.data.cleaned_data) {
-          const newData = response.data.cleaned_data;
-          setCleanedData(newData);
-          await refreshSemanticModelFromDataset(newData, { source: 'ai_shell_clean_followup', preserveUserMetrics: true });
-          earlyResponseText = "Dataset optimized based on your instructions.";
+        const resp = await axios.post(`${API_URL}/ai_cmd`, { command: "/clean", dataset: dsContext, instructions: msg });
+        let reply;
+        if (resp.data.cleaned_data) {
+          setCleanedData(resp.data.cleaned_data);
+          await refreshSemanticModelFromDataset(resp.data.cleaned_data, { source: 'ai_shell_clean_followup', preserveUserMetrics: true });
+          reply = "Instructions applied. Environment ready.";
           setAwaitingCleanInstructions(false);
         } else {
-          earlyResponseText = response.data.suggestions || "Unable to apply those instructions. Please refine and try again.";
+          reply = resp.data.suggestions || "Clarification required for optimization.";
         }
-        setUserMessages(prev => [...prev, { role: "assistant", content: earlyResponseText }]);
+        setUserMessages(prev => [...prev, { role: "assistant", content: reply }]);
       } catch (err) {
-        setError("Error applying cleaning instructions.");
+        setError("Context update failed.");
         setAwaitingCleanInstructions(false);
       } finally {
         setLoading(false);
@@ -464,15 +400,13 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
       return;
     }
 
-    // --- Phase 4 Decision Chat Path (Primary) ---
-    const conversation_history = userMessages.map(m => ({ role: m.role, content: m.content })).slice(-10);
-    
+    // --- Phase 4 Decision Chat Path (Primary for analytics & decisions) ---
     const payload = {
-      user_message: messageToSend,
-      dataset: datasetContext,
+      user_message: msg,
+      dataset: dsContext,
       semantic_model: semanticModel,
-      conversation_history,
-      session_state: sessionState,
+      conversation_history: userMessages.map(m => ({ role: m.role, content: m.content })).slice(-10),
+      session_state: { ...sessionState, active_mode: activeMode },
       resolved_datasets: resolvedDatasets.map(ds => ds.name)
     };
 
@@ -481,26 +415,26 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
       const data = response.data;
 
       if (data.status === 'success') {
-        setUserMessages(prev => [
-          ...prev, 
-          { 
-            role: "assistant", 
-            content: data.assistant_message, 
-            artifacts: data.artifacts,
-            suggested_actions: data.suggested_actions || [],
-            mode: data.mode
-          }
-        ]);
+        const newMsg = { 
+          role: "assistant", 
+          content: data.assistant_message, 
+          artifacts: data.artifacts,
+          suggested_actions: data.suggested_actions || [],
+          mode: data.mode
+        };
+        setUserMessages(prev => [...prev, newMsg]);
         setSessionState(data.session_state || {});
-        if (data.mode) {
-          setActiveMode(data.mode);
+        if (data.mode) setActiveMode(data.mode);
+        
+        if (data.artifacts && data.artifacts.length > 0) {
+          setActiveArtifact(data.artifacts[data.artifacts.length - 1]);
+          setIsResultsPaneOpen(true);
         }
       } else {
-        setError(data.error?.message || "Connectivity error.");
+        setError(data.error?.message || "Intelligence engine unavailable.");
       }
     } catch (err) {
-      console.error("Decision turn error:", err);
-      setError("⚠ Connectivity error. Please verify the backend service.");
+      setError("⚠ Connectivity error. Verify backend service status.");
     } finally {
       setLoading(false);
     }
@@ -510,7 +444,6 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
     if (!isMentionOpen) return;
     const filtered = datasets.filter((ds) => ds.name.toLowerCase().includes(mentionQuery?.toLowerCase() || ""));
     if (filtered.length === 0) return;
-
     if (e.key === 'ArrowDown') { e.preventDefault(); setHighlightedIndex(prev => (prev < filtered.length - 1 ? prev + 1 : prev)); }
     else if (e.key === 'ArrowUp') { e.preventDefault(); setHighlightedIndex(prev => (prev > 0 ? prev - 1 : prev)); }
     else if (e.key === 'Enter') { e.preventDefault(); handleMentionSelect(filtered[highlightedIndex].name); setHighlightedIndex(0); }
@@ -519,101 +452,139 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
 
   return (
     <div className="ai-shell">
-      {/* 1. Command Rail (Navigation) */}
+      {/* 1. Side Command Rail */}
       <aside className="ai-shell__rail">
         <div className="ai-shell__rail-top">
-          <Tooltip title="Ask" placement="right">
-            <button 
-              className={`ai-shell__rail-item ${activeMode === 'ask' ? 'is-active' : ''}`} 
-              onClick={() => setActiveMode('ask')}
-            >
-              <FaRegCommentDots />
-            </button>
-          </Tooltip>
-          <Tooltip title="Explore" placement="right">
-            <button 
-              className={`ai-shell__rail-item ${activeMode === 'explore' ? 'is-active' : ''}`} 
-              onClick={() => setActiveMode('explore')}
-            >
-              <FaChartBar />
-            </button>
-          </Tooltip>
-          <Tooltip title="Decide" placement="right">
-            <button 
-              className={`ai-shell__rail-item ${activeMode === 'decide' ? 'is-active' : ''}`} 
-              onClick={() => setActiveMode('decide')}
-            >
-              <FaLightbulb />
-            </button>
-          </Tooltip>
+          {MODES.map(m => (
+            <Tooltip key={m.id} title={m.label} placement="right">
+              <button 
+                className={`ai-shell__rail-item ${activeMode === m.id ? 'is-active' : ''}`} 
+                onClick={() => handleModeChange(null, m.id)}
+              >
+                {m.id === 'ask' ? <FaRegCommentDots /> : m.id === 'explore' ? <FaChartBar /> : <FaLightbulb />}
+              </button>
+            </Tooltip>
+          ))}
         </div>
-        
         <div className="ai-shell__rail-middle">
           <div className="ai-shell__rail-divider" />
-          <Tooltip title="Analysis History" placement="right">
-            <button className="ai-shell__rail-item is-disabled"><FaHistory /></button>
-          </Tooltip>
-          <Tooltip title="AI Skills (Placeholder)" placement="right">
-            <button className="ai-shell__rail-item is-disabled"><FaTools /><span className="ai-shell__dot-alert" /></button>
-          </Tooltip>
-          <Tooltip title="Playbooks (Placeholder)" placement="right">
-            <button className="ai-shell__rail-item is-disabled"><FaBook /></button>
-          </Tooltip>
-        </div>
-
-        <div className="ai-shell__rail-bottom">
-          <Tooltip title="Context Sources" placement="right">
-            <button className="ai-shell__rail-item is-disabled"><FaDatabase /></button>
+          <Tooltip title="Skills" placement="right"><button className="ai-shell__rail-item is-disabled"><FaTools /><span className="ai-shell__dot-alert" /></button></Tooltip>
+          <Tooltip title="Library" placement="right"><button className="ai-shell__rail-item" onClick={() => {/* Placeholder for Library */}}><FaHistory /></button></Tooltip>
+          <Tooltip title="Context & Metadata" placement="right">
+            <button 
+              className={`ai-shell__rail-item ${isContextPaneOpen ? 'is-active' : ''}`} 
+              onClick={() => setIsContextPaneOpen(true)}
+            >
+              <FaLayerGroup />
+            </button>
           </Tooltip>
         </div>
       </aside>
 
-      {/* 2. Primary Workspace */}
+      {/* 1.5 Context Drawer (Consolidated Pop-out) */}
+      <Drawer
+        anchor="left"
+        open={isContextPaneOpen}
+        onClose={() => setIsContextPaneOpen(false)}
+        PaperProps={{
+          sx: { 
+            width: 350, 
+            bgcolor: 'var(--bg-primary)', 
+            borderRight: '1px solid var(--border-color)',
+            boxShadow: '20px 0 50px rgba(0,0,0,0.3)',
+            color: 'var(--text-primary)',
+            padding: '32px'
+          }
+        }}
+      >
+        <Box sx={{ mb: 4, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Typography variant="overline" sx={{ fontWeight: 900, letterSpacing: '0.15em' }}>Context & Grounding</Typography>
+          <IconButton onClick={() => setIsContextPaneOpen(false)} size="small" sx={{ color: 'var(--text-secondary)' }}><FaChevronRight style={{ transform: 'rotate(180deg)' }} /></IconButton>
+        </Box>
+
+        <div className="ai-shell__secondary-content" style={{ padding: 0 }}>
+          <div className="ai-shell__ghost-item">
+            <div className="ai-shell__ghost-label"><FaDatabase /> Grounding Sources</div>
+            <div className="ai-shell__ghost-box"><Typography variant="caption" sx={{ opacity: 0.6 }}>No active grounding sources in immediate focus.</Typography></div>
+          </div>
+
+          <div className="ai-shell__ghost-item">
+            <div className="ai-shell__ghost-label"><FaHistory /> Analysis History</div>
+            <div className="ai-shell__ghost-placeholder">
+              <div className="ai-shell__ghost-bar" style={{ width: '80%' }} /><div className="ai-shell__ghost-bar" style={{ width: '60%' }} /><div className="ai-shell__ghost-bar" style={{ width: '90%' }} />
+            </div>
+          </div>
+
+          <div className="ai-shell__ghost-item">
+            <div className="ai-shell__ghost-label"><FaLightbulb /> Decision Bridge</div>
+            <div className="ai-shell__ghost-draft">
+              <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>Strategy Bridge</Typography>
+              <Typography variant="caption" sx={{ opacity: 0.5 }}>Reserved for handoff to structured simulation path.</Typography>
+            </div>
+          </div>
+
+          <Divider sx={{ my: 2, borderColor: 'var(--border-color)' }} />
+          
+          <div className="ai-shell__context-module">
+            <div className="ai-shell__module-header"><span className="ai-shell__module-title">Schema Metadata</span><span className="ai-shell__coming-soon">Soon</span></div>
+            <div className="ai-shell__module-empty">No metadata overrides detected.</div>
+          </div>
+
+          <div className="ai-shell__context-module">
+            <div className="ai-shell__module-header"><span className="ai-shell__module-title">Enterprise Glossary</span><span className="ai-shell__coming-soon">Soon</span></div>
+            <div className="ai-shell__module-empty">Agent glossary sync inactive.</div>
+          </div>
+
+          <div className="ai-shell__context-module">
+            <div className="ai-shell__module-header"><span className="ai-shell__module-title">Hard Constraints</span><span className="ai-shell__coming-soon">Soon</span></div>
+            <div className="ai-shell__module-empty">No explicit constraints identified in thread.</div>
+          </div>
+        </div>
+      </Drawer>
+
+      {/* 2. Primary Conversation Workspace */}
       <main className="ai-shell__workspace">
         <header className="ai-shell__header">
           <div className="ai-shell__header-left">
-            <Avatar className="ai-shell__avatar">
-              <FaRobot />
-            </Avatar>
+            <Avatar className="ai-shell__avatar"><FaRobot /></Avatar>
             <div className="ai-shell__titles">
-              <Typography variant="subtitle2" className="ai-shell__main-title">
-                AI Analysis Suite
-              </Typography>
+              <Typography variant="subtitle2" className="ai-shell__main-title">Intelligence Agent</Typography>
               <div className="ai-shell__status-bar">
-                <span className="ai-shell__status-item">
-                  <FaCircle className={`ai-shell__indicator is-${connectionStatus.data.toLowerCase()}`} />
-                  Data {connectionStatus.data}
-                </span>
-                <span className="ai-shell__status-item">
-                  <FaBolt className={`ai-shell__indicator is-${connectionStatus.semantic.toLowerCase()}`} />
-                  Semantic {connectionStatus.semantic}
-                </span>
+                <span className="ai-shell__status-item"><FaCircle className={`ai-shell__indicator is-${connectionStatus.data.toLowerCase()}`} /> {connectionStatus.data}</span>
+                <span className="ai-shell__status-item"><FaCloud className={`ai-shell__indicator is-${connectionStatus.semantic.toLowerCase()}`} /> Semantic {connectionStatus.semantic}</span>
               </div>
             </div>
           </div>
           <div className="ai-shell__header-right">
-             <Chip 
-              label={activeMode.toUpperCase()} 
-              size="small" 
-              color={activeMode === 'decide' ? 'primary' : activeMode === 'explore' ? 'secondary' : 'default'}
-              variant="outlined" 
-              className="ai-shell__session-chip" 
-            />
+             <IconButton onClick={() => setIsResultsPaneOpen(!isResultsPaneOpen)} size="small">
+               <FaEye style={{ color: isResultsPaneOpen ? 'var(--text-primary)' : 'var(--text-secondary)' }} />
+             </IconButton>
           </div>
         </header>
 
-        {/* Clearer Mode Selector (Main Workspace) */}
-        <div className="ai-shell__mode-tabs">
-          <Tabs 
-            value={activeMode} 
-            onChange={handleModeChange} 
-            centered 
-            TabIndicatorProps={{ style: { backgroundColor: 'var(--text-primary)' } }}
-          >
-            <Tab label="Ask" value="ask" className="ai-shell__mode-tab" />
-            <Tab label="Explore" value="explore" className="ai-shell__mode-tab" />
-            <Tab label="Decide" value="decide" className="ai-shell__mode-tab" />
+        {/* Workspace Level Tabs */}
+        <div className="ai-shell__workspace-tabs">
+          <Tabs value={activeWorkspaceTab} onChange={(e, v) => setActiveWorkspaceTab(v)} variant="scrollable" scrollButtons="auto">
+            {WORKSPACE_TABS.map(tab => (
+              <Tab key={tab.id} label={tab.label} value={tab.id} className="ai-shell__workspace-tab" />
+            ))}
           </Tabs>
+        </div>
+
+        {/* Functional Mode Selector */}
+        <div className="ai-shell__mode-bar">
+          <div className="ai-shell__mode-group">
+            {MODES.map(m => (
+              <button 
+                key={m.id} 
+                className={`ai-shell__mode-btn ${activeMode === m.id ? 'is-active' : ''}`}
+                onClick={() => handleModeChange(null, m.id)}
+              >
+                <span>{m.label}</span>
+                <span className="ai-shell__mode-promise">{m.promise}</span>
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="ai-shell__conversation" ref={chatBodyRef}>
@@ -621,19 +592,15 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
             <div className="ai-shell__welcome-hero">
               <div className="ai-shell__hero-icon"><FaRobot /></div>
               <Typography variant="h4" className="ai-shell__hero-title">
-                {activeMode === 'decide' ? 'Frame a Decision' : activeMode === 'explore' ? 'Explore Analytics' : 'Intelligent Analysis'}
+                {activeMode === 'decide' ? 'Draft Strategic Path' : activeMode === 'explore' ? 'Grounded Exploration' : 'Agent Intelligence'}
               </Typography>
               <Typography variant="body1" className="ai-shell__hero-subtitle">
-                {activeMode === 'decide' 
-                  ? 'Ask me to help with a business decision, like "Should we expand to Europe?"'
-                  : activeMode === 'explore'
-                  ? 'Ask for grounded metrics, trends, or visualizations.'
-                  : 'Ground your conversation in semantic metrics or discover trends across your datasets.'}
+                {activeMode === 'decide' ? 'Frame complex business decisions to evaluate levers and uncertainty.' : activeMode === 'explore' ? 'Identify trends and distributions across your grounded dataset sources.' : 'Ask for high-level summaries or query specific metric performance.'}
               </Typography>
               <div className="ai-shell__hero-actions">
-                <Chip icon={<FaPlus />} label="Compare Datasets" onClick={() => setUserInput('@')} clickable />
-                <Chip icon={<FaChartBar />} label="Visualize Trends" onClick={() => setUserInput('Visualize ')} clickable />
-                <Chip icon={<FaShieldAlt />} label="Grounded Cleaning" onClick={() => setUserInput('/clean')} clickable />
+                <Chip icon={<FaPlus />} label="Dataset Bridge" onClick={() => setUserInput('@')} clickable />
+                <Chip icon={<FaChartBar />} label="Quick Visual" onClick={() => setUserInput('Visualize ')} clickable />
+                <Chip icon={<FaShieldAlt />} label="Grounded Optimization" onClick={() => setUserInput('/clean')} clickable />
               </div>
             </div>
           )}
@@ -642,32 +609,21 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
             <div key={idx} className={`ai-shell__message-row is-${msg.role}`}>
               <div className="ai-shell__message-card">
                 <div className="ai-shell__message-header">
-                  <span className="ai-shell__message-author">{msg.role === 'user' ? 'You' : 'AI Assistant'}</span>
+                  <span className="ai-shell__message-author">{msg.role === 'user' ? 'You' : 'Agent'}</span>
                   {(msg.grounded || msg.role === 'assistant') && <span className="ai-shell__grounded-tag"><FaShieldAlt /> Grounded</span>}
                 </div>
                 <div className="ai-shell__message-content">{msg.content}</div>
                 
                 {msg.artifacts && msg.artifacts.length > 0 && (
                   <div className="ai-shell__artifact-container">
-                    {msg.artifacts.map((art, aIdx) => (
-                      <React.Fragment key={aIdx}>
-                        {renderArtifact(art)}
-                      </React.Fragment>
-                    ))}
+                    {msg.artifacts.map((art, aIdx) => <React.Fragment key={aIdx}>{renderArtifact(art)}</React.Fragment>)}
                   </div>
                 )}
 
                 {msg.suggested_actions && msg.suggested_actions.length > 0 && (
                   <div className="ai-shell__suggested-actions">
                     {msg.suggested_actions.map((act, actIdx) => (
-                      <button 
-                        key={actIdx} 
-                        className="ai-shell__action-btn"
-                        onClick={() => handleActionClick(act.action_id)}
-                        disabled={loading || !act.enabled}
-                      >
-                        {act.label}
-                      </button>
+                      <button key={actIdx} className="ai-shell__action-btn" onClick={() => handleActionClick(act.action_id)} disabled={loading || !act.enabled}>{act.label}</button>
                     ))}
                   </div>
                 )}
@@ -675,128 +631,43 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
             </div>
           ))}
 
-          {loading && (
-            <div className="ai-shell__message-row is-assistant">
-              <div className="ai-shell__message-card is-loading">
-                <div className="ai-shell__typing">
-                  <span /><span /><span />
-                </div>
-              </div>
-            </div>
-          )}
+          {loading && <div className="ai-shell__message-row is-assistant"><div className="ai-shell__message-card is-loading"><div className="ai-shell__typing"><span /><span /><span /></div></div></div>}
           {error && <div className="ai-shell__alert-bar"><FaInfoCircle /> {error}</div>}
         </div>
 
         <div className="ai-shell__footer">
           <div className="ai-shell__input-wrapper">
-             {isMentionOpen && (
-              <MentionDropdown
-                query={mentionQuery}
-                position={mentionPosition}
-                onSelect={handleMentionSelect}
-                onClose={() => setIsMentionOpen(false)}
-                highlightedIndex={highlightedIndex}
-                onHighlight={setHighlightedIndex}
-              />
-            )}
+             {isMentionOpen && <MentionDropdown query={mentionQuery} position={mentionPosition} onSelect={handleMentionSelect} onClose={() => setIsMentionOpen(false)} highlightedIndex={highlightedIndex} onHighlight={setHighlightedIndex} />}
             <div className="ai-shell__input-bar">
-              <TextField
-                inputRef={inputRef}
-                onKeyDown={handleKeyDown}
-                placeholder={activeMode === 'decide' ? "Describe your decision..." : "Ask anything, type @ for data..."}
-                variant="standard"
-                fullWidth
-                value={userInput}
-                onChange={handleInputChange}
-                disabled={loading}
-                multiline
-                maxRows={6}
-                InputProps={{ disableUnderline: true }}
-              />
-              <button 
-                className="ai-shell__send-btn" 
-                onClick={handleSendMessage}
-                disabled={loading || !userInput.trim()}
-              >
-                {loading ? <div className="ai-shell__spinner" /> : <FaBolt />}
-              </button>
+              <TextField inputRef={inputRef} onKeyDown={handleKeyDown} placeholder={activeMode === 'decide' ? "Frame a decision..." : "Inquire, type @ for data..."} variant="standard" fullWidth value={userInput} onChange={handleInputChange} disabled={loading} multiline maxRows={6} InputProps={{ disableUnderline: true }} />
+              <button className="ai-shell__send-btn" onClick={handleSendMessage} disabled={loading || !userInput.trim()}>{loading ? <div className="ai-shell__spinner" /> : <FaPaperPlane className="ai-shell__send-icon" />}</button>
             </div>
           </div>
         </div>
       </main>
 
-      {/* 3. Context & Artifact Pane */}
-      <aside className="ai-shell__context-pane">
+      {/* 3. DEDICATED RESULTS PANE (The Major Product Surface) */}
+      <aside className={`ai-shell__results-pane ${isResultsPaneOpen ? 'is-open' : 'is-closed'}`}>
         <div className="ai-shell__pane-header">
-          <Typography variant="overline">Workspace Context</Typography>
-        </div>
-        
-        <div className="ai-shell__ghost-stack">
-          {/* RESTORED ORIGINAL FEATURES */}
-          <div className="ai-shell__ghost-item">
-            <div className="ai-shell__ghost-label"><FaDatabase /> Live Sources</div>
-            <div className="ai-shell__ghost-box">
-              <Typography variant="caption">No active grounding sources in focus.</Typography>
-            </div>
-          </div>
-
-          <div className="ai-shell__ghost-item">
-            <div className="ai-shell__ghost-label"><FaChartBar /> Recent Artifacts</div>
-            <div className="ai-shell__ghost-placeholder">
-              <div className="ai-shell__ghost-bar" style={{ width: '80%' }} />
-              <div className="ai-shell__ghost-bar" style={{ width: '60%' }} />
-              <div className="ai-shell__ghost-bar" style={{ width: '90%' }} />
-            </div>
-          </div>
-
-          <div className="ai-shell__ghost-item">
-            <div className="ai-shell__ghost-label"><FaLightbulb /> Decision Bridge</div>
-            <div className="ai-shell__ghost-draft">
-              <Typography variant="subtitle2">Workspace Bridge</Typography>
-              <Typography variant="caption">Reserved for structured decision framing.</Typography>
-            </div>
-          </div>
-
-          <Divider sx={{ my: 1, borderColor: 'var(--border-color)' }} />
-          
-          <Typography variant="overline" sx={{ mb: -1, mt: 1, display: 'block', color: 'var(--text-secondary)' }}>
-            Decision Context
-          </Typography>
-
-          {/* NEW PHASE 4 FEATURES */}
-          <div className="ai-shell__context-module">
-            <div className="ai-shell__module-header">
-              <span className="ai-shell__module-title">Schema Notes</span>
-              <span className="ai-shell__coming-soon">Coming Soon</span>
-            </div>
-            <div className="ai-shell__module-empty">
-              No metadata overrides detected for the grounded context.
-            </div>
-          </div>
-
-          <div className="ai-shell__context-module">
-            <div className="ai-shell__module-header">
-              <span className="ai-shell__module-title">Business Terms</span>
-              <span className="ai-shell__coming-soon">Coming Soon</span>
-            </div>
-            <div className="ai-shell__module-empty">
-              Connect a glossary to align AI interpretations with local definitions.
-            </div>
-          </div>
-
-          <div className="ai-shell__context-module">
-            <div className="ai-shell__module-header">
-              <span className="ai-shell__module-title">Assumptions / Constraints</span>
-              <span className="ai-shell__coming-soon">Coming Soon</span>
-            </div>
-            <div className="ai-shell__module-empty">
-              Explicit constraints identified in chat will appear here for verification.
-            </div>
-          </div>
+          <Typography variant="overline" sx={{ fontWeight: 900, letterSpacing: '0.15em' }}>Inspection Workspace</Typography>
+          <IconButton onClick={() => setIsResultsPaneOpen(false)} size="small"><FaChevronRight /></IconButton>
         </div>
 
-        <div className="ai-shell__pane-footer">
-          <Typography variant="caption">Reserved for V2 Simulation & Trade-offs</Typography>
+        {/* Primary Viewer: Dominates above the fold */}
+        <div className="ai-shell__result-viewer">
+          <div className="ai-shell__viewer-label"><FaEye /> Active Result Viewer</div>
+          {activeArtifact ? (
+            renderArtifact(activeArtifact, true)
+          ) : (
+            <div className="ai-shell__viewer-empty">
+              <div className="ai-shell__viewer-empty-icon"><FaTerminal /></div>
+              <Typography variant="caption">Query the agent on the left to generate active visualizations, path previews, or structured analysis results.</Typography>
+            </div>
+          )}
+        </div>
+
+        <div className="ai-shell__pane-footer" style={{ padding: '24px', background: 'var(--bg-primary)', borderTop: '1px solid var(--border-color)', marginTop: 'auto' }}>
+          <Typography variant="caption" sx={{ opacity: 0.3, fontWeight: 800, letterSpacing: '0.1em' }}>DI PHASE 4 • WORKSPACE AGENT V1</Typography>
         </div>
       </aside>
     </div>
