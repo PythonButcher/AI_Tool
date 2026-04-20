@@ -219,6 +219,16 @@ Frontend follow-up after Codex:
     - Established consistent bluish-grey sidebars and menu bars using Slate 900 (`#0f172a`).
     - Boosted vibrancy of accent colors (Blue/Green) and added soft color variations for better component depth.
     - Standardized global CSS variables across Sidebar, MenuBar, DataPane, and AI Workflow Lab.
+- **DI V3: Phase 4 Chat Contract Integration (HARDENING ACTIVE)**:
+    - [x] Integrated `AIShell.jsx` with real Phase 4 backend chat contract (`POST /api/decision/chat/turns` and `POST /api/decision/chat/actions`).
+    - [x] Stateful `session_state` preservation across conversation turns.
+    - [x] In-thread rendering for `answer`, `chart`, `workspace_preview`, and `workspace_analysis_summary` artifacts.
+    - [x] Live backend-driven `suggested_actions` wired as real UI controls.
+    - [x] Added "Decision Context" area with truth-aligned "Coming Soon" placeholders for Schema, Business Terms, and Assumptions.
+    - [~] Legible support for `Ask`, `Explore`, and `Decide` modes is partially visible, but current UI hardening is still required so mode selection is not cosmetic-only.
+    - [ ] Remove frontend routing that lets chart-like prompts bypass the Phase 4 chat contract path.
+    - [ ] Improve `answer` artifact rendering so structured backend responses do not fall back to raw serialized object output.
+    - [ ] Redo the right pane so it becomes a true results pane rather than a sidebar with a small active-result module.
 - move to V3 planning and execution instead of continuing V2 completion language
 - **DI V3: Workspace Analysis Wiring (COMPLETE)**:
     - [x] Frontend call to `POST /api/decision/workspaces/analyze`.
