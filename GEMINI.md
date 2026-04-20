@@ -17,6 +17,9 @@ Read the relevant files carefully before editing.
 Check behavior more than once before calling work complete.
 Do not remove, downgrade, hide, or simplify existing features unless the user explicitly asks for that and the instruction is clear.
 If a feature feels messy, preserve capability first and improve clarity second.
+Gemini is never allowed to decide on its own to hide, remove, disable, de-scope, or retire a feature during development.
+If hiding or removing a feature seems helpful, stop and document the concern, but leave the feature in place until the user explicitly approves that change.
+Preserve existing capability by default. Gemini cannot make product-reduction decisions for us.
 When working from markdown handoff files written by Codex, treat their constraints as active requirements, especially around preserving contracts, preserving workflows, and avoiding frontend-only workarounds that weaken the product.
 
 

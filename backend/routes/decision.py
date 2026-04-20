@@ -1,5 +1,6 @@
 from flask import Blueprint, jsonify, request
 
+from backend.decision_engine import DecisionChatService
 from backend.services.decision_brief_service import generate_decision_brief
 from backend.services.decision_pipeline_service import run_decision_pipeline
 from backend.services.decision_signal_service import generate_decision_signals
@@ -28,6 +29,26 @@ def create_workspace_route():
         return jsonify(_error_payload("INVALID_DECISION_WORKSPACE_REQUEST", str(exc))), 400
     except Exception as exc:
         return jsonify(_error_payload("DECISION_WORKSPACE_CREATION_FAILED", f"Failed to create decision workspace: {exc}")), 500
+
+@decision_bp.route("/chat/turns", methods=["POST"])
+def decision_chat_turn_route():
+    payload = request.get_json(silent=True) or {}
+    try:
+        return jsonify(DecisionChatService.handle_turn(payload)), 200
+    except DecisionServiceError as exc:
+        return jsonify(_error_payload("INVALID_DECISION_CHAT_TURN_REQUEST", str(exc))), 400
+    except Exception as exc:
+        return jsonify(_error_payload("DECISION_CHAT_TURN_FAILED", f"Failed to process decision chat turn: {exc}")), 500
+
+@decision_bp.route("/chat/actions", methods=["POST"])
+def decision_chat_action_route():
+    payload = request.get_json(silent=True) or {}
+    try:
+        return jsonify(DecisionChatService.handle_action(payload)), 200
+    except DecisionServiceError as exc:
+        return jsonify(_error_payload("INVALID_DECISION_CHAT_ACTION_REQUEST", str(exc))), 400
+    except Exception as exc:
+        return jsonify(_error_payload("DECISION_CHAT_ACTION_FAILED", f"Failed to process decision chat action: {exc}")), 500
 
 @decision_bp.route("/workspaces/analyze", methods=["POST"])
 def analyze_workspace_route():
