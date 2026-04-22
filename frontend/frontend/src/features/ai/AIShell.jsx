@@ -131,6 +131,7 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
   const handleActionClick = async (actionId) => {
     setLoading(true);
     setError(null);
+    setActiveArtifact(null); // Clear stale inspector state immediately
 
     const payload = {
       action: actionId,
@@ -154,8 +155,13 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
         setSessionState(data.session_state || {});
         
         if (data.artifacts && data.artifacts.length > 0) {
-          setActiveArtifact(data.artifacts[data.artifacts.length - 1]);
-          setIsResultsPaneOpen(true);
+          const lastArt = data.artifacts[data.artifacts.length - 1];
+          // Only auto-focus if it's a rich, inspectable artifact
+          const richTypes = ['chart', 'workspace_preview', 'workspace_analysis_summary'];
+          if (richTypes.includes(lastArt.type)) {
+            setActiveArtifact(lastArt);
+            setIsResultsPaneOpen(true);
+          }
         }
       } else {
         setError(data.error?.message || "Action execution failed.");
@@ -230,16 +236,56 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
     return <Typography variant="body2" sx={{ lineHeight: 1.7 }}>{content.message || JSON.stringify(content)}</Typography>;
   };
 
+  const handleInspect = (artifact) => {
+    setActiveArtifact(artifact);
+    setIsResultsPaneOpen(true);
+  };
+
   const renderArtifact = (artifact, isInspector = false) => {
     if (!artifact) return null;
 
-    const baseClass = isInspector ? "ai-shell__active-artifact" : "ai-shell__artifact-card";
+    const baseClass = isInspector ? "ai-shell__active-artifact" : "ai-shell__artifact-preview-card";
+    const isRich = ['chart', 'workspace_preview', 'workspace_analysis_summary', 'answer'].includes(artifact.type);
+
+    // If it's a rich artifact in the thread, we render a compact "Preview Link"
+    if (!isInspector && isRich) {
+      // For answers, we only use the preview link if it's genuinely structured (has a metric)
+      if (artifact.type === 'answer' && !artifact.content?.metric) return null;
+
+      return (
+        <div className="ai-shell__artifact-preview-link" onClick={() => handleInspect(artifact)}>
+          <div className="ai-shell__preview-icon">
+            {artifact.type === 'chart' ? <FaChartBar /> : artifact.type === 'workspace_preview' ? <FaLayerGroup /> : artifact.type === 'answer' ? <FaCheckCircle /> : <FaFileAlt />}
+          </div>
+          <div className="ai-shell__preview-info">
+            <Typography variant="caption" className="ai-shell__preview-type">
+              {artifact.type === 'chart' ? 'Visualization' : artifact.type === 'workspace_preview' ? 'Workspace' : artifact.type === 'answer' ? 'Data Result' : 'Analysis'}
+            </Typography>
+            <Typography variant="body2" className="ai-shell__preview-title" noWrap>
+              {artifact.content?.title || artifact.content?.chartType || artifact.content?.summary?.headline || artifact.content?.metric?.label || artifact.content?.metric?.name || 'View Details'}
+            </Typography>
+          </div>
+          <IconButton size="small" className="ai-shell__preview-action">
+            <FaChevronRight />
+          </IconButton>
+        </div>
+      );
+    }
 
     switch (artifact.type) {
       case 'answer':
+        // Answers remain primarily thread-owned if they are the direct response.
+        // We only mirror in the inspector if explicitly selected.
+        if (!isInspector && !artifact.content?.metric) return null;
+
         return (
           <div className={`${baseClass} is-answer`}>
-            {!isInspector && <div className="ai-shell__artifact-header"><span className="ai-shell__artifact-title"><FaCheckCircle /> Result</span></div>}
+            {!isInspector && (
+              <div className="ai-shell__artifact-header">
+                <span className="ai-shell__artifact-title"><FaCheckCircle /> Result</span>
+                <IconButton size="small" onClick={() => handleInspect(artifact)}><FaExternalLinkAlt style={{ fontSize: '0.7rem' }} /></IconButton>
+              </div>
+            )}
             <div className="ai-shell__artifact-content">{renderAnswerArtifact(artifact.content)}</div>
           </div>
         );
@@ -247,13 +293,14 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
       case 'chart':
         return (
           <div className={`${baseClass} is-chart`}>
-            {!isInspector && <div className="ai-shell__artifact-header"><span className="ai-shell__artifact-title"><FaChartBar /> Visualization</span></div>}
-            <div className="ai-shell__artifact-content">
-              <AICharts aiChartType={artifact.content?.chartType || 'Bar'} aiChartData={artifact.content?.chartData} />
-              {artifact.content?.explanation && (
-                <Typography variant="caption" sx={{ mt: 2, display: 'block', opacity: 0.6 }}>{artifact.content.explanation}</Typography>
-              )}
-            </div>
+            {isInspector && (
+              <div className="ai-shell__artifact-content" style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+                <AICharts aiChartType={artifact.content?.chartType || 'Bar'} aiChartData={artifact.content?.chartData} />
+                {artifact.content?.explanation && (
+                  <Typography variant="caption" sx={{ mt: 2, display: 'block', opacity: 0.6 }}>{artifact.content.explanation}</Typography>
+                )}
+              </div>
+            )}
           </div>
         );
 
@@ -261,15 +308,28 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
         const wp = artifact.content || artifact;
         return (
           <div className={`${baseClass} is-workspace_preview`}>
-            {!isInspector && <div className="ai-shell__artifact-header"><span className="ai-shell__artifact-title"><FaLayerGroup /> Workspace Draft</span></div>}
             <div className="ai-shell__artifact-content">
-              <Typography variant="subtitle2" sx={{ fontWeight: 900, mb: 1 }}>{wp.title || 'Decision Path'}</Typography>
-              <Typography variant="body2" sx={{ opacity: 0.7, mb: 3 }}>{wp.scope_summary}</Typography>
-              <div className="ai-shell__preview-grid">
+              <Typography variant="h6" sx={{ fontWeight: 900, mb: 1 }}>{wp.title || 'Decision Path'}</Typography>
+              <Typography variant="body1" sx={{ opacity: 0.7, mb: 4 }}>{wp.scope_summary}</Typography>
+              <div className="ai-shell__preview-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '20px' }}>
                 <div className="ai-shell__preview-metric"><span className="ai-shell__preview-metric-label">Status</span><span className="ai-shell__preview-metric-value">{wp.status || 'Draft'}</span></div>
                 <div className="ai-shell__preview-metric"><span className="ai-shell__preview-metric-label">Levers</span><span className="ai-shell__preview-metric-value">{wp.lever_count || 0}</span></div>
                 <div className="ai-shell__preview-metric"><span className="ai-shell__preview-metric-label">Inputs Needed</span><span className="ai-shell__preview-metric-value" style={{ color: (wp.missing_inputs?.length > 0 ? 'var(--accent-red)' : 'inherit') }}>{wp.missing_inputs?.length || 0}</span></div>
               </div>
+              
+              {wp.missing_inputs?.length > 0 && (
+                <div className="ai-shell__ghost-item" style={{ mt: 4 }}>
+                  <div className="ai-shell__ghost-label">Required Clarifications</div>
+                  <div className="ai-shell__analysis-list" style={{ mt: 2 }}>
+                    {wp.missing_inputs.map((input, i) => (
+                      <div key={i} className="ai-shell__analysis-item">
+                         <span className="ai-shell__analysis-icon is-blocker"><FaExclamationTriangle /></span>
+                         <Typography variant="body2">{input}</Typography>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         );
@@ -277,21 +337,24 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
       case 'workspace_analysis_summary':
         return (
           <div className={`${baseClass} is-workspace_analysis_summary`}>
-            {!isInspector && <div className="ai-shell__artifact-header"><span className="ai-shell__artifact-title"><FaFileAlt /> Intelligence Summary</span></div>}
             <div className="ai-shell__artifact-content">
               {artifact.content?.items ? (
                 <div className="ai-shell__analysis-list">
+                  <Typography variant="overline" sx={{ fontWeight: 900, mb: 2, display: 'block', opacity: 0.5 }}>Diagnostic Breakdown</Typography>
                   {artifact.content.items.map((item, i) => (
-                    <div key={i} className="ai-shell__analysis-item">
+                    <div key={i} className="ai-shell__analysis-item" style={{ mb: 16 }}>
                       <span className={`ai-shell__analysis-icon ${item.blocks_simulation ? 'is-blocker' : 'is-assumption'}`}>
                         {item.blocks_simulation ? <FaExclamationTriangle /> : <FaCheckCircle />}
                       </span>
-                      <Typography variant="body2">{item.statement || item.description || item}</Typography>
+                      <div className="ai-shell__analysis-text">
+                        <Typography variant="body2" sx={{ fontWeight: 700 }}>{item.statement || item}</Typography>
+                        {item.description && <Typography variant="caption" sx={{ opacity: 0.6 }}>{item.description}</Typography>}
+                      </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <Typography variant="body2" sx={{ fontWeight: 700 }}>{artifact.content?.summary?.headline || 'Analysis finalized.'}</Typography>
+                <Typography variant="h6" sx={{ fontWeight: 700 }}>{artifact.content?.summary?.headline || 'Analysis finalized.'}</Typography>
               )}
             </div>
           </div>
@@ -341,6 +404,7 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
 
     setLoading(true);
     setError(null);
+    setActiveArtifact(null); // Clear stale inspector state immediately
 
     const dsContext = resolveDatasetForNlp();
     const msg = userInput;
@@ -427,8 +491,13 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
         if (data.mode) setActiveMode(data.mode);
         
         if (data.artifacts && data.artifacts.length > 0) {
-          setActiveArtifact(data.artifacts[data.artifacts.length - 1]);
-          setIsResultsPaneOpen(true);
+          const lastArt = data.artifacts[data.artifacts.length - 1];
+          // Only auto-focus if it's a rich, inspectable artifact
+          const richTypes = ['chart', 'workspace_preview', 'workspace_analysis_summary'];
+          if (richTypes.includes(lastArt.type)) {
+            setActiveArtifact(lastArt);
+            setIsResultsPaneOpen(true);
+          }
         }
       } else {
         setError(data.error?.message || "Intelligence engine unavailable.");
