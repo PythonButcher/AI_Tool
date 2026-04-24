@@ -95,6 +95,9 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
   const [isResultsPaneOpen, setIsResultsPaneOpen] = useState(true);
   const [isContextPaneOpen, setIsContextPaneOpen] = useState(false);
 
+  // Derive mode context for visibility
+  const modeContext = useMemo(() => sessionState?.mode_context || {}, [sessionState]);
+
   // Mention State
   const [mentionQuery, setMentionQuery] = useState(null);
   const [isMentionOpen, setIsMentionOpen] = useState(false);
@@ -149,10 +152,12 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
           role: "assistant", 
           content: data.assistant_message, 
           artifacts: data.artifacts,
-          suggested_actions: data.session_state?.available_actions || []
+          suggested_actions: data.suggested_actions || data.session_state?.available_actions || [],
+          mode: data.mode
         };
         setUserMessages(prev => [...prev, newAssistantMsg]);
         setSessionState(data.session_state || {});
+        if (data.mode) setActiveMode(data.mode);
         
         if (data.artifacts && data.artifacts.length > 0) {
           const lastArt = data.artifacts[data.artifacts.length - 1];
@@ -176,7 +181,14 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
   const handleModeChange = (event, newMode) => {
     if (!newMode) return;
     setActiveMode(newMode);
-    setSessionState(prev => ({ ...prev, active_mode: newMode }));
+    setSessionState(prev => ({ 
+      ...prev, 
+      active_mode: newMode,
+      mode_context: {
+        ...(prev.mode_context || {}),
+        reason: null // Clear stale backend reason on manual override
+      }
+    }));
   };
 
   const renderAnswerArtifact = (content) => {
@@ -244,25 +256,35 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
   const renderArtifact = (artifact, isInspector = false) => {
     if (!artifact) return null;
 
-    const baseClass = isInspector ? "ai-shell__active-artifact" : "ai-shell__artifact-preview-card";
-    const isRich = ['chart', 'workspace_preview', 'workspace_analysis_summary', 'answer'].includes(artifact.type);
+    const { 
+      type, 
+      content, 
+      render_hint, 
+      inspectable, 
+      source, 
+      mode: artMode 
+    } = artifact;
 
-    // If it's a rich artifact in the thread, we render a compact "Preview Link"
-    if (!isInspector && isRich) {
-      // For answers, we only use the preview link if it's genuinely structured (has a metric)
-      if (artifact.type === 'answer' && !artifact.content?.metric) return null;
+    const baseClass = isInspector ? "ai-shell__active-artifact" : "ai-shell__artifact-preview-card";
+    
+    // Metadata-driven visibility: In-thread we show links for inspectable rich content
+    // unless render_hint explicitly asks for 'inline' presentation.
+    if (!isInspector && inspectable && render_hint !== 'inline') {
+      // Relaxed check: Allow answers that have either semantic metric or raw analytics fields
+      const hasContent = content?.metric || (content?.fieldsUsed && content?.aggregation);
+      if (type === 'answer' && !hasContent) return null;
 
       return (
         <div className="ai-shell__artifact-preview-link" onClick={() => handleInspect(artifact)}>
           <div className="ai-shell__preview-icon">
-            {artifact.type === 'chart' ? <FaChartBar /> : artifact.type === 'workspace_preview' ? <FaLayerGroup /> : artifact.type === 'answer' ? <FaCheckCircle /> : <FaFileAlt />}
+            {type === 'chart' ? <FaChartBar /> : type === 'workspace_preview' ? <FaLayerGroup /> : type === 'answer' ? <FaCheckCircle /> : <FaFileAlt />}
           </div>
           <div className="ai-shell__preview-info">
             <Typography variant="caption" className="ai-shell__preview-type">
-              {artifact.type === 'chart' ? 'Visualization' : artifact.type === 'workspace_preview' ? 'Workspace' : artifact.type === 'answer' ? 'Data Result' : 'Analysis'}
+              {source ? `${source.toUpperCase()} • ` : ''}{type === 'chart' ? 'Visualization' : type === 'workspace_preview' ? 'Workspace' : type === 'answer' ? 'Data Result' : 'Analysis'}
             </Typography>
             <Typography variant="body2" className="ai-shell__preview-title" noWrap>
-              {artifact.content?.title || artifact.content?.chartType || artifact.content?.summary?.headline || artifact.content?.metric?.label || artifact.content?.metric?.name || 'View Details'}
+              {content?.title || content?.chartType || content?.summary?.headline || content?.metric?.label || content?.metric?.name || content?.fieldsUsed?.value || 'View Details'}
             </Typography>
           </div>
           <IconButton size="small" className="ai-shell__preview-action">
@@ -272,21 +294,23 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
       );
     }
 
-    switch (artifact.type) {
+    switch (type) {
       case 'answer':
-        // Answers remain primarily thread-owned if they are the direct response.
-        // We only mirror in the inspector if explicitly selected.
-        if (!isInspector && !artifact.content?.metric) return null;
+        // Inline answers or inspector view. Relaxed check for raw analytics results.
+        const hasContent = content?.metric || (content?.fieldsUsed && content?.aggregation);
+        if (!isInspector && !hasContent && render_hint !== 'inline') return null;
 
         return (
           <div className={`${baseClass} is-answer`}>
             {!isInspector && (
               <div className="ai-shell__artifact-header">
-                <span className="ai-shell__artifact-title"><FaCheckCircle /> Result</span>
-                <IconButton size="small" onClick={() => handleInspect(artifact)}><FaExternalLinkAlt style={{ fontSize: '0.7rem' }} /></IconButton>
+                <span className="ai-shell__artifact-title">
+                   <FaCheckCircle /> {source || 'Result'} {artMode ? `(${artMode})` : ''}
+                </span>
+                {inspectable && <IconButton size="small" onClick={() => handleInspect(artifact)}><FaExternalLinkAlt style={{ fontSize: '0.7rem' }} /></IconButton>}
               </div>
             )}
-            <div className="ai-shell__artifact-content">{renderAnswerArtifact(artifact.content)}</div>
+            <div className="ai-shell__artifact-content">{renderAnswerArtifact(content)}</div>
           </div>
         );
 
@@ -295,9 +319,9 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
           <div className={`${baseClass} is-chart`}>
             {isInspector && (
               <div className="ai-shell__artifact-content" style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-                <AICharts aiChartType={artifact.content?.chartType || 'Bar'} aiChartData={artifact.content?.chartData} />
-                {artifact.content?.explanation && (
-                  <Typography variant="caption" sx={{ mt: 2, display: 'block', opacity: 0.6 }}>{artifact.content.explanation}</Typography>
+                <AICharts aiChartType={content?.chartType || 'Bar'} aiChartData={content?.chartData} />
+                {content?.explanation && (
+                  <Typography variant="caption" sx={{ mt: 2, display: 'block', opacity: 0.6 }}>{content.explanation}</Typography>
                 )}
               </div>
             )}
@@ -305,7 +329,7 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
         );
 
       case 'workspace_preview':
-        const wp = artifact.content || artifact;
+        const wp = content || artifact;
         return (
           <div className={`${baseClass} is-workspace_preview`}>
             <div className="ai-shell__artifact-content">
@@ -338,23 +362,35 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
         return (
           <div className={`${baseClass} is-workspace_analysis_summary`}>
             <div className="ai-shell__artifact-content">
-              {artifact.content?.items ? (
+              {content?.items ? (
                 <div className="ai-shell__analysis-list">
-                  <Typography variant="overline" sx={{ fontWeight: 900, mb: 2, display: 'block', opacity: 0.5 }}>Diagnostic Breakdown</Typography>
-                  {artifact.content.items.map((item, i) => (
-                    <div key={i} className="ai-shell__analysis-item" style={{ mb: 16 }}>
-                      <span className={`ai-shell__analysis-icon ${item.blocks_simulation ? 'is-blocker' : 'is-assumption'}`}>
-                        {item.blocks_simulation ? <FaExclamationTriangle /> : <FaCheckCircle />}
-                      </span>
-                      <div className="ai-shell__analysis-text">
-                        <Typography variant="body2" sx={{ fontWeight: 700 }}>{item.statement || item}</Typography>
-                        {item.description && <Typography variant="caption" sx={{ opacity: 0.6 }}>{item.description}</Typography>}
+                  <Typography variant="overline" sx={{ fontWeight: 900, mb: 2, display: 'block', opacity: 0.5 }}>Diagnostic Breakdown {artMode ? `• ${artMode.toUpperCase()}` : ''}</Typography>
+                  {content.items.map((item, i) => {
+                    const isObj = typeof item === 'object' && item !== null;
+                    // Primary text: Prefer label, then statement, then headline, then title
+                    const statement = isObj ? (item.label || item.statement || item.headline || item.title) : item;
+                    
+                    // Secondary text: Prefer description, then summary, then reason, then category
+                    const description = isObj ? (item.description || item.summary || item.reason || (item.category ? `Category: ${item.category}` : null)) : null;
+                    
+                    // Severity/Blocker logic: check blocks_simulation, is_blocker, or high/critical severity
+                    const isBlocker = isObj ? !!(item.blocks_simulation || item.is_blocker || item.severity === 'high' || item.severity === 'critical') : false;
+
+                    return (
+                      <div key={i} className="ai-shell__analysis-item" style={{ mb: 16 }}>
+                        <span className={`ai-shell__analysis-icon ${isBlocker ? 'is-blocker' : 'is-assumption'}`}>
+                          {isBlocker ? <FaExclamationTriangle /> : <FaCheckCircle />}
+                        </span>
+                        <div className="ai-shell__analysis-text">
+                          <Typography variant="body2" sx={{ fontWeight: 700 }}>{statement}</Typography>
+                          {description && <Typography variant="caption" sx={{ opacity: 0.6 }}>{description}</Typography>}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
-                <Typography variant="h6" sx={{ fontWeight: 700 }}>{artifact.content?.summary?.headline || 'Analysis finalized.'}</Typography>
+                <Typography variant="h6" sx={{ fontWeight: 700 }}>{content?.summary?.headline || content?.headline || 'Analysis finalized.'}</Typography>
               )}
             </div>
           </div>
@@ -642,17 +678,25 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
 
         {/* Functional Mode Selector */}
         <div className="ai-shell__mode-bar">
-          <div className="ai-shell__mode-group">
-            {MODES.map(m => (
-              <button 
-                key={m.id} 
-                className={`ai-shell__mode-btn ${activeMode === m.id ? 'is-active' : ''}`}
-                onClick={() => handleModeChange(null, m.id)}
-              >
-                <span>{m.label}</span>
-                <span className="ai-shell__mode-promise">{m.promise}</span>
-              </button>
-            ))}
+          <div className="ai-shell__mode-container">
+            <div className="ai-shell__mode-group">
+              {MODES.map(m => (
+                <button 
+                  key={m.id} 
+                  className={`ai-shell__mode-btn ${activeMode === m.id ? 'is-active' : ''}`}
+                  onClick={() => handleModeChange(null, m.id)}
+                >
+                  <span>{m.label}</span>
+                  <span className="ai-shell__mode-promise">{m.promise}</span>
+                </button>
+              ))}
+            </div>
+            {modeContext.reason && (
+              <div className="ai-shell__mode-reason">
+                <FaInfoCircle className="ai-shell__mode-reason-icon" />
+                <Typography variant="caption">{modeContext.reason}</Typography>
+              </div>
+            )}
           </div>
         </div>
 
@@ -692,7 +736,17 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
                 {msg.suggested_actions && msg.suggested_actions.length > 0 && (
                   <div className="ai-shell__suggested-actions">
                     {msg.suggested_actions.map((act, actIdx) => (
-                      <button key={actIdx} className="ai-shell__action-btn" onClick={() => handleActionClick(act.action_id)} disabled={loading || !act.enabled}>{act.label}</button>
+                      <Tooltip key={actIdx} title={act.availability_reason || act.description || ''} arrow>
+                        <span>
+                          <button 
+                            className={`ai-shell__action-btn ${act.priority === 'primary' ? 'is-primary' : ''}`} 
+                            onClick={() => handleActionClick(act.action_id)} 
+                            disabled={loading || !act.enabled}
+                          >
+                            {act.label}
+                          </button>
+                        </span>
+                      </Tooltip>
                     ))}
                   </div>
                 )}

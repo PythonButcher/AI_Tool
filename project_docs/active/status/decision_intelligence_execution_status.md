@@ -65,40 +65,44 @@ Truth:
 
 Status:
 
-- **BACKEND COMPLETE; FRONTEND HARDENING ACTIVE**
+- **BACKEND COMPLETE; FRONTEND SLICE 1 HARDENING COMPLETE**
 
 Truth:
 
 - the backend decision engine and chat contract are real
 - `ask`, `explore`, and `decide` are implemented server-side
-- the frontend already has meaningful integration work in place, but the chat experience still needs refinement before it can be treated as finished
+- the frontend now has full Slice 1 legibility and metadata integration, including the fix for assumption/blocker rendering.
 
 ### Phase 4.5 AI Chat Decision Intelligence
 
 Status:
 
-- **IMPLEMENTATION ACTIVE**
+- **SLICE 1 COMPLETE; SLICE 2 PREPARATION ACTIVE**
 
 Truth:
 
 - this is the current product-improvement phase
-- the goal is to make AI chat a trustworthy decision front door
-- the work is about clarity, reliability, action fidelity, handoff quality, and truthful UX
+- Slice 1 (Frontend Fidelity) is complete: mode legibility, action priority/tooltips, and metadata-driven artifact rendering are live and contract-aligned.
+- the work is now moving toward Slice 2 (Decision Framing and Prompt Reliability)
 
 ## Active Workstreams
 
 - [~] Prompt-first intake hardening for real decision prompts
 - [x] Phase 4 backend decision chat contract
-- [~] Frontend hardening against the real chat contract
+- [x] Slice 1 backend mode/state normalization
+- [x] Slice 1 frontend fidelity (Mode legibility, Action fidelity, Artifact metadata, Rendering precision)
 - [~] Phase 4.5 AI chat decision-intelligence enhancement
 
 ## What Is Actually Implemented Today
 
 - The backend has a real `POST /api/decision/chat/turns` and `POST /api/decision/chat/actions` contract with stateless `session_state` carry-forward.
 - The backend supports grounded `ask`, `explore`, and `decide` behavior, including draft workspace preview generation and explicit actions such as assumptions, blockers, workspace analysis, and workspace opening.
+- Slice 1 backend hardening is now in place: `session_state` carries explicit `mode_context`, `action_state`, `decision_state`, normalized analytics state, and stable available-action metadata.
+- Chat artifacts now expose stable rendering metadata such as `artifact_id`, `render_hint`, `inspectable`, `default_view`, `source`, and `mode` so the frontend no longer has to infer those behaviors from shape alone.
 - Prompt-first workspace drafting and workspace analysis already exist as real deterministic backend paths.
 - The frontend already has the destination-based shell, Decision Intelligence workspace flow, AI destination shell, inspector-style result pane behavior, and bounded chart rendering.
-- The product is no longer blocked on backend invention. The main risk is experience quality: weak mode legibility, incomplete action presentation, fragile handoff clarity, and intake reliability on real prompts.
+- The current Gemini Slice 1 pass fixed the stale mode-reason problem, restored raw analytics answer artifacts, and resolved the `workspace_analysis_summary` rendering defect for assumptions and blockers.
+- The product is no longer blocked on backend invention. The main risk is experience quality: intake reliability on real prompts, and handoff clarity.
 
 ## Canonical Resume Order
 

@@ -129,6 +129,12 @@ class DecisionChatApiTests(unittest.TestCase):
         self.assertEqual(body["mode"], "explore")
         self.assertEqual(body["artifacts"][0]["type"], "chart")
         self.assertTrue(body["artifacts"][0]["content"]["chartData"])
+        self.assertEqual(body["mode_context"]["current_mode"], "explore")
+        self.assertEqual(body["mode_context"]["reason_code"], "visualization_request")
+        self.assertTrue(body["artifacts"][0]["artifact_id"])
+        self.assertEqual(body["artifacts"][0]["render_hint"], "chart")
+        self.assertTrue(body["artifacts"][0]["inspectable"])
+        self.assertEqual(body["action_state"]["available_action_ids"], [])
 
     def test_turn_route_builds_workspace_preview_for_decision_prompt(self):
         response = self.client.post(
@@ -148,6 +154,14 @@ class DecisionChatApiTests(unittest.TestCase):
         self.assertEqual(body["draft_workspace_preview"]["type"], "workspace_preview")
         self.assertIn("draft_workspace", body["session_state"])
         self.assertTrue(body["suggested_actions"])
+        self.assertEqual(body["mode_context"]["current_mode"], "decide")
+        self.assertEqual(body["mode_context"]["reason_code"], "decision_request")
+        self.assertEqual(body["session_state"]["schema_version"], "di_phase4_5_session_state_v1")
+        self.assertTrue(body["session_state"]["decision_state"]["has_draft_workspace"])
+        self.assertEqual(body["session_state"]["decision_state"]["objective_draft"]["metric"], "Revenue")
+        self.assertIn("open_workspace", body["action_state"]["available_action_ids"])
+        self.assertEqual(body["action_state"]["primary_action_id"], "open_workspace")
+        self.assertTrue(body["suggested_actions"][0]["description"])
 
     def test_turn_route_answers_semantic_metric_question_without_chart_keyword(self):
         response = self.client.post(
@@ -168,6 +182,8 @@ class DecisionChatApiTests(unittest.TestCase):
         self.assertEqual(body["artifacts"][0]["type"], "answer")
         self.assertEqual(body["session_state"]["last_analytic_context"]["source"], "semantic_metric")
         self.assertEqual(body["session_state"]["last_analytic_context"]["metric_name"], "Revenue")
+        self.assertEqual(body["mode_context"]["reason_code"], "grounded_analytics_request")
+        self.assertEqual(body["session_state"]["analytics_state"]["metric_name"], "Revenue")
 
     def test_follow_up_turn_reuses_last_metric_and_returns_chart(self):
         first_response = self.client.post(
@@ -198,6 +214,8 @@ class DecisionChatApiTests(unittest.TestCase):
         self.assertEqual(body["mode"], "explore")
         self.assertEqual(body["artifacts"][0]["type"], "chart")
         self.assertEqual(body["session_state"]["last_analytic_context"]["output_preference"], "chart")
+        self.assertEqual(body["mode_context"]["reason_code"], "visualization_request")
+        self.assertEqual(body["artifacts"][0]["default_view"], "inspector")
 
     def test_follow_up_turn_can_change_grouping_from_prior_semantic_context(self):
         first_response = self.client.post(
@@ -228,6 +246,7 @@ class DecisionChatApiTests(unittest.TestCase):
         self.assertEqual(body["mode"], "explore")
         self.assertEqual(body["artifacts"][0]["type"], "answer")
         self.assertEqual(body["session_state"]["last_analytic_context"]["group_by"], ["Channel"])
+        self.assertEqual(body["mode_context"]["reason_code"], "continue_active_mode")
 
     def test_action_route_returns_blockers_from_existing_workspace(self):
         turn_response = self.client.post(
@@ -254,7 +273,10 @@ class DecisionChatApiTests(unittest.TestCase):
         body = action_response.get_json()
         self.assertEqual(body["status"], "success")
         self.assertEqual(body["action"], "show_blockers")
+        self.assertEqual(body["mode"], "decide")
         self.assertEqual(body["artifacts"][0]["type"], "workspace_analysis_summary")
+        self.assertEqual(body["mode_context"]["reason_code"], "explicit_action")
+        self.assertIn("open_workspace", body["action_state"]["available_action_ids"])
 
     def test_action_route_runs_workspace_analysis(self):
         turn_response = self.client.post(
@@ -284,6 +306,8 @@ class DecisionChatApiTests(unittest.TestCase):
         self.assertEqual(body["status"], "success")
         self.assertEqual(body["action"], "analyze_workspace")
         self.assertEqual(body["artifacts"][0]["type"], "workspace_analysis_summary")
+        self.assertTrue(body["artifacts"][0]["inspectable"])
+        self.assertEqual(body["artifacts"][0]["render_hint"], "workspace_analysis_summary")
 
 
 if __name__ == "__main__":

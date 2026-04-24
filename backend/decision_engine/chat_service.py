@@ -6,7 +6,7 @@ from decimal import Decimal, InvalidOperation
 from typing import Any, Dict, List, Tuple
 
 from backend.decision_engine.grounding import build_grounding_summary
-from backend.decision_engine.mode_detection import detect_chat_mode, is_visualization_request
+from backend.decision_engine.mode_detection import detect_chat_mode_details, is_visualization_request
 from backend.services.aichat_nlp import analyse_columns, build_chart_response, extract_dataset, interpret_nl_query
 from backend.services.decision_support import DecisionServiceError
 from backend.services.metric_resolver import MetricResolutionError, MetricResolver
@@ -21,7 +21,7 @@ class DecisionChatService:
     larger decision engine package behind it.
     """
 
-    CONTRACT_VERSION = "di_v3_phase4_chat_v1"
+    CONTRACT_VERSION = "di_v3_phase4_5_chat_v1"
     ANALYTICS_INTENT_KEYWORDS = (
         "what is",
         "which",
@@ -53,9 +53,19 @@ class DecisionChatService:
         semantic_model = payload.get("semantic_model") or payload.get("semanticModel")
         session_state = DecisionChatService._normalize_session_state(payload.get("session_state"))
         grounding_summary = build_grounding_summary(dataset, semantic_model)
-        mode = detect_chat_mode(user_message, session_state)
+        mode_details = detect_chat_mode_details(user_message, session_state)
+        mode = mode_details["mode"]
         if mode == "ask" and DecisionChatService._should_attempt_analytics(user_message, dataset, semantic_model, session_state):
             mode = "explore"
+            mode_details = DecisionChatService._override_mode_details(
+                mode_details,
+                mode="explore",
+                reason_code="grounded_analytics_request",
+                reason=(
+                    "The message looks like a grounded analytical question against the active dataset, "
+                    "so explore mode was used."
+                ),
+            )
 
         artifacts: List[Dict[str, Any]] = []
         warnings: List[str] = []
@@ -115,27 +125,33 @@ class DecisionChatService:
                 },
             })
 
-        updated_state = {
-            **session_state,
-            "active_mode": mode,
-            "decision_prompt": session_state.get("decision_prompt") or user_message,
-            "available_actions": available_actions,
-        }
-        if analytic_state:
-            updated_state["last_analytic_context"] = analytic_state
-        if draft_workspace is not None:
-            updated_state["draft_workspace"] = draft_workspace
-            updated_state["missing_inputs"] = list((draft_workspace.get("readiness") or {}).get("missing_inputs") or [])
+        normalized_actions = DecisionChatService._normalize_available_actions(available_actions, mode=mode)
+        normalized_artifacts = DecisionChatService._annotate_artifacts(artifacts, mode=mode)
+        updated_state = DecisionChatService._build_session_state(
+            session_state=session_state,
+            mode=mode,
+            mode_details=mode_details,
+            user_message=user_message,
+            available_actions=normalized_actions,
+            analytic_state=analytic_state,
+            draft_workspace=draft_workspace,
+            grounding_summary=grounding_summary,
+        )
 
         return {
             "status": "success",
             "contract_version": DecisionChatService.CONTRACT_VERSION,
             "assistant_message": assistant_message,
             "mode": mode,
-            "suggested_actions": available_actions,
-            "artifacts": artifacts,
+            "mode_context": updated_state["mode_context"],
+            "action_state": updated_state["action_state"],
+            "suggested_actions": normalized_actions,
+            "artifacts": normalized_artifacts,
             "draft_workspace_preview": (
-                DecisionChatService._build_workspace_preview(draft_workspace)
+                DecisionChatService._annotate_artifacts(
+                    [DecisionChatService._build_workspace_preview(draft_workspace)],
+                    mode="decide",
+                )[0]
                 if draft_workspace is not None
                 else None
             ),
@@ -156,6 +172,11 @@ class DecisionChatService:
         artifacts: List[Dict[str, Any]] = []
         assistant_message = ""
         warnings: List[str] = []
+        mode_details = {
+            "mode": "decide",
+            "reason_code": "explicit_action",
+            "reason": "A decision action was invoked explicitly, so decide mode is active.",
+        }
 
         if action == "draft_workspace":
             prompt = str(payload.get("user_message") or session_state.get("decision_prompt") or "").strip()
@@ -253,20 +274,31 @@ class DecisionChatService:
         else:
             raise DecisionServiceError(f"Unsupported decision chat action: {action}")
 
-        updated_state = {
-            **session_state,
-            "active_mode": "decide",
-            "draft_workspace": workspace,
-            "available_actions": DecisionChatService._build_decision_actions(workspace) if workspace else [],
-            "missing_inputs": list((workspace.get("readiness") or {}).get("missing_inputs") or []) if workspace else [],
-        }
+        normalized_actions = DecisionChatService._normalize_available_actions(
+            DecisionChatService._build_decision_actions(workspace) if workspace else [],
+            mode="decide",
+        )
+        normalized_artifacts = DecisionChatService._annotate_artifacts(artifacts, mode="decide")
+        updated_state = DecisionChatService._build_session_state(
+            session_state=session_state,
+            mode="decide",
+            mode_details=mode_details,
+            user_message=str(payload.get("user_message") or session_state.get("decision_prompt") or "").strip(),
+            available_actions=normalized_actions,
+            analytic_state=DecisionChatService._normalize_analytic_state(session_state.get("last_analytic_context")),
+            draft_workspace=workspace,
+            grounding_summary=None,
+        )
 
         return {
             "status": "success",
             "contract_version": DecisionChatService.CONTRACT_VERSION,
             "action": action,
+            "mode": "decide",
+            "mode_context": updated_state["mode_context"],
+            "action_state": updated_state["action_state"],
             "assistant_message": assistant_message,
-            "artifacts": artifacts,
+            "artifacts": normalized_artifacts,
             "decision_workspace": workspace,
             "session_state": updated_state,
             "warnings": warnings,
@@ -274,7 +306,320 @@ class DecisionChatService:
 
     @staticmethod
     def _normalize_session_state(session_state: Any) -> Dict[str, Any]:
-        return session_state if isinstance(session_state, dict) else {}
+        raw_state = session_state if isinstance(session_state, dict) else {}
+        normalized_state = dict(raw_state)
+        active_mode = str(
+            normalized_state.get("active_mode")
+            or ((normalized_state.get("mode_context") or {}).get("current_mode") if isinstance(normalized_state.get("mode_context"), dict) else "")
+            or ""
+        ).strip().lower()
+        if active_mode in {"ask", "explore", "decide"}:
+            normalized_state["active_mode"] = active_mode
+
+        analytic_state = normalized_state.get("analytics_state")
+        if not isinstance(analytic_state, dict):
+            analytic_state = normalized_state.get("last_analytic_context")
+        analytic_state = DecisionChatService._normalize_analytic_state(analytic_state)
+        if analytic_state:
+            normalized_state["analytics_state"] = analytic_state
+            normalized_state["last_analytic_context"] = analytic_state
+
+        available_actions = normalized_state.get("available_actions")
+        if isinstance(available_actions, list):
+            normalized_state["available_actions"] = DecisionChatService._normalize_available_actions(
+                available_actions,
+                mode=normalized_state.get("active_mode") or "ask",
+            )
+
+        return normalized_state
+
+    @staticmethod
+    def _override_mode_details(
+        mode_details: Dict[str, Any],
+        *,
+        mode: str,
+        reason_code: str,
+        reason: str,
+    ) -> Dict[str, Any]:
+        updated = dict(mode_details or {})
+        updated["mode"] = mode
+        updated["reason_code"] = reason_code
+        updated["reason"] = reason
+        return updated
+
+    @staticmethod
+    def _build_session_state(
+        session_state: Dict[str, Any],
+        *,
+        mode: str,
+        mode_details: Dict[str, Any],
+        user_message: str,
+        available_actions: List[Dict[str, Any]],
+        analytic_state: Dict[str, Any] | None,
+        draft_workspace: Dict[str, Any] | None,
+        grounding_summary: Dict[str, Any] | None,
+    ) -> Dict[str, Any]:
+        previous_mode = str(session_state.get("active_mode") or "").strip().lower() or None
+        preserved_state = dict(session_state)
+        updated_state = {
+            **preserved_state,
+            "schema_version": "di_phase4_5_session_state_v1",
+            "active_mode": mode,
+            "decision_prompt": preserved_state.get("decision_prompt") or user_message,
+        }
+
+        if analytic_state:
+            updated_state["last_analytic_context"] = analytic_state
+            updated_state["analytics_state"] = analytic_state
+
+        if draft_workspace is not None:
+            updated_state["draft_workspace"] = draft_workspace
+        elif "draft_workspace" in updated_state:
+            updated_state["draft_workspace"] = updated_state.get("draft_workspace")
+
+        decision_state = DecisionChatService._build_decision_state(
+            draft_workspace if draft_workspace is not None else updated_state.get("draft_workspace")
+        )
+        updated_state["decision_state"] = decision_state
+        updated_state["missing_inputs"] = list(decision_state.get("missing_inputs") or [])
+        updated_state["available_actions"] = available_actions
+        updated_state["action_state"] = DecisionChatService._build_action_state(mode, available_actions)
+        updated_state["mode_context"] = DecisionChatService._build_mode_context(
+            mode=mode,
+            previous_mode=previous_mode,
+            mode_details=mode_details,
+        )
+        if grounding_summary is not None:
+            updated_state["context_summary"] = {
+                "has_dataset": bool((grounding_summary.get("dataset") or {}).get("row_count")),
+                "has_semantic_model": bool(
+                    (grounding_summary.get("semantic_model") or {}).get("metric_count")
+                    or (grounding_summary.get("semantic_model") or {}).get("dimension_count")
+                ),
+                "dataset": grounding_summary.get("dataset") or {},
+                "semantic_model": grounding_summary.get("semantic_model") or {},
+            }
+        return updated_state
+
+    @staticmethod
+    def _build_mode_context(
+        *,
+        mode: str,
+        previous_mode: str | None,
+        mode_details: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        return {
+            "current_mode": mode,
+            "current_mode_label": DecisionChatService._mode_label(mode),
+            "previous_mode": previous_mode,
+            "mode_changed": bool(previous_mode and previous_mode != mode),
+            "reason_code": str(mode_details.get("reason_code") or "unspecified"),
+            "reason": str(mode_details.get("reason") or "").strip(),
+            "available_modes": [
+                {"mode": "ask", "label": "Ask"},
+                {"mode": "explore", "label": "Explore"},
+                {"mode": "decide", "label": "Decide"},
+            ],
+        }
+
+    @staticmethod
+    def _build_action_state(mode: str, available_actions: List[Dict[str, Any]]) -> Dict[str, Any]:
+        enabled_actions = [
+            action for action in available_actions
+            if isinstance(action, dict) and action.get("enabled", True)
+        ]
+        primary_action = next(
+            (
+                action for action in enabled_actions
+                if str(action.get("priority") or "").strip().lower() == "primary"
+            ),
+            enabled_actions[0] if enabled_actions else None,
+        )
+        return {
+            "current_mode": mode,
+            "has_actions": bool(enabled_actions),
+            "available_action_ids": [
+                str(action.get("action_id") or "").strip()
+                for action in enabled_actions
+                if str(action.get("action_id") or "").strip()
+            ],
+            "primary_action_id": str(primary_action.get("action_id") or "").strip() if primary_action else None,
+            "empty_reason": (
+                None
+                if enabled_actions
+                else "No explicit backend tool actions are available for the current state yet."
+            ),
+            "available_actions": available_actions,
+        }
+
+    @staticmethod
+    def _build_decision_state(workspace: Any) -> Dict[str, Any]:
+        if not isinstance(workspace, dict) or not workspace:
+            return {
+                "has_draft_workspace": False,
+                "workspace_id": None,
+                "workspace_status": None,
+                "objective_draft": None,
+                "lever_count": 0,
+                "constraint_count": 0,
+                "missing_inputs": [],
+                "blocker_count": 0,
+                "can_open_workspace": False,
+                "can_analyze_workspace": False,
+                "can_run_simulation": False,
+            }
+
+        preview = DecisionChatService._build_workspace_preview(workspace)
+        readiness = workspace.get("readiness") if isinstance(workspace.get("readiness"), dict) else {}
+        blockers = [
+            item for item in (workspace.get("unknowns") or [])
+            if isinstance(item, dict) and item.get("blocks_simulation")
+        ]
+        return {
+            "has_draft_workspace": True,
+            "workspace_id": workspace.get("workspace_id"),
+            "workspace_status": workspace.get("status"),
+            "objective_draft": preview.get("objective"),
+            "lever_count": preview.get("lever_count") or 0,
+            "constraint_count": preview.get("constraint_count") or 0,
+            "missing_inputs": list(preview.get("missing_inputs") or []),
+            "blocker_count": len(blockers),
+            "can_open_workspace": True,
+            "can_analyze_workspace": True,
+            "can_run_simulation": bool(readiness.get("can_run_simulation")),
+        }
+
+    @staticmethod
+    def _normalize_available_actions(actions: Any, mode: str) -> List[Dict[str, Any]]:
+        if not isinstance(actions, list):
+            return []
+
+        normalized_actions: List[Dict[str, Any]] = []
+        for raw_action in actions:
+            if not isinstance(raw_action, dict):
+                continue
+            action_id = str(raw_action.get("action_id") or "").strip()
+            if not action_id:
+                continue
+            normalized_actions.append({
+                "action_id": action_id,
+                "label": str(raw_action.get("label") or action_id.replace("_", " ").title()).strip(),
+                "description": str(raw_action.get("description") or "").strip() or None,
+                "mode": str(raw_action.get("mode") or mode).strip().lower() or mode,
+                "kind": str(raw_action.get("kind") or "tool").strip().lower() or "tool",
+                "priority": str(raw_action.get("priority") or "secondary").strip().lower() or "secondary",
+                "enabled": bool(raw_action.get("enabled", True)),
+                "availability_reason": str(raw_action.get("availability_reason") or "").strip() or None,
+            })
+        return normalized_actions
+
+    @staticmethod
+    def _build_action(
+        *,
+        action_id: str,
+        label: str,
+        description: str,
+        mode: str,
+        priority: str = "secondary",
+        enabled: bool = True,
+        kind: str = "decision_tool",
+        availability_reason: str | None = None,
+    ) -> Dict[str, Any]:
+        return {
+            "action_id": action_id,
+            "label": label,
+            "description": description,
+            "mode": mode,
+            "kind": kind,
+            "priority": priority,
+            "enabled": enabled,
+            "availability_reason": availability_reason,
+        }
+
+    @staticmethod
+    def _annotate_artifacts(artifacts: List[Dict[str, Any]], mode: str) -> List[Dict[str, Any]]:
+        annotated: List[Dict[str, Any]] = []
+        for index, artifact in enumerate(artifacts):
+            if not isinstance(artifact, dict):
+                continue
+            defaults = DecisionChatService._artifact_defaults(str(artifact.get("type") or "").strip().lower())
+            source = DecisionChatService._infer_artifact_source(artifact)
+            annotated.append({
+                **artifact,
+                "artifact_id": str(artifact.get("artifact_id") or f"artifact_{mode}_{index + 1}_{artifact.get('type') or 'unknown'}"),
+                "render_hint": str(artifact.get("render_hint") or defaults["render_hint"]),
+                "inspectable": bool(artifact.get("inspectable", defaults["inspectable"])),
+                "default_view": str(artifact.get("default_view") or defaults["default_view"]),
+                "source": str(artifact.get("source") or source),
+                "mode": str(artifact.get("mode") or mode),
+                "schema_version": str(artifact.get("schema_version") or "di_phase4_5_artifact_v1"),
+            })
+        return annotated
+
+    @staticmethod
+    def _artifact_defaults(artifact_type: str) -> Dict[str, Any]:
+        defaults = {
+            "answer": {
+                "render_hint": "answer",
+                "inspectable": False,
+                "default_view": "inline",
+            },
+            "chart": {
+                "render_hint": "chart",
+                "inspectable": True,
+                "default_view": "inspector",
+            },
+            "workspace_preview": {
+                "render_hint": "workspace_preview",
+                "inspectable": True,
+                "default_view": "inline_and_inspector",
+            },
+            "workspace_analysis_summary": {
+                "render_hint": "workspace_analysis_summary",
+                "inspectable": True,
+                "default_view": "inspector",
+            },
+            "coming_soon": {
+                "render_hint": "coming_soon",
+                "inspectable": False,
+                "default_view": "inline",
+            },
+        }
+        return defaults.get(
+            artifact_type,
+            {
+                "render_hint": artifact_type or "unknown",
+                "inspectable": False,
+                "default_view": "inline",
+            },
+        )
+
+    @staticmethod
+    def _infer_artifact_source(artifact: Dict[str, Any]) -> str:
+        artifact_type = str(artifact.get("type") or "").strip().lower()
+        content = artifact.get("content") if isinstance(artifact.get("content"), dict) else {}
+        if artifact_type == "chart":
+            return str((content.get("meta") or {}).get("source") or "chart_engine")
+        if artifact_type == "workspace_preview":
+            return "decision_workspace"
+        if artifact_type == "workspace_analysis_summary":
+            return "workspace_analysis"
+        if artifact_type == "answer":
+            if content.get("metric"):
+                return "semantic_metric"
+            if content.get("fieldsUsed"):
+                return "raw_nlp"
+            return "grounding"
+        return "decision_chat"
+
+    @staticmethod
+    def _mode_label(mode: str) -> str:
+        labels = {
+            "ask": "Ask",
+            "explore": "Explore",
+            "decide": "Decide",
+        }
+        return labels.get(mode, mode.title() if mode else "Ask")
 
     @staticmethod
     def _extract_workspace(payload: Dict[str, Any], session_state: Dict[str, Any]) -> Dict[str, Any] | None:
@@ -799,10 +1144,46 @@ class DecisionChatService:
     def _build_decision_actions(workspace: Dict[str, Any] | None) -> List[Dict[str, Any]]:
         if not isinstance(workspace, dict) or not workspace:
             return []
+        missing_inputs = list((workspace.get("readiness") or {}).get("missing_inputs") or [])
         return [
-            {"action_id": "draft_workspace", "label": "Draft workspace", "enabled": True},
-            {"action_id": "show_assumptions", "label": "Show assumptions", "enabled": True},
-            {"action_id": "show_blockers", "label": "Show blockers", "enabled": True},
-            {"action_id": "analyze_workspace", "label": "Analyze workspace", "enabled": True},
-            {"action_id": "open_workspace", "label": "Open workspace", "enabled": True},
+            DecisionChatService._build_action(
+                action_id="draft_workspace",
+                label="Refresh workspace draft",
+                description="Rebuild the workspace preview from the current chat decision state.",
+                mode="decide",
+                priority="secondary",
+            ),
+            DecisionChatService._build_action(
+                action_id="show_assumptions",
+                label="Show assumptions",
+                description="Inspect the current assumptions being carried by the draft workspace.",
+                mode="decide",
+                priority="secondary",
+            ),
+            DecisionChatService._build_action(
+                action_id="show_blockers",
+                label="Show blockers",
+                description="See the missing inputs or structural gaps that still limit deeper execution.",
+                mode="decide",
+                priority="secondary",
+                availability_reason=(
+                    f"{len(missing_inputs)} missing input(s) are currently tracked."
+                    if missing_inputs
+                    else "No explicit missing inputs are currently tracked."
+                ),
+            ),
+            DecisionChatService._build_action(
+                action_id="analyze_workspace",
+                label="Analyze workspace",
+                description="Run observational analysis against the current scoped workspace draft.",
+                mode="decide",
+                priority="secondary",
+            ),
+            DecisionChatService._build_action(
+                action_id="open_workspace",
+                label="Open workspace",
+                description="Open the structured Decisions workspace and continue from this draft.",
+                mode="decide",
+                priority="primary",
+            ),
         ]
