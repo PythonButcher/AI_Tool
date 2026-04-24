@@ -58,23 +58,22 @@ The backend now supports:
 - Phase 3.6 current-intake hardening so prompts with a goal, multiple levers, and a guardrail are split into separate drafting clauses before objective/lever/constraint selection
 - `POST /api/decision/workspaces/analyze` for workspace-native observational diagnostics
 
-Immediate cleanup handoff:
+Historical cleanup handoff:
 
-- `ai_handoff/ui_overhaul/decision_intelligence_v3_gemini_handoff_01_workspace_analysis_continuation.md`
+- `project_docs/archive/ai_handoff_legacy/ui_overhaul/decision_intelligence_v3_gemini_handoff_01_workspace_analysis_continuation.md`
 
-For the current Gemini task, stop there.
+That cleanup slice is now archive material, not the default resume point.
 
-Do not mix the cleanup handoff with later Phase 4 work in the same execution prompt.
+Active Phase 4 and Phase 4.5 planning files:
 
-Separate Phase 4 planning files:
-
-- `ai_handoff/ui_overhaul/decision_intelligence_v3_gemini_handoff_02_chat_decision_bridge.md`
-- `ai_handoff/phase_docs/decision_intelligence_v3_phase_4_chat_engine_execution_plan.md`
+- `project_docs/active/decision_intelligence/decision_intelligence_v3_gemini_handoff_02_chat_decision_bridge.md`
+- `project_docs/active/decision_intelligence/decision_intelligence_v3_phase_4_chat_engine_execution_plan.md`
+- `project_docs/active/decision_intelligence/phase_4_5_ai_chat_decision_intelligence_plan.md`
 
 Required pre-Phase-4 plan:
 
-- `ai_handoff/ui_overhaul/phase_3_5_decision_intake_rework.md`
-- `ai_handoff/ui_overhaul/decision_intelligence_v3_gemini_handoff_03_phase_3_5_prompt_first_intake.md`
+- `project_docs/active/decision_intelligence/phase_3_5_decision_intake_rework.md`
+- `project_docs/active/decision_intelligence/decision_intelligence_v3_gemini_handoff_03_phase_3_5_prompt_first_intake.md`
 
 Important truth rule:
 
@@ -86,8 +85,8 @@ Important truth rule:
 
 The current immediate product priority is:
 
-1. complete the workspace-analysis cleanup if anything is still open
-2. keep hardening the Decision Intelligence intake under V3 Phase 3.6 until prompt-first drafting is reliable on real prompts
+1. keep hardening the Decision Intelligence intake under V3 Phase 3.6 until prompt-first drafting is reliable on real prompts
+2. execute Phase 4.5 so AI chat becomes a trustworthy decision front door instead of a partially connected shell
 
 The intake path still matters more than moving straight into chat.
 
@@ -100,7 +99,7 @@ Current Phase 3.6 truth:
   - lever candidates: `Discount Rate`, `Marketing Spend`, `Region mix`
   - guardrail: `Gross Margin %`
 
-Phase 4 chat-first work is important, but it should be started in a separate step with a separate prompt.
+Phase 4.5 is the next structured step after that hardening work. It should improve chat mode clarity, action reliability, workspace handoff quality, and honest decision-context rendering without pretending simulation exists.
 
 ## Rules For Codex
 
@@ -151,10 +150,12 @@ If a V2 doc conflicts with this file, this file wins.
 
 Read in this order:
 
-1. `ai_handoff/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md`
-2. `ai_handoff/ui_overhaul/ui_overhaul_execution_status.md`
-3. `ai_handoff/ui_overhaul/decision_intelligence_v3_resume_handoff.md`
-4. the relevant historical V2 handoff or contract docs needed for the specific task
+1. `project_docs/INDEX.md`
+2. `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md`
+3. `project_docs/active/status/decision_intelligence_execution_status.md`
+4. `project_docs/active/decision_intelligence/decision_intelligence_v3_resume_handoff.md`
+5. the relevant active phase or handoff docs for the task
+6. archive docs only if active docs explicitly point to them or historical context is required
 
 ## One-Line Project Truth
 
