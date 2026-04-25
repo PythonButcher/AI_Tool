@@ -123,23 +123,35 @@ function ChartComponentAI({ normalizedChartType = 'Bar', aiChartData, onExportPd
   const renderType = resolvedChartType === 'Histogram' ? 'Bar' : resolvedChartType;
 
   return (
-    <div style={{ width: "80%", height: "80%", margin: "auto", position: "relative" }}>
+    <div
+      style={{
+        width: "100%",
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
+        position: "relative",
+        boxSizing: "border-box",
+        overflow: "hidden"
+      }}
+    >
       <ChartToolbar chartRef={chartRef} onExportPdf={onExportPdf} />
-      {renderType === "Bar" && (
-        <Bar ref={chartRef} data={aiChartData} options={resolvedOptions} />
-      )}
-      {renderType === "Line" && (
-        <Line ref={chartRef} data={aiChartData} options={resolvedOptions} />
-      )}
-      {renderType === "Pie" && (
-        <Pie ref={chartRef} data={aiChartData} options={resolvedOptions} />
-      )}
-      {renderType === "Doughnut" && (
-        <Doughnut ref={chartRef} data={aiChartData} options={resolvedOptions} />
-      )}
-      {renderType === "Scatter" && (
-        <Scatter ref={chartRef} data={aiChartData} options={resolvedOptions} />
-      )}
+      <div style={{ flex: 1, minHeight: 0, position: "relative" }}>
+        {renderType === "Bar" && (
+          <Bar ref={chartRef} data={aiChartData} options={resolvedOptions} />
+        )}
+        {renderType === "Line" && (
+          <Line ref={chartRef} data={aiChartData} options={resolvedOptions} />
+        )}
+        {renderType === "Pie" && (
+          <Pie ref={chartRef} data={aiChartData} options={resolvedOptions} />
+        )}
+        {renderType === "Doughnut" && (
+          <Doughnut ref={chartRef} data={aiChartData} options={resolvedOptions} />
+        )}
+        {renderType === "Scatter" && (
+          <Scatter ref={chartRef} data={aiChartData} options={resolvedOptions} />
+        )}
+      </div>
     </div>
   );
 }

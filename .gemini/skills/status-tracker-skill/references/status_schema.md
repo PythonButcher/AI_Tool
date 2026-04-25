@@ -1,6 +1,6 @@
 # Status Tracker Schema & Conventions
 
-This reference defines the expected format for status updates in `ai_handoff/ui_overhaul/ui_overhaul_execution_status.md`.
+This reference defines the expected format for status updates in `project_docs/active/status/decision_intelligence_execution_status.md`.
 
 ## Status Labels
 

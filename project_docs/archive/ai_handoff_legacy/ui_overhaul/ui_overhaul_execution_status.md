@@ -228,7 +228,12 @@ Frontend follow-up after Codex:
     - [~] Legible support for `Ask`, `Explore`, and `Decide` modes is partially visible, but current UI hardening is still required so mode selection is not cosmetic-only.
     - [ ] Remove frontend routing that lets chart-like prompts bypass the Phase 4 chat contract path.
     - [ ] Improve `answer` artifact rendering so structured backend responses do not fall back to raw serialized object output.
-    - [ ] Redo the right pane so it becomes a true results pane rather than a sidebar with a small active-result module.
+    - [x] Redo the right pane so it becomes a true results pane rather than a sidebar with a small active-result module.
+    - [x] Resolve result duplication so simple answers do not feel mirrored across both panes.
+    - [x] Rework artifact focus so the right pane behaves like a true inspector instead of only mirroring the most recent artifact.
+    - [x] Stabilize AI chart rendering so chart outputs remain bounded and do not vertically break the workspace.
+    - Immediate focused Gemini handoff:
+      - `ai_handoff/ui_overhaul/decision_intelligence_v3_gemini_handoff_05_result_pane_and_chart_stability.md`
 - move to V3 planning and execution instead of continuing V2 completion language
 - **DI V3: Workspace Analysis Wiring (COMPLETE)**:
     - [x] Frontend call to `POST /api/decision/workspaces/analyze`.
@@ -283,6 +288,11 @@ The live frontend already has:
         - **Database Form**: Transformed into a technical 2-column grid layout for complex configurations.
     - **AI Chat "Once Over"**: Neutralized the robot icon and user message bubbles from bright blue to a cohesive dark neutral theme.
     - **Decision Intelligence Opening Polish**: Neutralized the Decision Intelligence setup guidance window (icons, badges, and prompt boxes) from bright blue to the premium neutral aesthetic, ensuring a consistent high-contrast professional look upon entry.
+- **AI Workspace Result Pane and Chart Stability (COMPLETE)**:
+    - **Separated Conversation and Inspection**: Left pane now clearly owns the conversation, while the right pane acts as a dedicated inspector for rich artifacts.
+    - **Eliminated Result Duplication**: Simple grounded answers stay in-thread; rich artifacts generate compact previews that focus in the inspector on click.
+    - **Hard-Bound AI Chart Rendering**: Implemented a disciplined flex-column bounding pattern in `ChartComponentAI.jsx` and `AIShell.css` to prevent vertical runaway growth.
+    - **Intentional Inspection Flow**: The right pane no longer automatically mirrors every message; it now focuses intentionally on genuinely inspectable outputs (Charts, Workspace Previews, Analysis Summaries).
 
 The live frontend does **not** yet have:
 

@@ -193,12 +193,38 @@
   justify-content: center;
 }
 
+.ai-shell__mode-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
 .ai-shell__mode-group {
   display: flex;
   background-color: var(--bg-secondary);
   padding: 4px;
   border-radius: 10px;
   border: 1px solid var(--border-color);
+}
+
+.ai-shell__mode-reason {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary);
+  opacity: 0.8;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.ai-shell__mode-reason-icon {
+  font-size: 0.7rem;
+  color: var(--text-primary);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 0.8; transform: translateY(0); }
 }
 
 .ai-shell__mode-btn {
@@ -408,12 +434,13 @@
 
 /* The Main Result Viewer Region */
 .ai-shell__result-viewer {
-  min-height: 55vh;
+  flex: 1;
+  min-height: 0; /* CRITICAL for flex bounding */
   padding: 32px;
   background-color: var(--bg-primary);
-  border-bottom: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
+  overflow: hidden; /* Prevent runaway growth */
 }
 
 .ai-shell__viewer-label {
@@ -426,110 +453,125 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-shrink: 0;
 }
 
-.ai-shell__viewer-label svg {
-  opacity: 0.5;
-}
-
-/* Empty State for Viewer */
-.ai-shell__viewer-empty {
+.ai-shell__active-artifact {
   flex: 1;
   display: flex;
   flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.ai-shell__active-artifact.is-chart .ai-shell__artifact-content {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* High Fidelity Artifact Preview Links (In-Thread Pointers) */
+.ai-shell__artifact-preview-link {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin-top: 12px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  max-width: 400px;
+}
+
+.ai-shell__artifact-preview-link:hover {
+  background-color: var(--bg-tertiary);
+  border-color: var(--text-secondary);
+  transform: translateX(4px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.ai-shell__preview-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background-color: var(--bg-primary);
+  display: flex;
   align-items: center;
   justify-content: center;
-  text-align: center;
-  color: var(--text-secondary);
-  border: 2px dashed var(--border-color);
-  background-color: var(--bg-secondary);
-  border-radius: 16px;
-  margin-top: 10px;
-  padding: 40px;
+  font-size: 1.1rem;
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
 }
 
-.ai-shell__viewer-empty-icon {
-  font-size: 2.5rem;
-  margin-bottom: 16px;
+.ai-shell__preview-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.ai-shell__preview-type {
+  font-size: 0.6rem !important;
+  font-weight: 900 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.1em !important;
+  color: var(--text-secondary);
+  opacity: 0.6;
+}
+
+.ai-shell__preview-title {
+  font-weight: 700 !important;
+  font-size: 0.85rem !important;
+  color: var(--text-primary);
+}
+
+.ai-shell__preview-action {
+  color: var(--text-secondary);
   opacity: 0.5;
+  font-size: 0.8rem !important;
 }
 
-/* Secondary Context modules */
-.ai-shell__secondary-content {
-  padding: 32px;
-  display: flex;
-  flex-direction: column;
-  gap: 40px;
-  background-color: var(--bg-primary);
+.ai-shell__artifact-preview-link:hover .ai-shell__preview-action {
+  opacity: 1;
+  color: var(--text-primary);
 }
 
-.ai-shell__ghost-item {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.ai-shell__ghost-label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.7rem;
-  font-weight: 900;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
-.ai-shell__ghost-box, 
-.ai-shell__ghost-placeholder, 
-.ai-shell__ghost-draft {
-  background-color: var(--bg-primary);
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
-  padding: 20px;
-}
-
-/* Decision Context placeholders */
-.ai-shell__context-module {
-  background-color: var(--bg-primary);
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
-  padding: 16px;
-}
-
-.ai-shell__module-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 12px;
-}
-
-.ai-shell__module-title {
-  font-size: 0.65rem;
-  font-weight: 900;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--text-secondary);
-}
-
-.ai-shell__coming-soon {
-  font-size: 0.55rem;
-  font-weight: 900;
-  background-color: var(--bg-tertiary);
-  color: var(--text-secondary);
-  padding: 2px 8px;
-  border-radius: 4px;
-  text-transform: uppercase;
-}
-
-/* High Fidelity Artifact Cards (In-Thread) */
-.ai-shell__artifact-card {
+/* Full Artifact Containers (Inspector Only) */
+.ai-shell__artifact-preview-card {
   background-color: var(--bg-primary);
   border: 1px solid var(--border-color);
   border-radius: 12px;
   overflow: hidden;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   margin-top: 16px;
+  width: 100%;
+}
+
+.ai-shell__active-artifact {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto; /* Allow internal scrolling if content is huge */
+}
+
+/* Analysis List Details (Inspector Version) */
+.ai-shell__analysis-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.ai-shell__analysis-item {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  padding: 12px;
+  background-color: var(--bg-secondary);
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
 }
 
 .ai-shell__artifact-header {
@@ -642,4 +684,22 @@
   color: var(--bg-primary);
   border-color: var(--text-primary);
   transform: translateY(-1px);
+}
+
+.ai-shell__action-btn.is-primary {
+  background-color: var(--text-primary);
+  color: var(--bg-primary);
+  border-color: var(--text-primary);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.ai-shell__action-btn.is-primary:hover:not(:disabled) {
+  filter: brightness(1.2);
+  transform: translateY(-1px);
+}
+
+.ai-shell__action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  filter: grayscale(1);
 }

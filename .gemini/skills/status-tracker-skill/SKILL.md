@@ -1,11 +1,11 @@
 ---
 name: status-tracker-skill
-description: Automatically updates the project execution status in ai_handoff/ui_overhaul/ui_overhaul_execution_status.md. Use this skill immediately after completing a phase, task, or bug fix to fulfill mandatory reporting requirements.
+description: Automatically updates the project execution status in project_docs/active/status/decision_intelligence_execution_status.md. Use this skill immediately after completing a phase, task, or bug fix to fulfill mandatory reporting requirements.
 ---
 
 # Project Execution Tracker
 
-This skill automates the mandatory reporting requirements defined in `GEMINI.md`. It ensures that the `ui_overhaul_execution_status.md` file accurately reflects the current state of implementation.
+This skill automates the mandatory reporting requirements defined in `GEMINI.md`. It ensures that the `decision_intelligence_execution_status.md` file accurately reflects the current state of implementation.
 
 ## Mandatory Workflow
 
