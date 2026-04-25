@@ -55,7 +55,11 @@ class DecisionChatService:
         grounding_summary = build_grounding_summary(dataset, semantic_model)
         mode_details = detect_chat_mode_details(user_message, session_state)
         mode = mode_details["mode"]
-        if mode == "ask" and DecisionChatService._should_attempt_analytics(user_message, dataset, semantic_model, session_state):
+        if (
+            mode != "explore"
+            and mode_details.get("reason_code") in {"default_question", "continue_active_mode"}
+            and DecisionChatService._should_attempt_analytics(user_message, dataset, semantic_model, session_state)
+        ):
             mode = "explore"
             mode_details = DecisionChatService._override_mode_details(
                 mode_details,
@@ -106,13 +110,45 @@ class DecisionChatService:
                     },
                 })
 
-        # Decision prompts reuse the prompt-first workspace draft rather than inventing new logic.
+        # Decision prompts reuse the prompt-first workspace service. Textual
+        # follow-up commands execute the same backend actions as explicit chips.
         elif mode == "decide":
-            if draft_workspace is None:
+            text_action = DecisionChatService._detect_decision_text_action(user_message)
+            if text_action and draft_workspace is not None:
+                action_result = DecisionChatService._execute_decision_action(
+                    action=text_action,
+                    payload=payload,
+                    session_state=session_state,
+                    workspace=draft_workspace,
+                    user_message=user_message,
+                )
+                artifacts.extend(action_result["artifacts"])
+                assistant_message = action_result["assistant_message"]
+                warnings = list(action_result.get("warnings") or [])
+                draft_workspace = action_result["workspace"]
+            elif text_action and draft_workspace is None:
+                assistant_message = "Frame a decision first, then I can show blockers, assumptions, or workspace analysis."
+                artifacts.append({
+                    "type": "answer",
+                    "title": "Decision action needs a draft",
+                    "content": {
+                        "message": assistant_message,
+                    },
+                })
+            elif DecisionChatService._should_rebuild_decision_workspace(
+                payload=payload,
+                session_state=session_state,
+                user_message=user_message,
+                mode_details=mode_details,
+                draft_workspace=draft_workspace,
+            ):
                 draft_workspace = DecisionChatService._create_draft_workspace(payload, user_message)
-            preview = DecisionChatService._build_workspace_preview(draft_workspace)
-            artifacts.append(preview)
-            assistant_message = DecisionChatService._build_workspace_preview_message(draft_workspace)
+            elif draft_workspace is None:
+                draft_workspace = DecisionChatService._create_draft_workspace(payload, user_message)
+            if draft_workspace is not None and not artifacts:
+                preview = DecisionChatService._build_workspace_preview(draft_workspace)
+                artifacts.append(preview)
+                assistant_message = DecisionChatService._build_workspace_preview_message(draft_workspace)
             available_actions = DecisionChatService._build_decision_actions(draft_workspace)
 
         else:
@@ -184,6 +220,12 @@ class DecisionChatService:
                 if not prompt:
                     raise DecisionServiceError("A decision prompt is required before a workspace can be drafted.")
                 workspace = DecisionChatService._create_draft_workspace(payload, prompt)
+            elif (
+                prompt
+                and DecisionWorkspaceService._normalize_phrase(prompt)
+                != DecisionWorkspaceService._normalize_phrase(workspace.get("decision_prompt"))
+            ):
+                workspace = DecisionChatService._create_draft_workspace(payload, prompt)
             artifacts.append(DecisionChatService._build_workspace_preview(workspace))
             assistant_message = DecisionChatService._build_workspace_preview_message(workspace)
 
@@ -250,6 +292,7 @@ class DecisionChatService:
                 "title": "Workspace analysis",
                 "content": {
                     "summary": analysis_summary,
+                    "truthfulness_note": workspace_analysis.get("truthfulness_note"),
                     "scoped_diagnostics": workspace_analysis.get("scoped_diagnostics") or [],
                     "legacy_diagnostics": workspace_analysis.get("legacy_diagnostics") or {},
                 },
@@ -361,11 +404,14 @@ class DecisionChatService:
     ) -> Dict[str, Any]:
         previous_mode = str(session_state.get("active_mode") or "").strip().lower() or None
         preserved_state = dict(session_state)
+        active_decision_prompt = ""
+        if isinstance(draft_workspace, dict):
+            active_decision_prompt = str(draft_workspace.get("decision_prompt") or "").strip()
         updated_state = {
             **preserved_state,
             "schema_version": "di_phase4_5_session_state_v1",
             "active_mode": mode,
-            "decision_prompt": preserved_state.get("decision_prompt") or user_message,
+            "decision_prompt": active_decision_prompt or preserved_state.get("decision_prompt") or user_message,
         }
 
         if analytic_state:
@@ -628,6 +674,164 @@ class DecisionChatService:
             return workspace
         workspace = session_state.get("draft_workspace")
         return workspace if isinstance(workspace, dict) else None
+
+    @staticmethod
+    def _should_rebuild_decision_workspace(
+        *,
+        payload: Dict[str, Any],
+        session_state: Dict[str, Any],
+        user_message: str,
+        mode_details: Dict[str, Any],
+        draft_workspace: Dict[str, Any] | None,
+    ) -> bool:
+        """Detect when a new decision question should replace stale chat draft state."""
+        if (mode_details or {}).get("reason_code") != "decision_request":
+            return False
+        if isinstance(payload.get("decision_workspace") or payload.get("decisionWorkspace"), dict):
+            return False
+
+        normalized_message = DecisionWorkspaceService._normalize_phrase(user_message)
+        if not normalized_message:
+            return False
+
+        existing_prompt = ""
+        if isinstance(draft_workspace, dict):
+            existing_prompt = str(draft_workspace.get("decision_prompt") or "").strip()
+        if not existing_prompt:
+            existing_prompt = str(session_state.get("decision_prompt") or "").strip()
+        normalized_existing = DecisionWorkspaceService._normalize_phrase(existing_prompt)
+
+        return bool(not normalized_existing or normalized_existing != normalized_message)
+
+    @staticmethod
+    def _detect_decision_text_action(user_message: str) -> str | None:
+        """Map plain chat follow-ups to deterministic decision backend actions."""
+        normalized = DecisionChatService._normalize_text(user_message)
+        if not normalized:
+            return None
+        if "analyze workspace" in normalized or "analyse workspace" in normalized:
+            return "analyze_workspace"
+        if "open workspace" in normalized:
+            return "open_workspace"
+        if "assumption" in normalized:
+            return "show_assumptions"
+        if "blocker" in normalized or "missing input" in normalized or "what is missing" in normalized:
+            return "show_blockers"
+        if "draft workspace" in normalized or "refresh workspace" in normalized:
+            return "draft_workspace"
+        return None
+
+    @staticmethod
+    def _execute_decision_action(
+        *,
+        action: str,
+        payload: Dict[str, Any],
+        session_state: Dict[str, Any],
+        workspace: Dict[str, Any],
+        user_message: str,
+    ) -> Dict[str, Any]:
+        """Execute decision actions for both explicit action calls and typed chat follow-ups."""
+        artifacts: List[Dict[str, Any]] = []
+        warnings: List[str] = []
+        assistant_message = ""
+
+        if action == "draft_workspace":
+            prompt = str(user_message or session_state.get("decision_prompt") or "").strip()
+            if (
+                prompt
+                and DecisionWorkspaceService._normalize_phrase(prompt)
+                != DecisionWorkspaceService._normalize_phrase(workspace.get("decision_prompt"))
+            ):
+                workspace = DecisionChatService._create_draft_workspace(payload, prompt)
+            artifacts.append(DecisionChatService._build_workspace_preview(workspace))
+            assistant_message = DecisionChatService._build_workspace_preview_message(workspace)
+
+        elif action == "show_assumptions":
+            assumptions = list(workspace.get("assumptions") or [])
+            artifacts.append({
+                "type": "workspace_analysis_summary",
+                "title": "Current assumptions",
+                "content": {
+                    "items": assumptions,
+                    "count": len(assumptions),
+                },
+            })
+            assistant_message = (
+                "These are the current assumptions in the decision draft."
+                if assumptions
+                else "The current draft does not yet have explicit assumptions."
+            )
+
+        elif action == "show_blockers":
+            blockers = [
+                item for item in (workspace.get("unknowns") or [])
+                if isinstance(item, dict) and item.get("blocks_simulation")
+            ]
+            artifacts.append({
+                "type": "workspace_analysis_summary",
+                "title": "Current blockers",
+                "content": {
+                    "items": blockers,
+                    "missing_inputs": list((workspace.get("readiness") or {}).get("missing_inputs") or []),
+                    "count": len(blockers),
+                },
+            })
+            assistant_message = (
+                "These gaps currently block deeper decision execution."
+                if blockers
+                else "The current draft does not show blocking gaps."
+            )
+
+        elif action == "analyze_workspace":
+            analysis_payload = {
+                "dataset": payload.get("dataset"),
+                "dataset_ref": payload.get("dataset_ref") or payload.get("datasetRef"),
+                "semantic_model": payload.get("semantic_model") or payload.get("semanticModel"),
+                "decision_workspace": workspace,
+                "analysis_preferences": payload.get("analysis_preferences") or {},
+            }
+            analysis_result = DecisionWorkspaceService.analyze_workspace(analysis_payload)
+            workspace_analysis = analysis_result.get("workspace_analysis") or {}
+            analysis_summary = workspace_analysis.get("summary")
+            summary_headline = (
+                analysis_summary.get("headline")
+                if isinstance(analysis_summary, dict)
+                else str(analysis_summary or "").strip()
+            )
+            artifacts.append({
+                "type": "workspace_analysis_summary",
+                "title": "Workspace analysis",
+                "content": {
+                    "summary": analysis_summary,
+                    "truthfulness_note": workspace_analysis.get("truthfulness_note"),
+                    "scoped_diagnostics": workspace_analysis.get("scoped_diagnostics") or [],
+                    "legacy_diagnostics": workspace_analysis.get("legacy_diagnostics") or {},
+                },
+            })
+            assistant_message = summary_headline or "Workspace analysis completed using the current scoped draft."
+            warnings = list(analysis_result.get("warnings") or [])
+
+        elif action == "open_workspace":
+            artifacts.append({
+                "type": "workspace_preview",
+                "title": "Open workspace handoff",
+                "content": DecisionChatService._build_workspace_preview(workspace),
+                "handoff": {
+                    "target": "decisions",
+                    "workspace_id": workspace.get("workspace_id"),
+                },
+            })
+            assistant_message = "Open this draft in the Decisions destination to continue structured work."
+
+        else:
+            raise DecisionServiceError(f"Unsupported decision chat action: {action}")
+
+        return {
+            "artifacts": artifacts,
+            "assistant_message": assistant_message,
+            "workspace": workspace,
+            "warnings": warnings,
+        }
 
     @staticmethod
     def _create_draft_workspace(payload: Dict[str, Any], user_message: str) -> Dict[str, Any]:
@@ -893,7 +1097,20 @@ class DecisionChatService:
     def _should_return_chart(user_message: str, analytic_state: Dict[str, Any]) -> bool:
         if is_visualization_request(user_message):
             return True
-        return analytic_state.get("output_preference") == "chart"
+        return (
+            analytic_state.get("output_preference") == "chart"
+            and DecisionChatService._is_terse_analytic_follow_up(user_message)
+        )
+
+    @staticmethod
+    def _is_terse_analytic_follow_up(user_message: str) -> bool:
+        normalized = DecisionChatService._normalize_text(user_message)
+        if not normalized:
+            return False
+        if any(phrase in normalized for phrase in ("what is", "what are", "how much", "how many", "total", "average")):
+            return False
+        tokens = normalized.split()
+        return len(tokens) <= 5 or any(token in tokens for token in ("instead", "same", "again"))
 
     @staticmethod
     def _build_metric_chart_artifact(metric_result: Dict[str, Any]) -> Dict[str, Any]:
@@ -1124,6 +1341,7 @@ class DecisionChatService:
             "lever_count": len(levers),
             "constraint_count": len(constraints),
             "missing_inputs": list(readiness.get("missing_inputs") or []),
+            "clarification_hints": list(((workspace.get("drafting") or {}).get("clarification_hints")) or []),
             "unknown_count": len(workspace.get("unknowns") or []),
         }
 
@@ -1133,10 +1351,13 @@ class DecisionChatService:
         objective = preview.get("objective") or {}
         objective_label = objective.get("statement") or "this decision"
         missing_inputs = preview.get("missing_inputs") or []
+        clarification_hints = preview.get("clarification_hints") or []
         if missing_inputs:
+            clarification = f" Next question: {clarification_hints[0]}" if clarification_hints else ""
             return (
                 f"I drafted a workspace for {objective_label}. "
                 f"It still needs {len(missing_inputs)} missing input(s) before deeper execution."
+                f"{clarification}"
             )
         return f"I drafted a scoped workspace for {objective_label}. You can inspect it or open it in Decisions."
 

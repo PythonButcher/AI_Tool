@@ -77,17 +77,20 @@ Truth:
 
 Status:
 
-- **SLICE 1 COMPLETE; SLICE 2 PREPARATION ACTIVE**
+- **SLICE 1 COMPLETE; SLICE 2 BACKEND REWORK COMPLETE**
 
 Truth:
 
 - this is the current product-improvement phase
 - Slice 1 (Frontend Fidelity) is complete: mode legibility, action priority/tooltips, and metadata-driven artifact rendering are live and contract-aligned.
-- the work is now moving toward Slice 2 (Decision Framing and Prompt Reliability)
+- Slice 2 backend rework is complete based on live chat testing: new full decision prompts now replace stale draft workspaces, weak shared metric tokens no longer pull unrelated metrics into levers, and protected metrics draft as hard guardrails.
+- regression coverage now replays realistic chat sequences where revenue, stockout-risk, discount-rate, segment, and guardrail prompts are asked back-to-back.
+- AI chat backend review/hardening now also covers typed decision follow-ups (`Show blockers`, `Analyze workspace`) and prevents stale chart output preference from overriding later full analytic questions.
+- frontend Slice 2 work has not been started in this pass.
 
 ## Active Workstreams
 
-- [~] Prompt-first intake hardening for real decision prompts
+- [x] Prompt-first intake hardening for real decision prompts
 - [x] Phase 4 backend decision chat contract
 - [x] Slice 1 backend mode/state normalization
 - [x] Slice 1 frontend fidelity (Mode legibility, Action fidelity, Artifact metadata, Rendering precision)

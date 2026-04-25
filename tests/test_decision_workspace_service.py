@@ -394,6 +394,76 @@ class DecisionWorkspaceServiceTests(unittest.TestCase):
         self.assertIn("dimension_region", lever_dimension_ids)
         self.assertEqual(constraint_metric_ids, {"metric_margin_pct"})
 
+    def test_prompt_first_intake_preserves_prompt_frame_for_multi_clause_business_prompt(self):
+        payload = build_compound_prompt_first_payload()
+        payload["decision_prompt"] = (
+            "How should we grow revenue in Q3 using marketing spend by channel "
+            "while keeping gross margin above target?"
+        )
+
+        result = DecisionWorkspaceService.create_workspace(payload)
+
+        workspace = result["decision_workspace"]
+        objective = workspace["decision_scope"]["objective"]
+        levers = workspace["decision_scope"]["levers"]
+        constraints = workspace["decision_scope"]["constraints"]
+        prompt_frame = workspace["drafting"]["prompt_frame"]
+
+        lever_metric_ids = {
+            (((lever.get("binding") or {}).get("metric_ref")) or {}).get("metric_id")
+            for lever in levers
+            if isinstance(lever.get("binding"), dict)
+        }
+        lever_dimension_ids = {
+            (((lever.get("binding") or {}).get("dimension_ref")) or {}).get("dimension_id")
+            for lever in levers
+            if isinstance(lever.get("binding"), dict)
+        }
+        constraint_metric_ids = {
+            (((constraint.get("binding") or {}).get("metric_ref")) or {}).get("metric_id")
+            for constraint in constraints
+            if isinstance(constraint.get("binding"), dict)
+        }
+
+        self.assertEqual(objective["metric_ref"]["metric_id"], "metric_revenue_sum")
+        self.assertEqual(objective["time_horizon"]["label"], "Q3")
+        self.assertEqual(prompt_frame["objective_clause"], "grow revenue in Q3")
+        self.assertIn("marketing spend", prompt_frame["lever_clause"].lower())
+        self.assertIn("channel", prompt_frame["segment_clause"].lower())
+        self.assertIn("metric_marketing_spend", lever_metric_ids)
+        self.assertIn("dimension_channel", lever_dimension_ids)
+        self.assertEqual(constraint_metric_ids, {"metric_margin_pct"})
+
+    def test_prompt_first_intake_asks_targeted_question_when_prompt_only_names_levers(self):
+        payload = build_compound_prompt_first_payload()
+        payload["decision_prompt"] = "How should we adjust discount rate by region next quarter?"
+
+        result = DecisionWorkspaceService.create_workspace(payload)
+
+        workspace = result["decision_workspace"]
+        objective = workspace["decision_scope"]["objective"]
+        levers = workspace["decision_scope"]["levers"]
+        clarification_hints = workspace["drafting"]["clarification_hints"]
+
+        lever_metric_ids = {
+            (((lever.get("binding") or {}).get("metric_ref")) or {}).get("metric_id")
+            for lever in levers
+            if isinstance(lever.get("binding"), dict)
+        }
+        lever_dimension_ids = {
+            (((lever.get("binding") or {}).get("dimension_ref")) or {}).get("dimension_id")
+            for lever in levers
+            if isinstance(lever.get("binding"), dict)
+        }
+
+        self.assertEqual(workspace["status"], "limited")
+        self.assertIsNone(objective["metric_ref"])
+        self.assertIn("objective.metric_id_or_metric_name", workspace["readiness"]["missing_inputs"])
+        self.assertIn("metric_discount_rate", lever_metric_ids)
+        self.assertIn("dimension_region", lever_dimension_ids)
+        self.assertTrue(clarification_hints[0].startswith("Which metric should define success"))
+        self.assertNotIn("What controllable lever", " ".join(clarification_hints))
+
     def test_workspace_analysis_preserves_prompt_first_drafting_metadata(self):
         workspace_result = DecisionWorkspaceService.create_workspace(build_prompt_first_payload())
 
