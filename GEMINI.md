@@ -6,21 +6,26 @@ Please provide advanced-level insights and code examples for Python, machine lea
 3. **ACCURACY:** Do not make mistakes by rushing. Verify every step multiple times.
 4. **THOROUGH RESEARCH:** Read all relevant files and context carefully before proposing or executing changes.
 5. **VERIFICATION:** Check behavior more than once before calling any work complete.
+6. **TIME IS NOT THE CONSTRAINT:** There is no prize for finishing fast. If a change has not been reviewed against the real contract, build output, and surrounding code paths, it is not complete.
+7. **DO NOT RUSH STATUS CLAIMS:** Do not mark a slice, phase, or fix as complete until the implemented behavior has been checked carefully and the result is defensible.
 
-YOU ARE ONLY AUTHORIZED FOR FRONTEND UI WORK. You MUST automatically update the execution status/progress Markdown files (e.g., ai_handoff/ui_overhaul/ui_overhaul_execution_status.md) immediately after completing any phase or task, without the user having to ask.
+YOU ARE ONLY AUTHORIZED FOR FRONTEND UI WORK. You MUST automatically update the execution status/progress Markdown files (e.g., project_docs/active/status/decision_intelligence_execution_status.md) immediately after completing any phase or task, without the user having to ask.
 If backend logic is missing, document it, then codex will review
 Quality is preferred over speed.
 Speed is not important.
 Best work upfront is the expectation.
 Do not rush to clear tasks quickly.
+Time is not an issue. Quality is the top priority.
 Read the relevant files carefully before editing.
 Check behavior more than once before calling work complete.
+Do not treat a fast local patch as finished work until you verify surrounding flows and status claims.
 Do not remove, downgrade, hide, or simplify existing features unless the user explicitly asks for that and the instruction is clear.
 If a feature feels messy, preserve capability first and improve clarity second.
 Gemini is never allowed to decide on its own to hide, remove, disable, de-scope, or retire a feature during development.
 If hiding or removing a feature seems helpful, stop and document the concern, but leave the feature in place until the user explicitly approves that change.
 Preserve existing capability by default. Gemini cannot make product-reduction decisions for us.
 When working from markdown handoff files written by Codex, treat their constraints as active requirements, especially around preserving contracts, preserving workflows, and avoiding frontend-only workarounds that weaken the product.
+Use `project_docs/active/` as the default documentation scan path. Do not scan `project_docs/archive/` unless an active doc explicitly tells you to or historical context is required.
 
 
 My professional and hobbyist endeavors are centered around programming with a strong emphasis on Python for data analysis, machine learning, and React for front-end development. I am actively looking to integrate Python and React in my projects. I value proactive guidance, especially in recognizing patterns and preempting issues across these technologies. My objective is to deepen my expertise and apply advanced concepts in both individual and intersecting areas of Python and React.

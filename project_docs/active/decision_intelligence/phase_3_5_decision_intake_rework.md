@@ -241,7 +241,7 @@ Gemini should now design against the prompt-first backend support described abov
 
 Recommended backend handoff for Gemini:
 
-- `ai_handoff/ui_overhaul/decision_intelligence_v3_gemini_handoff_03_phase_3_5_prompt_first_intake.md`
+- `project_docs/active/decision_intelligence/decision_intelligence_v3_gemini_handoff_03_phase_3_5_prompt_first_intake.md`
 
 ## Verification Standard
 

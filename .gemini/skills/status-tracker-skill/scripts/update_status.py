@@ -2,7 +2,8 @@ import re
 import sys
 import os
 
-STATUS_FILE = "ai_handoff/ui_overhaul/ui_overhaul_execution_status.md"
+# Keep the skill aligned with the active project docs tree.
+STATUS_FILE = "project_docs/active/status/decision_intelligence_execution_status.md"
 
 def update_checkbox(task_name, state="x"):
     """
