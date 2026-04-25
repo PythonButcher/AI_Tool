@@ -77,7 +77,7 @@ Truth:
 
 Status:
 
-- **SLICE 1 COMPLETE; SLICE 2 BACKEND REWORK COMPLETE**
+- **SLICE 1 COMPLETE; SLICE 2 BACKEND REWORK COMPLETE; SLICE 2.5 PLANNED**
 
 Truth:
 
@@ -86,6 +86,7 @@ Truth:
 - Slice 2 backend rework is complete based on live chat testing: new full decision prompts now replace stale draft workspaces, weak shared metric tokens no longer pull unrelated metrics into levers, and protected metrics draft as hard guardrails.
 - regression coverage now replays realistic chat sequences where revenue, stockout-risk, discount-rate, segment, and guardrail prompts are asked back-to-back.
 - AI chat backend review/hardening now also covers typed decision follow-ups (`Show blockers`, `Analyze workspace`) and prevents stale chart output preference from overriding later full analytic questions.
+- Slice 2.5 is now planned because the current draft workspace response is structurally correct but still confusing: it reads like a sparse contract/debug summary instead of a decision-readable kickoff.
 - frontend Slice 2 work has not been started in this pass.
 
 ## Active Workstreams
@@ -94,6 +95,7 @@ Truth:
 - [x] Phase 4 backend decision chat contract
 - [x] Slice 1 backend mode/state normalization
 - [x] Slice 1 frontend fidelity (Mode legibility, Action fidelity, Artifact metadata, Rendering precision)
+- [ ] Slice 2.5 decision-readable draft responses
 - [~] Phase 4.5 AI chat decision-intelligence enhancement
 
 ## What Is Actually Implemented Today

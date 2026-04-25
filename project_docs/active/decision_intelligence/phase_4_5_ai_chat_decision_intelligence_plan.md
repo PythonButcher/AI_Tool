@@ -132,6 +132,51 @@ Exit condition:
 - difficult prompts draft materially better structure
 - unclear prompts lead to crisp missing-input prompts rather than loose chatter
 
+### Slice 2.5: Decision-Readable Draft Responses
+
+Why this slice exists:
+
+Slice 2 made the backend parse decision prompts more correctly, but live testing showed that correct structure alone is not enough. The chat response can still feel like a debug summary: it says the workspace is `ready`, lists levers, and reports `Inputs Needed: 0`, but does not explain what the system understood, what `ready` actually means, or what the user should do next.
+
+Problem example:
+
+`How should we grow revenue next quarter using marketing spend by channel while protecting gross margin?`
+
+The backend can now correctly draft:
+
+- objective: `Revenue`
+- lever: `Marketing Spend`
+- segment lever: `Channel mix`
+- guardrail: `Gross Margin %`
+- time horizon: `Next quarter`
+
+But the current user-facing output can still be confusing:
+
+`This workspace is anchored on the objective 'grow revenue next quarter'. Candidate levers include Marketing Spend, Channel mix. Hard guardrails include Protect Gross Margin %.`
+
+That is structurally true, but not decision-intelligent enough.
+
+Codex:
+
+- improve backend draft workspace preview messaging so AI chat explains the decision frame in plain business language
+- distinguish `structurally ready for analysis` from `ready to recommend` or `ready to decide`
+- expose clearer preview fields for objective metric, levers, segment dimensions, guardrails, missing inputs, readiness meaning, and recommended next action
+- make the primary next step explicit, usually `Analyze workspace`, when the draft is structurally complete
+- keep truthfulness clear: a draft workspace is not a recommendation, simulation, optimizer, or final decision
+- add regressions for the main clean-dataset prompt examples so preview copy and artifact content are judged against expected user comprehension, not just parser structure
+
+Gemini:
+
+- render the richer draft preview fields so the UI no longer feels like a sparse debug card
+- rename or visually clarify `Status ready` so users understand it means ready for structured analysis, not ready for final recommendation
+- surface the recommended next action and truthfulness note near the draft preview
+
+Exit condition:
+
+- a user who asks a realistic decision prompt can understand what the system framed, what is still not known, and why the next action is analysis rather than a final recommendation
+- `Status ready` no longer reads as if the system has completed the decision
+- the draft preview feels like a guided decision kickoff, not a raw contract dump
+
 ### Slice 3: Real Action System
 
 Codex:
