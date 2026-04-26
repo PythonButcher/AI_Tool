@@ -1326,21 +1326,83 @@ class DecisionChatService:
         objective = decision_scope.get("objective") if isinstance(decision_scope.get("objective"), dict) else {}
         levers = decision_scope.get("levers") if isinstance(decision_scope.get("levers"), list) else []
         constraints = decision_scope.get("constraints") if isinstance(decision_scope.get("constraints"), list) else []
+        missing_inputs = list(readiness.get("missing_inputs") or [])
+        prompt_frame = (workspace.get("drafting") or {}).get("prompt_frame") if isinstance(workspace.get("drafting"), dict) else {}
+        prompt_frame = prompt_frame if isinstance(prompt_frame, dict) else {}
+        objective_metric = (objective.get("metric_ref") or {}).get("label") or objective.get("metric_id")
+        time_horizon = objective.get("time_horizon") if isinstance(objective.get("time_horizon"), dict) else {}
+        lever_items = DecisionChatService._build_preview_lever_items(levers)
+        segment_items = DecisionChatService._build_preview_segment_items(levers)
+        guardrail_items = DecisionChatService._build_preview_guardrail_items(constraints)
+        status = str(workspace.get("status") or "").strip().lower()
+        recommended_next_action = DecisionChatService._build_preview_next_action(
+            status=status,
+            missing_inputs=missing_inputs,
+        )
+        readiness_meaning = DecisionChatService._build_preview_readiness_meaning(
+            status=status,
+            missing_inputs=missing_inputs,
+        )
+        truthfulness_note = (
+            "This is a decision framing draft, not a recommendation, simulation, optimizer, "
+            "or final decision. Analysis can inspect grounded data, but it will not choose for you."
+        )
 
         return {
             "type": "workspace_preview",
             "workspace_id": workspace.get("workspace_id"),
             "title": workspace.get("title"),
             "status": workspace.get("status"),
+            "status_label": DecisionChatService._build_preview_status_label(status),
             "scope_summary": workspace.get("scope_summary"),
+            # Keep this explicit so the frontend can render a human-readable kickoff
+            # without reverse-engineering the raw workspace contract.
+            "decision_kickoff": {
+                "summary": DecisionChatService._build_preview_kickoff_summary(
+                    objective=objective,
+                    objective_metric=objective_metric,
+                    time_horizon=time_horizon,
+                    lever_items=lever_items,
+                    segment_items=segment_items,
+                    guardrail_items=guardrail_items,
+                ),
+                "understood": {
+                    "objective": {
+                        "statement": objective.get("statement"),
+                        "metric": objective_metric,
+                        "direction": objective.get("direction"),
+                        "time_horizon": time_horizon.get("label"),
+                    },
+                    "levers": lever_items,
+                    "segments": segment_items,
+                    "guardrails": guardrail_items,
+                },
+                "readiness_meaning": readiness_meaning,
+                "truthfulness_note": truthfulness_note,
+                "recommended_next_action": recommended_next_action,
+            },
+            "objective_metric": objective_metric,
+            "time_horizon": time_horizon.get("label"),
+            "levers": lever_items,
+            "segment_dimensions": segment_items,
+            "guardrails": guardrail_items,
+            "readiness_meaning": readiness_meaning,
+            "truthfulness_note": truthfulness_note,
+            "recommended_next_action": recommended_next_action,
+            "prompt_frame": {
+                "objective_clause": prompt_frame.get("objective_clause"),
+                "lever_clause": prompt_frame.get("lever_clause"),
+                "segment_clause": prompt_frame.get("segment_clause"),
+                "constraint_clauses": list(prompt_frame.get("constraint_clauses") or []),
+            },
             "objective": {
                 "statement": objective.get("statement"),
                 "direction": objective.get("direction"),
-                "metric": ((objective.get("metric_ref") or {}).get("label") or objective.get("metric_id")),
+                "metric": objective_metric,
             },
             "lever_count": len(levers),
             "constraint_count": len(constraints),
-            "missing_inputs": list(readiness.get("missing_inputs") or []),
+            "missing_inputs": missing_inputs,
             "clarification_hints": list(((workspace.get("drafting") or {}).get("clarification_hints")) or []),
             "unknown_count": len(workspace.get("unknowns") or []),
         }
@@ -1348,24 +1410,161 @@ class DecisionChatService:
     @staticmethod
     def _build_workspace_preview_message(workspace: Dict[str, Any]) -> str:
         preview = DecisionChatService._build_workspace_preview(workspace)
-        objective = preview.get("objective") or {}
-        objective_label = objective.get("statement") or "this decision"
         missing_inputs = preview.get("missing_inputs") or []
         clarification_hints = preview.get("clarification_hints") or []
+        kickoff = preview.get("decision_kickoff") or {}
+        summary = kickoff.get("summary") or "I drafted a decision workspace from your prompt."
+        readiness_meaning = preview.get("readiness_meaning") or ""
+        truthfulness_note = preview.get("truthfulness_note") or ""
+        next_action = preview.get("recommended_next_action") or {}
         if missing_inputs:
             clarification = f" Next question: {clarification_hints[0]}" if clarification_hints else ""
             return (
-                f"I drafted a workspace for {objective_label}. "
-                f"It still needs {len(missing_inputs)} missing input(s) before deeper execution."
+                f"{summary} {readiness_meaning} "
+                f"It still needs {len(missing_inputs)} input(s) before structured analysis is reliable."
                 f"{clarification}"
             )
-        return f"I drafted a scoped workspace for {objective_label}. You can inspect it or open it in Decisions."
+        next_label = next_action.get("label") or "Analyze workspace"
+        return f"{summary} {readiness_meaning} {truthfulness_note} Recommended next action: {next_label}."
+
+    @staticmethod
+    def _build_preview_lever_items(levers: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        items: List[Dict[str, Any]] = []
+        for lever in levers:
+            if not isinstance(lever, dict):
+                continue
+            binding = lever.get("binding") if isinstance(lever.get("binding"), dict) else {}
+            metric_ref = binding.get("metric_ref") if isinstance(binding.get("metric_ref"), dict) else {}
+            dimension_ref = binding.get("dimension_ref") if isinstance(binding.get("dimension_ref"), dict) else {}
+            binding_label = (
+                metric_ref.get("label")
+                or dimension_ref.get("label")
+                or binding.get("field")
+                or binding.get("metric_id")
+                or binding.get("dimension_id")
+            )
+            items.append({
+                "label": lever.get("label"),
+                "type": lever.get("lever_type"),
+                "binding_label": binding_label,
+                "desired_change": lever.get("desired_change"),
+                "controllable": bool(lever.get("controllable", True)),
+            })
+        return items
+
+    @staticmethod
+    def _build_preview_segment_items(levers: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        segments: List[Dict[str, Any]] = []
+        for lever in levers:
+            if not isinstance(lever, dict):
+                continue
+            binding = lever.get("binding") if isinstance(lever.get("binding"), dict) else {}
+            dimension_ref = binding.get("dimension_ref") if isinstance(binding.get("dimension_ref"), dict) else {}
+            if not dimension_ref:
+                continue
+            segments.append({
+                "label": dimension_ref.get("label") or lever.get("label"),
+                "dimension_id": dimension_ref.get("dimension_id"),
+                "role": "segment",
+            })
+        return segments
+
+    @staticmethod
+    def _build_preview_guardrail_items(constraints: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        guardrails: List[Dict[str, Any]] = []
+        for constraint in constraints:
+            if not isinstance(constraint, dict):
+                continue
+            binding = constraint.get("binding") if isinstance(constraint.get("binding"), dict) else {}
+            metric_ref = binding.get("metric_ref") if isinstance(binding.get("metric_ref"), dict) else {}
+            guardrails.append({
+                "label": constraint.get("label"),
+                "metric": metric_ref.get("label") or binding.get("metric_id"),
+                "hardness": constraint.get("hardness"),
+                "condition": constraint.get("condition"),
+            })
+        return guardrails
+
+    @staticmethod
+    def _build_preview_status_label(status: str) -> str:
+        if status == "ready":
+            return "Structurally ready for analysis"
+        if status == "limited":
+            return "Partially framed; analysis will be limited"
+        if status == "needs_input":
+            return "Needs more decision input"
+        return "Draft workspace"
+
+    @staticmethod
+    def _build_preview_readiness_meaning(status: str, missing_inputs: List[str]) -> str:
+        if status == "ready" and not missing_inputs:
+            return (
+                "Ready means the objective, at least one controllable lever, and hard guardrails "
+                "are structured enough for observational workspace analysis."
+            )
+        if missing_inputs:
+            return (
+                "This draft is not analysis-ready yet because key decision inputs are still missing."
+            )
+        return "This draft can be inspected, but some bindings or assumptions may limit analysis quality."
+
+    @staticmethod
+    def _build_preview_next_action(status: str, missing_inputs: List[str]) -> Dict[str, Any]:
+        if status == "ready" and not missing_inputs:
+            return {
+                "action_id": "analyze_workspace",
+                "label": "Analyze workspace",
+                "reason": "Run grounded observational analysis before treating the frame as decision evidence.",
+            }
+        return {
+            "action_id": "show_blockers",
+            "label": "Show blockers",
+            "reason": "Review the missing inputs that prevent a clean analysis pass.",
+        }
+
+    @staticmethod
+    def _build_preview_kickoff_summary(
+        *,
+        objective: Dict[str, Any],
+        objective_metric: Any,
+        time_horizon: Dict[str, Any],
+        lever_items: List[Dict[str, Any]],
+        segment_items: List[Dict[str, Any]],
+        guardrail_items: List[Dict[str, Any]],
+    ) -> str:
+        objective_label = objective_metric or objective.get("statement") or "the stated objective"
+        direction = str(objective.get("direction") or "improve").replace("_", " ")
+        horizon_label = time_horizon.get("label")
+        lever_labels = [str(item.get("label")) for item in lever_items if item.get("label")]
+        segment_labels = [str(item.get("label")) for item in segment_items if item.get("label")]
+        guardrail_labels = [str(item.get("metric") or item.get("label")) for item in guardrail_items if item.get("metric") or item.get("label")]
+
+        sentence = f"I understood this as a decision about whether and how to {direction} {objective_label}"
+        if horizon_label:
+            sentence += f" over {horizon_label}"
+        if lever_labels:
+            sentence += f" using {DecisionChatService._join_preview_labels(lever_labels)}"
+        if segment_labels:
+            sentence += f", with the analysis segmented by {DecisionChatService._join_preview_labels(segment_labels)}"
+        if guardrail_labels:
+            sentence += f", while protecting {DecisionChatService._join_preview_labels(guardrail_labels)}"
+        return sentence + "."
+
+    @staticmethod
+    def _join_preview_labels(labels: List[str]) -> str:
+        cleaned = [label for label in labels if label]
+        if not cleaned:
+            return ""
+        if len(cleaned) == 1:
+            return cleaned[0]
+        return f"{', '.join(cleaned[:-1])} and {cleaned[-1]}"
 
     @staticmethod
     def _build_decision_actions(workspace: Dict[str, Any] | None) -> List[Dict[str, Any]]:
         if not isinstance(workspace, dict) or not workspace:
             return []
         missing_inputs = list((workspace.get("readiness") or {}).get("missing_inputs") or [])
+        primary_action = "show_blockers" if missing_inputs else "analyze_workspace"
         return [
             DecisionChatService._build_action(
                 action_id="draft_workspace",
@@ -1386,7 +1585,7 @@ class DecisionChatService:
                 label="Show blockers",
                 description="See the missing inputs or structural gaps that still limit deeper execution.",
                 mode="decide",
-                priority="secondary",
+                priority="primary" if primary_action == "show_blockers" else "secondary",
                 availability_reason=(
                     f"{len(missing_inputs)} missing input(s) are currently tracked."
                     if missing_inputs
@@ -1398,13 +1597,13 @@ class DecisionChatService:
                 label="Analyze workspace",
                 description="Run observational analysis against the current scoped workspace draft.",
                 mode="decide",
-                priority="secondary",
+                priority="primary" if primary_action == "analyze_workspace" else "secondary",
             ),
             DecisionChatService._build_action(
                 action_id="open_workspace",
                 label="Open workspace",
                 description="Open the structured Decisions workspace and continue from this draft.",
                 mode="decide",
-                priority="primary",
+                priority="secondary",
             ),
         ]

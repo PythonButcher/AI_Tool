@@ -330,25 +330,133 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
 
       case 'workspace_preview':
         const wp = content || artifact;
+        
+        // Slice 2.5: Prefer Plain-English Kickoff fields
+        // Backend now sends decision_kickoff as an object
+        const isKickoff = !!wp.decision_kickoff;
+
+        // Helper to format object arrays into labels
+        const formatLabels = (items) => {
+          if (!Array.isArray(items)) return 'Not specified';
+          return items.map(item => item.label || item.name || item).join(', ');
+        };
+
         return (
           <div className={`${baseClass} is-workspace_preview`}>
             <div className="ai-shell__artifact-content">
-              <Typography variant="h6" sx={{ fontWeight: 900, mb: 1 }}>{wp.title || 'Decision Path'}</Typography>
-              <Typography variant="body1" sx={{ opacity: 0.7, mb: 4 }}>{wp.scope_summary}</Typography>
-              <div className="ai-shell__preview-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '20px' }}>
-                <div className="ai-shell__preview-metric"><span className="ai-shell__preview-metric-label">Status</span><span className="ai-shell__preview-metric-value">{wp.status || 'Draft'}</span></div>
-                <div className="ai-shell__preview-metric"><span className="ai-shell__preview-metric-label">Levers</span><span className="ai-shell__preview-metric-value">{wp.lever_count || 0}</span></div>
-                <div className="ai-shell__preview-metric"><span className="ai-shell__preview-metric-label">Inputs Needed</span><span className="ai-shell__preview-metric-value" style={{ color: (wp.missing_inputs?.length > 0 ? 'var(--accent-red)' : 'inherit') }}>{wp.missing_inputs?.length || 0}</span></div>
-              </div>
+              {isKickoff ? (
+                <div className="ai-shell__kickoff-container">
+                  <header className="ai-shell__kickoff-header" style={{ marginBottom: '24px' }}>
+                    <Typography variant="overline" sx={{ fontWeight: 900, opacity: 0.5, letterSpacing: '0.15em', display: 'block', mb: 1 }}>
+                      Decision Kickoff
+                    </Typography>
+                    <Typography variant="h5" sx={{ fontWeight: 900, letterSpacing: '-0.03em', lineHeight: 1.1 }}>
+                      {wp.title || 'Untitled Decision Framework'}
+                    </Typography>
+                  </header>
+                  
+                  <div className="ai-shell__kickoff-summary" style={{ marginBottom: '28px' }}>
+                    <Typography variant="body1" sx={{ lineHeight: 1.6, opacity: 0.9, fontSize: '1.05rem' }}>
+                      {wp.decision_kickoff?.summary || wp.decision_kickoff}
+                    </Typography>
+                  </div>
+
+                  <div className="ai-shell__kickoff-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '32px' }}>
+                    <div className="ai-shell__kickoff-item">
+                      <Typography variant="overline" sx={{ fontWeight: 900, opacity: 0.4, display: 'block', mb: 0.5 }}>Objective</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 700, borderLeft: '2px solid var(--text-primary)', pl: 1.5 }}>{wp.objective_metric?.label || wp.objective_metric || 'Not specified'}</Typography>
+                    </div>
+                    <div className="ai-shell__kickoff-item">
+                      <Typography variant="overline" sx={{ fontWeight: 900, opacity: 0.4, display: 'block', mb: 0.5 }}>Time Horizon</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 700, borderLeft: '2px solid var(--text-primary)', pl: 1.5 }}>{wp.time_horizon || 'Ongoing'}</Typography>
+                    </div>
+                    <div className="ai-shell__kickoff-item">
+                      <Typography variant="overline" sx={{ fontWeight: 900, opacity: 0.4, display: 'block', mb: 0.5 }}>Primary Levers</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 700, borderLeft: '2px solid var(--text-primary)', pl: 1.5 }}>{formatLabels(wp.levers)}</Typography>
+                    </div>
+                    <div className="ai-shell__kickoff-item">
+                      <Typography variant="overline" sx={{ fontWeight: 900, opacity: 0.4, display: 'block', mb: 0.5 }}>Segmentation</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 700, borderLeft: '2px solid var(--text-primary)', pl: 1.5 }}>{formatLabels(wp.segment_dimensions)}</Typography>
+                    </div>
+                    <div className="ai-shell__kickoff-item" style={{ gridColumn: '1 / -1' }}>
+                      <Typography variant="overline" sx={{ fontWeight: 900, opacity: 0.4, display: 'block', mb: 0.5 }}>Guardrails</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 700, borderLeft: '2px solid var(--text-primary)', pl: 1.5 }}>{formatLabels(wp.guardrails)}</Typography>
+                    </div>
+                  </div>
+
+                  <Divider sx={{ mb: 3, opacity: 0.1 }} />
+
+                  <div className="ai-shell__kickoff-footer">
+                    <div className="ai-shell__kickoff-status-block" style={{ marginBottom: '24px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
+                        <FaCheckCircle style={{ color: wp.status === 'ready' ? 'var(--accent-green)' : 'var(--text-secondary)', fontSize: '1rem' }} />
+                        <Typography variant="subtitle2" sx={{ fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', fontSize: '0.75rem' }}>
+                          {wp.status_label || (wp.status === 'ready' ? 'Framework Ready' : 'Incomplete')}
+                        </Typography>
+                      </div>
+                      <Typography variant="body2" sx={{ display: 'block', opacity: 0.7, lineHeight: 1.5 }}>
+                        {wp.readiness_meaning || (wp.status === 'ready' ? 'This framework is structurally complete and ready for analysis.' : 'Missing required inputs to begin analysis.')}
+                      </Typography>
+                    </div>
+
+                    {wp.truthfulness_note && (
+                      <div className="ai-shell__kickoff-truth" style={{ background: 'var(--bg-secondary)', padding: '16px', borderRadius: '12px', marginBottom: '28px', border: '1px solid var(--border-color)' }}>
+                        <Typography variant="caption" sx={{ opacity: 0.6, display: 'block', lineHeight: 1.5 }}>
+                          <FaInfoCircle style={{ marginRight: '8px', fontSize: '0.8rem', verticalAlign: 'middle', marginTop: '-2px' }} />
+                          {wp.truthfulness_note}
+                        </Typography>
+                      </div>
+                    )}
+
+                    {wp.recommended_next_action && (
+                      <div className="ai-shell__kickoff-action-zone">
+                        <Typography variant="overline" sx={{ fontWeight: 900, opacity: 0.5, display: 'block', mb: 1.5 }}>Recommended Next Step</Typography>
+                        <Button 
+                          variant="contained" 
+                          fullWidth
+                          startIcon={<FaSearch />}
+                          sx={{ 
+                            borderRadius: '12px', 
+                            py: 1.5,
+                            textTransform: 'none', 
+                            fontWeight: 900, 
+                            fontSize: '0.9rem',
+                            bgcolor: 'var(--text-primary)',
+                            color: 'var(--bg-primary)',
+                            '&:hover': { bgcolor: 'var(--text-primary)', filter: 'brightness(1.1)' }
+                          }}
+                          onClick={() => {
+                            const actionId = wp.recommended_next_action?.action_id || wp.recommended_next_action;
+                            handleActionClick(actionId === 'Analyze workspace' ? 'analyze_workspace' : actionId);
+                          }}
+                        >
+                          {wp.recommended_next_action?.label || wp.recommended_next_action}
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                // Compatibility Fallback for older sparse previews
+                <>
+                  <Typography variant="h6" sx={{ fontWeight: 900, mb: 1 }}>{wp.title || 'Decision Path'}</Typography>
+                  <Typography variant="body1" sx={{ opacity: 0.7, mb: 4 }}>{wp.scope_summary}</Typography>
+                  <div className="ai-shell__preview-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '20px' }}>
+                    <div className="ai-shell__preview-metric"><span className="ai-shell__preview-metric-label">Status</span><span className="ai-shell__preview-metric-value">{wp.status || 'Draft'}</span></div>
+                    <div className="ai-shell__preview-metric"><span className="ai-shell__preview-metric-label">Levers</span><span className="ai-shell__preview-metric-value">{wp.lever_count || 0}</span></div>
+                    <div className="ai-shell__preview-metric"><span className="ai-shell__preview-metric-label">Inputs Needed</span><span className="ai-shell__preview-metric-value" style={{ color: (wp.missing_inputs?.length > 0 ? 'var(--accent-red)' : 'inherit') }}>{wp.missing_inputs?.length || 0}</span></div>
+                  </div>
+                </>
+              )}
               
               {wp.missing_inputs?.length > 0 && (
-                <div className="ai-shell__ghost-item" style={{ mt: 4 }}>
-                  <div className="ai-shell__ghost-label">Required Clarifications</div>
-                  <div className="ai-shell__analysis-list" style={{ mt: 2 }}>
+                <div className="ai-shell__kickoff-clarifications" style={{ marginTop: '32px' }}>
+                  <Typography variant="overline" sx={{ fontWeight: 900, opacity: 0.5, display: 'block', mb: 2 }}>Required Clarifications</Typography>
+                  <div className="ai-shell__analysis-list">
                     {wp.missing_inputs.map((input, i) => (
-                      <div key={i} className="ai-shell__analysis-item">
+                      <div key={i} className="ai-shell__analysis-item" style={{ marginBottom: '12px' }}>
                          <span className="ai-shell__analysis-icon is-blocker"><FaExclamationTriangle /></span>
-                         <Typography variant="body2">{input}</Typography>
+                         <Typography variant="body2" sx={{ fontWeight: 600 }}>{input}</Typography>
                       </div>
                     ))}
                   </div>

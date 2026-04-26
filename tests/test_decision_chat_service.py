@@ -233,8 +233,104 @@ class DecisionChatApiTests(unittest.TestCase):
         self.assertTrue(body["session_state"]["decision_state"]["has_draft_workspace"])
         self.assertEqual(body["session_state"]["decision_state"]["objective_draft"]["metric"], "Revenue")
         self.assertIn("open_workspace", body["action_state"]["available_action_ids"])
-        self.assertEqual(body["action_state"]["primary_action_id"], "open_workspace")
+        self.assertEqual(body["action_state"]["primary_action_id"], "show_blockers")
         self.assertTrue(body["suggested_actions"][0]["description"])
+
+    def test_turn_route_builds_decision_readable_workspace_kickoff_for_clean_prompt(self):
+        response = self.client.post(
+            "/api/decision/chat/turns",
+            json={
+                "dataset": DATASET,
+                "semantic_model": SEMANTIC_MODEL,
+                "user_message": "How should we grow revenue next quarter using marketing spend by channel while protecting gross margin?",
+                "conversation_history": [],
+                "session_state": {},
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.get_json()
+        preview = body["draft_workspace_preview"]
+        kickoff = preview["decision_kickoff"]
+        understood = kickoff["understood"]
+
+        self.assertEqual(body["mode"], "decide")
+        self.assertEqual(preview["status"], "ready")
+        self.assertEqual(preview["status_label"], "Structurally ready for analysis")
+        self.assertEqual(understood["objective"]["metric"], "Revenue")
+        self.assertEqual(understood["objective"]["time_horizon"], "Next quarter")
+        self.assertEqual({item["label"] for item in understood["levers"]}, {"Marketing Spend", "Channel mix"})
+        self.assertEqual({item["label"] for item in understood["segments"]}, {"Channel"})
+        self.assertEqual({item["metric"] for item in understood["guardrails"]}, {"Gross Margin %"})
+        self.assertEqual(kickoff["recommended_next_action"]["action_id"], "analyze_workspace")
+        self.assertEqual(body["action_state"]["primary_action_id"], "analyze_workspace")
+        self.assertIn("Ready means", kickoff["readiness_meaning"])
+        self.assertIn("not a recommendation", kickoff["truthfulness_note"])
+        self.assertIn("Recommended next action: Analyze workspace", body["assistant_message"])
+        self.assertNotIn("Inputs Needed: 0", body["assistant_message"])
+
+    def test_turn_route_preview_keeps_discount_marketing_region_prompt_readable(self):
+        response = self.client.post(
+            "/api/decision/chat/turns",
+            json={
+                "dataset": DATASET,
+                "semantic_model": SEMANTIC_MODEL,
+                "user_message": (
+                    "How should we grow revenue next quarter using discount rate and "
+                    "marketing spend changes by region without hurting gross margin?"
+                ),
+                "conversation_history": [],
+                "session_state": {},
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.get_json()
+        preview = body["draft_workspace_preview"]
+        understood = preview["decision_kickoff"]["understood"]
+
+        # This regression protects the readable preview from collapsing the
+        # objective, controllable levers, segment, and guardrail into one blob.
+        self.assertEqual(understood["objective"]["metric"], "Revenue")
+        self.assertEqual(understood["objective"]["time_horizon"], "Next quarter")
+        self.assertEqual(
+            {item["label"] for item in understood["levers"]},
+            {"Discount Rate", "Marketing Spend", "Region mix"},
+        )
+        self.assertEqual({item["label"] for item in understood["segments"]}, {"Region"})
+        self.assertEqual({item["metric"] for item in understood["guardrails"]}, {"Gross Margin %"})
+        self.assertEqual(preview["recommended_next_action"]["action_id"], "analyze_workspace")
+        self.assertIn("observational workspace analysis", preview["readiness_meaning"])
+        self.assertNotIn("recommendation", preview["status_label"].lower())
+
+    def test_turn_route_preview_keeps_stockout_prompt_readable(self):
+        response = self.client.post(
+            "/api/decision/chat/turns",
+            json={
+                "dataset": DATASET,
+                "semantic_model": SEMANTIC_MODEL,
+                "user_message": (
+                    "How should we reduce stockout risk next quarter using inventory on hand "
+                    "by product category while protecting on time delivery?"
+                ),
+                "conversation_history": [],
+                "session_state": {},
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.get_json()
+        preview = body["draft_workspace_preview"]
+        understood = preview["decision_kickoff"]["understood"]
+
+        self.assertEqual(understood["objective"]["metric"], "Stockout Risk Score")
+        self.assertEqual(understood["objective"]["direction"], "minimize")
+        self.assertEqual(understood["objective"]["time_horizon"], "Next quarter")
+        self.assertEqual({item["label"] for item in understood["levers"]}, {"Inventory On Hand", "Product Category mix"})
+        self.assertEqual({item["label"] for item in understood["segments"]}, {"Product Category"})
+        self.assertEqual({item["metric"] for item in understood["guardrails"]}, {"On Time Delivery %"})
+        self.assertEqual(preview["recommended_next_action"]["action_id"], "analyze_workspace")
+        self.assertIn("not a recommendation", preview["truthfulness_note"])
 
     def test_turn_route_surfaces_targeted_clarification_for_incomplete_decision_prompt(self):
         response = self.client.post(

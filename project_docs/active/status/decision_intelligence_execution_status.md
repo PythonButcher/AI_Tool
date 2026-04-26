@@ -26,6 +26,14 @@ Treat that as a continuation-and-hardening checkpoint built on top of the real P
 
 ## Current Status Snapshot
 
+## Current Coordination Checkpoint
+
+Slice 2.5 is complete.
+
+Live UI verification passed for the `marketing spend by channel / gross margin` prompt: the decision kickoff renders the expected objective, horizon, levers, segment, guardrail, readiness meaning, truthfulness note, and `Analyze workspace` next action. Clicking `Analyze workspace` returns grounded observational analysis rather than a recommendation, simulation, optimizer, or final decision.
+
+Follow-up note for later frontend polish: the inspector detail pane for workspace analysis is still sparse (`Analysis finalized.`), even though the chat result contains the useful observational summary. Treat that as a future artifact-detail rendering improvement, not a Slice 2.5 blocker.
+
 ### V2
 
 Status:
@@ -77,25 +85,23 @@ Truth:
 
 Status:
 
-- **SLICE 1 COMPLETE; SLICE 2 BACKEND REWORK COMPLETE; SLICE 2.5 PLANNED**
+- **SLICE 1 COMPLETE; SLICE 2.5 COMPLETE**
 
 Truth:
 
 - this is the current product-improvement phase
-- Slice 1 (Frontend Fidelity) is complete: mode legibility, action priority/tooltips, and metadata-driven artifact rendering are live and contract-aligned.
-- Slice 2 backend rework is complete based on live chat testing: new full decision prompts now replace stale draft workspaces, weak shared metric tokens no longer pull unrelated metrics into levers, and protected metrics draft as hard guardrails.
-- regression coverage now replays realistic chat sequences where revenue, stockout-risk, discount-rate, segment, and guardrail prompts are asked back-to-back.
-- AI chat backend review/hardening now also covers typed decision follow-ups (`Show blockers`, `Analyze workspace`) and prevents stale chart output preference from overriding later full analytic questions.
-- Slice 2.5 is now planned because the current draft workspace response is structurally correct but still confusing: it reads like a sparse contract/debug summary instead of a decision-readable kickoff.
-- frontend Slice 2 work has not been started in this pass.
+- Slice 1 (Frontend Fidelity) is complete: mode legibility, action priority/tooltips, and metadata-driven artifact rendering are live.
+- Slice 2.5 (Decision-Readable Drafts) is complete: backend preview enrichment, frontend object-payload mapping, build verification, and live UI verification have all passed.
+- the UI clearly distinguishes between structural readiness for analysis and final recommendations.
 
 ## Active Workstreams
 
-- [x] Prompt-first intake hardening for real decision prompts
+- [~] Prompt-first intake hardening for real decision prompts
 - [x] Phase 4 backend decision chat contract
 - [x] Slice 1 backend mode/state normalization
 - [x] Slice 1 frontend fidelity (Mode legibility, Action fidelity, Artifact metadata, Rendering precision)
-- [ ] Slice 2.5 decision-readable draft responses
+- [x] Slice 2.5 backend decision-readable draft responses
+- [x] Slice 2.5 frontend rendering for decision-readable draft responses
 - [~] Phase 4.5 AI chat decision-intelligence enhancement
 
 ## What Is Actually Implemented Today
@@ -104,9 +110,10 @@ Truth:
 - The backend supports grounded `ask`, `explore`, and `decide` behavior, including draft workspace preview generation and explicit actions such as assumptions, blockers, workspace analysis, and workspace opening.
 - Slice 1 backend hardening is now in place: `session_state` carries explicit `mode_context`, `action_state`, `decision_state`, normalized analytics state, and stable available-action metadata.
 - Chat artifacts now expose stable rendering metadata such as `artifact_id`, `render_hint`, `inspectable`, `default_view`, `source`, and `mode` so the frontend no longer has to infer those behaviors from shape alone.
+- Slice 2.5 backend enrichment is live: draft workspace previews include object-based fields for `decision_kickoff`, `objective_metric`, `levers`, `segment_dimensions`, `guardrails`, and `recommended_next_action`.
+- The frontend `workspace_preview` renderer correctly maps these object-based fields to UI elements.
 - Prompt-first workspace drafting and workspace analysis already exist as real deterministic backend paths.
-- The frontend already has the destination-based shell, Decision Intelligence workspace flow, AI destination shell, inspector-style result pane behavior, and bounded chart rendering.
-- The current Gemini Slice 1 pass fixed the stale mode-reason problem, restored raw analytics answer artifacts, and resolved the `workspace_analysis_summary` rendering defect for assumptions and blockers.
+- The current Gemini Slice 1 & 2.5 passes fixed stale mode-reasons, restored raw analytics answers, resolved `workspace_analysis_summary` rendering defects, and implemented the kickoff-style preview with correct payload mapping for object-based fields.
 - The product is no longer blocked on backend invention. The main risk is experience quality: intake reliability on real prompts, and handoff clarity.
 
 ## Canonical Resume Order
@@ -128,6 +135,7 @@ Truth:
 - `project_docs/active/decision_intelligence/decision_intelligence_v3_gemini_handoff_02_chat_decision_bridge.md`
 - `project_docs/active/decision_intelligence/decision_intelligence_v3_gemini_handoff_03_phase_3_5_prompt_first_intake.md`
 - `project_docs/active/decision_intelligence/phase_4_5_ai_chat_decision_intelligence_plan.md`
+- `project_docs/active/decision_intelligence/slice_2_5_gemini_frontend_handoff.md`
 - `project_docs/active/contracts/decision_objects.md`
 - `project_docs/active/reviews/react_state_flow_review.md`
 

@@ -61,6 +61,7 @@ Decision Intelligence:
 - `project_docs/active/decision_intelligence/decision_intelligence_v3_gemini_handoff_02_chat_decision_bridge.md`
 - `project_docs/active/decision_intelligence/decision_intelligence_v3_gemini_handoff_03_phase_3_5_prompt_first_intake.md`
 - `project_docs/active/decision_intelligence/phase_4_5_ai_chat_decision_intelligence_plan.md`
+- `project_docs/active/decision_intelligence/slice_2_5_gemini_frontend_handoff.md`
 
 Contracts and reviews:
 
