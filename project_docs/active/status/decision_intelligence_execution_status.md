@@ -28,13 +28,15 @@ Treat that as a continuation-and-hardening checkpoint built on top of the real P
 
 ## Current Coordination Checkpoint
 
-Slice 3 is complete. 
+Slice 3 is complete, hardened, and verified.
 
-Phase 4.5 Slice 3 frontend implementation is finished: decision actions now render as real controls with primary/secondary treatment, disabled and loading states, and clear availability explanations via tooltips. 
+Phase 4.5 Slice 3 frontend implementation is finished:
+- Decision actions render as real controls with primary/secondary treatment, disabled states, and availability explanations.
+- Action contract lookups are now scoped to the specific message context. This ensures that older kickoff cards maintain their original state (disabled, priority, tooltips) even after subsequent messages are received.
+- Duplicate-action filtering is robust, checking both top-level and nested artifact action fields.
+- specialized artifact renderers for `workspace_preview` and `workspace_analysis_summary` are fully aligned with the backend object-based action contracts.
 
-Specialized artifact rendering for `workspace_preview` and `workspace_analysis_summary` now correctly maps object-based payloads and stable action contracts. Duplicate action surfaces have been removed by filtering message-level actions that are already handled by high-fidelity artifact cards.
-
-The frontend build passed (with existing warnings only), and the contract alignment for object-based payloads and action contracts is verified.
+The frontend build passed, and all linting warnings specifically related to the AI chat overhaul in `AIShell.jsx` have been resolved.
 
 ### V2
 
@@ -117,10 +119,11 @@ Truth:
 - Chat artifacts now expose stable rendering metadata such as `artifact_id`, `render_hint`, `inspectable`, `default_view`, `source`, and `mode` so the frontend no longer has to infer those behaviors from shape alone.
 - Slice 2.5 backend enrichment is live: draft workspace previews include object-based fields for `decision_kickoff`, `objective_metric`, `levers`, `segment_dimensions`, `guardrails`, and `recommended_next_action`.
 - Slice 3 backend and frontend hardening is live: decision actions now expose stable labels, intents, priorities, enabled states, availability reasons, and payload expectations. 
+- Scoped action resolution is verified: older messages in the thread and their corresponding inspector views now maintain their specific action states (priority, enabled, tooltips) correctly, independent of later turns.
 - The frontend `workspace_preview` and `workspace_analysis_summary` renderers correctly map these action contracts to high-fidelity controls.
-- Duplicate action surfaces are automatically resolved by filtering message-level actions that are already specialized in artifact cards.
+- Duplicate action surfaces are automatically resolved by filtering message-level actions that are already specialized in artifact cards (checking both top-level and nested artifact fields).
 - Prompt-first workspace drafting and workspace analysis already exist as real deterministic backend paths.
-- The current Gemini Slice 1, 2.5, & 3 passes fixed stale mode-reasons, restored raw analytics answers, resolved `workspace_analysis_summary` rendering defects, implemented the kickoff-style preview, and hardened the entire action rendering system.
+- The current Gemini Slice 1, 2.5, & 3 passes fixed stale mode-reasons, restored raw analytics answers, resolved `workspace_analysis_summary` rendering defects, implemented the kickoff-style preview, and hardened the entire action rendering system with scoped state persistence for both thread and inspector paths.
 - The product is no longer blocked on backend invention. The main risk is experience quality: intake reliability on real prompts, and handoff clarity.
 
 ## Canonical Resume Order
