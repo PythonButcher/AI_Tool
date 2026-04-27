@@ -7,8 +7,8 @@ import {
   FaEye, FaChevronRight, FaTerminal, FaSearch, FaCloud
 } from "react-icons/fa";
 import { 
-  TextField, Button, Paper, Box, Typography, Divider, Tooltip, Chip, 
-  Avatar, Tabs, Tab, Drawer, IconButton, ToggleButton, ToggleButtonGroup
+  TextField, Button, Box, Typography, Divider, Tooltip, Chip, 
+  Avatar, Tabs, Tab, Drawer, IconButton
 } from '@mui/material';
 import { DataContext } from '../../context/DataContext';
 import { WarehouseContext } from '../../context/WarehouseContext';
@@ -16,7 +16,6 @@ import MentionDropdown from '../../components/data_management/MentionDropdown';
 import { detectToken, extractTokens } from '../../utils/mentionUtils';
 import { AICommands } from '../workflow/AiCommandBlock';
 import { getDynamicColors } from '../../utils/ChartStyles';
-import { summarizeSemanticModel } from '../../utils/semanticModelUtils';
 import AICharts from './AICharts';
 import './AIShell.css';
 
@@ -411,27 +410,40 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
                     {wp.recommended_next_action && (
                       <div className="ai-shell__kickoff-action-zone">
                         <Typography variant="overline" sx={{ fontWeight: 900, opacity: 0.5, display: 'block', mb: 1.5 }}>Recommended Next Step</Typography>
-                        <Button 
-                          variant="contained" 
-                          fullWidth
-                          startIcon={<FaSearch />}
-                          sx={{ 
-                            borderRadius: '12px', 
-                            py: 1.5,
-                            textTransform: 'none', 
-                            fontWeight: 900, 
-                            fontSize: '0.9rem',
-                            bgcolor: 'var(--text-primary)',
-                            color: 'var(--bg-primary)',
-                            '&:hover': { bgcolor: 'var(--text-primary)', filter: 'brightness(1.1)' }
-                          }}
-                          onClick={() => {
-                            const actionId = wp.recommended_next_action?.action_id || wp.recommended_next_action;
-                            handleActionClick(actionId === 'Analyze workspace' ? 'analyze_workspace' : actionId);
-                          }}
-                        >
-                          {wp.recommended_next_action?.label || wp.recommended_next_action}
-                        </Button>
+                        <Tooltip title={wp.recommended_next_action?.availability_reason || wp.recommended_next_action?.description || ''} arrow>
+                          <span>
+                            <Button 
+                              variant="contained" 
+                              fullWidth
+                              disabled={loading || wp.recommended_next_action?.enabled === false}
+                              startIcon={<FaSearch />}
+                              sx={{ 
+                                borderRadius: '12px', 
+                                py: 1.5,
+                                textTransform: 'none', 
+                                fontWeight: 900, 
+                                fontSize: '0.9rem',
+                                bgcolor: wp.recommended_next_action?.priority === 'primary' ? 'var(--text-primary)' : 'var(--bg-secondary)',
+                                color: wp.recommended_next_action?.priority === 'primary' ? 'var(--bg-primary)' : 'var(--text-primary)',
+                                '&:hover': { 
+                                  bgcolor: wp.recommended_next_action?.priority === 'primary' ? 'var(--text-primary)' : 'var(--bg-tertiary)', 
+                                  filter: 'brightness(1.1)' 
+                                },
+                                '&:disabled': {
+                                  opacity: 0.5,
+                                  bgcolor: 'var(--bg-secondary)',
+                                  color: 'var(--text-secondary)'
+                                }
+                              }}
+                              onClick={() => {
+                                const actionId = wp.recommended_next_action?.action_id || wp.recommended_next_action;
+                                handleActionClick(actionId === 'Analyze workspace' ? 'analyze_workspace' : actionId);
+                              }}
+                            >
+                              {wp.recommended_next_action?.label || wp.recommended_next_action}
+                            </Button>
+                          </span>
+                        </Tooltip>
                       </div>
                     )}
                   </div>
@@ -485,7 +497,7 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
                     const isBlocker = isObj ? !!(item.blocks_simulation || item.is_blocker || item.severity === 'high' || item.severity === 'critical') : false;
 
                     return (
-                      <div key={i} className="ai-shell__analysis-item" style={{ mb: 16 }}>
+                      <div key={i} className="ai-shell__analysis-item" style={{ marginBottom: '16px' }}>
                         <span className={`ai-shell__analysis-icon ${isBlocker ? 'is-blocker' : 'is-assumption'}`}>
                           {isBlocker ? <FaExclamationTriangle /> : <FaCheckCircle />}
                         </span>
@@ -498,7 +510,30 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
                   })}
                 </div>
               ) : (
-                <Typography variant="h6" sx={{ fontWeight: 700 }}>{content?.summary?.headline || content?.headline || 'Analysis finalized.'}</Typography>
+                <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>{content?.summary?.headline || content?.headline || 'Analysis finalized.'}</Typography>
+              )}
+
+              {content?.missing_inputs?.length > 0 && (
+                <div className="ai-shell__kickoff-clarifications" style={{ marginTop: '24px' }}>
+                  <Typography variant="overline" sx={{ fontWeight: 900, opacity: 0.5, display: 'block', mb: 2 }}>Required Clarifications</Typography>
+                  <div className="ai-shell__analysis-list">
+                    {content.missing_inputs.map((input, i) => (
+                      <div key={i} className="ai-shell__analysis-item" style={{ marginBottom: '12px' }}>
+                         <span className="ai-shell__analysis-icon is-blocker"><FaExclamationTriangle /></span>
+                         <Typography variant="body2" sx={{ fontWeight: 600 }}>{input}</Typography>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {content?.truthfulness_note && (
+                <div className="ai-shell__kickoff-truth" style={{ background: 'var(--bg-secondary)', padding: '16px', borderRadius: '12px', marginTop: '24px', border: '1px solid var(--border-color)' }}>
+                  <Typography variant="caption" sx={{ opacity: 0.6, display: 'block', lineHeight: 1.5 }}>
+                    <FaInfoCircle style={{ marginRight: '8px', fontSize: '0.8rem', verticalAlign: 'middle', marginTop: '-2px' }} />
+                    {content.truthfulness_note}
+                  </Typography>
+                </div>
               )}
             </div>
           </div>
@@ -843,19 +878,29 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
 
                 {msg.suggested_actions && msg.suggested_actions.length > 0 && (
                   <div className="ai-shell__suggested-actions">
-                    {msg.suggested_actions.map((act, actIdx) => (
-                      <Tooltip key={actIdx} title={act.availability_reason || act.description || ''} arrow>
-                        <span>
-                          <button 
-                            className={`ai-shell__action-btn ${act.priority === 'primary' ? 'is-primary' : ''}`} 
-                            onClick={() => handleActionClick(act.action_id)} 
-                            disabled={loading || !act.enabled}
-                          >
-                            {act.label}
-                          </button>
-                        </span>
-                      </Tooltip>
-                    ))}
+                    {msg.suggested_actions
+                      .filter(act => {
+                        // Prevent duplicate action surfaces if the same action is rendered in a specialized artifact card
+                        const hasKickoffAction = msg.artifacts?.some(art => 
+                          art.type === 'workspace_preview' && 
+                          (art.content?.recommended_next_action?.action_id === act.action_id || 
+                           art.content?.recommended_next_action === act.action_id)
+                        );
+                        return !hasKickoffAction;
+                      })
+                      .map((act, actIdx) => (
+                        <Tooltip key={actIdx} title={act.availability_reason || act.description || ''} arrow>
+                          <span>
+                            <button 
+                              className={`ai-shell__action-btn ${act.priority === 'primary' ? 'is-primary' : ''} ${!act.enabled ? 'is-disabled' : ''}`} 
+                              onClick={() => handleActionClick(act.action_id)} 
+                              disabled={loading || !act.enabled}
+                            >
+                              {act.label}
+                            </button>
+                          </span>
+                        </Tooltip>
+                      ))}
                   </div>
                 )}
               </div>
