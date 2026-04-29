@@ -1,0 +1,1173 @@
+{
+  "schema_version": "agent-council-output/v1",
+  "council_id": "council-app-wide-ui-flaws-for-gemini-2026-04-28",
+  "generated_at": "2026-04-28T00:00:00Z",
+  "project_context": {
+    "project_name": "AI_Tool",
+    "current_workstream": "App-wide UI hardening before additional feature expansion",
+    "planning_topic": "Identify UI flaws across the entire app that should be given to Gemini, while preserving the current theme and tone and allowing frontend/backend changes when needed.",
+    "context_summary": "The app is a dense, dark, business-operations workbench with data intake, exploration, dashboards, AI chat, workflow automation, and Decision Intelligence. The current priority is to iron out UI flaws before adding more features. The council found that the biggest problems are workflow fragmentation, overclaiming UI language, weak chat-to-Decisions continuity, hidden semantic recovery paths, stale or risky state ownership, and missing frontend regression coverage.",
+    "active_constraints": [
+      "Codex should not implement frontend changes for this initiative unless explicitly authorized in the session.",
+      "Gemini owns frontend implementation and should preserve existing capability.",
+      "The theme and tone should remain dark, dense, professional, and operational rather than marketing-like.",
+      "Improvements may involve frontend and backend contracts if needed, but runtime contracts should not be changed casually.",
+      "Decision Intelligence must not imply simulation, optimization, autonomous decisioning, or final recommendations where only observational analysis exists."
+    ]
+  },
+  "sources_reviewed": [
+    {
+      "path": "project_docs/INDEX.md",
+      "source_type": "markdown",
+      "relevance": "Defines the active scan order and planning-document expectations.",
+      "reviewed_by": ["architecture_guardian", "implementation_planner"]
+    },
+    {
+      "path": "project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md",
+      "source_type": "markdown",
+      "relevance": "Confirms Codex should plan and hand off frontend implementation to Gemini.",
+      "reviewed_by": ["architecture_guardian", "implementation_planner"]
+    },
+    {
+      "path": "project_docs/active/status/decision_intelligence_execution_status.md",
+      "source_type": "status",
+      "relevance": "States that Decision Intelligence Slice 3 frontend action rendering is complete and must be preserved.",
+      "reviewed_by": ["decision_intelligence_specialist", "skeptic_qa_reviewer"]
+    },
+    {
+      "path": "project_docs/active/decision_intelligence/phase_4_5_ai_chat_decision_intelligence_plan.md",
+      "source_type": "handoff",
+      "relevance": "Defines the truth boundary for AI chat, decisions, observational analysis, and unsupported capabilities.",
+      "reviewed_by": ["product_ux_strategist", "decision_intelligence_specialist", "skeptic_qa_reviewer"]
+    },
+    {
+      "path": "project_docs/active/reviews/react_state_flow_review.md",
+      "source_type": "markdown",
+      "relevance": "Documents prior state ownership and source-of-truth concerns, though the duplicate WindowProvider finding appears stale against current code.",
+      "reviewed_by": ["architecture_guardian", "skeptic_qa_reviewer", "implementation_planner"]
+    },
+    {
+      "path": "frontend/frontend/src/App.jsx",
+      "source_type": "code",
+      "relevance": "Owns global navigation, many feature visibility flags, legacy chart state, Decision state, AI state, and large prop handoff into CanvasContainer.",
+      "reviewed_by": ["architecture_guardian", "product_ux_strategist", "implementation_planner"]
+    },
+    {
+      "path": "frontend/frontend/src/components/layout/CanvasContainer.jsx",
+      "source_type": "code",
+      "relevance": "Coordinates destination rendering, windows, AI shell mounting, Decision panel mounting, and many workflow surfaces.",
+      "reviewed_by": ["architecture_guardian", "product_ux_strategist", "decision_intelligence_specialist"]
+    },
+    {
+      "path": "frontend/frontend/src/features/ai/AIShell.jsx",
+      "source_type": "code",
+      "relevance": "Primary AI chat and Decision Intelligence chat UI, including mode selector, artifacts, actions, session_state, and results pane.",
+      "reviewed_by": ["decision_intelligence_specialist", "skeptic_qa_reviewer", "product_ux_strategist"]
+    },
+    {
+      "path": "frontend/frontend/src/components/layout/DestinationHome.jsx",
+      "source_type": "code",
+      "relevance": "Destination empty-state surface where tone, hierarchy, and overclaiming language issues appear.",
+      "reviewed_by": ["product_ux_strategist", "architecture_guardian"]
+    },
+    {
+      "path": "frontend/frontend/src/components/layout/DataPane.jsx",
+      "source_type": "code",
+      "relevance": "Right-side semantic/data pane that is essential for Decisions and Dashboards but is hidden by default.",
+      "reviewed_by": ["product_ux_strategist", "implementation_planner"]
+    },
+    {
+      "path": "frontend/frontend/src/features/business/decision/DecisionWorkspaceView.jsx",
+      "source_type": "code",
+      "relevance": "Decision workspace copy and presentation still include simulation/trade-off/recommendation language that can overstate current capability.",
+      "reviewed_by": ["decision_intelligence_specialist", "skeptic_qa_reviewer"]
+    },
+    {
+      "path": "backend/decision_engine/chat_service.py",
+      "source_type": "code",
+      "relevance": "Backend returns richer analysis diagnostics that the chat UI does not fully render.",
+      "reviewed_by": ["decision_intelligence_specialist"]
+    },
+    {
+      "path": "frontend/frontend/package.json",
+      "source_type": "test",
+      "relevance": "Shows Testing Library is available, while no focused frontend regression coverage was found for critical AI/Decision UI flows.",
+      "reviewed_by": ["skeptic_qa_reviewer"]
+    }
+  ],
+  "participating_agents": [
+    {
+      "agent_id": "architecture_guardian",
+      "role_name": "Architecture Guardian",
+      "perspective": "Protect system integrity, contract boundaries, state ownership, and maintainability while allowing safe UI cleanup.",
+      "decision_rights": "Can block UI work that changes contracts, backend truth, action IDs, session_state, or persistence behavior without a deliberate backend/frontend slice."
+    },
+    {
+      "agent_id": "product_ux_strategist",
+      "role_name": "Product/UX Strategist",
+      "perspective": "Protect workflow clarity, navigation authority, visual hierarchy, app-wide tone, and user trust.",
+      "decision_rights": "Can challenge technically correct screens that still feel fragmented, marketing-like, or confusing."
+    },
+    {
+      "agent_id": "decision_intelligence_specialist",
+      "role_name": "Decision Intelligence Specialist",
+      "perspective": "Protect chat-to-decision continuity, draft inspectability, workspace handoff, assumptions, blockers, and observational analysis truth.",
+      "decision_rights": "Can require Decision Intelligence UI to expose real decision state and avoid unsupported simulation or optimizer claims."
+    },
+    {
+      "agent_id": "skeptic_qa_reviewer",
+      "role_name": "Skeptic/QA Reviewer",
+      "perspective": "Protect against stale card execution, accessibility failures, unsupported capability language, and missing frontend regression coverage.",
+      "decision_rights": "Can require acceptance checks before Gemini marks UI cleanup complete."
+    },
+    {
+      "agent_id": "implementation_planner",
+      "role_name": "Implementation Planner",
+      "perspective": "Sequence Gemini work into safe phases that preserve current behavior and defer high-blast-radius architecture refactors.",
+      "decision_rights": "Can defer broad refactors until lower-risk UI truth and continuity fixes pass."
+    }
+  ],
+  "conversation_rounds": {
+    "round_1_independent_proposals": [
+      {
+        "agent_id": "architecture_guardian",
+        "stance": "Start with contract-safe UI cleanup and correct stale documentation before structural refactors.",
+        "claims": [
+          "The current React state-flow review is partly stale because the duplicate WindowProvider finding no longer matches current App.jsx and index.js.",
+          "App.jsx and CanvasContainer.jsx still concentrate too much UI state and make cleanup risky.",
+          "Gemini can improve copy, spacing, density, CSS consistency, and visual hierarchy without changing backend contracts."
+        ],
+        "challenged_assumptions": [
+          "All findings in the older React review should be treated as current implementation truth.",
+          "Visual polish can safely happen while changing state ownership and API payloads in the same pass."
+        ],
+        "evidence": [
+          "project_docs/active/reviews/react_state_flow_review.md",
+          "frontend/frontend/src/index.js",
+          "frontend/frontend/src/App.jsx",
+          "frontend/frontend/src/components/layout/CanvasContainer.jsx"
+        ],
+        "proposed_changes": [
+          "Mark stale review findings before Gemini starts.",
+          "Give Gemini a low-risk UI cleanup pass first, then a separate state ownership hardening pass.",
+          "Preserve action IDs, artifact types, session_state, backend endpoints, WindowContext persistence, and DataContext precedence."
+        ],
+        "risks_flagged": [
+          "A combined visual and state refactor could regress AI chat, charts, windows, and Decision workspace behavior."
+        ]
+      },
+      {
+        "agent_id": "product_ux_strategist",
+        "stance": "Make navigation and workspace hierarchy feel intentional before adding features.",
+        "claims": [
+          "The app can leave users in Workspace while an AI destination surface is open, weakening destination authority.",
+          "Decisions and AI still feel like movable windows rather than primary workspaces.",
+          "Destination empty states are polished but too centered and marketing-like for the dense workbench tone."
+        ],
+        "challenged_assumptions": [
+          "A window-manager style is enough for primary workflows like AI and Decisions.",
+          "Large hero-like empty states fit the operational tone of this application."
+        ],
+        "evidence": [
+          "frontend/frontend/src/App.jsx",
+          "frontend/frontend/src/components/layout/CanvasContainer.jsx",
+          "frontend/frontend/src/components/layout/DestinationHome.jsx",
+          "frontend/frontend/src/components/layout/DestinationHome.css"
+        ],
+        "proposed_changes": [
+          "Make destination selection authoritative when opening AI or Decisions.",
+          "Treat AI and Decisions as stable primary destination layouts over time.",
+          "Reduce empty-state hero/card treatment while preserving the current dark professional theme."
+        ],
+        "risks_flagged": [
+          "Users may not understand whether they are chatting, drafting, analyzing, or looking at a historical floating window."
+        ]
+      },
+      {
+        "agent_id": "decision_intelligence_specialist",
+        "stance": "Fix chat-to-Decisions continuity and truthfulness before adding more intelligence surfaces.",
+        "claims": [
+          "The chat `open_workspace` action does not appear to hand off into App-level decision workspace state or navigate to Decisions.",
+          "Backend analysis returns richer diagnostics than the chat renderer exposes.",
+          "Decorative AI tabs and context surfaces compete with real session state.",
+          "Decision workspace copy still includes simulation, trade-off, ranking, or recommendation language that can overstate current capability."
+        ],
+        "challenged_assumptions": [
+          "A chat artifact is enough to count as opening a decision workspace.",
+          "Placeholder tabs are harmless if they look polished.",
+          "Future simulation language is safe as long as it appears as locked or planned."
+        ],
+        "evidence": [
+          "frontend/frontend/src/features/ai/AIShell.jsx",
+          "frontend/frontend/src/components/layout/CanvasContainer.jsx",
+          "frontend/frontend/src/features/business/decision/DecisionWorkspaceView.jsx",
+          "backend/decision_engine/chat_service.py"
+        ],
+        "proposed_changes": [
+          "Wire chat workspace handoff into App-level decision state and navigation.",
+          "Render scoped diagnostics in chat analysis summaries.",
+          "Expose richer draft-understanding details so users can catch bad parses.",
+          "Hide or clearly mark inert AI tabs and rewrite unsupported capability language."
+        ],
+        "risks_flagged": [
+          "Users can frame a decision in chat and then land in a fresh Decisions flow with no carried context."
+        ]
+      },
+      {
+        "agent_id": "skeptic_qa_reviewer",
+        "stance": "Treat stale card execution, action shape coverage, accessibility, and tests as gating issues.",
+        "claims": [
+          "Older chat message actions can call the latest component-level sessionState instead of the state represented by that card.",
+          "Recommended action rendering only partly supports top-level versus nested `decision_kickoff.recommended_next_action` shapes.",
+          "Icon-only controls lack consistent accessible names.",
+          "No focused frontend regression tests were found for critical AI/Decision UI flows."
+        ],
+        "challenged_assumptions": [
+          "Passing backend tests proves frontend action behavior is safe.",
+          "Tooltip/title behavior is enough accessibility for icon-only controls.",
+          "The current duplicate-action filtering covers every artifact shape."
+        ],
+        "evidence": [
+          "frontend/frontend/src/features/ai/AIShell.jsx",
+          "frontend/frontend/package.json"
+        ],
+        "proposed_changes": [
+          "Capture or pass per-message session state for action execution.",
+          "Support both top-level and nested recommended action shapes.",
+          "Add accessible names to icon controls.",
+          "Add or run focused frontend tests for action rendering, stale-card state, disabled behavior, duplicate filtering, and nested payloads."
+        ],
+        "risks_flagged": [
+          "A user may click Analyze workspace on an older card and execute against a newer workspace."
+        ]
+      },
+      {
+        "agent_id": "implementation_planner",
+        "stance": "Split the work into Gemini phases: safety correction, continuity, clarity, state cleanup, and verification.",
+        "claims": [
+          "Gemini should not start by rewriting the whole shell.",
+          "The first pass should address user-visible trust problems while preserving the theme and current behavior.",
+          "High-blast-radius workflow globals and state ownership cleanup should be separate later phases."
+        ],
+        "challenged_assumptions": [
+          "Because frontend flaws are app-wide, one broad implementation pass is the safest path."
+        ],
+        "evidence": [
+          "project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md",
+          "frontend/frontend/src/App.jsx",
+          "frontend/frontend/src/components/layout/CanvasContainer.jsx",
+          "frontend/frontend/src/features/workflow/AiWorkflowLab.jsx",
+          "frontend/frontend/src/features/ai/AiAutopilot.jsx"
+        ],
+        "proposed_changes": [
+          "Create a Gemini handoff that starts with the P1 AI stale-state issue and Decision continuity.",
+          "Then clean unsupported language, inert surfaces, empty-state tone, semantic-pane recovery, and accessibility.",
+          "Defer workflow global refactors until visible AI/Decision surfaces are stable."
+        ],
+        "risks_flagged": [
+          "Trying to fix visual design, state ownership, workflow orchestration, and contracts together would be hard to verify."
+        ]
+      }
+    ],
+    "round_2_critiques": [
+      {
+        "agent_id": "architecture_guardian",
+        "stance": "Continuity fixes may require App-level integration, so they are not mere visual polish.",
+        "claims": [
+          "Wiring `open_workspace` into Decisions changes callback pathways and App-level state, so it needs a focused implementation phase.",
+          "The stale-session action issue is a behavioral bug and should be handled before broad visual cleanup."
+        ],
+        "challenged_assumptions": [
+          "All Gemini work can be limited to CSS and copy."
+        ],
+        "evidence": [
+          "frontend/frontend/src/features/ai/AIShell.jsx",
+          "frontend/frontend/src/App.jsx",
+          "frontend/frontend/src/components/layout/CanvasContainer.jsx"
+        ],
+        "proposed_changes": [
+          "Phase the first Gemini task around AI/Decision action correctness and workspace continuity."
+        ],
+        "risks_flagged": [
+          "Treating behavioral UI flaws as cosmetic could preserve broken handoff behavior."
+        ]
+      },
+      {
+        "agent_id": "product_ux_strategist",
+        "stance": "State cleanup matters, but users will notice unclear destinations and overclaiming first.",
+        "claims": [
+          "The UI should stop making AI and Decisions feel like optional floating tools.",
+          "Copy like Intelligence is Ready and Draft Strategy should be corrected early because it shapes user trust."
+        ],
+        "challenged_assumptions": [
+          "Architecture cleanup should always precede user-visible clarity."
+        ],
+        "evidence": [
+          "frontend/frontend/src/components/layout/DestinationHome.jsx",
+          "frontend/frontend/src/features/business/decision/DecisionIntakeFlow.jsx",
+          "project_docs/active/decision_intelligence/phase_4_5_ai_chat_decision_intelligence_plan.md"
+        ],
+        "proposed_changes": [
+          "Include a first-pass copy and hierarchy cleanup alongside critical action/handoff fixes."
+        ],
+        "risks_flagged": [
+          "Users may overtrust the system before its decision workflow has reached final recommendation capability."
+        ]
+      },
+      {
+        "agent_id": "decision_intelligence_specialist",
+        "stance": "Do not let general UI polish hide the specific decision workflow gap.",
+        "claims": [
+          "The most important UI flaw is that chat and Decisions can remain parallel products.",
+          "Draft previews should be more inspectable before workspace analysis, not merely prettier."
+        ],
+        "challenged_assumptions": [
+          "App-wide UI cleanup is primarily visual consistency work."
+        ],
+        "evidence": [
+          "frontend/frontend/src/features/ai/AIShell.jsx",
+          "frontend/frontend/src/features/business/decision/DecisionPanel.jsx",
+          "backend/decision_engine/chat_service.py"
+        ],
+        "proposed_changes": [
+          "Make chat-to-workspace continuity and richer analysis rendering explicit acceptance criteria."
+        ],
+        "risks_flagged": [
+          "A polished UI can still fail the core Decision Intelligence workflow."
+        ]
+      },
+      {
+        "agent_id": "skeptic_qa_reviewer",
+        "stance": "Every proposed cleanup needs regression checks, not just build success.",
+        "claims": [
+          "The prior status says scoped action resolution is verified, but current code still suggests action execution may use latest sessionState.",
+          "Gemini must test old-card actions after a second prompt.",
+          "Accessibility names and frontend tests should be part of cleanup acceptance."
+        ],
+        "challenged_assumptions": [
+          "Manual visual review is enough for UI hardening."
+        ],
+        "evidence": [
+          "frontend/frontend/src/features/ai/AIShell.jsx",
+          "project_docs/active/status/decision_intelligence_execution_status.md",
+          "frontend/frontend/package.json"
+        ],
+        "proposed_changes": [
+          "Require manual stale-card test, nested recommended-action test, unsupported-language search, keyboard-only pass, and focused frontend tests where feasible."
+        ],
+        "risks_flagged": [
+          "A UI cleanup can reintroduce exactly the action-state regressions Slice 3 claimed to solve."
+        ]
+      },
+      {
+        "agent_id": "implementation_planner",
+        "stance": "Prioritize one Gemini handoff with a bounded first slice, then queue later architecture cleanup.",
+        "claims": [
+          "The first Gemini prompt should not ask for a full rewrite.",
+          "It should name exact files, defects, acceptance checks, and status-doc requirement."
+        ],
+        "challenged_assumptions": [
+          "The council should give Gemini every possible improvement at once."
+        ],
+        "evidence": [
+          "project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md",
+          "project_docs/active/agent_council/agent_roles.md"
+        ],
+        "proposed_changes": [
+          "Produce a council JSON plus a concise Gemini prompt focused on action correctness, continuity, truthful copy, inert surfaces, semantic pane recovery, and accessibility."
+        ],
+        "risks_flagged": [
+          "A long unfocused prompt will cause Gemini to drift into feature work or unsafe refactors."
+        ]
+      }
+    ],
+    "round_3_reconciliation": [
+      {
+        "agent_id": "architecture_guardian",
+        "stance": "Allow frontend and App-level integration fixes, but preserve backend contract fields.",
+        "claims": [
+          "The first implementation slice may touch AIShell, CanvasContainer, App, DecisionPanel, DestinationHome, DataPane, and DecisionWorkspaceView.",
+          "It should not change decisionApi endpoints or backend response shapes unless Gemini finds a documented contract mismatch."
+        ],
+        "challenged_assumptions": [
+          "Backend changes are needed for the first UI cleanup."
+        ],
+        "evidence": [
+          "frontend/frontend/src/features/ai/AIShell.jsx",
+          "frontend/frontend/src/features/business/decision/decisionApi.js"
+        ],
+        "proposed_changes": [
+          "Keep backend changes optional and evidence-driven."
+        ],
+        "risks_flagged": [
+          "Unnecessary backend edits could destabilize the completed Slice 3 contract."
+        ]
+      },
+      {
+        "agent_id": "product_ux_strategist",
+        "stance": "The theme should remain; the tone should become more operational and less promotional.",
+        "claims": [
+          "Keep the dark, dense, professional visual direction.",
+          "Reduce large hero-card empty states and overclaiming terms.",
+          "Make AI and Decisions feel like clear destinations."
+        ],
+        "challenged_assumptions": [
+          "Preserving theme means preserving every current empty-state and copy pattern."
+        ],
+        "evidence": [
+          "frontend/frontend/src/index.css",
+          "frontend/frontend/src/components/layout/DestinationHome.css",
+          "frontend/frontend/src/features/ai/AIShell.css"
+        ],
+        "proposed_changes": [
+          "Preserve visual tokens and density while improving hierarchy, labels, and empty states."
+        ],
+        "risks_flagged": [
+          "A redesign could damage the current app identity."
+        ]
+      },
+      {
+        "agent_id": "decision_intelligence_specialist",
+        "stance": "Make the first slice pass the real decision journey.",
+        "claims": [
+          "A user should be able to ask a decision question in chat, inspect the draft, analyze it, and open the same workspace in Decisions without context loss.",
+          "Chat analysis should display enough diagnostic detail to justify the workflow."
+        ],
+        "challenged_assumptions": [
+          "Opening a workspace in chat is equivalent to navigating into the Decisions destination."
+        ],
+        "evidence": [
+          "backend/decision_engine/chat_service.py",
+          "frontend/frontend/src/features/ai/AIShell.jsx",
+          "frontend/frontend/src/features/business/decision/DecisionPanel.jsx"
+        ],
+        "proposed_changes": [
+          "Set continuity and analysis-detail rendering as top priority."
+        ],
+        "risks_flagged": [
+          "Decision Intelligence may remain a disconnected shell even if individual cards look good."
+        ]
+      },
+      {
+        "agent_id": "skeptic_qa_reviewer",
+        "stance": "The first Gemini slice must include explicit acceptance checks.",
+        "claims": [
+          "Old-card action execution should be tested after a later prompt.",
+          "Unsupported capability language should be searched and corrected.",
+          "Keyboard accessibility should be verified."
+        ],
+        "challenged_assumptions": [
+          "Frontend build success is enough."
+        ],
+        "evidence": [
+          "frontend/frontend/src/features/ai/AIShell.jsx",
+          "frontend/frontend/package.json"
+        ],
+        "proposed_changes": [
+          "Require build, manual prompts, stale-card test, nested action-shape test, unsupported-language search, and keyboard pass."
+        ],
+        "risks_flagged": [
+          "Regressions can remain invisible without prompt-based and keyboard-based checks."
+        ]
+      },
+      {
+        "agent_id": "implementation_planner",
+        "stance": "Final first-slice plan: fix correctness, continuity, truthfulness, and accessibility; defer deeper shell refactors.",
+        "claims": [
+          "The first Gemini handoff should address UI flaws that directly affect trust and workflow continuity.",
+          "Large state ownership, workflow-global, and stable full-destination layout refactors should be planned as follow-up slices."
+        ],
+        "challenged_assumptions": [
+          "A single Gemini pass should solve every app-wide UI issue."
+        ],
+        "evidence": [
+          "all council role reports"
+        ],
+        "proposed_changes": [
+          "Create a concise Gemini prompt with exact files, defects, constraints, acceptance checks, and status-doc requirement."
+        ],
+        "risks_flagged": [
+          "Over-scoping the first handoff increases the chance of regressions."
+        ]
+      }
+    ],
+    "round_4_synthesis": [
+      {
+        "agent_id": "implementation_planner",
+        "stance": "Give Gemini a focused app-wide UI flaw cleanup handoff before new features.",
+        "claims": [
+          "The first implementation should not add features.",
+          "It should fix AI/Decision correctness and continuity, remove overclaiming UI language, reduce inert/decorative surfaces, improve semantic-pane recovery, and add accessibility/test coverage where practical.",
+          "The app theme should remain dark, dense, professional, and operational."
+        ],
+        "challenged_assumptions": [
+          "UI polish means only CSS.",
+          "App-wide UI cleanup should begin with a shell rewrite."
+        ],
+        "evidence": [
+          "frontend/frontend/src/App.jsx",
+          "frontend/frontend/src/components/layout/CanvasContainer.jsx",
+          "frontend/frontend/src/features/ai/AIShell.jsx",
+          "frontend/frontend/src/features/business/decision/DecisionWorkspaceView.jsx",
+          "project_docs/active/decision_intelligence/phase_4_5_ai_chat_decision_intelligence_plan.md"
+        ],
+        "proposed_changes": [
+          "Save the council output and create a Gemini handoff prompt."
+        ],
+        "risks_flagged": [
+          "Without a bounded prompt, Gemini may either over-refactor or only repaint the UI."
+        ]
+      }
+    ]
+  },
+  "major_disagreements": [
+    {
+      "disagreement_id": "disagreement-polish-vs-behavior",
+      "topic": "Whether the first UI cleanup should be visual polish or behavior/continuity correction.",
+      "positions": [
+        {
+          "agent_id": "product_ux_strategist",
+          "position": "Start with visible clarity, destination hierarchy, and tone.",
+          "rationale": "Users experience the app through navigation, copy, and visible workflow clarity before they understand state ownership."
+        },
+        {
+          "agent_id": "skeptic_qa_reviewer",
+          "position": "Start with stale action execution and action-shape correctness.",
+          "rationale": "A visually clearer UI is still dangerous if old cards execute against the wrong session state."
+        },
+        {
+          "agent_id": "decision_intelligence_specialist",
+          "position": "Start with chat-to-Decisions continuity.",
+          "rationale": "The central Decision Intelligence workflow fails if chat and Decisions remain parallel products."
+        }
+      ],
+      "status": "resolved",
+      "resolution": "The first Gemini slice should combine critical behavior-facing UI fixes with visible trust cleanup: stale action state, open_workspace continuity, scoped diagnostics rendering, overclaiming copy, inert surfaces, and accessibility."
+    },
+    {
+      "disagreement_id": "disagreement-full-shell-refactor-vs-bounded-slice",
+      "topic": "Whether Gemini should convert AI and Decisions into full stable destination layouts immediately.",
+      "positions": [
+        {
+          "agent_id": "product_ux_strategist",
+          "position": "AI and Decisions should feel like primary workspaces rather than draggable windows.",
+          "rationale": "Primary workflows lose hierarchy when they behave like optional floating tools."
+        },
+        {
+          "agent_id": "architecture_guardian",
+          "position": "Do not start with a full shell refactor.",
+          "rationale": "CanvasContainer and App state ownership are too broad, and a shell rewrite could regress windows, dashboards, charts, and AI chat."
+        }
+      ],
+      "status": "deferred",
+      "resolution": "Plan stable AI/Decision destination layouts as a follow-up slice after the first correctness and trust cleanup passes."
+    },
+    {
+      "disagreement_id": "disagreement-review-truth",
+      "topic": "Whether to trust the existing React state flow review as-is.",
+      "positions": [
+        {
+          "agent_id": "architecture_guardian",
+          "position": "The review is useful but partly stale.",
+          "rationale": "The duplicate WindowProvider finding no longer matches current App.jsx and index.js."
+        },
+        {
+          "agent_id": "implementation_planner",
+          "position": "The review should still guide state cleanup.",
+          "rationale": "Many ownership drift issues remain true even if one finding is stale."
+        }
+      ],
+      "status": "resolved",
+      "resolution": "Use the review for ownership themes, but tell Gemini not to spend effort on the stale duplicate WindowProvider finding unless revalidated."
+    }
+  ],
+  "resolved_recommendations": [
+    {
+      "recommendation_id": "rec-ai-action-state-correctness",
+      "title": "Fix AI chat action execution context",
+      "summary": "Ensure actions on older AI chat cards execute against the state represented by that card, not only the latest component-level sessionState.",
+      "originating_agents": ["skeptic_qa_reviewer", "architecture_guardian"],
+      "source_paths": ["frontend/frontend/src/features/ai/AIShell.jsx", "project_docs/active/status/decision_intelligence_execution_status.md"],
+      "priority": "critical",
+      "confidence": 0.91,
+      "implementation_timing": "now",
+      "rationale": "This is the highest-risk UI flaw because the visible card can appear correct while the executed backend action targets newer decision state.",
+      "impacted_areas": ["AI chat action controls", "Decision chat session_state", "workspace_preview and workspace_analysis_summary artifacts"],
+      "frontend_implications": [
+        "AIShell should preserve per-message or per-artifact action context for action execution.",
+        "Disabled actions must remain non-executable and show availability reasons."
+      ],
+      "backend_implications": [
+        "No backend change should be needed unless the frontend lacks enough per-card state to execute correctly."
+      ],
+      "contract_considerations": [
+        "Preserve action_id, enabled, priority, availability_reason, payload_expectations, and session_state semantics."
+      ],
+      "testing_considerations": [
+        "Run one complete decision prompt, then a second unrelated prompt, then click Analyze workspace on the first card and verify the result matches the first card."
+      ],
+      "risks": [
+        "Fixing this incorrectly could break the scoped action rendering Slice 3 already completed."
+      ],
+      "dependencies": [
+        "Current backend decision chat action contract."
+      ],
+      "acceptance_signals": [
+        "Old card actions execute against their own workspace/session context.",
+        "Newer turns do not mutate older visible action availability or execution payloads."
+      ]
+    },
+    {
+      "recommendation_id": "rec-chat-decisions-continuity",
+      "title": "Make chat open_workspace hand off into Decisions",
+      "summary": "Wire chat workspace opening into App-level decisionWorkspace state and navigate to the Decisions destination so chat and Decisions behave as one workflow.",
+      "originating_agents": ["decision_intelligence_specialist", "product_ux_strategist", "implementation_planner"],
+      "source_paths": ["frontend/frontend/src/features/ai/AIShell.jsx", "frontend/frontend/src/App.jsx", "frontend/frontend/src/components/layout/CanvasContainer.jsx", "frontend/frontend/src/features/business/decision/DecisionPanel.jsx"],
+      "priority": "high",
+      "confidence": 0.86,
+      "implementation_timing": "now",
+      "rationale": "The user wants UI flaws ironed out before features; a major UI flaw is that decision framing in chat can fail to become the actual Decisions workspace.",
+      "impacted_areas": ["AI chat", "Decisions destination", "DecisionPanel", "App-level decision state", "CanvasContainer callbacks"],
+      "frontend_implications": [
+        "AIShell likely needs a callback for workspace handoff and destination navigation.",
+        "CanvasContainer and App may need to pass decision workspace setters into AIShell."
+      ],
+      "backend_implications": [
+        "Backend should remain unchanged if it already returns decision_workspace or enough workspace payload from actions."
+      ],
+      "contract_considerations": [
+        "Use backend returned decision_workspace as data, not invented frontend-only workspace state."
+      ],
+      "testing_considerations": [
+        "Click Open workspace from a chat draft and verify Decisions opens with the same objective, levers, guardrails, assumptions, blockers, and workspace context."
+      ],
+      "risks": [
+        "Poor callback wiring could open Decisions while losing the drafted workspace."
+      ],
+      "dependencies": [
+        "rec-ai-action-state-correctness"
+      ],
+      "acceptance_signals": [
+        "Open workspace from AI chat navigates to Decisions.",
+        "DecisionPanel shows the same drafted workspace instead of starting a fresh intake."
+      ]
+    },
+    {
+      "recommendation_id": "rec-truthful-ui-language",
+      "title": "Remove overclaiming AI and Decision language",
+      "summary": "Rewrite UI language that implies autonomous intelligence, optimization, simulation, final recommendations, ranked decisions, or finalized analysis unless it is explicitly framed as unavailable or future capability.",
+      "originating_agents": ["product_ux_strategist", "decision_intelligence_specialist", "architecture_guardian", "skeptic_qa_reviewer"],
+      "source_paths": ["frontend/frontend/src/features/ai/AIShell.jsx", "frontend/frontend/src/components/layout/DestinationHome.jsx", "frontend/frontend/src/features/business/decision/DecisionIntakeFlow.jsx", "frontend/frontend/src/features/business/decision/DecisionWorkspaceView.jsx", "project_docs/active/decision_intelligence/phase_4_5_ai_chat_decision_intelligence_plan.md"],
+      "priority": "high",
+      "confidence": 0.9,
+      "implementation_timing": "now",
+      "rationale": "The current product truth is observational and structurally scoped. UI copy must not create confidence in unavailable capabilities.",
+      "impacted_areas": ["AI shell copy", "Decision empty states", "Decision intake", "Decision workspace", "DestinationHome"],
+      "frontend_implications": [
+        "Use labels such as Draft decision frame, Ready for structured analysis, Observational analysis, Review blockers, and Open workspace.",
+        "Avoid autonomous, optimizer, simulation path, final decision, strategy finalized, and recommendation ranking language unless explicitly marked unsupported."
+      ],
+      "backend_implications": [
+        "No backend change expected."
+      ],
+      "contract_considerations": [
+        "Do not change backend action labels by local frontend rewrite unless display-only mapping is clearly separated from action_id."
+      ],
+      "testing_considerations": [
+        "Search visible UI strings for optimization, simulation, optimizer, final decision, autonomous, trade-off, and recommendation claims."
+      ],
+      "risks": [
+        "Overcorrecting could hide useful future-facing placeholders rather than labeling them honestly."
+      ],
+      "dependencies": [],
+      "acceptance_signals": [
+        "Unsupported capability terms appear only in honest limitation or coming-soon contexts.",
+        "Readiness language distinguishes structured analysis from final recommendation."
+      ]
+    },
+    {
+      "recommendation_id": "rec-ai-shell-inert-surfaces",
+      "title": "Reduce decorative AI shell surfaces",
+      "summary": "Hide, disable, or truthfully label AI workspace tabs and context drawer modules that do not yet reflect real session state or implemented behavior.",
+      "originating_agents": ["product_ux_strategist", "decision_intelligence_specialist"],
+      "source_paths": ["frontend/frontend/src/features/ai/AIShell.jsx"],
+      "priority": "medium",
+      "confidence": 0.82,
+      "implementation_timing": "next",
+      "rationale": "The AI shell currently has nested navigation and placeholder-like tabs that increase cognitive load and make it harder to distinguish real context from future affordance.",
+      "impacted_areas": ["AI shell tabs", "context drawer", "results pane"],
+      "frontend_implications": [
+        "Keep mode selector and results pane as primary.",
+        "Tabs such as Playbooks, Definitions, Briefs, and Checks should either show real content or be visibly unavailable without competing with the main chat flow."
+      ],
+      "backend_implications": [
+        "No backend change expected."
+      ],
+      "contract_considerations": [
+        "If context drawer reflects session_state, use real backend fields rather than static placeholder copy."
+      ],
+      "testing_considerations": [
+        "Verify no inert tab appears as a working peer to the chat thread."
+      ],
+      "risks": [
+        "Removing too much navigation could hide planned workflows; prefer truthful disabled states if future affordance matters."
+      ],
+      "dependencies": [
+        "rec-truthful-ui-language"
+      ],
+      "acceptance_signals": [
+        "Users can tell which AI surfaces are functional now.",
+        "The main Ask/Explore/Decide flow is visually dominant."
+      ]
+    },
+    {
+      "recommendation_id": "rec-draft-and-analysis-detail",
+      "title": "Make decision drafts and analysis results more inspectable",
+      "summary": "Render richer decision draft details and scoped diagnostics so users can catch bad parses and understand observational analysis results.",
+      "originating_agents": ["decision_intelligence_specialist", "product_ux_strategist"],
+      "source_paths": ["frontend/frontend/src/features/ai/AIShell.jsx", "backend/decision_engine/chat_service.py"],
+      "priority": "high",
+      "confidence": 0.84,
+      "implementation_timing": "now",
+      "rationale": "A clean UI is not enough if the user cannot inspect what the system understood or why analysis says what it says.",
+      "impacted_areas": ["workspace_preview artifacts", "workspace_analysis_summary artifacts", "AI results pane"],
+      "frontend_implications": [
+        "Use existing backend fields such as decision_kickoff, prompt_frame, understood, bindings, assumptions, blockers, scoped_diagnostics, and legacy_diagnostics when present.",
+        "Keep the card dense and work-focused; avoid a giant explanation panel."
+      ],
+      "backend_implications": [
+        "No backend change expected if the fields are already returned; otherwise Codex should review missing contract fields separately."
+      ],
+      "contract_considerations": [
+        "Treat backend artifact content as authoritative and keep fallback rendering for older shapes."
+      ],
+      "testing_considerations": [
+        "Analyze workspace should show observational diagnostic details without recommendation or simulation language."
+      ],
+      "risks": [
+        "Too much detail can make cards noisy; use progressive disclosure inside the existing visual tone."
+      ],
+      "dependencies": [
+        "rec-truthful-ui-language"
+      ],
+      "acceptance_signals": [
+        "Draft previews expose objective, levers, segments, guardrails, assumptions, blockers, and prompt framing when available.",
+        "Analysis summaries show scoped diagnostics beyond a headline."
+      ]
+    },
+    {
+      "recommendation_id": "rec-semantic-pane-recovery",
+      "title": "Make semantic definitions easier to discover when needed",
+      "summary": "In Decisions and Dashboards, open or strongly surface the right DataPane when semantic readiness is missing or the user needs to review definitions.",
+      "originating_agents": ["product_ux_strategist", "implementation_planner"],
+      "source_paths": ["frontend/frontend/src/components/layout/DataPane.jsx", "frontend/frontend/src/components/layout/DataPane.css", "frontend/frontend/src/features/business/decision/DecisionPanel.jsx"],
+      "priority": "medium",
+      "confidence": 0.78,
+      "implementation_timing": "next",
+      "rationale": "Semantic definitions are not secondary in Decisions. A hidden edge toggle makes recovery from readiness issues harder than it should be.",
+      "impacted_areas": ["DataPane", "DecisionPanel", "Dashboard definitions workflow"],
+      "frontend_implications": [
+        "When readiness is missing definitions, open the pane or present a clear Review Definitions action.",
+        "Preserve the current pane style and theme."
+      ],
+      "backend_implications": [
+        "No backend change expected."
+      ],
+      "contract_considerations": [
+        "Use existing decisionReadiness and semanticModelStatus data."
+      ],
+      "testing_considerations": [
+        "When semantic readiness is incomplete, user can find and act on definitions without hunting for the pane toggle."
+      ],
+      "risks": [
+        "Opening the pane too aggressively could crowd smaller screens."
+      ],
+      "dependencies": [],
+      "acceptance_signals": [
+        "Readiness recovery routes users to semantic definitions clearly.",
+        "The pane remains collapsible and does not cover primary content incoherently."
+      ]
+    },
+    {
+      "recommendation_id": "rec-accessibility-and-tests",
+      "title": "Add accessibility names and focused frontend verification",
+      "summary": "Add accessible names to icon-only controls and add or run focused frontend tests for the AI/Decision UI behaviors most likely to regress.",
+      "originating_agents": ["skeptic_qa_reviewer", "implementation_planner"],
+      "source_paths": ["frontend/frontend/src/features/ai/AIShell.jsx", "frontend/frontend/package.json"],
+      "priority": "medium",
+      "confidence": 0.88,
+      "implementation_timing": "now",
+      "rationale": "The UI cleanup should be verifiable beyond screenshots and build success.",
+      "impacted_areas": ["AI shell controls", "Decision action controls", "frontend test coverage"],
+      "frontend_implications": [
+        "Icon buttons should have aria-labels.",
+        "Keyboard-only flows should reach mode selection, chat input, send, artifact inspect, results close, and action buttons."
+      ],
+      "backend_implications": [
+        "No backend change expected."
+      ],
+      "contract_considerations": [
+        "Tests should use representative backend response shapes, including nested recommended_next_action."
+      ],
+      "testing_considerations": [
+        "Add or run tests for action rendering, stale-card state, disabled behavior, duplicate filtering, and nested payloads."
+      ],
+      "risks": [
+        "Testing may require mocking backend responses carefully to avoid brittle implementation tests."
+      ],
+      "dependencies": [
+        "rec-ai-action-state-correctness"
+      ],
+      "acceptance_signals": [
+        "Keyboard-only check passes for the core AI shell controls.",
+        "Frontend test coverage exists or manual verification is documented where tests are not feasible."
+      ]
+    },
+    {
+      "recommendation_id": "rec-defer-shell-and-workflow-refactor",
+      "title": "Defer broad shell and workflow refactors",
+      "summary": "Do not start the first Gemini pass by rewriting App/CanvasContainer ownership, stable destination layouts, or workflow global orchestration. Plan those as follow-up slices.",
+      "originating_agents": ["architecture_guardian", "implementation_planner"],
+      "source_paths": ["frontend/frontend/src/App.jsx", "frontend/frontend/src/components/layout/CanvasContainer.jsx", "frontend/frontend/src/features/workflow/AiWorkflowLab.jsx", "frontend/frontend/src/features/ai/AiAutopilot.jsx"],
+      "priority": "medium",
+      "confidence": 0.87,
+      "implementation_timing": "later",
+      "rationale": "Those are real flaws, but mixing them with action correctness and UI truth cleanup would create too much blast radius.",
+      "impacted_areas": ["App shell", "CanvasContainer", "WindowContext", "workflow orchestration"],
+      "frontend_implications": [
+        "First pass may reduce obviously stale props only where safe, but should avoid a full shell rewrite.",
+        "Future slice should make AI and Decisions stable full-destination layouts."
+      ],
+      "backend_implications": [
+        "No backend change expected."
+      ],
+      "contract_considerations": [
+        "Workflow globals should be replaced only with a deliberate React ownership contract."
+      ],
+      "testing_considerations": [
+        "Future refactor should have broad upload, chart, dashboard, AI, workflow, and Decisions regression checks."
+      ],
+      "risks": [
+        "Deferring these issues preserves some structural debt temporarily."
+      ],
+      "dependencies": [
+        "First UI trust cleanup completed."
+      ],
+      "acceptance_signals": [
+        "The first Gemini pass does not attempt a large unverified shell rewrite.",
+        "Follow-up architecture work is documented separately."
+      ]
+    }
+  ],
+  "unresolved_questions": [
+    {
+      "question_id": "question-stable-destination-layouts",
+      "question": "Should AI and Decisions become stable full-destination layouts instead of draggable windows in the next major UI architecture slice?",
+      "owner": "User and Gemini, with Codex architecture review",
+      "needed_before": "Before a broader shell or CanvasContainer refactor.",
+      "impact": "This affects the core product navigation model and should not be changed casually inside a cleanup pass."
+    },
+    {
+      "question_id": "question-backend-open-workspace-shape",
+      "question": "Does the current backend open_workspace action return every field needed to hydrate App-level decisionWorkspace without additional backend changes?",
+      "owner": "Gemini to inspect during implementation, Codex to review if backend contract is insufficient",
+      "needed_before": "Before completing chat-to-Decisions continuity.",
+      "impact": "If the backend response is incomplete, a small contract slice may be needed before UI handoff can be fully correct."
+    },
+    {
+      "question_id": "question-frontend-test-depth",
+      "question": "Should Gemini add formal React tests now or document manual verification if test setup friction is high?",
+      "owner": "Gemini",
+      "needed_before": "Before marking the UI cleanup complete.",
+      "impact": "Formal tests would better protect action state and duplicate rendering, but may require careful response mocks."
+    }
+  ],
+  "risks": [
+    {
+      "risk_id": "risk-old-card-wrong-session",
+      "title": "Older AI chat card actions may execute against the newest session state.",
+      "severity": "critical",
+      "likelihood": "medium",
+      "mitigation": "Store or pass per-message session/action context into handleActionClick and verify with a two-prompt stale-card test.",
+      "owner": "Gemini"
+    },
+    {
+      "risk_id": "risk-chat-decisions-parallel-products",
+      "title": "AI chat and Decisions can remain disconnected workflows.",
+      "severity": "high",
+      "likelihood": "medium",
+      "mitigation": "Wire open_workspace from chat into App-level decisionWorkspace and navigate to Decisions with the same draft context.",
+      "owner": "Gemini, Codex if backend contract gap appears"
+    },
+    {
+      "risk_id": "risk-overclaiming-intelligence",
+      "title": "UI language may imply unsupported simulation, optimization, or final recommendation capability.",
+      "severity": "high",
+      "likelihood": "high",
+      "mitigation": "Rewrite risky labels and search visible UI strings for unsupported capability terms.",
+      "owner": "Gemini"
+    },
+    {
+      "risk_id": "risk-shell-refactor-regression",
+      "title": "A broad shell refactor could regress charts, dashboards, windows, AI chat, and Decisions at once.",
+      "severity": "high",
+      "likelihood": "medium",
+      "mitigation": "Defer full shell/layout refactors until after bounded UI trust cleanup passes.",
+      "owner": "Gemini with Codex review"
+    },
+    {
+      "risk_id": "risk-hidden-semantic-recovery",
+      "title": "Users may not discover semantic definitions when Decision readiness is incomplete.",
+      "severity": "medium",
+      "likelihood": "medium",
+      "mitigation": "Open or clearly surface DataPane/Review Definitions in Decisions and Dashboards when readiness needs semantic fixes.",
+      "owner": "Gemini"
+    },
+    {
+      "risk_id": "risk-accessibility-gap",
+      "title": "Icon-only controls may be unclear to keyboard and screen-reader users.",
+      "severity": "medium",
+      "likelihood": "high",
+      "mitigation": "Add aria-labels and run keyboard-only verification across AI shell controls.",
+      "owner": "Gemini"
+    },
+    {
+      "risk_id": "risk-stale-review-finding",
+      "title": "Gemini may waste effort on a stale duplicate WindowProvider finding.",
+      "severity": "low",
+      "likelihood": "medium",
+      "mitigation": "State in the handoff that this finding appears stale and should be revalidated before action.",
+      "owner": "Codex"
+    }
+  ],
+  "impacted_codebase_areas": [
+    {
+      "area": "Global shell and navigation",
+      "path_patterns": ["frontend/frontend/src/App.jsx", "frontend/frontend/src/components/layout/CanvasContainer.jsx", "frontend/frontend/src/components/layout/MenuBar.jsx", "frontend/frontend/src/components/layout/SideBar.jsx"],
+      "why_it_matters": "Destination authority, window mounting, and cross-surface handoffs are controlled here.",
+      "change_type": "frontend"
+    },
+    {
+      "area": "AI chat shell",
+      "path_patterns": ["frontend/frontend/src/features/ai/AIShell.jsx", "frontend/frontend/src/features/ai/AIShell.css"],
+      "why_it_matters": "Contains the highest-priority action-state, artifact rendering, copy, accessibility, and inert-surface issues.",
+      "change_type": "frontend"
+    },
+    {
+      "area": "Decision Intelligence workspace",
+      "path_patterns": ["frontend/frontend/src/features/business/decision/*.jsx", "frontend/frontend/src/features/business/decision/*.css"],
+      "why_it_matters": "Needs truthful observational language and continuity from AI chat.",
+      "change_type": "frontend"
+    },
+    {
+      "area": "Destination empty states",
+      "path_patterns": ["frontend/frontend/src/components/layout/DestinationHome.jsx", "frontend/frontend/src/components/layout/DestinationHome.css"],
+      "why_it_matters": "Shapes app-wide tone and can overclaim readiness or feel too marketing-like.",
+      "change_type": "frontend"
+    },
+    {
+      "area": "Right data and semantic pane",
+      "path_patterns": ["frontend/frontend/src/components/layout/DataPane.jsx", "frontend/frontend/src/components/layout/DataPane.css"],
+      "why_it_matters": "Semantic recovery and definitions are important for Decisions and Dashboards.",
+      "change_type": "frontend"
+    },
+    {
+      "area": "Decision chat backend contract",
+      "path_patterns": ["backend/decision_engine/chat_service.py", "backend/routes/decision.py"],
+      "why_it_matters": "Only relevant if Gemini discovers the current open_workspace or diagnostics response lacks needed fields.",
+      "change_type": "backend"
+    },
+    {
+      "area": "Frontend tests",
+      "path_patterns": ["frontend/frontend/src/**/*.test.jsx", "frontend/frontend/src/**/*.test.js"],
+      "why_it_matters": "No focused tests currently protect the most critical UI action and artifact behavior.",
+      "change_type": "test"
+    }
+  ],
+  "frontend_implications": [
+    "Gemini should make a focused first pass, not a broad feature expansion.",
+    "The first pass may touch AIShell, App, CanvasContainer, DecisionPanel, DecisionWorkspaceView, DestinationHome, DataPane, and related CSS.",
+    "The dark, dense, professional operational tone should remain.",
+    "AI/Decision copy should become more truthful and less promotional.",
+    "AI and Decisions should become clearer workflows, but full stable-destination layout conversion should be a follow-up slice."
+  ],
+  "backend_implications": [
+    "No backend change is expected for the first Gemini pass unless open_workspace or analysis diagnostics lacks data needed for truthful UI continuity.",
+    "If a backend gap is found, Gemini should document it and stop short of frontend-only fake state; Codex should review the contract.",
+    "Backend action IDs, artifact types, session_state, and existing chat/action endpoints should be preserved."
+  ],
+  "contract_considerations": [
+    "Do not rename action_id values even if display labels change.",
+    "Use enabled, priority, availability_reason, payload_expectations, artifact.type, workspace_preview, workspace_analysis_summary, decision_workspace, and session_state as contract truth.",
+    "Support top-level and nested recommended_next_action shapes where current backend/tests allow both.",
+    "Do not infer final recommendation readiness from structural readiness.",
+    "Keep unsupported features visibly unavailable rather than silently hiding or implying them."
+  ],
+  "testing_considerations": [
+    "Run the frontend build after changes.",
+    "Run the ready prompt: How should we grow revenue next quarter using marketing spend by channel while protecting gross margin?",
+    "Run an incomplete prompt such as: How should we adjust discount rate by region next quarter?",
+    "After a second unrelated decision prompt, click Analyze workspace on the first card and verify it targets the first card context.",
+    "Verify Open workspace from AI chat navigates to Decisions with the same draft context.",
+    "Verify Analyze workspace renders observational diagnostics without simulation or optimizer language.",
+    "Search visible UI for optimization, simulation, optimizer, final decision, autonomous, and trade-off; keep only truthful limitation contexts.",
+    "Keyboard-test mode selection, chat input, send, artifact inspect, results-pane close, and action buttons.",
+    "Add focused frontend tests if practical for action rendering, stale-card execution context, disabled action behavior, duplicate filtering, and nested recommended action payloads."
+  ],
+  "implementation_priority": {
+    "top_priority_ids": [
+      "rec-ai-action-state-correctness",
+      "rec-chat-decisions-continuity",
+      "rec-truthful-ui-language",
+      "rec-draft-and-analysis-detail",
+      "rec-accessibility-and-tests"
+    ],
+    "deferred_ids": [
+      "rec-ai-shell-inert-surfaces",
+      "rec-semantic-pane-recovery",
+      "rec-defer-shell-and-workflow-refactor"
+    ],
+    "rationale": "The first Gemini slice should fix UI flaws that can actively mislead the user or execute the wrong decision state. Broader shell/layout architecture cleanup should come after those trust and continuity risks are under control."
+  },
+  "suggested_implementation_phases": [
+    {
+      "phase_id": "phase-0-handoff-orientation",
+      "title": "Read active docs and revalidate stale review findings",
+      "owner": "Gemini",
+      "objective": "Start from current project truth and avoid acting on stale review findings.",
+      "recommendation_ids": ["rec-defer-shell-and-workflow-refactor"],
+      "entry_criteria": [
+        "Read project_docs/INDEX.md and follow active scan order.",
+        "Read the Agent Council output and Gemini handoff prompt.",
+        "Confirm duplicate WindowProvider finding is stale before taking action on it."
+      ],
+      "exit_criteria": [
+        "Gemini understands frontend ownership and preservation constraints.",
+        "Gemini does not remove, hide, or simplify existing capability without approval."
+      ],
+      "validation_plan": [
+        "Inspect index.js and App.jsx for current provider structure.",
+        "Do not edit backend or contracts unless a specific contract gap blocks the UI fix."
+      ]
+    },
+    {
+      "phase_id": "phase-1-ai-decision-correctness",
+      "title": "Fix AI action context and chat-to-Decisions continuity",
+      "owner": "Gemini",
+      "objective": "Make the core AI-to-Decision workflow execute the visible card state and open the same workspace in Decisions.",
+      "recommendation_ids": ["rec-ai-action-state-correctness", "rec-chat-decisions-continuity"],
+      "entry_criteria": [
+        "AIShell action rendering and current session_state handling are understood.",
+        "App-level decisionWorkspace and destination navigation flow are understood."
+      ],
+      "exit_criteria": [
+        "Old AI card actions execute against their own state.",
+        "Open workspace from AI chat navigates to Decisions with the same draft workspace.",
+        "Existing Slice 3 action rendering still has primary/secondary state, disabled state, availability explanations, and no duplicate action surfaces."
+      ],
+      "validation_plan": [
+        "Run ready prompt, then second decision prompt, then click the first card action.",
+        "Verify Open workspace continuity into Decisions.",
+        "Confirm disabled actions do not execute."
+      ]
+    },
+    {
+      "phase_id": "phase-2-truth-and-inspection",
+      "title": "Clean Decision/AI truthfulness and inspectability",
+      "owner": "Gemini",
+      "objective": "Make the UI clear about what is real, what was understood, what analysis means, and what is not supported.",
+      "recommendation_ids": ["rec-truthful-ui-language", "rec-draft-and-analysis-detail", "rec-ai-shell-inert-surfaces"],
+      "entry_criteria": [
+        "Phase 1 continuity checks pass.",
+        "Current backend artifact fields are inspected before adding frontend display logic."
+      ],
+      "exit_criteria": [
+        "Unsupported capability language is corrected.",
+        "Draft previews expose enough structure for users to catch parse errors.",
+        "Analysis summaries show scoped diagnostics where available.",
+        "Inert AI tabs/context surfaces are hidden, disabled, or truthfully labeled."
+      ],
+      "validation_plan": [
+        "Search UI strings for unsupported capability terms.",
+        "Verify draft preview and analysis result on benchmark prompts.",
+        "Verify UI does not imply simulation, optimizer, autonomous agent, or final recommendation capability."
+      ]
+    },
+    {
+      "phase_id": "phase-3-operational-tone-and-recovery",
+      "title": "Improve app-wide UI tone and semantic recovery",
+      "owner": "Gemini",
+      "objective": "Preserve the theme while reducing marketing-like empty states and making semantic definition recovery easier.",
+      "recommendation_ids": ["rec-semantic-pane-recovery"],
+      "entry_criteria": [
+        "Core AI/Decision correctness and truthfulness checks pass."
+      ],
+      "exit_criteria": [
+        "DestinationHome copy and layout feel like an operational workbench, not a landing page.",
+        "Decisions and Dashboards can route users to semantic definitions clearly when readiness is incomplete.",
+        "Theme, density, and tone remain consistent."
+      ],
+      "validation_plan": [
+        "Inspect Workspace, Explore, Dashboards, Decisions, and AI empty states.",
+        "Verify semantic readiness recovery does not crowd or obscure main content."
+      ]
+    },
+    {
+      "phase_id": "phase-4-accessibility-and-regression",
+      "title": "Accessibility and regression verification",
+      "owner": "Gemini",
+      "objective": "Verify the cleanup with build, keyboard checks, prompt checks, and focused frontend tests where feasible.",
+      "recommendation_ids": ["rec-accessibility-and-tests"],
+      "entry_criteria": [
+        "Phases 1 through 3 are implemented."
+      ],
+      "exit_criteria": [
+        "Frontend build passes.",
+        "Keyboard-only checks pass for AI shell controls.",
+        "Frontend tests or documented manual checks cover critical AI/Decision flows.",
+        "Active status doc is updated truthfully."
+      ],
+      "validation_plan": [
+        "Run npm build from frontend/frontend.",
+        "Run or add focused React tests where practical.",
+        "Manually verify upload/data preview, charts, AI chat, Decision prompts, Open workspace, Analyze workspace, and semantic recovery."
+      ]
+    },
+    {
+      "phase_id": "phase-5-follow-up-architecture",
+      "title": "Plan shell and workflow ownership refactors",
+      "owner": "Codex and Gemini",
+      "objective": "After the first cleanup lands, plan a separate architecture slice for stable AI/Decision destination layouts, App/CanvasContainer state reduction, and workflow global replacement.",
+      "recommendation_ids": ["rec-defer-shell-and-workflow-refactor"],
+      "entry_criteria": [
+        "First Gemini UI cleanup passes verification."
+      ],
+      "exit_criteria": [
+        "A separate handoff exists for shell architecture cleanup.",
+        "The handoff has broader regression coverage expectations."
+      ],
+      "validation_plan": [
+        "Review App, CanvasContainer, WindowContext, workflow globals, dashboards, charts, AI, and Decisions before implementation."
+      ]
+    }
+  ],
+  "final_synthesis_summary": {
+    "executive_summary": "The council recommends giving Gemini a focused app-wide UI flaw cleanup before adding features. The first pass should fix AI action state correctness, chat-to-Decisions continuity, truthful capability language, draft/analysis inspectability, inert AI surfaces, semantic-pane recovery, and accessibility/test coverage while preserving the current dark professional theme.",
+    "strongest_proposal": "Start with the core AI/Decision trust path: old-card actions must execute against their own state, Open workspace must carry the same draft into Decisions, and the UI must stop implying unsupported simulation, optimization, autonomous decisioning, or final recommendation capability.",
+    "main_tradeoff": "A full shell redesign could make AI and Decisions feel more like primary destinations, but doing that first would carry high regression risk. The safer first slice is correctness, continuity, and truthful presentation.",
+    "decision_for_next_agent": "Gemini should implement the bounded UI cleanup described in the handoff prompt, not add features and not start with a broad App/CanvasContainer rewrite.",
+    "non_goals": [
+      "Do not add new Decision Intelligence features.",
+      "Do not redesign the app theme or tone.",
+      "Do not remove existing AI chat, chart, dashboard, workflow, or Decision capability.",
+      "Do not imply simulation, optimization, autonomous recommendation, or final-decision capability.",
+      "Do not rewrite backend contracts unless a specific frontend continuity fix proves the current response shape insufficient."
+    ],
+    "handoff_notes": "The existing React state flow review remains useful for ownership themes, but its duplicate WindowProvider finding appears stale. Gemini should preserve completed Decision Intelligence Slice 3 behavior and update the active status doc truthfully after implementation."
+  },
+  "metadata": {
+    "created_by": "Codex Agent Council live run",
+    "schema_path": "project_docs/active/agent_council/council_output_schema.json",
+    "validator_path": "project_docs/active/agent_council/validate_council_json.py"
+  }
+}

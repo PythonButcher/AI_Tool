@@ -23,6 +23,7 @@ The archive exists to preserve context without burning tokens on old plans that 
 - active Decision Intelligence plans and handoffs
 - active contracts
 - active technical reviews
+- reusable planning workflows, including the Agent Council debate framework
 
 `project_docs/archive/`
 
@@ -68,3 +69,14 @@ Contracts and reviews:
 
 - `project_docs/active/contracts/decision_objects.md`
 - `project_docs/active/reviews/react_state_flow_review.md`
+
+Planning workflows:
+
+- `project_docs/active/agent_council/README.md`
+- `project_docs/active/agent_council/agent_roles.md`
+- `project_docs/active/agent_council/master_council_prompt.md`
+- `project_docs/active/agent_council/council_output_schema.json`
+- `project_docs/active/agent_council/sample_decision_intelligence_council_output.json`
+- `project_docs/active/agent_council/validate_council_json.py`
+- `project_docs/active/agent_council/app_wide_ui_flaws_gemini_handoff.md`
+- `project_docs/active/agent_council/outputs/2026-04-28-app-wide-ui-flaws-gemini-council.json`

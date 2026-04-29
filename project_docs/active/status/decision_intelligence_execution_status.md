@@ -110,6 +110,7 @@ Truth:
 - [x] Slice 3 backend real action system contract
 - [x] Slice 3 frontend real action rendering
 - [~] Phase 4.5 AI chat decision-intelligence enhancement
+- [x] Agent Council planning workflow added under `project_docs/active/agent_council/`
 
 ## What Is Actually Implemented Today
 
@@ -149,6 +150,33 @@ Truth:
 - `project_docs/active/decision_intelligence/slice_3_real_action_system_gemini_frontend_handoff.md`
 - `project_docs/active/contracts/decision_objects.md`
 - `project_docs/active/reviews/react_state_flow_review.md`
+- `project_docs/active/agent_council/README.md`
+
+## Planning Support
+
+The Agent Council workflow is available for future planning debates that need multiple AI perspectives, explicit disagreement, reconciliation, and a structured JSON output for downstream analysis.
+
+Start with:
+
+- `project_docs/active/agent_council/README.md`
+- `project_docs/active/agent_council/master_council_prompt.md`
+- `project_docs/active/agent_council/council_output_schema.json`
+
+This workflow is documentation and handoff support only. It does not alter frontend behavior, backend behavior, API contracts, or Decision Intelligence runtime capability.
+
+### Latest Council Run
+
+An app-wide UI flaws council has been run for a Gemini cleanup handoff before additional feature work.
+
+Council artifact:
+
+- `project_docs/active/agent_council/outputs/2026-04-28-app-wide-ui-flaws-gemini-council.json`
+
+Gemini handoff:
+
+- `project_docs/active/agent_council/app_wide_ui_flaws_gemini_handoff.md`
+
+The council concluded that the first Gemini slice should focus on UI correctness and trust: AI chat action state, chat-to-Decisions continuity, truthful capability language, draft and analysis inspectability, inert AI shell surfaces, semantic definition recovery, accessibility, and focused verification. It should not add features or start with a broad shell rewrite.
 
 ## One-Line Status Truth
 
