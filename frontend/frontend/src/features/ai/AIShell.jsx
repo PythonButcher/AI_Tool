@@ -7,16 +7,14 @@ import {
   FaEye, FaChevronRight, FaTerminal, FaSearch, FaCloud
 } from "react-icons/fa";
 import { 
-  TextField, Button, Paper, Box, Typography, Divider, Tooltip, Chip, 
-  Avatar, Tabs, Tab, Drawer, IconButton, ToggleButton, ToggleButtonGroup
+  TextField, Button, Box, Typography, Divider, Tooltip, Chip, 
+  Avatar, Tabs, Tab, Drawer, IconButton
 } from '@mui/material';
 import { DataContext } from '../../context/DataContext';
 import { WarehouseContext } from '../../context/WarehouseContext';
 import MentionDropdown from '../../components/data_management/MentionDropdown';
 import { detectToken, extractTokens } from '../../utils/mentionUtils';
 import { AICommands } from '../workflow/AiCommandBlock';
-import { getDynamicColors } from '../../utils/ChartStyles';
-import { summarizeSemanticModel } from '../../utils/semanticModelUtils';
 import AICharts from './AICharts';
 import './AIShell.css';
 
@@ -35,35 +33,6 @@ const MODES = [
   { id: 'explore', label: 'Explore', promise: 'Visual trend discovery' },
   { id: 'decide', label: 'Decide', promise: 'Strategic path evaluation' },
 ];
-
-const formatChartData = (chartResponse) => {
-  const labels = chartResponse.chartData.map(item => {
-    if (typeof item === "object") {
-      const labelKey = Object.keys(item).find(k => k.toLowerCase() !== "value") || "label";
-      return String(item[labelKey]);
-    }
-    return String(item);
-  });
-
-  const data = chartResponse.chartData.map(item =>
-    typeof item === "object" && "value" in item
-      ? Number(item.value) || 0
-      : Number(item) || 0
-  );
-
-  const colors = getDynamicColors(labels.length);
-
-  return {
-    labels,
-    datasets: [{
-      label: chartResponse.chartType || "AI-Generated Chart",
-      data,
-      backgroundColor: colors.map(c => c.backgroundColor),
-      borderColor: colors.map(c => c.borderColor),
-      borderWidth: 1,
-    }]
-  };
-};
 
 /**
  * AIShell (Analytics-Agent Workspace)
@@ -248,12 +217,12 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
     return <Typography variant="body2" sx={{ lineHeight: 1.7 }}>{content.message || JSON.stringify(content)}</Typography>;
   };
 
-  const handleInspect = (artifact) => {
-    setActiveArtifact(artifact);
+  const handleInspect = (artifact, messageActions = null) => {
+    setActiveArtifact({ ...artifact, contextActions: messageActions });
     setIsResultsPaneOpen(true);
   };
 
-  const renderArtifact = (artifact, isInspector = false) => {
+  const renderArtifact = (artifact, isInspector = false, contextActions = null) => {
     if (!artifact) return null;
 
     const { 
@@ -265,6 +234,9 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
       mode: artMode 
     } = artifact;
 
+    // Use passed contextActions or stored artifact actions for inspector
+    const lookupActions = contextActions || artifact.contextActions || sessionState?.available_actions || [];
+
     const baseClass = isInspector ? "ai-shell__active-artifact" : "ai-shell__artifact-preview-card";
     
     // Metadata-driven visibility: In-thread we show links for inspectable rich content
@@ -275,7 +247,7 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
       if (type === 'answer' && !hasContent) return null;
 
       return (
-        <div className="ai-shell__artifact-preview-link" onClick={() => handleInspect(artifact)}>
+        <div className="ai-shell__artifact-preview-link" onClick={() => handleInspect(artifact, contextActions)}>
           <div className="ai-shell__preview-icon">
             {type === 'chart' ? <FaChartBar /> : type === 'workspace_preview' ? <FaLayerGroup /> : type === 'answer' ? <FaCheckCircle /> : <FaFileAlt />}
           </div>
@@ -307,7 +279,7 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
                 <span className="ai-shell__artifact-title">
                    <FaCheckCircle /> {source || 'Result'} {artMode ? `(${artMode})` : ''}
                 </span>
-                {inspectable && <IconButton size="small" onClick={() => handleInspect(artifact)}><FaExternalLinkAlt style={{ fontSize: '0.7rem' }} /></IconButton>}
+                {inspectable && <IconButton size="small" onClick={() => handleInspect(artifact, contextActions)}><FaExternalLinkAlt style={{ fontSize: '0.7rem' }} /></IconButton>}
               </div>
             )}
             <div className="ai-shell__artifact-content">{renderAnswerArtifact(content)}</div>
@@ -330,25 +302,153 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
 
       case 'workspace_preview':
         const wp = content || artifact;
+        
+        // Slice 2.5: Prefer Plain-English Kickoff fields
+        // Backend now sends decision_kickoff as an object
+        const isKickoff = !!wp.decision_kickoff;
+
+        // Helper to format object arrays into labels
+        const formatLabels = (items) => {
+          if (!Array.isArray(items)) return 'Not specified';
+          return items.map(item => item.label || item.name || item).join(', ');
+        };
+
         return (
           <div className={`${baseClass} is-workspace_preview`}>
             <div className="ai-shell__artifact-content">
-              <Typography variant="h6" sx={{ fontWeight: 900, mb: 1 }}>{wp.title || 'Decision Path'}</Typography>
-              <Typography variant="body1" sx={{ opacity: 0.7, mb: 4 }}>{wp.scope_summary}</Typography>
-              <div className="ai-shell__preview-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '20px' }}>
-                <div className="ai-shell__preview-metric"><span className="ai-shell__preview-metric-label">Status</span><span className="ai-shell__preview-metric-value">{wp.status || 'Draft'}</span></div>
-                <div className="ai-shell__preview-metric"><span className="ai-shell__preview-metric-label">Levers</span><span className="ai-shell__preview-metric-value">{wp.lever_count || 0}</span></div>
-                <div className="ai-shell__preview-metric"><span className="ai-shell__preview-metric-label">Inputs Needed</span><span className="ai-shell__preview-metric-value" style={{ color: (wp.missing_inputs?.length > 0 ? 'var(--accent-red)' : 'inherit') }}>{wp.missing_inputs?.length || 0}</span></div>
-              </div>
+              {isKickoff ? (
+                <div className="ai-shell__kickoff-container">
+                  <header className="ai-shell__kickoff-header" style={{ marginBottom: '24px' }}>
+                    <Typography variant="overline" sx={{ fontWeight: 900, opacity: 0.5, letterSpacing: '0.15em', display: 'block', mb: 1 }}>
+                      Decision Kickoff
+                    </Typography>
+                    <Typography variant="h5" sx={{ fontWeight: 900, letterSpacing: '-0.03em', lineHeight: 1.1 }}>
+                      {wp.title || 'Untitled Decision Framework'}
+                    </Typography>
+                  </header>
+                  
+                  <div className="ai-shell__kickoff-summary" style={{ marginBottom: '28px' }}>
+                    <Typography variant="body1" sx={{ lineHeight: 1.6, opacity: 0.9, fontSize: '1.05rem' }}>
+                      {wp.decision_kickoff?.summary || wp.decision_kickoff}
+                    </Typography>
+                  </div>
+
+                  <div className="ai-shell__kickoff-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '32px' }}>
+                    <div className="ai-shell__kickoff-item">
+                      <Typography variant="overline" sx={{ fontWeight: 900, opacity: 0.4, display: 'block', mb: 0.5 }}>Objective</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 700, borderLeft: '2px solid var(--text-primary)', pl: 1.5 }}>{wp.objective_metric?.label || wp.objective_metric || 'Not specified'}</Typography>
+                    </div>
+                    <div className="ai-shell__kickoff-item">
+                      <Typography variant="overline" sx={{ fontWeight: 900, opacity: 0.4, display: 'block', mb: 0.5 }}>Time Horizon</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 700, borderLeft: '2px solid var(--text-primary)', pl: 1.5 }}>{wp.time_horizon || 'Ongoing'}</Typography>
+                    </div>
+                    <div className="ai-shell__kickoff-item">
+                      <Typography variant="overline" sx={{ fontWeight: 900, opacity: 0.4, display: 'block', mb: 0.5 }}>Primary Levers</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 700, borderLeft: '2px solid var(--text-primary)', pl: 1.5 }}>{formatLabels(wp.levers)}</Typography>
+                    </div>
+                    <div className="ai-shell__kickoff-item">
+                      <Typography variant="overline" sx={{ fontWeight: 900, opacity: 0.4, display: 'block', mb: 0.5 }}>Segmentation</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 700, borderLeft: '2px solid var(--text-primary)', pl: 1.5 }}>{formatLabels(wp.segment_dimensions)}</Typography>
+                    </div>
+                    <div className="ai-shell__kickoff-item" style={{ gridColumn: '1 / -1' }}>
+                      <Typography variant="overline" sx={{ fontWeight: 900, opacity: 0.4, display: 'block', mb: 0.5 }}>Guardrails</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 700, borderLeft: '2px solid var(--text-primary)', pl: 1.5 }}>{formatLabels(wp.guardrails)}</Typography>
+                    </div>
+                  </div>
+
+                  <Divider sx={{ mb: 3, opacity: 0.1 }} />
+
+                  <div className="ai-shell__kickoff-footer">
+                    <div className="ai-shell__kickoff-status-block" style={{ marginBottom: '24px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
+                        <FaCheckCircle style={{ color: wp.status === 'ready' ? 'var(--accent-green)' : 'var(--text-secondary)', fontSize: '1rem' }} />
+                        <Typography variant="subtitle2" sx={{ fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', fontSize: '0.75rem' }}>
+                          {wp.status_label || (wp.status === 'ready' ? 'Framework Ready' : 'Incomplete')}
+                        </Typography>
+                      </div>
+                      <Typography variant="body2" sx={{ display: 'block', opacity: 0.7, lineHeight: 1.5 }}>
+                        {wp.readiness_meaning || (wp.status === 'ready' ? 'This framework is structurally complete and ready for analysis.' : 'Missing required inputs to begin analysis.')}
+                      </Typography>
+                    </div>
+
+                    {wp.truthfulness_note && (
+                      <div className="ai-shell__kickoff-truth" style={{ background: 'var(--bg-secondary)', padding: '16px', borderRadius: '12px', marginBottom: '28px', border: '1px solid var(--border-color)' }}>
+                        <Typography variant="caption" sx={{ opacity: 0.6, display: 'block', lineHeight: 1.5 }}>
+                          <FaInfoCircle style={{ marginRight: '8px', fontSize: '0.8rem', verticalAlign: 'middle', marginTop: '-2px' }} />
+                          {wp.truthfulness_note}
+                        </Typography>
+                      </div>
+                    )}
+
+                    {wp.recommended_next_action && (() => {
+                      const actionId = wp.recommended_next_action?.action_id || wp.recommended_next_action;
+                      // Use the scoped lookupActions from renderArtifact scope
+                      const fullAction = lookupActions.find(a => a.action_id === actionId) || wp.recommended_next_action;
+                      
+                      const isPrimary = fullAction?.priority === 'primary';
+                      const isEnabled = fullAction?.enabled !== false;
+                      const tooltip = fullAction?.availability_reason || fullAction?.description || fullAction?.reason || '';
+
+                      return (
+                        <div className="ai-shell__kickoff-action-zone">
+                          <Typography variant="overline" sx={{ fontWeight: 900, opacity: 0.5, display: 'block', mb: 1.5 }}>Recommended Next Step</Typography>
+                          <Tooltip title={tooltip} arrow>
+                            <span>
+                              <Button 
+                                variant="contained" 
+                                fullWidth
+                                disabled={loading || !isEnabled}
+                                startIcon={<FaSearch />}
+                                sx={{ 
+                                  borderRadius: '12px', 
+                                  py: 1.5,
+                                  textTransform: 'none', 
+                                  fontWeight: 900, 
+                                  fontSize: '0.9rem',
+                                  bgcolor: isPrimary ? 'var(--text-primary)' : 'var(--bg-secondary)',
+                                  color: isPrimary ? 'var(--bg-primary)' : 'var(--text-primary)',
+                                  '&:hover': { 
+                                    bgcolor: isPrimary ? 'var(--text-primary)' : 'var(--bg-tertiary)', 
+                                    filter: 'brightness(1.1)' 
+                                  },
+                                  '&:disabled': {
+                                    opacity: 0.5,
+                                    bgcolor: 'var(--bg-secondary)',
+                                    color: 'var(--text-secondary)'
+                                  }
+                                }}
+                                onClick={() => handleActionClick(actionId === 'Analyze workspace' ? 'analyze_workspace' : actionId)}
+                              >
+                                {fullAction?.label || wp.recommended_next_action?.label || wp.recommended_next_action}
+                              </Button>
+                            </span>
+                          </Tooltip>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </div>
+              ) : (
+                // Compatibility Fallback for older sparse previews
+                <>
+                  <Typography variant="h6" sx={{ fontWeight: 900, mb: 1 }}>{wp.title || 'Decision Path'}</Typography>
+                  <Typography variant="body1" sx={{ opacity: 0.7, mb: 4 }}>{wp.scope_summary}</Typography>
+                  <div className="ai-shell__preview-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '20px' }}>
+                    <div className="ai-shell__preview-metric"><span className="ai-shell__preview-metric-label">Status</span><span className="ai-shell__preview-metric-value">{wp.status || 'Draft'}</span></div>
+                    <div className="ai-shell__preview-metric"><span className="ai-shell__preview-metric-label">Levers</span><span className="ai-shell__preview-metric-value">{wp.lever_count || 0}</span></div>
+                    <div className="ai-shell__preview-metric"><span className="ai-shell__preview-metric-label">Inputs Needed</span><span className="ai-shell__preview-metric-value" style={{ color: (wp.missing_inputs?.length > 0 ? 'var(--accent-red)' : 'inherit') }}>{wp.missing_inputs?.length || 0}</span></div>
+                  </div>
+                </>
+              )}
               
               {wp.missing_inputs?.length > 0 && (
-                <div className="ai-shell__ghost-item" style={{ mt: 4 }}>
-                  <div className="ai-shell__ghost-label">Required Clarifications</div>
-                  <div className="ai-shell__analysis-list" style={{ mt: 2 }}>
+                <div className="ai-shell__kickoff-clarifications" style={{ marginTop: '32px' }}>
+                  <Typography variant="overline" sx={{ fontWeight: 900, opacity: 0.5, display: 'block', mb: 2 }}>Required Clarifications</Typography>
+                  <div className="ai-shell__analysis-list">
                     {wp.missing_inputs.map((input, i) => (
-                      <div key={i} className="ai-shell__analysis-item">
+                      <div key={i} className="ai-shell__analysis-item" style={{ marginBottom: '12px' }}>
                          <span className="ai-shell__analysis-icon is-blocker"><FaExclamationTriangle /></span>
-                         <Typography variant="body2">{input}</Typography>
+                         <Typography variant="body2" sx={{ fontWeight: 600 }}>{input}</Typography>
                       </div>
                     ))}
                   </div>
@@ -359,10 +459,11 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
         );
 
       case 'workspace_analysis_summary':
+        const hasItems = content?.items && content.items.length > 0;
         return (
           <div className={`${baseClass} is-workspace_analysis_summary`}>
             <div className="ai-shell__artifact-content">
-              {content?.items ? (
+              {hasItems ? (
                 <div className="ai-shell__analysis-list">
                   <Typography variant="overline" sx={{ fontWeight: 900, mb: 2, display: 'block', opacity: 0.5 }}>Diagnostic Breakdown {artMode ? `• ${artMode.toUpperCase()}` : ''}</Typography>
                   {content.items.map((item, i) => {
@@ -377,7 +478,7 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
                     const isBlocker = isObj ? !!(item.blocks_simulation || item.is_blocker || item.severity === 'high' || item.severity === 'critical') : false;
 
                     return (
-                      <div key={i} className="ai-shell__analysis-item" style={{ mb: 16 }}>
+                      <div key={i} className="ai-shell__analysis-item" style={{ marginBottom: '16px' }}>
                         <span className={`ai-shell__analysis-icon ${isBlocker ? 'is-blocker' : 'is-assumption'}`}>
                           {isBlocker ? <FaExclamationTriangle /> : <FaCheckCircle />}
                         </span>
@@ -390,7 +491,36 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
                   })}
                 </div>
               ) : (
-                <Typography variant="h6" sx={{ fontWeight: 700 }}>{content?.summary?.headline || content?.headline || 'Analysis finalized.'}</Typography>
+                <div className="ai-shell__analysis-empty">
+                  <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>{content?.summary?.headline || content?.headline || 'Analysis finalized.'}</Typography>
+                  {content?.summary?.content && <Typography variant="body2" sx={{ opacity: 0.7 }}>{content.summary.content}</Typography>}
+                  {!content?.summary?.headline && !content?.headline && (
+                    <Typography variant="caption" sx={{ opacity: 0.5, fontStyle: 'italic' }}>No diagnostic details identified for this state.</Typography>
+                  )}
+                </div>
+              )}
+
+              {content?.missing_inputs?.length > 0 && (
+                <div className="ai-shell__kickoff-clarifications" style={{ marginTop: '24px' }}>
+                  <Typography variant="overline" sx={{ fontWeight: 900, opacity: 0.5, display: 'block', mb: 2 }}>Required Clarifications</Typography>
+                  <div className="ai-shell__analysis-list">
+                    {content.missing_inputs.map((input, i) => (
+                      <div key={i} className="ai-shell__analysis-item" style={{ marginBottom: '12px' }}>
+                         <span className="ai-shell__analysis-icon is-blocker"><FaExclamationTriangle /></span>
+                         <Typography variant="body2" sx={{ fontWeight: 600 }}>{input}</Typography>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {content?.truthfulness_note && (
+                <div className="ai-shell__kickoff-truth" style={{ background: 'var(--bg-secondary)', padding: '16px', borderRadius: '12px', marginTop: '24px', border: '1px solid var(--border-color)' }}>
+                  <Typography variant="caption" sx={{ opacity: 0.6, display: 'block', lineHeight: 1.5 }}>
+                    <FaInfoCircle style={{ marginRight: '8px', fontSize: '0.8rem', verticalAlign: 'middle', marginTop: '-2px' }} />
+                    {content.truthfulness_note}
+                  </Typography>
+                </div>
               )}
             </div>
           </div>
@@ -531,7 +661,7 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
           // Only auto-focus if it's a rich, inspectable artifact
           const richTypes = ['chart', 'workspace_preview', 'workspace_analysis_summary'];
           if (richTypes.includes(lastArt.type)) {
-            setActiveArtifact(lastArt);
+            setActiveArtifact({ ...lastArt, contextActions: data.suggested_actions || [] });
             setIsResultsPaneOpen(true);
           }
         }
@@ -729,25 +859,37 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
                 
                 {msg.artifacts && msg.artifacts.length > 0 && (
                   <div className="ai-shell__artifact-container">
-                    {msg.artifacts.map((art, aIdx) => <React.Fragment key={aIdx}>{renderArtifact(art)}</React.Fragment>)}
+                    {msg.artifacts.map((art, aIdx) => <React.Fragment key={aIdx}>{renderArtifact(art, false, msg.suggested_actions)}</React.Fragment>)}
                   </div>
                 )}
 
                 {msg.suggested_actions && msg.suggested_actions.length > 0 && (
                   <div className="ai-shell__suggested-actions">
-                    {msg.suggested_actions.map((act, actIdx) => (
-                      <Tooltip key={actIdx} title={act.availability_reason || act.description || ''} arrow>
-                        <span>
-                          <button 
-                            className={`ai-shell__action-btn ${act.priority === 'primary' ? 'is-primary' : ''}`} 
-                            onClick={() => handleActionClick(act.action_id)} 
-                            disabled={loading || !act.enabled}
-                          >
-                            {act.label}
-                          </button>
-                        </span>
-                      </Tooltip>
-                    ))}
+                    {msg.suggested_actions
+                      .filter(act => {
+                        // Prevent duplicate action surfaces if the same action is rendered in a specialized artifact card
+                        // Check both top-level artifact and nested content
+                        const hasKickoffAction = msg.artifacts?.some(art => {
+                          if (art.type !== 'workspace_preview') return false;
+                          const artAction = art.recommended_next_action || art.content?.recommended_next_action;
+                          const artActionId = artAction?.action_id || artAction;
+                          return artActionId === act.action_id;
+                        });
+                        return !hasKickoffAction;
+                      })
+                      .map((act, actIdx) => (
+                        <Tooltip key={actIdx} title={act.availability_reason || act.description || ''} arrow>
+                          <span>
+                            <button 
+                              className={`ai-shell__action-btn ${act.priority === 'primary' ? 'is-primary' : ''} ${!act.enabled ? 'is-disabled' : ''}`} 
+                              onClick={() => handleActionClick(act.action_id)} 
+                              disabled={loading || !act.enabled}
+                            >
+                              {act.label}
+                            </button>
+                          </span>
+                        </Tooltip>
+                      ))}
                   </div>
                 )}
               </div>
@@ -780,7 +922,7 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
         <div className="ai-shell__result-viewer">
           <div className="ai-shell__viewer-label"><FaEye /> Active Result Viewer</div>
           {activeArtifact ? (
-            renderArtifact(activeArtifact, true)
+            renderArtifact(activeArtifact, true, activeArtifact.contextActions)
           ) : (
             <div className="ai-shell__viewer-empty">
               <div className="ai-shell__viewer-empty-icon"><FaTerminal /></div>

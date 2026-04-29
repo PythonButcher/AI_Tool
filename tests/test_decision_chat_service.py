@@ -233,8 +233,104 @@ class DecisionChatApiTests(unittest.TestCase):
         self.assertTrue(body["session_state"]["decision_state"]["has_draft_workspace"])
         self.assertEqual(body["session_state"]["decision_state"]["objective_draft"]["metric"], "Revenue")
         self.assertIn("open_workspace", body["action_state"]["available_action_ids"])
-        self.assertEqual(body["action_state"]["primary_action_id"], "open_workspace")
+        self.assertEqual(body["action_state"]["primary_action_id"], "show_blockers")
         self.assertTrue(body["suggested_actions"][0]["description"])
+
+    def test_turn_route_builds_decision_readable_workspace_kickoff_for_clean_prompt(self):
+        response = self.client.post(
+            "/api/decision/chat/turns",
+            json={
+                "dataset": DATASET,
+                "semantic_model": SEMANTIC_MODEL,
+                "user_message": "How should we grow revenue next quarter using marketing spend by channel while protecting gross margin?",
+                "conversation_history": [],
+                "session_state": {},
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.get_json()
+        preview = body["draft_workspace_preview"]
+        kickoff = preview["decision_kickoff"]
+        understood = kickoff["understood"]
+
+        self.assertEqual(body["mode"], "decide")
+        self.assertEqual(preview["status"], "ready")
+        self.assertEqual(preview["status_label"], "Structurally ready for analysis")
+        self.assertEqual(understood["objective"]["metric"], "Revenue")
+        self.assertEqual(understood["objective"]["time_horizon"], "Next quarter")
+        self.assertEqual({item["label"] for item in understood["levers"]}, {"Marketing Spend", "Channel mix"})
+        self.assertEqual({item["label"] for item in understood["segments"]}, {"Channel"})
+        self.assertEqual({item["metric"] for item in understood["guardrails"]}, {"Gross Margin %"})
+        self.assertEqual(kickoff["recommended_next_action"]["action_id"], "analyze_workspace")
+        self.assertEqual(body["action_state"]["primary_action_id"], "analyze_workspace")
+        self.assertIn("Ready means", kickoff["readiness_meaning"])
+        self.assertIn("not a recommendation", kickoff["truthfulness_note"])
+        self.assertIn("Recommended next action: Analyze workspace", body["assistant_message"])
+        self.assertNotIn("Inputs Needed: 0", body["assistant_message"])
+
+    def test_turn_route_preview_keeps_discount_marketing_region_prompt_readable(self):
+        response = self.client.post(
+            "/api/decision/chat/turns",
+            json={
+                "dataset": DATASET,
+                "semantic_model": SEMANTIC_MODEL,
+                "user_message": (
+                    "How should we grow revenue next quarter using discount rate and "
+                    "marketing spend changes by region without hurting gross margin?"
+                ),
+                "conversation_history": [],
+                "session_state": {},
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.get_json()
+        preview = body["draft_workspace_preview"]
+        understood = preview["decision_kickoff"]["understood"]
+
+        # This regression protects the readable preview from collapsing the
+        # objective, controllable levers, segment, and guardrail into one blob.
+        self.assertEqual(understood["objective"]["metric"], "Revenue")
+        self.assertEqual(understood["objective"]["time_horizon"], "Next quarter")
+        self.assertEqual(
+            {item["label"] for item in understood["levers"]},
+            {"Discount Rate", "Marketing Spend", "Region mix"},
+        )
+        self.assertEqual({item["label"] for item in understood["segments"]}, {"Region"})
+        self.assertEqual({item["metric"] for item in understood["guardrails"]}, {"Gross Margin %"})
+        self.assertEqual(preview["recommended_next_action"]["action_id"], "analyze_workspace")
+        self.assertIn("observational workspace analysis", preview["readiness_meaning"])
+        self.assertNotIn("recommendation", preview["status_label"].lower())
+
+    def test_turn_route_preview_keeps_stockout_prompt_readable(self):
+        response = self.client.post(
+            "/api/decision/chat/turns",
+            json={
+                "dataset": DATASET,
+                "semantic_model": SEMANTIC_MODEL,
+                "user_message": (
+                    "How should we reduce stockout risk next quarter using inventory on hand "
+                    "by product category while protecting on time delivery?"
+                ),
+                "conversation_history": [],
+                "session_state": {},
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.get_json()
+        preview = body["draft_workspace_preview"]
+        understood = preview["decision_kickoff"]["understood"]
+
+        self.assertEqual(understood["objective"]["metric"], "Stockout Risk Score")
+        self.assertEqual(understood["objective"]["direction"], "minimize")
+        self.assertEqual(understood["objective"]["time_horizon"], "Next quarter")
+        self.assertEqual({item["label"] for item in understood["levers"]}, {"Inventory On Hand", "Product Category mix"})
+        self.assertEqual({item["label"] for item in understood["segments"]}, {"Product Category"})
+        self.assertEqual({item["metric"] for item in understood["guardrails"]}, {"On Time Delivery %"})
+        self.assertEqual(preview["recommended_next_action"]["action_id"], "analyze_workspace")
+        self.assertIn("not a recommendation", preview["truthfulness_note"])
 
     def test_turn_route_surfaces_targeted_clarification_for_incomplete_decision_prompt(self):
         response = self.client.post(
@@ -601,6 +697,132 @@ class DecisionChatApiTests(unittest.TestCase):
         self.assertEqual(body["artifacts"][0]["type"], "workspace_analysis_summary")
         self.assertTrue(body["artifacts"][0]["inspectable"])
         self.assertEqual(body["artifacts"][0]["render_hint"], "workspace_analysis_summary")
+
+    def test_ready_workspace_actions_expose_stable_contract_and_priority(self):
+        response = self.client.post(
+            "/api/decision/chat/turns",
+            json={
+                "dataset": DATASET,
+                "semantic_model": SEMANTIC_MODEL,
+                "user_message": "How should we grow revenue next quarter using marketing spend by channel while protecting gross margin?",
+                "conversation_history": [],
+                "session_state": {},
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.get_json()
+        actions = {action["action_id"]: action for action in body["suggested_actions"]}
+
+        self.assertEqual(
+            set(actions),
+            {"draft_workspace", "show_assumptions", "show_blockers", "analyze_workspace", "open_workspace"},
+        )
+        for action_id, action in actions.items():
+            # Frontend rendering depends on every action carrying the same minimum contract.
+            self.assertEqual(action["action_id"], action_id)
+            self.assertTrue(action["label"])
+            self.assertTrue(action["intent"])
+            self.assertIn(action["priority"], {"primary", "secondary", "informational"})
+            self.assertIn("enabled", action)
+            self.assertTrue(action["availability_reason"])
+            self.assertIsInstance(action["payload_expectations"], dict)
+
+        self.assertEqual(actions["analyze_workspace"]["priority"], "primary")
+        self.assertTrue(actions["analyze_workspace"]["enabled"])
+        self.assertEqual(actions["show_blockers"]["priority"], "secondary")
+        self.assertFalse(actions["show_blockers"]["enabled"])
+        self.assertEqual(body["action_state"]["primary_action_id"], "analyze_workspace")
+        self.assertIn("show_blockers", body["action_state"]["disabled_action_ids"])
+        self.assertIn("open_workspace", body["action_state"]["secondary_action_ids"])
+
+    def test_incomplete_workspace_disables_analysis_and_prioritizes_blockers(self):
+        response = self.client.post(
+            "/api/decision/chat/turns",
+            json={
+                "dataset": DATASET,
+                "semantic_model": SEMANTIC_MODEL,
+                "user_message": "How should we adjust discount rate by region next quarter?",
+                "conversation_history": [],
+                "session_state": {},
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.get_json()
+        actions = {action["action_id"]: action for action in body["suggested_actions"]}
+
+        self.assertEqual(body["action_state"]["primary_action_id"], "show_blockers")
+        self.assertEqual(actions["show_blockers"]["priority"], "primary")
+        self.assertTrue(actions["show_blockers"]["enabled"])
+        self.assertEqual(actions["analyze_workspace"]["priority"], "secondary")
+        self.assertFalse(actions["analyze_workspace"]["enabled"])
+        self.assertIn("analyze_workspace", body["action_state"]["disabled_action_ids"])
+        self.assertIn("objective.metric_id_or_metric_name", body["draft_workspace_preview"]["missing_inputs"])
+
+    def test_unsupported_action_returns_truthful_error_state(self):
+        action_response = self.client.post(
+            "/api/decision/chat/actions",
+            json={
+                "action": "run_optimizer",
+                "session_state": {},
+            },
+        )
+
+        self.assertEqual(action_response.status_code, 400)
+        body = action_response.get_json()
+        self.assertEqual(body["status"], "error")
+        self.assertEqual(body["error"]["code"], "INVALID_DECISION_CHAT_ACTION_REQUEST")
+        self.assertIn("Unsupported decision chat action", body["error"]["message"])
+
+    def test_decision_action_artifacts_use_consistent_response_shape(self):
+        turn_response = self.client.post(
+            "/api/decision/chat/turns",
+            json={
+                "dataset": DATASET,
+                "semantic_model": SEMANTIC_MODEL,
+                "user_message": "How should we grow revenue next quarter using marketing spend by channel while protecting gross margin?",
+                "conversation_history": [],
+                "session_state": {},
+            },
+        )
+        draft_state = turn_response.get_json()["session_state"]
+
+        for action_id in [
+            "draft_workspace",
+            "show_assumptions",
+            "show_blockers",
+            "analyze_workspace",
+            "open_workspace",
+        ]:
+            response = self.client.post(
+                "/api/decision/chat/actions",
+                json={
+                    "action": action_id,
+                    "dataset": DATASET,
+                    "semantic_model": SEMANTIC_MODEL,
+                    "session_state": draft_state,
+                },
+            )
+
+            self.assertEqual(response.status_code, 200, action_id)
+            body = response.get_json()
+            artifact = body["artifacts"][0]
+
+            self.assertEqual(body["executed_action"]["action_id"], action_id)
+            self.assertTrue(body["executed_action"]["payload_expectations"])
+            self.assertEqual(body["suggested_actions"], body["session_state"]["available_actions"])
+            self.assertIn("artifact_id", artifact)
+            self.assertIn("schema_version", artifact)
+            if artifact["type"] == "workspace_preview":
+                self.assertEqual(artifact["action_id"], action_id)
+                self.assertEqual(artifact["response_kind"], action_id)
+                self.assertTrue(artifact["workspace_id"])
+            else:
+                self.assertEqual(artifact["content"]["action_id"], action_id)
+                self.assertEqual(artifact["content"]["response_kind"], action_id)
+                self.assertTrue(artifact["content"]["workspace_id"])
+                self.assertIn("truthfulness_note", artifact["content"])
 
 
 if __name__ == "__main__":

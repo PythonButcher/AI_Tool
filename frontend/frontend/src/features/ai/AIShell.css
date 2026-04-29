@@ -698,8 +698,12 @@
   transform: translateY(-1px);
 }
 
-.ai-shell__action-btn:disabled {
+.ai-shell__action-btn:disabled,
+.ai-shell__action-btn.is-disabled {
   opacity: 0.5;
   cursor: not-allowed;
   filter: grayscale(1);
+  background-color: var(--bg-secondary);
+  color: var(--text-secondary);
+  border-color: var(--border-color);
 }
