@@ -1,0 +1,750 @@
+{
+  "schema_version": "agent-council-output/v1",
+  "council_id": "council-decision-intelligence-phase-4-5-hardening-sample",
+  "generated_at": "2026-04-27T00:00:00Z",
+  "project_context": {
+    "project_name": "AI_Tool",
+    "current_workstream": "Decision Intelligence V3 / Phase 4.5",
+    "planning_topic": "What should be improved next after the chat action system and draft workspace preview work?",
+    "context_summary": "Decision Intelligence is past backend invention and into hardening. The backend chat contract, prompt-first drafting, action contracts, and observational workspace analysis exist. The current risk is whether the chat-first workflow is dependable across realistic prompts, clear to users, and supported by repeatable acceptance coverage.",
+    "active_constraints": [
+      "Codex owns backend logic, contracts, architecture, review, tests, and active markdown coordination.",
+      "Gemini owns frontend implementation unless the user explicitly authorizes Codex frontend work in the current session.",
+      "The workflow must not imply simulation, optimization, goal seeking, autonomous recommendation quality, or real upload ingestion unless those capabilities are implemented.",
+      "Existing AI chat, chart, workspace, and action behavior must be preserved while improvements are added."
+    ]
+  },
+  "sources_reviewed": [
+    {
+      "path": "project_docs/INDEX.md",
+      "source_type": "markdown",
+      "relevance": "Defines the active scan order and keeps archive material out of default planning unless specifically needed.",
+      "reviewed_by": ["architecture_guardian", "implementation_planner"]
+    },
+    {
+      "path": "project_docs/active/status/decision_intelligence_execution_status.md",
+      "source_type": "status",
+      "relevance": "States that Slice 3 is complete, the backend contract is real, and the main remaining risk is experience quality and intake reliability.",
+      "reviewed_by": ["product_ux_strategist", "skeptic_qa_reviewer", "implementation_planner"]
+    },
+    {
+      "path": "project_docs/active/decision_intelligence/phase_4_5_ai_chat_decision_intelligence_plan.md",
+      "source_type": "handoff",
+      "relevance": "Defines Phase 4.5 goals: mode clarity, prompt reliability, action fidelity, artifact quality, workspace handoff, and evaluation coverage.",
+      "reviewed_by": ["decision_intelligence_specialist", "product_ux_strategist"]
+    },
+    {
+      "path": "project_docs/active/contracts/decision_objects.md",
+      "source_type": "contract",
+      "relevance": "Provides the current decision object contract and reinforces the distinction between observational decision support and future scenario or optimization capabilities.",
+      "reviewed_by": ["architecture_guardian", "decision_intelligence_specialist"]
+    },
+    {
+      "path": "tests/test_decision_chat_service.py",
+      "source_type": "test",
+      "relevance": "Represents current backend regression coverage for chat contract, action execution, prompt-first drafting, and state behavior.",
+      "reviewed_by": ["skeptic_qa_reviewer", "implementation_planner"]
+    }
+  ],
+  "participating_agents": [
+    {
+      "agent_id": "architecture_guardian",
+      "role_name": "Architecture Guardian",
+      "perspective": "Protect system integrity, additive contracts, deterministic backend ownership, and honest capability boundaries.",
+      "decision_rights": "Can veto proposals that weaken contracts, create frontend-only inference, or imply unsupported capabilities."
+    },
+    {
+      "agent_id": "product_ux_strategist",
+      "role_name": "Product/UX Strategist",
+      "perspective": "Protect user comprehension, workflow continuity, action clarity, and trust in chat-to-workspace movement.",
+      "decision_rights": "Can challenge technically correct proposals that still feel confusing or overclaiming to the user."
+    },
+    {
+      "agent_id": "decision_intelligence_specialist",
+      "role_name": "Decision Intelligence Specialist",
+      "perspective": "Protect semantic grounding, decision framing, objective and lever separation, guardrail clarity, and insight workflow quality.",
+      "decision_rights": "Can require proposals to improve the intelligence workflow rather than only polishing presentation."
+    },
+    {
+      "agent_id": "skeptic_qa_reviewer",
+      "role_name": "Skeptic/QA Reviewer",
+      "perspective": "Protect regression coverage, edge cases, stale state handling, unsupported requests, and acceptance-test discipline.",
+      "decision_rights": "Can block completion claims until risks have concrete validation paths."
+    },
+    {
+      "agent_id": "implementation_planner",
+      "role_name": "Implementation Planner",
+      "perspective": "Turn the debated direction into phased work with owners, files, acceptance checks, and handoff-ready sequencing.",
+      "decision_rights": "Can defer ideas that are not implementation-ready or that lack a clear owner."
+    }
+  ],
+  "conversation_rounds": {
+    "round_1_independent_proposals": [
+      {
+        "agent_id": "architecture_guardian",
+        "stance": "Improve evidence-backed contract documentation before adding new behavior.",
+        "claims": [
+          "The current action contract is stable enough to build on, but the next planning unit should document which response fields are authoritative for frontend rendering.",
+          "Future improvements should remain additive and should not move decision interpretation into `AIShell.jsx`."
+        ],
+        "challenged_assumptions": [
+          "A clearer UI alone will not fix weak backend state if the frontend must infer readiness from shape."
+        ],
+        "evidence": [
+          "The execution status says scoped action resolution is verified and backend action metadata is stable.",
+          "The Phase 4.5 plan warns against fake simulation, optimizer, and recommendation theater."
+        ],
+        "proposed_changes": [
+          "Create a short active contract note for chat action and artifact authority.",
+          "Keep unsupported future capabilities explicit as unavailable."
+        ],
+        "risks_flagged": [
+          "Frontend-only interpretation may drift from backend truth over time."
+        ]
+      },
+      {
+        "agent_id": "product_ux_strategist",
+        "stance": "Prioritize user-facing flow comprehension over adding new surfaces.",
+        "claims": [
+          "The next improvement should make users understand why chat is moving from question to decision framing to workspace analysis.",
+          "The product needs a repeatable story for readiness, blockers, assumptions, and observational analysis."
+        ],
+        "challenged_assumptions": [
+          "An action being enabled does not mean the user understands the consequence of clicking it."
+        ],
+        "evidence": [
+          "The Phase 4.5 plan identifies mode ambiguity, artifact readability, and workspace handoff quality as core problems.",
+          "The status document says the product is now limited more by experience quality than backend invention."
+        ],
+        "proposed_changes": [
+          "Plan a Gemini-owned front-end comprehension pass after Codex confirms field authority.",
+          "Use realistic prompts to test whether users can explain what the system framed and what it has not decided."
+        ],
+        "risks_flagged": [
+          "Users may read structurally ready as ready for a recommendation."
+        ]
+      },
+      {
+        "agent_id": "decision_intelligence_specialist",
+        "stance": "Build a prompt benchmark before proposing new intelligence features.",
+        "claims": [
+          "Prompt-first intake reliability remains the most important intelligence-layer risk.",
+          "The next planning step should collect realistic prompts that stress objective, lever, segment, guardrail, and time horizon extraction."
+        ],
+        "challenged_assumptions": [
+          "The clean marketing-spend prompt is not enough to prove general decision-intelligence reliability."
+        ],
+        "evidence": [
+          "The V3 resume handoff says intake still matters more than moving straight into chat.",
+          "The Phase 4.5 plan calls for a small benchmark set of realistic decision prompts."
+        ],
+        "proposed_changes": [
+          "Create a prompt benchmark and classify each prompt by expected objective, levers, segments, guardrails, missing inputs, and correct action state.",
+          "Use the benchmark to drive backend tests and Gemini manual verification."
+        ],
+        "risks_flagged": [
+          "A fragile parser may pass the known acceptance prompt while failing normal business language."
+        ]
+      },
+      {
+        "agent_id": "skeptic_qa_reviewer",
+        "stance": "Do not mark the next phase complete without explicit negative tests.",
+        "claims": [
+          "Unsupported requests are as important as happy paths because the product must stay honest.",
+          "Stale session state and duplicated action surfaces remain high-risk areas whenever the chat thread grows."
+        ],
+        "challenged_assumptions": [
+          "A passing frontend build does not prove the conversation workflow is reliable."
+        ],
+        "evidence": [
+          "The Phase 4 checklist still calls out honest fallback coverage.",
+          "Slice 3 fixed scoped action resolution, which implies stale state was a real risk."
+        ],
+        "proposed_changes": [
+          "Add regression expectations for unsupported optimization, incomplete decision prompts, stale earlier cards, and repeated action clicks.",
+          "Require manual verification with at least one complete prompt, one incomplete prompt, one unsupported prompt, and one normal analytics prompt."
+        ],
+        "risks_flagged": [
+          "The system may overclaim if asked for optimization or final recommendations."
+        ]
+      },
+      {
+        "agent_id": "implementation_planner",
+        "stance": "Phase the next work into contract note, benchmark, backend tests, and Gemini handoff.",
+        "claims": [
+          "The debate should produce a phased plan rather than a broad feature wish list.",
+          "Codex should prepare the benchmark and backend validation first, then hand a narrow frontend comprehension task to Gemini."
+        ],
+        "challenged_assumptions": [
+          "Frontend work should not start until the backend fields and expected prompt outcomes are documented."
+        ],
+        "evidence": [
+          "The active docs already use Codex-to-Gemini handoffs for frontend slices.",
+          "The frontend guardrail assigns implementation ownership to Gemini."
+        ],
+        "proposed_changes": [
+          "Create a Codex-owned benchmark and contract hardening slice.",
+          "Create a Gemini-owned UI verification handoff only after the benchmark is stable."
+        ],
+        "risks_flagged": [
+          "A large mixed backend/frontend slice would be hard to verify and easy to regress."
+        ]
+      }
+    ],
+    "round_2_critiques": [
+      {
+        "agent_id": "architecture_guardian",
+        "stance": "The UX proposal is valid only if it consumes explicit backend fields.",
+        "claims": [
+          "The frontend comprehension pass should not infer readiness or blocker meaning from labels alone.",
+          "Any new field needed by UX must be added through backend contract documentation first."
+        ],
+        "challenged_assumptions": [
+          "The frontend can safely derive meaning from current artifact shape without drift."
+        ],
+        "evidence": [
+          "Slice 2.5 succeeded because backend preview fields became more readable before Gemini rendered them."
+        ],
+        "proposed_changes": [
+          "Document authoritative fields before Gemini changes UI copy."
+        ],
+        "risks_flagged": [
+          "Contract drift between chat service and UI rendering."
+        ]
+      },
+      {
+        "agent_id": "product_ux_strategist",
+        "stance": "A benchmark is useful only if it measures user comprehension, not just parser fields.",
+        "claims": [
+          "Expected objective, lever, and guardrail extraction is necessary but not sufficient.",
+          "Each benchmark case should include what a user should understand after the assistant response."
+        ],
+        "challenged_assumptions": [
+          "Correct structure automatically creates a trustworthy experience."
+        ],
+        "evidence": [
+          "Slice 2.5 existed because correct structure still produced a debug-like card."
+        ],
+        "proposed_changes": [
+          "Add user-comprehension assertions to the prompt benchmark."
+        ],
+        "risks_flagged": [
+          "Tests may pass while the product remains hard to understand."
+        ]
+      },
+      {
+        "agent_id": "decision_intelligence_specialist",
+        "stance": "Contract notes should not become a substitute for better decision framing.",
+        "claims": [
+          "The next slice must still improve real intake reliability, not only document existing fields.",
+          "The benchmark should include messy prompts with multiple levers and guardrails."
+        ],
+        "challenged_assumptions": [
+          "The current parsing behavior is good enough because the documented prompt passes."
+        ],
+        "evidence": [
+          "The V3 resume handoff says reliability on more real prompts is still a gating concern."
+        ],
+        "proposed_changes": [
+          "Prioritize hard prompt cases before adding new UI affordances."
+        ],
+        "risks_flagged": [
+          "The system may look polished while failing realistic decision questions."
+        ]
+      },
+      {
+        "agent_id": "skeptic_qa_reviewer",
+        "stance": "Every proposal needs a negative acceptance case.",
+        "claims": [
+          "Unsupported optimization requests should be part of the same acceptance suite as successful draft prompts.",
+          "Repeated interactions should prove earlier message cards retain scoped state."
+        ],
+        "challenged_assumptions": [
+          "Single-turn validation is enough for chat workflow confidence."
+        ],
+        "evidence": [
+          "The status document specifically celebrates scoped action resolution, which should remain guarded."
+        ],
+        "proposed_changes": [
+          "Require stale-card and unsupported-capability checks for any next Gemini handoff."
+        ],
+        "risks_flagged": [
+          "A new UI pass may accidentally reintroduce duplicate actions or stale states."
+        ]
+      },
+      {
+        "agent_id": "implementation_planner",
+        "stance": "The strongest plan is a small Codex slice followed by a precise Gemini handoff.",
+        "claims": [
+          "The council should not recommend a broad product expansion yet.",
+          "The next implementation path should be easy to verify with existing test files and active docs."
+        ],
+        "challenged_assumptions": [
+          "All valid ideas should be started immediately."
+        ],
+        "evidence": [
+          "The active docs show a successful slice-based handoff pattern."
+        ],
+        "proposed_changes": [
+          "Defer new feature surfaces and focus on benchmark-driven hardening."
+        ],
+        "risks_flagged": [
+          "Too many simultaneous changes would blur ownership and make status updates less trustworthy."
+        ]
+      }
+    ],
+    "round_3_reconciliation": [
+      {
+        "agent_id": "architecture_guardian",
+        "stance": "Support the benchmark if it treats contracts as source of truth.",
+        "claims": [
+          "The benchmark and any UI handoff should cite authoritative backend fields.",
+          "Contract consideration should be documented even when no runtime schema changes are made."
+        ],
+        "challenged_assumptions": [
+          "Benchmark expectations can live only in test code without active docs."
+        ],
+        "evidence": [
+          "Active handoffs already make backend truth explicit before Gemini implementation."
+        ],
+        "proposed_changes": [
+          "Pair the benchmark with a concise contract authority note."
+        ],
+        "risks_flagged": [
+          "Future agents may misread sample output as a new application contract."
+        ]
+      },
+      {
+        "agent_id": "product_ux_strategist",
+        "stance": "Accept Codex-first sequencing if user comprehension remains a first-class outcome.",
+        "claims": [
+          "The benchmark should include what the visible response should communicate.",
+          "Gemini should receive a narrow handoff focused on comprehension and continuity after backend tests pass."
+        ],
+        "challenged_assumptions": [
+          "A backend-only improvement can close the user trust gap by itself."
+        ],
+        "evidence": [
+          "Phase 4.5 defines the gap between backend capability and user trust as the phase objective."
+        ],
+        "proposed_changes": [
+          "Make comprehension expectations part of each prompt case."
+        ],
+        "risks_flagged": [
+          "The product may still feel like it is improvising if visible state is unclear."
+        ]
+      },
+      {
+        "agent_id": "decision_intelligence_specialist",
+        "stance": "The benchmark should drive parser, blocker, and action-state hardening.",
+        "claims": [
+          "Prompt cases should cover complete, incomplete, ambiguous, and unsupported decision requests.",
+          "Each case should state expected action availability, not just extracted fields."
+        ],
+        "challenged_assumptions": [
+          "Decision structure and action state can be tested separately."
+        ],
+        "evidence": [
+          "The real action system depends on structural readiness and missing inputs."
+        ],
+        "proposed_changes": [
+          "Use prompt cases to validate objective, levers, guardrails, missing inputs, and primary action."
+        ],
+        "risks_flagged": [
+          "Action gating may be correct for one prompt and wrong for nearby prompts."
+        ]
+      },
+      {
+        "agent_id": "skeptic_qa_reviewer",
+        "stance": "Accept the phased plan only with negative and multi-turn validation.",
+        "claims": [
+          "The benchmark should include stale state and unsupported capability checks.",
+          "Manual frontend verification should include old message cards after later turns."
+        ],
+        "challenged_assumptions": [
+          "Static output samples are enough for chat regression confidence."
+        ],
+        "evidence": [
+          "Slice 3 had to harden scoped state persistence."
+        ],
+        "proposed_changes": [
+          "Add regression cases for stale cards, duplicate actions, unsupported optimizer requests, and incomplete prompts."
+        ],
+        "risks_flagged": [
+          "Repeat-turn behavior may regress while single-turn tests pass."
+        ]
+      },
+      {
+        "agent_id": "implementation_planner",
+        "stance": "Combine the ideas into two phases and defer feature expansion.",
+        "claims": [
+          "Phase A should create the benchmark, contract note, and backend tests.",
+          "Phase B should create a Gemini handoff for visible comprehension after Phase A passes."
+        ],
+        "challenged_assumptions": [
+          "The next iteration should add a new product surface."
+        ],
+        "evidence": [
+          "The project has an established active-doc handoff pattern."
+        ],
+        "proposed_changes": [
+          "Prioritize benchmark-driven hardening now and defer new UI surfaces until reliability is clearer."
+        ],
+        "risks_flagged": [
+          "Starting frontend polish before reliable expectations are documented would cause rework."
+        ]
+      }
+    ],
+    "round_4_synthesis": [
+      {
+        "agent_id": "implementation_planner",
+        "stance": "Final synthesis: benchmark-driven hardening is the best next move.",
+        "claims": [
+          "The council recommends a Codex-owned prompt benchmark and contract authority note as the next iteration.",
+          "A Gemini comprehension handoff should follow only after the benchmark and backend tests make expected behavior explicit."
+        ],
+        "challenged_assumptions": [
+          "The product should add new decision features before hardening prompt reliability and trust."
+        ],
+        "evidence": [
+          "Active docs identify intake reliability and experience quality as the current gating concerns."
+        ],
+        "proposed_changes": [
+          "Create a benchmark-driven hardening slice.",
+          "Prepare a later Gemini handoff focused on comprehension, continuity, and verified action rendering."
+        ],
+        "risks_flagged": [
+          "Without benchmark coverage, future UI work may optimize for one prompt and regress broader decision behavior."
+        ]
+      }
+    ]
+  },
+  "major_disagreements": [
+    {
+      "disagreement_id": "disagreement-contract-first-vs-ux-first",
+      "topic": "Whether the next iteration should start with frontend comprehension or backend/contract benchmark work.",
+      "positions": [
+        {
+          "agent_id": "architecture_guardian",
+          "position": "Start with backend field authority and contract documentation.",
+          "rationale": "Frontend comprehension should consume explicit backend truth instead of deriving meaning from artifact shape."
+        },
+        {
+          "agent_id": "product_ux_strategist",
+          "position": "Start with user comprehension because the backend is already real.",
+          "rationale": "The current product risk is user trust and workflow clarity."
+        }
+      ],
+      "status": "resolved",
+      "resolution": "Do a Codex-first benchmark and contract authority note, but include user-comprehension expectations so the later Gemini handoff is not reduced to visual polish."
+    },
+    {
+      "disagreement_id": "disagreement-feature-expansion-vs-hardening",
+      "topic": "Whether to add new Decision Intelligence capability or harden current behavior.",
+      "positions": [
+        {
+          "agent_id": "decision_intelligence_specialist",
+          "position": "Harden prompt-first decision framing before adding new intelligence surfaces.",
+          "rationale": "Current docs still identify real prompt reliability as a gating concern."
+        },
+        {
+          "agent_id": "implementation_planner",
+          "position": "Defer feature expansion until the current chat-to-workspace loop is repeatable.",
+          "rationale": "The established slice pattern works best when each phase has clear acceptance."
+        }
+      ],
+      "status": "resolved",
+      "resolution": "Defer new product surfaces and prioritize prompt benchmark, negative cases, and action-state verification."
+    }
+  ],
+  "resolved_recommendations": [
+    {
+      "recommendation_id": "rec-prompt-benchmark",
+      "title": "Create a Decision Intelligence prompt benchmark",
+      "summary": "Define a small benchmark of realistic complete, incomplete, ambiguous, analytic, and unsupported prompts with expected objective, levers, segments, guardrails, missing inputs, action availability, and user-comprehension outcomes.",
+      "originating_agents": ["decision_intelligence_specialist", "skeptic_qa_reviewer", "product_ux_strategist"],
+      "source_paths": [
+        "project_docs/active/decision_intelligence/phase_4_5_ai_chat_decision_intelligence_plan.md",
+        "project_docs/active/decision_intelligence/decision_intelligence_v3_resume_handoff.md",
+        "project_docs/active/status/decision_intelligence_execution_status.md"
+      ],
+      "priority": "high",
+      "confidence": 0.91,
+      "implementation_timing": "now",
+      "rationale": "The product is currently gated by intake reliability and experience trust, and a benchmark turns those concerns into repeatable acceptance evidence.",
+      "impacted_areas": ["Decision Intelligence docs", "backend decision chat tests", "future Gemini handoff"],
+      "frontend_implications": [
+        "Gemini can later verify visible comprehension against the same prompt cases."
+      ],
+      "backend_implications": [
+        "Codex should expand tests around prompt-first drafting, action state, unsupported requests, and session carry-forward."
+      ],
+      "contract_considerations": [
+        "Expected outputs should reference authoritative backend fields rather than frontend interpretation."
+      ],
+      "testing_considerations": [
+        "Add complete, incomplete, ambiguous, unsupported, and normal analytics prompts.",
+        "Include multi-turn stale-state checks for older message cards."
+      ],
+      "risks": [
+        "Benchmark cases may become too narrow if they only mirror existing happy-path prompts."
+      ],
+      "dependencies": [
+        "Current Phase 4.5 backend chat contract remains available."
+      ],
+      "acceptance_signals": [
+        "Each benchmark case has expected parsed structure, expected primary action, expected disabled actions, and expected truthfulness behavior.",
+        "Backend tests pass for the benchmark cases before Gemini receives a frontend handoff."
+      ]
+    },
+    {
+      "recommendation_id": "rec-contract-authority-note",
+      "title": "Document authoritative chat action and artifact fields",
+      "summary": "Create or update an active contract note that explains which backend fields the frontend should treat as authoritative for mode, readiness, actions, artifacts, truthfulness, and workspace handoff.",
+      "originating_agents": ["architecture_guardian", "implementation_planner"],
+      "source_paths": [
+        "project_docs/active/contracts/decision_objects.md",
+        "project_docs/active/decision_intelligence/slice_3_real_action_system_gemini_frontend_handoff.md"
+      ],
+      "priority": "medium",
+      "confidence": 0.84,
+      "implementation_timing": "next",
+      "rationale": "The current handoffs describe backend truth, but a compact authority note would reduce future drift between backend state and frontend rendering.",
+      "impacted_areas": ["active contracts", "Gemini handoffs"],
+      "frontend_implications": [
+        "Gemini should consume `action_id`, `priority`, `enabled`, `availability_reason`, artifact `type`, and readable preview fields directly."
+      ],
+      "backend_implications": [
+        "Codex should keep additions backward-compatible and additive."
+      ],
+      "contract_considerations": [
+        "The note should describe current fields without inventing new runtime behavior."
+      ],
+      "testing_considerations": [
+        "Contract expectations should map to current backend tests and benchmark cases."
+      ],
+      "risks": [
+        "Future agents may treat the note as permission to expand contracts without implementation."
+      ],
+      "dependencies": [
+        "Current action contract and artifact metadata remain stable."
+      ],
+      "acceptance_signals": [
+        "The active contract note names each authoritative field and states unsupported capability boundaries.",
+        "Future Gemini prompts can cite the note instead of rediscovering contract truth from code."
+      ]
+    },
+    {
+      "recommendation_id": "rec-gemini-comprehension-handoff",
+      "title": "Prepare a later Gemini comprehension handoff",
+      "summary": "After Codex benchmark work passes, prepare a narrow Gemini handoff focused on visible comprehension, continuity across chat and workspace, and regression-safe action rendering.",
+      "originating_agents": ["product_ux_strategist", "implementation_planner", "skeptic_qa_reviewer"],
+      "source_paths": [
+        "project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md",
+        "project_docs/active/decision_intelligence/phase_4_5_ai_chat_decision_intelligence_plan.md"
+      ],
+      "priority": "medium",
+      "confidence": 0.79,
+      "implementation_timing": "later",
+      "rationale": "The frontend should improve user comprehension after the backend benchmark clarifies expected state and action outcomes.",
+      "impacted_areas": ["frontend AI shell", "active Gemini handoff docs", "manual UI verification"],
+      "frontend_implications": [
+        "Gemini should preserve existing AI chat, chart, inspector, and action behavior while improving clarity."
+      ],
+      "backend_implications": [
+        "No backend behavior change should be required if the benchmark and contract note are complete."
+      ],
+      "contract_considerations": [
+        "The handoff should forbid frontend-only fake intelligence and unsupported capability language."
+      ],
+      "testing_considerations": [
+        "Manual verification should use the benchmark prompts and confirm older cards keep scoped action states after later turns."
+      ],
+      "risks": [
+        "A UI-only pass may accidentally reintroduce duplicate actions or overclaim recommendation quality."
+      ],
+      "dependencies": [
+        "rec-prompt-benchmark",
+        "rec-contract-authority-note"
+      ],
+      "acceptance_signals": [
+        "Gemini can run the benchmark manually and explain visible state for each prompt.",
+        "Frontend build passes and active status docs are updated truthfully."
+      ]
+    }
+  ],
+  "unresolved_questions": [
+    {
+      "question_id": "question-benchmark-size",
+      "question": "How many prompts should be in the first benchmark before it becomes too heavy for fast regression use?",
+      "owner": "Codex",
+      "needed_before": "Before implementing the benchmark test file or expanding existing chat tests.",
+      "impact": "Too few prompts will miss real failures; too many may slow iteration and make failures harder to interpret."
+    },
+    {
+      "question_id": "question-contract-location",
+      "question": "Should chat action authority live in the existing decision objects contract or in a focused chat contract note?",
+      "owner": "Codex",
+      "needed_before": "Before writing the contract authority note.",
+      "impact": "The wrong location may make future agents miss the contract truth during active scan."
+    }
+  ],
+  "risks": [
+    {
+      "risk_id": "risk-fake-capability-language",
+      "title": "Future planning may accidentally imply unsupported simulation or optimization.",
+      "severity": "high",
+      "likelihood": "medium",
+      "mitigation": "Keep unsupported capability prompts in the benchmark and require truthfulness assertions.",
+      "owner": "Codex"
+    },
+    {
+      "risk_id": "risk-ui-contract-drift",
+      "title": "Frontend rendering may drift from backend action and artifact truth.",
+      "severity": "medium",
+      "likelihood": "medium",
+      "mitigation": "Document authoritative backend fields and require Gemini handoffs to cite them.",
+      "owner": "Codex and Gemini"
+    },
+    {
+      "risk_id": "risk-stale-chat-state",
+      "title": "Older chat cards may lose their original action state after later turns.",
+      "severity": "medium",
+      "likelihood": "low",
+      "mitigation": "Keep stale-card behavior in benchmark and manual frontend verification.",
+      "owner": "Gemini for UI verification, Codex for backend state tests"
+    }
+  ],
+  "impacted_codebase_areas": [
+    {
+      "area": "Active Decision Intelligence documentation",
+      "path_patterns": ["project_docs/active/decision_intelligence/*.md", "project_docs/active/status/*.md"],
+      "why_it_matters": "The next slice needs clear handoff truth and status alignment.",
+      "change_type": "documentation"
+    },
+    {
+      "area": "Decision chat backend tests",
+      "path_patterns": ["tests/test_decision_chat_service.py"],
+      "why_it_matters": "Prompt benchmark cases should become repeatable regression coverage.",
+      "change_type": "test"
+    },
+    {
+      "area": "Decision chat backend engine",
+      "path_patterns": ["backend/decision_engine/*.py"],
+      "why_it_matters": "Only touched if benchmark failures reveal parser, state, or action-contract gaps.",
+      "change_type": "backend"
+    },
+    {
+      "area": "AI Shell frontend",
+      "path_patterns": ["frontend/frontend/src/features/ai/AIShell.jsx"],
+      "why_it_matters": "Gemini may later improve visible comprehension after Codex benchmark work.",
+      "change_type": "frontend"
+    }
+  ],
+  "frontend_implications": [
+    "No immediate frontend change should start from this sample council output.",
+    "A later Gemini handoff should use benchmark prompts for manual verification and should preserve existing chat, chart, inspector, action, and artifact behavior.",
+    "Frontend copy should not imply final recommendations, simulation, optimization, or autonomous decisioning."
+  ],
+  "backend_implications": [
+    "Codex should add benchmark-driven tests around prompt-first drafting, action gating, unsupported capability honesty, and session-state carry-forward.",
+    "Backend changes should be additive and should preserve the current public chat contract.",
+    "If benchmark failures require new fields, those fields should be documented before Gemini consumes them."
+  ],
+  "contract_considerations": [
+    "Action availability should remain backend authoritative through `enabled`, `priority`, and `availability_reason`.",
+    "Artifact type and readable preview fields should remain the source of truth for rendering.",
+    "No new council artifact should be mistaken for a runtime API contract."
+  ],
+  "testing_considerations": [
+    "Prompt benchmark cases should include happy path, incomplete path, ambiguous path, unsupported request path, normal analytics path, and multi-turn stale-state path.",
+    "Tests should verify structure and user-facing truthfulness signals, not just parser success.",
+    "Manual Gemini verification should include both thread and inspector paths if UI work follows."
+  ],
+  "implementation_priority": {
+    "top_priority_ids": ["rec-prompt-benchmark", "rec-contract-authority-note"],
+    "deferred_ids": ["rec-gemini-comprehension-handoff"],
+    "rationale": "The benchmark and contract note reduce uncertainty for both backend hardening and later frontend work. Gemini comprehension work should wait until Codex has made expected behavior repeatable."
+  },
+  "suggested_implementation_phases": [
+    {
+      "phase_id": "phase-a-codex-benchmark",
+      "title": "Codex prompt benchmark and backend validation",
+      "owner": "Codex",
+      "objective": "Create a small but meaningful benchmark that captures expected decision framing, action state, truthfulness, and regression behavior.",
+      "recommendation_ids": ["rec-prompt-benchmark"],
+      "entry_criteria": [
+        "Active docs have been reviewed from `project_docs/INDEX.md` through the relevant Phase 4.5 files.",
+        "Current backend chat tests pass before modification."
+      ],
+      "exit_criteria": [
+        "Benchmark cases are documented or encoded in tests.",
+        "Backend tests pass for complete, incomplete, ambiguous, unsupported, analytic, and multi-turn cases.",
+        "Active status docs are updated if implementation changes are made."
+      ],
+      "validation_plan": [
+        "Run targeted decision chat service tests.",
+        "Inspect failing cases to distinguish parser gaps from contract gaps.",
+        "Do not hand off frontend work until expected backend truth is stable."
+      ]
+    },
+    {
+      "phase_id": "phase-b-codex-contract-note",
+      "title": "Codex contract authority note",
+      "owner": "Codex",
+      "objective": "Document authoritative chat fields for future frontend handoffs without changing runtime behavior.",
+      "recommendation_ids": ["rec-contract-authority-note"],
+      "entry_criteria": [
+        "Current action and artifact fields are confirmed from active docs or code.",
+        "The note location is chosen so it is reachable from active scan order."
+      ],
+      "exit_criteria": [
+        "The note explains authoritative mode, readiness, action, artifact, truthfulness, and workspace handoff fields.",
+        "The note explicitly says unsupported capabilities remain unsupported."
+      ],
+      "validation_plan": [
+        "Review the note against current handoffs and tests.",
+        "Confirm it does not describe unimplemented behavior as implemented."
+      ]
+    },
+    {
+      "phase_id": "phase-c-gemini-comprehension",
+      "title": "Gemini visible comprehension pass",
+      "owner": "Gemini",
+      "objective": "Improve user-visible comprehension of the existing chat-to-decision workflow after backend expectations are stable.",
+      "recommendation_ids": ["rec-gemini-comprehension-handoff"],
+      "entry_criteria": [
+        "Codex benchmark passes.",
+        "Contract authority note is available.",
+        "A short Gemini handoff names exact files, constraints, acceptance prompts, and status-doc requirements."
+      ],
+      "exit_criteria": [
+        "The UI preserves existing behavior while making mode, readiness, actions, blockers, assumptions, and analysis boundaries clear.",
+        "Frontend build passes.",
+        "Manual verification covers benchmark prompts and scoped action-state persistence."
+      ],
+      "validation_plan": [
+        "Run frontend build.",
+        "Use benchmark prompts in live UI verification.",
+        "Update `project_docs/active/status/decision_intelligence_execution_status.md` truthfully."
+      ]
+    }
+  ],
+  "final_synthesis_summary": {
+    "executive_summary": "The council recommends benchmark-driven hardening before new product expansion. The current Decision Intelligence stack has real backend contracts and completed frontend action slices, but the next risk is repeatable reliability and user trust across realistic prompts.",
+    "strongest_proposal": "Create a Codex-owned prompt benchmark that captures parsed structure, action availability, unsupported capability honesty, multi-turn state behavior, and user-comprehension expectations.",
+    "main_tradeoff": "Starting with benchmark and contract work delays visible UI polish, but it reduces rework and prevents future Gemini tasks from relying on unstable or inferred behavior.",
+    "decision_for_next_agent": "Do not start a new frontend slice from this sample. Use the council workflow to run a live debate for the next real planning topic, then implement the highest-priority Codex backend or documentation slice first.",
+    "non_goals": [
+      "Do not add simulation, optimization, or goal-seeking claims.",
+      "Do not create frontend-only interpretations of decision readiness.",
+      "Do not treat this sample JSON as an application runtime contract."
+    ],
+    "handoff_notes": "This sample demonstrates the intended output shape. A real council run should replace the sample claims with evidence from the exact files reviewed for that planning topic."
+  },
+  "metadata": {
+    "created_by": "Codex sample artifact",
+    "schema_path": "project_docs/active/agent_council/council_output_schema.json",
+    "validator_path": "project_docs/active/agent_council/validate_council_json.py"
+  }
+}

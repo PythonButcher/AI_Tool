@@ -1,0 +1,643 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "project_docs/active/agent_council/council_output_schema.json",
+  "title": "AI_Tool Agent Council Output",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "council_id",
+    "generated_at",
+    "project_context",
+    "sources_reviewed",
+    "participating_agents",
+    "conversation_rounds",
+    "major_disagreements",
+    "resolved_recommendations",
+    "unresolved_questions",
+    "risks",
+    "impacted_codebase_areas",
+    "frontend_implications",
+    "backend_implications",
+    "contract_considerations",
+    "testing_considerations",
+    "implementation_priority",
+    "suggested_implementation_phases",
+    "final_synthesis_summary",
+    "metadata"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "enum": ["agent-council-output/v1"]
+    },
+    "council_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "generated_at": {
+      "type": "string",
+      "minLength": 1
+    },
+    "project_context": {
+      "$ref": "#/$defs/project_context"
+    },
+    "sources_reviewed": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/source_reviewed"
+      }
+    },
+    "participating_agents": {
+      "type": "array",
+      "minItems": 5,
+      "items": {
+        "$ref": "#/$defs/participating_agent"
+      }
+    },
+    "conversation_rounds": {
+      "$ref": "#/$defs/conversation_rounds"
+    },
+    "major_disagreements": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/disagreement"
+      }
+    },
+    "resolved_recommendations": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/recommendation"
+      }
+    },
+    "unresolved_questions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/unresolved_question"
+      }
+    },
+    "risks": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/risk"
+      }
+    },
+    "impacted_codebase_areas": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/impacted_area"
+      }
+    },
+    "frontend_implications": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "backend_implications": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "contract_considerations": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "testing_considerations": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "implementation_priority": {
+      "$ref": "#/$defs/implementation_priority"
+    },
+    "suggested_implementation_phases": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/implementation_phase"
+      }
+    },
+    "final_synthesis_summary": {
+      "$ref": "#/$defs/final_synthesis_summary"
+    },
+    "metadata": {
+      "$ref": "#/$defs/metadata"
+    }
+  },
+  "$defs": {
+    "project_context": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "project_name",
+        "current_workstream",
+        "planning_topic",
+        "context_summary",
+        "active_constraints"
+      ],
+      "properties": {
+        "project_name": {
+          "type": "string"
+        },
+        "current_workstream": {
+          "type": "string"
+        },
+        "planning_topic": {
+          "type": "string"
+        },
+        "context_summary": {
+          "type": "string"
+        },
+        "active_constraints": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "source_reviewed": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "source_type", "relevance", "reviewed_by"],
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "source_type": {
+          "type": "string",
+          "enum": ["markdown", "code", "test", "status", "contract", "handoff", "other"]
+        },
+        "relevance": {
+          "type": "string"
+        },
+        "reviewed_by": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "participating_agent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["agent_id", "role_name", "perspective", "decision_rights"],
+      "properties": {
+        "agent_id": {
+          "type": "string"
+        },
+        "role_name": {
+          "type": "string"
+        },
+        "perspective": {
+          "type": "string"
+        },
+        "decision_rights": {
+          "type": "string"
+        }
+      }
+    },
+    "conversation_rounds": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "round_1_independent_proposals",
+        "round_2_critiques",
+        "round_3_reconciliation",
+        "round_4_synthesis"
+      ],
+      "properties": {
+        "round_1_independent_proposals": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/round_entry"
+          }
+        },
+        "round_2_critiques": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/round_entry"
+          }
+        },
+        "round_3_reconciliation": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/round_entry"
+          }
+        },
+        "round_4_synthesis": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/round_entry"
+          }
+        }
+      }
+    },
+    "round_entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "agent_id",
+        "stance",
+        "claims",
+        "challenged_assumptions",
+        "evidence",
+        "proposed_changes",
+        "risks_flagged"
+      ],
+      "properties": {
+        "agent_id": {
+          "type": "string"
+        },
+        "stance": {
+          "type": "string"
+        },
+        "claims": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "challenged_assumptions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "proposed_changes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "risks_flagged": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "disagreement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["disagreement_id", "topic", "positions", "status", "resolution"],
+      "properties": {
+        "disagreement_id": {
+          "type": "string"
+        },
+        "topic": {
+          "type": "string"
+        },
+        "positions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/position"
+          }
+        },
+        "status": {
+          "type": "string",
+          "enum": ["resolved", "unresolved", "deferred"]
+        },
+        "resolution": {
+          "type": "string"
+        }
+      }
+    },
+    "position": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["agent_id", "position", "rationale"],
+      "properties": {
+        "agent_id": {
+          "type": "string"
+        },
+        "position": {
+          "type": "string"
+        },
+        "rationale": {
+          "type": "string"
+        }
+      }
+    },
+    "recommendation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "recommendation_id",
+        "title",
+        "summary",
+        "originating_agents",
+        "source_paths",
+        "priority",
+        "confidence",
+        "implementation_timing",
+        "rationale",
+        "impacted_areas",
+        "frontend_implications",
+        "backend_implications",
+        "contract_considerations",
+        "testing_considerations",
+        "risks",
+        "dependencies",
+        "acceptance_signals"
+      ],
+      "properties": {
+        "recommendation_id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "originating_agents": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "source_paths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "priority": {
+          "type": "string",
+          "enum": ["critical", "high", "medium", "low"]
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "implementation_timing": {
+          "type": "string",
+          "enum": ["now", "next", "later", "defer"]
+        },
+        "rationale": {
+          "type": "string"
+        },
+        "impacted_areas": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "frontend_implications": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "backend_implications": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "contract_considerations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "testing_considerations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "risks": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "dependencies": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "acceptance_signals": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "unresolved_question": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["question_id", "question", "owner", "needed_before", "impact"],
+      "properties": {
+        "question_id": {
+          "type": "string"
+        },
+        "question": {
+          "type": "string"
+        },
+        "owner": {
+          "type": "string"
+        },
+        "needed_before": {
+          "type": "string"
+        },
+        "impact": {
+          "type": "string"
+        }
+      }
+    },
+    "risk": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["risk_id", "title", "severity", "likelihood", "mitigation", "owner"],
+      "properties": {
+        "risk_id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "severity": {
+          "type": "string",
+          "enum": ["critical", "high", "medium", "low"]
+        },
+        "likelihood": {
+          "type": "string",
+          "enum": ["high", "medium", "low"]
+        },
+        "mitigation": {
+          "type": "string"
+        },
+        "owner": {
+          "type": "string"
+        }
+      }
+    },
+    "impacted_area": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["area", "path_patterns", "why_it_matters", "change_type"],
+      "properties": {
+        "area": {
+          "type": "string"
+        },
+        "path_patterns": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "why_it_matters": {
+          "type": "string"
+        },
+        "change_type": {
+          "type": "string",
+          "enum": ["documentation", "frontend", "backend", "contract", "test", "infrastructure", "unknown"]
+        }
+      }
+    },
+    "implementation_priority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["top_priority_ids", "deferred_ids", "rationale"],
+      "properties": {
+        "top_priority_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "deferred_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "rationale": {
+          "type": "string"
+        }
+      }
+    },
+    "implementation_phase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "phase_id",
+        "title",
+        "owner",
+        "objective",
+        "recommendation_ids",
+        "entry_criteria",
+        "exit_criteria",
+        "validation_plan"
+      ],
+      "properties": {
+        "phase_id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "owner": {
+          "type": "string"
+        },
+        "objective": {
+          "type": "string"
+        },
+        "recommendation_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "entry_criteria": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "exit_criteria": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "validation_plan": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "final_synthesis_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "executive_summary",
+        "strongest_proposal",
+        "main_tradeoff",
+        "decision_for_next_agent",
+        "non_goals",
+        "handoff_notes"
+      ],
+      "properties": {
+        "executive_summary": {
+          "type": "string"
+        },
+        "strongest_proposal": {
+          "type": "string"
+        },
+        "main_tradeoff": {
+          "type": "string"
+        },
+        "decision_for_next_agent": {
+          "type": "string"
+        },
+        "non_goals": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "handoff_notes": {
+          "type": "string"
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["created_by", "schema_path", "validator_path"],
+      "properties": {
+        "created_by": {
+          "type": "string"
+        },
+        "schema_path": {
+          "type": "string"
+        },
+        "validator_path": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}
