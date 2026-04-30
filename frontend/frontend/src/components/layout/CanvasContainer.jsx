@@ -1,4 +1,5 @@
 import React, { useState, useRef, useMemo, useContext, useEffect, useCallback } from 'react';
+import { createPortal, flushSync } from 'react-dom';
 import './CanvasContainer.css';
 import WindowFrame from './WindowFrame';
 import MinimizedDock from './MinimizedDock';
@@ -24,6 +25,7 @@ import KpiCardWindow from '../../features/dashboard/KpiCardWindow';
 import { WINDOW_SIZING } from '../../utils/windowSizing';
 import DecisionPanel from '../../features/business/decision/DecisionPanel';
 import DestinationHome from './DestinationHome';
+import { FaCompress, FaExternalLinkAlt } from 'react-icons/fa';
 
 const DESTINATIONS = {
   WORKSPACE: 'workspace',
@@ -173,7 +175,6 @@ function CanvasContainer({
     onDestinationSelect,
     activeDestination,
     setShowDataPreview, 
-    setShowDecisionPanel,
     addDashboardKpi,
     addDashboardChart,
     isDashboardDest,
@@ -181,8 +182,12 @@ function CanvasContainer({
   ]);
 
   const containerRef = useRef(null);
-  const [containerBounds, setContainerBounds] = useState({ width: 1920, height: 1080 });
+  const [containerBounds, setContainerBounds] = useState({ left: 0, top: 0, width: 1920, height: 1080 });
   const [focusStack, setFocusStack] = useState([]);
+  const [isAiChatPoppedOut, setIsAiChatPoppedOut] = useState(false);
+  const [aiChatPopupRoot, setAiChatPopupRoot] = useState(null);
+  const aiChatPopupWindowRef = useRef(null);
+  const isClosingAiChatPopupRef = useRef(false);
   const windowRegistry = useRef(new Map());
 
   useEffect(() => {
@@ -190,15 +195,18 @@ function CanvasContainer({
 
     const rect = containerRef.current.getBoundingClientRect();
     if (rect.width > 0 && rect.height > 0) {
-      setContainerBounds({ width: rect.width, height: rect.height });
+      setContainerBounds({ left: rect.left, top: rect.top, width: rect.width, height: rect.height });
     }
 
     const observer = new ResizeObserver((entries) => {
       for (const entry of entries) {
         if (entry.contentRect.width > 0 && entry.contentRect.height > 0) {
+          const nextRect = containerRef.current.getBoundingClientRect();
           setContainerBounds({
-            width: entry.contentRect.width,
-            height: entry.contentRect.height,
+            left: nextRect.left,
+            top: nextRect.top,
+            width: nextRect.width,
+            height: nextRect.height,
           });
         }
       }
@@ -807,12 +815,164 @@ function CanvasContainer({
     </WindowFrame>
   ) : null;
 
-  const aiChatElement = (showAiChat && !minimizedWindows.aiChat) ? (
+  const closeAiChatPopupWindow = useCallback(() => {
+    const popupWindow = aiChatPopupWindowRef.current;
+    aiChatPopupWindowRef.current = null;
+    setAiChatPopupRoot(null);
+
+    if (popupWindow && !popupWindow.closed) {
+      popupWindow.close();
+    }
+  }, []);
+
+  const prepareAiChatPopupWindow = useCallback((popupWindow) => {
+    const popupDocument = popupWindow.document;
+
+    popupDocument.open();
+    popupDocument.write('<!doctype html><html><head><title>AI Chat</title></head><body><div id="ai-chat-popout-root"></div></body></html>');
+    popupDocument.close();
+
+    popupDocument.documentElement.className = document.documentElement.className;
+    popupDocument.body.className = document.body.className;
+
+    document.querySelectorAll('link[rel="stylesheet"], style').forEach((styleNode) => {
+      popupDocument.head.appendChild(styleNode.cloneNode(true));
+    });
+
+    const popupBaseStyle = popupDocument.createElement('style');
+    popupBaseStyle.textContent = `
+      html,
+      body,
+      #ai-chat-popout-root {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+        background: var(--bg-primary, #ffffff);
+      }
+
+      body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      }
+    `;
+    popupDocument.head.appendChild(popupBaseStyle);
+
+    return popupDocument.getElementById('ai-chat-popout-root');
+  }, []);
+
+  const handleDockAiChat = useCallback(() => {
+    isClosingAiChatPopupRef.current = true;
+    closeAiChatPopupWindow();
+    setIsAiChatPoppedOut(false);
+    restoreWindow('aiChat');
+    window.setTimeout(() => {
+      isClosingAiChatPopupRef.current = false;
+    }, 0);
+  }, [closeAiChatPopupWindow, restoreWindow]);
+
+  const handleToggleAiChatPopout = useCallback(() => {
+    if (isAiChatPoppedOut) {
+      handleDockAiChat();
+      return;
+    }
+
+    const popupWindow = window.open(
+      '',
+      'ai-chat-popout',
+      'popup=yes,width=1200,height=850,left=160,top=80,resizable=yes,scrollbars=no'
+    );
+
+    if (!popupWindow) {
+      console.warn('AI Chat pop-out was blocked by the browser.');
+      return;
+    }
+
+    const popupRoot = prepareAiChatPopupWindow(popupWindow);
+    aiChatPopupWindowRef.current = popupWindow;
+    setAiChatPopupRoot(popupRoot);
+    setIsAiChatPoppedOut(true);
+    restoreWindow('aiChat');
+    popupWindow.focus();
+  }, [handleDockAiChat, isAiChatPoppedOut, prepareAiChatPopupWindow, restoreWindow]);
+
+  useEffect(() => {
+    if (!isAiChatPoppedOut) return undefined;
+
+    const checkPopupWindow = window.setInterval(() => {
+      const popupWindow = aiChatPopupWindowRef.current;
+      if (popupWindow && !popupWindow.closed) return;
+
+      aiChatPopupWindowRef.current = null;
+      setAiChatPopupRoot(null);
+      setIsAiChatPoppedOut(false);
+
+      if (!isClosingAiChatPopupRef.current) {
+        restoreWindow('aiChat');
+      }
+    }, 500);
+
+    return () => window.clearInterval(checkPopupWindow);
+  }, [isAiChatPoppedOut, restoreWindow]);
+
+  useEffect(() => () => {
+    isClosingAiChatPopupRef.current = true;
+    closeAiChatPopupWindow();
+  }, [closeAiChatPopupWindow]);
+
+  const handleMinimizeAiChat = useCallback(() => {
+    isClosingAiChatPopupRef.current = true;
+
+    flushSync(() => {
+      setIsAiChatPoppedOut(false);
+      setAiChatPopupRoot(null);
+      minimizeWindow('aiChat', 'AI Chat');
+    });
+
+    const popupWindow = aiChatPopupWindowRef.current;
+    aiChatPopupWindowRef.current = null;
+
+    if (popupWindow && !popupWindow.closed) {
+      popupWindow.close();
+    }
+
+    window.setTimeout(() => {
+      isClosingAiChatPopupRef.current = false;
+    }, 0);
+  }, [minimizeWindow]);
+
+  const handleCloseAiChat = useCallback(() => {
+    isClosingAiChatPopupRef.current = true;
+    closeAiChatPopupWindow();
+    setIsAiChatPoppedOut(false);
+    setShowAiChat(false);
+    window.setTimeout(() => {
+      isClosingAiChatPopupRef.current = false;
+    }, 0);
+  }, [closeAiChatPopupWindow, setShowAiChat]);
+
+  const aiChatHeaderActions = (
+    <button
+      className={`header-button ai-chat-popout-button ${isAiChatPoppedOut ? 'is-active' : ''}`}
+      onClick={(event) => {
+        event.stopPropagation();
+        handleToggleAiChatPopout();
+      }}
+      aria-label={isAiChatPoppedOut ? 'Dock AI Chat in app' : 'Open AI Chat in separate window'}
+      title={isAiChatPoppedOut ? 'Dock AI Chat in app' : 'Open AI Chat in separate window'}
+    >
+      {isAiChatPoppedOut ? <FaCompress /> : <FaExternalLinkAlt />}
+    </button>
+  );
+
+  const aiChatElement = showAiChat ? (
     <WindowFrame
-      {...getWindowProps('aiChat', '🤖 AI Analysis Suite', () => setShowAiChat(false), () => minimizeWindow('aiChat', 'AI Chat'))}
+      {...getWindowProps('aiChat', '🤖 AI Analysis Suite', handleCloseAiChat, handleMinimizeAiChat)}
       initialState={getInitialState('aiChat', 10, 25, 1100, 800)}
       minWidth={800}
       minHeight={600}
+      headerActions={aiChatHeaderActions}
+      isMinimized={!!minimizedWindows.aiChat}
+      isExternalWindow={isAiChatPoppedOut && !!aiChatPopupRoot}
     >
       <AIShell 
         setShowAIChart={setShowAIChart}
@@ -822,6 +982,26 @@ function CanvasContainer({
       />
     </WindowFrame>
   ) : null;
+
+  const aiChatPortal = showAiChat && typeof document !== 'undefined'
+    ? isAiChatPoppedOut && aiChatPopupRoot
+      ? createPortal(aiChatElement, aiChatPopupRoot, 'ai-chat-popout-window')
+      : createPortal(
+        <div
+          className="ai-chat-window-portal"
+          style={{
+            left: `${containerBounds.left}px`,
+            top: `${containerBounds.top}px`,
+            width: `${containerBounds.width}px`,
+            height: `${containerBounds.height}px`,
+          }}
+        >
+          {aiChatElement}
+        </div>,
+        document.body,
+        'ai-chat-docked-window'
+      )
+    : null;
 
   const shouldShowHome = useMemo(() => {
     if (isWorkspaceDest) return !showDataPreview && !showRawViewer && !showMachineLearning;
@@ -878,11 +1058,11 @@ function CanvasContainer({
         {isAiDest && workflowLabElement}
         {isAiDest && whiteBoardElement}
         {isAiDest && storyPanelElement}
-        {aiChatElement}
         {(isExploreDest || isDecisionDest) && chartElements}
         {isDashboardDest && dashboardElements}
         {isDecisionDest && decisionPanelElement}
       </div>
+      {aiChatPortal}
       <MinimizedDock />
     </div>
   );

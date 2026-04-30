@@ -43,6 +43,20 @@ export const useWindowInteraction = ({
   // Animation frame ID
   const rafId = useRef(null);
 
+  const applyTransform = useCallback(() => {
+    if (windowRef.current) {
+      const { x, y, w, h } = stateRef.current;
+      windowRef.current.style.transform = `translate(${x}px, ${y}px)`;
+      windowRef.current.style.width = `${w}px`;
+      windowRef.current.style.height = `${h}px`;
+    }
+  }, []);
+
+  const initialX = initialState?.x;
+  const initialY = initialState?.y;
+  const initialW = initialState?.w;
+  const initialH = initialState?.h;
+
   // Sync state if props change (e.g. Smart Split updates this window from parent)
   useEffect(() => {
     if (draggingRef.current || resizingRef.current) return;
@@ -50,17 +64,17 @@ export const useWindowInteraction = ({
     let needsUpdate = false;
     const current = { ...stateRef.current };
 
-    if (initialState) {
+    if (initialX !== undefined && initialY !== undefined && initialW !== undefined && initialH !== undefined) {
         // Only update if difference is significant to avoid jitter
-        if (Math.abs(current.x - initialState.x) > 1 || 
-            Math.abs(current.y - initialState.y) > 1 || 
-            Math.abs(current.w - initialState.w) > 1 || 
-            Math.abs(current.h - initialState.h) > 1) {
+        if (Math.abs(current.x - initialX) > 1 ||
+            Math.abs(current.y - initialY) > 1 ||
+            Math.abs(current.w - initialW) > 1 ||
+            Math.abs(current.h - initialH) > 1) {
             
-            current.x = initialState.x;
-            current.y = initialState.y;
-            current.w = initialState.w;
-            current.h = initialState.h;
+            current.x = initialX;
+            current.y = initialY;
+            current.w = initialW;
+            current.h = initialH;
             needsUpdate = true;
         }
     }
@@ -79,16 +93,7 @@ export const useWindowInteraction = ({
         stateRef.current = current;
         applyTransform();
     }
-  }, [initialState?.x, initialState?.y, initialState?.w, initialState?.h, minWidth, minHeight]);
-
-  const applyTransform = useCallback(() => {
-    if (windowRef.current) {
-      const { x, y, w, h } = stateRef.current;
-      windowRef.current.style.transform = `translate(${x}px, ${y}px)`;
-      windowRef.current.style.width = `${w}px`;
-      windowRef.current.style.height = `${h}px`;
-    }
-  }, []);
+  }, [initialX, initialY, initialW, initialH, minWidth, minHeight, applyTransform]);
 
   // --- Core Interaction Loop ---
 
