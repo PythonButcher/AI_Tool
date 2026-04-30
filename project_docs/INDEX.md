@@ -78,5 +78,7 @@ Planning workflows:
 - `project_docs/active/agent_council/council_output_schema.json`
 - `project_docs/active/agent_council/sample_decision_intelligence_council_output.json`
 - `project_docs/active/agent_council/validate_council_json.py`
-- `project_docs/active/agent_council/app_wide_ui_flaws_gemini_handoff.md`
-- `project_docs/active/agent_council/outputs/2026-04-28-app-wide-ui-flaws-gemini-council.json`
+- `project_docs/active/agent_council/outputs/README.md`
+- `project_docs/active/agent_council/outputs/app-wide-ui-flaws/README.md`
+- `project_docs/active/agent_council/outputs/app-wide-ui-flaws/2026-04-28-gemini-council.json`
+- `project_docs/active/agent_council/outputs/app-wide-ui-flaws/gemini_handoff.md`

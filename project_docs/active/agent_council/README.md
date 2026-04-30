@@ -6,9 +6,9 @@ The Agent Council is a lightweight planning and debate framework for AI_Tool. It
 
 This is not a runtime feature. It does not add backend endpoints, frontend UI, database state, or product contracts. It lives in project documentation so it can support future planning debates without changing application behavior.
 
-## Where The Artifacts Live
+## Where The Framework Lives
 
-The council artifacts are stored here:
+The reusable council framework files are stored here:
 
 `project_docs/active/agent_council/agent_roles.md`
 
@@ -20,6 +20,16 @@ The council artifacts are stored here:
 
 `project_docs/active/agent_council/validate_council_json.py`
 
+Live council outputs should not be stored beside these framework files. Each topic gets a dedicated folder under:
+
+`project_docs/active/agent_council/outputs/<topic-slug>/`
+
+The topic folder should contain the council JSON, derived handoffs, review notes, and follow-up prompts for that topic. This keeps the workflow reusable and prevents unrelated council runs from becoming a flat pile of files.
+
+Current topic folders:
+
+`project_docs/active/agent_council/outputs/app-wide-ui-flaws/`
+
 ## How To Run A Council
 
 Start by choosing a planning topic. Good topics are questions like what the next Decision Intelligence slice should be, whether a proposed UI handoff is strong enough, whether a backend contract is ready for Gemini, or which risks should gate the next implementation phase.
@@ -28,7 +38,7 @@ Before running the council, the orchestrating agent should inspect the current a
 
 Then paste `project_docs/active/agent_council/master_council_prompt.md` into the AI system that will simulate or coordinate the agents. Add the specific planning topic after the prompt in plain language. The council should run four rounds: independent proposals, critique, reconciliation, and final JSON synthesis.
 
-The output should be saved as JSON. Use a name that captures the topic and date, such as `project_docs/active/agent_council/outputs/2026-04-27-decision-chat-hardening.json`. The `outputs/` folder is intentionally not required by this initial setup, because this task creates the reusable workflow and a sample artifact rather than a live council result.
+The output should be saved as JSON inside a topic folder. Use a topic slug and date-based filename, such as `project_docs/active/agent_council/outputs/decision-chat-hardening/2026-04-27-council.json`. If the council creates an implementation handoff, save that handoff in the same topic folder, for example `project_docs/active/agent_council/outputs/decision-chat-hardening/gemini_handoff.md`.
 
 ## How To Validate Council JSON
 

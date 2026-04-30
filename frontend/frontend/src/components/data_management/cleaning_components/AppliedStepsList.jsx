@@ -17,11 +17,11 @@ const AppliedStepsList = ({ steps, editingId, onEditStep, onDeleteStep, onMoveSt
                </div>
              </div>
              <div className="step-controls">
-               <button onClick={() => onEditStep(step)} title="Edit"><FaEdit /></button>
-               <button onClick={() => onDeleteStep(step.id)} title="Remove"><FaTrash /></button>
+               <button onClick={() => onEditStep(step)} title="Edit Step" aria-label="Edit Step"><FaEdit /></button>
+               <button onClick={() => onDeleteStep(step.id)} title="Remove Step" aria-label="Remove Step"><FaTrash /></button>
                <div className="step-arrows">
-                  <button onClick={() => onMoveStep(idx, -1)} disabled={idx === 0}>↑</button>
-                  <button onClick={() => onMoveStep(idx, 1)} disabled={idx === steps.length - 1}>↓</button>
+                  <button onClick={() => onMoveStep(idx, -1)} disabled={idx === 0} title="Move Step Up" aria-label="Move Step Up">↑</button>
+                  <button onClick={() => onMoveStep(idx, 1)} disabled={idx === steps.length - 1} title="Move Step Down" aria-label="Move Step Down">↓</button>
                </div>
              </div>
           </div>

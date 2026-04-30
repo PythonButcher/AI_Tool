@@ -24,7 +24,7 @@ const ScenarioPreview = ({ preview }) => {
           )}
         </div>
         <div className="decision-scenario-inputs">
-          <span className="scenario-input-label">Simulated Adjustments:</span>
+          <span className="scenario-input-label">Adjusted Variables:</span>
           {suggested_inputs && suggested_inputs.metric_targets && suggested_inputs.metric_targets.map((t, i) => (
             <span key={i} className="scenario-input-tag">
               {t.metric_id}: {t.adjustment_value > 0 ? '+' : ''}{(t.adjustment_value * 100).toFixed(0)}%

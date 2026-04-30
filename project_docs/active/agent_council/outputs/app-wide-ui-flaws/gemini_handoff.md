@@ -10,11 +10,11 @@ The user priority is clear: iron out UI flaws across the app before adding more 
 
 The full structured council artifact is:
 
-`project_docs/active/agent_council/outputs/2026-04-28-app-wide-ui-flaws-gemini-council.json`
+`project_docs/active/agent_council/outputs/app-wide-ui-flaws/2026-04-28-gemini-council.json`
 
 Validate it with:
 
-`python project_docs/active/agent_council/validate_council_json.py project_docs/active/agent_council/outputs/2026-04-28-app-wide-ui-flaws-gemini-council.json`
+`python project_docs/active/agent_council/validate_council_json.py project_docs/active/agent_council/outputs/app-wide-ui-flaws/2026-04-28-gemini-council.json`
 
 ## Current Truth
 
@@ -112,7 +112,7 @@ Update `project_docs/active/status/decision_intelligence_execution_status.md` tr
 
 ## Short Gemini CLI Prompt
 
-Read `project_docs/INDEX.md` first, then the active frontend guardrail, Decision Intelligence status, Phase 4.5 plan, React state-flow review, and `project_docs/active/agent_council/app_wide_ui_flaws_gemini_handoff.md`. Implement the first app-wide UI flaw cleanup before adding any new features. Preserve the current dark, dense, professional operations-focused theme and preserve all existing AI chat, chart, dashboard, workflow, and Decision Intelligence capability.
+Read `project_docs/INDEX.md` first, then the active frontend guardrail, Decision Intelligence status, Phase 4.5 plan, React state-flow review, and `project_docs/active/agent_council/outputs/app-wide-ui-flaws/gemini_handoff.md`. Implement the first app-wide UI flaw cleanup before adding any new features. Preserve the current dark, dense, professional operations-focused theme and preserve all existing AI chat, chart, dashboard, workflow, and Decision Intelligence capability.
 
 Focus first on correctness and trust. In `frontend/frontend/src/features/ai/AIShell.jsx`, verify and fix older chat card actions so they execute against that card's own decision/session context, not the latest component-level `sessionState`. Support both top-level and nested `recommended_next_action` shapes without duplicate action buttons. Keep disabled actions non-executable and keep availability explanations visible.
 

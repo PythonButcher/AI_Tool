@@ -78,6 +78,7 @@ function CanvasContainer({
   workspaceAnalysis,
   onCreateDecisionWorkspace,
   onAnalyzeWorkspace,
+  onOpenDecisionWorkspace,
   getDecisionPayloadBase,
   onDecisionAction,
   decisionReadiness,
@@ -817,6 +818,7 @@ function CanvasContainer({
         setShowAIChart={setShowAIChart}
         setAiChartType={setAiChartType}
         setAiChartData={setAiChartData}
+        onOpenWorkspace={onOpenDecisionWorkspace}
       />
     </WindowFrame>
   ) : null;
