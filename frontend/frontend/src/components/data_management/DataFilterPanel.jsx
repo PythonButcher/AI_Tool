@@ -123,7 +123,7 @@ function DataFilterPanel({ openDataFilter, setOpenDataFilter }) {
     <Drawer anchor="right" open={openDataFilter} onClose={toggleDrawer(false)}>
       <div style={{ width: 300, padding: 20 }}>
         <Typography variant="h6" gutterBottom>Filters</Typography>
-        <IconButton onClick={toggleDrawer(false)} style={{ float: 'right', marginTop: -40 }}>✕</IconButton>
+        <IconButton onClick={toggleDrawer(false)} style={{ float: 'right', marginTop: -40 }} aria-label="Close">✕</IconButton>
 
         <TextField
           select

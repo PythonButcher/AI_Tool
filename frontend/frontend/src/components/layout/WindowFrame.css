@@ -34,6 +34,25 @@
   z-index: 1000 !important;
 }
 
+.window-frame.is-external-window {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  transform: none !important;
+}
+
+.window-frame.is-external-window .window-surface {
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  animation: none;
+}
+
+.window-frame.is-external-window .window-header {
+  border-radius: 0;
+}
+
 .window-frame.is-dragging .window-surface,
 .window-frame.is-resizing .window-surface {
   transition: none;

@@ -111,6 +111,7 @@ const DecisionPanel = ({
         analysis={workspaceAnalysis}
         onCreateNew={onResetWorkspace}
         onAnalyze={onAnalyzeWorkspace}
+        setIsDataPaneOpen={setIsDataPaneOpen}
       />
       
       {/* Optional Legacy Bundle Support: If a bundle exists, we can still show signals below the workspace */}

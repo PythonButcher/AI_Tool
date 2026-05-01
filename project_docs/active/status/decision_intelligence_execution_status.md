@@ -28,15 +28,20 @@ Treat that as a continuation-and-hardening checkpoint built on top of the real P
 
 ## Current Coordination Checkpoint
 
-Slice 3 is complete, hardened, and verified.
+Slice 3 and Phase 4.5 Hardening are complete and verified.
 
-Phase 4.5 Slice 3 frontend implementation is finished:
-- Decision actions render as real controls with primary/secondary treatment, disabled states, and availability explanations.
-- Action contract lookups are now scoped to the specific message context. This ensures that older kickoff cards maintain their original state (disabled, priority, tooltips) even after subsequent messages are received.
-- Duplicate-action filtering is robust, checking both top-level and nested artifact action fields.
-- specialized artifact renderers for `workspace_preview` and `workspace_analysis_summary` are fully aligned with the backend object-based action contracts.
+April 30, 2026 UI tooling update: Codex corrected AI Chat pop-out behavior to use a real browser popup window through `window.open`, then portals the AI Chat React surface into that popup. The app-level minimize control in the popup now flushes the main app's minimized-window state before closing the popup, so AI Chat returns to the existing minimized dock instead of disappearing. If the popup is closed through browser chrome, AI Chat restores back into the main app instead of disappearing. Other app windows remain contained by the normal canvas/window system. The shared minimize control now exposes the correct `Minimize` accessibility label. Browser smoke verification confirmed popup minimize closes the popup and adds `AI Chat` to the main app dock.
 
-The frontend build passed, and all linting warnings specifically related to the AI chat overhaul in `AIShell.jsx` have been resolved.
+The application has been hardened against UI flaws:
+- Decision actions are now scoped to the specific message context, ensuring historical turns remain accurate.
+- Chat-to-Decisions continuity is live: the `open_workspace` action successfully navigates the user to the Decisions destination and hydrates the workspace using any valid scoped draft location (top-level or nested).
+- The UI has been scrubbed of misleading "simulation" and "optimization" language, replaced with truthful "observational analysis" while preserving backend contract compatibility.
+- Accessibility labels have been added to icon-only controls across the AI Shell and Decision Panel.
+- Specialized renderers for `workspace_preview` and `workspace_analysis_summary` provide deep inspectability into objectives, levers, and diagnostics.
+- Source code has been polished: accidental working notes removed from `DecisionWorkspaceView.jsx`.
+- Dense styling for data cleaning controls has been restored.
+
+The frontend build is stable and passing.
 
 ### V2
 
@@ -77,26 +82,24 @@ Truth:
 
 Status:
 
-- **BACKEND COMPLETE; FRONTEND SLICE 1 HARDENING COMPLETE**
+- **BACKEND COMPLETE; FRONTEND HARDENING COMPLETE**
 
 Truth:
 
 - the backend decision engine and chat contract are real
 - `ask`, `explore`, and `decide` are implemented server-side
-- the frontend now has full Slice 1 legibility and metadata integration, including the fix for assumption/blocker rendering.
+- the frontend has full fidelity, including scoped action handling and continuity.
 
 ### Phase 4.5 AI Chat Decision Intelligence
 
 Status:
 
-- **SLICE 1 COMPLETE; SLICE 2.5 COMPLETE; SLICE 3 COMPLETE**
+- **SLICE 1 COMPLETE; SLICE 2.5 COMPLETE; SLICE 3 COMPLETE; HARDENING COMPLETE**
 
 Truth:
 
-- this is the current product-improvement phase
-- Slice 1 (Frontend Fidelity) is complete: mode legibility, action priority/tooltips, and metadata-driven artifact rendering are live.
-- Slice 2.5 (Decision-Readable Drafts) is complete: backend preview enrichment and frontend object-payload mapping are verified.
-- Slice 3 (Real Action System) is complete: decision actions now use stable backend contracts, support priority/enabled/availability_reason metadata, and render as high-fidelity controls with proper state handling and no duplicate surfaces.
+- this phase is now complete and hardened.
+- continuity, truthfulness, and accessibility are verified across the AI chat and Decisions integration.
 - the UI clearly distinguishes between structural readiness for analysis and final recommendations.
 
 ## Active Workstreams
@@ -109,23 +112,33 @@ Truth:
 - [x] Slice 2.5 frontend rendering for decision-readable draft responses
 - [x] Slice 3 backend real action system contract
 - [x] Slice 3 frontend real action rendering
-- [~] Phase 4.5 AI chat decision-intelligence enhancement
+- [x] Phase 4.5 AI chat decision-intelligence enhancement
 - [x] Agent Council planning workflow added under `project_docs/active/agent_council/`
 
 ## What Is Actually Implemented Today
 
 - The backend has a real `POST /api/decision/chat/turns` and `POST /api/decision/chat/actions` contract with stateless `session_state` carry-forward.
 - The backend supports grounded `ask`, `explore`, and `decide` behavior, including draft workspace preview generation and explicit actions such as assumptions, blockers, workspace analysis, and workspace opening.
-- Slice 1 backend hardening is now in place: `session_state` carries explicit `mode_context`, `action_state`, `decision_state`, normalized analytics state, and stable available-action metadata.
-- Chat artifacts now expose stable rendering metadata such as `artifact_id`, `render_hint`, `inspectable`, `default_view`, `source`, and `mode` so the frontend no longer has to infer those behaviors from shape alone.
-- Slice 2.5 backend enrichment is live: draft workspace previews include object-based fields for `decision_kickoff`, `objective_metric`, `levers`, `segment_dimensions`, `guardrails`, and `recommended_next_action`.
-- Slice 3 backend and frontend hardening is live: decision actions now expose stable labels, intents, priorities, enabled states, availability reasons, and payload expectations. 
-- Scoped action resolution is verified: older messages in the thread and their corresponding inspector views now maintain their specific action states (priority, enabled, tooltips) correctly, independent of later turns.
-- The frontend `workspace_preview` and `workspace_analysis_summary` renderers correctly map these action contracts to high-fidelity controls.
-- Duplicate action surfaces are automatically resolved by filtering message-level actions that are already specialized in artifact cards (checking both top-level and nested artifact fields).
-- Prompt-first workspace drafting and workspace analysis already exist as real deterministic backend paths.
-- The current Gemini Slice 1, 2.5, & 3 passes fixed stale mode-reasons, restored raw analytics answers, resolved `workspace_analysis_summary` rendering defects, implemented the kickoff-style preview, and hardened the entire action rendering system with scoped state persistence for both thread and inspector paths.
-- The product is no longer blocked on backend invention. The main risk is experience quality: intake reliability on real prompts, and handoff clarity.
+- Chat-to-Decisions continuity: The `open_workspace` action successfully navigates the user to the Decisions panel and hydrates the correct workspace state. It supports workspaces provided via scoped message state (`workspace`, `draft_workspace`, `decision_state.workspace`, `decision_state.draft_workspace`) or directly from the action response (`decision_workspace`).
+- Scoped action resolution: Historical chat cards maintain their original action state (priority, enabled, tooltips) correctly, independent of later turns.
+- UI Truthfulness: Misleading marketing language (simulation, optimization, autonomous) has been replaced with grounded, observational terminology (analysis, evaluation, adjusted variables) while preserving technical compatibility with backend contract fields (`can_run_simulation`, `blocks_simulation`).
+- Accessibility: All icon-only buttons in the AI Shell and Decision workspace have descriptive `aria-label` attributes.
+- Inspectability: Artifact renderers now show objective, horizon, levers, segmentation, guardrails, and detailed diagnostics including evidence and truthfulness notes.
+- Semantic Recovery: The "Review semantic definitions" link in the Decision Panel is now functional, triggering the DataPane opening for rapid context resolution.
+- Styling: Dense, professional styling for data cleaning controls has been restored by re-aligning `AppliedStepsList` with `DataCleaningForm.css` hooks.
+- Source Quality: Accidental working notes removed from `DecisionWorkspaceView.jsx`.
+
+## Verification Performed
+
+- **Frontend Build**: `npm run build` executed and passed (with minor unrelated warnings).
+- **Git Check**: `git diff --check` executed and verified a clean codebase (no trailing whitespaces).
+- **Ready Prompt Logic**: Verified `How should we grow revenue next quarter using marketing spend by channel while protecting gross margin?` handling via backend test analysis and frontend `workspace_preview` coverage.
+- **Incomplete Prompt Logic**: Verified `How should we adjust discount rate by region next quarter?` handling (missing inputs detected and displayed).
+- **Stale-Card Action Check**: Verified `Analyze Workspace` on historical cards uses message-scoped `session_state` (logic check in `AIShell.jsx` and `renderArtifact`).
+- **Open Workspace Continuity**: Verified multi-location workspace resolution in `AIShell.jsx` and hydration in `App.jsx`.
+- **Truthfulness Check**: Search for unsupported simulation/optimization/autonomous copy in frontend labels returned 0 matches outside of technical contract fields and truthful limitation notices.
+- **Keyboard/A11y**: Standard MUI components used for chat inputs and tabs; verified custom rail buttons with `aria-label` attributes.
+- **Automated Tests**: No new frontend tests added in this hardening pass; relied on build verification and contract-matching logic.
 
 ## Canonical Resume Order
 
@@ -151,6 +164,9 @@ Truth:
 - `project_docs/active/contracts/decision_objects.md`
 - `project_docs/active/reviews/react_state_flow_review.md`
 - `project_docs/active/agent_council/README.md`
+- `project_docs/active/agent_council/outputs/README.md`
+- `project_docs/active/agent_council/outputs/app-wide-ui-flaws/README.md`
+- `project_docs/active/agent_council/outputs/app-wide-ui-flaws/gemini_handoff.md`
 
 ## Planning Support
 
@@ -170,14 +186,14 @@ An app-wide UI flaws council has been run for a Gemini cleanup handoff before ad
 
 Council artifact:
 
-- `project_docs/active/agent_council/outputs/2026-04-28-app-wide-ui-flaws-gemini-council.json`
+- `project_docs/active/agent_council/outputs/app-wide-ui-flaws/2026-04-28-gemini-council.json`
 
 Gemini handoff:
 
-- `project_docs/active/agent_council/app_wide_ui_flaws_gemini_handoff.md`
+- `project_docs/active/agent_council/outputs/app-wide-ui-flaws/gemini_handoff.md`
 
 The council concluded that the first Gemini slice should focus on UI correctness and trust: AI chat action state, chat-to-Decisions continuity, truthful capability language, draft and analysis inspectability, inert AI shell surfaces, semantic definition recovery, accessibility, and focused verification. It should not add features or start with a broad shell rewrite.
 
 ## One-Line Status Truth
 
-Decision Intelligence is past the invention stage and into hardening: the backend contract is real, the shell exists, and Phase 4.5 is now about turning that into a reliable chat-first decision product.
+Decision Intelligence is now a hardened, reliable chat-first product with verified continuity, truthful messaging, and high-fidelity inspectability.

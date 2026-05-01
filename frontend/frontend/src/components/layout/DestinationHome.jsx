@@ -95,7 +95,7 @@ const DestinationHome = ({ activeDestination, onAction, readiness }) => {
       </div>
       <h2 className="dest-home__title">AI Analysis Suite</h2>
       <p className="dest-home__description">
-        Leverage autonomous intelligence. Chat with your data, 
+        Grounded Intelligence. Chat with your data,
         generate complex workflows, or automate your business reporting.
       </p>
       <div className="dest-home__actions">

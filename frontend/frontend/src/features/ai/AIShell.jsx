@@ -39,7 +39,7 @@ const MODES = [
  * 
  * Re-implemented as a high-fidelity workspace with split conversation and inspection.
  */
-function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
+function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspace }) {
   const {
     cleanedData,
     fullData,
@@ -100,14 +100,29 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
     return null;
   };
 
-  const handleActionClick = async (actionId) => {
+  const handleActionClick = async (actionId, scopedSessionState = null) => {
+    // If the action is specifically to open a workspace, handle continuity immediately
+    if (actionId === 'open_workspace' && onOpenWorkspace) {
+      const activeState = scopedSessionState || sessionState;
+      const workspace = activeState.workspace ||
+                        activeState.draft_workspace ||
+                        activeState.decision_state?.workspace ||
+                        activeState.decision_state?.draft_workspace ||
+                        activeState.decision_workspace;
+
+      if (workspace) {
+        onOpenWorkspace(workspace);
+        return;
+      }
+    }
+
     setLoading(true);
     setError(null);
     setActiveArtifact(null); // Clear stale inspector state immediately
 
     const payload = {
       action: actionId,
-      session_state: sessionState,
+      session_state: scopedSessionState || sessionState,
       dataset: resolveDatasetForNlp(),
       semantic_model: semanticModel,
     };
@@ -117,12 +132,20 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
       const data = response.data;
 
       if (data.status === 'success') {
+        // If the action response itself contains a workspace, and it's an open intent, handle it
+        if (actionId === 'open_workspace' && data.decision_workspace && onOpenWorkspace) {
+          onOpenWorkspace(data.decision_workspace);
+          setLoading(false);
+          return;
+        }
+
         const newAssistantMsg = { 
           role: "assistant", 
           content: data.assistant_message, 
           artifacts: data.artifacts,
           suggested_actions: data.suggested_actions || data.session_state?.available_actions || [],
-          mode: data.mode
+          mode: data.mode,
+          session_state: data.session_state || {} // Scoped state for this turn
         };
         setUserMessages(prev => [...prev, newAssistantMsg]);
         setSessionState(data.session_state || {});
@@ -133,7 +156,7 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
           // Only auto-focus if it's a rich, inspectable artifact
           const richTypes = ['chart', 'workspace_preview', 'workspace_analysis_summary'];
           if (richTypes.includes(lastArt.type)) {
-            setActiveArtifact(lastArt);
+            setActiveArtifact({ ...lastArt, contextActions: newAssistantMsg.suggested_actions, contextSessionState: newAssistantMsg.session_state });
             setIsResultsPaneOpen(true);
           }
         }
@@ -217,12 +240,12 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
     return <Typography variant="body2" sx={{ lineHeight: 1.7 }}>{content.message || JSON.stringify(content)}</Typography>;
   };
 
-  const handleInspect = (artifact, messageActions = null) => {
-    setActiveArtifact({ ...artifact, contextActions: messageActions });
+  const handleInspect = (artifact, messageActions = null, messageSessionState = null) => {
+    setActiveArtifact({ ...artifact, contextActions: messageActions, contextSessionState: messageSessionState });
     setIsResultsPaneOpen(true);
   };
 
-  const renderArtifact = (artifact, isInspector = false, contextActions = null) => {
+  const renderArtifact = (artifact, isInspector = false, contextActions = null, contextSessionState = null) => {
     if (!artifact) return null;
 
     const { 
@@ -236,6 +259,7 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
 
     // Use passed contextActions or stored artifact actions for inspector
     const lookupActions = contextActions || artifact.contextActions || sessionState?.available_actions || [];
+    const lookupSessionState = contextSessionState || artifact.contextSessionState || sessionState;
 
     const baseClass = isInspector ? "ai-shell__active-artifact" : "ai-shell__artifact-preview-card";
     
@@ -247,7 +271,7 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
       if (type === 'answer' && !hasContent) return null;
 
       return (
-        <div className="ai-shell__artifact-preview-link" onClick={() => handleInspect(artifact, contextActions)}>
+        <div className="ai-shell__artifact-preview-link" onClick={() => handleInspect(artifact, contextActions, contextSessionState)}>
           <div className="ai-shell__preview-icon">
             {type === 'chart' ? <FaChartBar /> : type === 'workspace_preview' ? <FaLayerGroup /> : type === 'answer' ? <FaCheckCircle /> : <FaFileAlt />}
           </div>
@@ -259,7 +283,7 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
               {content?.title || content?.chartType || content?.summary?.headline || content?.metric?.label || content?.metric?.name || content?.fieldsUsed?.value || 'View Details'}
             </Typography>
           </div>
-          <IconButton size="small" className="ai-shell__preview-action">
+          <IconButton size="small" className="ai-shell__preview-action" aria-label="View Details">
             <FaChevronRight />
           </IconButton>
         </div>
@@ -279,7 +303,7 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
                 <span className="ai-shell__artifact-title">
                    <FaCheckCircle /> {source || 'Result'} {artMode ? `(${artMode})` : ''}
                 </span>
-                {inspectable && <IconButton size="small" onClick={() => handleInspect(artifact, contextActions)}><FaExternalLinkAlt style={{ fontSize: '0.7rem' }} /></IconButton>}
+                {inspectable && <IconButton size="small" onClick={() => handleInspect(artifact, contextActions)} aria-label="Inspect Result"><FaExternalLinkAlt style={{ fontSize: '0.7rem' }} /></IconButton>}
               </div>
             )}
             <div className="ai-shell__artifact-content">{renderAnswerArtifact(content)}</div>
@@ -417,7 +441,7 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
                                     color: 'var(--text-secondary)'
                                   }
                                 }}
-                                onClick={() => handleActionClick(actionId === 'Analyze workspace' ? 'analyze_workspace' : actionId)}
+                                onClick={() => handleActionClick(actionId === 'Analyze workspace' ? 'analyze_workspace' : actionId, lookupSessionState)}
                               >
                                 {fullAction?.label || wp.recommended_next_action?.label || wp.recommended_next_action}
                               </Button>
@@ -597,7 +621,7 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
             reply = resp.data.suggestions;
             setAwaitingCleanInstructions(true);
           } else {
-            reply = "Optimization complete. Context is stable.";
+            reply = "Context stabilized.";
             setAwaitingCleanInstructions(false);
           }
           setUserMessages(prev => [...prev, { role: "assistant", content: reply }]);
@@ -618,7 +642,7 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
           reply = "Instructions applied. Environment ready.";
           setAwaitingCleanInstructions(false);
         } else {
-          reply = resp.data.suggestions || "Clarification required for optimization.";
+          reply = resp.data.suggestions || "Clarification required for analysis.";
         }
         setUserMessages(prev => [...prev, { role: "assistant", content: reply }]);
       } catch (err) {
@@ -650,7 +674,8 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
           content: data.assistant_message, 
           artifacts: data.artifacts,
           suggested_actions: data.suggested_actions || [],
-          mode: data.mode
+          mode: data.mode,
+          session_state: data.session_state || {} // Scoped state
         };
         setUserMessages(prev => [...prev, newMsg]);
         setSessionState(data.session_state || {});
@@ -661,7 +686,7 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
           // Only auto-focus if it's a rich, inspectable artifact
           const richTypes = ['chart', 'workspace_preview', 'workspace_analysis_summary'];
           if (richTypes.includes(lastArt.type)) {
-            setActiveArtifact({ ...lastArt, contextActions: data.suggested_actions || [] });
+            setActiveArtifact({ ...lastArt, contextActions: newMsg.suggested_actions, contextSessionState: newMsg.session_state });
             setIsResultsPaneOpen(true);
           }
         }
@@ -695,6 +720,7 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
               <button 
                 className={`ai-shell__rail-item ${activeMode === m.id ? 'is-active' : ''}`} 
                 onClick={() => handleModeChange(null, m.id)}
+                aria-label={m.label}
               >
                 {m.id === 'ask' ? <FaRegCommentDots /> : m.id === 'explore' ? <FaChartBar /> : <FaLightbulb />}
               </button>
@@ -703,12 +729,21 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
         </div>
         <div className="ai-shell__rail-middle">
           <div className="ai-shell__rail-divider" />
-          <Tooltip title="Skills" placement="right"><button className="ai-shell__rail-item is-disabled"><FaTools /><span className="ai-shell__dot-alert" /></button></Tooltip>
-          <Tooltip title="Library" placement="right"><button className="ai-shell__rail-item" onClick={() => {/* Placeholder for Library */}}><FaHistory /></button></Tooltip>
+          <Tooltip title="Skills" placement="right">
+            <button className="ai-shell__rail-item is-disabled" aria-label="Skills">
+              <FaTools /><span className="ai-shell__dot-alert" />
+            </button>
+          </Tooltip>
+          <Tooltip title="Library" placement="right">
+            <button className="ai-shell__rail-item" onClick={() => {/* Placeholder for Library */}} aria-label="Library">
+              <FaHistory />
+            </button>
+          </Tooltip>
           <Tooltip title="Context & Metadata" placement="right">
             <button 
               className={`ai-shell__rail-item ${isContextPaneOpen ? 'is-active' : ''}`} 
               onClick={() => setIsContextPaneOpen(true)}
+              aria-label="Context & Metadata"
             >
               <FaLayerGroup />
             </button>
@@ -734,7 +769,7 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
       >
         <Box sx={{ mb: 4, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Typography variant="overline" sx={{ fontWeight: 900, letterSpacing: '0.15em' }}>Context & Grounding</Typography>
-          <IconButton onClick={() => setIsContextPaneOpen(false)} size="small" sx={{ color: 'var(--text-secondary)' }}><FaChevronRight style={{ transform: 'rotate(180deg)' }} /></IconButton>
+          <IconButton onClick={() => setIsContextPaneOpen(false)} size="small" sx={{ color: 'var(--text-secondary)' }} aria-label="Close Context"><FaChevronRight style={{ transform: 'rotate(180deg)' }} /></IconButton>
         </Box>
 
         <div className="ai-shell__secondary-content" style={{ padding: 0 }}>
@@ -754,7 +789,7 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
             <div className="ai-shell__ghost-label"><FaLightbulb /> Decision Bridge</div>
             <div className="ai-shell__ghost-draft">
               <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>Strategy Bridge</Typography>
-              <Typography variant="caption" sx={{ opacity: 0.5 }}>Reserved for handoff to structured simulation path.</Typography>
+              <Typography variant="caption" sx={{ opacity: 0.5 }}>Reserved for handoff to structured observational analysis.</Typography>
             </div>
           </div>
 
@@ -791,7 +826,7 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
             </div>
           </div>
           <div className="ai-shell__header-right">
-             <IconButton onClick={() => setIsResultsPaneOpen(!isResultsPaneOpen)} size="small">
+             <IconButton onClick={() => setIsResultsPaneOpen(!isResultsPaneOpen)} size="small" aria-label="Toggle Results Pane">
                <FaEye style={{ color: isResultsPaneOpen ? 'var(--text-primary)' : 'var(--text-secondary)' }} />
              </IconButton>
           </div>
@@ -800,9 +835,19 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
         {/* Workspace Level Tabs */}
         <div className="ai-shell__workspace-tabs">
           <Tabs value={activeWorkspaceTab} onChange={(e, v) => setActiveWorkspaceTab(v)} variant="scrollable" scrollButtons="auto">
-            {WORKSPACE_TABS.map(tab => (
-              <Tab key={tab.id} label={tab.label} value={tab.id} className="ai-shell__workspace-tab" />
-            ))}
+            {WORKSPACE_TABS.map(tab => {
+              // Only allow Threads and Briefs for now as they are the most functional
+              const isFunctional = ['threads', 'briefs'].includes(tab.id);
+              return (
+                <Tab
+                  key={tab.id}
+                  label={tab.label}
+                  value={tab.id}
+                  className={`ai-shell__workspace-tab ${!isFunctional ? 'is-disabled' : ''}`}
+                  disabled={!isFunctional}
+                />
+              );
+            })}
           </Tabs>
         </div>
 
@@ -835,7 +880,7 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
             <div className="ai-shell__welcome-hero">
               <div className="ai-shell__hero-icon"><FaRobot /></div>
               <Typography variant="h4" className="ai-shell__hero-title">
-                {activeMode === 'decide' ? 'Draft Strategic Path' : activeMode === 'explore' ? 'Grounded Exploration' : 'Agent Intelligence'}
+                {activeMode === 'decide' ? 'Draft Decision Frame' : activeMode === 'explore' ? 'Grounded Exploration' : 'Agent Intelligence'}
               </Typography>
               <Typography variant="body1" className="ai-shell__hero-subtitle">
                 {activeMode === 'decide' ? 'Frame complex business decisions to evaluate levers and uncertainty.' : activeMode === 'explore' ? 'Identify trends and distributions across your grounded dataset sources.' : 'Ask for high-level summaries or query specific metric performance.'}
@@ -843,7 +888,7 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
               <div className="ai-shell__hero-actions">
                 <Chip icon={<FaPlus />} label="Dataset Bridge" onClick={() => setUserInput('@')} clickable />
                 <Chip icon={<FaChartBar />} label="Quick Visual" onClick={() => setUserInput('Visualize ')} clickable />
-                <Chip icon={<FaShieldAlt />} label="Grounded Optimization" onClick={() => setUserInput('/clean')} clickable />
+                <Chip icon={<FaShieldAlt />} label="Grounded Observational Analysis" onClick={() => setUserInput('/clean')} clickable />
               </div>
             </div>
           )}
@@ -859,7 +904,7 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
                 
                 {msg.artifacts && msg.artifacts.length > 0 && (
                   <div className="ai-shell__artifact-container">
-                    {msg.artifacts.map((art, aIdx) => <React.Fragment key={aIdx}>{renderArtifact(art, false, msg.suggested_actions)}</React.Fragment>)}
+                    {msg.artifacts.map((art, aIdx) => <React.Fragment key={aIdx}>{renderArtifact(art, false, msg.suggested_actions, msg.session_state)}</React.Fragment>)}
                   </div>
                 )}
 
@@ -882,7 +927,7 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
                           <span>
                             <button 
                               className={`ai-shell__action-btn ${act.priority === 'primary' ? 'is-primary' : ''} ${!act.enabled ? 'is-disabled' : ''}`} 
-                              onClick={() => handleActionClick(act.action_id)} 
+                              onClick={() => handleActionClick(act.action_id, msg.session_state)}
                               disabled={loading || !act.enabled}
                             >
                               {act.label}
@@ -905,7 +950,7 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
              {isMentionOpen && <MentionDropdown query={mentionQuery} position={mentionPosition} onSelect={handleMentionSelect} onClose={() => setIsMentionOpen(false)} highlightedIndex={highlightedIndex} onHighlight={setHighlightedIndex} />}
             <div className="ai-shell__input-bar">
               <TextField inputRef={inputRef} onKeyDown={handleKeyDown} placeholder={activeMode === 'decide' ? "Frame a decision..." : "Inquire, type @ for data..."} variant="standard" fullWidth value={userInput} onChange={handleInputChange} disabled={loading} multiline maxRows={6} InputProps={{ disableUnderline: true }} />
-              <button className="ai-shell__send-btn" onClick={handleSendMessage} disabled={loading || !userInput.trim()}>{loading ? <div className="ai-shell__spinner" /> : <FaPaperPlane className="ai-shell__send-icon" />}</button>
+              <button className="ai-shell__send-btn" onClick={handleSendMessage} disabled={loading || !userInput.trim()} aria-label="Send Message">{loading ? <div className="ai-shell__spinner" /> : <FaPaperPlane className="ai-shell__send-icon" />}</button>
             </div>
           </div>
         </div>
@@ -915,14 +960,14 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData }) {
       <aside className={`ai-shell__results-pane ${isResultsPaneOpen ? 'is-open' : 'is-closed'}`}>
         <div className="ai-shell__pane-header">
           <Typography variant="overline" sx={{ fontWeight: 900, letterSpacing: '0.15em' }}>Inspection Workspace</Typography>
-          <IconButton onClick={() => setIsResultsPaneOpen(false)} size="small"><FaChevronRight /></IconButton>
+          <IconButton onClick={() => setIsResultsPaneOpen(false)} size="small" aria-label="Close Results Pane"><FaChevronRight /></IconButton>
         </div>
 
         {/* Primary Viewer: Dominates above the fold */}
         <div className="ai-shell__result-viewer">
           <div className="ai-shell__viewer-label"><FaEye /> Active Result Viewer</div>
           {activeArtifact ? (
-            renderArtifact(activeArtifact, true, activeArtifact.contextActions)
+            renderArtifact(activeArtifact, true, activeArtifact.contextActions, activeArtifact.contextSessionState)
           ) : (
             <div className="ai-shell__viewer-empty">
               <div className="ai-shell__viewer-empty-icon"><FaTerminal /></div>

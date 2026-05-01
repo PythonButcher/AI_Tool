@@ -408,12 +408,14 @@ const DecisionWorkspaceComposer = ({ onCreateWorkspace, datasetContext, initialD
                     <option value="mix">Mix</option>
                   </select>
                 </div>
-                <button className="icon-btn" onClick={() => toggleDetails(lever.id)} title="Configure Binding & Constraints">
-                  <FaGears />
-                </button>
-                <button className="remove-btn" onClick={() => removeLever(lever.id)} title="Remove Lever">
-                  <FaTrash />
-                </button>
+                <div className="lever-actions">
+                  <button className="icon-btn" onClick={() => toggleDetails(lever.id)} title="Configure Binding & Constraints" aria-label="Configure Binding & Constraints">
+                    <FaGears />
+                  </button>
+                  <button className="remove-btn" onClick={() => removeLever(lever.id)} title="Remove Lever" aria-label="Remove Lever">
+                    <FaTrash />
+                  </button>
+                </div>
               </div>
 
               {detailedItems.has(lever.id) && (
@@ -613,10 +615,10 @@ const DecisionWorkspaceComposer = ({ onCreateWorkspace, datasetContext, initialD
                     )}
                   </div>
                 </div>
-                <button className="icon-btn" onClick={() => toggleDetails(constraint.id)} title="Edit Condition & Rationale">
+                <button className="icon-btn" onClick={() => toggleDetails(constraint.id)} title="Edit Condition & Rationale" aria-label="Edit Condition & Rationale">
                   <FaShieldHalved />
                 </button>
-                <button className="remove-btn" onClick={() => removeConstraint(constraint.id)}>
+                <button className="remove-btn" onClick={() => removeConstraint(constraint.id)} title="Remove Guardrail" aria-label="Remove Guardrail">
                   <FaTrash />
                 </button>
               </div>
@@ -740,7 +742,7 @@ const DecisionWorkspaceComposer = ({ onCreateWorkspace, datasetContext, initialD
                   onChange={(e) => updateFilter(idx, { value: e.target.value })}
                 />
               </div>
-              <button className="remove-btn" onClick={() => removeFilter(idx)} title="Remove Filter">
+              <button className="remove-btn" onClick={() => removeFilter(idx)} title="Remove Filter" aria-label="Remove Filter">
                 <FaTrash />
               </button>
             </div>

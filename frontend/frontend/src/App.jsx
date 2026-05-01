@@ -382,6 +382,14 @@ function AppContent() {
     }
   }, [decisionWorkspace, getDecisionPayloadBase]);
 
+  const handleOpenDecisionWorkspace = useCallback((workspace) => {
+    setDecisionWorkspace(workspace);
+    setWorkspaceAnalysis(null);
+    setShowDecisionPanel(true);
+    restoreWindow('decisionPanel');
+    handleDestinationSelect(DESTINATIONS.DECISIONS);
+  }, [handleDestinationSelect, restoreWindow]);
+
   const handleResetDecisionWorkspace = useCallback(() => {
     setDecisionWorkspace(null);
     setWorkspaceAnalysis(null);
@@ -630,6 +638,7 @@ function AppContent() {
               workspaceAnalysis={workspaceAnalysis}
               onCreateDecisionWorkspace={handleCreateDecisionWorkspace}
               onAnalyzeWorkspace={handleAnalyzeWorkspace}
+              onOpenDecisionWorkspace={handleOpenDecisionWorkspace}
               getDecisionPayloadBase={getDecisionPayloadBase}
               onDecisionAction={handleDecisionAction}
               decisionReadiness={decisionReadiness}
