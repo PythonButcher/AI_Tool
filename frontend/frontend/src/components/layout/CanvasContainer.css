@@ -266,6 +266,27 @@
   overflow: auto;
 }
 
+.ai-chat-window-portal {
+  position: fixed;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 1600;
+}
+
+.ai-chat-window-portal .window-frame {
+  pointer-events: auto;
+}
+
+.ai-chat-popout-button.is-active {
+  background-color: var(--accent-blue-soft);
+  color: var(--accent-blue);
+}
+
+.ai-chat-popout-button.is-active:hover {
+  background-color: var(--accent-blue-strong);
+  color: var(--text-on-accent);
+}
+
 
 
 /* Styles for the main header bar */

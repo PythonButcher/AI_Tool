@@ -28,6 +28,9 @@ const WindowFrame = ({
   minWidth = WINDOW_SIZING.DEFAULT.minW,
   minHeight = WINDOW_SIZING.DEFAULT.minH,
   footer,
+  headerActions,
+  isMinimized = false,
+  isExternalWindow = false,
 }) => {
   const [isMinimizing, setIsMinimizing] = React.useState(false);
 
@@ -57,13 +60,20 @@ const WindowFrame = ({
   }, [applyTransform]);
 
   useEffect(() => {
-    if (registerWindow && windowRef.current) {
+    if (registerWindow && windowRef.current && !isMinimized) {
       registerWindow(id, windowRef.current, stateRef);
     }
     return () => {
       if (registerWindow) registerWindow(id, null, null);
     };
-  }, [id, registerWindow, stateRef, windowRef]);
+  }, [id, isMinimized, registerWindow, stateRef, windowRef]);
+
+  useEffect(() => {
+    if (!isMinimized) {
+      setIsMinimizing(false);
+      applyTransform();
+    }
+  }, [applyTransform, isMinimized]);
 
   const handleMinimize = (event) => {
     event.stopPropagation();
@@ -84,20 +94,21 @@ const WindowFrame = ({
   return (
     <div
       ref={windowRef}
-      className={`window-frame ${isActive ? 'active' : ''} ${isDragging ? 'is-dragging' : ''} ${isResizing ? 'is-resizing' : ''} ${isMinimizing ? 'minimizing' : ''}`}
+      className={`window-frame ${isActive ? 'active' : ''} ${isDragging ? 'is-dragging' : ''} ${isResizing ? 'is-resizing' : ''} ${isMinimizing ? 'minimizing' : ''} ${isExternalWindow ? 'is-external-window' : ''}`}
       style={{
         zIndex,
         position: 'absolute',
         top: 0,
         left: 0,
+        display: isMinimized ? 'none' : undefined,
       }}
       onPointerDown={() => onFocus(id)}
     >
       <div className="window-surface">
         <div
           className="window-header"
-          onPointerDown={handleDragStart}
-          style={{ cursor: 'grab' }}
+          onPointerDown={isExternalWindow ? undefined : handleDragStart}
+          style={{ cursor: isExternalWindow ? 'default' : 'grab' }}
         >
           <div className="header-title-container">
             <span className="header-title">{title}</span>
@@ -116,6 +127,7 @@ const WindowFrame = ({
                 {isLocked ? <FaLock size={12} /> : <FaLockOpen size={12} />}
               </button>
             )}
+            {headerActions}
             {onMinimize && <MinimizeButton onClick={handleMinimize} />}
             {onMaximize && <MaximizeButton windowId={id} />}
             {onClose && <CloseButton onClick={handleClose} />}
@@ -133,7 +145,7 @@ const WindowFrame = ({
         )}
       </div>
 
-      {!isLocked && (
+      {!isLocked && !isExternalWindow && (
         <>
           <div className="resize-handle n" onPointerDown={(event) => handleResizeStart(event, 'n')} />
           <div className="resize-handle s" onPointerDown={(event) => handleResizeStart(event, 's')} />
