@@ -30,6 +30,14 @@ Current topic folders:
 
 `project_docs/active/agent_council/outputs/app-wide-ui-flaws/`
 
+`project_docs/active/agent_council/outputs/application-next-focus-priorities/`
+
+## Setup Summary
+
+The reusable setup now consists of an agent role definition, master council prompt, strict JSON schema, realistic sample output, usage documentation, output registry, and dependency-free validator. The framework is linked from `project_docs/INDEX.md` and `project_docs/active/status/decision_intelligence_execution_status.md`, and live outputs are stored under `project_docs/active/agent_council/outputs/`.
+
+The sample file is an example artifact only. It demonstrates the required shape and level of detail for a council output; it should not be treated as the result of a newly run council unless a future task explicitly says to run that topic.
+
 ## How To Run A Council
 
 Start by choosing a planning topic. Good topics are questions like what the next Decision Intelligence slice should be, whether a proposed UI handoff is strong enough, whether a backend contract is ready for Gemini, or which risks should gate the next implementation phase.
@@ -39,6 +47,10 @@ Before running the council, the orchestrating agent should inspect the current a
 Then paste `project_docs/active/agent_council/master_council_prompt.md` into the AI system that will simulate or coordinate the agents. Add the specific planning topic after the prompt in plain language. The council should run four rounds: independent proposals, critique, reconciliation, and final JSON synthesis.
 
 The output should be saved as JSON inside a topic folder. Use a topic slug and date-based filename, such as `project_docs/active/agent_council/outputs/decision-chat-hardening/2026-04-27-council.json`. If the council creates an implementation handoff, save that handoff in the same topic folder, for example `project_docs/active/agent_council/outputs/decision-chat-hardening/gemini_handoff.md`.
+
+## Good First Council Topic
+
+A strong next live topic is: "What should the first measurable Decision Intelligence reliability slice include after Phase 4.5 hardening?" That topic fits the current project truth because it can examine prompt benchmark fixtures, readiness fields, semantic role gaps, active dataset alignment, and truthful frontend handoff needs without changing runtime behavior.
 
 ## How To Validate Council JSON
 

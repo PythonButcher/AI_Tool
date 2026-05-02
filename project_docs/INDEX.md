@@ -82,3 +82,5 @@ Planning workflows:
 - `project_docs/active/agent_council/outputs/app-wide-ui-flaws/README.md`
 - `project_docs/active/agent_council/outputs/app-wide-ui-flaws/2026-04-28-gemini-council.json`
 - `project_docs/active/agent_council/outputs/app-wide-ui-flaws/gemini_handoff.md`
+- `project_docs/active/agent_council/outputs/application-next-focus-priorities/README.md`
+- `project_docs/active/agent_council/outputs/application-next-focus-priorities/2026-05-01-council.json`

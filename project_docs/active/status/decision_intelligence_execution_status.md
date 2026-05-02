@@ -167,6 +167,8 @@ Truth:
 - `project_docs/active/agent_council/outputs/README.md`
 - `project_docs/active/agent_council/outputs/app-wide-ui-flaws/README.md`
 - `project_docs/active/agent_council/outputs/app-wide-ui-flaws/gemini_handoff.md`
+- `project_docs/active/agent_council/outputs/application-next-focus-priorities/README.md`
+- `project_docs/active/agent_council/outputs/application-next-focus-priorities/2026-05-01-council.json`
 
 ## Planning Support
 
@@ -181,6 +183,16 @@ Start with:
 This workflow is documentation and handoff support only. It does not alter frontend behavior, backend behavior, API contracts, or Decision Intelligence runtime capability.
 
 ### Latest Council Run
+
+An application next-focus priorities council has been run to rank what the product should focus on after Phase 4.5 hardening and the app-wide UI flaw cleanup.
+
+Council artifact:
+
+- `project_docs/active/agent_council/outputs/application-next-focus-priorities/2026-05-01-council.json`
+
+The council concluded that the next application focus should be measurable Decision Intelligence reliability before broad feature expansion. The highest-priority next slice is a Codex-owned reliability foundation: benchmark prompt fixtures, grading checks, and additive capability/readiness truth fields. The follow-on priorities are semantic role strengthening, decision-frame correction, ranked observational evidence, canonical active dataset alignment, ML readiness diagnostics, and future simulation/trade-off contract design.
+
+### Previous Council Run
 
 An app-wide UI flaws council has been run for a Gemini cleanup handoff before additional feature work.
 

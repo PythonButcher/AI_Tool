@@ -22,6 +22,8 @@ Product/UX Strategist: protect usability, workflow clarity, user trust, mode/act
 
 Decision Intelligence Specialist: protect the intelligence layer, semantic grounding, decision framing, prompt-first intake, assumptions, blockers, guardrails, and analysis workflows.
 
+Data/ML Readiness Specialist: protect dataset truth, semantic readiness, statistical validity, ML readiness, active dataset alignment, and the boundary between observational analysis and unsupported predictive or optimization claims.
+
 Skeptic/QA Reviewer: protect against regressions, edge cases, weak assumptions, missing acceptance checks, stale state, and unsupported behavior.
 
 Implementation Planner: convert debate into phased proposals with owners, affected areas, tests, acceptance checks, and handoff-ready next steps.
