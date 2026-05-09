@@ -1,0 +1,1364 @@
+{
+  "schema_version": "agent-council-output/v1",
+  "council_id": "council-application-next-focus-priorities-2026-05-01",
+  "generated_at": "2026-05-01T00:00:00Z",
+  "project_context": {
+    "project_name": "AI_Tool",
+    "current_workstream": "Decision Intelligence V3 continuation after Phase 4.5 hardening",
+    "planning_topic": "Rank what the application should focus on next across backend, frontend, semantic modeling, ML readiness, Decision Intelligence quality, data workflows, contracts, and verification.",
+    "context_summary": "Decision Intelligence is now a hardened chat-first product with scoped actions, chat-to-Decisions continuity, truthful observational analysis language, inspectable draft and analysis artifacts, and a completed app-wide UI flaw cleanup. The council was asked to identify the next application priorities from most critical to least critical without assuming unsupported simulation, optimization, autonomous decisioning, goal seeking, or real document-ingestion intelligence exists.",
+    "active_constraints": [
+      "Codex owns backend logic, contracts, architecture, tests, active markdown coordination, and review.",
+      "Gemini owns frontend implementation unless Codex is explicitly authorized to edit frontend code in the current session.",
+      "Frontend and backend behavior must preserve existing AI chat, Decisions, dashboards, charting, data cleaning, semantic recovery, and workspace continuity.",
+      "Simulation, full trade-off execution, goal seeking, autonomous decisioning, final recommendations, and real upload-ingestion intelligence are not implemented and must not be implied.",
+      "Council artifacts are planning and handoff support only; they do not change runtime behavior."
+    ]
+  },
+  "sources_reviewed": [
+    {
+      "path": "project_docs/INDEX.md",
+      "source_type": "markdown",
+      "relevance": "Defines the current documentation navigation path and confirms Agent Council workflow location.",
+      "reviewed_by": ["architecture_guardian", "implementation_planner"]
+    },
+    {
+      "path": "project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md",
+      "source_type": "markdown",
+      "relevance": "Confirms frontend ownership boundary and Codex default scope.",
+      "reviewed_by": ["architecture_guardian", "implementation_planner", "skeptic_qa_reviewer"]
+    },
+    {
+      "path": "project_docs/active/status/decision_intelligence_execution_status.md",
+      "source_type": "status",
+      "relevance": "States Phase 4.5 hardening is complete, prompt-first intake remains an active reliability concern, and no new frontend tests were added.",
+      "reviewed_by": ["architecture_guardian", "product_ux_strategist", "decision_intelligence_specialist", "skeptic_qa_reviewer", "implementation_planner"]
+    },
+    {
+      "path": "project_docs/active/status/decision_intelligence_execution_status.md",
+      "source_type": "handoff",
+      "relevance": "Defines V3 as the continuation path and preserves the boundary between descriptive analysis and future simulation or trade-off execution.",
+      "reviewed_by": ["architecture_guardian", "decision_intelligence_specialist", "product_ux_strategist"]
+    },
+    {
+      "path": "project_docs/active/decision_intelligence/completed/phase_3_5_decision_intake_rework.md",
+      "source_type": "handoff",
+      "relevance": "Provides current prompt-first intake context and known reliability target around objective, lever, guardrail, and horizon separation.",
+      "reviewed_by": ["decision_intelligence_specialist", "skeptic_qa_reviewer", "implementation_planner"]
+    },
+    {
+      "path": "project_docs/active/decision_intelligence/completed/phase_4_5_ai_chat_decision_intelligence_plan.md",
+      "source_type": "handoff",
+      "relevance": "Defines Phase 4.5 truth boundaries, acceptance scenarios, and non-goals around fake simulation, optimization, and autonomous behavior.",
+      "reviewed_by": ["architecture_guardian", "product_ux_strategist", "decision_intelligence_specialist", "skeptic_qa_reviewer", "implementation_planner"]
+    },
+    {
+      "path": "project_docs/active/contracts/decision_objects.md",
+      "source_type": "contract",
+      "relevance": "Defines current decision object contracts including metrics, dimensions, signals, briefs, recommendations, scenarios, and scenario previews.",
+      "reviewed_by": ["architecture_guardian", "decision_intelligence_specialist", "product_ux_strategist"]
+    },
+    {
+      "path": "project_docs/active/reviews/react_state_flow_review.md",
+      "source_type": "markdown",
+      "relevance": "Documents state ownership and active dataset source-of-truth risks that can affect AI, charts, dashboards, Decisions, and workflows.",
+      "reviewed_by": ["architecture_guardian", "skeptic_qa_reviewer", "implementation_planner"]
+    },
+    {
+      "path": "project_docs/active/agent_council/outputs/app-wide-ui-flaws/2026-04-28-gemini-council.json",
+      "source_type": "other",
+      "relevance": "Provides the previous council pattern and confirms the earlier focus on UI trust cleanup rather than next product priorities.",
+      "reviewed_by": ["product_ux_strategist", "skeptic_qa_reviewer", "implementation_planner"]
+    },
+    {
+      "path": "tests/test_decision_chat_service.py",
+      "source_type": "test",
+      "relevance": "Contains current backend decision chat coverage and examples that can seed a benchmark prompt suite.",
+      "reviewed_by": ["decision_intelligence_specialist", "skeptic_qa_reviewer"]
+    },
+    {
+      "path": "tests/test_decision_workspace_service.py",
+      "source_type": "test",
+      "relevance": "Contains current workspace parsing and analysis expectations that can become formal benchmark cases.",
+      "reviewed_by": ["decision_intelligence_specialist", "skeptic_qa_reviewer", "implementation_planner"]
+    },
+    {
+      "path": "tests/test_decision_pipeline_service.py",
+      "source_type": "test",
+      "relevance": "Shows current decision pipeline coverage that should be protected before adding ML or richer recommendations.",
+      "reviewed_by": ["skeptic_qa_reviewer"]
+    },
+    {
+      "path": "backend/services/semantic_model.py",
+      "source_type": "code",
+      "relevance": "Semantic model implementation is the likely backend foundation for role hints, confidence, aliases, and decision-aware metric metadata.",
+      "reviewed_by": ["decision_intelligence_specialist", "implementation_planner"]
+    },
+    {
+      "path": "backend/services/decision_workspace_service.py",
+      "source_type": "code",
+      "relevance": "Workspace parsing and analysis behavior is central to prompt-first reliability, correction loops, and observational evidence ranking.",
+      "reviewed_by": ["decision_intelligence_specialist", "implementation_planner"]
+    },
+    {
+      "path": "backend/decision_engine/chat_service.py",
+      "source_type": "code",
+      "relevance": "Chat service action and artifact behavior is central to capability boundaries and future correction actions.",
+      "reviewed_by": ["decision_intelligence_specialist", "architecture_guardian"]
+    },
+    {
+      "path": "backend/services/model_training.py",
+      "source_type": "code",
+      "relevance": "Current ML training logic is relevant to ML readiness planning and model output trust boundaries.",
+      "reviewed_by": ["decision_intelligence_specialist", "implementation_planner"]
+    },
+    {
+      "path": "backend/routes/ml_prep.py",
+      "source_type": "code",
+      "relevance": "ML preparation routes are relevant to future ML readiness diagnostics.",
+      "reviewed_by": ["decision_intelligence_specialist"]
+    },
+    {
+      "path": "backend/routes/automl.py",
+      "source_type": "code",
+      "relevance": "AutoML routes are relevant to future model-readiness and leakage-warning boundaries.",
+      "reviewed_by": ["implementation_planner"]
+    },
+    {
+      "path": "frontend/frontend/src/App.jsx",
+      "source_type": "code",
+      "relevance": "Global shell state and destination routing affect active dataset continuity and future frontend state stabilization.",
+      "reviewed_by": ["product_ux_strategist", "skeptic_qa_reviewer", "implementation_planner"]
+    },
+    {
+      "path": "frontend/frontend/src/features/ai/AIShell.jsx",
+      "source_type": "code",
+      "relevance": "AI chat is the primary front door for decision prompts, action rendering, artifacts, and frontend regression coverage.",
+      "reviewed_by": ["product_ux_strategist", "skeptic_qa_reviewer"]
+    }
+  ],
+  "participating_agents": [
+    {
+      "agent_id": "architecture_guardian",
+      "role_name": "Architecture Guardian",
+      "perspective": "Protect backend-owned capability truth, contract clarity, semantic foundations, maintainability, and implementation boundaries.",
+      "decision_rights": "Can block proposals that rely on frontend-only truth, fake unsupported capabilities, or hidden coupling between current and future decision behavior."
+    },
+    {
+      "agent_id": "product_ux_strategist",
+      "role_name": "Product/UX Strategist",
+      "perspective": "Protect the end-to-end user journey from question to decision frame, semantic validation, observational analysis, dashboards, and workspace follow-through.",
+      "decision_rights": "Can challenge technically sound plans that still leave users without clear state, next action, or trust cues."
+    },
+    {
+      "agent_id": "decision_intelligence_specialist",
+      "role_name": "Decision Intelligence Specialist",
+      "perspective": "Protect prompt-first intake quality, semantic grounding, decision frame correction, evidence quality, and honest progression toward future analysis capabilities.",
+      "decision_rights": "Can require proposals to improve objective, lever, guardrail, segment, horizon, assumption, blocker, and analysis workflows."
+    },
+    {
+      "agent_id": "skeptic_qa_reviewer",
+      "role_name": "Skeptic/QA Reviewer",
+      "perspective": "Protect against regressions, semantic false positives, untested frontend flows, unsupported claims, and unmeasurable ML behavior.",
+      "decision_rights": "Can require benchmark prompts, acceptance checks, and regression coverage before new intelligence claims are accepted."
+    },
+    {
+      "agent_id": "implementation_planner",
+      "role_name": "Implementation Planner",
+      "perspective": "Sequence the strongest ideas into safe Codex and Gemini phases with clear entry criteria, exit criteria, and validation.",
+      "decision_rights": "Can defer high-blast-radius work until foundational contracts, tests, and state boundaries are stable."
+    }
+  ],
+  "conversation_rounds": {
+    "round_1_independent_proposals": [
+      {
+        "agent_id": "architecture_guardian",
+        "stance": "Start with backend-owned capability truth and semantic framing contracts before new product claims.",
+        "claims": [
+          "The app needs an explicit capability and readiness object so truthfulness is not enforced only by copy discipline.",
+          "Prompt-first parsing should become a reusable semantic decision frame service with confidence and traceability.",
+          "Advanced ML and future scenario work should wait until semantic roles and evaluation fixtures are stable."
+        ],
+        "challenged_assumptions": [
+          "UI truthfulness alone is enough to prevent future overclaiming.",
+          "Scenario preview objects can safely evolve into simulation without a separate capability boundary.",
+          "More ML should be the immediate next step after chat hardening."
+        ],
+        "evidence": [
+          "project_docs/active/status/decision_intelligence_execution_status.md",
+          "project_docs/active/decision_intelligence/completed/phase_4_5_ai_chat_decision_intelligence_plan.md",
+          "project_docs/active/contracts/decision_objects.md"
+        ],
+        "proposed_changes": [
+          "Add a backend-owned capability/readiness contract.",
+          "Harden prompt-first intake into a semantic decision frame service.",
+          "Document future scenario and simulation prerequisites before implementation."
+        ],
+        "risks_flagged": [
+          "Future frontend or agent work can reintroduce unsupported simulation or optimization language if capability truth is implicit."
+        ]
+      },
+      {
+        "agent_id": "product_ux_strategist",
+        "stance": "Make the product journey coherent across AI chat, Decisions, semantic validation, dashboards, and analysis.",
+        "claims": [
+          "Users need a guided workflow spine from plain-English question to structured decision frame to observational analysis.",
+          "Semantic readiness should be first-class and repairable rather than hidden behind backend parsing.",
+          "Dashboards should become decision follow-through surfaces instead of disconnected display areas."
+        ],
+        "challenged_assumptions": [
+          "A hardened chat-to-Decisions handoff alone makes the broader app feel coherent.",
+          "Semantic issues can remain mostly backend-visible.",
+          "Dashboards can stay separate from decision workflows."
+        ],
+        "evidence": [
+          "project_docs/active/status/decision_intelligence_execution_status.md",
+          "project_docs/active/decision_intelligence/completed/phase_4_5_ai_chat_decision_intelligence_plan.md",
+          "project_docs/active/agent_council/outputs/app-wide-ui-flaws/2026-04-28-gemini-council.json"
+        ],
+        "proposed_changes": [
+          "Define a guided decision workflow spine.",
+          "Make semantic readiness visible and actionable.",
+          "Connect decision workspaces to dashboard inspection paths."
+        ],
+        "risks_flagged": [
+          "AI Chat, Decisions, Dashboards, and DataPane can still feel like separate tools rather than one decision system."
+        ]
+      },
+      {
+        "agent_id": "decision_intelligence_specialist",
+        "stance": "Improve real decision intelligence value through benchmarks, semantic roles, correction, and evidence.",
+        "claims": [
+          "The most critical next step is a prompt-first intake benchmark and grading harness.",
+          "Semantic model output needs aliases, business terms, metric polarity, controllability, guardrail suitability, and segment-versus-lever hints.",
+          "Users need a correction loop before analysis so bad draft frames can be fixed without rebuilding from scratch.",
+          "Observational analysis should deepen into ranked evidence without pretending to simulate or optimize."
+        ],
+        "challenged_assumptions": [
+          "Better artifact rendering is enough after Phase 4.5.",
+          "The next ML feature should be model training or prediction.",
+          "Draft workspace correctness can be judged without a formal prompt suite."
+        ],
+        "evidence": [
+          "backend/services/semantic_model.py",
+          "backend/services/decision_workspace_service.py",
+          "backend/decision_engine/chat_service.py",
+          "tests/test_decision_chat_service.py",
+          "tests/test_decision_workspace_service.py"
+        ],
+        "proposed_changes": [
+          "Create a benchmark prompt suite with grading rules.",
+          "Add decision-aware semantic role metadata.",
+          "Design and implement correction actions for objective, lever, segment, guardrail, and horizon.",
+          "Rank observational diagnostics by evidence and confidence."
+        ],
+        "risks_flagged": [
+          "Future intelligence work will be judged by happy-path prompts and may regress real prompt behavior."
+        ]
+      },
+      {
+        "agent_id": "skeptic_qa_reviewer",
+        "stance": "Make repeatable verification the gate before new intelligence claims.",
+        "claims": [
+          "The active status says no focused frontend tests were added in the hardening pass.",
+          "Prompt examples and backend tests are scattered and should become a named benchmark suite.",
+          "Semantic false positives and false negatives are the next major quality risk.",
+          "Unsupported capability claim audits should become permanent."
+        ],
+        "challenged_assumptions": [
+          "Build success and manual smoke checks are enough for a stateful decision product.",
+          "Semantic confidence can be trusted without collision and missing-metric tests.",
+          "ML can be meaningfully improved before evaluation data exists."
+        ],
+        "evidence": [
+          "project_docs/active/status/decision_intelligence_execution_status.md",
+          "tests/test_decision_chat_service.py",
+          "tests/test_decision_workspace_service.py",
+          "tests/test_decision_pipeline_service.py",
+          "frontend/frontend/src/features/ai/AIShell.jsx"
+        ],
+        "proposed_changes": [
+          "Create a named benchmark prompt suite.",
+          "Add frontend regression checks for AI Chat and Decisions.",
+          "Add semantic false-positive and false-negative validation.",
+          "Make unsupported language search and generated-response audit a release gate."
+        ],
+        "risks_flagged": [
+          "Future changes can break old-card actions, readiness meaning, open-workspace continuity, or truthfulness without failing tests."
+        ]
+      },
+      {
+        "agent_id": "implementation_planner",
+        "stance": "Sequence reliability, semantic strength, dataset state, explainability, frontend state cleanup, and ML readiness.",
+        "claims": [
+          "The next phase should improve prompt and semantic reliability before destabilizing frontend structure.",
+          "The React state review shows dataset source-of-truth drift that can undermine AI, charts, dashboards, and Decisions.",
+          "ML readiness should mean target, feature, leakage, split, and evaluation metadata, not premature recommendations."
+        ],
+        "challenged_assumptions": [
+          "Frontend state architecture should be the first post-cleanup focus.",
+          "Stronger ML should start with model output UI.",
+          "Manual checks should remain the main acceptance method."
+        ],
+        "evidence": [
+          "project_docs/active/reviews/react_state_flow_review.md",
+          "project_docs/active/status/decision_intelligence_execution_status.md",
+          "backend/services/model_training.py",
+          "backend/routes/ml_prep.py",
+          "backend/routes/automl.py"
+        ],
+        "proposed_changes": [
+          "Run a Codex-owned prompt and semantic reliability phase first.",
+          "Define a canonical active dataset contract before larger product features.",
+          "Create ML readiness diagnostics after semantic and decision frame quality improve."
+        ],
+        "risks_flagged": [
+          "Adding stronger ML on top of unclear semantic roles or inconsistent active dataset selection will create plausible but untrustworthy behavior."
+        ]
+      }
+    ],
+    "round_2_critiques": [
+      {
+        "agent_id": "architecture_guardian",
+        "stance": "Benchmarking is necessary, but it should be paired with a capability boundary so tests validate the right truth model.",
+        "claims": [
+          "A prompt benchmark can prove extraction accuracy but cannot by itself prevent future UI or generated responses from implying unsupported capabilities.",
+          "The capability/readiness contract should land early and remain additive.",
+          "Future simulation architecture should be designed separately from current observational analysis."
+        ],
+        "challenged_assumptions": [
+          "A benchmark suite alone is enough to preserve truthful capability boundaries.",
+          "Scenario preview fields can become user-facing scenario controls without a stricter contract."
+        ],
+        "evidence": [
+          "project_docs/active/decision_intelligence/completed/phase_4_5_ai_chat_decision_intelligence_plan.md",
+          "project_docs/active/contracts/decision_objects.md"
+        ],
+        "proposed_changes": [
+          "Combine the benchmark suite with capability/readiness fields in Phase 1."
+        ],
+        "risks_flagged": [
+          "Tests can pass while the product still overclaims if capability state is not explicit."
+        ]
+      },
+      {
+        "agent_id": "product_ux_strategist",
+        "stance": "A backend-first plan is right, but it must be shaped around user workflow outcomes.",
+        "claims": [
+          "Semantic readiness and capability state must be understandable to users, not just machine-readable.",
+          "The decision workflow spine should be designed alongside contracts so Gemini can later render a coherent path.",
+          "Dashboard follow-through should remain in the plan even if it is not first."
+        ],
+        "challenged_assumptions": [
+          "Backend reliability work can be considered complete without visible recovery and next-step surfaces.",
+          "Dashboard integration can wait indefinitely."
+        ],
+        "evidence": [
+          "project_docs/active/status/decision_intelligence_execution_status.md",
+          "project_docs/active/agent_council/outputs/app-wide-ui-flaws/2026-04-28-gemini-council.json"
+        ],
+        "proposed_changes": [
+          "Add user-facing workflow and dashboard implications to each backend phase."
+        ],
+        "risks_flagged": [
+          "Reliable backend outputs may still feel opaque or disconnected if not mapped to a workflow spine."
+        ]
+      },
+      {
+        "agent_id": "decision_intelligence_specialist",
+        "stance": "Do not let general state cleanup outrank decision-frame quality.",
+        "claims": [
+          "Dataset state alignment is important but ranks below semantic and prompt reliability unless it directly affects decision trust.",
+          "The correction loop should be prioritized before deeper observational analysis because bad frames must be fixable.",
+          "ML readiness should be connected to decision context, not standalone modeling screens."
+        ],
+        "challenged_assumptions": [
+          "Frontend architecture debt should be the immediate next focus.",
+          "Observational analysis can deepen safely without user correction of the draft frame."
+        ],
+        "evidence": [
+          "backend/services/decision_workspace_service.py",
+          "backend/decision_engine/chat_service.py",
+          "project_docs/active/reviews/react_state_flow_review.md"
+        ],
+        "proposed_changes": [
+          "Rank prompt benchmark, semantic roles, and correction loop ahead of frontend state cleanup."
+        ],
+        "risks_flagged": [
+          "A clean shell can still analyze the wrong objective or guardrail if the decision frame is wrong."
+        ]
+      },
+      {
+        "agent_id": "skeptic_qa_reviewer",
+        "stance": "Every proposed intelligence improvement needs failing-case coverage before implementation is called complete.",
+        "claims": [
+          "The benchmark suite should include near-name semantic collisions, no-safe-match prompts, unsupported capability requests, and stale frontend action flows.",
+          "Frontend regression coverage should not be deferred until after every backend improvement.",
+          "ML readiness should not produce model outputs before leakage and evaluation warnings exist."
+        ],
+        "challenged_assumptions": [
+          "Backend-only tests are enough for product trust.",
+          "Semantic improvements can be accepted without false-positive and false-negative cases.",
+          "Manual verification can remain the main regression strategy."
+        ],
+        "evidence": [
+          "project_docs/active/status/decision_intelligence_execution_status.md",
+          "tests/test_decision_chat_service.py",
+          "frontend/frontend/src/features/ai/AIShell.jsx"
+        ],
+        "proposed_changes": [
+          "Make benchmark and audit fixtures part of the first implementation slice.",
+          "Include Gemini frontend verification once response shapes are consumed visually."
+        ],
+        "risks_flagged": [
+          "A backend pass can still regress user-visible action state, rendering, or generated copy."
+        ]
+      },
+      {
+        "agent_id": "implementation_planner",
+        "stance": "The strongest plan is a phased backbone: benchmark and capability first, semantic roles second, correction and evidence third, state and ML readiness later.",
+        "claims": [
+          "Capability boundary and benchmark harness are compatible and should be paired in the first Codex phase.",
+          "Semantic role metadata should precede correction UI and ML readiness.",
+          "Frontend state stabilization is real but should be scoped around active dataset and decision trust before broad shell refactors."
+        ],
+        "challenged_assumptions": [
+          "One phase should try to fix contracts, semantic model, correction UI, dashboards, ML, and frontend state at once.",
+          "The easiest visual follow-up is the best next priority."
+        ],
+        "evidence": [
+          "project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md",
+          "project_docs/active/status/decision_intelligence_execution_status.md",
+          "project_docs/active/reviews/react_state_flow_review.md"
+        ],
+        "proposed_changes": [
+          "Create a ranked implementation path with Codex first and Gemini handoffs only after contracts stabilize."
+        ],
+        "risks_flagged": [
+          "Trying to build strong ML or broad frontend refactors too early will multiply verification burden."
+        ]
+      }
+    ],
+    "round_3_reconciliation": [
+      {
+        "agent_id": "architecture_guardian",
+        "stance": "Accepted the benchmark-first framing if capability/readiness truth is part of the same first slice.",
+        "claims": [
+          "The top priority should be named as a decision reliability foundation that includes benchmark prompts and explicit capability/readiness state.",
+          "The capability boundary remains the architectural guardrail that all later features consume."
+        ],
+        "challenged_assumptions": [
+          "Benchmark prompts and capability contracts must be separate phases."
+        ],
+        "evidence": [
+          "project_docs/active/decision_intelligence/completed/phase_4_5_ai_chat_decision_intelligence_plan.md",
+          "project_docs/active/contracts/decision_objects.md"
+        ],
+        "proposed_changes": [
+          "Merge benchmark harness and capability/readiness contract into the highest-priority recommendation."
+        ],
+        "risks_flagged": [
+          "If merged poorly, Phase 1 could grow too broad; it must stay limited to additive truth and evaluation fields."
+        ]
+      },
+      {
+        "agent_id": "product_ux_strategist",
+        "stance": "Accepted backend-first sequencing if the workflow spine remains an explicit product outcome.",
+        "claims": [
+          "The first two backend phases should define fields Gemini can later use to show framing, readiness, evidence, uncertainty, and repair paths.",
+          "Dashboard follow-through should be a later recommendation, not the first implementation phase."
+        ],
+        "challenged_assumptions": [
+          "Workflow coherence can be postponed until all backend intelligence is done."
+        ],
+        "evidence": [
+          "project_docs/active/status/decision_intelligence_execution_status.md",
+          "frontend/frontend/src/features/ai/AIShell.jsx"
+        ],
+        "proposed_changes": [
+          "Frame the first implementation phases as backend foundations for later guided UX."
+        ],
+        "risks_flagged": [
+          "The application can become technically stronger while still feeling fragmented."
+        ]
+      },
+      {
+        "agent_id": "decision_intelligence_specialist",
+        "stance": "Prioritized prompt benchmark, semantic roles, and correction loop as the core next Decision Intelligence path.",
+        "claims": [
+          "Semantic role metadata should come before correction and deeper analysis, because correction needs stable entities to mutate.",
+          "Observational evidence ranking should follow correction so users can analyze a trusted frame.",
+          "ML readiness should remain later and decision-context-aware."
+        ],
+        "challenged_assumptions": [
+          "Evidence ranking should happen before users can correct the frame."
+        ],
+        "evidence": [
+          "backend/services/semantic_model.py",
+          "backend/services/decision_workspace_service.py"
+        ],
+        "proposed_changes": [
+          "Order recommendations as reliability foundation, semantic strengthening, correction loop, evidence ranking, dataset state, ML readiness, future simulation design."
+        ],
+        "risks_flagged": [
+          "Deeper analysis can look authoritative while resting on an uncorrected parse."
+        ]
+      },
+      {
+        "agent_id": "skeptic_qa_reviewer",
+        "stance": "Accepted phased feature work only if each phase includes concrete validation fixtures.",
+        "claims": [
+          "Each implementation phase must list specific acceptance checks rather than broad build success.",
+          "Semantic false-positive tests and unsupported-claim audits must be included early.",
+          "Frontend tests can be staged, but stale-card and open-workspace checks remain mandatory when Gemini consumes new fields."
+        ],
+        "challenged_assumptions": [
+          "Manual checks are enough because this is still early product work."
+        ],
+        "evidence": [
+          "project_docs/active/status/decision_intelligence_execution_status.md",
+          "project_docs/active/agent_council/outputs/app-wide-ui-flaws/README.md"
+        ],
+        "proposed_changes": [
+          "Add validation fixtures and forbidden-claim checks to the first two phases."
+        ],
+        "risks_flagged": [
+          "Unmeasured intelligence changes will produce invisible regressions."
+        ]
+      },
+      {
+        "agent_id": "implementation_planner",
+        "stance": "Final sequencing should start with a Codex foundation and reserve Gemini implementation for stable contracts and UI consumption.",
+        "claims": [
+          "The first phase should be Codex-owned and produce benchmark fixtures plus additive capability/readiness fields.",
+          "The second phase should strengthen semantic roles and confidence.",
+          "Later phases should add correction, evidence ranking, active dataset contract, ML readiness, and simulation architecture design."
+        ],
+        "challenged_assumptions": [
+          "A Gemini-first frontend feature is the most productive next step."
+        ],
+        "evidence": [
+          "project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md",
+          "project_docs/active/status/decision_intelligence_execution_status.md"
+        ],
+        "proposed_changes": [
+          "Codify owner split in each recommendation and phase."
+        ],
+        "risks_flagged": [
+          "Starting with frontend UI before backend response truth stabilizes will create rework."
+        ]
+      }
+    ],
+    "round_4_synthesis": [
+      {
+        "agent_id": "implementation_planner",
+        "stance": "Synthesize a ranked list from most critical to least critical.",
+        "claims": [
+          "The highest-priority recommendation is a Decision Intelligence reliability foundation: prompt benchmark, grading harness, and backend capability/readiness boundary.",
+          "Semantic role strengthening is second because future ML, correction, evidence, and dashboards depend on trusted metric and dimension meaning.",
+          "Human correction and ranked observational evidence are the next product-value layers.",
+          "Frontend state and canonical active dataset work should be scoped around decision trust rather than a broad shell rewrite.",
+          "ML readiness and future simulation architecture are important but should not become user-facing intelligence claims yet."
+        ],
+        "challenged_assumptions": [
+          "The next focus should be broad feature expansion.",
+          "The next focus should be a full frontend shell refactor.",
+          "The next focus should be advanced ML outputs."
+        ],
+        "evidence": [
+          "All participating agent proposals",
+          "project_docs/active/status/decision_intelligence_execution_status.md",
+          "project_docs/active/contracts/decision_objects.md"
+        ],
+        "proposed_changes": [
+          "Save the final council JSON under application-next-focus-priorities.",
+          "Use the ranked recommendations to choose the next Codex backend slice."
+        ],
+        "risks_flagged": [
+          "The implementation path must stay phased; compressing it into one branch would be hard to verify."
+        ]
+      }
+    ]
+  },
+  "major_disagreements": [
+    {
+      "disagreement_id": "disagreement-capability-vs-benchmark-first",
+      "topic": "Whether the first phase should start with a capability/readiness contract or a prompt benchmark harness.",
+      "positions": [
+        {
+          "agent_id": "architecture_guardian",
+          "position": "Capability/readiness contract should be first.",
+          "rationale": "It protects truth boundaries and prevents unsupported feature claims from leaking into future frontend or agent work."
+        },
+        {
+          "agent_id": "decision_intelligence_specialist",
+          "position": "Prompt benchmark and grading should be first.",
+          "rationale": "The app cannot improve decision intelligence reliably without measuring objective, lever, guardrail, segment, horizon, and clarification quality."
+        },
+        {
+          "agent_id": "skeptic_qa_reviewer",
+          "position": "Benchmark fixtures should gate all next work.",
+          "rationale": "Unmeasured changes can regress prompt parsing, truthfulness, and action behavior while still passing build checks."
+        }
+      ],
+      "status": "resolved",
+      "resolution": "The first recommendation combines both: a Codex-owned Decision Intelligence reliability foundation with prompt benchmark fixtures, grading rules, and additive capability/readiness truth fields."
+    },
+    {
+      "disagreement_id": "disagreement-frontend-state-priority",
+      "topic": "Whether frontend state architecture cleanup should be the next major focus.",
+      "positions": [
+        {
+          "agent_id": "implementation_planner",
+          "position": "Frontend state cleanup matters but should follow prompt and semantic reliability.",
+          "rationale": "The state review identifies real risk, but broad shell work would be high blast radius and should be scoped around active dataset and decision trust."
+        },
+        {
+          "agent_id": "product_ux_strategist",
+          "position": "Workflow coherence and frontend continuity remain product-critical.",
+          "rationale": "Users need one understandable journey across chat, Decisions, dashboards, and semantic readiness."
+        },
+        {
+          "agent_id": "decision_intelligence_specialist",
+          "position": "State cleanup ranks below decision-frame quality unless it directly affects decision trust.",
+          "rationale": "A clean shell does not help if the system parses the wrong objective or guardrail."
+        }
+      ],
+      "status": "resolved",
+      "resolution": "Frontend state cleanup remains a ranked recommendation, but it is scoped to canonical active dataset and decision-trust continuity rather than a broad shell rewrite."
+    },
+    {
+      "disagreement_id": "disagreement-ml-timing",
+      "topic": "Whether stronger ML should be a near-term feature priority.",
+      "positions": [
+        {
+          "agent_id": "product_ux_strategist",
+          "position": "Advanced ML should be deferred until semantic and workflow foundations are stronger.",
+          "rationale": "Users need structured, trustworthy decision flow before opaque model outputs."
+        },
+        {
+          "agent_id": "decision_intelligence_specialist",
+          "position": "ML readiness should connect to decision context rather than standalone modeling.",
+          "rationale": "Predictive modeling needs target suitability, feature suitability, leakage checks, temporal strategy, and explainability before it can support decisions."
+        },
+        {
+          "agent_id": "skeptic_qa_reviewer",
+          "position": "No stronger ML without evaluation data.",
+          "rationale": "ML output would be unmeasurable and likely overtrusted without labeled prompts, sample datasets, expected semantic bindings, and failure-mode checks."
+        }
+      ],
+      "status": "resolved",
+      "resolution": "The council recommends ML readiness diagnostics later, not advanced ML user-facing claims now."
+    },
+    {
+      "disagreement_id": "disagreement-dashboard-follow-through",
+      "topic": "How soon dashboards should become part of the decision workflow.",
+      "positions": [
+        {
+          "agent_id": "product_ux_strategist",
+          "position": "Dashboards should become decision follow-through surfaces.",
+          "rationale": "Users should be able to inspect objective, levers, segments, guardrails, and historical movement without rebuilding context."
+        },
+        {
+          "agent_id": "architecture_guardian",
+          "position": "Dashboard integration should wait for stable semantic and active dataset contracts.",
+          "rationale": "Decision-aware dashboards could create contradictory outputs if dataset source and semantic roles are not stable."
+        }
+      ],
+      "status": "deferred",
+      "resolution": "Dashboard follow-through is retained as a later implication of the workflow spine, after semantic roles and active dataset contract work."
+    }
+  ],
+  "resolved_recommendations": [
+    {
+      "recommendation_id": "rec-decision-reliability-foundation",
+      "title": "Build a Decision Intelligence reliability foundation",
+      "summary": "Create a Codex-owned prompt-first benchmark and grading harness paired with additive backend capability/readiness fields so decision frames can be measured and unsupported capabilities stay explicit.",
+      "originating_agents": ["architecture_guardian", "decision_intelligence_specialist", "skeptic_qa_reviewer", "implementation_planner"],
+      "source_paths": [
+        "project_docs/active/status/decision_intelligence_execution_status.md",
+        "project_docs/active/decision_intelligence/completed/phase_4_5_ai_chat_decision_intelligence_plan.md",
+        "project_docs/active/contracts/decision_objects.md",
+        "tests/test_decision_chat_service.py",
+        "tests/test_decision_workspace_service.py"
+      ],
+      "priority": "critical",
+      "confidence": 0.95,
+      "implementation_timing": "now",
+      "rationale": "This is the highest-leverage next move because every later feature depends on reliable decision framing and truthful capability boundaries. It also converts current manual prompt knowledge into repeatable acceptance evidence.",
+      "impacted_areas": ["Decision chat backend", "Decision workspace service", "Decision contracts", "Backend tests", "Active planning docs"],
+      "frontend_implications": [
+        "Gemini can later consume readiness and capability fields instead of inferring truth from labels.",
+        "Frontend benchmark checks should reuse the same prompt fixtures after backend response shapes stabilize."
+      ],
+      "backend_implications": [
+        "Add a named prompt fixture set with expected objective, levers, guardrails, segments, horizon, readiness, allowed actions, and forbidden claims.",
+        "Expose additive capability/readiness state in decision chat and workspace analysis responses.",
+        "Keep existing endpoints backward-compatible."
+      ],
+      "contract_considerations": [
+        "Fields should distinguish structurally ready for analysis from ready for recommendation or decision.",
+        "Fields should represent observational-only, unsupported, blocked, and allowed-next-action states.",
+        "Capability fields must not rename existing action IDs or artifact types."
+      ],
+      "testing_considerations": [
+        "At least 20 realistic prompts should be graded.",
+        "Tests should cover ready prompts, incomplete prompts, guardrail-only prompts, segment-only prompts, unsupported capability requests, and truthfulness notes.",
+        "Current unit tests should remain passing."
+      ],
+      "risks": [
+        "The first slice could become too broad if it tries to redesign every decision object.",
+        "Capability state may be ignored by frontend until a Gemini follow-up consumes it."
+      ],
+      "dependencies": [
+        "Current decision chat and workspace tests must be reviewed as seed fixtures.",
+        "No unsupported capability should be added as a side effect."
+      ],
+      "acceptance_signals": [
+        "A repeatable command runs the benchmark prompt suite and reports pass/fail.",
+        "Decision responses include capability/readiness state without breaking existing clients.",
+        "Unsupported simulation, optimization, autonomous decisioning, and final recommendation requests produce truthful limitation behavior."
+      ]
+    },
+    {
+      "recommendation_id": "rec-semantic-model-role-strengthening",
+      "title": "Strengthen semantic roles before stronger ML or simulation",
+      "summary": "Extend semantic model output with decision-aware role hints such as objective candidate, lever candidate, guardrail candidate, segment dimension, temporal field, polarity, controllability, aliases, business terms, confidence, and unresolved mapping details.",
+      "originating_agents": ["architecture_guardian", "product_ux_strategist", "decision_intelligence_specialist", "skeptic_qa_reviewer", "implementation_planner"],
+      "source_paths": [
+        "project_docs/active/contracts/decision_objects.md",
+        "backend/services/semantic_model.py",
+        "backend/services/decision_workspace_service.py",
+        "tests/test_decision_chat_service.py",
+        "tests/test_decision_workspace_service.py"
+      ],
+      "priority": "critical",
+      "confidence": 0.93,
+      "implementation_timing": "now",
+      "rationale": "Most future intelligence quality depends on correctly understanding business meaning. Stronger ML, correction flows, ranked evidence, and dashboard follow-through all depend on semantic role confidence.",
+      "impacted_areas": ["Semantic model backend", "Decision workspace parsing", "Metric resolver behavior", "Decision object contracts", "Semantic recovery UI"],
+      "frontend_implications": [
+        "Gemini should later surface semantic uncertainty and review actions where the backend reports weak mappings.",
+        "Semantic readiness should become visible in Decisions, Dashboards, and DataPane without overwhelming the user."
+      ],
+      "backend_implications": [
+        "Semantic model generation should produce role hints and confidence metadata.",
+        "Prompt-first intake should use semantic roles to avoid objective, lever, guardrail, and segment confusion.",
+        "Resolver logic should refuse unsafe weak matches where appropriate."
+      ],
+      "contract_considerations": [
+        "All semantic role fields should be additive.",
+        "Semantic role confidence should be represented distinctly from final recommendation confidence.",
+        "Unresolved mappings should be machine-readable enough for frontend recovery actions."
+      ],
+      "testing_considerations": [
+        "Add near-name collision cases such as discount rate versus return rate.",
+        "Add ambiguous objective, no-safe-match, missing metric, guardrail-only, and segment-only cases.",
+        "Ensure existing inferred semantic model compatibility is preserved."
+      ],
+      "risks": [
+        "Role hints can become overconfident if confidence thresholds are not calibrated.",
+        "More semantic metadata can create UI noise if Gemini renders everything directly."
+      ],
+      "dependencies": [
+        "Decision reliability benchmark should provide expected semantic bindings.",
+        "Existing semantic model contract must remain backward-compatible."
+      ],
+      "acceptance_signals": [
+        "Decision drafting can explain why a field was treated as objective, lever, guardrail, or segment.",
+        "Ambiguous fields surface clarification or review prompts instead of silent guesses.",
+        "Semantic false-positive and false-negative tests pass."
+      ]
+    },
+    {
+      "recommendation_id": "rec-decision-frame-correction-loop",
+      "title": "Add a human correction loop for decision frames",
+      "summary": "Allow users to correct objective, lever, segment, guardrail, and horizon interpretation before analysis, preserving the corrected workspace in session state and downstream analysis.",
+      "originating_agents": ["decision_intelligence_specialist", "product_ux_strategist", "implementation_planner"],
+      "source_paths": [
+        "project_docs/active/decision_intelligence/completed/phase_4_5_ai_chat_decision_intelligence_plan.md",
+        "backend/decision_engine/chat_service.py",
+        "backend/services/decision_workspace_service.py",
+        "project_docs/active/agent_council/outputs/app-wide-ui-flaws/gemini_handoff.md"
+      ],
+      "priority": "high",
+      "confidence": 0.89,
+      "implementation_timing": "next",
+      "rationale": "The app now makes drafts inspectable, but users need a controlled way to fix wrong framing before analysis. This improves trust without pretending the system is autonomous.",
+      "impacted_areas": ["Decision chat actions", "Workspace draft mutation", "Session state", "AI chat UI", "Decision workspace UI"],
+      "frontend_implications": [
+        "Gemini should provide focused correction controls in chat and Decisions after backend action contracts exist.",
+        "Corrections should feel guided, not like a hidden raw form rebuild."
+      ],
+      "backend_implications": [
+        "Codex should define correction actions and workspace mutation rules.",
+        "Corrections should update session_state and analysis inputs deterministically.",
+        "Audit fields should record user correction source where useful."
+      ],
+      "contract_considerations": [
+        "Correction actions should use stable action IDs and payload shapes.",
+        "Corrected frames should remain compatible with existing open_workspace and analyze_workspace flows.",
+        "Correction should not bypass readiness checks."
+      ],
+      "testing_considerations": [
+        "Test correction of objective, lever, guardrail, segment, and horizon separately.",
+        "Test that analysis uses corrected state after correction.",
+        "Test stale-card correction does not mutate a newer workspace."
+      ],
+      "risks": [
+        "Correction UI could become too complex if too many fields are editable at once.",
+        "Correction actions could create inconsistent workspace state if mutation rules are loose."
+      ],
+      "dependencies": [
+        "Semantic role strengthening should provide stable entities to correct.",
+        "Capability/readiness fields should define whether corrected frames are ready for analysis."
+      ],
+      "acceptance_signals": [
+        "A user can correct a draft frame and rerun analysis against the corrected workspace.",
+        "Corrected state persists through chat-to-Decisions continuity.",
+        "The UI communicates that correction improves the frame but is not a final recommendation."
+      ]
+    },
+    {
+      "recommendation_id": "rec-ranked-observational-evidence",
+      "title": "Deepen observational analysis into ranked evidence",
+      "summary": "Improve Analyze workspace outputs with ranked scoped diagnostics, evidence, confidence, assumptions, blockers, semantic coverage, data-quality caveats, and explicit limitations while preserving observational-only truth.",
+      "originating_agents": ["decision_intelligence_specialist", "product_ux_strategist", "architecture_guardian"],
+      "source_paths": [
+        "backend/services/decision_workspace_service.py",
+        "project_docs/active/status/decision_intelligence_execution_status.md",
+        "tests/test_decision_workspace_service.py",
+        "project_docs/active/contracts/decision_objects.md"
+      ],
+      "priority": "high",
+      "confidence": 0.88,
+      "implementation_timing": "next",
+      "rationale": "After a workspace frame is trusted, users need analysis that explains what the current data says and what it cannot say. Ranked evidence is the honest bridge before any future simulation or ML recommendations.",
+      "impacted_areas": ["Workspace analysis backend", "Decision artifacts", "AI chat analysis rendering", "Decision workspace rendering"],
+      "frontend_implications": [
+        "Gemini should render ranked diagnostics and limitations clearly without implying final recommendations.",
+        "Analysis summaries should distinguish primary scoped diagnostics from secondary legacy signals."
+      ],
+      "backend_implications": [
+        "Add ranking, evidence, confidence, limitation, semantic coverage, and data-quality fields to analysis outputs.",
+        "Keep language and fields truthful about observational analysis.",
+        "Preserve existing analysis endpoint compatibility."
+      ],
+      "contract_considerations": [
+        "Ranked diagnostics should be additive and traceable to metric and dimension references.",
+        "Confidence should describe evidence quality, not final decision certainty.",
+        "Limitations and truthfulness notes should be machine-readable."
+      ],
+      "testing_considerations": [
+        "Test that diagnostics are scoped to the workspace objective, levers, guardrails, and segments.",
+        "Test that analysis never claims simulation, optimization, or final decision capability.",
+        "Test data-quality caveats for missing or weak semantic context."
+      ],
+      "risks": [
+        "Ranked evidence can be mistaken for ranked recommendations if copy or field names are loose.",
+        "Too much diagnostic detail can overwhelm frontend rendering."
+      ],
+      "dependencies": [
+        "Decision frame correction should exist or at least be designed so ranked evidence operates on trusted frames.",
+        "Semantic role metadata improves diagnostic relevance."
+      ],
+      "acceptance_signals": [
+        "Analyze workspace returns ranked scoped diagnostics with evidence and limitations.",
+        "UI can show why the analysis is limited without overclaiming.",
+        "Benchmark prompts confirm observational truthfulness."
+      ]
+    },
+    {
+      "recommendation_id": "rec-canonical-active-dataset-contract",
+      "title": "Define a canonical active dataset contract",
+      "summary": "Resolve dataset source-of-truth drift by documenting and implementing one canonical active dataset selector for AI chat, charts, dashboards, Decisions, workflows, filters, and semantic model consumers.",
+      "originating_agents": ["implementation_planner", "skeptic_qa_reviewer", "product_ux_strategist", "architecture_guardian"],
+      "source_paths": [
+        "project_docs/active/reviews/react_state_flow_review.md",
+        "frontend/frontend/src/context/DataContext.jsx",
+        "frontend/frontend/src/App.jsx",
+        "frontend/frontend/src/components/layout/CanvasContainer.jsx"
+      ],
+      "priority": "high",
+      "confidence": 0.86,
+      "implementation_timing": "next",
+      "rationale": "Decision Intelligence cannot be trusted if different surfaces reason over different versions of the active dataset. This is frontend architecture work, but it directly protects backend and product truth.",
+      "impacted_areas": ["DataContext", "App shell", "CanvasContainer", "AI chat", "Charts", "Dashboards", "Decisions", "Workflow surfaces"],
+      "frontend_implications": [
+        "Gemini should implement the selector and replace ad hoc cleaned/full/uploaded/filtered fallback logic in bounded files.",
+        "This should be scoped to active dataset consistency before a broad shell refactor."
+      ],
+      "backend_implications": [
+        "Codex should define backend assumptions about which dataset state powers analysis requests.",
+        "Backend endpoints should reject or clarify ambiguous dataset context where feasible."
+      ],
+      "contract_considerations": [
+        "Document filtered, cleaned, full, uploaded, and explicitly overridden dataset precedence.",
+        "Include dataset_id, source, row_count, column_count, and transform state where available.",
+        "Avoid changing unrelated window or chart contracts in the same slice."
+      ],
+      "testing_considerations": [
+        "Verify AI chat, charts, dashboards, Decisions, and workflows use the same active dataset after filtering or cleaning.",
+        "Regression-test chat-to-Decisions continuity with active dataset metadata.",
+        "Revalidate stale findings in the React state flow review before editing."
+      ],
+      "risks": [
+        "A broad App/CanvasContainer rewrite could regress many surfaces.",
+        "Changing dataset precedence can affect user expectations if not communicated."
+      ],
+      "dependencies": [
+        "Decision reliability benchmark should define dataset context expectations.",
+        "Gemini frontend authorization and handoff are required for implementation."
+      ],
+      "acceptance_signals": [
+        "One canonical active dataset selector is documented and used by major surfaces.",
+        "Filtered, cleaned, full, uploaded, and override states behave predictably.",
+        "Existing AI Chat, Decisions, charts, dashboards, and data cleaning flows still work."
+      ]
+    },
+    {
+      "recommendation_id": "rec-decision-context-ml-readiness",
+      "title": "Create decision-context ML readiness diagnostics",
+      "summary": "Prepare for stronger ML by assessing target clarity, feature suitability, leakage risk, temporal split strategy, row-count sufficiency, metric choice, explainability needs, and failure modes inside the decision workflow before producing predictions or recommendations.",
+      "originating_agents": ["decision_intelligence_specialist", "skeptic_qa_reviewer", "implementation_planner", "product_ux_strategist"],
+      "source_paths": [
+        "backend/services/model_training.py",
+        "backend/routes/ml_prep.py",
+        "backend/routes/automl.py",
+        "backend/services/automl_logic.py",
+        "project_docs/active/decision_intelligence/completed/phase_4_5_ai_chat_decision_intelligence_plan.md"
+      ],
+      "priority": "medium",
+      "confidence": 0.84,
+      "implementation_timing": "later",
+      "rationale": "Stronger ML is strategically important, but the immediate need is readiness and validation rather than user-facing model claims. ML should be grounded in semantic roles and decision context.",
+      "impacted_areas": ["ML prep backend", "Model training backend", "AutoML routes", "Decision workspace", "Future ML readiness UI"],
+      "frontend_implications": [
+        "Gemini should later surface readiness as not ready, partially ready, or ready for modeling review.",
+        "Frontend must not present ML readiness as decision proof."
+      ],
+      "backend_implications": [
+        "Codex should define ML readiness diagnostics and model-card-style metadata.",
+        "Leakage warnings, target suitability, feature suitability, split strategy, and evaluation limits should be explicit.",
+        "Readiness should not train or recommend by default."
+      ],
+      "contract_considerations": [
+        "Readiness output should be separate from model predictions.",
+        "Confidence should describe data/modeling readiness, not decision certainty.",
+        "Refusal or not-ready states should be first-class."
+      ],
+      "testing_considerations": [
+        "Test leakage-prone feature sets.",
+        "Test missing target, too-few-rows, weak semantic target, temporal leakage, and unsupported objective cases.",
+        "Test that no final recommendation language is emitted."
+      ],
+      "risks": [
+        "Users may interpret model readiness or training metrics as decision evidence.",
+        "ML work can distract from semantic and prompt reliability if started too early."
+      ],
+      "dependencies": [
+        "Semantic roles and active dataset contract should land first.",
+        "Benchmark data and expected outcomes should exist before ML expansion."
+      ],
+      "acceptance_signals": [
+        "A decision workspace can request ML readiness and receive clear target, feature, leakage, validation, and explainability diagnostics.",
+        "The system refuses or marks not-ready cases truthfully.",
+        "No fake recommendation, optimization, or causal claim is produced."
+      ]
+    },
+    {
+      "recommendation_id": "rec-future-simulation-contract-design",
+      "title": "Design the future simulation and trade-off contract before building it",
+      "summary": "Create a design document for real future scenario, simulation, and trade-off capability that defines prerequisites, causal assumptions, elasticity inputs, uncertainty, guardrail evaluation, refusal states, and truthful UI boundaries.",
+      "originating_agents": ["architecture_guardian", "decision_intelligence_specialist", "implementation_planner"],
+      "source_paths": [
+        "project_docs/active/contracts/decision_objects.md",
+        "backend/services/scenario_service.py",
+        "project_docs/active/status/decision_intelligence_execution_status.md",
+        "project_docs/active/decision_intelligence/completed/phase_4_5_ai_chat_decision_intelligence_plan.md"
+      ],
+      "priority": "medium",
+      "confidence": 0.82,
+      "implementation_timing": "later",
+      "rationale": "Simulation and trade-off capability remain strategically important, but building them before semantic roles, correction, evidence, and readiness would create fake optimizer behavior.",
+      "impacted_areas": ["Decision contracts", "Scenario service", "Future backend design docs", "Future frontend handoffs"],
+      "frontend_implications": [
+        "Gemini should not add simulation or trade-off UI until backend truth and refusal states exist.",
+        "Future UI should distinguish direct-adjustment preview, observational analysis, and causal simulation."
+      ],
+      "backend_implications": [
+        "Codex should design request and response schemas, prerequisites, refusal states, uncertainty bands, and validation strategy.",
+        "Current scenario scaffolds should remain clearly non-causal unless upgraded deliberately."
+      ],
+      "contract_considerations": [
+        "Do not overload current Scenario or DecisionScenarioPreview objects to imply causal simulation.",
+        "Require explicit assumptions and uncertainty for any future simulation output.",
+        "Refusal states should be part of the contract."
+      ],
+      "testing_considerations": [
+        "Future implementation must include tests for insufficient assumptions, weak data, unsupported levers, guardrail violations, and uncertainty communication.",
+        "Design phase should define test fixtures before code."
+      ],
+      "risks": [
+        "Premature simulation UI would regress product truth.",
+        "Direct metric adjustment could be misread as causal projection."
+      ],
+      "dependencies": [
+        "Capability/readiness contract should exist first.",
+        "Semantic roles, correction loop, ranked evidence, and ML readiness should inform the design."
+      ],
+      "acceptance_signals": [
+        "A design doc defines simulation prerequisites, schema, refusal states, uncertainty language, and phase boundaries.",
+        "Current app continues to describe existing analysis as observational.",
+        "No runtime simulation feature is implied by the design alone."
+      ]
+    }
+  ],
+  "unresolved_questions": [
+    {
+      "question_id": "question-dashboard-decision-follow-through",
+      "question": "When should dashboards become a first-class decision follow-through destination that preserves objective, levers, segments, and guardrails?",
+      "owner": "Codex architecture review and Gemini frontend planning",
+      "needed_before": "Before a dashboard-focused Decision Intelligence slice.",
+      "impact": "This affects the product workflow spine and how dashboard state consumes decision context."
+    },
+    {
+      "question_id": "question-benchmark-fixture-format",
+      "question": "Should the prompt benchmark suite live as Python test fixtures, JSON fixtures, Markdown acceptance tables, or a combination?",
+      "owner": "Codex",
+      "needed_before": "Before implementing the reliability foundation.",
+      "impact": "The fixture format determines whether Gemini and future agents can reuse the same benchmark cases for frontend verification."
+    },
+    {
+      "question_id": "question-semantic-confidence-thresholds",
+      "question": "What confidence thresholds should trigger automatic mapping, clarification, or semantic review for objective, lever, guardrail, and segment roles?",
+      "owner": "Codex",
+      "needed_before": "Before semantic role strengthening is called complete.",
+      "impact": "Thresholds affect false positives, false negatives, and user trust in draft decision frames."
+    },
+    {
+      "question_id": "question-frontend-test-ownership",
+      "question": "Should Gemini add formal React tests for AI Chat and Decisions now, or should Codex provide scripted browser checks while the frontend test architecture is still immature?",
+      "owner": "Gemini with Codex review",
+      "needed_before": "Before frontend consumes new capability or correction contracts.",
+      "impact": "The answer affects how stale-card behavior, open-workspace continuity, and artifact rendering are protected."
+    }
+  ],
+  "risks": [
+    {
+      "risk_id": "risk-unmeasured-prompt-regression",
+      "title": "Prompt-first improvements may regress other realistic prompts.",
+      "severity": "critical",
+      "likelihood": "medium",
+      "mitigation": "Create a named benchmark suite with expected extraction and forbidden-claim checks before expanding intelligence features.",
+      "owner": "Codex"
+    },
+    {
+      "risk_id": "risk-semantic-false-confidence",
+      "title": "Semantic matches may look grounded while actually being weak or ambiguous.",
+      "severity": "critical",
+      "likelihood": "medium",
+      "mitigation": "Add semantic confidence, role hints, unresolved mappings, and false-positive/false-negative tests.",
+      "owner": "Codex"
+    },
+    {
+      "risk_id": "risk-overclaiming-capability",
+      "title": "Future UI or generated responses may imply unsupported simulation, optimization, autonomous decisioning, or final recommendations.",
+      "severity": "high",
+      "likelihood": "high",
+      "mitigation": "Add backend capability/readiness fields and permanent unsupported-claim audit checks.",
+      "owner": "Codex and Gemini"
+    },
+    {
+      "risk_id": "risk-wrong-active-dataset",
+      "title": "Different surfaces may reason over different active dataset states.",
+      "severity": "high",
+      "likelihood": "medium",
+      "mitigation": "Define and implement one canonical active dataset selector before deeper decision, dashboard, workflow, or ML features rely on it.",
+      "owner": "Gemini with Codex contract review"
+    },
+    {
+      "risk_id": "risk-premature-ml",
+      "title": "Stronger ML could produce impressive but unmeasurable or misleading outputs.",
+      "severity": "high",
+      "likelihood": "medium",
+      "mitigation": "Build ML readiness diagnostics and evaluation fixtures before predictions, recommendations, or optimization claims.",
+      "owner": "Codex"
+    },
+    {
+      "risk_id": "risk-broad-shell-refactor",
+      "title": "A broad frontend shell refactor could regress existing AI, Decisions, charts, dashboards, windows, and data workflows.",
+      "severity": "high",
+      "likelihood": "medium",
+      "mitigation": "Scope frontend work around canonical active dataset and decision trust first; defer broad shell cleanup to a dedicated handoff.",
+      "owner": "Gemini with Codex review"
+    },
+    {
+      "risk_id": "risk-ranked-evidence-misread-as-recommendation",
+      "title": "Ranked observational diagnostics may be mistaken for ranked recommendations.",
+      "severity": "medium",
+      "likelihood": "medium",
+      "mitigation": "Use explicit observational language, machine-readable limitations, and frontend rendering that separates evidence from recommendations.",
+      "owner": "Codex and Gemini"
+    }
+  ],
+  "impacted_codebase_areas": [
+    {
+      "area": "Decision chat and action backend",
+      "path_patterns": ["backend/decision_engine/chat_service.py", "backend/routes/decision.py"],
+      "why_it_matters": "Capability/readiness fields, correction actions, and chat artifacts flow through this layer.",
+      "change_type": "backend"
+    },
+    {
+      "area": "Decision workspace service",
+      "path_patterns": ["backend/services/decision_workspace_service.py"],
+      "why_it_matters": "Prompt-first intake, workspace analysis, correction state, and ranked observational evidence depend on this service.",
+      "change_type": "backend"
+    },
+    {
+      "area": "Semantic model backend",
+      "path_patterns": ["backend/services/semantic_model.py", "backend/routes/semantic_model.py"],
+      "why_it_matters": "Semantic role hints, confidence, aliases, polarity, controllability, and unresolved mappings should be generated here.",
+      "change_type": "backend"
+    },
+    {
+      "area": "Decision contracts and active docs",
+      "path_patterns": ["project_docs/active/contracts/decision_objects.md", "project_docs/active/decision_intelligence/current/*.md", "project_docs/active/decision_intelligence/completed/*.md", "project_docs/active/status/decision_intelligence_execution_status.md"],
+      "why_it_matters": "Additive contract truth and handoff status must remain synchronized with backend changes.",
+      "change_type": "documentation"
+    },
+    {
+      "area": "Decision backend tests and future benchmark fixtures",
+      "path_patterns": ["tests/test_decision_chat_service.py", "tests/test_decision_workspace_service.py", "tests/test_decision_pipeline_service.py", "tests/**/*decision*"],
+      "why_it_matters": "The benchmark suite should become the primary gate for future Decision Intelligence changes.",
+      "change_type": "test"
+    },
+    {
+      "area": "AI Chat frontend",
+      "path_patterns": ["frontend/frontend/src/features/ai/AIShell.jsx", "frontend/frontend/src/features/ai/AIShell.css"],
+      "why_it_matters": "Gemini will eventually consume capability fields, correction actions, ranked evidence, and benchmarked artifact shapes here.",
+      "change_type": "frontend"
+    },
+    {
+      "area": "Decision frontend",
+      "path_patterns": ["frontend/frontend/src/features/business/decision/*.jsx", "frontend/frontend/src/features/business/decision/*.css"],
+      "why_it_matters": "Correction, semantic readiness, observational evidence, and workflow spine surfaces will appear here.",
+      "change_type": "frontend"
+    },
+    {
+      "area": "Data state and shell ownership",
+      "path_patterns": ["frontend/frontend/src/context/DataContext.jsx", "frontend/frontend/src/App.jsx", "frontend/frontend/src/components/layout/CanvasContainer.jsx"],
+      "why_it_matters": "Canonical active dataset behavior must be consistent across AI, Decisions, charts, dashboards, and workflows.",
+      "change_type": "frontend"
+    },
+    {
+      "area": "ML readiness backend",
+      "path_patterns": ["backend/services/model_training.py", "backend/routes/ml_prep.py", "backend/routes/automl.py", "backend/services/automl_logic.py"],
+      "why_it_matters": "Future ML should start with readiness diagnostics, leakage warnings, and evaluation metadata rather than premature model claims.",
+      "change_type": "backend"
+    },
+    {
+      "area": "Scenario and future simulation planning",
+      "path_patterns": ["backend/services/scenario_service.py", "project_docs/active/contracts/decision_objects.md"],
+      "why_it_matters": "Current scenario scaffolds must remain distinct from future causal simulation and trade-off execution.",
+      "change_type": "contract"
+    }
+  ],
+  "frontend_implications": [
+    "Gemini should not start the next phase with new visual features; frontend work should follow stabilized backend truth fields and correction/action contracts.",
+    "A future Gemini handoff should render capability/readiness state, semantic uncertainty, correction controls, ranked evidence, and active dataset context without implying simulation or final recommendations.",
+    "Frontend state work should first align canonical active dataset selection across AI, Decisions, charts, dashboards, workflows, and semantic surfaces.",
+    "Dashboard follow-through remains strategically important but should wait for stable semantic roles and dataset state.",
+    "Frontend tests or browser checks should cover stale-card actions, open-workspace continuity, artifact rendering, semantic recovery, and unsupported capability copy."
+  ],
+  "backend_implications": [
+    "Codex should lead the next slice with benchmark fixtures, grading rules, additive capability/readiness fields, and tests.",
+    "Semantic model output should become more decision-aware before ML or simulation expansion.",
+    "Correction actions and ranked evidence should be deterministic backend features, not frontend-only inference.",
+    "ML work should start as readiness diagnostics with target, feature, leakage, split, and explainability metadata.",
+    "Future simulation and trade-off capability should be designed as a separate contract before any runtime implementation."
+  ],
+  "contract_considerations": [
+    "All new fields should be additive and should preserve current chat/action/workspace contracts.",
+    "Capability/readiness should distinguish structural analysis readiness from recommendation, optimization, or decision readiness.",
+    "Semantic roles should include confidence and unresolved mapping state rather than forcing weak mappings.",
+    "Correction actions need stable action IDs, payload schemas, mutation rules, and session-state behavior.",
+    "Ranked evidence should be separate from recommendations and should carry limitations and truthfulness notes.",
+    "ML readiness contracts should be separate from predictions or model outputs.",
+    "Future simulation contracts should include refusal states and uncertainty before UI affordances exist."
+  ],
+  "testing_considerations": [
+    "Create a named prompt benchmark with at least 20 realistic prompts.",
+    "Each benchmark prompt should define expected mode, objective, levers, guardrails, segments, horizon, readiness state, allowed actions, and forbidden claims.",
+    "Add semantic collision, missing metric, ambiguous objective, no-safe-match, guardrail-only, and segment-only tests.",
+    "Keep existing decision chat, workspace, and pipeline tests passing.",
+    "Add unsupported capability claim audits for visible UI and generated chat copy.",
+    "When Gemini consumes new fields, add or document frontend checks for stale-card actions, open-workspace continuity, artifact rendering, correction persistence, semantic recovery, and active dataset consistency.",
+    "ML readiness tests should cover leakage, insufficient rows, missing target, weak semantic target, and unsupported objective cases."
+  ],
+  "implementation_priority": {
+    "top_priority_ids": [
+      "rec-decision-reliability-foundation",
+      "rec-semantic-model-role-strengthening",
+      "rec-decision-frame-correction-loop",
+      "rec-ranked-observational-evidence",
+      "rec-canonical-active-dataset-contract"
+    ],
+    "deferred_ids": [
+      "rec-decision-context-ml-readiness",
+      "rec-future-simulation-contract-design"
+    ],
+    "rationale": "The ranked path starts with measurable reliability and capability truth, then strengthens semantic grounding, then adds user correction and richer observational evidence. Canonical active dataset state is required before broader frontend/product integration. ML readiness and simulation design are important but should wait until semantic roles, evidence, and evaluation foundations are stable."
+  },
+  "suggested_implementation_phases": [
+    {
+      "phase_id": "phase-1-reliability-foundation",
+      "title": "Decision reliability benchmark and capability boundary",
+      "owner": "Codex",
+      "objective": "Create a measurable Decision Intelligence reliability foundation by adding benchmark prompt fixtures, grading checks, and additive capability/readiness fields.",
+      "recommendation_ids": ["rec-decision-reliability-foundation"],
+      "entry_criteria": [
+        "Read active project docs and current decision chat/workspace tests.",
+        "Confirm no frontend implementation is required for this phase.",
+        "Identify existing prompt examples that should become benchmark seeds."
+      ],
+      "exit_criteria": [
+        "A named benchmark prompt suite exists with at least 20 realistic prompts.",
+        "Benchmark expectations include extraction, readiness, allowed actions, and forbidden claims.",
+        "Decision responses include additive capability/readiness truth fields.",
+        "Existing decision tests still pass."
+      ],
+      "validation_plan": [
+        "Run backend decision chat and workspace tests.",
+        "Run the new benchmark command or test suite.",
+        "Verify unsupported capability requests remain truthful."
+      ]
+    },
+    {
+      "phase_id": "phase-2-semantic-role-strengthening",
+      "title": "Decision-aware semantic roles and confidence",
+      "owner": "Codex",
+      "objective": "Strengthen semantic model output so decision framing can reason over objective, lever, guardrail, segment, temporal, polarity, controllability, alias, and confidence metadata.",
+      "recommendation_ids": ["rec-semantic-model-role-strengthening"],
+      "entry_criteria": [
+        "Phase 1 benchmark suite exists.",
+        "Current semantic model and decision workspace service behavior are inspected.",
+        "Additive contract shape is drafted."
+      ],
+      "exit_criteria": [
+        "Semantic model output includes decision role hints and confidence metadata.",
+        "Prompt-first intake uses semantic roles without breaking existing behavior.",
+        "Ambiguous mappings can trigger clarification or review rather than silent selection."
+      ],
+      "validation_plan": [
+        "Run semantic collision and no-safe-match tests.",
+        "Run the benchmark suite and compare extraction quality.",
+        "Verify existing inferred semantic model compatibility."
+      ]
+    },
+    {
+      "phase_id": "phase-3-correction-and-evidence",
+      "title": "Decision frame correction and ranked observational evidence",
+      "owner": "Codex first, Gemini after backend contract stabilization",
+      "objective": "Let users correct decision frames before analysis and deepen observational analysis into ranked evidence with limitations.",
+      "recommendation_ids": ["rec-decision-frame-correction-loop", "rec-ranked-observational-evidence"],
+      "entry_criteria": [
+        "Semantic role fields are stable.",
+        "Capability/readiness fields are available.",
+        "Correction action contract is designed before frontend work."
+      ],
+      "exit_criteria": [
+        "Backend correction actions can update objective, lever, guardrail, segment, and horizon deterministically.",
+        "Analyze workspace returns ranked scoped evidence, confidence, caveats, and truthfulness notes.",
+        "Gemini handoff exists if frontend rendering or correction controls are needed."
+      ],
+      "validation_plan": [
+        "Test each correction type and rerun analysis against corrected state.",
+        "Test ranked evidence output on benchmark prompts.",
+        "Verify analysis does not claim simulation, optimization, or final recommendation capability."
+      ]
+    },
+    {
+      "phase_id": "phase-4-active-dataset-and-workflow-spine",
+      "title": "Canonical active dataset and guided workflow spine",
+      "owner": "Codex contract planning, Gemini frontend implementation",
+      "objective": "Align the active dataset source of truth and prepare the frontend workflow spine that connects AI Chat, Decisions, semantic readiness, dashboards, and data inspection.",
+      "recommendation_ids": ["rec-canonical-active-dataset-contract"],
+      "entry_criteria": [
+        "Decision reliability and semantic role contracts are stable.",
+        "React state flow review findings are revalidated.",
+        "A scoped Gemini handoff is prepared."
+      ],
+      "exit_criteria": [
+        "One canonical active dataset selector and precedence rule are documented.",
+        "AI chat, Decisions, charts, dashboards, workflows, and semantic surfaces use the same active dataset unless explicitly overridden.",
+        "No broad shell rewrite is attempted outside the handoff scope."
+      ],
+      "validation_plan": [
+        "Verify dataset consistency after upload, clean, filter, chart, AI chat, open workspace, and analyze workspace flows.",
+        "Run frontend build.",
+        "Run or document browser checks for major cross-surface flows."
+      ]
+    },
+    {
+      "phase_id": "phase-5-ml-readiness",
+      "title": "Decision-context ML readiness diagnostics",
+      "owner": "Codex",
+      "objective": "Prepare stronger ML responsibly by adding readiness diagnostics instead of premature predictions, recommendations, or optimization claims.",
+      "recommendation_ids": ["rec-decision-context-ml-readiness"],
+      "entry_criteria": [
+        "Semantic roles and active dataset contract are stable.",
+        "Benchmark fixtures include expected semantic bindings.",
+        "ML prep and model training services are reviewed."
+      ],
+      "exit_criteria": [
+        "A decision workspace can request ML readiness diagnostics.",
+        "Readiness output covers target suitability, feature suitability, leakage warnings, row count, validation strategy, metric choice, and explainability needs.",
+        "Not-ready and refusal states are explicit."
+      ],
+      "validation_plan": [
+        "Test missing target, too-few-rows, leakage-prone features, temporal leakage, weak semantic target, and unsupported objective cases.",
+        "Verify no final recommendation or causal claim is emitted."
+      ]
+    },
+    {
+      "phase_id": "phase-6-simulation-design-only",
+      "title": "Future simulation and trade-off contract design",
+      "owner": "Codex",
+      "objective": "Design the future simulation and trade-off architecture without implementing runtime simulation or frontend affordances.",
+      "recommendation_ids": ["rec-future-simulation-contract-design"],
+      "entry_criteria": [
+        "Capability/readiness, semantic roles, correction, ranked evidence, and ML readiness plans are understood.",
+        "Current scenario service and contract are reviewed."
+      ],
+      "exit_criteria": [
+        "A design document defines simulation prerequisites, request and response schema, causal assumptions, lever elasticity, uncertainty bands, guardrail evaluation, refusal states, and UI truth boundaries.",
+        "Current observational and direct-adjustment behavior remains clearly distinct from causal simulation."
+      ],
+      "validation_plan": [
+        "Review design against active non-goals.",
+        "Confirm no runtime simulation feature or UI claim is added.",
+        "Define future test fixtures before any implementation phase begins."
+      ]
+    }
+  ],
+  "final_synthesis_summary": {
+    "executive_summary": "The council recommends that AI_Tool focus next on measurable Decision Intelligence reliability rather than broad feature expansion. The strongest path is to make prompt-first decision framing testable, capability truth backend-owned, semantic roles explicit, user corrections possible, observational evidence richer, active dataset state consistent, and ML readiness honest before any future simulation or optimizer work.",
+    "strongest_proposal": "Start with a Codex-owned Decision Intelligence reliability foundation that combines a benchmark prompt suite, grading harness, and additive capability/readiness boundary.",
+    "main_tradeoff": "The application could move immediately into frontend workflow polish or stronger ML, but doing so before prompt reliability, semantic roles, and capability truth are stable would increase trust and regression risk.",
+    "decision_for_next_agent": "Codex should implement the next backend planning and test slice first: benchmark fixtures, readiness/capability fields, and contract docs. Gemini should wait for stabilized fields before implementing new frontend surfaces.",
+    "non_goals": [
+      "Do not add simulation, optimizer, autonomous decisioning, final recommendation, or goal-seeking behavior.",
+      "Do not start with a broad frontend shell rewrite.",
+      "Do not add stronger ML outputs before readiness diagnostics and evaluation data exist.",
+      "Do not make semantic mappings look certain when confidence is weak.",
+      "Do not treat ranked observational evidence as ranked recommendations."
+    ],
+    "handoff_notes": "This council intentionally moves beyond the previous app-wide UI flaw cleanup. Its output should be used to choose the next implementation slice, most likely a Codex backend reliability foundation followed by semantic role strengthening. Any frontend work should be handed to Gemini with specific stabilized contracts and acceptance checks."
+  },
+  "metadata": {
+    "created_by": "Codex Agent Council live run",
+    "schema_path": "project_docs/active/agent_council/council_output_schema.json",
+    "validator_path": "project_docs/active/agent_council/validate_council_json.py"
+  }
+}

@@ -18,17 +18,13 @@ Before Codex edits frontend files for this initiative, re-read:
 
 - `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md`
 
-## Branch Truth
-
-The active branch label is `decision-intelligence-v4-phase4.5`.
-
-Treat that as a continuation-and-hardening checkpoint built on top of the real Phase 4 backend contract, not as a brand-new disconnected program.
-
 ## Current Status Snapshot
 
 ## Current Coordination Checkpoint
 
 Slice 3 and Phase 4.5 Hardening are complete and verified.
+
+May 8, 2026 documentation navigation update: the documentation entry path has been simplified. Agents should start with `project_docs/INDEX.md`, then `project_docs/active/README.md`, then this status file and the frontend guardrail. Decision Intelligence docs are now physically organized into `project_docs/active/decision_intelligence/current/` and `project_docs/active/decision_intelligence/completed/` so agents do not bulk scan completed work by default.
 
 April 30, 2026 UI tooling update: Codex corrected AI Chat pop-out behavior to use a real browser popup window through `window.open`, then portals the AI Chat React surface into that popup. The app-level minimize control in the popup now flushes the main app's minimized-window state before closing the popup, so AI Chat returns to the existing minimized dock instead of disappearing. If the popup is closed through browser chrome, AI Chat restores back into the main app instead of disappearing. Other app windows remain contained by the normal canvas/window system. The shared minimize control now exposes the correct `Minimize` accessibility label. Browser smoke verification confirmed popup minimize closes the popup and adds `AI Chat` to the main app dock.
 
@@ -70,13 +66,13 @@ Meaning:
 
 Status:
 
-- **HARDENING ACTIVE**
+- **OPEN THROUGH RELIABILITY PLAN**
 
 Truth:
 
 - the prompt-first intake flow exists
 - backend hardening already covers the key objective-versus-lever parsing failure mode
-- reliability on more real prompts is still a gating concern
+- reliability on more real prompts is now tracked by `project_docs/active/decision_intelligence/current/next_focus_execution_plan.md`
 
 ### Phase 4 Chat Contract
 
@@ -104,7 +100,9 @@ Truth:
 
 ## Active Workstreams
 
-- [~] Prompt-first intake hardening for real decision prompts
+- [x] Council-derived next-focus execution plan created at `project_docs/active/decision_intelligence/current/next_focus_execution_plan.md`
+- [ ] Optional next implementation: Phase 1 Decision Intelligence reliability foundation
+- [~] Prompt-first intake reliability for real decision prompts, now tracked through the next-focus execution plan
 - [x] Phase 4 backend decision chat contract
 - [x] Slice 1 backend mode/state normalization
 - [x] Slice 1 frontend fidelity (Mode legibility, Action fidelity, Artifact metadata, Rendering precision)
@@ -143,24 +141,34 @@ Truth:
 ## Canonical Resume Order
 
 1. `project_docs/INDEX.md`
-2. `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md`
+2. `project_docs/active/README.md`
 3. `project_docs/active/status/decision_intelligence_execution_status.md`
-4. `project_docs/active/decision_intelligence/decision_intelligence_v3_resume_handoff.md`
-5. `project_docs/active/decision_intelligence/phase_4_5_ai_chat_decision_intelligence_plan.md`
-6. the specific active handoff, checklist, or contract needed for the task
+4. `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md`
+5. the task-specific file named by the navigation docs
 
-## Current Active Files
+## Current Navigation And Truth Files
 
-- `project_docs/active/decision_intelligence/decision_intelligence_v3_resume_handoff.md`
-- `project_docs/active/decision_intelligence/phase_3_5_decision_intake_rework.md`
-- `project_docs/active/decision_intelligence/decision_intelligence_v3_phase_4_backend_checkpoint.md`
-- `project_docs/active/decision_intelligence/decision_intelligence_v3_phase_4_chat_engine_execution_plan.md`
-- `project_docs/active/decision_intelligence/decision_intelligence_v3_phase_4_execution_checklist.md`
-- `project_docs/active/decision_intelligence/decision_intelligence_v3_gemini_handoff_02_chat_decision_bridge.md`
-- `project_docs/active/decision_intelligence/decision_intelligence_v3_gemini_handoff_03_phase_3_5_prompt_first_intake.md`
-- `project_docs/active/decision_intelligence/phase_4_5_ai_chat_decision_intelligence_plan.md`
-- `project_docs/active/decision_intelligence/slice_2_5_gemini_frontend_handoff.md`
-- `project_docs/active/decision_intelligence/slice_3_real_action_system_gemini_frontend_handoff.md`
+- `project_docs/active/README.md`
+- `project_docs/active/status/decision_intelligence_execution_status.md`
+- `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md`
+- `project_docs/active/decision_intelligence/README.md`
+- `project_docs/active/decision_intelligence/current/next_focus_execution_plan.md`
+- `project_docs/active/agent_council/outputs/application-next-focus-priorities/README.md`
+- `project_docs/active/agent_council/outputs/application-next-focus-priorities/2026-05-01-council.json`
+
+## Task-Specific Reference Files
+
+These files are still useful, but agents should not scan them by default.
+
+- `project_docs/active/decision_intelligence/completed/phase_3_5_decision_intake_rework.md`
+- `project_docs/active/decision_intelligence/completed/decision_intelligence_v3_phase_4_backend_checkpoint.md`
+- `project_docs/active/decision_intelligence/completed/decision_intelligence_v3_phase_4_chat_engine_execution_plan.md`
+- `project_docs/active/decision_intelligence/completed/decision_intelligence_v3_phase_4_execution_checklist.md`
+- `project_docs/active/decision_intelligence/completed/decision_intelligence_v3_gemini_handoff_02_chat_decision_bridge.md`
+- `project_docs/active/decision_intelligence/completed/decision_intelligence_v3_gemini_handoff_03_phase_3_5_prompt_first_intake.md`
+- `project_docs/active/decision_intelligence/completed/phase_4_5_ai_chat_decision_intelligence_plan.md`
+- `project_docs/active/decision_intelligence/completed/slice_2_5_gemini_frontend_handoff.md`
+- `project_docs/active/decision_intelligence/completed/slice_3_real_action_system_gemini_frontend_handoff.md`
 - `project_docs/active/contracts/decision_objects.md`
 - `project_docs/active/reviews/react_state_flow_review.md`
 - `project_docs/active/agent_council/README.md`
@@ -181,6 +189,16 @@ Start with:
 This workflow is documentation and handoff support only. It does not alter frontend behavior, backend behavior, API contracts, or Decision Intelligence runtime capability.
 
 ### Latest Council Run
+
+An application next-focus priorities council has been run to rank what the product should focus on after Phase 4.5 hardening and the app-wide UI flaw cleanup.
+
+Council artifact:
+
+- `project_docs/active/agent_council/outputs/application-next-focus-priorities/2026-05-01-council.json`
+
+The council concluded that the next application focus should be measurable Decision Intelligence reliability before broad feature expansion. The highest-priority next slice is a Codex-owned reliability foundation: benchmark prompt fixtures, grading checks, and additive capability/readiness truth fields. The follow-on priorities are semantic role strengthening, decision-frame correction, ranked observational evidence, canonical active dataset alignment, ML readiness diagnostics, and future simulation/trade-off contract design.
+
+### Previous Council Run
 
 An app-wide UI flaws council has been run for a Gemini cleanup handoff before additional feature work.
 

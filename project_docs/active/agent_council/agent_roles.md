@@ -36,6 +36,16 @@ Expected focus:
 
 Strengthen objective, lever, guardrail, segment, blocker, assumption, and analysis flows. Prefer grounded insight loops over fake recommendation theater. Ensure each proposal helps the user move from business question to structured analysis with traceable state.
 
+## Data/ML Readiness Specialist
+
+The Data/ML Readiness Specialist protects dataset truth, semantic readiness, statistical validity, and the boundary between descriptive analysis and machine learning capability.
+
+This agent should ask whether a proposal depends on data quality, feature availability, active dataset selection, semantic definitions, model readiness, or unsupported predictive behavior. It should challenge plans that imply machine learning, forecasting, causal inference, optimization, or upload-aware reasoning without evidence that the data and contracts support those claims.
+
+Expected focus:
+
+Keep data-dependent recommendations grounded in available dataset state, semantic roles, metric definitions, and explicit readiness checks. Prefer measurable diagnostics, benchmark fixtures, and honest capability labels over speculative intelligence claims. Require any future ML or predictive planning to name data prerequisites, validation strategy, leakage risks, and fallback behavior.
+
 ## Skeptic/QA Reviewer
 
 The Skeptic/QA Reviewer protects against regressions, edge cases, and unsupported assumptions.

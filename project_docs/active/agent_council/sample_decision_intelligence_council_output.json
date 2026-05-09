@@ -18,7 +18,7 @@
     {
       "path": "project_docs/INDEX.md",
       "source_type": "markdown",
-      "relevance": "Defines the active scan order and keeps archive material out of default planning unless specifically needed.",
+      "relevance": "Defines the current documentation navigation path and keeps archive material out of default planning unless specifically needed.",
       "reviewed_by": ["architecture_guardian", "implementation_planner"]
     },
     {
@@ -28,7 +28,7 @@
       "reviewed_by": ["product_ux_strategist", "skeptic_qa_reviewer", "implementation_planner"]
     },
     {
-      "path": "project_docs/active/decision_intelligence/phase_4_5_ai_chat_decision_intelligence_plan.md",
+      "path": "project_docs/active/decision_intelligence/completed/phase_4_5_ai_chat_decision_intelligence_plan.md",
       "source_type": "handoff",
       "relevance": "Defines Phase 4.5 goals: mode clarity, prompt reliability, action fidelity, artifact quality, workspace handoff, and evaluation coverage.",
       "reviewed_by": ["decision_intelligence_specialist", "product_ux_strategist"]
@@ -64,6 +64,12 @@
       "role_name": "Decision Intelligence Specialist",
       "perspective": "Protect semantic grounding, decision framing, objective and lever separation, guardrail clarity, and insight workflow quality.",
       "decision_rights": "Can require proposals to improve the intelligence workflow rather than only polishing presentation."
+    },
+    {
+      "agent_id": "data_ml_readiness_specialist",
+      "role_name": "Data/ML Readiness Specialist",
+      "perspective": "Protect dataset truth, semantic readiness, statistical validity, active dataset alignment, and honest ML-readiness boundaries.",
+      "decision_rights": "Can challenge recommendations that imply predictive, causal, optimization, or upload-aware capability without explicit data prerequisites and validation evidence."
     },
     {
       "agent_id": "skeptic_qa_reviewer",
@@ -135,7 +141,7 @@
           "The clean marketing-spend prompt is not enough to prove general decision-intelligence reliability."
         ],
         "evidence": [
-          "The V3 resume handoff says intake still matters more than moving straight into chat.",
+          "The active status says prompt-first reliability on more real prompts remains a gating concern.",
           "The Phase 4.5 plan calls for a small benchmark set of realistic decision prompts."
         ],
         "proposed_changes": [
@@ -144,6 +150,28 @@
         ],
         "risks_flagged": [
           "A fragile parser may pass the known acceptance prompt while failing normal business language."
+        ]
+      },
+      {
+        "agent_id": "data_ml_readiness_specialist",
+        "stance": "Tie reliability work to dataset and semantic readiness instead of treating prompts as free-floating text.",
+        "claims": [
+          "A prompt benchmark should record whether the expected answer depends on active dataset state, semantic role coverage, or unavailable predictive modeling.",
+          "Future ML-facing work should start with readiness diagnostics before promising forecasting, optimization, or causal explanations."
+        ],
+        "challenged_assumptions": [
+          "A well-framed business prompt is enough to support analysis if the dataset and semantic roles are weak."
+        ],
+        "evidence": [
+          "The active status describes semantic recovery and observational analysis as real, while simulation and optimization remain unsupported.",
+          "The Phase 4.5 plan requires honest context surfaces and evaluation coverage."
+        ],
+        "proposed_changes": [
+          "Add dataset-readiness and semantic-role expectations to benchmark cases when a prompt depends on real data.",
+          "Keep ML readiness separate from current observational analysis capability."
+        ],
+        "risks_flagged": [
+          "The product may appear decision-intelligent while silently relying on missing, stale, or semantically ambiguous data."
         ]
       },
       {
@@ -243,13 +271,34 @@
           "The current parsing behavior is good enough because the documented prompt passes."
         ],
         "evidence": [
-          "The V3 resume handoff says reliability on more real prompts is still a gating concern."
+          "The active status says reliability on more real prompts is tracked through the current next-focus execution plan."
         ],
         "proposed_changes": [
           "Prioritize hard prompt cases before adding new UI affordances."
         ],
         "risks_flagged": [
           "The system may look polished while failing realistic decision questions."
+        ]
+      },
+      {
+        "agent_id": "data_ml_readiness_specialist",
+        "stance": "Prompt and UI benchmarks need data-readiness dimensions to avoid false analytical confidence.",
+        "claims": [
+          "A complete-looking decision frame can still be unsafe if the active dataset lacks the required metrics, segments, or semantic definitions.",
+          "Unsupported ML, forecasting, and optimization requests should be graded separately from supported observational analysis."
+        ],
+        "challenged_assumptions": [
+          "Decision readiness can be judged only from objective, lever, and guardrail extraction."
+        ],
+        "evidence": [
+          "The current project truth distinguishes structural readiness for analysis from final recommendations.",
+          "Active docs preserve semantic recovery and truthfulness as explicit reliability concerns."
+        ],
+        "proposed_changes": [
+          "Include active dataset alignment, semantic role availability, and unsupported predictive requests in benchmark expectations."
+        ],
+        "risks_flagged": [
+          "A benchmark without data-readiness checks may pass prompts that cannot actually be analyzed with the current dataset."
         ]
       },
       {
@@ -352,6 +401,27 @@
         ],
         "risks_flagged": [
           "Action gating may be correct for one prompt and wrong for nearby prompts."
+        ]
+      },
+      {
+        "agent_id": "data_ml_readiness_specialist",
+        "stance": "Accept benchmark-driven hardening if readiness and semantic evidence are explicit.",
+        "claims": [
+          "The benchmark should distinguish structural decision readiness from data readiness and ML readiness.",
+          "Future predictive or optimization work should be deferred until prerequisites and validation strategy are documented."
+        ],
+        "challenged_assumptions": [
+          "A structurally complete workspace means the system has enough data to analyze or recommend."
+        ],
+        "evidence": [
+          "Phase 4.5 requires the product to explain what is still not known before moving from draft to analysis.",
+          "The active status says the UI now distinguishes structural readiness from final recommendations."
+        ],
+        "proposed_changes": [
+          "Add readiness fields or benchmark notes that cover metric availability, segment availability, semantic role confidence, and unsupported ML requests."
+        ],
+        "risks_flagged": [
+          "Readiness labels may collapse multiple kinds of readiness into one misleading state."
         ]
       },
       {
@@ -461,11 +531,11 @@
     {
       "recommendation_id": "rec-prompt-benchmark",
       "title": "Create a Decision Intelligence prompt benchmark",
-      "summary": "Define a small benchmark of realistic complete, incomplete, ambiguous, analytic, and unsupported prompts with expected objective, levers, segments, guardrails, missing inputs, action availability, and user-comprehension outcomes.",
-      "originating_agents": ["decision_intelligence_specialist", "skeptic_qa_reviewer", "product_ux_strategist"],
+      "summary": "Define a small benchmark of realistic complete, incomplete, ambiguous, analytic, data-dependent, and unsupported prompts with expected objective, levers, segments, guardrails, missing inputs, action availability, dataset and semantic readiness, and user-comprehension outcomes.",
+      "originating_agents": ["decision_intelligence_specialist", "data_ml_readiness_specialist", "skeptic_qa_reviewer", "product_ux_strategist"],
       "source_paths": [
-        "project_docs/active/decision_intelligence/phase_4_5_ai_chat_decision_intelligence_plan.md",
-        "project_docs/active/decision_intelligence/decision_intelligence_v3_resume_handoff.md",
+        "project_docs/active/decision_intelligence/completed/phase_4_5_ai_chat_decision_intelligence_plan.md",
+        "project_docs/active/status/decision_intelligence_execution_status.md",
         "project_docs/active/status/decision_intelligence_execution_status.md"
       ],
       "priority": "high",
@@ -477,13 +547,13 @@
         "Gemini can later verify visible comprehension against the same prompt cases."
       ],
       "backend_implications": [
-        "Codex should expand tests around prompt-first drafting, action state, unsupported requests, and session carry-forward."
+        "Codex should expand tests around prompt-first drafting, action state, unsupported requests, dataset and semantic readiness, and session carry-forward."
       ],
       "contract_considerations": [
         "Expected outputs should reference authoritative backend fields rather than frontend interpretation."
       ],
       "testing_considerations": [
-        "Add complete, incomplete, ambiguous, unsupported, and normal analytics prompts.",
+        "Add complete, incomplete, ambiguous, data-dependent, unsupported, and normal analytics prompts.",
         "Include multi-turn stale-state checks for older message cards."
       ],
       "risks": [
@@ -504,7 +574,7 @@
       "originating_agents": ["architecture_guardian", "implementation_planner"],
       "source_paths": [
         "project_docs/active/contracts/decision_objects.md",
-        "project_docs/active/decision_intelligence/slice_3_real_action_system_gemini_frontend_handoff.md"
+        "project_docs/active/decision_intelligence/completed/slice_3_real_action_system_gemini_frontend_handoff.md"
       ],
       "priority": "medium",
       "confidence": 0.84,
@@ -541,7 +611,7 @@
       "originating_agents": ["product_ux_strategist", "implementation_planner", "skeptic_qa_reviewer"],
       "source_paths": [
         "project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md",
-        "project_docs/active/decision_intelligence/phase_4_5_ai_chat_decision_intelligence_plan.md"
+        "project_docs/active/decision_intelligence/completed/phase_4_5_ai_chat_decision_intelligence_plan.md"
       ],
       "priority": "medium",
       "confidence": 0.79,
@@ -618,7 +688,7 @@
   "impacted_codebase_areas": [
     {
       "area": "Active Decision Intelligence documentation",
-      "path_patterns": ["project_docs/active/decision_intelligence/*.md", "project_docs/active/status/*.md"],
+      "path_patterns": ["project_docs/active/decision_intelligence/current/*.md", "project_docs/active/decision_intelligence/completed/*.md", "project_docs/active/status/*.md"],
       "why_it_matters": "The next slice needs clear handoff truth and status alignment.",
       "change_type": "documentation"
     },
@@ -647,7 +717,7 @@
     "Frontend copy should not imply final recommendations, simulation, optimization, or autonomous decisioning."
   ],
   "backend_implications": [
-    "Codex should add benchmark-driven tests around prompt-first drafting, action gating, unsupported capability honesty, and session-state carry-forward.",
+    "Codex should add benchmark-driven tests around prompt-first drafting, action gating, unsupported capability honesty, dataset and semantic readiness, and session-state carry-forward.",
     "Backend changes should be additive and should preserve the current public chat contract.",
     "If benchmark failures require new fields, those fields should be documented before Gemini consumes them."
   ],
@@ -657,7 +727,7 @@
     "No new council artifact should be mistaken for a runtime API contract."
   ],
   "testing_considerations": [
-    "Prompt benchmark cases should include happy path, incomplete path, ambiguous path, unsupported request path, normal analytics path, and multi-turn stale-state path.",
+    "Prompt benchmark cases should include happy path, incomplete path, ambiguous path, data-dependent path, unsupported request path, normal analytics path, and multi-turn stale-state path.",
     "Tests should verify structure and user-facing truthfulness signals, not just parser success.",
     "Manual Gemini verification should include both thread and inspector paths if UI work follows."
   ],
@@ -679,7 +749,7 @@
       ],
       "exit_criteria": [
         "Benchmark cases are documented or encoded in tests.",
-        "Backend tests pass for complete, incomplete, ambiguous, unsupported, analytic, and multi-turn cases.",
+        "Backend tests pass for complete, incomplete, ambiguous, data-dependent, unsupported, analytic, and multi-turn cases.",
         "Active status docs are updated if implementation changes are made."
       ],
       "validation_plan": [
@@ -696,7 +766,7 @@
       "recommendation_ids": ["rec-contract-authority-note"],
       "entry_criteria": [
         "Current action and artifact fields are confirmed from active docs or code.",
-        "The note location is chosen so it is reachable from active scan order."
+        "The note location is chosen so it is reachable from the current documentation navigation path."
       ],
       "exit_criteria": [
         "The note explains authoritative mode, readiness, action, artifact, truthfulness, and workspace handoff fields.",

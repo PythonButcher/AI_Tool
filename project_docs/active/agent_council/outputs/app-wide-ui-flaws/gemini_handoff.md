@@ -52,7 +52,7 @@ Start with:
 
 `project_docs/active/status/decision_intelligence_execution_status.md`
 
-`project_docs/active/decision_intelligence/phase_4_5_ai_chat_decision_intelligence_plan.md`
+`project_docs/active/decision_intelligence/completed/phase_4_5_ai_chat_decision_intelligence_plan.md`
 
 `project_docs/active/reviews/react_state_flow_review.md`
 
