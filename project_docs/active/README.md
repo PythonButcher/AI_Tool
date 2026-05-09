@@ -12,7 +12,8 @@ Its job is to stop agents from scanning old plans, completed handoffs, and archi
 | 2 | `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md` | Ownership boundary: Codex does backend/contracts/docs; Gemini owns frontend unless explicitly reauthorized. |
 | 3 | `project_docs/active/agent_council/outputs/application-next-focus-priorities/README.md` | Current next-focus decision after Phase 4.5 hardening. |
 | 4 | `project_docs/active/agent_council/outputs/application-next-focus-priorities/2026-05-01-council.json` | Detailed ranked recommendations for the next work. |
-| 5 | `project_docs/active/contracts/decision_objects.md` | Current backend/frontend decision object contract reference. |
+| 5 | `project_docs/active/decision_intelligence/current/next_focus_execution_plan.md` | Active execution plan derived from the council output. |
+| 6 | `project_docs/active/contracts/decision_objects.md` | Current backend/frontend decision object contract reference. |
 
 Do not start by reading every file in `project_docs/active/decision_intelligence/`. That folder now has a README plus `current/` and `completed/` subfolders. Read the README first and open only the specific file needed.
 
@@ -39,6 +40,8 @@ The next priority is measurable Decision Intelligence reliability, not broad fea
 The next implementation slice should be:
 
 Build the Decision Intelligence reliability foundation. Create prompt benchmark fixtures, grading checks, and additive backend readiness/capability fields that distinguish structural readiness, observational-only analysis, blocked states, unsupported capabilities, and allowed next actions.
+
+The active plan for that work is `project_docs/active/decision_intelligence/current/next_focus_execution_plan.md`.
 
 Good first files for that slice are `tests/test_decision_chat_service.py`, `tests/test_decision_workspace_service.py`, `backend/decision_engine/`, `backend/services/decision_workspace_service.py`, and `project_docs/active/contracts/decision_objects.md`.
 

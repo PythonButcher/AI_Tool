@@ -16,6 +16,10 @@ Council JSON:
 
 `project_docs/active/agent_council/outputs/application-next-focus-priorities/2026-05-01-council.json`
 
+Derived active execution plan:
+
+`project_docs/active/decision_intelligence/current/next_focus_execution_plan.md`
+
 ## Validation
 
 Run this from the repository root:

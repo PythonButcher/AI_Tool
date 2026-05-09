@@ -18,6 +18,7 @@ After those files, read only the task-specific document listed below.
 
 | Need | Read |
 | --- | --- |
+| Execute the council-derived next-focus plan | `project_docs/active/decision_intelligence/current/next_focus_execution_plan.md` |
 | Choose the next implementation slice | `project_docs/active/agent_council/outputs/application-next-focus-priorities/README.md` |
 | Inspect the full latest council recommendation | `project_docs/active/agent_council/outputs/application-next-focus-priorities/2026-05-01-council.json` |
 | Work on decision object contracts | `project_docs/active/contracts/decision_objects.md` |

@@ -17,6 +17,7 @@ Phase 4.5 hardening is complete. The next work is the Decision Intelligence reli
 | Task | Read |
 | --- | --- |
 | Resume current Decision Intelligence work | `project_docs/active/status/decision_intelligence_execution_status.md`, then `project_docs/active/agent_council/outputs/application-next-focus-priorities/README.md` |
+| Execute the council-derived next-focus plan | `current/next_focus_execution_plan.md` |
 | Understand why V3 exists | `current/decision_intelligence_v3_resume_handoff.md` |
 | Work on prompt-first intake behavior | `current/phase_3_5_decision_intake_rework.md` |
 | Work on the completed chat backend contract | `completed/decision_intelligence_v3_phase_4_backend_checkpoint.md`, `completed/decision_intelligence_v3_phase_4_chat_engine_execution_plan.md` |

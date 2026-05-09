@@ -106,6 +106,8 @@ Truth:
 
 ## Active Workstreams
 
+- [x] Council-derived next-focus execution plan created at `project_docs/active/decision_intelligence/current/next_focus_execution_plan.md`
+- [ ] Optional next implementation: Phase 1 Decision Intelligence reliability foundation
 - [~] Prompt-first intake hardening for real decision prompts
 - [x] Phase 4 backend decision chat contract
 - [x] Slice 1 backend mode/state normalization
@@ -156,6 +158,7 @@ Truth:
 - `project_docs/active/status/decision_intelligence_execution_status.md`
 - `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md`
 - `project_docs/active/decision_intelligence/README.md`
+- `project_docs/active/decision_intelligence/current/next_focus_execution_plan.md`
 - `project_docs/active/agent_council/outputs/application-next-focus-priorities/README.md`
 - `project_docs/active/agent_council/outputs/application-next-focus-priorities/2026-05-01-council.json`
 
