@@ -1,8 +1,9 @@
+> COMPLETED REFERENCE ONLY: This file is not part of the default active scan path. Any old wording below such as "active", "next", "required", or "handoff" is historical unless the current status or active execution plan explicitly points here.
 # Phase 3.5 Decision Intake Rework
 
 ## Status
 
-This is the next required Decision Intelligence step before Phase 4.
+This was the Decision Intelligence intake rework step before Phase 4.
 
 Plain English:
 

@@ -18,7 +18,7 @@
     {
       "path": "project_docs/INDEX.md",
       "source_type": "markdown",
-      "relevance": "Defines the active scan order and keeps archive material out of default planning unless specifically needed.",
+      "relevance": "Defines the current documentation navigation path and keeps archive material out of default planning unless specifically needed.",
       "reviewed_by": ["architecture_guardian", "implementation_planner"]
     },
     {
@@ -141,7 +141,7 @@
           "The clean marketing-spend prompt is not enough to prove general decision-intelligence reliability."
         ],
         "evidence": [
-          "The V3 resume handoff says intake still matters more than moving straight into chat.",
+          "The active status says prompt-first reliability on more real prompts remains a gating concern.",
           "The Phase 4.5 plan calls for a small benchmark set of realistic decision prompts."
         ],
         "proposed_changes": [
@@ -271,7 +271,7 @@
           "The current parsing behavior is good enough because the documented prompt passes."
         ],
         "evidence": [
-          "The V3 resume handoff says reliability on more real prompts is still a gating concern."
+          "The active status says reliability on more real prompts is tracked through the current next-focus execution plan."
         ],
         "proposed_changes": [
           "Prioritize hard prompt cases before adding new UI affordances."
@@ -535,7 +535,7 @@
       "originating_agents": ["decision_intelligence_specialist", "data_ml_readiness_specialist", "skeptic_qa_reviewer", "product_ux_strategist"],
       "source_paths": [
         "project_docs/active/decision_intelligence/completed/phase_4_5_ai_chat_decision_intelligence_plan.md",
-        "project_docs/active/decision_intelligence/current/decision_intelligence_v3_resume_handoff.md",
+        "project_docs/active/status/decision_intelligence_execution_status.md",
         "project_docs/active/status/decision_intelligence_execution_status.md"
       ],
       "priority": "high",
@@ -688,7 +688,7 @@
   "impacted_codebase_areas": [
     {
       "area": "Active Decision Intelligence documentation",
-      "path_patterns": ["project_docs/active/decision_intelligence/*.md", "project_docs/active/status/*.md"],
+      "path_patterns": ["project_docs/active/decision_intelligence/current/*.md", "project_docs/active/decision_intelligence/completed/*.md", "project_docs/active/status/*.md"],
       "why_it_matters": "The next slice needs clear handoff truth and status alignment.",
       "change_type": "documentation"
     },
@@ -766,7 +766,7 @@
       "recommendation_ids": ["rec-contract-authority-note"],
       "entry_criteria": [
         "Current action and artifact fields are confirmed from active docs or code.",
-        "The note location is chosen so it is reachable from active scan order."
+        "The note location is chosen so it is reachable from the current documentation navigation path."
       ],
       "exit_criteria": [
         "The note explains authoritative mode, readiness, action, artifact, truthfulness, and workspace handoff fields.",

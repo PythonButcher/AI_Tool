@@ -19,7 +19,7 @@
     {
       "path": "project_docs/INDEX.md",
       "source_type": "markdown",
-      "relevance": "Defines active scan order and confirms Agent Council workflow location.",
+      "relevance": "Defines the current documentation navigation path and confirms Agent Council workflow location.",
       "reviewed_by": ["architecture_guardian", "implementation_planner"]
     },
     {
@@ -35,13 +35,13 @@
       "reviewed_by": ["architecture_guardian", "product_ux_strategist", "decision_intelligence_specialist", "skeptic_qa_reviewer", "implementation_planner"]
     },
     {
-      "path": "project_docs/active/decision_intelligence/current/decision_intelligence_v3_resume_handoff.md",
+      "path": "project_docs/active/status/decision_intelligence_execution_status.md",
       "source_type": "handoff",
       "relevance": "Defines V3 as the continuation path and preserves the boundary between descriptive analysis and future simulation or trade-off execution.",
       "reviewed_by": ["architecture_guardian", "decision_intelligence_specialist", "product_ux_strategist"]
     },
     {
-      "path": "project_docs/active/decision_intelligence/current/phase_3_5_decision_intake_rework.md",
+      "path": "project_docs/active/decision_intelligence/completed/phase_3_5_decision_intake_rework.md",
       "source_type": "handoff",
       "relevance": "Provides current prompt-first intake context and known reliability target around objective, lever, guardrail, and horizon separation.",
       "reviewed_by": ["decision_intelligence_specialist", "skeptic_qa_reviewer", "implementation_planner"]
@@ -974,7 +974,7 @@
       "source_paths": [
         "project_docs/active/contracts/decision_objects.md",
         "backend/services/scenario_service.py",
-        "project_docs/active/decision_intelligence/current/decision_intelligence_v3_resume_handoff.md",
+        "project_docs/active/status/decision_intelligence_execution_status.md",
         "project_docs/active/decision_intelligence/completed/phase_4_5_ai_chat_decision_intelligence_plan.md"
       ],
       "priority": "medium",
@@ -1123,7 +1123,7 @@
     },
     {
       "area": "Decision contracts and active docs",
-      "path_patterns": ["project_docs/active/contracts/decision_objects.md", "project_docs/active/decision_intelligence/*.md", "project_docs/active/status/decision_intelligence_execution_status.md"],
+      "path_patterns": ["project_docs/active/contracts/decision_objects.md", "project_docs/active/decision_intelligence/current/*.md", "project_docs/active/decision_intelligence/completed/*.md", "project_docs/active/status/decision_intelligence_execution_status.md"],
       "why_it_matters": "Additive contract truth and handoff status must remain synchronized with backend changes.",
       "change_type": "documentation"
     },

@@ -72,13 +72,13 @@ Meaning:
 
 Status:
 
-- **HARDENING ACTIVE**
+- **OPEN THROUGH RELIABILITY PLAN**
 
 Truth:
 
 - the prompt-first intake flow exists
 - backend hardening already covers the key objective-versus-lever parsing failure mode
-- reliability on more real prompts is still a gating concern
+- reliability on more real prompts is now tracked by `project_docs/active/decision_intelligence/current/next_focus_execution_plan.md`
 
 ### Phase 4 Chat Contract
 
@@ -108,7 +108,7 @@ Truth:
 
 - [x] Council-derived next-focus execution plan created at `project_docs/active/decision_intelligence/current/next_focus_execution_plan.md`
 - [ ] Optional next implementation: Phase 1 Decision Intelligence reliability foundation
-- [~] Prompt-first intake hardening for real decision prompts
+- [~] Prompt-first intake reliability for real decision prompts, now tracked through the next-focus execution plan
 - [x] Phase 4 backend decision chat contract
 - [x] Slice 1 backend mode/state normalization
 - [x] Slice 1 frontend fidelity (Mode legibility, Action fidelity, Artifact metadata, Rendering precision)
@@ -166,8 +166,7 @@ Truth:
 
 These files are still useful, but agents should not scan them by default.
 
-- `project_docs/active/decision_intelligence/current/decision_intelligence_v3_resume_handoff.md`
-- `project_docs/active/decision_intelligence/current/phase_3_5_decision_intake_rework.md`
+- `project_docs/active/decision_intelligence/completed/phase_3_5_decision_intake_rework.md`
 - `project_docs/active/decision_intelligence/completed/decision_intelligence_v3_phase_4_backend_checkpoint.md`
 - `project_docs/active/decision_intelligence/completed/decision_intelligence_v3_phase_4_chat_engine_execution_plan.md`
 - `project_docs/active/decision_intelligence/completed/decision_intelligence_v3_phase_4_execution_checklist.md`

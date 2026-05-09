@@ -1,3 +1,4 @@
+> COMPLETED REFERENCE ONLY: This file is not part of the default active scan path. Any old wording below such as "active", "next", "required", or "handoff" is historical unless the current status or active execution plan explicitly points here.
 # Decision Intelligence V3 Phase 4 Backend Checkpoint
 
 ## Status

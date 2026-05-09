@@ -19,7 +19,7 @@
     {
       "path": "project_docs/INDEX.md",
       "source_type": "markdown",
-      "relevance": "Defines the active scan order and planning-document expectations.",
+      "relevance": "Defines the current documentation navigation path and planning-document expectations.",
       "reviewed_by": ["architecture_guardian", "implementation_planner"]
     },
     {
@@ -1037,7 +1037,7 @@
       "objective": "Start from current project truth and avoid acting on stale review findings.",
       "recommendation_ids": ["rec-defer-shell-and-workflow-refactor"],
       "entry_criteria": [
-        "Read project_docs/INDEX.md and follow active scan order.",
+        "Read project_docs/INDEX.md and project_docs/active/README.md before selecting task-specific files.",
         "Read the Agent Council output and Gemini handoff prompt.",
         "Confirm duplicate WindowProvider finding is stale before taking action on it."
       ],

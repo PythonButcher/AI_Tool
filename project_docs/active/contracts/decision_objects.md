@@ -1,6 +1,6 @@
 # Decision Objects Contract
 
-This document is the Phase 1 source of truth for backend and frontend integration of the Decision Layer.
+This document is the current contract reference for backend and frontend integration of the Decision Layer.
 
 All timestamps use ISO-8601 UTC strings. Optional fields may be `null`. All objects below are additive and sit on top of the existing semantic model, metric resolver, and dataset context systems.
 
