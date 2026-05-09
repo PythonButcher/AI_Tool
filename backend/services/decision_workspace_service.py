@@ -2305,6 +2305,18 @@ class DecisionWorkspaceService:
             and constraint_ready
             and not any(bool(item.get("blocks_simulation")) for item in unknowns)
         )
+        readiness_state = DecisionWorkspaceService._derive_readiness_state(
+            objective_ready=objective_ready,
+            lever_ready=lever_ready,
+            constraint_ready=constraint_ready,
+            missing_inputs=missing_inputs,
+            unknowns=unknowns,
+        )
+        allowed_next_actions = (
+            ["analyze_workspace", "open_workspace", "show_assumptions"]
+            if readiness_state == "analysis_ready"
+            else ["show_blockers", "open_workspace"]
+        )
 
         return {
             "scope_complete": scope_complete,
@@ -2313,6 +2325,109 @@ class DecisionWorkspaceService:
             "constraint_ready": constraint_ready,
             "can_run_simulation": can_run_simulation,
             "missing_inputs": missing_inputs,
+            "readiness_state": readiness_state,
+            "truth_boundary": "observational_analysis_only",
+            "structural_readiness": {
+                "ready_for_observational_analysis": readiness_state == "analysis_ready",
+                "ready_for_recommendation": False,
+                "ready_for_simulation": False,
+                "ready_for_optimization": False,
+                "ready_for_autonomous_decisioning": False,
+                "missing_inputs": list(missing_inputs),
+            },
+            "blocked_state": {
+                "is_blocked": readiness_state == "blocked",
+                "blocked_action_ids": [] if readiness_state == "analysis_ready" else ["analyze_workspace"],
+                "blocking_missing_inputs": list(missing_inputs),
+                "blocking_unknown_ids": [
+                    item.get("unknown_id")
+                    for item in unknowns
+                    if isinstance(item, dict) and item.get("blocks_simulation")
+                ],
+            },
+            "allowed_next_actions": allowed_next_actions,
+            "capability_state": DecisionWorkspaceService._build_capability_state(
+                readiness_state=readiness_state,
+                missing_inputs=missing_inputs,
+            ),
+            "unsupported_capabilities": [
+                "simulation",
+                "optimization",
+                "autonomous_decisioning",
+                "final_recommendation",
+            ],
+            "not_ready_for_recommendation": True,
+        }
+
+    @staticmethod
+    def _derive_readiness_state(
+        *,
+        objective_ready: bool,
+        lever_ready: bool,
+        constraint_ready: bool,
+        missing_inputs: Sequence[str],
+        unknowns: Sequence[Dict[str, Any]],
+    ) -> str:
+        if objective_ready and lever_ready and constraint_ready and not missing_inputs:
+            return "analysis_ready"
+        if missing_inputs or any(
+            bool(item.get("blocks_simulation"))
+            for item in unknowns
+            if isinstance(item, dict)
+        ):
+            return "blocked"
+        return "limited"
+
+    @staticmethod
+    def _build_capability_state(
+        *,
+        readiness_state: str,
+        missing_inputs: Sequence[str],
+    ) -> Dict[str, Any]:
+        analysis_ready = readiness_state == "analysis_ready"
+        blocked_reason = (
+            "Missing decision inputs must be resolved before observational analysis can run."
+            if missing_inputs
+            else "The current decision frame is not structurally ready for observational analysis."
+        )
+        return {
+            "observational_analysis": {
+                "supported": True,
+                "available": analysis_ready,
+                "status": "allowed" if analysis_ready else "blocked",
+                "reason": (
+                    "The frame has a resolved objective, at least one usable lever, and valid hard guardrails."
+                    if analysis_ready
+                    else blocked_reason
+                ),
+            },
+            "workspace_open": {
+                "supported": True,
+                "available": True,
+                "status": "allowed",
+                "reason": "A structured draft workspace can be opened for review even when analysis is blocked.",
+            },
+            "simulation": DecisionWorkspaceService._unsupported_capability(
+                "Causal simulation is not implemented for this decision workspace."
+            ),
+            "optimization": DecisionWorkspaceService._unsupported_capability(
+                "Goal-seeking optimization is not implemented for this decision workspace."
+            ),
+            "autonomous_decisioning": DecisionWorkspaceService._unsupported_capability(
+                "The system does not make autonomous decisions."
+            ),
+            "final_recommendation": DecisionWorkspaceService._unsupported_capability(
+                "The system can provide observational decision support, not final recommendations."
+            ),
+        }
+
+    @staticmethod
+    def _unsupported_capability(reason: str) -> Dict[str, Any]:
+        return {
+            "supported": False,
+            "available": False,
+            "status": "unsupported",
+            "reason": reason,
         }
 
     @staticmethod

@@ -22,6 +22,8 @@ Before Codex edits frontend files for this initiative, re-read:
 
 ## Current Coordination Checkpoint
 
+May 9, 2026 Phase 1 reliability foundation update: Codex added a repeatable Decision Intelligence benchmark suite with 20 prompt fixtures and grading checks for extraction, readiness, allowed and disabled actions, unsupported capability requests, and forbidden claims. Backend decision workspace and chat responses now include additive `decision_readiness`, `readiness_state`, `structural_readiness`, `blocked_state`, `allowed_next_actions`, `capability_state`, `unsupported_capabilities`, and `not_ready_for_recommendation` fields while preserving existing endpoint names, artifact types, action IDs, and compatibility fields. `ml_logic.py` now has a deterministic pandas-only anomaly fallback when scikit-learn is unavailable, because the current pinned requirements do not include scikit-learn.
+
 Slice 3 and Phase 4.5 Hardening are complete and verified.
 
 May 8, 2026 documentation navigation update: the documentation entry path has been simplified. Agents should start with `project_docs/INDEX.md`, then `project_docs/active/README.md`, then this status file and the frontend guardrail. Decision Intelligence docs are now physically organized into `project_docs/active/decision_intelligence/current/` and `project_docs/active/decision_intelligence/completed/` so agents do not bulk scan completed work by default.
@@ -101,7 +103,7 @@ Truth:
 ## Active Workstreams
 
 - [x] Council-derived next-focus execution plan created at `project_docs/active/decision_intelligence/current/next_focus_execution_plan.md`
-- [ ] Optional next implementation: Phase 1 Decision Intelligence reliability foundation
+- [~] Phase 1 Decision Intelligence reliability foundation implemented with partial local verification; route-level Flask chat tests are blocked in the current non-escalated runtime by missing Flask visibility
 - [~] Prompt-first intake reliability for real decision prompts, now tracked through the next-focus execution plan
 - [x] Phase 4 backend decision chat contract
 - [x] Slice 1 backend mode/state normalization
@@ -130,6 +132,9 @@ Truth:
 
 - **Frontend Build**: `npm run build` executed and passed (with minor unrelated warnings).
 - **Git Check**: `git diff --check` executed and verified a clean codebase (no trailing whitespaces).
+- **Phase 1 Reliability Benchmark**: `C:\Users\18022\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe -m unittest tests.test_decision_reliability_benchmark` executed and passed.
+- **Workspace Tests After Phase 1 Fields**: `C:\Users\18022\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe -m unittest tests.test_decision_workspace_service` executed and passed.
+- **Route-Level Chat Test Attempt**: `C:\Users\18022\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe -m unittest tests.test_decision_chat_service` was attempted but blocked before test execution because Flask is not visible in the bundled runtime. System Python was also missing visible dependencies inside the sandbox, and escalation to use user-site packages was not approved in this session.
 - **Ready Prompt Logic**: Verified `How should we grow revenue next quarter using marketing spend by channel while protecting gross margin?` handling via backend test analysis and frontend `workspace_preview` coverage.
 - **Incomplete Prompt Logic**: Verified `How should we adjust discount rate by region next quarter?` handling (missing inputs detected and displayed).
 - **Stale-Card Action Check**: Verified `Analyze Workspace` on historical cards uses message-scoped `session_state` (logic check in `AIShell.jsx` and `renderArtifact`).

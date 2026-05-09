@@ -235,6 +235,16 @@ class DecisionChatService:
             "mode": mode,
             "mode_context": updated_state["mode_context"],
             "action_state": updated_state["action_state"],
+            "decision_readiness": DecisionChatService._build_response_readiness_state(
+                mode=mode,
+                workspace=draft_workspace,
+                available_actions=normalized_actions,
+            ),
+            "capability_state": DecisionChatService._build_response_capability_state(
+                mode=mode,
+                workspace=draft_workspace,
+                user_message=user_message,
+            ),
             "suggested_actions": normalized_actions,
             "artifacts": normalized_artifacts,
             "draft_workspace_preview": (
@@ -301,6 +311,16 @@ class DecisionChatService:
             "mode": "decide",
             "mode_context": updated_state["mode_context"],
             "action_state": updated_state["action_state"],
+            "decision_readiness": DecisionChatService._build_response_readiness_state(
+                mode="decide",
+                workspace=workspace,
+                available_actions=normalized_actions,
+            ),
+            "capability_state": DecisionChatService._build_response_capability_state(
+                mode="decide",
+                workspace=workspace,
+                user_message=str(payload.get("user_message") or session_state.get("decision_prompt") or "").strip(),
+            ),
             "assistant_message": assistant_message,
             "executed_action": DecisionChatService._normalize_action_contract(action, mode="decide"),
             "suggested_actions": normalized_actions,
@@ -514,7 +534,128 @@ class DecisionChatService:
             "can_open_workspace": True,
             "can_analyze_workspace": True,
             "can_run_simulation": bool(readiness.get("can_run_simulation")),
+            "readiness_state": readiness.get("readiness_state"),
+            "structural_readiness": readiness.get("structural_readiness") or {},
+            "blocked_state": readiness.get("blocked_state") or {},
+            "allowed_next_actions": list(readiness.get("allowed_next_actions") or []),
+            "capability_state": readiness.get("capability_state") or {},
+            "unsupported_capabilities": list(readiness.get("unsupported_capabilities") or []),
+            "not_ready_for_recommendation": bool(readiness.get("not_ready_for_recommendation", True)),
         }
+
+    @staticmethod
+    def _build_response_readiness_state(
+        *,
+        mode: str,
+        workspace: Dict[str, Any] | None,
+        available_actions: List[Dict[str, Any]],
+    ) -> Dict[str, Any]:
+        if not isinstance(workspace, dict) or not workspace:
+            return {
+                "current_mode": mode,
+                "has_decision_frame": False,
+                "workspace_status": None,
+                "readiness_state": "not_applicable",
+                "structural_readiness": {},
+                "blocked_state": {"is_blocked": False, "blocked_action_ids": [], "blocking_missing_inputs": []},
+                "allowed_next_actions": [],
+                "primary_action_id": None,
+                "missing_inputs": [],
+            }
+
+        readiness = workspace.get("readiness") if isinstance(workspace.get("readiness"), dict) else {}
+        action_state = DecisionChatService._build_action_state(mode, available_actions)
+        return {
+            "current_mode": mode,
+            "has_decision_frame": True,
+            "workspace_id": workspace.get("workspace_id"),
+            "workspace_status": workspace.get("status"),
+            "readiness_state": readiness.get("readiness_state") or workspace.get("status"),
+            "truth_boundary": readiness.get("truth_boundary") or "observational_analysis_only",
+            "structural_readiness": readiness.get("structural_readiness") or {},
+            "blocked_state": readiness.get("blocked_state") or {},
+            "allowed_next_actions": list(readiness.get("allowed_next_actions") or []),
+            "primary_action_id": action_state.get("primary_action_id"),
+            "missing_inputs": list(readiness.get("missing_inputs") or []),
+        }
+
+    @staticmethod
+    def _build_response_capability_state(
+        *,
+        mode: str,
+        workspace: Dict[str, Any] | None,
+        user_message: str,
+    ) -> Dict[str, Any]:
+        requested_capabilities = DecisionChatService._detect_requested_capabilities(user_message)
+        if isinstance(workspace, dict):
+            readiness = workspace.get("readiness") if isinstance(workspace.get("readiness"), dict) else {}
+            capability_state = dict(readiness.get("capability_state") or {})
+            unsupported = list(readiness.get("unsupported_capabilities") or [])
+        else:
+            capability_state = DecisionChatService._default_capability_state(mode)
+            unsupported = ["simulation", "optimization", "autonomous_decisioning", "final_recommendation"]
+
+        return {
+            **capability_state,
+            "requested_capabilities": requested_capabilities,
+            "unsupported_requested_capabilities": [
+                item for item in requested_capabilities if item in unsupported
+            ],
+            "truth_boundary": "observational_analysis_only",
+        }
+
+    @staticmethod
+    def _default_capability_state(mode: str) -> Dict[str, Any]:
+        return {
+            "observational_analysis": {
+                "supported": True,
+                "available": mode == "explore",
+                "status": "allowed" if mode == "explore" else "not_applicable",
+                "reason": "Explore mode can answer grounded analytic questions when data is available.",
+            },
+            "workspace_open": {
+                "supported": True,
+                "available": False,
+                "status": "blocked",
+                "reason": "A decision workspace must be drafted before it can be opened.",
+            },
+            "simulation": DecisionChatService._unsupported_capability(
+                "Causal simulation is not implemented in decision chat."
+            ),
+            "optimization": DecisionChatService._unsupported_capability(
+                "Goal-seeking optimization is not implemented in decision chat."
+            ),
+            "autonomous_decisioning": DecisionChatService._unsupported_capability(
+                "The system does not make autonomous decisions."
+            ),
+            "final_recommendation": DecisionChatService._unsupported_capability(
+                "The system can provide observational decision support, not final recommendations."
+            ),
+        }
+
+    @staticmethod
+    def _unsupported_capability(reason: str) -> Dict[str, Any]:
+        return {
+            "supported": False,
+            "available": False,
+            "status": "unsupported",
+            "reason": reason,
+        }
+
+    @staticmethod
+    def _detect_requested_capabilities(user_message: str) -> List[str]:
+        normalized = DecisionChatService._normalize_text(user_message)
+        requested: List[str] = []
+        checks = [
+            ("simulation", ("simulate", "simulation", "what-if", "what if")),
+            ("optimization", ("optimize", "optimise", "optimizer", "best allocation", "maximize", "minimize")),
+            ("autonomous_decisioning", ("autonomous", "decide for me", "make the decision")),
+            ("final_recommendation", ("final recommendation", "recommendation", "recommend ", "tell me what to do")),
+        ]
+        for capability, keywords in checks:
+            if any(keyword in normalized for keyword in keywords):
+                requested.append(capability)
+        return requested
 
     @staticmethod
     def _normalize_available_actions(actions: Any, mode: str) -> List[Dict[str, Any]]:
@@ -1391,6 +1532,11 @@ class DecisionChatService:
             "response_kind": action_id,
             "workspace_id": workspace.get("workspace_id"),
             "workspace_status": workspace.get("status"),
+            "readiness_state": readiness.get("readiness_state"),
+            "structural_readiness": readiness.get("structural_readiness") or {},
+            "blocked_state": readiness.get("blocked_state") or {},
+            "allowed_next_actions": list(readiness.get("allowed_next_actions") or []),
+            "capability_state": readiness.get("capability_state") or {},
             "missing_inputs": list(readiness.get("missing_inputs") or []),
             "truthfulness_note": DecisionChatService._decision_truthfulness_note(),
         }
@@ -1464,7 +1610,17 @@ class DecisionChatService:
                 "readiness_meaning": readiness_meaning,
                 "truthfulness_note": truthfulness_note,
                 "recommended_next_action": recommended_next_action,
+                "readiness_state": readiness.get("readiness_state"),
+                "capability_state": readiness.get("capability_state") or {},
             },
+            "readiness_state": readiness.get("readiness_state"),
+            "truth_boundary": readiness.get("truth_boundary") or "observational_analysis_only",
+            "structural_readiness": readiness.get("structural_readiness") or {},
+            "blocked_state": readiness.get("blocked_state") or {},
+            "allowed_next_actions": list(readiness.get("allowed_next_actions") or []),
+            "capability_state": readiness.get("capability_state") or {},
+            "unsupported_capabilities": list(readiness.get("unsupported_capabilities") or []),
+            "not_ready_for_recommendation": bool(readiness.get("not_ready_for_recommendation", True)),
             "objective_metric": objective_metric,
             "time_horizon": time_horizon.get("label"),
             "levers": lever_items,

@@ -35,7 +35,7 @@ Do not treat ranked observational evidence as ranked recommendations.
 
 | Phase | Owner | Status | Source Recommendation | Objective |
 | --- | --- | --- | --- | --- |
-| 1 | Codex | Ready to start | `rec-decision-reliability-foundation` | Add prompt benchmark fixtures, grading checks, and additive capability/readiness fields. |
+| 1 | Codex | Implemented; verification partial in local runtime | `rec-decision-reliability-foundation` | Add prompt benchmark fixtures, grading checks, and additive capability/readiness fields. |
 | 2 | Codex | Next after Phase 1 | `rec-semantic-model-role-strengthening` | Add decision-aware semantic roles, confidence, aliases, polarity, controllability, and unresolved mapping details. |
 | 3 | Codex first, Gemini after backend contract stabilizes | Later | `rec-decision-frame-correction-loop`, `rec-ranked-observational-evidence` | Add frame correction actions and richer ranked observational evidence. |
 | 4 | Codex planning, Gemini frontend implementation | Later | `rec-canonical-active-dataset-contract` | Define and implement one active dataset source of truth across AI chat, Decisions, charts, dashboards, and workflows. |
@@ -45,6 +45,8 @@ Do not treat ranked observational evidence as ranked recommendations.
 ## Phase 1: Reliability Foundation
 
 Phase 1 is the best first slice if the user wants to continue now.
+
+May 9, 2026 implementation note: Phase 1 now has a Python unittest benchmark suite at `tests/test_decision_reliability_benchmark.py` backed by fixtures in `tests/decision_reliability_benchmark_cases.py`. Backend decision responses include additive readiness and capability truth fields. The benchmark and workspace tests pass in the bundled Codex Python runtime. The existing Flask route-level chat test could not run in the current non-escalated runtime because Flask is not visible there; system Python also cannot see dependencies inside the sandbox.
 
 The goal is to make prompt-first Decision Intelligence measurable. The system should no longer rely on a few manually verified prompts. It should have a repeatable benchmark that checks extraction, readiness, allowed actions, and forbidden claims.
 

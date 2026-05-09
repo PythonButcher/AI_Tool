@@ -6,6 +6,46 @@ All timestamps use ISO-8601 UTC strings. Optional fields may be `null`. All obje
 
 ## Shared Nested Objects
 
+### Decision Readiness State
+
+Additive readiness metadata returned by Decision Chat responses and Decision Workspace objects. These fields are the backend-owned truth source for whether a decision frame is structurally ready, what action is allowed next, and which capabilities are explicitly unsupported.
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `readiness_state` | `string` | Yes | `analysis_ready`, `blocked`, `limited`, or `not_applicable` on non-decision chat responses |
+| `truth_boundary` | `string` | Yes | Current value is `observational_analysis_only` |
+| `structural_readiness` | `object` | Yes | Flags for `ready_for_observational_analysis`, `ready_for_recommendation`, `ready_for_simulation`, `ready_for_optimization`, `ready_for_autonomous_decisioning`, and `missing_inputs` |
+| `blocked_state` | `object` | Yes | Includes `is_blocked`, `blocked_action_ids`, `blocking_missing_inputs`, and `blocking_unknown_ids` |
+| `allowed_next_actions` | `string[]` | Yes | Backend-approved action IDs such as `analyze_workspace`, `show_blockers`, `open_workspace`, and `show_assumptions` |
+| `capability_state` | `object` | Yes | Capability map described below |
+| `unsupported_capabilities` | `string[]` | Yes | Current values include `simulation`, `optimization`, `autonomous_decisioning`, and `final_recommendation` |
+| `not_ready_for_recommendation` | `boolean` | Yes | Current Decision Intelligence output remains observational and should not be rendered as a final recommendation |
+
+Legacy compatibility note: existing fields such as `can_run_simulation` and `blocks_simulation` remain available for older frontend code. They must not be interpreted as a current runtime simulation feature. New code should prefer `capability_state.simulation.status == "unsupported"` and `truth_boundary == "observational_analysis_only"`.
+
+### Capability State
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `observational_analysis` | `Capability Item` | Yes | Supported; available only when the decision frame is structurally ready |
+| `workspace_open` | `Capability Item` | Yes | Supported when a draft workspace exists |
+| `simulation` | `Capability Item` | Yes | Unsupported in the current runtime |
+| `optimization` | `Capability Item` | Yes | Unsupported in the current runtime |
+| `autonomous_decisioning` | `Capability Item` | Yes | Unsupported in the current runtime |
+| `final_recommendation` | `Capability Item` | Yes | Unsupported; current output is decision support, not final recommendation |
+| `requested_capabilities` | `string[]` | Chat only | Echoes detected unsupported or sensitive capability requests from the user message |
+| `unsupported_requested_capabilities` | `string[]` | Chat only | Intersection of requested capabilities and backend-unsupported capabilities |
+| `truth_boundary` | `string` | Chat only | Current value is `observational_analysis_only` |
+
+### Capability Item
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `supported` | `boolean` | Yes | Whether the backend supports the capability |
+| `available` | `boolean` | Yes | Whether the capability can be used in the current frame |
+| `status` | `string` | Yes | `allowed`, `blocked`, `unsupported`, or `not_applicable` |
+| `reason` | `string` | Yes | Human-readable reason suitable for UI tooltips or diagnostics |
+
 ### Dataset Summary
 
 | Field | Type | Required | Notes |
