@@ -35,7 +35,7 @@
       "reviewed_by": ["decision_intelligence_specialist", "skeptic_qa_reviewer"]
     },
     {
-      "path": "project_docs/active/decision_intelligence/phase_4_5_ai_chat_decision_intelligence_plan.md",
+      "path": "project_docs/active/decision_intelligence/completed/phase_4_5_ai_chat_decision_intelligence_plan.md",
       "source_type": "handoff",
       "relevance": "Defines the truth boundary for AI chat, decisions, observational analysis, and unsupported capabilities.",
       "reviewed_by": ["product_ux_strategist", "decision_intelligence_specialist", "skeptic_qa_reviewer"]
@@ -305,7 +305,7 @@
         "evidence": [
           "frontend/frontend/src/components/layout/DestinationHome.jsx",
           "frontend/frontend/src/features/business/decision/DecisionIntakeFlow.jsx",
-          "project_docs/active/decision_intelligence/phase_4_5_ai_chat_decision_intelligence_plan.md"
+          "project_docs/active/decision_intelligence/completed/phase_4_5_ai_chat_decision_intelligence_plan.md"
         ],
         "proposed_changes": [
           "Include a first-pass copy and hierarchy cleanup alongside critical action/handoff fixes."
@@ -509,7 +509,7 @@
           "frontend/frontend/src/components/layout/CanvasContainer.jsx",
           "frontend/frontend/src/features/ai/AIShell.jsx",
           "frontend/frontend/src/features/business/decision/DecisionWorkspaceView.jsx",
-          "project_docs/active/decision_intelligence/phase_4_5_ai_chat_decision_intelligence_plan.md"
+          "project_docs/active/decision_intelligence/completed/phase_4_5_ai_chat_decision_intelligence_plan.md"
         ],
         "proposed_changes": [
           "Save the council output and create a Gemini handoff prompt."
@@ -657,7 +657,7 @@
       "title": "Remove overclaiming AI and Decision language",
       "summary": "Rewrite UI language that implies autonomous intelligence, optimization, simulation, final recommendations, ranked decisions, or finalized analysis unless it is explicitly framed as unavailable or future capability.",
       "originating_agents": ["product_ux_strategist", "decision_intelligence_specialist", "architecture_guardian", "skeptic_qa_reviewer"],
-      "source_paths": ["frontend/frontend/src/features/ai/AIShell.jsx", "frontend/frontend/src/components/layout/DestinationHome.jsx", "frontend/frontend/src/features/business/decision/DecisionIntakeFlow.jsx", "frontend/frontend/src/features/business/decision/DecisionWorkspaceView.jsx", "project_docs/active/decision_intelligence/phase_4_5_ai_chat_decision_intelligence_plan.md"],
+      "source_paths": ["frontend/frontend/src/features/ai/AIShell.jsx", "frontend/frontend/src/components/layout/DestinationHome.jsx", "frontend/frontend/src/features/business/decision/DecisionIntakeFlow.jsx", "frontend/frontend/src/features/business/decision/DecisionWorkspaceView.jsx", "project_docs/active/decision_intelligence/completed/phase_4_5_ai_chat_decision_intelligence_plan.md"],
       "priority": "high",
       "confidence": 0.9,
       "implementation_timing": "now",

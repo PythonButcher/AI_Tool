@@ -66,14 +66,14 @@ That cleanup slice is now archive material, not the default resume point.
 
 Active Phase 4 and Phase 4.5 planning files:
 
-- `project_docs/active/decision_intelligence/decision_intelligence_v3_gemini_handoff_02_chat_decision_bridge.md`
-- `project_docs/active/decision_intelligence/decision_intelligence_v3_phase_4_chat_engine_execution_plan.md`
-- `project_docs/active/decision_intelligence/phase_4_5_ai_chat_decision_intelligence_plan.md`
+- `project_docs/active/decision_intelligence/completed/decision_intelligence_v3_gemini_handoff_02_chat_decision_bridge.md`
+- `project_docs/active/decision_intelligence/completed/decision_intelligence_v3_phase_4_chat_engine_execution_plan.md`
+- `project_docs/active/decision_intelligence/completed/phase_4_5_ai_chat_decision_intelligence_plan.md`
 
 Required pre-Phase-4 plan:
 
-- `project_docs/active/decision_intelligence/phase_3_5_decision_intake_rework.md`
-- `project_docs/active/decision_intelligence/decision_intelligence_v3_gemini_handoff_03_phase_3_5_prompt_first_intake.md`
+- `project_docs/active/decision_intelligence/current/phase_3_5_decision_intake_rework.md`
+- `project_docs/active/decision_intelligence/completed/decision_intelligence_v3_gemini_handoff_03_phase_3_5_prompt_first_intake.md`
 
 Important truth rule:
 
@@ -153,7 +153,7 @@ Read in this order:
 1. `project_docs/INDEX.md`
 2. `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md`
 3. `project_docs/active/status/decision_intelligence_execution_status.md`
-4. `project_docs/active/decision_intelligence/decision_intelligence_v3_resume_handoff.md`
+4. `project_docs/active/decision_intelligence/current/decision_intelligence_v3_resume_handoff.md`
 5. the relevant active phase or handoff docs for the task
 6. archive docs only if active docs explicitly point to them or historical context is required
 

@@ -1,86 +1,58 @@
-# Project Docs Index
+# Project Documentation Index
 
-This folder is the canonical home for project planning, implementation, handoff, and review markdown.
+This is the top-level documentation entry point for AI_Tool.
 
-## Default Scan Rule
+Agents must use this file as a routing map, not as permission to scan every Markdown file. The goal is to read the smallest set of current documents needed for the task.
 
-Use `project_docs/active/` by default.
+## Required First Reads
 
-Do not scan `project_docs/archive/` unless:
+| Order | File | Purpose |
+| --- | --- | --- |
+| 1 | `project_docs/active/README.md` | Main navigation hub and current scan rules. |
+| 2 | `project_docs/active/status/decision_intelligence_execution_status.md` | Current project truth and implementation status. |
+| 3 | `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md` | Codex/Gemini ownership boundary. |
 
-- an active doc explicitly points there
-- the user asks for historical context
-- a current contradiction cannot be resolved from the active set
+After those files, read only the task-specific document listed below.
 
-The archive exists to preserve context without burning tokens on old plans that no longer drive implementation.
+## Current Work Path
 
-## Folder Structure
+| Need | Read |
+| --- | --- |
+| Choose the next implementation slice | `project_docs/active/agent_council/outputs/application-next-focus-priorities/README.md` |
+| Inspect the full latest council recommendation | `project_docs/active/agent_council/outputs/application-next-focus-priorities/2026-05-01-council.json` |
+| Work on decision object contracts | `project_docs/active/contracts/decision_objects.md` |
+| Work inside Decision Intelligence docs | `project_docs/active/decision_intelligence/README.md` first, then only the named file under `current/` or `completed/` |
+| Review frontend state architecture | `project_docs/active/reviews/react_state_flow_review.md` |
+| Run or modify Agent Council workflow | `project_docs/active/agent_council/README.md` |
 
-`project_docs/active/`
+## Current Project Truth
 
-- current rules
-- current execution status
-- active Decision Intelligence plans and handoffs
-- active contracts
-- active technical reviews
-- reusable planning workflows, including the Agent Council debate framework
+Decision Intelligence V3 is active. V2 is closed as-is and lives as historical context.
 
-`project_docs/archive/`
+Phase 4.5 AI Chat Decision Intelligence hardening is complete. The product now has real chat-to-decision continuity, scoped action behavior, truthful observational-analysis language, and verified frontend hardening.
 
-- historical `ai_handoff` material
-- older overhaul plans
-- semantic-foundation planning history
-- implementation notes that are no longer part of the default execution path
+The next work is not broad frontend polish and not new simulation or optimization. The next work is a Codex-owned reliability foundation: benchmark prompt fixtures, grading checks, and additive capability/readiness fields. Semantic role strengthening follows that.
 
-## Active Scan Order
+## Folder Map
 
-Read these first for current Decision Intelligence work:
+| Folder | Meaning | Default Scan Rule |
+| --- | --- | --- |
+| `project_docs/active/status/` | Current execution truth. | Read first. |
+| `project_docs/active/rules/` | Standing rules and ownership boundaries. | Read when scope or frontend ownership matters. |
+| `project_docs/active/contracts/` | Backend/frontend contract references. | Read when changing or reviewing response shapes. |
+| `project_docs/active/decision_intelligence/` | Decision Intelligence navigation, current docs, and completed handoffs. | Read its README first; use `current/` for active docs and `completed/` only for reference. |
+| `project_docs/active/agent_council/` | Reusable council workflow and live planning outputs. | Read only for planning or next-focus decisions. |
+| `project_docs/active/reviews/` | Focused technical reviews. | Read only when touching the reviewed area. |
+| `project_docs/archive/` | Historical material. | Do not scan unless explicitly needed. |
 
-1. `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md`
-2. `project_docs/active/status/decision_intelligence_execution_status.md`
-3. `project_docs/active/decision_intelligence/decision_intelligence_v3_resume_handoff.md`
-4. `project_docs/active/decision_intelligence/phase_4_5_ai_chat_decision_intelligence_plan.md`
-5. the specific active handoff or contract that matches the task
+## Do Not Do This
 
-## Current Active Documents
+Do not scan `project_docs/archive/` for normal work.
 
-Rules:
+Do not scan every file under `project_docs/active/decision_intelligence/`.
 
-- `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md`
+Do not treat old handoffs as current tasks unless the active status or user names them.
 
-Status:
+Do not treat old checklist unchecked boxes as current blockers if the active status says the work is complete.
 
-- `project_docs/active/status/decision_intelligence_execution_status.md`
-
-Decision Intelligence:
-
-- `project_docs/active/decision_intelligence/decision_intelligence_v3_resume_handoff.md`
-- `project_docs/active/decision_intelligence/phase_3_5_decision_intake_rework.md`
-- `project_docs/active/decision_intelligence/decision_intelligence_v3_phase_4_backend_checkpoint.md`
-- `project_docs/active/decision_intelligence/decision_intelligence_v3_phase_4_chat_engine_execution_plan.md`
-- `project_docs/active/decision_intelligence/decision_intelligence_v3_phase_4_execution_checklist.md`
-- `project_docs/active/decision_intelligence/decision_intelligence_v3_gemini_handoff_02_chat_decision_bridge.md`
-- `project_docs/active/decision_intelligence/decision_intelligence_v3_gemini_handoff_03_phase_3_5_prompt_first_intake.md`
-- `project_docs/active/decision_intelligence/phase_4_5_ai_chat_decision_intelligence_plan.md`
-- `project_docs/active/decision_intelligence/slice_2_5_gemini_frontend_handoff.md`
-- `project_docs/active/decision_intelligence/slice_3_real_action_system_gemini_frontend_handoff.md`
-
-Contracts and reviews:
-
-- `project_docs/active/contracts/decision_objects.md`
-- `project_docs/active/reviews/react_state_flow_review.md`
-
-Planning workflows:
-
-- `project_docs/active/agent_council/README.md`
-- `project_docs/active/agent_council/agent_roles.md`
-- `project_docs/active/agent_council/master_council_prompt.md`
-- `project_docs/active/agent_council/council_output_schema.json`
-- `project_docs/active/agent_council/sample_decision_intelligence_council_output.json`
-- `project_docs/active/agent_council/validate_council_json.py`
-- `project_docs/active/agent_council/outputs/README.md`
-- `project_docs/active/agent_council/outputs/app-wide-ui-flaws/README.md`
-- `project_docs/active/agent_council/outputs/app-wide-ui-flaws/2026-04-28-gemini-council.json`
-- `project_docs/active/agent_council/outputs/app-wide-ui-flaws/gemini_handoff.md`
-- `project_docs/active/agent_council/outputs/application-next-focus-priorities/README.md`
-- `project_docs/active/agent_council/outputs/application-next-focus-priorities/2026-05-01-council.json`
+Do not let frontend work drift to Codex unless the user explicitly authorizes Codex frontend edits in the current session.

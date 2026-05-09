@@ -305,10 +305,10 @@ For the next active Phase 4 work, read:
 1. `project_docs/INDEX.md`
 2. `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md`
 3. `project_docs/active/status/decision_intelligence_execution_status.md`
-4. `project_docs/active/decision_intelligence/decision_intelligence_v3_resume_handoff.md`
-5. `project_docs/active/decision_intelligence/decision_intelligence_v3_gemini_handoff_02_chat_decision_bridge.md`
-6. `project_docs/active/decision_intelligence/phase_4_5_ai_chat_decision_intelligence_plan.md`
-7. `project_docs/active/decision_intelligence/decision_intelligence_v3_phase_4_chat_engine_execution_plan.md`
+4. `project_docs/active/decision_intelligence/current/decision_intelligence_v3_resume_handoff.md`
+5. `project_docs/active/decision_intelligence/completed/decision_intelligence_v3_gemini_handoff_02_chat_decision_bridge.md`
+6. `project_docs/active/decision_intelligence/completed/phase_4_5_ai_chat_decision_intelligence_plan.md`
+7. `project_docs/active/decision_intelligence/completed/decision_intelligence_v3_phase_4_chat_engine_execution_plan.md`
 
 ## One-Line Phase Truth
 

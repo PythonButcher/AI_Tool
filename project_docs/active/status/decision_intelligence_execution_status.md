@@ -30,6 +30,8 @@ Treat that as a continuation-and-hardening checkpoint built on top of the real P
 
 Slice 3 and Phase 4.5 Hardening are complete and verified.
 
+May 8, 2026 documentation navigation update: the documentation entry path has been simplified. Agents should start with `project_docs/INDEX.md`, then `project_docs/active/README.md`, then this status file and the frontend guardrail. Decision Intelligence docs are now physically organized into `project_docs/active/decision_intelligence/current/` and `project_docs/active/decision_intelligence/completed/` so agents do not bulk scan completed work by default.
+
 April 30, 2026 UI tooling update: Codex corrected AI Chat pop-out behavior to use a real browser popup window through `window.open`, then portals the AI Chat React surface into that popup. The app-level minimize control in the popup now flushes the main app's minimized-window state before closing the popup, so AI Chat returns to the existing minimized dock instead of disappearing. If the popup is closed through browser chrome, AI Chat restores back into the main app instead of disappearing. Other app windows remain contained by the normal canvas/window system. The shared minimize control now exposes the correct `Minimize` accessibility label. Browser smoke verification confirmed popup minimize closes the popup and adds `AI Chat` to the main app dock.
 
 The application has been hardened against UI flaws:
@@ -143,32 +145,40 @@ Truth:
 ## Canonical Resume Order
 
 1. `project_docs/INDEX.md`
-2. `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md`
+2. `project_docs/active/README.md`
 3. `project_docs/active/status/decision_intelligence_execution_status.md`
-4. `project_docs/active/decision_intelligence/decision_intelligence_v3_resume_handoff.md`
-5. `project_docs/active/decision_intelligence/phase_4_5_ai_chat_decision_intelligence_plan.md`
-6. the specific active handoff, checklist, or contract needed for the task
+4. `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md`
+5. the task-specific file named by the navigation docs
 
-## Current Active Files
+## Current Navigation And Truth Files
 
-- `project_docs/active/decision_intelligence/decision_intelligence_v3_resume_handoff.md`
-- `project_docs/active/decision_intelligence/phase_3_5_decision_intake_rework.md`
-- `project_docs/active/decision_intelligence/decision_intelligence_v3_phase_4_backend_checkpoint.md`
-- `project_docs/active/decision_intelligence/decision_intelligence_v3_phase_4_chat_engine_execution_plan.md`
-- `project_docs/active/decision_intelligence/decision_intelligence_v3_phase_4_execution_checklist.md`
-- `project_docs/active/decision_intelligence/decision_intelligence_v3_gemini_handoff_02_chat_decision_bridge.md`
-- `project_docs/active/decision_intelligence/decision_intelligence_v3_gemini_handoff_03_phase_3_5_prompt_first_intake.md`
-- `project_docs/active/decision_intelligence/phase_4_5_ai_chat_decision_intelligence_plan.md`
-- `project_docs/active/decision_intelligence/slice_2_5_gemini_frontend_handoff.md`
-- `project_docs/active/decision_intelligence/slice_3_real_action_system_gemini_frontend_handoff.md`
+- `project_docs/active/README.md`
+- `project_docs/active/status/decision_intelligence_execution_status.md`
+- `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md`
+- `project_docs/active/decision_intelligence/README.md`
+- `project_docs/active/agent_council/outputs/application-next-focus-priorities/README.md`
+- `project_docs/active/agent_council/outputs/application-next-focus-priorities/2026-05-01-council.json`
+
+## Task-Specific Reference Files
+
+These files are still useful, but agents should not scan them by default.
+
+- `project_docs/active/decision_intelligence/current/decision_intelligence_v3_resume_handoff.md`
+- `project_docs/active/decision_intelligence/current/phase_3_5_decision_intake_rework.md`
+- `project_docs/active/decision_intelligence/completed/decision_intelligence_v3_phase_4_backend_checkpoint.md`
+- `project_docs/active/decision_intelligence/completed/decision_intelligence_v3_phase_4_chat_engine_execution_plan.md`
+- `project_docs/active/decision_intelligence/completed/decision_intelligence_v3_phase_4_execution_checklist.md`
+- `project_docs/active/decision_intelligence/completed/decision_intelligence_v3_gemini_handoff_02_chat_decision_bridge.md`
+- `project_docs/active/decision_intelligence/completed/decision_intelligence_v3_gemini_handoff_03_phase_3_5_prompt_first_intake.md`
+- `project_docs/active/decision_intelligence/completed/phase_4_5_ai_chat_decision_intelligence_plan.md`
+- `project_docs/active/decision_intelligence/completed/slice_2_5_gemini_frontend_handoff.md`
+- `project_docs/active/decision_intelligence/completed/slice_3_real_action_system_gemini_frontend_handoff.md`
 - `project_docs/active/contracts/decision_objects.md`
 - `project_docs/active/reviews/react_state_flow_review.md`
 - `project_docs/active/agent_council/README.md`
 - `project_docs/active/agent_council/outputs/README.md`
 - `project_docs/active/agent_council/outputs/app-wide-ui-flaws/README.md`
 - `project_docs/active/agent_council/outputs/app-wide-ui-flaws/gemini_handoff.md`
-- `project_docs/active/agent_council/outputs/application-next-focus-priorities/README.md`
-- `project_docs/active/agent_council/outputs/application-next-focus-priorities/2026-05-01-council.json`
 
 ## Planning Support
 

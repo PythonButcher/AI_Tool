@@ -16,7 +16,7 @@ Before changing anything under `frontend/frontend/src/`:
 
 1. re-read this file
 2. re-read `project_docs/active/status/decision_intelligence_execution_status.md`
-3. re-read `project_docs/active/decision_intelligence/decision_intelligence_v3_resume_handoff.md` if the task touches Decision Intelligence
+3. re-read `project_docs/active/decision_intelligence/current/decision_intelligence_v3_resume_handoff.md` if the task touches Decision Intelligence
 4. confirm the user explicitly asked Codex to make frontend changes in the current session
 
 If that explicit permission is missing:

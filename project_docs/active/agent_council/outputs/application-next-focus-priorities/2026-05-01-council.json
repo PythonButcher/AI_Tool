@@ -35,19 +35,19 @@
       "reviewed_by": ["architecture_guardian", "product_ux_strategist", "decision_intelligence_specialist", "skeptic_qa_reviewer", "implementation_planner"]
     },
     {
-      "path": "project_docs/active/decision_intelligence/decision_intelligence_v3_resume_handoff.md",
+      "path": "project_docs/active/decision_intelligence/current/decision_intelligence_v3_resume_handoff.md",
       "source_type": "handoff",
       "relevance": "Defines V3 as the continuation path and preserves the boundary between descriptive analysis and future simulation or trade-off execution.",
       "reviewed_by": ["architecture_guardian", "decision_intelligence_specialist", "product_ux_strategist"]
     },
     {
-      "path": "project_docs/active/decision_intelligence/phase_3_5_decision_intake_rework.md",
+      "path": "project_docs/active/decision_intelligence/current/phase_3_5_decision_intake_rework.md",
       "source_type": "handoff",
       "relevance": "Provides current prompt-first intake context and known reliability target around objective, lever, guardrail, and horizon separation.",
       "reviewed_by": ["decision_intelligence_specialist", "skeptic_qa_reviewer", "implementation_planner"]
     },
     {
-      "path": "project_docs/active/decision_intelligence/phase_4_5_ai_chat_decision_intelligence_plan.md",
+      "path": "project_docs/active/decision_intelligence/completed/phase_4_5_ai_chat_decision_intelligence_plan.md",
       "source_type": "handoff",
       "relevance": "Defines Phase 4.5 truth boundaries, acceptance scenarios, and non-goals around fake simulation, optimization, and autonomous behavior.",
       "reviewed_by": ["architecture_guardian", "product_ux_strategist", "decision_intelligence_specialist", "skeptic_qa_reviewer", "implementation_planner"]
@@ -186,7 +186,7 @@
         ],
         "evidence": [
           "project_docs/active/status/decision_intelligence_execution_status.md",
-          "project_docs/active/decision_intelligence/phase_4_5_ai_chat_decision_intelligence_plan.md",
+          "project_docs/active/decision_intelligence/completed/phase_4_5_ai_chat_decision_intelligence_plan.md",
           "project_docs/active/contracts/decision_objects.md"
         ],
         "proposed_changes": [
@@ -213,7 +213,7 @@
         ],
         "evidence": [
           "project_docs/active/status/decision_intelligence_execution_status.md",
-          "project_docs/active/decision_intelligence/phase_4_5_ai_chat_decision_intelligence_plan.md",
+          "project_docs/active/decision_intelligence/completed/phase_4_5_ai_chat_decision_intelligence_plan.md",
           "project_docs/active/agent_council/outputs/app-wide-ui-flaws/2026-04-28-gemini-council.json"
         ],
         "proposed_changes": [
@@ -331,7 +331,7 @@
           "Scenario preview fields can become user-facing scenario controls without a stricter contract."
         ],
         "evidence": [
-          "project_docs/active/decision_intelligence/phase_4_5_ai_chat_decision_intelligence_plan.md",
+          "project_docs/active/decision_intelligence/completed/phase_4_5_ai_chat_decision_intelligence_plan.md",
           "project_docs/active/contracts/decision_objects.md"
         ],
         "proposed_changes": [
@@ -451,7 +451,7 @@
           "Benchmark prompts and capability contracts must be separate phases."
         ],
         "evidence": [
-          "project_docs/active/decision_intelligence/phase_4_5_ai_chat_decision_intelligence_plan.md",
+          "project_docs/active/decision_intelligence/completed/phase_4_5_ai_chat_decision_intelligence_plan.md",
           "project_docs/active/contracts/decision_objects.md"
         ],
         "proposed_changes": [
@@ -677,7 +677,7 @@
       "originating_agents": ["architecture_guardian", "decision_intelligence_specialist", "skeptic_qa_reviewer", "implementation_planner"],
       "source_paths": [
         "project_docs/active/status/decision_intelligence_execution_status.md",
-        "project_docs/active/decision_intelligence/phase_4_5_ai_chat_decision_intelligence_plan.md",
+        "project_docs/active/decision_intelligence/completed/phase_4_5_ai_chat_decision_intelligence_plan.md",
         "project_docs/active/contracts/decision_objects.md",
         "tests/test_decision_chat_service.py",
         "tests/test_decision_workspace_service.py"
@@ -776,7 +776,7 @@
       "summary": "Allow users to correct objective, lever, segment, guardrail, and horizon interpretation before analysis, preserving the corrected workspace in session state and downstream analysis.",
       "originating_agents": ["decision_intelligence_specialist", "product_ux_strategist", "implementation_planner"],
       "source_paths": [
-        "project_docs/active/decision_intelligence/phase_4_5_ai_chat_decision_intelligence_plan.md",
+        "project_docs/active/decision_intelligence/completed/phase_4_5_ai_chat_decision_intelligence_plan.md",
         "backend/decision_engine/chat_service.py",
         "backend/services/decision_workspace_service.py",
         "project_docs/active/agent_council/outputs/app-wide-ui-flaws/gemini_handoff.md"
@@ -926,7 +926,7 @@
         "backend/routes/ml_prep.py",
         "backend/routes/automl.py",
         "backend/services/automl_logic.py",
-        "project_docs/active/decision_intelligence/phase_4_5_ai_chat_decision_intelligence_plan.md"
+        "project_docs/active/decision_intelligence/completed/phase_4_5_ai_chat_decision_intelligence_plan.md"
       ],
       "priority": "medium",
       "confidence": 0.84,
@@ -974,8 +974,8 @@
       "source_paths": [
         "project_docs/active/contracts/decision_objects.md",
         "backend/services/scenario_service.py",
-        "project_docs/active/decision_intelligence/decision_intelligence_v3_resume_handoff.md",
-        "project_docs/active/decision_intelligence/phase_4_5_ai_chat_decision_intelligence_plan.md"
+        "project_docs/active/decision_intelligence/current/decision_intelligence_v3_resume_handoff.md",
+        "project_docs/active/decision_intelligence/completed/phase_4_5_ai_chat_decision_intelligence_plan.md"
       ],
       "priority": "medium",
       "confidence": 0.82,

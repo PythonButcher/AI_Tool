@@ -28,7 +28,7 @@
       "reviewed_by": ["product_ux_strategist", "skeptic_qa_reviewer", "implementation_planner"]
     },
     {
-      "path": "project_docs/active/decision_intelligence/phase_4_5_ai_chat_decision_intelligence_plan.md",
+      "path": "project_docs/active/decision_intelligence/completed/phase_4_5_ai_chat_decision_intelligence_plan.md",
       "source_type": "handoff",
       "relevance": "Defines Phase 4.5 goals: mode clarity, prompt reliability, action fidelity, artifact quality, workspace handoff, and evaluation coverage.",
       "reviewed_by": ["decision_intelligence_specialist", "product_ux_strategist"]
@@ -534,8 +534,8 @@
       "summary": "Define a small benchmark of realistic complete, incomplete, ambiguous, analytic, data-dependent, and unsupported prompts with expected objective, levers, segments, guardrails, missing inputs, action availability, dataset and semantic readiness, and user-comprehension outcomes.",
       "originating_agents": ["decision_intelligence_specialist", "data_ml_readiness_specialist", "skeptic_qa_reviewer", "product_ux_strategist"],
       "source_paths": [
-        "project_docs/active/decision_intelligence/phase_4_5_ai_chat_decision_intelligence_plan.md",
-        "project_docs/active/decision_intelligence/decision_intelligence_v3_resume_handoff.md",
+        "project_docs/active/decision_intelligence/completed/phase_4_5_ai_chat_decision_intelligence_plan.md",
+        "project_docs/active/decision_intelligence/current/decision_intelligence_v3_resume_handoff.md",
         "project_docs/active/status/decision_intelligence_execution_status.md"
       ],
       "priority": "high",
@@ -574,7 +574,7 @@
       "originating_agents": ["architecture_guardian", "implementation_planner"],
       "source_paths": [
         "project_docs/active/contracts/decision_objects.md",
-        "project_docs/active/decision_intelligence/slice_3_real_action_system_gemini_frontend_handoff.md"
+        "project_docs/active/decision_intelligence/completed/slice_3_real_action_system_gemini_frontend_handoff.md"
       ],
       "priority": "medium",
       "confidence": 0.84,
@@ -611,7 +611,7 @@
       "originating_agents": ["product_ux_strategist", "implementation_planner", "skeptic_qa_reviewer"],
       "source_paths": [
         "project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md",
-        "project_docs/active/decision_intelligence/phase_4_5_ai_chat_decision_intelligence_plan.md"
+        "project_docs/active/decision_intelligence/completed/phase_4_5_ai_chat_decision_intelligence_plan.md"
       ],
       "priority": "medium",
       "confidence": 0.79,
