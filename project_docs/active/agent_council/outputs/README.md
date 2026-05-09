@@ -17,3 +17,5 @@ The topic README should explain the purpose, list the artifacts, include the val
 Current topics:
 
 `app-wide-ui-flaws/`
+
+`application-next-focus-priorities/`

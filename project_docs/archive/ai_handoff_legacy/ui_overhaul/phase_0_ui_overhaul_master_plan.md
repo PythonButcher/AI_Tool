@@ -1,3 +1,4 @@
+> ARCHIVED REFERENCE ONLY: This file is historical. Do not treat old wording below such as "active", "next", "source of truth", or "handoff" as current project truth.
 # Phase 0: UI Overhaul Master Plan
 
 ## Section 1 - Overhaul Intent
