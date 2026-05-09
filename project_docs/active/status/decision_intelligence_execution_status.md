@@ -18,12 +18,6 @@ Before Codex edits frontend files for this initiative, re-read:
 
 - `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md`
 
-## Branch Truth
-
-The active branch label is `decision-intelligence-v4-phase4.5`.
-
-Treat that as a continuation-and-hardening checkpoint built on top of the real Phase 4 backend contract, not as a brand-new disconnected program.
-
 ## Current Status Snapshot
 
 ## Current Coordination Checkpoint
