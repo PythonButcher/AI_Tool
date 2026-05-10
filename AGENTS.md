@@ -12,14 +12,15 @@ Do not scan every Markdown file. Do not scan `project_docs/archive/` unless an a
 | Understand current truth and scan rules | `project_docs/active/README.md` |
 | Check current Decision Intelligence status | `project_docs/active/status/decision_intelligence_execution_status.md` |
 | Confirm Codex vs Gemini ownership | `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md` |
-| Execute the council-derived next-focus plan | `project_docs/active/decision_intelligence/current/next_focus_execution_plan.md` |
+| Execute the current implementation plan | `project_docs/active/decision_intelligence/current/phase_2_semantic_role_strengthening_plan.md` |
+| Review the council-derived roadmap | `project_docs/active/decision_intelligence/current/next_focus_execution_plan.md` |
 | Choose next implementation work | `project_docs/active/agent_council/outputs/application-next-focus-priorities/README.md` |
 | Inspect detailed next-focus recommendations | `project_docs/active/agent_council/outputs/application-next-focus-priorities/2026-05-01-council.json` |
 | Work on contracts | `project_docs/active/contracts/decision_objects.md` |
 | Work on Decision Intelligence historical plans or handoffs | `project_docs/active/decision_intelligence/README.md` first |
 | Run or update Agent Council workflow | `project_docs/active/agent_council/README.md` |
 
-Current project truth: Decision Intelligence V3 is active, Phase 4.5 hardening is complete, and the next priority is a Codex-owned reliability foundation with benchmark prompts, grading checks, and additive readiness/capability fields. Frontend implementation belongs to Gemini unless the user explicitly authorizes Codex frontend edits in the current session.
+Current project truth: Decision Intelligence V3 is active. Phase 4.5 hardening and Phase 1 reliability foundation are complete, including Gemini frontend integration of the reliability fields. The active next implementation plan is Codex-owned Phase 2 semantic role strengthening at `project_docs/active/decision_intelligence/current/phase_2_semantic_role_strengthening_plan.md`. Frontend implementation belongs to Gemini unless the user explicitly authorizes Codex frontend edits in the current session.
 
 Codex is the coordinator for Decision Intelligence work. This file is only for standing Codex reference, not for active Gemini task handoffs.
 

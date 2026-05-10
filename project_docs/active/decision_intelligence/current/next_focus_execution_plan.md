@@ -12,8 +12,8 @@ The council recommends measurable Decision Intelligence reliability before broad
 
 The strongest next path is:
 
-1. Build a reliability benchmark and capability/readiness boundary.
-2. Strengthen semantic role detection and confidence.
+1. Build a reliability benchmark and capability/readiness boundary. Completed.
+2. Strengthen semantic role detection and confidence. Active next.
 3. Add correction and richer observational evidence.
 4. Align active dataset truth across surfaces.
 5. Add ML readiness diagnostics.
@@ -35,8 +35,8 @@ Do not treat ranked observational evidence as ranked recommendations.
 
 | Phase | Owner | Status | Source Recommendation | Objective |
 | --- | --- | --- | --- | --- |
-| 1 | Codex | Implemented; verification partial in local runtime | `rec-decision-reliability-foundation` | Add prompt benchmark fixtures, grading checks, and additive capability/readiness fields. |
-| 2 | Codex | Next after Phase 1 | `rec-semantic-model-role-strengthening` | Add decision-aware semantic roles, confidence, aliases, polarity, controllability, and unresolved mapping details. |
+| 1 | Codex and Gemini | Complete | `rec-decision-reliability-foundation` | Add prompt benchmark fixtures, grading checks, additive capability/readiness fields, and frontend rendering of reliability truth. |
+| 2 | Codex | Active next | `rec-semantic-model-role-strengthening` | Add decision-aware semantic roles, confidence, aliases, polarity, controllability, and unresolved mapping details. |
 | 3 | Codex first, Gemini after backend contract stabilizes | Later | `rec-decision-frame-correction-loop`, `rec-ranked-observational-evidence` | Add frame correction actions and richer ranked observational evidence. |
 | 4 | Codex planning, Gemini frontend implementation | Later | `rec-canonical-active-dataset-contract` | Define and implement one active dataset source of truth across AI chat, Decisions, charts, dashboards, and workflows. |
 | 5 | Codex | Deferred | `rec-decision-context-ml-readiness` | Add ML readiness diagnostics without producing predictions or recommendations. |
@@ -44,9 +44,9 @@ Do not treat ranked observational evidence as ranked recommendations.
 
 ## Phase 1: Reliability Foundation
 
-Phase 1 is the best first slice if the user wants to continue now.
+Phase 1 is complete. It remains here as a completed reference because later phases should keep using the benchmark suite and readiness/capability contract as regression coverage.
 
-May 9, 2026 implementation note: Phase 1 now has a Python unittest benchmark suite at `tests/test_decision_reliability_benchmark.py` backed by fixtures in `tests/decision_reliability_benchmark_cases.py`. Backend decision responses include additive readiness and capability truth fields. The benchmark and workspace tests pass in the bundled Codex Python runtime. The existing Flask route-level chat test could not run in the current non-escalated runtime because Flask is not visible there; system Python also cannot see dependencies inside the sandbox.
+May 9, 2026 completion note: Phase 1 now has a Python unittest benchmark suite at `tests/test_decision_reliability_benchmark.py` backed by fixtures in `tests/decision_reliability_benchmark_cases.py`. Backend decision responses include additive readiness and capability truth fields. Gemini frontend integration is complete and verified for object-path normalization, response-level state preservation, and capability merging. The benchmark and workspace tests pass in the bundled Codex Python runtime. The existing Flask route-level chat test could not run in the current non-escalated runtime because Flask is not visible there; system Python also cannot see dependencies inside the sandbox.
 
 The goal is to make prompt-first Decision Intelligence measurable. The system should no longer rely on a few manually verified prompts. It should have a repeatable benchmark that checks extraction, readiness, allowed actions, and forbidden claims.
 
@@ -78,7 +78,9 @@ Unsupported simulation, optimization, autonomous decisioning, and final recommen
 
 ## Phase 2: Semantic Role Strengthening
 
-Phase 2 should start after Phase 1 creates benchmark fixtures. The benchmark should become the measuring stick for semantic improvements.
+Phase 2 is the active next implementation slice. The detailed plan lives at `project_docs/active/decision_intelligence/current/phase_2_semantic_role_strengthening_plan.md`.
+
+The benchmark should become the measuring stick for semantic improvements.
 
 The goal is to improve how the system identifies objective candidates, lever candidates, guardrail candidates, segment dimensions, temporal fields, polarity, controllability, aliases, business terms, confidence, and unresolved mappings.
 
@@ -171,7 +173,7 @@ The council left four useful choices open.
 | Frontend test ownership | Codex should stabilize backend tests first. Gemini can add formal React tests when frontend contracts are stable. |
 | Dashboard decision follow-through | Defer until reliability, semantic roles, and active dataset state are stable. |
 
-## First Slice Prompt For Codex
+## Current Slice Prompt For Codex
 
-Implement Phase 1 of `project_docs/active/decision_intelligence/current/next_focus_execution_plan.md`. Start by reading the active docs and the latest council output. Build a Decision Intelligence reliability benchmark with at least 20 realistic prompts, expected extracted structure, readiness state, allowed actions, and forbidden claims. Add additive readiness/capability truth fields to backend decision responses without renaming existing endpoints, action IDs, or artifact types. Update `project_docs/active/contracts/decision_objects.md` and the active status docs truthfully. Run the targeted decision chat and workspace tests before calling the slice complete.
+Implement Phase 2 from `project_docs/active/decision_intelligence/current/phase_2_semantic_role_strengthening_plan.md`. Keep it backend-first. Add additive decision-aware semantic role metadata, conservative confidence, unresolved mapping details, and tests that protect against semantic false confidence. Update the decision object contract and active status docs truthfully. Do not edit frontend files unless explicitly authorized.
 

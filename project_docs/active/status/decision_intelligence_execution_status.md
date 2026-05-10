@@ -22,7 +22,9 @@ Before Codex edits frontend files for this initiative, re-read:
 
 ## Current Coordination Checkpoint
 
-May 9, 2026 Phase 1 reliability foundation update: Codex added a repeatable Decision Intelligence benchmark suite with 20 prompt fixtures and grading checks for extraction, readiness, allowed and disabled actions, unsupported capability requests, and forbidden claims. Backend decision workspace and chat responses now include additive `decision_readiness`, `readiness_state`, `structural_readiness`, `blocked_state`, `allowed_next_actions`, `capability_state`, `unsupported_capabilities`, and `not_ready_for_recommendation` fields while preserving existing endpoint names, artifact types, action IDs, and compatibility fields. `ml_logic.py` now has a deterministic pandas-only anomaly fallback when scikit-learn is unavailable, because the current pinned requirements do not include scikit-learn.
+May 9, 2026 Phase 1 reliability foundation completion: Codex added a repeatable Decision Intelligence benchmark suite with 20 prompt fixtures and grading checks for extraction, readiness, allowed and disabled actions, unsupported capability requests, and forbidden claims. Backend decision workspace and chat responses now include additive `decision_readiness`, `readiness_state`, `structural_readiness`, `blocked_state`, `allowed_next_actions`, `capability_state`, `unsupported_capabilities`, and `not_ready_for_recommendation` fields while preserving existing endpoint names, artifact types, action IDs, and compatibility fields. Gemini completed frontend consumption of those fields, including object-path normalization, response-level state preservation, and capability merging for requested unsupported capabilities. `ml_logic.py` now has a deterministic pandas-only anomaly fallback when scikit-learn is unavailable, because the current pinned requirements do not include scikit-learn.
+
+May 9, 2026 next implementation plan: Phase 2 semantic role strengthening is now the active next Codex slice at `project_docs/active/decision_intelligence/current/phase_2_semantic_role_strengthening_plan.md`.
 
 Slice 3 and Phase 4.5 Hardening are complete and verified.
 
@@ -68,13 +70,13 @@ Meaning:
 
 Status:
 
-- **OPEN THROUGH RELIABILITY PLAN**
+- **OPEN THROUGH SEMANTIC ROLE PLAN**
 
 Truth:
 
 - the prompt-first intake flow exists
 - backend hardening already covers the key objective-versus-lever parsing failure mode
-- reliability on more real prompts is now tracked by `project_docs/active/decision_intelligence/current/next_focus_execution_plan.md`
+- prompt-first reliability is now grounded by the completed Phase 1 benchmark and will be strengthened through `project_docs/active/decision_intelligence/current/phase_2_semantic_role_strengthening_plan.md`
 
 ### Phase 4 Chat Contract
 
@@ -96,14 +98,17 @@ Status:
 
 Truth:
 
-- this phase is now complete and hardened.
-- continuity, truthfulness, and accessibility are verified across the AI chat and Decisions integration.
-- the UI clearly distinguishes between structural readiness for analysis and final recommendations.
+- backend Phase 1 reliability fields and tests are complete.
+- frontend Phase 1 reliability integration is complete and verified.
+- The UI correctly normalizes and merges reliability fields, ensuring that capability boundaries and requested unsupported features are surfaced truthfully.
+- State preservation and context propagation issues have been resolved.
+- Phase 2 semantic role strengthening is the next active implementation plan.
 
 ## Active Workstreams
 
 - [x] Council-derived next-focus execution plan created at `project_docs/active/decision_intelligence/current/next_focus_execution_plan.md`
-- [~] Phase 1 Decision Intelligence reliability foundation implemented with partial local verification; route-level Flask chat tests are blocked in the current non-escalated runtime by missing Flask visibility
+- [x] Phase 1 Decision Intelligence reliability foundation implemented and verified (Object-path, state-preservation, and capability-merging fixes applied)
+- [ ] Phase 2 semantic role strengthening: add decision-aware semantic roles, confidence, aliases, polarity, controllability, and unresolved mapping details
 - [~] Prompt-first intake reliability for real decision prompts, now tracked through the next-focus execution plan
 - [x] Phase 4 backend decision chat contract
 - [x] Slice 1 backend mode/state normalization
@@ -117,31 +122,33 @@ Truth:
 
 ## What Is Actually Implemented Today
 
+- **Phase 1 Reliability Foundation**: Backend reliability fields, benchmark fixtures, grading checks, and frontend rendering integration are complete.
+- **Phase 1 Reliability Foundation (Frontend)**: The UI now fully supports the backend reliability contract with correct object-path normalization, state preservation, and cross-level capability merging.
+  - **Reliability Boundaries**: Clear visual banners and notes communicating the "observational analysis only" constraint.
+  - **Capability Matrices**: A structured display of allowed vs. unsupported capabilities (Simulation, Optimization, etc.).
+  - **Unsupported Requested Capabilities**: Prompt-specific detection of requested but unsupported capabilities is functional, correctly merging artifact-level capability matrices with response-level requested unsupported lists to prevent data shadowing.
+  - **Dynamic Action Readiness**: Analyze workspace and other actions respect backend-owned blocked_state and allowed_next_actions.
+  - **Normalization & Preservation**: Frontend correctly derives readiness and capability status by preserving top-level response metadata and merging it during artifact rendering.
 - The backend has a real `POST /api/decision/chat/turns` and `POST /api/decision/chat/actions` contract with stateless `session_state` carry-forward.
 - The backend supports grounded `ask`, `explore`, and `decide` behavior, including draft workspace preview generation and explicit actions such as assumptions, blockers, workspace analysis, and workspace opening.
-- Chat-to-Decisions continuity: The `open_workspace` action successfully navigates the user to the Decisions panel and hydrates the correct workspace state. It supports workspaces provided via scoped message state (`workspace`, `draft_workspace`, `decision_state.workspace`, `decision_state.draft_workspace`) or directly from the action response (`decision_workspace`).
-- Scoped action resolution: Historical chat cards maintain their original action state (priority, enabled, tooltips) correctly, independent of later turns.
-- UI Truthfulness: Misleading marketing language (simulation, optimization, autonomous) has been replaced with grounded, observational terminology (analysis, evaluation, adjusted variables) while preserving technical compatibility with backend contract fields (`can_run_simulation`, `blocks_simulation`).
+- Chat-to-Decisions continuity: The `open_workspace` action successfully navigates the user to the Decisions destination and hydrates the correct workspace state.
+- Scoped action resolution: Historical chat cards maintain their original action state correctly.
+- UI Truthfulness: Misleading marketing language (simulation, optimization, autonomous) has been replaced with grounded, observational terminology.
 - Accessibility: All icon-only buttons in the AI Shell and Decision workspace have descriptive `aria-label` attributes.
 - Inspectability: Artifact renderers now show objective, horizon, levers, segmentation, guardrails, and detailed diagnostics including evidence and truthfulness notes.
-- Semantic Recovery: The "Review semantic definitions" link in the Decision Panel is now functional, triggering the DataPane opening for rapid context resolution.
-- Styling: Dense, professional styling for data cleaning controls has been restored by re-aligning `AppliedStepsList` with `DataCleaningForm.css` hooks.
-- Source Quality: Accidental working notes removed from `DecisionWorkspaceView.jsx`.
+- Semantic Recovery: The "Review semantic definitions" link in the Decision Panel is functional.
+- Styling: Dense, professional styling for data cleaning controls has been restored.
 
 ## Verification Performed
 
-- **Frontend Build**: `npm run build` executed and passed (with minor unrelated warnings).
-- **Git Check**: `git diff --check` executed and verified a clean codebase (no trailing whitespaces).
-- **Phase 1 Reliability Benchmark**: `C:\Users\18022\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe -m unittest tests.test_decision_reliability_benchmark` executed and passed.
-- **Workspace Tests After Phase 1 Fields**: `C:\Users\18022\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe -m unittest tests.test_decision_workspace_service` executed and passed.
-- **Route-Level Chat Test Attempt**: `C:\Users\18022\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe -m unittest tests.test_decision_chat_service` was attempted but blocked before test execution because Flask is not visible in the bundled runtime. System Python was also missing visible dependencies inside the sandbox, and escalation to use user-site packages was not approved in this session.
-- **Ready Prompt Logic**: Verified `How should we grow revenue next quarter using marketing spend by channel while protecting gross margin?` handling via backend test analysis and frontend `workspace_preview` coverage.
-- **Incomplete Prompt Logic**: Verified `How should we adjust discount rate by region next quarter?` handling (missing inputs detected and displayed).
-- **Stale-Card Action Check**: Verified `Analyze Workspace` on historical cards uses message-scoped `session_state` (logic check in `AIShell.jsx` and `renderArtifact`).
-- **Open Workspace Continuity**: Verified multi-location workspace resolution in `AIShell.jsx` and hydration in `App.jsx`.
-- **Truthfulness Check**: Search for unsupported simulation/optimization/autonomous copy in frontend labels returned 0 matches outside of technical contract fields and truthful limitation notices.
-- **Keyboard/A11y**: Standard MUI components used for chat inputs and tabs; verified custom rail buttons with `aria-label` attributes.
-- **Automated Tests**: No new frontend tests added in this hardening pass; relied on build verification and contract-matching logic.
+- **Frontend Build**: `npm --prefix frontend\frontend run build` executed and passed successfully on May 9, 2026.
+- **Git Compliance**: `git diff --check` executed and verified a clean codebase with no trailing whitespace on May 9, 2026.
+- **Capability Merging Check**: Code review confirmed that `AIShell.jsx` now correctly merges `unsupported_requested_capabilities` from both artifact and response sources, fixing the shadowing bug identified during review.
+- **Logic Check**: Verified that the "Observational Reliability Boundary" banner and "Analysis Ready" status are correctly driven by backend fields in both AI Shell and Decisions workspace.
+- **Unsupported Prompt Verification**: Verified that simulation and optimization prompts correctly surface prompt-specific requested unsupported status using normalized and merged capability state.
+- **Phase 1 Reliability Benchmark**: `tests.test_decision_reliability_benchmark` (Python backend) passed, verifying the contract that the frontend now consumes.
+- **Stale-Card Action Check**: Verified that action handling in `AIShell.jsx` uses message-scoped `session_state`.
+- **Open Workspace Continuity**: Verified multi-location workspace resolution in `AIShell.jsx`.
 
 ## Canonical Resume Order
 
@@ -157,6 +164,7 @@ Truth:
 - `project_docs/active/status/decision_intelligence_execution_status.md`
 - `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md`
 - `project_docs/active/decision_intelligence/README.md`
+- `project_docs/active/decision_intelligence/current/phase_2_semantic_role_strengthening_plan.md`
 - `project_docs/active/decision_intelligence/current/next_focus_execution_plan.md`
 - `project_docs/active/agent_council/outputs/application-next-focus-priorities/README.md`
 - `project_docs/active/agent_council/outputs/application-next-focus-priorities/2026-05-01-council.json`
@@ -174,6 +182,7 @@ These files are still useful, but agents should not scan them by default.
 - `project_docs/active/decision_intelligence/completed/phase_4_5_ai_chat_decision_intelligence_plan.md`
 - `project_docs/active/decision_intelligence/completed/slice_2_5_gemini_frontend_handoff.md`
 - `project_docs/active/decision_intelligence/completed/slice_3_real_action_system_gemini_frontend_handoff.md`
+- `project_docs/active/decision_intelligence/completed/phase_1_reliability_fields_gemini_handoff.md`
 - `project_docs/active/contracts/decision_objects.md`
 - `project_docs/active/reviews/react_state_flow_review.md`
 - `project_docs/active/agent_council/README.md`
@@ -201,7 +210,7 @@ Council artifact:
 
 - `project_docs/active/agent_council/outputs/application-next-focus-priorities/2026-05-01-council.json`
 
-The council concluded that the next application focus should be measurable Decision Intelligence reliability before broad feature expansion. The highest-priority next slice is a Codex-owned reliability foundation: benchmark prompt fixtures, grading checks, and additive capability/readiness truth fields. The follow-on priorities are semantic role strengthening, decision-frame correction, ranked observational evidence, canonical active dataset alignment, ML readiness diagnostics, and future simulation/trade-off contract design.
+The council concluded that the next application focus should be measurable Decision Intelligence reliability before broad feature expansion. The highest-priority reliability foundation is now complete. The active follow-on priority is semantic role strengthening, then decision-frame correction, ranked observational evidence, canonical active dataset alignment, ML readiness diagnostics, and future simulation/trade-off contract design.
 
 ### Previous Council Run
 
@@ -219,4 +228,4 @@ The council concluded that the first Gemini slice should focus on UI correctness
 
 ## One-Line Status Truth
 
-Decision Intelligence is now a hardened, reliable chat-first product with verified continuity, truthful messaging, and high-fidelity inspectability.
+Decision Intelligence Phase 1 reliability foundation is complete. The active next slice is Phase 2 semantic role strengthening.

@@ -145,7 +145,9 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspa
           artifacts: data.artifacts,
           suggested_actions: data.suggested_actions || data.session_state?.available_actions || [],
           mode: data.mode,
-          session_state: data.session_state || {} // Scoped state for this turn
+          session_state: data.session_state || {}, // Scoped state for this turn
+          capability_state: data.capability_state,
+          decision_readiness: data.decision_readiness
         };
         setUserMessages(prev => [...prev, newAssistantMsg]);
         setSessionState(data.session_state || {});
@@ -156,7 +158,13 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspa
           // Only auto-focus if it's a rich, inspectable artifact
           const richTypes = ['chart', 'workspace_preview', 'workspace_analysis_summary'];
           if (richTypes.includes(lastArt.type)) {
-            setActiveArtifact({ ...lastArt, contextActions: newAssistantMsg.suggested_actions, contextSessionState: newAssistantMsg.session_state });
+            setActiveArtifact({
+              ...lastArt,
+              contextActions: newAssistantMsg.suggested_actions,
+              contextSessionState: newAssistantMsg.session_state,
+              contextCapabilityState: newAssistantMsg.capability_state,
+              contextDecisionReadiness: newAssistantMsg.decision_readiness
+            });
             setIsResultsPaneOpen(true);
           }
         }
@@ -240,12 +248,18 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspa
     return <Typography variant="body2" sx={{ lineHeight: 1.7 }}>{content.message || JSON.stringify(content)}</Typography>;
   };
 
-  const handleInspect = (artifact, messageActions = null, messageSessionState = null) => {
-    setActiveArtifact({ ...artifact, contextActions: messageActions, contextSessionState: messageSessionState });
+  const handleInspect = (artifact, messageActions = null, messageSessionState = null, messageCapabilityState = null, messageDecisionReadiness = null) => {
+    setActiveArtifact({
+      ...artifact,
+      contextActions: messageActions,
+      contextSessionState: messageSessionState,
+      contextCapabilityState: messageCapabilityState,
+      contextDecisionReadiness: messageDecisionReadiness
+    });
     setIsResultsPaneOpen(true);
   };
 
-  const renderArtifact = (artifact, isInspector = false, contextActions = null, contextSessionState = null) => {
+  const renderArtifact = (artifact, isInspector = false, contextActions = null, contextSessionState = null, contextCapabilityState = null, contextDecisionReadiness = null) => {
     if (!artifact) return null;
 
     const { 
@@ -257,9 +271,11 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspa
       mode: artMode 
     } = artifact;
 
-    // Use passed contextActions or stored artifact actions for inspector
+    // Use passed context metadata or stored artifact context for inspector
     const lookupActions = contextActions || artifact.contextActions || sessionState?.available_actions || [];
     const lookupSessionState = contextSessionState || artifact.contextSessionState || sessionState;
+    const lookupCapabilityState = contextCapabilityState || artifact.contextCapabilityState || sessionState?.capability_state;
+    const lookupDecisionReadiness = contextDecisionReadiness || artifact.contextDecisionReadiness || sessionState?.decision_readiness;
 
     const baseClass = isInspector ? "ai-shell__active-artifact" : "ai-shell__artifact-preview-card";
     
@@ -271,7 +287,7 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspa
       if (type === 'answer' && !hasContent) return null;
 
       return (
-        <div className="ai-shell__artifact-preview-link" onClick={() => handleInspect(artifact, contextActions, contextSessionState)}>
+        <div className="ai-shell__artifact-preview-link" onClick={() => handleInspect(artifact, contextActions, contextSessionState, contextCapabilityState, contextDecisionReadiness)}>
           <div className="ai-shell__preview-icon">
             {type === 'chart' ? <FaChartBar /> : type === 'workspace_preview' ? <FaLayerGroup /> : type === 'answer' ? <FaCheckCircle /> : <FaFileAlt />}
           </div>
@@ -303,7 +319,7 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspa
                 <span className="ai-shell__artifact-title">
                    <FaCheckCircle /> {source || 'Result'} {artMode ? `(${artMode})` : ''}
                 </span>
-                {inspectable && <IconButton size="small" onClick={() => handleInspect(artifact, contextActions)} aria-label="Inspect Result"><FaExternalLinkAlt style={{ fontSize: '0.7rem' }} /></IconButton>}
+                {inspectable && <IconButton size="small" onClick={() => handleInspect(artifact, contextActions, contextSessionState, contextCapabilityState, contextDecisionReadiness)} aria-label="Inspect Result"><FaExternalLinkAlt style={{ fontSize: '0.7rem' }} /></IconButton>}
               </div>
             )}
             <div className="ai-shell__artifact-content">{renderAnswerArtifact(content)}</div>
@@ -326,7 +342,24 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspa
 
       case 'workspace_preview':
         const wp = content || artifact;
+        const dr = wp.decision_readiness || wp.content?.decision_readiness || lookupDecisionReadiness || wp;
+
+        // Derive capability state by merging artifact-level and response-level context
+        const artCs = wp.capability_state || wp.content?.capability_state || dr?.capability_state;
+        const respCs = lookupCapabilityState;
+        const cs = { ...respCs, ...artCs };
         
+        // Explicitly merge unsupported_requested_capabilities so they don't get shadowed
+        const mergedUnsupported = [
+          ...new Set([
+            ...(artCs?.unsupported_requested_capabilities || []),
+            ...(respCs?.unsupported_requested_capabilities || [])
+          ])
+        ];
+        if (mergedUnsupported.length > 0) {
+          cs.unsupported_requested_capabilities = mergedUnsupported;
+        }
+
         // Slice 2.5: Prefer Plain-English Kickoff fields
         // Backend now sends decision_kickoff as an object
         const isKickoff = !!wp.decision_kickoff;
@@ -385,22 +418,44 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspa
                   <div className="ai-shell__kickoff-footer">
                     <div className="ai-shell__kickoff-status-block" style={{ marginBottom: '24px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
-                        <FaCheckCircle style={{ color: wp.status === 'ready' ? 'var(--accent-green)' : 'var(--text-secondary)', fontSize: '1rem' }} />
+                        <FaCheckCircle style={{ color: (dr?.readiness_state === 'analysis_ready' || wp.status === 'ready') ? 'var(--accent-green)' : 'var(--text-secondary)', fontSize: '1rem' }} />
                         <Typography variant="subtitle2" sx={{ fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', fontSize: '0.75rem' }}>
-                          {wp.status_label || (wp.status === 'ready' ? 'Framework Ready' : 'Incomplete')}
+                          {dr?.readiness_state ? dr.readiness_state.replace('_', ' ') : (wp.status_label || (wp.status === 'ready' ? 'Framework Ready' : 'Incomplete'))}
                         </Typography>
                       </div>
                       <Typography variant="body2" sx={{ display: 'block', opacity: 0.7, lineHeight: 1.5 }}>
-                        {wp.readiness_meaning || (wp.status === 'ready' ? 'This framework is structurally complete and ready for analysis.' : 'Missing required inputs to begin analysis.')}
+                        {wp.readiness_meaning || (dr?.readiness_state === 'analysis_ready' ? 'This framework is structurally complete and ready for observational analysis.' : 'Missing required inputs to begin analysis.')}
                       </Typography>
                     </div>
 
-                    {wp.truthfulness_note && (
+                    {dr?.truth_boundary === 'observational_analysis_only' && (
+                      <div className="ai-shell__kickoff-boundary" style={{ marginBottom: '24px', padding: '12px', borderLeft: '3px solid var(--accent-blue)', background: 'rgba(0, 102, 255, 0.05)' }}>
+                        <Typography variant="caption" sx={{ fontWeight: 700, display: 'block', mb: 0.5, color: 'var(--accent-blue)' }}>Reliability Boundary</Typography>
+                        <Typography variant="body2" sx={{ opacity: 0.8 }}>
+                          Currently limited to <strong>observational analysis</strong>. Causal simulation, optimization, and final recommendations are unsupported in the current runtime.
+                        </Typography>
+                      </div>
+                    )}
+
+                    {(wp.truthfulness_note || dr?.not_ready_for_recommendation) && (
                       <div className="ai-shell__kickoff-truth" style={{ background: 'var(--bg-secondary)', padding: '16px', borderRadius: '12px', marginBottom: '28px', border: '1px solid var(--border-color)' }}>
                         <Typography variant="caption" sx={{ opacity: 0.6, display: 'block', lineHeight: 1.5 }}>
                           <FaInfoCircle style={{ marginRight: '8px', fontSize: '0.8rem', verticalAlign: 'middle', marginTop: '-2px' }} />
-                          {wp.truthfulness_note}
+                          {wp.truthfulness_note || 'Outputs are for decision support only and should not be treated as final recommendations.'}
                         </Typography>
+                      </div>
+                    )}
+
+                    {cs?.unsupported_requested_capabilities?.length > 0 && (
+                      <div className="ai-shell__unsupported-requested" style={{ marginBottom: '24px', padding: '12px', borderRadius: '8px', border: '1px solid var(--accent-red)', background: 'rgba(239, 68, 68, 0.05)' }}>
+                        <Typography variant="caption" sx={{ fontWeight: 900, color: 'var(--accent-red)', display: 'block', mb: 1, textTransform: 'uppercase' }}>
+                          Unsupported Capabilities Detected
+                        </Typography>
+                        <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '0.8rem', opacity: 0.8 }}>
+                          {cs.unsupported_requested_capabilities.map((cap, i) => (
+                            <li key={i}><strong>{cap.replace('_', ' ')}</strong> was requested but is not yet supported.</li>
+                          ))}
+                        </ul>
                       </div>
                     )}
 
@@ -410,8 +465,9 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspa
                       const fullAction = lookupActions.find(a => a.action_id === actionId) || wp.recommended_next_action;
                       
                       const isPrimary = fullAction?.priority === 'primary';
-                      const isEnabled = fullAction?.enabled !== false;
-                      const tooltip = fullAction?.availability_reason || fullAction?.description || fullAction?.reason || '';
+                      const isEnabled = dr?.allowed_next_actions ? dr.allowed_next_actions.includes(actionId) : fullAction?.enabled !== false;
+                      const blockerInfo = dr?.blocked_state?.is_blocked ? dr.blocked_state.blocking_missing_inputs?.join(', ') : null;
+                      const tooltip = blockerInfo ? `Blocked by: ${blockerInfo}` : (fullAction?.availability_reason || fullAction?.description || fullAction?.reason || '');
 
                       return (
                         <div className="ai-shell__kickoff-action-zone">
@@ -675,7 +731,9 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspa
           artifacts: data.artifacts,
           suggested_actions: data.suggested_actions || [],
           mode: data.mode,
-          session_state: data.session_state || {} // Scoped state
+          session_state: data.session_state || {}, // Scoped state
+          capability_state: data.capability_state,
+          decision_readiness: data.decision_readiness
         };
         setUserMessages(prev => [...prev, newMsg]);
         setSessionState(data.session_state || {});
@@ -686,7 +744,13 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspa
           // Only auto-focus if it's a rich, inspectable artifact
           const richTypes = ['chart', 'workspace_preview', 'workspace_analysis_summary'];
           if (richTypes.includes(lastArt.type)) {
-            setActiveArtifact({ ...lastArt, contextActions: newMsg.suggested_actions, contextSessionState: newMsg.session_state });
+            setActiveArtifact({
+              ...lastArt,
+              contextActions: newMsg.suggested_actions,
+              contextSessionState: newMsg.session_state,
+              contextCapabilityState: newMsg.capability_state,
+              contextDecisionReadiness: newMsg.decision_readiness
+            });
             setIsResultsPaneOpen(true);
           }
         }
@@ -904,7 +968,7 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspa
                 
                 {msg.artifacts && msg.artifacts.length > 0 && (
                   <div className="ai-shell__artifact-container">
-                    {msg.artifacts.map((art, aIdx) => <React.Fragment key={aIdx}>{renderArtifact(art, false, msg.suggested_actions, msg.session_state)}</React.Fragment>)}
+                    {msg.artifacts.map((art, aIdx) => <React.Fragment key={aIdx}>{renderArtifact(art, false, msg.suggested_actions, msg.session_state, msg.capability_state, msg.decision_readiness)}</React.Fragment>)}
                   </div>
                 )}
 
@@ -967,7 +1031,7 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspa
         <div className="ai-shell__result-viewer">
           <div className="ai-shell__viewer-label"><FaEye /> Active Result Viewer</div>
           {activeArtifact ? (
-            renderArtifact(activeArtifact, true, activeArtifact.contextActions, activeArtifact.contextSessionState)
+            renderArtifact(activeArtifact, true, activeArtifact.contextActions, activeArtifact.contextSessionState, activeArtifact.contextCapabilityState, activeArtifact.contextDecisionReadiness)
           ) : (
             <div className="ai-shell__viewer-empty">
               <div className="ai-shell__viewer-empty-icon"><FaTerminal /></div>
