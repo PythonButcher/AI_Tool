@@ -707,3 +707,19 @@
   color: var(--text-secondary);
   border-color: var(--border-color);
 }
+
+/* Reliability & Capability Boundaries */
+.ai-shell__kickoff-boundary {
+  margin-bottom: 24px;
+  padding: 12px;
+  border-left: 3px solid var(--accent-blue);
+  background: rgba(0, 102, 255, 0.05);
+}
+
+.ai-shell__unsupported-requested {
+  margin-bottom: 24px;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid var(--accent-red);
+  background: rgba(239, 68, 68, 0.05);
+}

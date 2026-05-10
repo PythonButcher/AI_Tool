@@ -3,7 +3,7 @@ import Typography from '@mui/material/Typography';
 import { 
   FaCircleCheck, FaCircleExclamation, FaTriangleExclamation, FaCircleInfo, 
   FaGears, FaShieldHalved, FaChartLine, FaLayerGroup, FaPlus, FaCalendarDays, FaFileLines, FaLink, FaClock,
-  FaMagnifyingGlassChart, FaFlask, FaScaleBalanced, FaLightbulb
+  FaMagnifyingGlassChart, FaFlask, FaScaleBalanced, FaLightbulb, FaBrain
 } from 'react-icons/fa6';
 import './DecisionWorkspace.css';
 import DecisionSignals from './DecisionSignals';
@@ -113,13 +113,20 @@ const DecisionWorkspaceView = ({ workspace, analysis, onCreateNew, onAnalyze, se
     assumptions,
     unknowns,
     readiness,
+    decision_readiness,
     created_at
   } = workspace;
 
+  const dr = decision_readiness || readiness?.decision_readiness || readiness;
+  const cs = dr?.capability_state || readiness?.capability_state;
+
   const renderStatusBadge = () => {
-    switch (status) {
+    const currentState = dr?.readiness_state || status;
+    switch (currentState) {
+      case 'analysis_ready':
       case 'ready':
-        return <span className="workspace-status workspace-status--ready"><FaCircleCheck /> Ready for Analysis</span>;
+        return <span className="workspace-status workspace-status--ready"><FaCircleCheck /> Analysis Ready</span>;
+      case 'blocked':
       case 'needs_input':
         return <span className="workspace-status workspace-status--needs-input"><FaCircleExclamation /> Definition Incomplete</span>;
       case 'limited':
@@ -127,7 +134,7 @@ const DecisionWorkspaceView = ({ workspace, analysis, onCreateNew, onAnalyze, se
       case 'analyzed':
         return <span className="workspace-status workspace-status--analyzed" style={{ background: 'var(--accent-blue)', color: 'white' }}><FaMagnifyingGlassChart /> Analysis Complete</span>;
       default:
-        return <span className="workspace-status">{status}</span>;
+        return <span className="workspace-status">{currentState.replace('_', ' ')}</span>;
     }
   };
 
@@ -153,7 +160,7 @@ const DecisionWorkspaceView = ({ workspace, analysis, onCreateNew, onAnalyze, se
             <button className="add-btn" onClick={onCreateNew}>
               <FaPlus /> New Decision
             </button>
-            <span className="contract-version">DI 2.0 v1.0</span>
+            <span className="contract-version">DI 2.0 v1.1 • Reliability Phase 1</span>
           </div>
         </div>
         <h2 className="workspace-title">{title || "Untitled Decision Workspace"}</h2>
@@ -165,6 +172,18 @@ const DecisionWorkspaceView = ({ workspace, analysis, onCreateNew, onAnalyze, se
           <FaCalendarDays /> Prepared: {formatDate(created_at)}
         </div>
       </div>
+
+      {dr?.truth_boundary === 'observational_analysis_only' && (
+        <div className="workspace-boundary-banner" style={{ marginBottom: '24px', padding: '16px', background: 'rgba(0, 102, 255, 0.05)', border: '1px solid var(--accent-blue)', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <FaShieldHalved style={{ fontSize: '1.5rem', color: 'var(--accent-blue)' }} />
+          <div>
+            <Typography variant="subtitle2" sx={{ fontWeight: 900, color: 'var(--accent-blue)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Observational Reliability Boundary</Typography>
+            <Typography variant="body2" sx={{ opacity: 0.8 }}>
+              This workspace is currently restricted to <strong>observational analysis</strong>. Simulation, optimization, and autonomous decisioning are disabled in this runtime to ensure output integrity.
+            </Typography>
+          </div>
+        </div>
+      )}
 
       <div className="workspace-summary">
         <FaFileLines className="summary-icon" />
@@ -391,7 +410,7 @@ const DecisionWorkspaceView = ({ workspace, analysis, onCreateNew, onAnalyze, se
                   <div className="unknown-label" style={{ fontWeight: 600, fontSize: '0.9rem' }}>{u.label}</div>
                   <div className={`unknown-meta severity--${u.severity}`} style={{ fontSize: '0.75rem', marginTop: '4px', opacity: 0.7, textTransform: 'uppercase', fontWeight: 800 }}>
                     {u.category} • {u.severity} severity
-                    {u.blocks_simulation && <span className="blocker-badge" style={{ marginLeft: '8px', color: '#ef4444' }}>[BLOCKER]</span>}
+                    {(u.blocks_simulation || dr?.blocked_state?.blocking_unknown_ids?.includes(u.unknown_id)) && <span className="blocker-badge" style={{ marginLeft: '8px', color: '#ef4444' }}>[BLOCKER]</span>}
                   </div>
                 </div>
               ))}
@@ -403,7 +422,7 @@ const DecisionWorkspaceView = ({ workspace, analysis, onCreateNew, onAnalyze, se
             <h3 className="section-label" style={{ margin: '0 0 16px 0', fontSize: '0.85rem', letterSpacing: '0.05em' }}>Engine Readiness Checklist</h3>
             <ul className="di-checklist" style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <li style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.85rem' }}>
-                <FaCircleCheck style={{ color: readiness.dataset_ready ? 'var(--accent-green)' : 'var(--text-secondary)', opacity: readiness.dataset_ready ? 1 : 0.3 }} />
+                <FaCircleCheck style={{ color: (readiness.dataset_ready || dr?.structural_readiness?.ready_for_observational_analysis) ? 'var(--accent-green)' : 'var(--text-secondary)', opacity: (readiness.dataset_ready || dr?.structural_readiness?.ready_for_observational_analysis) ? 1 : 0.3 }} />
                 <span style={{ opacity: readiness.dataset_ready ? 1 : 0.6 }}>Data Context Loaded</span>
               </li>
               <li style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.85rem' }}>
@@ -413,6 +432,10 @@ const DecisionWorkspaceView = ({ workspace, analysis, onCreateNew, onAnalyze, se
               <li style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.85rem' }}>
                 <FaCircleCheck style={{ color: readiness.objective_ready ? 'var(--accent-green)' : 'var(--text-secondary)', opacity: readiness.objective_ready ? 1 : 0.3 }} />
                 <span style={{ opacity: readiness.objective_ready ? 1 : 0.6 }}>Business Goals Defined</span>
+              </li>
+              <li style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.85rem' }}>
+                <FaCircleCheck style={{ color: dr?.structural_readiness?.ready_for_observational_analysis ? 'var(--accent-green)' : 'var(--text-secondary)', opacity: dr?.structural_readiness?.ready_for_observational_analysis ? 1 : 0.3 }} />
+                <span style={{ opacity: dr?.structural_readiness?.ready_for_observational_analysis ? 1 : 0.6 }}>Structural Integrity Verified</span>
               </li>
             </ul>
 
@@ -438,12 +461,12 @@ const DecisionWorkspaceView = ({ workspace, analysis, onCreateNew, onAnalyze, se
             </div>
           </div>
           
-          {readiness.missing_inputs.length > 0 && (
+          {(dr?.blocked_state?.is_blocked || readiness.missing_inputs?.length > 0) && (
             <div className="missing-inputs" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <FaCircleExclamation />
                 <div>
-                  <strong>Action Required:</strong> The workspace definition is missing high-materiality inputs: {readiness.missing_inputs.join(', ')}
+                  <strong>Action Required:</strong> The workspace definition is missing high-materiality inputs: {dr?.blocked_state?.blocking_missing_inputs?.join(', ') || readiness.missing_inputs.join(', ')}
                 </div>
               </div>
               <div style={{ paddingLeft: '32px' }}>
@@ -454,18 +477,50 @@ const DecisionWorkspaceView = ({ workspace, analysis, onCreateNew, onAnalyze, se
             </div>
           )}
           
-          {!readiness.can_run_simulation && (
-            <div className="analysis-notice">
-              <FaTriangleExclamation /> Structured analysis and evaluation engines are locked until the decision architecture is structurally complete.
+          <div className="capability-matrix" style={{ marginTop: '24px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px' }}>
+            <div className={`capability-tag ${cs?.observational_analysis?.available ? 'is-allowed' : 'is-blocked'}`}>
+              <FaMagnifyingGlassChart /> Observational Analysis: {cs?.observational_analysis?.status || (dr?.structural_readiness?.ready_for_observational_analysis ? 'allowed' : 'blocked')}
+            </div>
+            <div className={`capability-tag is-unsupported`}>
+              <FaFlask /> Causal Simulation: {cs?.simulation?.status || 'unsupported'}
+            </div>
+            <div className={`capability-tag is-unsupported`}>
+              <FaScaleBalanced /> Optimization: {cs?.optimization?.status || 'unsupported'}
+            </div>
+            <div className={`capability-tag is-unsupported`}>
+              <FaBrain /> Autonomous: {cs?.autonomous_decisioning?.status || 'unsupported'}
+            </div>
+          </div>
+          
+          {dr?.truth_boundary === 'observational_analysis_only' && (
+            <div className="analysis-notice" style={{ marginTop: '16px' }}>
+              <FaTriangleExclamation /> This decision frame is limited to <strong>observational analysis</strong>. Causal simulation and recommendation engines are currently unsupported.
             </div>
           )}
-          
-          {readiness.can_run_simulation && !analysis && (
-            <div className="analysis-notice" style={{ background: 'color-mix(in srgb, var(--accent-green) 5%, var(--bg-primary))', borderColor: 'var(--accent-green)', color: 'var(--text-primary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+
+          {(dr?.structural_readiness?.ready_for_observational_analysis || (readiness.can_run_simulation && !analysis)) && (
+            <div className="analysis-notice" style={{ background: 'color-mix(in srgb, var(--accent-green) 5%, var(--bg-primary))', borderColor: 'var(--accent-green)', color: 'var(--text-primary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px' }}>
               <div>
                 <FaCircleCheck /> Decision architecture is structurally sound. Ready for observational analysis.
               </div>
-              <button className="analyze-workspace-btn" onClick={onAnalyze} style={{ padding: '8px 16px', background: 'var(--accent-green)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <button
+                className="analyze-workspace-btn"
+                onClick={onAnalyze}
+                disabled={dr?.allowed_next_actions && !dr.allowed_next_actions.includes('analyze_workspace')}
+                style={{
+                  padding: '8px 16px',
+                  background: 'var(--accent-green)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: (dr?.allowed_next_actions && !dr.allowed_next_actions.includes('analyze_workspace')) ? 'not-allowed' : 'pointer',
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  opacity: (dr?.allowed_next_actions && !dr.allowed_next_actions.includes('analyze_workspace')) ? 0.5 : 1
+                }}
+              >
                 <FaMagnifyingGlassChart /> Analyze Workspace
               </button>
             </div>
