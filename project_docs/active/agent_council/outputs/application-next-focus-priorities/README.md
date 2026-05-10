@@ -30,6 +30,6 @@ Run this from the repository root:
 
 This council ranks the next application focus areas from most critical to least critical. It does not implement runtime behavior, frontend UI, backend endpoints, machine learning features, or contract changes.
 
-The council concluded that the next work should strengthen measurable Decision Intelligence reliability before adding ambitious new features. The highest-priority direction is a Codex-owned prompt benchmark and capability/readiness contract foundation, followed by semantic model strengthening, decision correction, observational evidence, active dataset state alignment, ML readiness, and future simulation architecture design.
+The council concluded that measurable Decision Intelligence reliability should come before ambitious new features. The highest-priority prompt benchmark and capability/readiness foundation is now complete. The active follow-on direction is semantic model strengthening, then decision correction, observational evidence, active dataset state alignment, ML readiness, and future simulation architecture design.
 
 This differs from `project_docs/active/agent_council/outputs/app-wide-ui-flaws/`, which was about UI correctness and trust before feature work. This topic assumes that cleanup is complete and asks what the application should focus on next.

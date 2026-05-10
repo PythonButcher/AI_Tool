@@ -18,7 +18,8 @@ After those files, read only the task-specific document listed below.
 
 | Need | Read |
 | --- | --- |
-| Execute the council-derived next-focus plan | `project_docs/active/decision_intelligence/current/next_focus_execution_plan.md` |
+| Execute the current implementation plan | `project_docs/active/decision_intelligence/current/phase_2_semantic_role_strengthening_plan.md` |
+| Review the council-derived roadmap | `project_docs/active/decision_intelligence/current/next_focus_execution_plan.md` |
 | Choose the next implementation slice | `project_docs/active/agent_council/outputs/application-next-focus-priorities/README.md` |
 | Inspect the full latest council recommendation | `project_docs/active/agent_council/outputs/application-next-focus-priorities/2026-05-01-council.json` |
 | Work on decision object contracts | `project_docs/active/contracts/decision_objects.md` |
@@ -32,7 +33,7 @@ Decision Intelligence V3 is active. V2 is closed as-is and lives as historical c
 
 Phase 4.5 AI Chat Decision Intelligence hardening is complete. The product now has real chat-to-decision continuity, scoped action behavior, truthful observational-analysis language, and verified frontend hardening.
 
-The next work is not broad frontend polish and not new simulation or optimization. The next work is a Codex-owned reliability foundation: benchmark prompt fixtures, grading checks, and additive capability/readiness fields. Semantic role strengthening follows that.
+The next work is not broad frontend polish and not new simulation or optimization. Phase 1 reliability foundation is complete. The active next work is Codex-owned Phase 2 semantic role strengthening: additive decision-aware semantic roles, confidence, aliases, polarity, controllability, and unresolved mapping details.
 
 ## Folder Map
 

@@ -397,6 +397,58 @@
   color: var(--text-primary) !important;
 }
 
+/* Reliability & Capability Boundaries */
+.workspace-boundary-banner {
+  margin-bottom: 24px;
+  padding: 16px;
+  background: rgba(0, 102, 255, 0.05);
+  border: 1px solid var(--accent-blue);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.capability-matrix {
+  margin-top: 24px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+}
+
+.capability-tag {
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.capability-tag.is-allowed {
+  border-color: var(--accent-green);
+  color: var(--accent-green);
+  background: rgba(34, 197, 94, 0.05);
+}
+
+.capability-tag.is-blocked {
+  border-color: var(--accent-red);
+  color: var(--accent-red);
+  background: rgba(239, 68, 68, 0.05);
+}
+
+.capability-tag.is-unsupported {
+  opacity: 0.5;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  border-style: dashed;
+}
+
 /* Responsiveness */
 @media (max-width: 768px) {
   .workspace-grid {
