@@ -18,7 +18,7 @@ After those files, read only the task-specific document listed below.
 
 | Need | Read |
 | --- | --- |
-| Execute the current implementation plan | `project_docs/active/decision_intelligence/current/phase_2_semantic_role_strengthening_plan.md` |
+| Execute the current implementation plan | `project_docs/active/decision_intelligence/current/phase_3_correction_and_observational_evidence_plan.md` |
 | Review the council-derived roadmap | `project_docs/active/decision_intelligence/current/next_focus_execution_plan.md` |
 | Choose the next implementation slice | `project_docs/active/agent_council/outputs/application-next-focus-priorities/README.md` |
 | Inspect the full latest council recommendation | `project_docs/active/agent_council/outputs/application-next-focus-priorities/2026-05-01-council.json` |
@@ -33,7 +33,7 @@ Decision Intelligence V3 is active. V2 is closed as-is and lives as historical c
 
 Phase 4.5 AI Chat Decision Intelligence hardening is complete. The product now has real chat-to-decision continuity, scoped action behavior, truthful observational-analysis language, and verified frontend hardening.
 
-The next work is not broad frontend polish and not new simulation or optimization. Phase 1 reliability foundation is complete. The active next work is Codex-owned Phase 2 semantic role strengthening: additive decision-aware semantic roles, confidence, aliases, polarity, controllability, and unresolved mapping details.
+The next work is not broad frontend polish and not new simulation or optimization. Phase 1 reliability foundation and Phase 2 semantic role strengthening are complete as backend foundations. The active next implementation plan is Codex-owned Phase 3 correction and ranked observational evidence at `project_docs/active/decision_intelligence/current/phase_3_correction_and_observational_evidence_plan.md`. Frontend implementation remains Gemini-owned unless the user explicitly authorizes Codex frontend edits in the current session.
 
 ## Folder Map
 

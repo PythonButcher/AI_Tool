@@ -197,7 +197,7 @@ def build_semantic_summary(semantic_model: Dict[str, Any]) -> Dict[str, Any]:
 def build_metric_ref(metric: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
     if not isinstance(metric, dict):
         return None
-    return {
+    ref = {
         "metric_id": metric.get("id") or metric.get("metric_id"),
         "name": metric.get("name") or metric.get("label") or metric.get("display_name"),
         "label": metric.get("label") or metric.get("display_name") or metric.get("name"),
@@ -205,12 +205,15 @@ def build_metric_ref(metric: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any
         "default_aggregation": metric.get("default_aggregation"),
         "format_hint": metric.get("format_hint"),
     }
+    if isinstance(metric.get("decision_semantics"), dict):
+        ref["decision_semantics"] = metric["decision_semantics"]
+    return ref
 
 
 def build_dimension_ref(dimension: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
     if not isinstance(dimension, dict):
         return None
-    return {
+    ref = {
         "dimension_id": dimension.get("id"),
         "name": dimension.get("name") or dimension.get("field"),
         "label": dimension.get("label") or dimension.get("field"),
@@ -218,6 +221,9 @@ def build_dimension_ref(dimension: Optional[Dict[str, Any]]) -> Optional[Dict[st
         "semantic_kind": dimension.get("semantic_kind"),
         "data_type": dimension.get("data_type"),
     }
+    if isinstance(dimension.get("decision_semantics"), dict):
+        ref["decision_semantics"] = dimension["decision_semantics"]
+    return ref
 
 
 def build_field_profile_map(context: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:

@@ -56,6 +56,39 @@ Legacy compatibility note: existing fields such as `can_run_simulation` and `blo
 | `row_count` | `integer` | Yes | Row count for the resolved dataset |
 | `column_count` | `integer` | Yes | Column count for the resolved dataset |
 
+### Decision Semantics For Metrics
+
+Additive role metadata attached to semantic model metrics and echoed on `Metric Reference` objects when available. Older semantic models remain valid; the backend finalizer can infer conservative defaults from names, fields, format hints, aggregation, and existing metadata.
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `objective_candidate` | `boolean` | Yes | Whether this metric is plausibly a business objective or success measure |
+| `lever_candidate` | `boolean` | Yes | Whether this metric is plausibly a controllable lever |
+| `guardrail_candidate` | `boolean` | Yes | Whether this metric is plausibly a threshold, constraint, or guardrail |
+| `polarity` | `string` | Yes | `increase_is_good`, `decrease_is_good`, `context_dependent`, or `unknown` |
+| `controllability` | `string` | Yes | `controllable`, `outcome`, or `unknown` in the current implementation |
+| `aliases` | `string[]` | Yes | Names, labels, fields, and normalized business aliases used as matching evidence |
+| `business_terms` | `string[]` | Yes | Matched business-role keywords such as `revenue`, `discount`, `margin`, or `risk` |
+| `confidence` | `number` | Yes | Conservative `0.0` to `1.0` confidence for the role metadata, not a model-quality guarantee |
+| `confidence_reason` | `string` | Yes | Short explanation of the evidence used for the confidence score |
+| `unresolved_reasons` | `string[]` | Yes | Reasons the role should be reviewed, including low evidence or multiple plausible roles |
+
+### Decision Semantics For Dimensions
+
+Additive role metadata attached to semantic model dimensions and echoed on `Dimension Reference` objects when available.
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `segment_candidate` | `boolean` | Yes | Whether this dimension is suitable for segmentation or slicing |
+| `comparison_candidate` | `boolean` | Yes | Whether this dimension is suitable for comparison |
+| `temporal_candidate` | `boolean` | Yes | Whether this dimension is temporal |
+| `grain` | `string \| null` | No | `day`, `week`, `month`, `quarter`, `year`, `observed_value`, or `null` when not temporal |
+| `aliases` | `string[]` | Yes | Names, labels, fields, and normalized business aliases used as matching evidence |
+| `business_terms` | `string[]` | Yes | Matched temporal or business terms |
+| `confidence` | `number` | Yes | Conservative `0.0` to `1.0` confidence for the dimension role metadata |
+| `confidence_reason` | `string` | Yes | Short explanation of the evidence used for the confidence score |
+| `unresolved_reasons` | `string[]` | Yes | Reasons the role should be reviewed |
+
 ### Metric Reference
 
 | Field | Type | Required | Notes |
@@ -66,6 +99,11 @@ Legacy compatibility note: existing fields such as `can_run_simulation` and `blo
 | `field` | `string \| null` | No | Backing field when applicable |
 | `default_aggregation` | `string \| null` | No | `sum`, `mean`, `count`, etc. |
 | `format_hint` | `string \| null` | No | `number`, `currency`, `percentage`, `date`, or `null` |
+| `decision_semantics` | `Decision Semantics For Metrics \| null` | No | Additive role metadata when the semantic model has been finalized by Phase 2 backend code |
+| `semantic_binding_confidence` | `number \| null` | No | Prompt-specific binding confidence when the ref was selected from prompt text |
+| `semantic_binding_reason` | `string \| null` | No | Prompt-specific binding reason |
+| `semantic_role_source` | `string \| null` | No | `decision_semantics`, `lexical_match`, `raw_field`, or `unresolved` |
+| `semantic_role_warnings` | `string[]` | No | Prompt-specific warnings such as role mismatch, ambiguity, or low-confidence evidence |
 
 ### Dimension Reference
 
@@ -77,6 +115,23 @@ Legacy compatibility note: existing fields such as `can_run_simulation` and `blo
 | `field` | `string` | Yes | Backing dataset field |
 | `semantic_kind` | `string \| null` | No | `categorical`, `temporal`, etc. |
 | `data_type` | `string \| null` | No | `string`, `datetime`, `number`, etc. |
+| `decision_semantics` | `Decision Semantics For Dimensions \| null` | No | Additive role metadata when the semantic model has been finalized by Phase 2 backend code |
+| `semantic_binding_confidence` | `number \| null` | No | Prompt-specific binding confidence when the ref was selected from prompt text |
+| `semantic_binding_reason` | `string \| null` | No | Prompt-specific binding reason |
+| `semantic_role_source` | `string \| null` | No | `decision_semantics`, `lexical_match`, `raw_field`, or `unresolved` |
+| `semantic_role_warnings` | `string[]` | No | Prompt-specific warnings such as role mismatch, ambiguity, or low-confidence evidence |
+
+### Prompt Semantic Binding Trace
+
+Prompt-first decision workspace drafting now preserves semantic binding traceability. The fields are additive and may appear on `decision_scope.objective`, lever or constraint `binding` objects, and prompt match refs under `decision_workspace.drafting.prompt_matches`.
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `semantic_binding_confidence` | `number \| null` | No | Prompt-specific confidence for the selected semantic object; unresolved bindings use `0.0` or `null` depending on whether an attempted binding existed |
+| `semantic_binding_reason` | `string \| null` | No | Human-readable evidence summary |
+| `semantic_role_source` | `string \| null` | No | `decision_semantics`, `lexical_match`, `raw_field`, or `unresolved` |
+| `semantic_role_warnings` | `string[]` | No | Warnings when metadata is weak, ambiguous, role-conflicting, or raw-field-only |
+| `unresolved_mappings` | `object[]` | No | Present under `drafting.prompt_matches`; each item includes `mapping_type`, `status`, `reason`, `candidate_labels`, and optional `confidence` |
 
 ### Time Context
 

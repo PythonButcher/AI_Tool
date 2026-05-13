@@ -14,6 +14,52 @@ RATE_KEYWORDS = ("rate", "ratio", "pct", "percent", "average", "avg", "mean")
 CURRENCY_KEYWORDS = ("revenue", "sales", "amount", "cost", "price", "profit", "income", "spend")
 IDENTIFIER_KEYWORDS = ("id", "key", "code", "uuid", "identifier")
 TEMPORAL_KEYWORDS = ("date", "time", "timestamp", "year", "month", "day", "week", "quarter")
+OBJECTIVE_KEYWORDS = (
+    "revenue",
+    "sales",
+    "profit",
+    "margin",
+    "growth",
+    "delivery",
+    "retention",
+    "conversion",
+    "satisfaction",
+    "score",
+    "risk",
+    "return",
+    "stockout",
+    "cost",
+)
+LEVER_KEYWORDS = (
+    "spend",
+    "discount",
+    "price",
+    "budget",
+    "inventory",
+    "capacity",
+    "staffing",
+    "headcount",
+    "allocation",
+    "mix",
+    "promotion",
+    "campaign",
+)
+GUARDRAIL_KEYWORDS = (
+    "margin",
+    "risk",
+    "rate",
+    "cost",
+    "delivery",
+    "return",
+    "stockout",
+    "quality",
+    "sla",
+    "compliance",
+    "churn",
+)
+POSITIVE_POLARITY_KEYWORDS = ("revenue", "sales", "profit", "margin", "delivery", "retention", "conversion", "satisfaction")
+NEGATIVE_POLARITY_KEYWORDS = ("cost", "spend", "discount", "risk", "return", "churn", "stockout", "defect", "delay")
+GRAIN_KEYWORDS = ("day", "week", "month", "quarter", "year")
 SUPPORTED_AGGREGATIONS = {"sum", "avg", "average", "mean", "min", "max", "count", "count_distinct", "distinct_count", "nunique"}
 SUPPORTED_FORMAT_HINTS = {None, "", "number", "currency", "percentage", "date"}
 FORMULA_COLUMN_PATTERN = re.compile(r"\[([^\]]+)\]")
@@ -181,6 +227,12 @@ def finalize_semantic_model(semantic_model: Optional[Dict[str, Any]]) -> Dict[st
         "notes": "The semantic model is additive and does not replace the existing dataset pipeline.",
         **(model.get("compatibility") if isinstance(model.get("compatibility"), dict) else {}),
     }
+
+    normalized_dimensions = []
+    for dimension in model.get("dimensions") if isinstance(model.get("dimensions"), list) else []:
+        if isinstance(dimension, dict):
+            normalized_dimensions.append(_normalize_existing_dimension(dimension, timestamp))
+    model["dimensions"] = normalized_dimensions
 
     normalized_metrics = []
     for metric in model.get("metrics") if isinstance(model.get("metrics"), list) else []:
@@ -387,7 +439,7 @@ def build_user_metric_definition(
 
     created_at = existing_metric.get("created_at") if isinstance(existing_metric, dict) else timestamp
 
-    return {
+    metric = {
         "id": metric_id,
         "metric_id": metric_id,
         "name": name,
@@ -410,9 +462,20 @@ def build_user_metric_definition(
         "origin": "user_defined",
         "is_inferred": False,
         "is_user_defined": True,
+        "decision_semantics": deepcopy(
+            payload.get("decision_semantics")
+            if isinstance(payload.get("decision_semantics"), dict)
+            else (
+                existing_metric.get("decision_semantics")
+                if isinstance(existing_metric, dict) and isinstance(existing_metric.get("decision_semantics"), dict)
+                else {}
+            )
+        ),
         "created_at": created_at,
         "updated_at": timestamp,
     }
+    metric["decision_semantics"] = _build_metric_decision_semantics(metric)
+    return metric
 
 
 def merge_user_defined_metrics(
@@ -577,7 +640,7 @@ def _build_dimension_definition(
     entity_id: str,
     timestamp: str,
 ) -> Dict[str, Any]:
-    return {
+    dimension = {
         "id": f"dimension_{_slugify(column_name)}",
         "name": column_name,
         "label": column_name,
@@ -592,6 +655,8 @@ def _build_dimension_definition(
         "created_at": timestamp,
         "updated_at": timestamp,
     }
+    dimension["decision_semantics"] = _build_dimension_decision_semantics(dimension)
+    return dimension
 
 
 def _build_metric_definition(
@@ -603,7 +668,7 @@ def _build_metric_definition(
     aggregation = profile.get("default_aggregation") or "sum"
     metric_id = f"metric_{_slugify(column_name)}_{aggregation}"
     format_hint = profile.get("format_hint")
-    return {
+    metric = {
         "id": metric_id,
         "metric_id": metric_id,
         "name": column_name,
@@ -636,6 +701,8 @@ def _build_metric_definition(
         "created_at": timestamp,
         "updated_at": timestamp,
     }
+    metric["decision_semantics"] = _build_metric_decision_semantics(metric)
+    return metric
 
 
 def _available_columns(semantic_model: Dict[str, Any], dataframe: Optional[pd.DataFrame]) -> Set[str]:
@@ -744,7 +811,195 @@ def _normalize_existing_metric(metric: Dict[str, Any], fallback_timestamp: str) 
     metric_copy["filters"] = metric_copy.get("filters") if isinstance(metric_copy.get("filters"), list) else (
         metric_copy["expression"].get("filters") if isinstance(metric_copy["expression"].get("filters"), list) else []
     )
+    metric_copy["decision_semantics"] = _build_metric_decision_semantics(metric_copy)
     return metric_copy
+
+
+def _normalize_existing_dimension(dimension: Dict[str, Any], fallback_timestamp: str) -> Dict[str, Any]:
+    dimension_copy = deepcopy(dimension)
+    dimension_copy["id"] = dimension_copy.get("id") or dimension_copy.get("dimension_id") or f"dimension_{_slugify(dimension_copy.get('name') or dimension_copy.get('field') or 'dimension')}"
+    dimension_copy["dimension_id"] = dimension_copy["id"]
+    dimension_copy["name"] = dimension_copy.get("name") or dimension_copy.get("label") or dimension_copy.get("field") or dimension_copy["id"]
+    dimension_copy["label"] = dimension_copy.get("label") or dimension_copy["name"]
+    dimension_copy["field"] = dimension_copy.get("field") or dimension_copy["name"]
+    dimension_copy["semantic_kind"] = dimension_copy.get("semantic_kind") or "categorical"
+    dimension_copy["data_type"] = dimension_copy.get("data_type")
+    dimension_copy["status"] = dimension_copy.get("status") or ("inferred" if dimension_copy.get("is_inferred") else "configured")
+    dimension_copy["is_inferred"] = bool(dimension_copy.get("is_inferred") or dimension_copy["status"] == "inferred")
+    dimension_copy["created_at"] = dimension_copy.get("created_at") or fallback_timestamp
+    dimension_copy["updated_at"] = dimension_copy.get("updated_at") or fallback_timestamp
+    dimension_copy["decision_semantics"] = _build_dimension_decision_semantics(dimension_copy)
+    return dimension_copy
+
+
+def _build_metric_decision_semantics(metric: Dict[str, Any]) -> Dict[str, Any]:
+    existing = metric.get("decision_semantics") if isinstance(metric.get("decision_semantics"), dict) else {}
+    text = _semantic_text(metric, ("id", "metric_id", "name", "label", "display_name", "field", "description"))
+    aliases = _semantic_aliases(metric, ("name", "label", "display_name", "field"))
+    objective_hits = _matched_keywords(text, OBJECTIVE_KEYWORDS)
+    lever_hits = _matched_keywords(text, LEVER_KEYWORDS)
+    guardrail_hits = _matched_keywords(text, GUARDRAIL_KEYWORDS)
+    format_hint = str(metric.get("format_hint") or "").strip().lower()
+    aggregation = str(metric.get("default_aggregation") or metric.get("aggregation_behavior") or "").strip().lower()
+
+    objective_score = 0.2
+    lever_score = 0.2
+    guardrail_score = 0.2
+    evidence: List[str] = []
+
+    if objective_hits:
+        objective_score += 0.45
+        evidence.append(f"objective keywords: {', '.join(objective_hits[:3])}")
+    if format_hint == "currency" and aggregation in {"sum", "avg", "average", "mean"}:
+        objective_score += 0.12
+        evidence.append("business metric format and aggregation")
+    if lever_hits:
+        lever_score += 0.5
+        evidence.append(f"controllable lever keywords: {', '.join(lever_hits[:3])}")
+    if guardrail_hits:
+        guardrail_score += 0.45
+        evidence.append(f"guardrail keywords: {', '.join(guardrail_hits[:3])}")
+    if format_hint == "percentage":
+        guardrail_score += 0.08
+        evidence.append("percentage metric often acts as a threshold or guardrail")
+
+    confidence = round(min(max(objective_score, lever_score, guardrail_score), 0.9), 2)
+    objective_candidate = objective_score >= 0.62
+    lever_candidate = lever_score >= 0.62
+    guardrail_candidate = guardrail_score >= 0.62
+    unresolved_reasons: List[str] = []
+    if confidence < 0.55:
+        unresolved_reasons.append("No strong business-role evidence was found for this metric.")
+    if sum([objective_candidate, lever_candidate, guardrail_candidate]) > 1:
+        unresolved_reasons.append("Multiple plausible decision roles were detected; prompt context should choose the role.")
+
+    inferred = {
+        "objective_candidate": objective_candidate,
+        "lever_candidate": lever_candidate,
+        "guardrail_candidate": guardrail_candidate,
+        "polarity": _infer_metric_polarity(text),
+        "controllability": _infer_metric_controllability(text, lever_candidate),
+        "aliases": aliases,
+        "business_terms": _dedupe_strings([*objective_hits, *lever_hits, *guardrail_hits]),
+        "confidence": confidence,
+        "confidence_reason": "; ".join(evidence) if evidence else "Only generic metric structure was available.",
+        "unresolved_reasons": unresolved_reasons,
+    }
+    return _merge_decision_semantics(inferred, existing)
+
+
+def _build_dimension_decision_semantics(dimension: Dict[str, Any]) -> Dict[str, Any]:
+    existing = dimension.get("decision_semantics") if isinstance(dimension.get("decision_semantics"), dict) else {}
+    text = _semantic_text(dimension, ("id", "dimension_id", "name", "label", "field", "description"))
+    aliases = _semantic_aliases(dimension, ("name", "label", "field"))
+    semantic_kind = str(dimension.get("semantic_kind") or "").strip().lower()
+    data_type = str(dimension.get("data_type") or "").strip().lower()
+    is_temporal = semantic_kind == "temporal" or data_type == "datetime" or bool(_matched_keywords(text, TEMPORAL_KEYWORDS))
+    is_identifier = bool(_matched_keywords(text, IDENTIFIER_KEYWORDS))
+
+    segment_candidate = not is_temporal and not is_identifier
+    comparison_candidate = segment_candidate or is_temporal
+    confidence = 0.84 if is_temporal else (0.72 if segment_candidate else 0.42)
+    evidence = []
+    if is_temporal:
+        evidence.append("temporal semantic kind, data type, or name evidence")
+    if segment_candidate:
+        evidence.append("categorical or configured dimension suitable for segmentation")
+    if is_identifier:
+        evidence.append("identifier-like name reduces segmentation confidence")
+
+    unresolved_reasons = []
+    if confidence < 0.55:
+        unresolved_reasons.append("Dimension appears identifier-like or lacks role evidence.")
+
+    inferred = {
+        "segment_candidate": segment_candidate,
+        "comparison_candidate": comparison_candidate,
+        "temporal_candidate": is_temporal,
+        "grain": _infer_dimension_grain(text) if is_temporal else None,
+        "aliases": aliases,
+        "business_terms": _dedupe_strings(_matched_keywords(text, TEMPORAL_KEYWORDS)),
+        "confidence": round(confidence, 2),
+        "confidence_reason": "; ".join(evidence) if evidence else "Only generic dimension structure was available.",
+        "unresolved_reasons": unresolved_reasons,
+    }
+    return _merge_decision_semantics(inferred, existing)
+
+
+def _semantic_text(item: Dict[str, Any], keys: Sequence[str]) -> str:
+    return " ".join(str(item.get(key) or "").lower() for key in keys)
+
+
+def _semantic_aliases(item: Dict[str, Any], keys: Sequence[str]) -> List[str]:
+    aliases: List[str] = []
+    for key in keys:
+        value = str(item.get(key) or "").strip()
+        if value:
+            aliases.append(value)
+            normalized = " ".join(re.findall(r"[a-z0-9%]+", value.lower()))
+            if normalized and normalized != value.lower():
+                aliases.append(normalized)
+    return _dedupe_strings(aliases)
+
+
+def _matched_keywords(text: str, keywords: Sequence[str]) -> List[str]:
+    normalized = " " + re.sub(r"[^a-z0-9%]+", " ", str(text or "").lower()) + " "
+    return [
+        keyword
+        for keyword in keywords
+        if f" {keyword} " in normalized or keyword in normalized.strip().split()
+    ]
+
+
+def _infer_metric_polarity(text: str) -> str:
+    positive_hits = _matched_keywords(text, POSITIVE_POLARITY_KEYWORDS)
+    negative_hits = _matched_keywords(text, NEGATIVE_POLARITY_KEYWORDS)
+    if positive_hits and not negative_hits:
+        return "increase_is_good"
+    if negative_hits and not positive_hits:
+        return "decrease_is_good"
+    if positive_hits and negative_hits:
+        return "context_dependent"
+    return "unknown"
+
+
+def _infer_metric_controllability(text: str, lever_candidate: bool) -> str:
+    if lever_candidate:
+        return "controllable"
+    if _matched_keywords(text, ("revenue", "profit", "margin", "delivery", "return", "risk", "stockout")):
+        return "outcome"
+    return "unknown"
+
+
+def _infer_dimension_grain(text: str) -> Optional[str]:
+    for grain in GRAIN_KEYWORDS:
+        if grain in text:
+            return grain
+    return "observed_value"
+
+
+def _merge_decision_semantics(inferred: Dict[str, Any], existing: Dict[str, Any]) -> Dict[str, Any]:
+    merged = deepcopy(inferred)
+    for key, value in existing.items():
+        if value is not None:
+            merged[key] = deepcopy(value)
+    merged["aliases"] = _dedupe_strings(list(inferred.get("aliases") or []) + list(existing.get("aliases") or []))
+    merged["business_terms"] = _dedupe_strings(
+        list(inferred.get("business_terms") or []) + list(existing.get("business_terms") or [])
+    )
+    merged["unresolved_reasons"] = _dedupe_strings(
+        list(inferred.get("unresolved_reasons") or []) + list(existing.get("unresolved_reasons") or [])
+    )
+    return merged
+
+
+def _dedupe_strings(items: Sequence[str]) -> List[str]:
+    ordered: List[str] = []
+    for item in items:
+        text = str(item or "").strip()
+        if text and text not in ordered:
+            ordered.append(text)
+    return ordered
 
 
 def _metric_sort_key(metric: Dict[str, Any]) -> tuple:

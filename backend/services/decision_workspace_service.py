@@ -392,6 +392,75 @@ class DecisionWorkspaceService:
         return {
             "metrics": metric_matches[:5],
             "dimensions": dimension_matches[:4],
+            "unresolved_mappings": DecisionWorkspaceService._build_prompt_unresolved_mappings(
+                text_blob=text_blob,
+                metric_matches=metric_matches,
+                dimension_matches=dimension_matches,
+            ),
+        }
+
+    @staticmethod
+    def _build_prompt_unresolved_mappings(
+        text_blob: str,
+        metric_matches: Sequence[Dict[str, Any]],
+        dimension_matches: Sequence[Dict[str, Any]],
+    ) -> List[Dict[str, Any]]:
+        unresolved: List[Dict[str, Any]] = []
+        if text_blob and not metric_matches:
+            unresolved.append({
+                "mapping_type": "metric",
+                "status": "unresolved",
+                "reason": "No metric matched the prompt with safe confidence.",
+                "candidate_labels": [],
+            })
+        metric_ambiguity = DecisionWorkspaceService._detect_prompt_ambiguity(metric_matches, "metric")
+        if metric_ambiguity:
+            unresolved.append(metric_ambiguity)
+        dimension_ambiguity = DecisionWorkspaceService._detect_prompt_ambiguity(dimension_matches, "dimension")
+        if dimension_ambiguity:
+            unresolved.append(dimension_ambiguity)
+        return unresolved
+
+    @staticmethod
+    def _detect_prompt_ambiguity(
+        matches: Sequence[Dict[str, Any]],
+        mapping_type: str,
+    ) -> Optional[Dict[str, Any]]:
+        if len(matches) < 2:
+            return None
+        for first_index, first in enumerate(matches):
+            for second in matches[first_index + 1:]:
+                first_confidence = float(first.get("semantic_binding_confidence") or 0.0)
+                second_confidence = float(second.get("semantic_binding_confidence") or 0.0)
+                first_tokens = DecisionWorkspaceService._salient_ref_tokens(first)
+                second_tokens = DecisionWorkspaceService._salient_ref_tokens(second)
+                if abs(first_confidence - second_confidence) <= 0.08 and first_tokens.intersection(second_tokens):
+                    return {
+                        "mapping_type": mapping_type,
+                        "status": "ambiguous",
+                        "reason": "Multiple semantic objects matched the prompt with similar confidence.",
+                        "candidate_labels": [
+                            str(first.get("label") or first.get("name") or "").strip(),
+                            str(second.get("label") or second.get("name") or "").strip(),
+                        ],
+                        "confidence": round(max(first_confidence, second_confidence), 2),
+                    }
+        return None
+
+    @staticmethod
+    def _salient_ref_tokens(ref: Dict[str, Any]) -> set:
+        tokens: List[str] = []
+        for key in ("label", "name", "field"):
+            normalized_value = DecisionWorkspaceService._normalize_phrase(ref.get(key))
+            tokens.extend(
+                DecisionWorkspaceService._normalize_prompt_token(token)
+                for token in normalized_value.split()
+                if token not in DecisionWorkspaceService.PROMPT_MATCH_STOPWORDS
+            )
+        return {
+            token
+            for token in tokens
+            if token and token not in DecisionWorkspaceService.GENERIC_METRIC_TOKENS
         }
 
     @staticmethod
@@ -431,7 +500,22 @@ class DecisionWorkspaceService:
             score = DecisionWorkspaceService._score_prompt_candidate(candidate, tokens, normalized_blob)
             if score <= 0:
                 continue
-            ranked.append((score, ref_builder(candidate)))
+            ref = ref_builder(candidate)
+            if not isinstance(ref, dict):
+                continue
+            ref["semantic_binding_confidence"] = DecisionWorkspaceService._semantic_binding_confidence(score, ref, None)
+            ref["semantic_binding_reason"] = (
+                ((ref.get("decision_semantics") or {}).get("confidence_reason"))
+                if isinstance(ref.get("decision_semantics"), dict)
+                else "Lexical prompt evidence matched this semantic object."
+            )
+            ref["semantic_role_source"] = "decision_semantics" if isinstance(ref.get("decision_semantics"), dict) else "lexical_match"
+            ref["semantic_role_warnings"] = list(
+                ((ref.get("decision_semantics") or {}).get("unresolved_reasons") or [])
+                if isinstance(ref.get("decision_semantics"), dict)
+                else []
+            )
+            ranked.append((score, ref))
 
         ranked.sort(
             key=lambda item: (
@@ -461,6 +545,20 @@ class DecisionWorkspaceService:
             candidate_tokens.extend(value_tokens)
             if normalized_value in normalized_blob:
                 score += 6 + len(value_tokens)
+
+        semantics = candidate.get("decision_semantics") if isinstance(candidate.get("decision_semantics"), dict) else {}
+        for alias in list(semantics.get("aliases") or []) + list(semantics.get("business_terms") or []):
+            normalized_alias = DecisionWorkspaceService._normalize_phrase(alias)
+            if not normalized_alias:
+                continue
+            alias_tokens = [
+                DecisionWorkspaceService._normalize_prompt_token(token)
+                for token in normalized_alias.split()
+                if token not in DecisionWorkspaceService.PROMPT_MATCH_STOPWORDS
+            ]
+            candidate_tokens.extend(alias_tokens)
+            if normalized_alias in normalized_blob:
+                score += 4 + len(alias_tokens)
 
         if not candidate_tokens:
             return score
@@ -537,6 +635,7 @@ class DecisionWorkspaceService:
         objective_metric = DecisionWorkspaceService._find_best_prompt_metric_match(
             objective_text,
             prompt_matches.get("metrics") or [],
+            role="objective",
         )
         direction = DecisionWorkspaceService._infer_objective_direction(objective_text or decision_prompt)
 
@@ -558,6 +657,7 @@ class DecisionWorkspaceService:
             "metric_id": objective_metric.get("metric_id") if objective_metric else None,
             "direction": direction,
             "time_horizon": prompt_frame.get("time_horizon"),
+            **DecisionWorkspaceService._semantic_trace_from_ref(objective_metric),
         }
 
     @staticmethod
@@ -583,6 +683,7 @@ class DecisionWorkspaceService:
         ranked_metric_refs = DecisionWorkspaceService._rank_prompt_refs(
             lever_text,
             prompt_matches.get("metrics") or [],
+            role="lever",
         )
 
         for metric_ref in ranked_metric_refs:
@@ -594,7 +695,10 @@ class DecisionWorkspaceService:
                 {
                     "label": label,
                     "lever_type": DecisionWorkspaceService._infer_lever_type(label),
-                    "binding": {"metric_id": metric_id},
+                    "binding": {
+                        "metric_id": metric_id,
+                        **DecisionWorkspaceService._semantic_trace_from_ref(metric_ref),
+                    },
                     "desired_change": DecisionWorkspaceService._infer_desired_change(text_blob),
                 }
             )
@@ -610,6 +714,7 @@ class DecisionWorkspaceService:
             ranked_dimension_refs = DecisionWorkspaceService._rank_prompt_refs(
                 lever_and_segment_text,
                 prompt_matches.get("dimensions") or [],
+                role="segment",
             )
             for dimension_ref in ranked_dimension_refs:
                 dimension_id = dimension_ref.get("dimension_id")
@@ -619,7 +724,10 @@ class DecisionWorkspaceService:
                     {
                         "label": f"{dimension_ref.get('label') or dimension_ref.get('name')} mix",
                         "lever_type": "mix",
-                        "binding": {"dimension_id": dimension_id},
+                        "binding": {
+                            "dimension_id": dimension_id,
+                            **DecisionWorkspaceService._semantic_trace_from_ref(dimension_ref),
+                        },
                         "desired_change": "shift",
                     }
                 )
@@ -642,6 +750,7 @@ class DecisionWorkspaceService:
             metric_ref = DecisionWorkspaceService._find_best_prompt_metric_match(
                 clause,
                 prompt_matches.get("metrics") or [],
+                role="guardrail",
             )
             metric_id = metric_ref.get("metric_id") if isinstance(metric_ref, dict) else None
             if not metric_id or metric_id in used_metric_ids:
@@ -659,7 +768,10 @@ class DecisionWorkspaceService:
                     "label": f"Protect {metric_ref.get('label') or metric_ref.get('name')}",
                     "description": clause,
                     "constraint_type": "metric_guardrail",
-                    "binding": {"metric_id": metric_id},
+                    "binding": {
+                        "metric_id": metric_id,
+                        **DecisionWorkspaceService._semantic_trace_from_ref(metric_ref),
+                    },
                     "condition": {
                         "operator": operator,
                         "value": None,
@@ -921,17 +1033,24 @@ class DecisionWorkspaceService:
     def _rank_prompt_refs(
         text: str,
         refs: Sequence[Dict[str, Any]],
+        role: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         tokens = DecisionWorkspaceService._tokenize_prompt_text(text)
         normalized_text = DecisionWorkspaceService._normalize_phrase(text)
-        ranked: List[Tuple[int, Dict[str, Any]]] = []
+        ranked: List[Tuple[float, Dict[str, Any]]] = []
         for ref in refs:
             if not DecisionWorkspaceService._has_strong_ref_evidence(text, ref):
                 continue
             score = DecisionWorkspaceService._score_prompt_candidate(ref, tokens, normalized_text)
             if score <= 0:
                 continue
-            ranked.append((score, ref))
+            confidence = DecisionWorkspaceService._semantic_binding_confidence(score, ref, role)
+            if confidence < 0.58:
+                continue
+            ranked.append((
+                score + DecisionWorkspaceService._semantic_role_weight(ref, role),
+                DecisionWorkspaceService._annotate_semantic_binding(ref, role, confidence, "resolved"),
+            ))
         ranked.sort(
             key=lambda item: (
                 -item[0],
@@ -949,6 +1068,12 @@ class DecisionWorkspaceService:
         for key in ("label", "name", "field"):
             normalized_value = DecisionWorkspaceService._normalize_phrase(ref.get(key))
             if normalized_value and normalized_value in normalized_text:
+                return True
+
+        semantics = ref.get("decision_semantics") if isinstance(ref.get("decision_semantics"), dict) else {}
+        for alias in list(semantics.get("aliases") or []) + list(semantics.get("business_terms") or []):
+            normalized_alias = DecisionWorkspaceService._normalize_phrase(alias)
+            if normalized_alias and normalized_alias in normalized_text:
                 return True
 
         text_tokens = set(DecisionWorkspaceService._tokenize_prompt_text(text))
@@ -970,37 +1095,150 @@ class DecisionWorkspaceService:
     def _find_best_prompt_metric_match(
         text: str,
         metric_refs: Sequence[Dict[str, Any]],
+        role: Optional[str] = None,
     ) -> Optional[Dict[str, Any]]:
         text_tokens = DecisionWorkspaceService._tokenize_prompt_text(text)
         normalized_text = DecisionWorkspaceService._normalize_phrase(text)
-        best_score = 0
-        best_match: Optional[Dict[str, Any]] = None
+        ranked: List[Tuple[float, float, Dict[str, Any]]] = []
         for metric_ref in metric_refs:
             if not DecisionWorkspaceService._has_strong_ref_evidence(text, metric_ref):
                 continue
             score = DecisionWorkspaceService._score_prompt_candidate(metric_ref, text_tokens, normalized_text)
-            if score > best_score:
-                best_score = score
-                best_match = metric_ref
-        return best_match
+            confidence = DecisionWorkspaceService._semantic_binding_confidence(score, metric_ref, role)
+            if confidence < 0.58:
+                continue
+            ranked.append((score + DecisionWorkspaceService._semantic_role_weight(metric_ref, role), confidence, metric_ref))
+        return DecisionWorkspaceService._select_prompt_match(ranked, role)
 
     @staticmethod
     def _find_best_prompt_dimension_match(
         text: str,
         dimension_refs: Sequence[Dict[str, Any]],
+        role: Optional[str] = None,
     ) -> Optional[Dict[str, Any]]:
         text_tokens = DecisionWorkspaceService._tokenize_prompt_text(text)
         normalized_text = DecisionWorkspaceService._normalize_phrase(text)
-        best_score = 0
-        best_match: Optional[Dict[str, Any]] = None
+        ranked: List[Tuple[float, float, Dict[str, Any]]] = []
         for dimension_ref in dimension_refs:
             if not DecisionWorkspaceService._has_strong_ref_evidence(text, dimension_ref):
                 continue
             score = DecisionWorkspaceService._score_prompt_candidate(dimension_ref, text_tokens, normalized_text)
-            if score > best_score:
-                best_score = score
-                best_match = dimension_ref
-        return best_match
+            confidence = DecisionWorkspaceService._semantic_binding_confidence(score, dimension_ref, role)
+            if confidence < 0.58:
+                continue
+            ranked.append((score + DecisionWorkspaceService._semantic_role_weight(dimension_ref, role), confidence, dimension_ref))
+        return DecisionWorkspaceService._select_prompt_match(ranked, role)
+
+    @staticmethod
+    def _select_prompt_match(
+        ranked: Sequence[Tuple[float, float, Dict[str, Any]]],
+        role: Optional[str],
+    ) -> Optional[Dict[str, Any]]:
+        if not ranked:
+            return None
+        ordered = sorted(
+            ranked,
+            key=lambda item: (
+                -item[0],
+                str(item[2].get("label") or item[2].get("name") or ""),
+            ),
+        )
+        best_score, best_confidence, best_ref = ordered[0]
+        if len(ordered) > 1 and abs(best_score - ordered[1][0]) <= 1.5:
+            return None
+        return DecisionWorkspaceService._annotate_semantic_binding(best_ref, role, best_confidence, "resolved")
+
+    @staticmethod
+    def _semantic_binding_confidence(score: int, ref: Dict[str, Any], role: Optional[str]) -> float:
+        semantics = ref.get("decision_semantics") if isinstance(ref.get("decision_semantics"), dict) else {}
+        semantic_confidence = float(semantics.get("confidence") or 0.5)
+        lexical_confidence = min(0.35, max(score, 0) / 45)
+        role_weight = DecisionWorkspaceService._semantic_role_weight(ref, role) / 20
+        confidence = 0.32 + lexical_confidence + role_weight
+        confidence = min(confidence, semantic_confidence + 0.12, 0.94)
+        return round(max(confidence, 0.0), 2)
+
+    @staticmethod
+    def _semantic_role_weight(ref: Dict[str, Any], role: Optional[str]) -> float:
+        if not role:
+            return 0.0
+        semantics = ref.get("decision_semantics") if isinstance(ref.get("decision_semantics"), dict) else {}
+        if DecisionWorkspaceService._semantic_role_candidate(ref, role):
+            return 4.0 + (float(semantics.get("confidence") or 0.0) * 2.0)
+        return -0.5
+
+    @staticmethod
+    def _semantic_role_candidate(ref: Dict[str, Any], role: Optional[str]) -> bool:
+        if not role:
+            return True
+        semantics = ref.get("decision_semantics") if isinstance(ref.get("decision_semantics"), dict) else {}
+        key_by_role = {
+            "objective": "objective_candidate",
+            "lever": "lever_candidate",
+            "guardrail": "guardrail_candidate",
+            "segment": "segment_candidate",
+            "comparison": "comparison_candidate",
+            "temporal": "temporal_candidate",
+        }
+        candidate_key = key_by_role.get(role)
+        if not candidate_key:
+            return True
+        return bool(semantics.get(candidate_key))
+
+    @staticmethod
+    def _annotate_semantic_binding(
+        ref: Dict[str, Any],
+        role: Optional[str],
+        confidence: float,
+        status: str,
+    ) -> Dict[str, Any]:
+        annotated = dict(ref)
+        semantics = ref.get("decision_semantics") if isinstance(ref.get("decision_semantics"), dict) else {}
+        annotated["semantic_binding_confidence"] = round(float(confidence), 2)
+        annotated["semantic_binding_reason"] = semantics.get("confidence_reason") or "Lexical prompt evidence matched this semantic object."
+        annotated["semantic_role_source"] = "decision_semantics" if semantics else "lexical_match"
+        warnings = list(semantics.get("unresolved_reasons") or [])
+        if role and not DecisionWorkspaceService._semantic_role_candidate(ref, role):
+            warnings.append(f"Matched text, but semantic role metadata does not mark this as a {role} candidate.")
+        if status != "resolved":
+            warnings.append(f"Binding status is {status}; review is required before treating it as resolved.")
+        annotated["semantic_role_warnings"] = DecisionWorkspaceService._dedupe_strings(warnings)
+        return annotated
+
+    @staticmethod
+    def _semantic_trace_from_ref(
+        ref: Optional[Dict[str, Any]],
+        fallback: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        source = ref if isinstance(ref, dict) else {}
+        fallback_source = fallback if isinstance(fallback, dict) else {}
+        semantics = source.get("decision_semantics") if isinstance(source.get("decision_semantics"), dict) else {}
+        confidence = (
+            source.get("semantic_binding_confidence")
+            if source.get("semantic_binding_confidence") is not None
+            else fallback_source.get("semantic_binding_confidence")
+        )
+        if confidence is None and semantics:
+            confidence = semantics.get("confidence")
+        reason = (
+            source.get("semantic_binding_reason")
+            or fallback_source.get("semantic_binding_reason")
+            or semantics.get("confidence_reason")
+        )
+        role_source = (
+            source.get("semantic_role_source")
+            or fallback_source.get("semantic_role_source")
+            or ("decision_semantics" if semantics else None)
+        )
+        warnings = list(source.get("semantic_role_warnings") or [])
+        warnings.extend(list(fallback_source.get("semantic_role_warnings") or []))
+        warnings.extend(list(semantics.get("unresolved_reasons") or []))
+        return {
+            "semantic_binding_confidence": round(float(confidence), 2) if confidence is not None else None,
+            "semantic_binding_reason": reason,
+            "semantic_role_source": role_source,
+            "semantic_role_warnings": DecisionWorkspaceService._dedupe_strings(warnings),
+        }
 
     @staticmethod
     def _infer_objective_direction(text: str) -> str:
@@ -1131,6 +1369,7 @@ class DecisionWorkspaceService:
             "prompt_matches": {
                 "metrics": list(prompt_matches.get("metrics") or []),
                 "dimensions": list(prompt_matches.get("dimensions") or []),
+                "unresolved_mappings": list(prompt_matches.get("unresolved_mappings") or []),
             },
             "clarification_hints": list(DecisionWorkspaceService._dedupe_strings(clarification_hints)),
             "prompt_frame": prompt_frame or {},
@@ -1162,6 +1401,7 @@ class DecisionWorkspaceService:
             "prompt_matches": {
                 "metrics": list(prompt_matches.get("metrics") or []),
                 "dimensions": list(prompt_matches.get("dimensions") or []),
+                "unresolved_mappings": list(prompt_matches.get("unresolved_mappings") or []),
             },
             "clarification_hints": list(raw.get("clarification_hints") or []),
             "prompt_frame": raw.get("prompt_frame") if isinstance(raw.get("prompt_frame"), dict) else {},
@@ -1218,6 +1458,7 @@ class DecisionWorkspaceService:
             "metric_ref": metric_ref,
             "resolution_status": resolution_status,
             "reason": reason,
+            **DecisionWorkspaceService._semantic_trace_from_ref(metric_ref, raw),
         }
 
     @staticmethod
@@ -1354,13 +1595,15 @@ class DecisionWorkspaceService:
         if metric_reference:
             metric = DecisionWorkspaceService._find_metric(context, metric_reference)
             if metric:
+                metric_ref = build_metric_ref(metric)
                 return {
                     "binding_type": "metric",
                     "status": "resolved",
-                    "metric_ref": build_metric_ref(metric),
+                    "metric_ref": metric_ref,
                     "dimension_ref": None,
                     "field": None,
                     "reason": None,
+                    **DecisionWorkspaceService._semantic_trace_from_ref(metric_ref, binding_input),
                 }
             return {
                 "binding_type": "metric",
@@ -1369,18 +1612,24 @@ class DecisionWorkspaceService:
                 "dimension_ref": None,
                 "field": None,
                 "reason": f"Metric '{metric_reference}' was not found in the semantic model.",
+                "semantic_binding_confidence": 0.0,
+                "semantic_binding_reason": f"Metric '{metric_reference}' was not found in the semantic model.",
+                "semantic_role_source": "unresolved",
+                "semantic_role_warnings": ["Metric binding could not be resolved."],
             }
 
         if dimension_reference:
             dimension = DecisionWorkspaceService._find_dimension(context, dimension_reference)
             if dimension:
+                dimension_ref = build_dimension_ref(dimension)
                 return {
                     "binding_type": "dimension",
                     "status": "resolved",
                     "metric_ref": None,
-                    "dimension_ref": build_dimension_ref(dimension),
+                    "dimension_ref": dimension_ref,
                     "field": None,
                     "reason": None,
+                    **DecisionWorkspaceService._semantic_trace_from_ref(dimension_ref, binding_input),
                 }
             return {
                 "binding_type": "dimension",
@@ -1389,29 +1638,37 @@ class DecisionWorkspaceService:
                 "dimension_ref": None,
                 "field": None,
                 "reason": f"Dimension '{dimension_reference}' was not found in the semantic model.",
+                "semantic_binding_confidence": 0.0,
+                "semantic_binding_reason": f"Dimension '{dimension_reference}' was not found in the semantic model.",
+                "semantic_role_source": "unresolved",
+                "semantic_role_warnings": ["Dimension binding could not be resolved."],
             }
 
         if field:
             dimension = DecisionWorkspaceService._find_dimension_by_field(context, field)
             if dimension:
+                dimension_ref = build_dimension_ref(dimension)
                 return {
                     "binding_type": "dimension",
                     "status": "resolved",
                     "metric_ref": None,
-                    "dimension_ref": build_dimension_ref(dimension),
+                    "dimension_ref": dimension_ref,
                     "field": None,
                     "reason": None,
+                    **DecisionWorkspaceService._semantic_trace_from_ref(dimension_ref, binding_input),
                 }
 
             metric = DecisionWorkspaceService._find_metric_by_field(context, field)
             if metric:
+                metric_ref = build_metric_ref(metric)
                 return {
                     "binding_type": "metric",
                     "status": "resolved",
-                    "metric_ref": build_metric_ref(metric),
+                    "metric_ref": metric_ref,
                     "dimension_ref": None,
                     "field": None,
                     "reason": None,
+                    **DecisionWorkspaceService._semantic_trace_from_ref(metric_ref, binding_input),
                 }
 
             if field in {str(column) for column in context["dataframe"].columns}:
@@ -1422,6 +1679,10 @@ class DecisionWorkspaceService:
                     "dimension_ref": None,
                     "field": field,
                     "reason": None,
+                    "semantic_binding_confidence": 0.45,
+                    "semantic_binding_reason": "Resolved only to a raw dataset field, not a semantic metric or dimension.",
+                    "semantic_role_source": "raw_field",
+                    "semantic_role_warnings": ["Raw field binding should be reviewed before treating it as a semantic decision object."],
                 }
 
             return {
@@ -1431,6 +1692,10 @@ class DecisionWorkspaceService:
                 "dimension_ref": None,
                 "field": field,
                 "reason": f"Field '{field}' does not exist in the dataset.",
+                "semantic_binding_confidence": 0.0,
+                "semantic_binding_reason": f"Field '{field}' does not exist in the dataset.",
+                "semantic_role_source": "unresolved",
+                "semantic_role_warnings": ["Field binding could not be resolved."],
             }
 
         return {
@@ -1440,6 +1705,10 @@ class DecisionWorkspaceService:
             "dimension_ref": None,
             "field": None,
             "reason": "No binding was provided.",
+            "semantic_binding_confidence": 0.0,
+            "semantic_binding_reason": "No binding was provided.",
+            "semantic_role_source": "unresolved",
+            "semantic_role_warnings": ["No semantic binding evidence was available."],
         }
 
     @staticmethod

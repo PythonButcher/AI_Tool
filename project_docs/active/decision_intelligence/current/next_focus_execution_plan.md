@@ -13,8 +13,8 @@ The council recommends measurable Decision Intelligence reliability before broad
 The strongest next path is:
 
 1. Build a reliability benchmark and capability/readiness boundary. Completed.
-2. Strengthen semantic role detection and confidence. Active next.
-3. Add correction and richer observational evidence.
+2. Strengthen semantic role detection and confidence. Completed.
+3. Add correction and richer observational evidence. Active next.
 4. Align active dataset truth across surfaces.
 5. Add ML readiness diagnostics.
 6. Design future simulation and trade-off contracts without implementing simulation.
@@ -36,8 +36,8 @@ Do not treat ranked observational evidence as ranked recommendations.
 | Phase | Owner | Status | Source Recommendation | Objective |
 | --- | --- | --- | --- | --- |
 | 1 | Codex and Gemini | Complete | `rec-decision-reliability-foundation` | Add prompt benchmark fixtures, grading checks, additive capability/readiness fields, and frontend rendering of reliability truth. |
-| 2 | Codex | Active next | `rec-semantic-model-role-strengthening` | Add decision-aware semantic roles, confidence, aliases, polarity, controllability, and unresolved mapping details. |
-| 3 | Codex first, Gemini after backend contract stabilizes | Later | `rec-decision-frame-correction-loop`, `rec-ranked-observational-evidence` | Add frame correction actions and richer ranked observational evidence. |
+| 2 | Codex and Gemini | Complete, with minor Gemini cleanup pending | `rec-semantic-model-role-strengthening` | Add decision-aware semantic roles, confidence, aliases, polarity, controllability, and unresolved mapping details. |
+| 3 | Codex first, Gemini after backend contract stabilizes | Active next | `rec-decision-frame-correction-loop`, `rec-ranked-observational-evidence` | Add frame correction actions and richer ranked observational evidence. |
 | 4 | Codex planning, Gemini frontend implementation | Later | `rec-canonical-active-dataset-contract` | Define and implement one active dataset source of truth across AI chat, Decisions, charts, dashboards, and workflows. |
 | 5 | Codex | Deferred | `rec-decision-context-ml-readiness` | Add ML readiness diagnostics without producing predictions or recommendations. |
 | 6 | Codex | Deferred design only | `rec-future-simulation-contract-design` | Design future simulation/trade-off contracts without runtime simulation or frontend claims. |
@@ -78,7 +78,7 @@ Unsupported simulation, optimization, autonomous decisioning, and final recommen
 
 ## Phase 2: Semantic Role Strengthening
 
-Phase 2 is the active next implementation slice. The detailed plan lives at `project_docs/active/decision_intelligence/current/phase_2_semantic_role_strengthening_plan.md`.
+Phase 2 is complete as the semantic-role foundation for later work. The detailed completed plan remains at `project_docs/active/decision_intelligence/completed/phase_2_semantic_role_strengthening_plan.md`.
 
 The benchmark should become the measuring stick for semantic improvements.
 
@@ -97,6 +97,8 @@ Ambiguous mappings can trigger clarification or review instead of silent weak se
 Semantic collision, no-safe-match, missing metric, guardrail-only, and segment-only tests pass.
 
 ## Phase 3: Correction And Ranked Observational Evidence
+
+Phase 3 is the active next implementation slice. The detailed plan lives at `project_docs/active/decision_intelligence/current/phase_3_correction_and_observational_evidence_plan.md`.
 
 Phase 3 should add trust controls after semantic roles and readiness fields are stable.
 
@@ -175,5 +177,5 @@ The council left four useful choices open.
 
 ## Current Slice Prompt For Codex
 
-Implement Phase 2 from `project_docs/active/decision_intelligence/current/phase_2_semantic_role_strengthening_plan.md`. Keep it backend-first. Add additive decision-aware semantic role metadata, conservative confidence, unresolved mapping details, and tests that protect against semantic false confidence. Update the decision object contract and active status docs truthfully. Do not edit frontend files unless explicitly authorized.
+Implement Phase 3 from `project_docs/active/decision_intelligence/current/phase_3_correction_and_observational_evidence_plan.md`. Keep it backend-first. Add deterministic decision-frame correction actions and ranked observational evidence, preserving existing endpoint names, action IDs, artifact types, readiness fields, and the observational-analysis-only boundary. Use Phase 2 semantic role confidence and unresolved mapping trace where it helps correction and evidence ranking. Update backend tests, `project_docs/active/contracts/decision_objects.md`, and active status docs truthfully. Do not edit frontend files unless explicitly authorized.
 

@@ -539,6 +539,47 @@
   color: var(--text-primary);
 }
 
+.ai-shell__preview-actions,
+.ai-shell__artifact-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ai-shell__export-icon-btn {
+  width: 32px !important;
+  height: 32px !important;
+  color: var(--text-secondary) !important;
+  border: 1px solid var(--border-color) !important;
+  background: var(--bg-primary) !important;
+  transition: all 0.2s ease !important;
+}
+
+.ai-shell__export-icon-btn:hover {
+  color: var(--accent-red) !important;
+  border-color: color-mix(in srgb, var(--accent-red) 35%, var(--border-color)) !important;
+  background: color-mix(in srgb, var(--accent-red) 8%, var(--bg-primary)) !important;
+}
+
+.ai-shell__export-icon-btn.is-preview-export {
+  opacity: 0.75;
+}
+
+.ai-shell__artifact-export-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
 /* Full Artifact Containers (Inspector Only) */
 .ai-shell__artifact-preview-card {
   background-color: var(--bg-primary);

@@ -1,20 +1,24 @@
+> COMPLETED REFERENCE ONLY: This file is not part of the default active scan path. Current work should start from `project_docs/active/status/decision_intelligence_execution_status.md` and the active plan under `project_docs/active/decision_intelligence/current/`.
+
 # Phase 2 Semantic Role Strengthening Plan
 
 ## Purpose
 
-This is the active next implementation plan after Phase 1 Decision Intelligence reliability foundation completion.
+This was the active implementation plan after Phase 1 Decision Intelligence reliability foundation completion. It is now completed reference material.
 
 Phase 1 made decision framing measurable and added backend-owned readiness and capability boundaries. Phase 2 should improve the semantic grounding that feeds those decision frames, so the system can distinguish objective metrics, controllable levers, guardrails, segment dimensions, temporal fields, ambiguous mappings, and unsafe weak matches with explicit confidence.
 
 ## Current Status
 
-Status: ready to start.
+Status: backend implementation complete; frontend rendering handoff completed and moved to completed reference records.
 
 Owner: Codex for backend, contracts, tests, and documentation.
 
 Frontend ownership remains Gemini. Do not change frontend files unless the user explicitly authorizes Codex frontend edits in the current session.
 
 Primary council recommendation: `rec-semantic-model-role-strengthening`.
+
+May 10, 2026 update: Codex implemented the backend slice. Semantic model finalization now emits additive `decision_semantics` for metrics and dimensions. Decision Workspace prompt-first drafting now carries prompt-specific semantic binding confidence, reasons, source, warnings, and unresolved mapping details. The decision object contract and active execution status have been updated. Gemini frontend rendering is not implemented in this Codex slice.
 
 ## Non-Goals
 
@@ -132,4 +136,4 @@ If `tests.test_decision_chat_service` is still blocked by local Flask visibility
 
 ## Start Prompt
 
-Implement Phase 2 from `project_docs/active/decision_intelligence/current/phase_2_semantic_role_strengthening_plan.md`. Keep it backend-first. Add additive decision-aware semantic role metadata, conservative confidence, unresolved mapping details, and tests that protect against semantic false confidence. Update the decision object contract and active status docs truthfully. Do not edit frontend files unless explicitly authorized.
+Historical start prompt: implement Phase 2 from this completed reference. Keep it backend-first. Add additive decision-aware semantic role metadata, conservative confidence, unresolved mapping details, and tests that protect against semantic false confidence. Update the decision object contract and active status docs truthfully. Do not edit frontend files unless explicitly authorized.

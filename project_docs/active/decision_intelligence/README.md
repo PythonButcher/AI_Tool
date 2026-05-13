@@ -10,13 +10,13 @@ This folder is organized so current work and completed records are no longer mix
 
 The current truth lives in `project_docs/active/status/decision_intelligence_execution_status.md`, not in older phase plans in this folder.
 
-Phase 4.5 hardening and Phase 1 reliability foundation are complete. The next work is defined in `current/phase_2_semantic_role_strengthening_plan.md`: additive decision-aware semantic roles, confidence, aliases, polarity, controllability, and unresolved mapping details.
+Phase 4.5 hardening, Phase 1 reliability foundation, and Phase 2 semantic role strengthening are complete as backend foundations. The next work is defined in `current/phase_3_correction_and_observational_evidence_plan.md`: deterministic decision-frame corrections and ranked observational evidence.
 
 ## Read These By Task
 
 | Task | Read |
 | --- | --- |
-| Resume current Decision Intelligence work | `project_docs/active/status/decision_intelligence_execution_status.md`, then `current/phase_2_semantic_role_strengthening_plan.md` |
+| Resume current Decision Intelligence work | `project_docs/active/status/decision_intelligence_execution_status.md`, then `current/phase_3_correction_and_observational_evidence_plan.md` |
 | Review the council-derived roadmap | `current/next_focus_execution_plan.md` |
 | Review completed prompt-first intake behavior | `completed/phase_3_5_decision_intake_rework.md` |
 | Work on the completed chat backend contract | `completed/decision_intelligence_v3_phase_4_backend_checkpoint.md`, `completed/decision_intelligence_v3_phase_4_chat_engine_execution_plan.md` |
@@ -35,6 +35,8 @@ The files below are useful records but should not be scanned by default:
 | `completed/slice_2_5_gemini_frontend_handoff.md` | Completed Slice 2.5 frontend handoff record. |
 | `completed/slice_3_real_action_system_gemini_frontend_handoff.md` | Completed Slice 3 frontend handoff record. |
 | `completed/phase_1_reliability_fields_gemini_handoff.md` | Completed Phase 1 reliability frontend handoff and review record. |
+| `completed/phase_2_semantic_role_strengthening_plan.md` | Completed Phase 2 backend plan and acceptance record. |
+| `completed/phase_2_semantic_role_strengthening_gemini_handoff.md` | Completed Phase 2 semantic frontend handoff record. |
 | `completed/decision_intelligence_v3_phase_4_execution_checklist.md` | Historical checklist. Some unchecked items may be stale; active status wins. |
 
 ## Ownership Reminder
