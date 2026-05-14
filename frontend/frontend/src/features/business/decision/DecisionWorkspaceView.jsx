@@ -103,6 +103,8 @@ const ScopedDiagnosticCard = ({ diagnostic }) => {
  * Emphasizes the strategic framing over raw data schema.
  */
 const DecisionWorkspaceView = ({ workspace, analysis, onCreateNew, onAnalyze, setIsDataPaneOpen }) => {
+  const workspaceExportRef = React.useRef(null);
+
   if (!workspace) return null;
 
   const {
@@ -124,7 +126,7 @@ const DecisionWorkspaceView = ({ workspace, analysis, onCreateNew, onAnalyze, se
   const cs = dr?.capability_state || readiness?.capability_state;
 
   const handleExportWorkspacePdf = () => {
-    generateDecisionWorkspacePdf({ workspace, analysis });
+    generateDecisionWorkspacePdf({ workspace, analysis, sourceElement: workspaceExportRef.current });
   };
 
   const renderStatusBadge = () => {
@@ -156,7 +158,7 @@ const DecisionWorkspaceView = ({ workspace, analysis, onCreateNew, onAnalyze, se
   };
 
   return (
-    <div className={`workspace-view workspace-view--${status}`}>
+    <div className={`workspace-view workspace-view--${status}`} ref={workspaceExportRef}>
       <div className="workspace-header">
         <div className="header-top">
           <div className="status-group">
@@ -535,6 +537,7 @@ const DecisionWorkspaceView = ({ workspace, analysis, onCreateNew, onAnalyze, se
               <button
                 className="analyze-workspace-btn"
                 onClick={onAnalyze}
+                data-pdf-keep="true"
                 disabled={dr?.allowed_next_actions && !dr.allowed_next_actions.includes('analyze_workspace')}
                 style={{
                   padding: '8px 16px',

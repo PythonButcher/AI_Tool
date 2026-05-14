@@ -12,8 +12,8 @@ Its job is to stop agents from scanning old plans, completed handoffs, and archi
 | 2 | `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md` | Ownership boundary: Codex does backend/contracts/docs; Gemini owns frontend unless explicitly reauthorized. |
 | 3 | `project_docs/active/agent_council/outputs/application-next-focus-priorities/README.md` | Current next-focus decision after Phase 4.5 hardening. |
 | 4 | `project_docs/active/agent_council/outputs/application-next-focus-priorities/2026-05-01-council.json` | Detailed ranked recommendations for the next work. |
-| 5 | `project_docs/active/pdf_export_unification_plan.md` | Active implementation plan. |
-| 6 | `project_docs/active/decision_intelligence/current/phase_2_5_semantic_frame_completion_plan.md` | Next plan after PDF export unification. |
+| 5 | `project_docs/active/pdf_export_unification_plan.md` | Active PDF export remediation plan before Phase 2.5. |
+| 6 | `project_docs/active/decision_intelligence/current/phase_2_5_semantic_frame_completion_plan.md` | Next implementation plan after PDF export acceptance. |
 | 7 | `project_docs/active/decision_intelligence/current/phase_3_correction_and_observational_evidence_plan.md` | Deferred next plan after Phase 2.5 is complete. |
 | 8 | `project_docs/active/decision_intelligence/current/next_focus_execution_plan.md` | Council-derived roadmap and later-phase sequencing. |
 | 9 | `project_docs/active/contracts/decision_objects.md` | Current backend/frontend decision object contract reference. |
@@ -24,7 +24,7 @@ Do not start by reading every file in `project_docs/active/decision_intelligence
 
 Decision Intelligence V3 is the active product line. Phase 4.5 AI Chat hardening is complete. The app has a real backend chat contract, grounded `ask`, `explore`, and `decide` modes, real action handling, chat-to-Decisions continuity, truthful observational-analysis language, and improved artifact rendering.
 
-Phase 1 reliability foundation is complete. Phase 2 semantic metadata plumbing is implemented, and Gemini frontend integration is functionally in place, but May 14 PDF review showed the active prompt-first decision frame still drops or misclassifies key semantic roles. Before Phase 2.5 continues, the active next Codex slice is app-wide PDF export unification so exported results accurately match visible app content. Phase 2.5 semantic frame completion is next after PDF export unification. Phase 3 correction and ranked observational evidence is deferred until Phase 2.5 is complete.
+Phase 1 reliability foundation is complete. Phase 2 semantic metadata plumbing is implemented, and Gemini frontend integration is functionally in place, but May 14 PDF review showed the active prompt-first decision frame still drops or misclassifies key semantic roles. App-wide PDF export remediation is active first because the Decisions workspace export still does not match the visible workspace window closely enough. Phase 2.5 semantic frame completion resumes after PDF export acceptance. Phase 3 correction and ranked observational evidence is deferred until Phase 2.5 is complete.
 
 ## Documentation Areas
 
@@ -40,9 +40,9 @@ Phase 1 reliability foundation is complete. Phase 2 semantic metadata plumbing i
 
 ## Current Next Work
 
-The next implementation slice should be Codex-owned app-wide PDF export unification, using `project_docs/active/pdf_export_unification_plan.md`. This branch is explicitly about frontend export code and export UI; the branch prompt authorizes Codex to work on those PDF export surfaces. Broader unrelated frontend cleanup still belongs to Gemini unless the user explicitly authorizes it.
+The next implementation slice should be PDF export remediation, using `project_docs/active/pdf_export_unification_plan.md`. Decision Workspace export fidelity is the first blocker: the PDF must be formatted much closer to the visible workspace results in the window. Phase 2.5 semantic frame completion remains documented at `project_docs/active/decision_intelligence/current/phase_2_5_semantic_frame_completion_plan.md` and resumes after PDF export acceptance. Broader unrelated frontend cleanup still belongs to Gemini unless the user explicitly authorizes it.
 
-Good first files for that slice are `frontend/frontend/src/utils/pdfReportExport.js`, `frontend/frontend/src/utils/decisionPdfExport.js`, `frontend/frontend/src/features/charts/ChartToolbar.jsx`, `frontend/frontend/src/components/insights/DataStoryPanel.jsx`, `frontend/frontend/src/components/data_management/FileExport.jsx`, `frontend/frontend/src/features/workflow/AIReporter.jsx`, `frontend/frontend/src/features/ai/AIShell.jsx`, `frontend/frontend/src/features/business/decision/DecisionWorkspaceView.jsx`, and the related CSS files.
+Good first files for that slice are `frontend/frontend/src/utils/appPdfExport.js`, `frontend/frontend/src/utils/decisionPdfExport.js`, `frontend/frontend/src/utils/pdfReportExport.js`, `frontend/frontend/src/features/business/decision/DecisionWorkspaceView.jsx`, `frontend/frontend/src/features/business/decision/DecisionWorkspace.css`, `frontend/frontend/src/features/ai/AIShell.jsx`, `frontend/frontend/src/features/ai/AIShell.css`, and the existing PDF export entry points for charts, Data Story, workflow reports, and file export.
 
 ## Do Not Scan By Default
 

@@ -1,6 +1,6 @@
 import React from 'react';
-import { jsPDF } from 'jspdf';
-import { FaImage, FaCopy, FaFileExport, FaCloudUploadAlt } from 'react-icons/fa';
+import { FaImage, FaCopy, FaFilePdf, FaCloudUploadAlt } from 'react-icons/fa';
+import { exportChartToPdf } from '../../utils/appPdfExport';
 
 export default function ChartToolbar({ chartRef, onExportPdf }) {
     const handleCopyImage = async () => {
@@ -57,7 +57,7 @@ export default function ChartToolbar({ chartRef, onExportPdf }) {
   };
 
   return (
-    <div style={toolbarStyle}>
+    <div className="chart-toolbar" style={toolbarStyle}>
         <button 
         style={{
             ...buttonStyle,
@@ -90,12 +90,14 @@ export default function ChartToolbar({ chartRef, onExportPdf }) {
         onMouseOut={(e) => {
             e.currentTarget.style.backgroundColor = '#f3f4f6'; // Reset
         }}
+        aria-label="Export chart as PNG"
+        title="Export chart as PNG"
         >
         <FaImage style={{ opacity: 0.85 }} />
         Export PNG
         </button>
             
-      <button style={buttonStyle} onClick={handleCopyImage}>
+      <button style={buttonStyle} onClick={handleCopyImage} aria-label="Copy chart image" title="Copy chart image">
         <FaCopy /> Copy Chart Image
       </button>
       
@@ -103,7 +105,7 @@ export default function ChartToolbar({ chartRef, onExportPdf }) {
         style={buttonStyle}
         onClick={() => {
             if (typeof onExportPdf === 'function') {
-              onExportPdf();
+              onExportPdf(chartRef?.current || null);
               return;
             }
 
@@ -112,22 +114,19 @@ export default function ChartToolbar({ chartRef, onExportPdf }) {
             return;
             }
 
-            const base64Image = chartRef.current.toBase64Image();
-            const pdf = new jsPDF({
-            orientation: 'landscape',
-            unit: 'px',
-            format: [800, 600], // adjust size as needed
+            exportChartToPdf({
+              chart: chartRef.current,
+              title: chartRef.current?.config?.data?.datasets?.[0]?.label || 'Chart Export',
             });
-
-            pdf.addImage(base64Image, 'PNG', 20, 20, 760, 560);
-            pdf.save(`chart_export_${new Date().toISOString().split('T')[0]}.pdf`);
         }}
+        aria-label="Export chart as PDF"
+        title="Export chart as PDF"
         >
-        <FaFileExport /> Export as PDF
+        <FaFilePdf /> Export PDF
     </button>
 
       
-      <button style={buttonStyle} onClick={handleClick('Web Clipboard')}>
+      <button style={buttonStyle} onClick={handleClick('Web Clipboard')} aria-label="Send chart to web clipboard" title="Send chart to web clipboard">
         <FaCloudUploadAlt /> Web Clipboard
       </button>
     </div>

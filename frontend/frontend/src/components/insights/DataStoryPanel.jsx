@@ -16,6 +16,7 @@ export default function DataStoryPanel({ uploadedData, cleanedData, model, saved
   const { saveWindowContentState } = useWindowContext();
   const [story, setStory] = useState(savedState || null);  // ✅ initialize from savedState
   const [error, setError] = useState(null);
+  const storyExportRef = React.useRef(null);
 
   console.log("📘 story model in DataStoryPanel:", model);
   
@@ -94,6 +95,8 @@ export default function DataStoryPanel({ uploadedData, cleanedData, model, saved
       datasetRows: activeDataset || [],
       storyState: story,
       pipelineResults,
+      sourceElement: storyExportRef.current,
+      title: 'Data Story',
       executiveSummaryOverride: story.sections
         ?.map((section) => `${section.title}\n${section.content}`)
         .join('\n\n'),
@@ -101,7 +104,7 @@ export default function DataStoryPanel({ uploadedData, cleanedData, model, saved
   };
 
   return (
-    <div className="storyboard-wrapper">
+    <div className="storyboard-wrapper" ref={storyExportRef}>
       <div className="charts-column">
         {chartConfigs.length === 0 && <p>No AI charts returned.</p>}
         {chartConfigs.map((cfg, i) => (

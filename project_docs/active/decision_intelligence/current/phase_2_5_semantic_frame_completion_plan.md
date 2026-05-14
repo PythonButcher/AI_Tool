@@ -8,9 +8,9 @@ Phase 2.5 exists to button up that gap before Phase 3 correction and ranked obse
 
 ## Current Status
 
-Status: next Codex-owned backend slice after app-wide PDF export unification.
+Status: queued after PDF export acceptance.
 
-The active branch immediately before this work is `project_docs/active/pdf_export_unification_plan.md`. Do not start Phase 2.5 until the PDF export work is complete enough that exported review artifacts accurately match visible AI Chat, Decisions workspace, chart, story, and report content.
+The preceding branch, `project_docs/active/pdf_export_unification_plan.md`, is still active. The first shared export implementation exists, but Decisions workspace export fidelity is not accepted because the generated PDF does not yet match the visible workspace window closely enough. Phase 2.5 should start only after PDF export remediation is accepted.
 
 Phase 3 correction and ranked observational evidence remains planned, but it is deferred until Phase 2.5 is complete. Phase 3 should not be started while the current prompt-first frame can misclassify segmentation dimensions as levers or drop guardrail thresholds.
 
@@ -82,9 +82,9 @@ Preserve Phase 2 traceability fields on active bindings: `semantic_binding_confi
 
 Readiness should be based on the active frame, not only on partial prompt matches. A decision with a hard guardrail whose threshold value failed to parse should be blocked or limited until resolved. A frame that drops one of two explicitly requested guardrails should not look fully reliable without warning.
 
-### 6. Use the unified PDF export for review
+### 6. Use the accepted PDF export for review
 
-Phase 2.5 should rely on the app-wide PDF export system completed immediately before this branch. Do not rebuild PDF export inside Phase 2.5. Use the unified export only to verify that AI Chat and Decisions workspace output match the active backend frame.
+Phase 2.5 should rely on the app-wide PDF export system after it is accepted. Do not rebuild PDF export inside Phase 2.5. Use the accepted export only to verify that AI Chat and Decisions workspace output match the active backend frame.
 
 ## Tests To Add
 
@@ -172,4 +172,4 @@ Do not mark Phase 3 active again until this status file truthfully says Phase 2.
 
 ## Stored Start Prompt For Later
 
-Start by reading AGENTS.md, project_docs/INDEX.md, project_docs/active/README.md, project_docs/active/status/decision_intelligence_execution_status.md, and project_docs/active/decision_intelligence/current/phase_2_5_semantic_frame_completion_plan.md. Implement Phase 2.5 backend-first after confirming app-wide PDF export unification is complete. The goal is to fix prompt-first semantic frame extraction so the exact May 14 real-dataset prompt preserves objective revenue, levers marketing_spend and discount_pct, segments region and channel, and guardrails gross_margin_pct above 30% plus return_rate_pct below 4% with non-null threshold values. Do not add a false channel mix lever when channel appears only in segmentation language. Preserve existing endpoint names, action IDs, artifact types, readiness fields, semantic trace fields, and the observational-analysis-only boundary. Update backend tests, project_docs/active/contracts/decision_objects.md if fields change, and active status docs truthfully. Do not edit frontend files unless explicitly authorized.
+Start by reading AGENTS.md, project_docs/INDEX.md, project_docs/active/README.md, project_docs/active/status/decision_intelligence_execution_status.md, and project_docs/active/decision_intelligence/current/phase_2_5_semantic_frame_completion_plan.md. Implement Phase 2.5 backend-first after confirming app-wide PDF export remediation is accepted. The goal is to fix prompt-first semantic frame extraction so the exact May 14 real-dataset prompt preserves objective revenue, levers marketing_spend and discount_pct, segments region and channel, and guardrails gross_margin_pct above 30% plus return_rate_pct below 4% with non-null threshold values. Do not add a false channel mix lever when channel appears only in segmentation language. Preserve existing endpoint names, action IDs, artifact types, readiness fields, semantic trace fields, and the observational-analysis-only boundary. Update backend tests, project_docs/active/contracts/decision_objects.md if fields change, and active status docs truthfully. Do not edit frontend files unless explicitly authorized.

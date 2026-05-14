@@ -582,3 +582,115 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Print-capture rules keep the PDF close to the visible workspace while expanding scrollable content. */
+.workspace-view.decision-workspace-pdf-capture {
+  width: 1040px;
+  max-width: none;
+  height: auto;
+  min-height: auto;
+  overflow: visible;
+  margin: 0;
+  padding: 24px;
+  gap: 18px;
+  border-radius: 10px;
+  background: var(--bg-primary);
+  box-shadow: none;
+}
+
+.decision-workspace-pdf-capture .workspace-header {
+  padding-bottom: 18px;
+  margin-bottom: 0;
+}
+
+.decision-workspace-pdf-capture .header-actions {
+  gap: 8px;
+}
+
+.decision-workspace-pdf-capture .workspace-title {
+  margin: 0;
+  font-size: 1.8rem;
+  line-height: 1.2;
+}
+
+.decision-workspace-pdf-capture .workspace-prompt,
+.decision-workspace-pdf-capture .workspace-summary,
+.decision-workspace-pdf-capture .workspace-boundary-banner {
+  margin: 12px 0;
+  padding: 14px 16px;
+  border-radius: 10px;
+}
+
+.decision-workspace-pdf-capture .workspace-grid {
+  grid-template-columns: 1.5fr 1fr;
+  gap: 20px;
+}
+
+.decision-workspace-pdf-capture .scope-section,
+.decision-workspace-pdf-capture .context-section {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.decision-workspace-pdf-capture .objective-card,
+.decision-workspace-pdf-capture .lever-card,
+.decision-workspace-pdf-capture .constraint-card,
+.decision-workspace-pdf-capture .context-card {
+  padding: 16px;
+  border-radius: 10px;
+  margin-bottom: 12px;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.decision-workspace-pdf-capture .section-label {
+  margin-bottom: 10px;
+}
+
+.decision-workspace-pdf-capture .objective-statement {
+  font-size: 1.15rem;
+  margin-bottom: 12px;
+}
+
+.decision-workspace-pdf-capture .objective-details {
+  padding: 12px;
+  gap: 10px;
+}
+
+.decision-workspace-pdf-capture .semantic-ref {
+  padding: 4px 8px;
+  gap: 8px;
+}
+
+.decision-workspace-pdf-capture .semantic-ref.is-compact {
+  padding: 3px 7px;
+}
+
+.decision-workspace-pdf-capture .workspace-footer,
+.decision-workspace-pdf-capture .workspace-analysis-results {
+  margin-top: 22px !important;
+  padding-top: 22px !important;
+}
+
+.decision-workspace-pdf-capture .readiness-panel,
+.decision-workspace-pdf-capture .di-checklist-section,
+.decision-workspace-pdf-capture .workspace-analysis-results,
+.decision-workspace-pdf-capture .scoped-diagnostic-card {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.decision-workspace-pdf-capture .capability-matrix {
+  margin-top: 14px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.decision-workspace-pdf-capture .capability-tag {
+  padding: 7px 9px;
+  font-size: 0.68rem;
+}
+
+.decision-workspace-pdf-capture .analysis-notice {
+  margin-top: 12px !important;
+}
