@@ -1,13 +1,13 @@
 import React, { useState, useContext, useEffect, useRef, useMemo } from 'react';
 import axios from 'axios';
-import { 
-  FaRobot, FaRegCommentDots, FaTools, FaBook, FaDatabase, FaPlus, FaLightbulb, 
+import {
+  FaRobot, FaRegCommentDots, FaTools, FaBook, FaDatabase, FaPlus, FaLightbulb,
   FaHistory, FaChartBar, FaShieldAlt, FaCircle, FaInfoCircle, FaPaperPlane,
   FaCheckCircle, FaExclamationTriangle, FaExternalLinkAlt, FaLayerGroup, FaFileAlt,
-  FaEye, FaChevronRight, FaTerminal, FaSearch, FaCloud
+  FaEye, FaChevronRight, FaTerminal, FaSearch, FaCloud, FaFilePdf
 } from "react-icons/fa";
-import { 
-  TextField, Button, Box, Typography, Divider, Tooltip, Chip, 
+import {
+  TextField, Button, Box, Typography, Divider, Tooltip, Chip,
   Avatar, Tabs, Tab, Drawer, IconButton
 } from '@mui/material';
 import { DataContext } from '../../context/DataContext';
@@ -16,6 +16,8 @@ import MentionDropdown from '../../components/data_management/MentionDropdown';
 import { detectToken, extractTokens } from '../../utils/mentionUtils';
 import { AICommands } from '../workflow/AiCommandBlock';
 import AICharts from './AICharts';
+import SemanticRef from '../business/decision/SemanticRef';
+import { generateDecisionArtifactPdf } from '../../utils/decisionPdfExport';
 import './AIShell.css';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
@@ -36,7 +38,7 @@ const MODES = [
 
 /**
  * AIShell (Analytics-Agent Workspace)
- * 
+ *
  * Re-implemented as a high-fidelity workspace with split conversation and inspection.
  */
 function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspace }) {
@@ -56,11 +58,11 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspa
   const [error, setError] = useState(null);
   const [awaitingCleanInstructions, setAwaitingCleanInstructions] = useState(false);
   const [activeWorkspaceTab, setActiveWorkspaceTab] = useState('threads');
-  
+
   // Phase 4 Logic State
   const [sessionState, setSessionState] = useState({});
-  const [activeMode, setActiveMode] = useState('ask'); 
-  const [activeArtifact, setActiveArtifact] = useState(null); 
+  const [activeMode, setActiveMode] = useState('ask');
+  const [activeArtifact, setActiveArtifact] = useState(null);
   const [isResultsPaneOpen, setIsResultsPaneOpen] = useState(true);
   const [isContextPaneOpen, setIsContextPaneOpen] = useState(false);
 
@@ -139,9 +141,9 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspa
           return;
         }
 
-        const newAssistantMsg = { 
-          role: "assistant", 
-          content: data.assistant_message, 
+        const newAssistantMsg = {
+          role: "assistant",
+          content: data.assistant_message,
           artifacts: data.artifacts,
           suggested_actions: data.suggested_actions || data.session_state?.available_actions || [],
           mode: data.mode,
@@ -152,7 +154,7 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspa
         setUserMessages(prev => [...prev, newAssistantMsg]);
         setSessionState(data.session_state || {});
         if (data.mode) setActiveMode(data.mode);
-        
+
         if (data.artifacts && data.artifacts.length > 0) {
           const lastArt = data.artifacts[data.artifacts.length - 1];
           // Only auto-focus if it's a rich, inspectable artifact
@@ -181,8 +183,8 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspa
   const handleModeChange = (event, newMode) => {
     if (!newMode) return;
     setActiveMode(newMode);
-    setSessionState(prev => ({ 
-      ...prev, 
+    setSessionState(prev => ({
+      ...prev,
       active_mode: newMode,
       mode_context: {
         ...(prev.mode_context || {}),
@@ -259,16 +261,62 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspa
     setIsResultsPaneOpen(true);
   };
 
+  const isPdfExportableArtifact = (artifact) => {
+    return ['answer', 'chart', 'workspace_preview', 'workspace_analysis_summary'].includes(artifact?.type);
+  };
+
+  const handleExportArtifactPdf = (artifact, messageSessionState = null, messageCapabilityState = null, messageDecisionReadiness = null) => {
+    if (!isPdfExportableArtifact(artifact)) return;
+
+    generateDecisionArtifactPdf({
+      artifact,
+      contextSessionState: messageSessionState || artifact.contextSessionState || sessionState,
+      contextCapabilityState: messageCapabilityState || artifact.contextCapabilityState || sessionState?.capability_state,
+      contextDecisionReadiness: messageDecisionReadiness || artifact.contextDecisionReadiness || sessionState?.decision_readiness,
+    });
+  };
+
+  const renderArtifactExportButton = (artifact, messageSessionState = null, messageCapabilityState = null, messageDecisionReadiness = null, className = '') => {
+    if (!isPdfExportableArtifact(artifact)) return null;
+
+    return (
+      <Tooltip title="Export result as PDF" arrow>
+        <IconButton
+          size="small"
+          className={`ai-shell__export-icon-btn ${className}`}
+          aria-label="Export result as PDF"
+          onClick={(event) => {
+            event.stopPropagation();
+            handleExportArtifactPdf(artifact, messageSessionState, messageCapabilityState, messageDecisionReadiness);
+          }}
+        >
+          <FaFilePdf />
+        </IconButton>
+      </Tooltip>
+    );
+  };
+
+  const renderArtifactExportBar = (artifact, messageSessionState = null, messageCapabilityState = null, messageDecisionReadiness = null) => {
+    if (!isPdfExportableArtifact(artifact)) return null;
+
+    return (
+      <div className="ai-shell__artifact-export-bar">
+        <span>Export this result for review</span>
+        {renderArtifactExportButton(artifact, messageSessionState, messageCapabilityState, messageDecisionReadiness)}
+      </div>
+    );
+  };
+
   const renderArtifact = (artifact, isInspector = false, contextActions = null, contextSessionState = null, contextCapabilityState = null, contextDecisionReadiness = null) => {
     if (!artifact) return null;
 
-    const { 
-      type, 
-      content, 
-      render_hint, 
-      inspectable, 
-      source, 
-      mode: artMode 
+    const {
+      type,
+      content,
+      render_hint,
+      inspectable,
+      source,
+      mode: artMode
     } = artifact;
 
     // Use passed context metadata or stored artifact context for inspector
@@ -278,7 +326,7 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspa
     const lookupDecisionReadiness = contextDecisionReadiness || artifact.contextDecisionReadiness || sessionState?.decision_readiness;
 
     const baseClass = isInspector ? "ai-shell__active-artifact" : "ai-shell__artifact-preview-card";
-    
+
     // Metadata-driven visibility: In-thread we show links for inspectable rich content
     // unless render_hint explicitly asks for 'inline' presentation.
     if (!isInspector && inspectable && render_hint !== 'inline') {
@@ -299,9 +347,12 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspa
               {content?.title || content?.chartType || content?.summary?.headline || content?.metric?.label || content?.metric?.name || content?.fieldsUsed?.value || 'View Details'}
             </Typography>
           </div>
-          <IconButton size="small" className="ai-shell__preview-action" aria-label="View Details">
-            <FaChevronRight />
-          </IconButton>
+          <div className="ai-shell__preview-actions">
+            {renderArtifactExportButton(artifact, contextSessionState, contextCapabilityState, contextDecisionReadiness, 'is-preview-export')}
+            <IconButton size="small" className="ai-shell__preview-action" aria-label="View Details">
+              <FaChevronRight />
+            </IconButton>
+          </div>
         </div>
       );
     }
@@ -319,10 +370,16 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspa
                 <span className="ai-shell__artifact-title">
                    <FaCheckCircle /> {source || 'Result'} {artMode ? `(${artMode})` : ''}
                 </span>
-                {inspectable && <IconButton size="small" onClick={() => handleInspect(artifact, contextActions, contextSessionState, contextCapabilityState, contextDecisionReadiness)} aria-label="Inspect Result"><FaExternalLinkAlt style={{ fontSize: '0.7rem' }} /></IconButton>}
+                <div className="ai-shell__artifact-header-actions">
+                  {renderArtifactExportButton(artifact, contextSessionState, contextCapabilityState, contextDecisionReadiness)}
+                  {inspectable && <IconButton size="small" onClick={() => handleInspect(artifact, contextActions, contextSessionState, contextCapabilityState, contextDecisionReadiness)} aria-label="Inspect Result"><FaExternalLinkAlt style={{ fontSize: '0.7rem' }} /></IconButton>}
+                </div>
               </div>
             )}
-            <div className="ai-shell__artifact-content">{renderAnswerArtifact(content)}</div>
+            <div className="ai-shell__artifact-content">
+              {isInspector && renderArtifactExportBar(artifact, lookupSessionState, lookupCapabilityState, lookupDecisionReadiness)}
+              {renderAnswerArtifact(content)}
+            </div>
           </div>
         );
 
@@ -331,6 +388,7 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspa
           <div className={`${baseClass} is-chart`}>
             {isInspector && (
               <div className="ai-shell__artifact-content" style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+                {renderArtifactExportBar(artifact, lookupSessionState, lookupCapabilityState, lookupDecisionReadiness)}
                 <AICharts aiChartType={content?.chartType || 'Bar'} aiChartData={content?.chartData} />
                 {content?.explanation && (
                   <Typography variant="caption" sx={{ mt: 2, display: 'block', opacity: 0.6 }}>{content.explanation}</Typography>
@@ -348,7 +406,7 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspa
         const artCs = wp.capability_state || wp.content?.capability_state || dr?.capability_state;
         const respCs = lookupCapabilityState;
         const cs = { ...respCs, ...artCs };
-        
+
         // Explicitly merge unsupported_requested_capabilities so they don't get shadowed
         const mergedUnsupported = [
           ...new Set([
@@ -364,15 +422,43 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspa
         // Backend now sends decision_kickoff as an object
         const isKickoff = !!wp.decision_kickoff;
 
-        // Helper to format object arrays into labels
-        const formatLabels = (items) => {
-          if (!Array.isArray(items)) return 'Not specified';
-          return items.map(item => item.label || item.name || item).join(', ');
+        // Helper to format object arrays into SemanticRef components
+        const renderSemanticList = (items, type) => {
+          if (!Array.isArray(items) || items.length === 0) return <Typography variant="body2" sx={{ opacity: 0.5 }}>Not specified</Typography>;
+          return (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', paddingLeft: '12px', borderLeft: '2px solid var(--text-primary)' }}>
+              {items.map((item, i) => {
+                const metricRef = item.metric_ref || (type === 'lever' && item.binding?.binding_type === 'metric' ? item.binding.metric_ref : null);
+                const dimensionRef = item.dimension_ref || (type === 'lever' && item.binding?.binding_type === 'dimension' ? item.binding.dimension_ref : null);
+
+                if (metricRef?.metric_id || dimensionRef?.dimension_id) {
+                  return <SemanticRef key={i} metric_ref={metricRef} dimension_ref={dimensionRef} type={type} compact />;
+                }
+
+                // Build a fallback ref from flattened fields
+                const fallbackLabel = item.label || item.binding_label || item.metric || item.dimension_id || item.field || item.strings || (typeof item === 'string' ? item : 'Unbound item');
+                const fallbackRef = { label: fallbackLabel };
+
+                return (
+                  <SemanticRef
+                    key={i}
+                    metric_ref={type !== 'segment' ? fallbackRef : null}
+                    dimension_ref={type === 'segment' ? fallbackRef : null}
+                    type={type}
+                    compact
+                  />
+                );
+              })}
+            </div>
+          );
         };
+
+        const unresolvedMappings = wp.drafting?.prompt_matches?.unresolved_mappings || wp.unresolved_mappings || [];
 
         return (
           <div className={`${baseClass} is-workspace_preview`}>
             <div className="ai-shell__artifact-content">
+              {isInspector && renderArtifactExportBar(artifact, lookupSessionState, lookupCapabilityState, lookupDecisionReadiness)}
               {isKickoff ? (
                 <div className="ai-shell__kickoff-container">
                   <header className="ai-shell__kickoff-header" style={{ marginBottom: '24px' }}>
@@ -383,7 +469,7 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspa
                       {wp.title || 'Untitled Decision Framework'}
                     </Typography>
                   </header>
-                  
+
                   <div className="ai-shell__kickoff-summary" style={{ marginBottom: '28px' }}>
                     <Typography variant="body1" sx={{ lineHeight: 1.6, opacity: 0.9, fontSize: '1.05rem' }}>
                       {wp.decision_kickoff?.summary || wp.decision_kickoff}
@@ -393,7 +479,17 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspa
                   <div className="ai-shell__kickoff-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '32px' }}>
                     <div className="ai-shell__kickoff-item">
                       <Typography variant="overline" sx={{ fontWeight: 900, opacity: 0.4, display: 'block', mb: 0.5 }}>Objective</Typography>
-                      <Typography variant="body2" sx={{ fontWeight: 700, borderLeft: '2px solid var(--text-primary)', pl: 1.5 }}>{wp.objective_metric?.label || wp.objective_metric || 'Not specified'}</Typography>
+                      {wp.objective_metric ? (
+                        <div style={{ paddingLeft: '12px', borderLeft: '2px solid var(--text-primary)' }}>
+                          <SemanticRef
+                            metric_ref={wp.objective_metric.metric_id ? wp.objective_metric : { label: typeof wp.objective_metric === 'string' ? wp.objective_metric : wp.objective_metric?.label || wp.objective_metric?.name || 'Not specified' }}
+                            type="objective"
+                            compact
+                          />
+                        </div>
+                      ) : (
+                        <Typography variant="body2" sx={{ fontWeight: 700, borderLeft: '2px solid var(--text-primary)', pl: 1.5, opacity: 0.5 }}>Not specified</Typography>
+                      )}
                     </div>
                     <div className="ai-shell__kickoff-item">
                       <Typography variant="overline" sx={{ fontWeight: 900, opacity: 0.4, display: 'block', mb: 0.5 }}>Time Horizon</Typography>
@@ -401,17 +497,53 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspa
                     </div>
                     <div className="ai-shell__kickoff-item">
                       <Typography variant="overline" sx={{ fontWeight: 900, opacity: 0.4, display: 'block', mb: 0.5 }}>Primary Levers</Typography>
-                      <Typography variant="body2" sx={{ fontWeight: 700, borderLeft: '2px solid var(--text-primary)', pl: 1.5 }}>{formatLabels(wp.levers)}</Typography>
+                      {renderSemanticList(wp.levers, 'lever')}
                     </div>
                     <div className="ai-shell__kickoff-item">
                       <Typography variant="overline" sx={{ fontWeight: 900, opacity: 0.4, display: 'block', mb: 0.5 }}>Segmentation</Typography>
-                      <Typography variant="body2" sx={{ fontWeight: 700, borderLeft: '2px solid var(--text-primary)', pl: 1.5 }}>{formatLabels(wp.segment_dimensions)}</Typography>
+                      {renderSemanticList(wp.segment_dimensions, 'segment')}
                     </div>
                     <div className="ai-shell__kickoff-item" style={{ gridColumn: '1 / -1' }}>
                       <Typography variant="overline" sx={{ fontWeight: 900, opacity: 0.4, display: 'block', mb: 0.5 }}>Guardrails</Typography>
-                      <Typography variant="body2" sx={{ fontWeight: 700, borderLeft: '2px solid var(--text-primary)', pl: 1.5 }}>{formatLabels(wp.guardrails)}</Typography>
+                      {renderSemanticList(wp.guardrails, 'guardrail')}
                     </div>
                   </div>
+
+                  {unresolvedMappings.length > 0 && (
+                    <div className="ai-shell__unresolved-zone" style={{ marginBottom: '32px', padding: '16px', borderRadius: '12px', background: 'rgba(239, 68, 68, 0.05)', border: '1px solid rgba(239, 68, 68, 0.1)' }}>
+                      <Typography variant="overline" sx={{ fontWeight: 900, color: '#ef4444', display: 'block', mb: 1.5 }}>Unresolved Semantic Mappings</Typography>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                        {unresolvedMappings.map((m, i) => {
+                          const mappingType = m.mapping_type || 'unresolved';
+                          const coreTerm = m.label || m.name || m.term || m.field || 'unknown term';
+                          const candidateSummary = m.candidate_labels?.length > 0 ? ` [${m.candidate_labels[0]}${m.candidate_labels.length > 1 ? '...' : ''}]` : '';
+                          const reasonInfo = m.reason ? ` (${m.reason})` : '';
+
+                          // Build high-fidelity label from type + term + metadata
+                          const labelText = `${mappingType}: ${coreTerm}${candidateSummary}${reasonInfo}`;
+
+                          const ref = {
+                            label: labelText,
+                            confidence: m.confidence,
+                            reason: m.reason,
+                            candidate_labels: m.candidate_labels
+                          };
+                          return (
+                            <SemanticRef
+                              key={i}
+                              metric_ref={m.mapping_type === 'metric' ? ref : null}
+                              dimension_ref={m.mapping_type === 'dimension' ? ref : null}
+                              type="unresolved"
+                              compact
+                            />
+                          );
+                        })}
+                      </div>
+                      <Typography variant="caption" sx={{ display: 'block', mt: 1.5, opacity: 0.6 }}>
+                        These terms were identified in your prompt but could not be confidently bound to the current semantic model.
+                      </Typography>
+                    </div>
+                  )}
 
                   <Divider sx={{ mb: 3, opacity: 0.1 }} />
 
@@ -463,7 +595,7 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspa
                       const actionId = wp.recommended_next_action?.action_id || wp.recommended_next_action;
                       // Use the scoped lookupActions from renderArtifact scope
                       const fullAction = lookupActions.find(a => a.action_id === actionId) || wp.recommended_next_action;
-                      
+
                       const isPrimary = fullAction?.priority === 'primary';
                       const isEnabled = dr?.allowed_next_actions ? dr.allowed_next_actions.includes(actionId) : fullAction?.enabled !== false;
                       const blockerInfo = dr?.blocked_state?.is_blocked ? dr.blocked_state.blocking_missing_inputs?.join(', ') : null;
@@ -474,22 +606,22 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspa
                           <Typography variant="overline" sx={{ fontWeight: 900, opacity: 0.5, display: 'block', mb: 1.5 }}>Recommended Next Step</Typography>
                           <Tooltip title={tooltip} arrow>
                             <span>
-                              <Button 
-                                variant="contained" 
+                              <Button
+                                variant="contained"
                                 fullWidth
                                 disabled={loading || !isEnabled}
                                 startIcon={<FaSearch />}
-                                sx={{ 
-                                  borderRadius: '12px', 
+                                sx={{
+                                  borderRadius: '12px',
                                   py: 1.5,
-                                  textTransform: 'none', 
-                                  fontWeight: 900, 
+                                  textTransform: 'none',
+                                  fontWeight: 900,
                                   fontSize: '0.9rem',
                                   bgcolor: isPrimary ? 'var(--text-primary)' : 'var(--bg-secondary)',
                                   color: isPrimary ? 'var(--bg-primary)' : 'var(--text-primary)',
-                                  '&:hover': { 
-                                    bgcolor: isPrimary ? 'var(--text-primary)' : 'var(--bg-tertiary)', 
-                                    filter: 'brightness(1.1)' 
+                                  '&:hover': {
+                                    bgcolor: isPrimary ? 'var(--text-primary)' : 'var(--bg-tertiary)',
+                                    filter: 'brightness(1.1)'
                                   },
                                   '&:disabled': {
                                     opacity: 0.5,
@@ -520,7 +652,7 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspa
                   </div>
                 </>
               )}
-              
+
               {wp.missing_inputs?.length > 0 && (
                 <div className="ai-shell__kickoff-clarifications" style={{ marginTop: '32px' }}>
                   <Typography variant="overline" sx={{ fontWeight: 900, opacity: 0.5, display: 'block', mb: 2 }}>Required Clarifications</Typography>
@@ -543,6 +675,7 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspa
         return (
           <div className={`${baseClass} is-workspace_analysis_summary`}>
             <div className="ai-shell__artifact-content">
+              {isInspector && renderArtifactExportBar(artifact, lookupSessionState, lookupCapabilityState, lookupDecisionReadiness)}
               {hasItems ? (
                 <div className="ai-shell__analysis-list">
                   <Typography variant="overline" sx={{ fontWeight: 900, mb: 2, display: 'block', opacity: 0.5 }}>Diagnostic Breakdown {artMode ? `• ${artMode.toUpperCase()}` : ''}</Typography>
@@ -550,10 +683,10 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspa
                     const isObj = typeof item === 'object' && item !== null;
                     // Primary text: Prefer label, then statement, then headline, then title
                     const statement = isObj ? (item.label || item.statement || item.headline || item.title) : item;
-                    
+
                     // Secondary text: Prefer description, then summary, then reason, then category
                     const description = isObj ? (item.description || item.summary || item.reason || (item.category ? `Category: ${item.category}` : null)) : null;
-                    
+
                     // Severity/Blocker logic: check blocks_simulation, is_blocker, or high/critical severity
                     const isBlocker = isObj ? !!(item.blocks_simulation || item.is_blocker || item.severity === 'high' || item.severity === 'critical') : false;
 
@@ -654,7 +787,7 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspa
 
     const dsContext = resolveDatasetForNlp();
     const msg = userInput;
-    setUserInput(''); 
+    setUserInput('');
 
     setUserMessages(prev => [...prev, { role: "user", content: msg, grounded: resolvedDatasets.length > 0 }]);
 
@@ -725,9 +858,9 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspa
       const data = response.data;
 
       if (data.status === 'success') {
-        const newMsg = { 
-          role: "assistant", 
-          content: data.assistant_message, 
+        const newMsg = {
+          role: "assistant",
+          content: data.assistant_message,
           artifacts: data.artifacts,
           suggested_actions: data.suggested_actions || [],
           mode: data.mode,
@@ -738,7 +871,7 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspa
         setUserMessages(prev => [...prev, newMsg]);
         setSessionState(data.session_state || {});
         if (data.mode) setActiveMode(data.mode);
-        
+
         if (data.artifacts && data.artifacts.length > 0) {
           const lastArt = data.artifacts[data.artifacts.length - 1];
           // Only auto-focus if it's a rich, inspectable artifact
@@ -781,8 +914,8 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspa
         <div className="ai-shell__rail-top">
           {MODES.map(m => (
             <Tooltip key={m.id} title={m.label} placement="right">
-              <button 
-                className={`ai-shell__rail-item ${activeMode === m.id ? 'is-active' : ''}`} 
+              <button
+                className={`ai-shell__rail-item ${activeMode === m.id ? 'is-active' : ''}`}
                 onClick={() => handleModeChange(null, m.id)}
                 aria-label={m.label}
               >
@@ -804,8 +937,8 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspa
             </button>
           </Tooltip>
           <Tooltip title="Context & Metadata" placement="right">
-            <button 
-              className={`ai-shell__rail-item ${isContextPaneOpen ? 'is-active' : ''}`} 
+            <button
+              className={`ai-shell__rail-item ${isContextPaneOpen ? 'is-active' : ''}`}
               onClick={() => setIsContextPaneOpen(true)}
               aria-label="Context & Metadata"
             >
@@ -821,9 +954,9 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspa
         open={isContextPaneOpen}
         onClose={() => setIsContextPaneOpen(false)}
         PaperProps={{
-          sx: { 
-            width: 350, 
-            bgcolor: 'var(--bg-primary)', 
+          sx: {
+            width: 350,
+            bgcolor: 'var(--bg-primary)',
             borderRight: '1px solid var(--border-color)',
             boxShadow: '20px 0 50px rgba(0,0,0,0.3)',
             color: 'var(--text-primary)',
@@ -858,7 +991,7 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspa
           </div>
 
           <Divider sx={{ my: 2, borderColor: 'var(--border-color)' }} />
-          
+
           <div className="ai-shell__context-module">
             <div className="ai-shell__module-header"><span className="ai-shell__module-title">Schema Metadata</span><span className="ai-shell__coming-soon">Soon</span></div>
             <div className="ai-shell__module-empty">No metadata overrides detected.</div>
@@ -920,8 +1053,8 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspa
           <div className="ai-shell__mode-container">
             <div className="ai-shell__mode-group">
               {MODES.map(m => (
-                <button 
-                  key={m.id} 
+                <button
+                  key={m.id}
                   className={`ai-shell__mode-btn ${activeMode === m.id ? 'is-active' : ''}`}
                   onClick={() => handleModeChange(null, m.id)}
                 >
@@ -956,7 +1089,7 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspa
               </div>
             </div>
           )}
-          
+
           {userMessages.map((msg, idx) => (
             <div key={idx} className={`ai-shell__message-row is-${msg.role}`}>
               <div className="ai-shell__message-card">
@@ -965,7 +1098,7 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspa
                   {(msg.grounded || msg.role === 'assistant') && <span className="ai-shell__grounded-tag"><FaShieldAlt /> Grounded</span>}
                 </div>
                 <div className="ai-shell__message-content">{msg.content}</div>
-                
+
                 {msg.artifacts && msg.artifacts.length > 0 && (
                   <div className="ai-shell__artifact-container">
                     {msg.artifacts.map((art, aIdx) => <React.Fragment key={aIdx}>{renderArtifact(art, false, msg.suggested_actions, msg.session_state, msg.capability_state, msg.decision_readiness)}</React.Fragment>)}
@@ -989,8 +1122,8 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspa
                       .map((act, actIdx) => (
                         <Tooltip key={actIdx} title={act.availability_reason || act.description || ''} arrow>
                           <span>
-                            <button 
-                              className={`ai-shell__action-btn ${act.priority === 'primary' ? 'is-primary' : ''} ${!act.enabled ? 'is-disabled' : ''}`} 
+                            <button
+                              className={`ai-shell__action-btn ${act.priority === 'primary' ? 'is-primary' : ''} ${!act.enabled ? 'is-disabled' : ''}`}
                               onClick={() => handleActionClick(act.action_id, msg.session_state)}
                               disabled={loading || !act.enabled}
                             >

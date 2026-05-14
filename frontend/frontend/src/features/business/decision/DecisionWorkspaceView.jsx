@@ -1,24 +1,25 @@
 import React from 'react';
 import Typography from '@mui/material/Typography';
-import { 
-  FaCircleCheck, FaCircleExclamation, FaTriangleExclamation, FaCircleInfo, 
-  FaGears, FaShieldHalved, FaChartLine, FaLayerGroup, FaPlus, FaCalendarDays, FaFileLines, FaLink, FaClock,
-  FaMagnifyingGlassChart, FaFlask, FaScaleBalanced, FaLightbulb, FaBrain
+import {
+  FaCircleCheck, FaCircleExclamation, FaTriangleExclamation, FaCircleInfo,
+  FaGears, FaShieldHalved, FaChartLine, FaLayerGroup, FaPlus, FaCalendarDays, FaFileLines, FaClock,
+  FaMagnifyingGlassChart, FaFlask, FaScaleBalanced, FaLightbulb, FaBrain, FaFilePdf
 } from 'react-icons/fa6';
 import './DecisionWorkspace.css';
 import DecisionSignals from './DecisionSignals';
 import DecisionRecommendations from './DecisionRecommendations';
+import SemanticRef from './SemanticRef';
+import { generateDecisionWorkspacePdf } from '../../../utils/decisionPdfExport';
 
 /**
  * ScopedDiagnosticCard
- * 
+ *
  * Renders a single structured diagnostic item from the workspace analysis.
  * Follows the DI 2.0 V3 contract for truthful, scoped observational diagnostics.
  */
 const ScopedDiagnosticCard = ({ diagnostic }) => {
   const { summary, metric_ref, status, evidence } = diagnostic;
-  const label = metric_ref?.label || 'Workspace Observation';
-  
+
   const getStatusConfig = () => {
     switch (status) {
       case 'observed_change':
@@ -55,7 +56,7 @@ const ScopedDiagnosticCard = ({ diagnostic }) => {
 
     const { delta_pct, current_value, previous_value, delta_value } = evidence;
     const isPositive = (delta_value || 0) > 0;
-    
+
     return (
       <div className="diagnostic-evidence">
         <div className="evidence-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: '12px' }}>
@@ -84,7 +85,9 @@ const ScopedDiagnosticCard = ({ diagnostic }) => {
     <div className={`scoped-diagnostic-card status--${status === 'observed_change' ? 'info' : status === 'insufficient_history' ? 'warning' : 'critical'}`}>
       <div className="diagnostic-header">
         <div className="diagnostic-status-icon">{config.icon}</div>
-        <div className="diagnostic-metric-label">{label}</div>
+        <div className="diagnostic-metric-label">
+          {metric_ref ? <SemanticRef metric_ref={metric_ref} type="diagnostic" compact /> : 'Workspace Observation'}
+        </div>
         <div className={`diagnostic-status-badge ${config.badgeClass}`}>{config.label}</div>
       </div>
       <div className="diagnostic-summary">{summary}</div>
@@ -95,7 +98,7 @@ const ScopedDiagnosticCard = ({ diagnostic }) => {
 
 /**
  * DecisionWorkspaceView
- * 
+ *
  * High-fidelity "Decision Brief" rendering for DI 2.0 V1/V3.
  * Emphasizes the strategic framing over raw data schema.
  */
@@ -120,6 +123,10 @@ const DecisionWorkspaceView = ({ workspace, analysis, onCreateNew, onAnalyze, se
   const dr = decision_readiness || readiness?.decision_readiness || readiness;
   const cs = dr?.capability_state || readiness?.capability_state;
 
+  const handleExportWorkspacePdf = () => {
+    generateDecisionWorkspacePdf({ workspace, analysis });
+  };
+
   const renderStatusBadge = () => {
     const currentState = dr?.readiness_state || status;
     switch (currentState) {
@@ -140,8 +147,8 @@ const DecisionWorkspaceView = ({ workspace, analysis, onCreateNew, onAnalyze, se
 
   const formatDate = (dateStr) => {
     try {
-      return new Date(dateStr).toLocaleString('en-US', { 
-        month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' 
+      return new Date(dateStr).toLocaleString('en-US', {
+        month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit'
       });
     } catch (e) {
       return dateStr;
@@ -157,6 +164,14 @@ const DecisionWorkspaceView = ({ workspace, analysis, onCreateNew, onAnalyze, se
             <span className="workspace-id">ID: {workspace_id.slice(-8)}</span>
           </div>
           <div className="header-actions">
+            <button
+              className="decision-export-btn"
+              onClick={handleExportWorkspacePdf}
+              aria-label="Export decision workspace as PDF"
+              title="Export decision workspace as PDF"
+            >
+              <FaFilePdf /> Export PDF
+            </button>
             <button className="add-btn" onClick={onCreateNew}>
               <FaPlus /> New Decision
             </button>
@@ -227,11 +242,11 @@ const DecisionWorkspaceView = ({ workspace, analysis, onCreateNew, onAnalyze, se
               )}
               {decision_scope.objective.metric_ref ? (
                 <div className="binding-resolved" style={{ marginTop: '20px' }}>
-                  <FaLink /> Anchor Metric: <strong>{decision_scope.objective.metric_ref.label}</strong>
+                  <SemanticRef metric_ref={decision_scope.objective.metric_ref} type="objective" />
                 </div>
               ) : (
                 <div className="binding-unresolved" style={{ marginTop: '20px' }}>
-                  <FaCircleExclamation /> Unresolved Metric: {decision_scope.objective.reason || "Manual ID entry required"}
+                  <SemanticRef type="unresolved" metric_ref={{ label: decision_scope.objective.reason || "Manual ID entry required" }} />
                 </div>
               )}
             </div>
@@ -247,7 +262,7 @@ const DecisionWorkspaceView = ({ workspace, analysis, onCreateNew, onAnalyze, se
                     <span className="lever-type">{lever.lever_type}</span>
                   </div>
                   {lever.description && <p className="item-description">{lever.description}</p>}
-                  
+
                   <div className="lever-meta">
                     {lever.desired_change && (
                       <span className="intent-tag">Intent: {lever.desired_change}</span>
@@ -264,11 +279,18 @@ const DecisionWorkspaceView = ({ workspace, analysis, onCreateNew, onAnalyze, se
 
                   {lever.binding && lever.binding.status !== 'unresolved' ? (
                     <div className="binding-resolved">
-                      <FaLink /> Bound to {lever.binding.binding_type}: <strong>{lever.binding.metric_ref?.label || lever.binding.dimension_ref?.label || lever.binding.field}</strong>
+                      <SemanticRef
+                        metric_ref={lever.binding.metric_ref}
+                        dimension_ref={lever.binding.dimension_ref}
+                        type="lever"
+                      />
                     </div>
                   ) : (
                     <div className="binding-unresolved">
-                      <FaCircleExclamation /> Unresolved Lever Binding
+                      <SemanticRef
+                        type="unresolved"
+                        metric_ref={{ label: lever.binding?.binding_label || lever.label || "Unresolved Lever Binding" }}
+                      />
                     </div>
                   )}
                 </div>
@@ -294,7 +316,7 @@ const DecisionWorkspaceView = ({ workspace, analysis, onCreateNew, onAnalyze, se
                       <strong>Constraint Rationale:</strong> {constraint.rationale}
                     </div>
                   )}
-                  
+
                   <div className="constraint-rule">
                     Condition: {constraint.condition.operator} {constraint.condition.value}
                     {constraint.condition.secondary_value && ` and ${constraint.condition.secondary_value}`}
@@ -304,11 +326,18 @@ const DecisionWorkspaceView = ({ workspace, analysis, onCreateNew, onAnalyze, se
 
                   {constraint.binding && constraint.binding.status !== 'unresolved' ? (
                     <div className="binding-resolved">
-                      <FaLink /> Bound to {constraint.binding.binding_type}: <strong>{constraint.binding.metric_ref?.label || constraint.binding.dimension_ref?.label || constraint.binding.field}</strong>
+                      <SemanticRef
+                        metric_ref={constraint.binding.metric_ref}
+                        dimension_ref={constraint.binding.dimension_ref}
+                        type="guardrail"
+                      />
                     </div>
                   ) : (
                     <div className="binding-unresolved">
-                      <FaCircleExclamation /> Unresolved Guardrail Binding
+                      <SemanticRef
+                        type="unresolved"
+                        metric_ref={{ label: constraint.binding?.binding_label || constraint.label || "Unresolved Guardrail Binding" }}
+                      />
                     </div>
                   )}
                 </div>
@@ -325,24 +354,24 @@ const DecisionWorkspaceView = ({ workspace, analysis, onCreateNew, onAnalyze, se
             <div className="context-card">
               <div className="context-group">
                 <label>Relevant Metrics</label>
-                <div className="tag-cloud">
+                <div className="tag-cloud" style={{ gap: '12px' }}>
                   {scoped_context.relevant_metrics.map(m => (
-                    <span key={m.metric_id} className="context-tag">{m.label}</span>
+                    <SemanticRef key={m.metric_id} metric_ref={m} type="relevant" compact />
                   ))}
                 </div>
               </div>
               <div className="context-group">
                 <label>Dimensions & Segments</label>
-                <div className="tag-cloud">
+                <div className="tag-cloud" style={{ gap: '12px' }}>
                   {scoped_context.relevant_dimensions.map(d => (
-                    <span key={d.dimension_id} className="context-tag">{d.label}</span>
+                    <SemanticRef key={d.dimension_id} dimension_ref={d} type="relevant" compact />
                   ))}
                   {scoped_context.comparison_dimensions?.map(d => (
-                    <span key={`comp-${d.dimension_id}`} className="context-tag context-tag--comparison">{d.label}</span>
+                    <SemanticRef key={`comp-${d.dimension_id}`} dimension_ref={d} type="comparison" compact />
                   ))}
                 </div>
               </div>
-              
+
               {scoped_context.applied_filters?.length > 0 && (
                 <div className="context-group">
                   <label>Active Slice Filters</label>
@@ -362,7 +391,7 @@ const DecisionWorkspaceView = ({ workspace, analysis, onCreateNew, onAnalyze, se
                   <div className="temporal-info">
                     {scoped_context.period_context && (
                       <div className="period-label">
-                        {scoped_context.period_context.label} 
+                        {scoped_context.period_context.label}
                         <span style={{ opacity: 0.5, fontWeight: 500, margin: '0 8px' }}>vs</span>
                         {scoped_context.period_context.comparison_label}
                       </div>
@@ -375,7 +404,7 @@ const DecisionWorkspaceView = ({ workspace, analysis, onCreateNew, onAnalyze, se
                   </div>
                 </div>
               )}
-              
+
               {scoped_context.notes && scoped_context.notes.length > 0 && (
                 <div className="context-group">
                   <label>Scoping Intelligence</label>
@@ -460,7 +489,7 @@ const DecisionWorkspaceView = ({ workspace, analysis, onCreateNew, onAnalyze, se
               <span className={`indicator ${readiness.constraint_ready ? 'is-ready' : 'not-ready'}`}>Guardrails</span>
             </div>
           </div>
-          
+
           {(dr?.blocked_state?.is_blocked || readiness.missing_inputs?.length > 0) && (
             <div className="missing-inputs" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -476,7 +505,7 @@ const DecisionWorkspaceView = ({ workspace, analysis, onCreateNew, onAnalyze, se
               </div>
             </div>
           )}
-          
+
           <div className="capability-matrix" style={{ marginTop: '24px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px' }}>
             <div className={`capability-tag ${cs?.observational_analysis?.available ? 'is-allowed' : 'is-blocked'}`}>
               <FaMagnifyingGlassChart /> Observational Analysis: {cs?.observational_analysis?.status || (dr?.structural_readiness?.ready_for_observational_analysis ? 'allowed' : 'blocked')}
@@ -491,7 +520,7 @@ const DecisionWorkspaceView = ({ workspace, analysis, onCreateNew, onAnalyze, se
               <FaBrain /> Autonomous: {cs?.autonomous_decisioning?.status || 'unsupported'}
             </div>
           </div>
-          
+
           {dr?.truth_boundary === 'observational_analysis_only' && (
             <div className="analysis-notice" style={{ marginTop: '16px' }}>
               <FaTriangleExclamation /> This decision frame is limited to <strong>observational analysis</strong>. Causal simulation and recommendation engines are currently unsupported.
@@ -551,7 +580,7 @@ const DecisionWorkspaceView = ({ workspace, analysis, onCreateNew, onAnalyze, se
               <h4 className="section-label" style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--accent-blue)' }}>
                 <FaFlask /> Scoped Diagnostics
               </h4>
-              
+
               <div className="scoped-diagnostics-list">
                 {Array.isArray(analysis.scoped_diagnostics) ? (
                   analysis.scoped_diagnostics.map((diag, idx) => (
@@ -592,7 +621,7 @@ const DecisionWorkspaceView = ({ workspace, analysis, onCreateNew, onAnalyze, se
               </section>
             )}
           </div>
-          
+
           <div className="analysis-footer" style={{ marginTop: '32px', textAlign: 'right', fontSize: '0.75rem', opacity: 0.5 }}>
             Analysis ID: {analysis.analysis_id} • Generated at: {formatDate(analysis.generated_at)}
           </div>
