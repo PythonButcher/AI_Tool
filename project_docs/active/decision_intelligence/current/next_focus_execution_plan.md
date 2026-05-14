@@ -78,7 +78,7 @@ Unsupported simulation, optimization, autonomous decisioning, and final recommen
 
 ## Phase 2: Semantic Role Strengthening
 
-Phase 2 is complete as the semantic-role foundation for later work. The detailed completed plan remains at `project_docs/active/decision_intelligence/completed/phase_2_semantic_role_strengthening_plan.md`.
+Phase 2 implemented the semantic-role metadata foundation for later work. The detailed completed plan remains at `project_docs/active/decision_intelligence/completed/phase_2_semantic_role_strengthening_plan.md`.
 
 The benchmark should become the measuring stick for semantic improvements.
 
@@ -96,9 +96,53 @@ Ambiguous mappings can trigger clarification or review instead of silent weak se
 
 Semantic collision, no-safe-match, missing metric, guardrail-only, and segment-only tests pass.
 
+## App-Wide PDF Export Unification
+
+App-wide PDF export unification is the active next implementation slice. The detailed plan lives at `project_docs/active/pdf_export_unification_plan.md`.
+
+This work was moved ahead of Phase 2.5 after the first Decision Intelligence PDF export proved useful for debugging but too inaccurate and clunky for product review. The export must accurately match the visible decision, chat, chart, story, or report content being exported. Normal PDFs should be compact, polished, and same-as-window where practical, not raw JSON debug dumps.
+
+Exit criteria:
+
+One shared export system or documented adapter layer is used across current PDF export entry points.
+
+AI Chat relevant artifacts export as the visible card or inspector content.
+
+Decisions workspace export matches the visible workspace and visible analysis content.
+
+Charts, Data Story, workflow reports, and file export keep working with consistent styling.
+
+Normal PDF output does not dump raw JSON by default.
+
+`npm --prefix frontend\frontend run build` and `git diff --check` pass for touched files.
+
+## Phase 2.5: Semantic Frame Completion
+
+Phase 2.5 is the next implementation slice after PDF export unification. The detailed plan lives at `project_docs/active/decision_intelligence/current/phase_2_5_semantic_frame_completion_plan.md`.
+
+May 14 PDF review showed that Phase 2 metadata exists, but the active prompt-first decision frame is still not reliable enough. The exact test prompt routed to `decide` and exposed semantic metadata, but `gross_margin_pct above 30%` did not become an active guardrail, `return_rate_pct below 4%` lost its threshold value, `region and channel` were inconsistent as segments, and `channel mix` was incorrectly introduced as a lever.
+
+Phase 2.5 should fix prompt-first role extraction before the correction loop and ranked observational evidence work begins. This phase should stay backend-first and should not become broad frontend polish.
+
+Exit criteria:
+
+The active frame for the May 14 prompt has objective `revenue`.
+
+The active levers are `marketing_spend` and `discount_pct`.
+
+The active segment dimensions include both `region` and `channel`.
+
+The active guardrails include `gross_margin_pct above 30%` and `return_rate_pct below 4%`.
+
+Guardrail thresholds are non-null and directionally correct.
+
+`channel mix` is not added as a lever unless the prompt explicitly asks to change or shift channel mix.
+
+Phase 2 semantic confidence, reason, source, warnings, and unresolved or omission details remain truthful.
+
 ## Phase 3: Correction And Ranked Observational Evidence
 
-Phase 3 is the active next implementation slice. The detailed plan lives at `project_docs/active/decision_intelligence/current/phase_3_correction_and_observational_evidence_plan.md`.
+Phase 3 is deferred until Phase 2.5 is complete. The detailed plan lives at `project_docs/active/decision_intelligence/current/phase_3_correction_and_observational_evidence_plan.md`.
 
 Phase 3 should add trust controls after semantic roles and readiness fields are stable.
 
@@ -177,5 +221,5 @@ The council left four useful choices open.
 
 ## Current Slice Prompt For Codex
 
-Implement Phase 3 from `project_docs/active/decision_intelligence/current/phase_3_correction_and_observational_evidence_plan.md`. Keep it backend-first. Add deterministic decision-frame correction actions and ranked observational evidence, preserving existing endpoint names, action IDs, artifact types, readiness fields, and the observational-analysis-only boundary. Use Phase 2 semantic role confidence and unresolved mapping trace where it helps correction and evidence ranking. Update backend tests, `project_docs/active/contracts/decision_objects.md`, and active status docs truthfully. Do not edit frontend files unless explicitly authorized.
+Implement app-wide PDF export unification from `project_docs/active/pdf_export_unification_plan.md`. The export to PDF must accurately match the visible decision, chat, chart, story, or report content being exported. Build one shared, polished export system or a clearly documented adapter layer used by all current PDF export entry points. Normal PDFs should not dump raw JSON by default; they should be compact, visually aligned with the app, accessible, and smooth. Preserve current export entry points for charts, Data Story, AI Chat relevant artifacts, Decisions workspace, workflow reports, and file export where applicable. Verify with `npm --prefix frontend\frontend run build` and `git diff --check` on touched files. Do not implement Phase 2.5 semantic frame fixes in this branch.
 

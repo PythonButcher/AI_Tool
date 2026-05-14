@@ -1,16 +1,18 @@
 # Phase 3 Correction And Ranked Observational Evidence Plan
 
+> DEFERRED: May 14, 2026 PDF review showed Phase 2 semantic metadata exists, but the active prompt-first decision frame still drops or misclassifies key semantic roles. Do not start Phase 3 until `project_docs/active/decision_intelligence/current/phase_2_5_semantic_frame_completion_plan.md` is complete.
+
 ## Purpose
 
 Phase 3 builds on the completed reliability and semantic-role foundation. The system can now identify decision objects with more explicit role metadata, confidence, trace reasons, and unresolved mapping details. The next step is to let users correct the frame before analysis and to make `Analyze workspace` return richer observational evidence without drifting into recommendations, simulation, optimization, or autonomous decisioning.
 
 ## Current Status
 
-Status: active next Codex-owned backend slice.
+Status: deferred until Phase 2.5 semantic frame completion is complete.
 
 Owner: Codex for backend actions, contracts, tests, and documentation. Gemini owns frontend implementation after the backend contract stabilizes and Codex prepares a scoped handoff.
 
-Phase 2 backend is complete. Phase 2 frontend integration is functionally in place, but the latest Codex review found small Gemini-owned cleanup items: compact semantic refs should visibly surface role metadata, and modified frontend files should pass `git diff --check`. These cleanup items do not change the Phase 3 backend contract.
+Phase 2 semantic metadata plumbing is implemented and frontend integration is functionally in place, but May 14 PDF review found active prompt-first frame defects that must be fixed first: dropped `gross_margin_pct` guardrail, null `return_rate_pct` threshold, inconsistent `region`/`channel` segmentation, and a false `channel mix` lever. These are tracked in `project_docs/active/decision_intelligence/current/phase_2_5_semantic_frame_completion_plan.md`.
 
 ## What Phase 2 Enables Now
 
@@ -134,6 +136,6 @@ Any new Phase 3 correction or ranked-evidence test module.
 
 If route-level chat tests remain blocked by local dependency visibility, document that honestly instead of marking them passed.
 
-## Start Prompt
+## Deferred Start Prompt
 
-Implement Phase 3 from `project_docs/active/decision_intelligence/current/phase_3_correction_and_observational_evidence_plan.md`. Keep it backend-first. Add deterministic decision-frame correction actions and ranked observational evidence, preserving existing endpoint names, action IDs, artifact types, readiness fields, and the observational-analysis-only boundary. Use Phase 2 semantic role confidence and unresolved mapping trace where it helps correction and evidence ranking. Update backend tests, `project_docs/active/contracts/decision_objects.md`, and active status docs truthfully. Do not edit frontend files unless explicitly authorized.
+Use this only after Phase 2.5 is complete: Implement Phase 3 from `project_docs/active/decision_intelligence/current/phase_3_correction_and_observational_evidence_plan.md`. Keep it backend-first. Add deterministic decision-frame correction actions and ranked observational evidence, preserving existing endpoint names, action IDs, artifact types, readiness fields, and the observational-analysis-only boundary. Use Phase 2 semantic role confidence and unresolved mapping trace where it helps correction and evidence ranking. Update backend tests, `project_docs/active/contracts/decision_objects.md`, and active status docs truthfully. Do not edit frontend files unless explicitly authorized.

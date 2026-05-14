@@ -10,13 +10,15 @@ This folder is organized so current work and completed records are no longer mix
 
 The current truth lives in `project_docs/active/status/decision_intelligence_execution_status.md`, not in older phase plans in this folder.
 
-Phase 4.5 hardening, Phase 1 reliability foundation, and Phase 2 semantic role strengthening are complete as backend foundations. The next work is defined in `current/phase_3_correction_and_observational_evidence_plan.md`: deterministic decision-frame corrections and ranked observational evidence.
+Phase 4.5 hardening and Phase 1 reliability foundation are complete. Phase 2 semantic metadata plumbing is implemented, but May 14 PDF review showed the active prompt-first decision frame still drops or misclassifies key semantic roles. Before Phase 2.5 continues, the active next project work is app-wide PDF export unification at `project_docs/active/pdf_export_unification_plan.md`, because exports must accurately match visible app content for reliable review. After the PDF work, return to `current/phase_2_5_semantic_frame_completion_plan.md` to finish prompt-first semantic frame extraction. Phase 3 correction and ranked observational evidence is deferred until Phase 2.5 is complete.
 
 ## Read These By Task
 
 | Task | Read |
 | --- | --- |
-| Resume current Decision Intelligence work | `project_docs/active/status/decision_intelligence_execution_status.md`, then `current/phase_3_correction_and_observational_evidence_plan.md` |
+| Resume current project work | `project_docs/active/status/decision_intelligence_execution_status.md`, then `project_docs/active/pdf_export_unification_plan.md` |
+| Resume Phase 2.5 after PDF export work | `project_docs/active/status/decision_intelligence_execution_status.md`, then `current/phase_2_5_semantic_frame_completion_plan.md` |
+| Review the deferred Phase 3 plan | `current/phase_3_correction_and_observational_evidence_plan.md` |
 | Review the council-derived roadmap | `current/next_focus_execution_plan.md` |
 | Review completed prompt-first intake behavior | `completed/phase_3_5_decision_intake_rework.md` |
 | Work on the completed chat backend contract | `completed/decision_intelligence_v3_phase_4_backend_checkpoint.md`, `completed/decision_intelligence_v3_phase_4_chat_engine_execution_plan.md` |

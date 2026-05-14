@@ -28,7 +28,11 @@ May 10, 2026 Phase 2 semantic role strengthening backend slice: Codex added addi
 
 May 11, 2026 Phase 2 semantic role strengthening frontend slice: Gemini integrated `SemanticRef` component across AI Shell and Decisions workspace, surfacing role metadata, confidence, trace reasons, warnings, unresolved mappings, and readable fallback labels for flattened workspace fields. Codex review confirmed the objective fallback regression is fixed and the frontend build compiles. Minor Gemini-owned cleanup remains: compact semantic refs should visibly surface role metadata, and modified frontend files should pass `git diff --check`.
 
-May 11, 2026 next implementation plan: Phase 3 correction and ranked observational evidence is now the active next Codex slice at `project_docs/active/decision_intelligence/current/phase_3_correction_and_observational_evidence_plan.md`.
+May 14, 2026 Phase 2 product-behavior review: user-exported PDFs from AI Chat and Decisions workspace showed Phase 2 semantic metadata is present in raw contracts, but the active decision frame is not reliable enough to mark the product behavior complete. The test prompt was: "How should we grow revenue next quarter using marketing_spend and discount_pct as controllable levers, segmented by region and channel, while keeping gross_margin_pct above 30% and return_rate_pct below 4%?" The result correctly routed to `decide`, created a workspace, mapped objective `revenue`, and exposed semantic metadata such as `decision_semantics`, `semantic_binding_confidence`, `semantic_binding_reason`, `semantic_role_source`, polarity, controllability, aliases, and warnings. However, `gross_margin_pct above 30%` was detected only in prompt matches and did not become an active guardrail; `return_rate_pct below 4%` became a guardrail but lost its threshold value (`value: null`); `region and channel` was inconsistent, with only `channel` shown in the preview segment while `region` appeared only in scoped context; and `channel mix` was incorrectly introduced as a controllable lever even though the prompt used channel as segmentation. Phase 2.5 semantic frame completion was created at `project_docs/active/decision_intelligence/current/phase_2_5_semantic_frame_completion_plan.md` and is scheduled after app-wide PDF export unification.
+
+May 14, 2026 next implementation plan correction: Phase 3 correction and ranked observational evidence remains planned, but is deferred until Phase 2.5 fixes prompt-first semantic frame extraction and guardrail threshold preservation.
+
+May 14, 2026 PDF export correction: the first Decision Intelligence PDF export was useful for debugging but did not satisfy product-quality export behavior. The exported PDF did not accurately match the visible Decision or AI Chat window, was too clunky, dumped too much raw JSON, and was not compact or visually aligned with the app. The active next branch is now app-wide PDF export unification at `project_docs/active/pdf_export_unification_plan.md`. PDF export must be accurate, same-as-window where practical, reusable across all app features, polished, compact, and smooth. Phase 2.5 semantic frame completion is now scheduled immediately after the PDF export work.
 
 Slice 3 and Phase 4.5 Hardening are complete and verified.
 
@@ -80,7 +84,7 @@ Truth:
 
 - the prompt-first intake flow exists
 - backend hardening already covers the key objective-versus-lever parsing failure mode
-- prompt-first reliability is now grounded by the completed Phase 1 benchmark and completed Phase 2 semantic-role strengthening. The next reliability layer is Phase 3 correction and ranked observational evidence at `project_docs/active/decision_intelligence/current/phase_3_correction_and_observational_evidence_plan.md`
+- prompt-first reliability is grounded by the completed Phase 1 benchmark and Phase 2 semantic metadata, but May 14 PDF review showed the active prompt-first decision frame still needs Phase 2.5 completion before Phase 3. Before Phase 2.5 resumes, app-wide PDF export unification is active so future review artifacts accurately match visible app output.
 
 ### Phase 4 Chat Contract
 
@@ -106,16 +110,17 @@ Truth:
 - frontend Phase 1 reliability integration is complete and verified.
 - The UI correctly normalizes and merges reliability fields, ensuring that capability boundaries and requested unsupported features are surfaced truthfully.
 - State preservation and context propagation issues have been resolved.
-- Phase 3 correction and ranked observational evidence is the next active implementation plan.
+- App-wide PDF export unification is the next active implementation plan. Phase 2.5 semantic frame completion follows immediately after the PDF work. Phase 3 correction and ranked observational evidence is deferred until Phase 2.5 is complete.
 
 ## Active Workstreams
 
 - [x] Council-derived next-focus execution plan created at `project_docs/active/decision_intelligence/current/next_focus_execution_plan.md`
 - [x] Phase 1 Decision Intelligence reliability foundation implemented and verified (Object-path, state-preservation, and capability-merging fixes applied)
-- [x] Phase 2 semantic role strengthening backend slice: additive semantic roles, confidence, aliases, polarity, controllability, prompt binding trace, and unresolved mapping details are implemented and covered by backend tests
-- [~] Phase 2 semantic role strengthening frontend cleanup: integration is in place and build compiles, but Codex review found compact role metadata visibility and trailing-whitespace cleanup still belong to Gemini
-- [ ] Phase 3 correction and ranked observational evidence backend slice: deterministic frame correction actions, corrected-state analysis, ranked observational diagnostics, contracts, tests, and Gemini handoff
-- [~] Prompt-first intake reliability for real decision prompts, now tracked through Phase 3 correction and ranked observational evidence
+- [~] Phase 2 semantic role strengthening product completion: semantic metadata plumbing is implemented, but active prompt-first frame behavior is not complete because guardrails, thresholds, and segmentation can be dropped or misclassified
+- [ ] App-wide PDF export unification: make PDF export accurate to visible app content, shared across features, compact, polished, and not a raw JSON debug dump by default
+- [ ] Phase 2.5 semantic frame completion backend slice: next after PDF export; fix prompt-first role extraction so clear objective, lever, guardrail, segment, and threshold terms survive into the active workspace frame
+- [ ] Phase 3 correction and ranked observational evidence backend slice: deferred until Phase 2.5 is complete
+- [~] Prompt-first intake reliability for real decision prompts, now tracked through Phase 2.5 semantic frame completion
 - [x] Phase 4 backend decision chat contract
 - [x] Slice 1 backend mode/state normalization
 - [x] Slice 1 frontend fidelity (Mode legibility, Action fidelity, Artifact metadata, Rendering precision)
@@ -129,12 +134,19 @@ Truth:
 ## What Is Actually Implemented Today
 
 - **Phase 1 Reliability Foundation**: Backend reliability fields, benchmark fixtures, grading checks, and frontend rendering integration are complete.
-- **Phase 2 Semantic Role Strengthening**: Backend complete; frontend integration functionally in place with minor Gemini cleanup pending.
-  - **Backend**: Semantic model finalization now adds additive decision-aware role metadata for metrics and dimensions. Decision Workspace prompt-first drafting uses those roles as conservative binding evidence and surfaces confidence, reasons, warnings, and unresolved mappings for ambiguous or weak matches.
-  - **Frontend**: `SemanticRef` component integrated into Success Objective, Strategic Levers, Guardrails, Scoped Context, and AI Chat `workspace_preview`. Fixed fallback logic to ensure readable strings/labels (`label`, `binding_label`, `metric`, `dimension_id`) are preserved when real semantic references are missing. Unresolved mappings now render with labels combining `mapping_type`, reason, and candidate summaries. Remaining Gemini cleanup: compact semantic refs should visibly surface role metadata, and modified frontend files should pass `git diff --check`.
-- **Phase 3 Correction And Ranked Observational Evidence**: Active next plan created at `project_docs/active/decision_intelligence/current/phase_3_correction_and_observational_evidence_plan.md`.
-  - **Backend Goal**: Add deterministic correction actions for objective, lever, guardrail, segment, and horizon interpretation, then make corrected state drive follow-up analysis.
-  - **Evidence Goal**: Return ranked observational diagnostics with evidence, semantic coverage, data-quality caveats, assumptions, blockers, limitations, and the existing observational-analysis-only boundary.
+- **Phase 2 Semantic Role Strengthening**: Metadata plumbing is implemented, but product behavior is not complete.
+  - **Backend Foundation**: Semantic model finalization adds additive decision-aware role metadata for metrics and dimensions. Decision Workspace prompt-first drafting can surface confidence, reasons, warnings, and unresolved mappings for ambiguous or weak matches.
+  - **Behavior Gap Found May 14**: The exact real-dataset test prompt dropped `gross_margin_pct above 30%` from active guardrails, lost the `4%` threshold on `return_rate_pct`, treated only `channel` as the active preview segment while `region` appeared only in scoped context, and introduced `channel mix` as a lever even though the prompt used channel as segmentation.
+  - **Frontend State**: `SemanticRef` component integration and PDF export exist, but frontend rendering cannot compensate for an incorrect active backend frame.
+- **Phase 2.5 Semantic Frame Completion**: Active next plan created at `project_docs/active/decision_intelligence/current/phase_2_5_semantic_frame_completion_plan.md`.
+  - **Backend Goal**: Fix prompt-first role extraction so the active workspace frame preserves clearly stated objectives, levers, guardrails, segments, and threshold values.
+  - **Acceptance Prompt**: `How should we grow revenue next quarter using marketing_spend and discount_pct as controllable levers, segmented by region and channel, while keeping gross_margin_pct above 30% and return_rate_pct below 4%?`
+  - **Required Active Frame**: objective `revenue`; levers `marketing_spend` and `discount_pct`; segments `region` and `channel`; guardrails `gross_margin_pct above 30%` and `return_rate_pct below 4%`; no false `channel mix` lever; no null guardrail threshold values.
+- **App-Wide PDF Export Unification**: Active next plan created at `project_docs/active/pdf_export_unification_plan.md`.
+  - **Product Goal**: PDF export should accurately match the visible decision, chat, chart, story, or report content being exported. It should be compact, polished, reusable across features, and visually aligned with the app.
+  - **Known Defect**: The first Decision Intelligence export did not match the window closely enough, was too clunky, and dumped raw contract JSON into the normal PDF.
+  - **Sequencing**: Complete PDF export unification before returning to Phase 2.5 semantic frame completion.
+- **Phase 3 Correction And Ranked Observational Evidence**: Plan exists at `project_docs/active/decision_intelligence/current/phase_3_correction_and_observational_evidence_plan.md`, but it is deferred until Phase 2.5 is complete.
 - **Phase 1 Reliability Foundation (Frontend)**: The UI now fully supports the backend reliability contract with correct object-path normalization, state preservation, and cross-level capability merging.
   - **Reliability Boundaries**: Clear visual banners and notes communicating the "observational analysis only" constraint.
   - **Capability Matrices**: A structured display of allowed vs. unsupported capabilities (Simulation, Optimization, etc.).
@@ -154,7 +166,9 @@ Truth:
 ## Verification Performed
 
 - **Frontend Build**: `npm --prefix frontend\frontend run build` executed and compiled successfully on May 11, 2026, with existing warnings.
-- **Phase 2 Frontend Integration Verification**: Verified that fallback labels for `objective_metric`, `levers`, `segment_dimensions`, and `guardrails` are preserved using flattened fields (`strings`, `label`, `binding_label`, `metric`, `dimension_id`, `field`) when nested refs are missing. Unresolved mappings in `workspace_preview` now build descriptive labels from type, term, reason, and candidates. Codex review still found that compact semantic refs hide visible role badges and that `git diff --check` fails on trailing whitespace in Gemini-modified frontend files.
+- **Phase 2 Frontend Integration Verification**: Verified that fallback labels for `objective_metric`, `levers`, `segment_dimensions`, and `guardrails` are preserved using flattened fields (`strings`, `label`, `binding_label`, `metric`, `dimension_id`, `field`) when nested refs are missing. Unresolved mappings in `workspace_preview` now build descriptive labels from type, term, reason, and candidates. May 14 PDF review showed frontend/export visibility is now sufficient to diagnose backend frame defects, but the active backend frame remains wrong for the real acceptance prompt.
+- **May 14 PDF Review**: User exported `decision_ai_result_2026-05-14.pdf` and `decision_workspace_export_2026-05-14.pdf`. Codex extracted text from both PDFs and confirmed the decision routed to `decide`, semantic metadata exists, but the active frame omitted `gross_margin_pct` as a guardrail, lost the `return_rate_pct` threshold value, handled `region` and `channel` inconsistently as segments, and created an unwanted `channel mix` lever.
+- **May 14 Export Quality Review**: User clarified that the PDF export must exactly match the decision or chat content where practical. Normal export should be same-as-window, app-wide, visually smooth, compact, and accurate; it should not be a sloppy debug report.
 - **Git Compliance**: `git diff --check` executed and verified a clean codebase with no trailing whitespace on May 9, 2026.
 - **Capability Merging Check**: Code review confirmed that `AIShell.jsx` now correctly merges `unsupported_requested_capabilities` from both artifact and response sources, fixing the shadowing bug identified during review.
 - **Logic Check**: Verified that the "Observational Reliability Boundary" banner and "Analysis Ready" status are correctly driven by backend fields in both AI Shell and Decisions workspace.
@@ -180,7 +194,9 @@ Truth:
 - `project_docs/active/README.md`
 - `project_docs/active/status/decision_intelligence_execution_status.md`
 - `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md`
+- `project_docs/active/pdf_export_unification_plan.md`
 - `project_docs/active/decision_intelligence/README.md`
+- `project_docs/active/decision_intelligence/current/phase_2_5_semantic_frame_completion_plan.md`
 - `project_docs/active/decision_intelligence/current/phase_3_correction_and_observational_evidence_plan.md`
 - `project_docs/active/decision_intelligence/completed/phase_2_semantic_role_strengthening_plan.md`
 - `project_docs/active/decision_intelligence/current/next_focus_execution_plan.md`
@@ -228,7 +244,7 @@ Council artifact:
 
 - `project_docs/active/agent_council/outputs/application-next-focus-priorities/2026-05-01-council.json`
 
-The council concluded that the next application focus should be measurable Decision Intelligence reliability before broad feature expansion. The highest-priority reliability foundation and semantic role strengthening are now complete as backend foundations. The active follow-on priority is decision-frame correction and ranked observational evidence, then canonical active dataset alignment, ML readiness diagnostics, and future simulation/trade-off contract design.
+The council concluded that the next application focus should be measurable Decision Intelligence reliability before broad feature expansion. The highest-priority reliability foundation is complete, and semantic role metadata exists, but May 14 review showed prompt-first semantic frame behavior still needs Phase 2.5 completion before the ranked Phase 3 work. The user then moved app-wide PDF export unification ahead of Phase 2.5 so review artifacts can accurately match visible app content. After PDF export unification, the sequence returns to Phase 2.5, then decision-frame correction and ranked observational evidence, then canonical active dataset alignment, ML readiness diagnostics, and future simulation/trade-off contract design.
 
 ### Previous Council Run
 
@@ -246,4 +262,4 @@ The council concluded that the first Gemini slice should focus on UI correctness
 
 ## One-Line Status Truth
 
-Decision Intelligence Phase 3 correction and ranked observational evidence is the active next Codex backend slice; Phase 2 backend is complete, with minor Gemini frontend cleanup pending.
+App-wide PDF export unification is the active next Codex slice; Phase 2.5 semantic frame completion follows after export accuracy is fixed.

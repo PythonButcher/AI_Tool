@@ -12,7 +12,7 @@ Do not scan every Markdown file. Do not scan `project_docs/archive/` unless an a
 | Understand current truth and scan rules | `project_docs/active/README.md` |
 | Check current Decision Intelligence status | `project_docs/active/status/decision_intelligence_execution_status.md` |
 | Confirm Codex vs Gemini ownership | `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md` |
-| Execute the current implementation plan | `project_docs/active/decision_intelligence/current/phase_3_correction_and_observational_evidence_plan.md` |
+| Execute the current implementation plan | `project_docs/active/pdf_export_unification_plan.md` |
 | Review the council-derived roadmap | `project_docs/active/decision_intelligence/current/next_focus_execution_plan.md` |
 | Choose next implementation work | `project_docs/active/agent_council/outputs/application-next-focus-priorities/README.md` |
 | Inspect detailed next-focus recommendations | `project_docs/active/agent_council/outputs/application-next-focus-priorities/2026-05-01-council.json` |
@@ -20,7 +20,7 @@ Do not scan every Markdown file. Do not scan `project_docs/archive/` unless an a
 | Work on Decision Intelligence historical plans or handoffs | `project_docs/active/decision_intelligence/README.md` first |
 | Run or update Agent Council workflow | `project_docs/active/agent_council/README.md` |
 
-Current project truth: Decision Intelligence V3 is active. Phase 4.5 hardening, Phase 1 reliability foundation, and Phase 2 semantic role strengthening are complete as backend foundations. The active next implementation plan is Codex-owned Phase 3 correction and ranked observational evidence at `project_docs/active/decision_intelligence/current/phase_3_correction_and_observational_evidence_plan.md`. Frontend implementation belongs to Gemini unless the user explicitly authorizes Codex frontend edits in the current session.
+Current project truth: Decision Intelligence V3 is active. Phase 4.5 hardening and Phase 1 reliability foundation are complete. Phase 2 semantic metadata plumbing is implemented, but May 14 PDF review showed the active prompt-first decision frame still drops or misclassifies key semantic roles. Before Phase 2.5 continues, the active next implementation plan is app-wide PDF export unification at `project_docs/active/pdf_export_unification_plan.md`, because exports must accurately match visible app content for reliable review. Phase 2.5 semantic frame completion is next after PDF export unification. Phase 3 correction and ranked observational evidence is deferred until Phase 2.5 is complete. Frontend implementation belongs to Gemini unless the user explicitly authorizes Codex frontend edits in the current session; the PDF export branch prompt explicitly authorizes Codex to work on the export UI and frontend export code.
 
 Codex is the coordinator for Decision Intelligence work. This file is only for standing Codex reference, not for active Gemini task handoffs.
 
