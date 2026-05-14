@@ -1,4 +1,4 @@
-> COMPLETED REFERENCE ONLY: This file records the completed Phase 1 reliability frontend handoff and review loop. It is not part of the default active scan path. Current work is routed through `project_docs/active/status/decision_intelligence_execution_status.md` and `project_docs/active/decision_intelligence/current/phase_2_semantic_role_strengthening_plan.md`.
+> COMPLETED REFERENCE ONLY: This file records the completed Phase 1 reliability frontend handoff and review loop. It is not part of the default active scan path. Current work is routed through `project_docs/active/status/decision_intelligence_execution_status.md` and the current plan under `project_docs/active/decision_intelligence/current/`.
 
 # Phase 1 Reliability Fields Gemini Handoff
 
