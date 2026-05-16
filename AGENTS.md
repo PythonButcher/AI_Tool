@@ -4,12 +4,19 @@ Always review the current project Markdown before making project decisions. Star
 
 Do not scan every Markdown file. Do not scan `project_docs/archive/` unless an active doc explicitly points there or the user asks for historical context. Do not bulk scan `project_docs/active/decision_intelligence/`; read `project_docs/active/decision_intelligence/README.md` first and select only the relevant file.
 
+## Codex Run Efficiency
+
+For substantial repo work, read `project_docs/active/codex_harness_engineering.md` before opening large source files or running noisy verification tools.
+
+Codex must keep context use disciplined: use targeted searches and line ranges before full-file reads, avoid full diffs unless they are small, summarize build/test/browser output, and escalate verification only when the cheaper check cannot prove the claim. Quality remains required, but broad exploration, repeated browser flows, and large tool dumps are not acceptable substitutes for a scoped run plan.
+
 ## Documentation Table Of Contents For Agents
 
 | Need | Read |
 | --- | --- |
 | Start any project task | `project_docs/INDEX.md` |
 | Understand current truth and scan rules | `project_docs/active/README.md` |
+| Run Codex efficiently on substantial work | `project_docs/active/codex_harness_engineering.md` |
 | Check current Decision Intelligence status | `project_docs/active/status/decision_intelligence_execution_status.md` |
 | Confirm Codex vs Gemini ownership | `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md` |
 | Execute the current implementation plan | `project_docs/active/pdf_export_unification_plan.md` |
@@ -20,7 +27,7 @@ Do not scan every Markdown file. Do not scan `project_docs/archive/` unless an a
 | Work on Decision Intelligence historical plans or handoffs | `project_docs/active/decision_intelligence/README.md` first |
 | Run or update Agent Council workflow | `project_docs/active/agent_council/README.md` |
 
-Current project truth: Decision Intelligence V3 is active. Phase 4.5 hardening and Phase 1 reliability foundation are complete. Phase 2 semantic metadata plumbing is implemented, but May 14 PDF review showed the active prompt-first decision frame still drops or misclassifies key semantic roles. Before Phase 2.5 continues, the active next implementation plan is app-wide PDF export unification at `project_docs/active/pdf_export_unification_plan.md`, because exports must accurately match visible app content for reliable review. Phase 2.5 semantic frame completion is next after PDF export unification. Phase 3 correction and ranked observational evidence is deferred until Phase 2.5 is complete. Frontend implementation belongs to Gemini unless the user explicitly authorizes Codex frontend edits in the current session; the PDF export branch prompt explicitly authorizes Codex to work on the export UI and frontend export code.
+Current project truth: Decision Intelligence V3 is active. Phase 4.5 hardening and Phase 1 reliability foundation are complete. Phase 2 semantic metadata plumbing is implemented, but May 14 PDF review showed the active prompt-first decision frame still drops or misclassifies key semantic roles. Before Phase 2.5 continues, the active next implementation plan is app-wide PDF export remediation at `project_docs/active/pdf_export_unification_plan.md`, because the Decisions workspace export still does not match the visible workspace window closely enough for reliable review. Phase 2.5 semantic frame completion is next after PDF export acceptance. Phase 3 correction and ranked observational evidence is deferred until Phase 2.5 is complete. Frontend implementation belongs to Gemini unless the user explicitly authorizes Codex frontend edits in the current session; the PDF export branch prompt explicitly authorizes Codex to work on the export UI and frontend export code.
 
 Codex is the coordinator for Decision Intelligence work. This file is only for standing Codex reference, not for active Gemini task handoffs.
 

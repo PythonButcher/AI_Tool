@@ -1,36 +1,10 @@
-import { jsPDF } from 'jspdf';
-
-const PAGE = {
-  width: 612,
-  height: 792,
-  marginX: 48,
-  marginY: 48,
-  lineHeight: 14,
-};
-
-const CONTENT_WIDTH = PAGE.width - PAGE.marginX * 2;
-
-const formatDeterministicTimestamp = () => {
-  const now = new Date();
-  const pad = (value) => String(value).padStart(2, '0');
-  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
-};
-
-const sanitizeText = (value) => {
-  const raw = typeof value === 'string' ? value : JSON.stringify(value ?? '', null, 2);
-  const normalized = raw
-    .replace(/[‘’]/g, "'")
-    .replace(/[“”]/g, '"');
-
-  const ascii = Array.from(normalized)
-    .filter((char) => {
-      const code = char.charCodeAt(0);
-      return code === 10 || code === 13 || (code >= 32 && code <= 126);
-    })
-    .join('');
-
-  return ascii.replace(/ +/g, ' ').trim();
-};
+import {
+  captureVisibleChartImages,
+  exportElementToPdf,
+  exportStructuredPdf,
+  readablePdfLabel,
+  sanitizePdfText,
+} from './appPdfExport';
 
 const parseNumeric = (value) => {
   if (typeof value === 'number' && Number.isFinite(value)) return value;
@@ -43,7 +17,12 @@ const parseNumeric = (value) => {
 
 const summarizeDataset = (rows = []) => {
   if (!Array.isArray(rows) || rows.length === 0) {
-    return { rowCount: 0, columnCount: 0, missingByColumn: {}, numericalSummaries: [] };
+    return {
+      rowCount: 0,
+      columnCount: 0,
+      missingByColumn: {},
+      numericalSummaries: [],
+    };
   }
 
   const columns = Object.keys(rows[0] || {});
@@ -77,39 +56,11 @@ const summarizeDataset = (rows = []) => {
   };
 };
 
-const collectCharts = () => {
-  const canvases = Array.from(document.querySelectorAll('.window-frame .window-content-area canvas'));
-
-  return canvases
-    .filter((canvas) => canvas.width > 10 && canvas.height > 10)
-    .filter((canvas) => {
-      const styles = window.getComputedStyle(canvas);
-      return styles.display !== 'none' && styles.visibility !== 'hidden';
-    })
-    .map((canvas) => {
-      const frame = canvas.closest('.window-frame');
-      const title = sanitizeText(frame?.querySelector('.header-title')?.textContent || 'Chart');
-
-      try {
-        return {
-          title,
-          image: canvas.toDataURL('image/png', 1),
-          width: canvas.width,
-          height: canvas.height,
-        };
-      } catch (error) {
-        console.warn('Failed to capture chart canvas.', error);
-        return null;
-      }
-    })
-    .filter(Boolean);
-};
-
 const buildExecutiveSummary = ({ storyState, pipelineResults, overrideText }) => {
-  if (overrideText) return sanitizeText(overrideText);
+  if (overrideText) return sanitizePdfText(overrideText);
 
   if (storyState?.sections?.length) {
-    return sanitizeText(
+    return sanitizePdfText(
       storyState.sections
         .map((section) => `${section.title}\n${section.content}`)
         .join('\n\n')
@@ -118,163 +69,103 @@ const buildExecutiveSummary = ({ storyState, pipelineResults, overrideText }) =>
 
   const aiReport = pipelineResults?.ai_report?.result;
   if (aiReport) {
-    return sanitizeText([aiReport.summary, aiReport.insights].filter(Boolean).join('\n\n'));
+    return sanitizePdfText([aiReport.summary, aiReport.insights].filter(Boolean).join('\n\n'));
   }
 
   return 'No AI insights are available for this session.';
 };
 
-const ensureRoom = (pdf, y, spaceNeeded = PAGE.lineHeight) => {
-  if (y + spaceNeeded <= PAGE.height - PAGE.marginY) return y;
-  pdf.addPage();
-  return PAGE.marginY;
+const buildDatasetCards = (stats) => {
+  const cards = [
+    {
+      title: 'Dataset Shape',
+      body: `${stats.rowCount.toLocaleString()} rows and ${stats.columnCount.toLocaleString()} columns are available in the active export context.`,
+    },
+  ];
+
+  const missingColumns = Object.entries(stats.missingByColumn)
+    .filter(([, count]) => count > 0)
+    .slice(0, 12);
+
+  if (missingColumns.length) {
+    cards.push({
+      title: 'Missing Values',
+      body: missingColumns.map(([column, count]) => `${readablePdfLabel(column)}: ${count}`).join(' | '),
+    });
+  }
+
+  if (stats.numericalSummaries.length) {
+    cards.push(
+      ...stats.numericalSummaries.slice(0, 12).map((summary) => ({
+        title: readablePdfLabel(summary.column),
+        body: `Count ${summary.count.toLocaleString()} | Min ${summary.min.toFixed(2)} | Max ${summary.max.toFixed(2)} | Mean ${summary.mean.toFixed(2)}`,
+      }))
+    );
+  }
+
+  return cards;
 };
 
-const writeParagraph = (pdf, text, y, fontSize = 10) => {
-  const safeText = sanitizeText(text);
-  if (!safeText) return y;
-
-  pdf.setFont('helvetica', 'normal');
-  pdf.setFontSize(fontSize);
-  const lines = pdf.splitTextToSize(safeText, CONTENT_WIDTH);
-
-  let nextY = y;
-  lines.forEach((line) => {
-    nextY = ensureRoom(pdf, nextY);
-    pdf.text(line, PAGE.marginX, nextY);
-    nextY += PAGE.lineHeight;
-  });
-
-  return nextY;
+const buildStoryCards = (storyState) => {
+  if (!Array.isArray(storyState?.sections)) return [];
+  return storyState.sections.map((section) => ({
+    title: section.title,
+    body: section.content,
+  }));
 };
 
-const writeSectionTitle = (pdf, text, y) => {
-  const nextY = ensureRoom(pdf, y, 18);
-  pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(14);
-  pdf.text(text, PAGE.marginX, nextY);
-  return nextY + 18;
-};
-
-const writeSubheading = (pdf, text, y) => {
-  const nextY = ensureRoom(pdf, y, 16);
-  pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(11);
-  pdf.text(text, PAGE.marginX, nextY);
-  return nextY + 12;
-};
-
-const drawDivider = (pdf, y) => {
-  const nextY = ensureRoom(pdf, y, 10);
-  pdf.setDrawColor(220);
-  pdf.setLineWidth(0.7);
-  pdf.line(PAGE.marginX, nextY, PAGE.width - PAGE.marginX, nextY);
-  return nextY + 12;
-};
-
-export const generateAnalyticalPdfReport = ({
+export const generateAnalyticalPdfReport = async ({
   datasetRows = [],
   storyState,
   pipelineResults,
   fileLabel = 'active_session_data',
   executiveSummaryOverride,
+  sourceElement,
+  title = 'Analytical Report',
 }) => {
-  const pdf = new jsPDF({ unit: 'pt', format: 'letter', orientation: 'portrait' });
-  const generatedAt = formatDeterministicTimestamp();
+  if (sourceElement) {
+    const captured = await exportElementToPdf({
+      element: sourceElement,
+      title,
+      subtitle: sanitizePdfText(fileLabel),
+      fileName: 'analysis_report',
+      footerLabel: 'Analytical Report',
+    });
+    if (captured) return;
+  }
+
   const stats = summarizeDataset(datasetRows);
   const executiveSummary = buildExecutiveSummary({
     storyState,
     pipelineResults,
     overrideText: executiveSummaryOverride,
   });
-  const charts = collectCharts();
+  const charts = captureVisibleChartImages();
 
-  let y = PAGE.marginY;
-
-  pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(18);
-  pdf.text('Analytical Report', PAGE.marginX, y);
-  y += 24;
-
-  pdf.setFont('helvetica', 'normal');
-  pdf.setFontSize(10);
-  pdf.text(`File: ${sanitizeText(fileLabel)} | Date: ${generatedAt}`, PAGE.marginX, y);
-  y += 22;
-  y = drawDivider(pdf, y);
-
-  y = writeSectionTitle(pdf, 'Dataset Statistics', y);
-  y = writeParagraph(pdf, `Row count: ${stats.rowCount}`, y);
-  y = writeParagraph(pdf, `Column count: ${stats.columnCount}`, y);
-  y += 4;
-  y = writeSubheading(pdf, 'Missing values by column', y);
-
-  Object.entries(stats.missingByColumn).forEach(([column, missing]) => {
-    y = writeParagraph(pdf, `- ${column}: ${missing}`, y);
+  exportStructuredPdf({
+    title,
+    subtitle: sanitizePdfText(fileLabel),
+    fileName: 'analysis_report',
+    footerLabel: 'Analytical Report',
+    sections: [
+      {
+        title: 'Visible Summary',
+        body: executiveSummary,
+      },
+      {
+        title: 'Dataset Context',
+        cards: buildDatasetCards(stats),
+      },
+      {
+        title: 'Data Story',
+        cards: buildStoryCards(storyState),
+        emptyText: 'No Data Story sections are visible in the current session.',
+      },
+      {
+        title: 'Visible Charts',
+        body: charts.length ? undefined : 'No visible charts were available during export.',
+        images: charts,
+      },
+    ],
   });
-
-  y += 8;
-  y = writeSubheading(pdf, 'Numerical summaries (count, min, max, mean)', y);
-
-  if (!stats.numericalSummaries.length) {
-    y = writeParagraph(pdf, '- No numeric columns found.', y);
-  } else {
-    stats.numericalSummaries.forEach((summary) => {
-      y = writeParagraph(
-        pdf,
-        `- ${summary.column}: count=${summary.count}, min=${summary.min.toFixed(2)}, max=${summary.max.toFixed(2)}, mean=${summary.mean.toFixed(2)}`,
-        y
-      );
-    });
-  }
-
-  y += 10;
-  y = drawDivider(pdf, y);
-  y = writeSectionTitle(pdf, 'Executive Summary', y);
-  y = writeParagraph(pdf, executiveSummary, y);
-
-  y += 10;
-  y = drawDivider(pdf, y);
-  y = writeSectionTitle(pdf, 'Visualizations', y);
-
-  if (!charts.length) {
-    y = writeParagraph(pdf, 'No visible charts were available during export.', y);
-  } else {
-    charts.forEach((chart, index) => {
-      const maxWidth = CONTENT_WIDTH;
-      const naturalHeight = (chart.height / chart.width) * maxWidth;
-      let targetHeight = Math.min(naturalHeight, 320);
-      const minChartHeight = 140;
-      const reservedHeight = 30;
-      const availableHeight = PAGE.height - PAGE.marginY - y - reservedHeight;
-
-      if (availableHeight < minChartHeight) {
-        pdf.addPage();
-        y = PAGE.marginY;
-      } else if (targetHeight > availableHeight) {
-        targetHeight = Math.max(minChartHeight, availableHeight);
-      }
-
-      const blockHeight = 30 + targetHeight + 16;
-      y = ensureRoom(pdf, y, blockHeight);
-      pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(11);
-      pdf.text(`${index + 1}. ${chart.title || 'Chart'}`, PAGE.marginX, y);
-      y += 14;
-
-      pdf.addImage(chart.image, 'PNG', PAGE.marginX, y, maxWidth, targetHeight, undefined, 'FAST');
-      y += targetHeight + 12;
-      y = drawDivider(pdf, y);
-    });
-  }
-
-  const pageCount = pdf.getNumberOfPages();
-  for (let i = 1; i <= pageCount; i += 1) {
-    pdf.setPage(i);
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(9);
-    pdf.text(`Page ${i} of ${pageCount}`, PAGE.width - 105, PAGE.height - 20);
-  }
-
-  const outputName = `analysis_report_${new Date().toISOString().split('T')[0]}.pdf`;
-  pdf.save(outputName);
 };

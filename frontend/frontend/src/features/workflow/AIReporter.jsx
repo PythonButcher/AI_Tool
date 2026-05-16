@@ -1,5 +1,6 @@
-import React, { useContext } from 'react';
+import React, { useContext, useRef } from 'react';
 import AICharts from '../ai/AICharts';
+import { FaFilePdf } from 'react-icons/fa';
 import { DataContext, useActiveDataset } from '../../context/DataContext';
 import { useWindowContext } from '../../context/WindowContext';
 import { generateAnalyticalPdfReport } from '../../utils/pdfReportExport';
@@ -18,6 +19,7 @@ const AIReporter = ({ summary, outliers, insights, execution, chartType, chartDa
   const activeDataset = useActiveDataset();
   const { pipelineResults } = useContext(DataContext);
   const { getWindowContentState } = useWindowContext();
+  const reportExportRef = useRef(null);
 
   const handleExportPDF = () => {
     const localSummary = [asText(summary), asText(insights), asText(outliers), asText(execution)]
@@ -28,12 +30,15 @@ const AIReporter = ({ summary, outliers, insights, execution, chartType, chartDa
       datasetRows: activeDataset || [],
       storyState: getWindowContentState('storyPanel'),
       pipelineResults,
+      sourceElement: reportExportRef.current,
+      title: 'AI Reporter',
       executiveSummaryOverride: localSummary || undefined,
     });
   };
 
   return (
     <div
+      ref={reportExportRef}
       style={{
         background: '#f9f9f9',
         border: '1px solid #ccc',
@@ -63,8 +68,13 @@ const AIReporter = ({ summary, outliers, insights, execution, chartType, chartDa
         />
       )}
       <div style={{ textAlign: 'center', marginTop: '24px' }}>
-        <button className="export-report-button" onClick={handleExportPDF}>
-          Export Report as PDF
+        <button
+          className="export-report-button"
+          onClick={handleExportPDF}
+          aria-label="Export report as PDF"
+          title="Export report as PDF"
+        >
+          <FaFilePdf /> Export PDF
         </button>
       </div>
     </div>
