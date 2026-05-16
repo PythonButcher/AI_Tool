@@ -10,13 +10,14 @@ Its job is to stop agents from scanning old plans, completed handoffs, and archi
 | --- | --- | --- |
 | 1 | `project_docs/active/status/decision_intelligence_execution_status.md` | Current project truth, current phase state, and next recommended work. |
 | 2 | `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md` | Ownership boundary: Codex does backend/contracts/docs; Gemini owns frontend unless explicitly reauthorized. |
-| 3 | `project_docs/active/agent_council/outputs/application-next-focus-priorities/README.md` | Current next-focus decision after Phase 4.5 hardening. |
-| 4 | `project_docs/active/agent_council/outputs/application-next-focus-priorities/2026-05-01-council.json` | Detailed ranked recommendations for the next work. |
-| 5 | `project_docs/active/pdf_export_unification_plan.md` | Active PDF export remediation plan before Phase 2.5. |
-| 6 | `project_docs/active/decision_intelligence/current/phase_2_5_semantic_frame_completion_plan.md` | Next implementation plan after PDF export acceptance. |
-| 7 | `project_docs/active/decision_intelligence/current/phase_3_correction_and_observational_evidence_plan.md` | Deferred next plan after Phase 2.5 is complete. |
-| 8 | `project_docs/active/decision_intelligence/current/next_focus_execution_plan.md` | Council-derived roadmap and later-phase sequencing. |
-| 9 | `project_docs/active/contracts/decision_objects.md` | Current backend/frontend decision object contract reference. |
+| 3 | `project_docs/active/codex_harness_engineering.md` | Codex-specific efficiency rules for substantial repo work. |
+| 4 | `project_docs/active/agent_council/outputs/application-next-focus-priorities/README.md` | Current next-focus decision after Phase 4.5 hardening. |
+| 5 | `project_docs/active/agent_council/outputs/application-next-focus-priorities/2026-05-01-council.json` | Detailed ranked recommendations for the next work. |
+| 6 | `project_docs/active/pdf_export_unification_plan.md` | Active PDF export remediation plan before Phase 2.5. |
+| 7 | `project_docs/active/decision_intelligence/current/phase_2_5_semantic_frame_completion_plan.md` | Next implementation plan after PDF export acceptance. |
+| 8 | `project_docs/active/decision_intelligence/current/phase_3_correction_and_observational_evidence_plan.md` | Deferred next plan after Phase 2.5 is complete. |
+| 9 | `project_docs/active/decision_intelligence/current/next_focus_execution_plan.md` | Council-derived roadmap and later-phase sequencing. |
+| 10 | `project_docs/active/contracts/decision_objects.md` | Current backend/frontend decision object contract reference. |
 
 Do not start by reading every file in `project_docs/active/decision_intelligence/`. That folder now has a README plus `current/` and `completed/` subfolders. Read the README first and open only the specific file needed.
 
@@ -31,6 +32,7 @@ Phase 1 reliability foundation is complete. Phase 2 semantic metadata plumbing i
 | Area | Location | Default Action |
 | --- | --- | --- |
 | Current status | `project_docs/active/status/` | Read first for active truth. |
+| Codex harness | `project_docs/active/codex_harness_engineering.md` | Read for substantial Codex repo work before large source reads or noisy verification. |
 | Rules | `project_docs/active/rules/` | Read when ownership or frontend scope matters. |
 | Current council decision | `project_docs/active/agent_council/outputs/application-next-focus-priorities/` | Read when choosing next work. |
 | Contracts | `project_docs/active/contracts/` | Read when touching backend response shape, frontend consumption, or Gemini handoff. |

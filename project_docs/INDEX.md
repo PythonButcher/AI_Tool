@@ -19,6 +19,7 @@ After those files, read only the task-specific document listed below.
 | Need | Read |
 | --- | --- |
 | Execute the current implementation plan | `project_docs/active/pdf_export_unification_plan.md` |
+| Keep Codex implementation runs efficient | `project_docs/active/codex_harness_engineering.md` |
 | Review the council-derived roadmap | `project_docs/active/decision_intelligence/current/next_focus_execution_plan.md` |
 | Choose the next implementation slice | `project_docs/active/agent_council/outputs/application-next-focus-priorities/README.md` |
 | Inspect the full latest council recommendation | `project_docs/active/agent_council/outputs/application-next-focus-priorities/2026-05-01-council.json` |
@@ -40,6 +41,7 @@ The next work is not broad frontend polish and not new simulation or optimizatio
 | Folder | Meaning | Default Scan Rule |
 | --- | --- | --- |
 | `project_docs/active/status/` | Current execution truth. | Read first. |
+| `project_docs/active/codex_harness_engineering.md` | Codex-specific run efficiency, tool-output, and verification rules. | Read for substantial Codex repo work. |
 | `project_docs/active/rules/` | Standing rules and ownership boundaries. | Read when scope or frontend ownership matters. |
 | `project_docs/active/contracts/` | Backend/frontend contract references. | Read when changing or reviewing response shapes. |
 | `project_docs/active/decision_intelligence/` | Decision Intelligence navigation, current docs, and completed handoffs. | Read its README first; use `current/` for active docs and `completed/` only for reference. |

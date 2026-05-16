@@ -4,12 +4,19 @@ Always review the current project Markdown before making project decisions. Star
 
 Do not scan every Markdown file. Do not scan `project_docs/archive/` unless an active doc explicitly points there or the user asks for historical context. Do not bulk scan `project_docs/active/decision_intelligence/`; read `project_docs/active/decision_intelligence/README.md` first and select only the relevant file.
 
+## Codex Run Efficiency
+
+For substantial repo work, read `project_docs/active/codex_harness_engineering.md` before opening large source files or running noisy verification tools.
+
+Codex must keep context use disciplined: use targeted searches and line ranges before full-file reads, avoid full diffs unless they are small, summarize build/test/browser output, and escalate verification only when the cheaper check cannot prove the claim. Quality remains required, but broad exploration, repeated browser flows, and large tool dumps are not acceptable substitutes for a scoped run plan.
+
 ## Documentation Table Of Contents For Agents
 
 | Need | Read |
 | --- | --- |
 | Start any project task | `project_docs/INDEX.md` |
 | Understand current truth and scan rules | `project_docs/active/README.md` |
+| Run Codex efficiently on substantial work | `project_docs/active/codex_harness_engineering.md` |
 | Check current Decision Intelligence status | `project_docs/active/status/decision_intelligence_execution_status.md` |
 | Confirm Codex vs Gemini ownership | `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md` |
 | Execute the current implementation plan | `project_docs/active/pdf_export_unification_plan.md` |
