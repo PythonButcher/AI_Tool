@@ -170,6 +170,3 @@ This plan if acceptance criteria or field names change during implementation
 
 Do not mark Phase 3 active again until this status file truthfully says Phase 2.5 is complete.
 
-## Stored Start Prompt For Later
-
-Start by reading AGENTS.md, project_docs/INDEX.md, project_docs/active/README.md, project_docs/active/status/decision_intelligence_execution_status.md, and project_docs/active/decision_intelligence/current/phase_2_5_semantic_frame_completion_plan.md. Implement Phase 2.5 backend-first after confirming app-wide PDF export remediation is accepted. The goal is to fix prompt-first semantic frame extraction so the exact May 14 real-dataset prompt preserves objective revenue, levers marketing_spend and discount_pct, segments region and channel, and guardrails gross_margin_pct above 30% plus return_rate_pct below 4% with non-null threshold values. Do not add a false channel mix lever when channel appears only in segmentation language. Preserve existing endpoint names, action IDs, artifact types, readiness fields, semantic trace fields, and the observational-analysis-only boundary. Update backend tests, project_docs/active/contracts/decision_objects.md if fields change, and active status docs truthfully. Do not edit frontend files unless explicitly authorized.
