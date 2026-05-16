@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from decimal import Decimal, InvalidOperation
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from backend.decision_engine.grounding import build_grounding_summary
 from backend.decision_engine.mode_detection import detect_chat_mode_details, is_visualization_request
@@ -1555,6 +1555,11 @@ class DecisionChatService:
         readiness = workspace.get("readiness") if isinstance(workspace.get("readiness"), dict) else {}
         objective = decision_scope.get("objective") if isinstance(decision_scope.get("objective"), dict) else {}
         levers = decision_scope.get("levers") if isinstance(decision_scope.get("levers"), list) else []
+        segment_dimensions = (
+            decision_scope.get("segment_dimensions")
+            if isinstance(decision_scope.get("segment_dimensions"), list)
+            else []
+        )
         constraints = decision_scope.get("constraints") if isinstance(decision_scope.get("constraints"), list) else []
         missing_inputs = list(readiness.get("missing_inputs") or [])
         prompt_frame = (workspace.get("drafting") or {}).get("prompt_frame") if isinstance(workspace.get("drafting"), dict) else {}
@@ -1562,7 +1567,7 @@ class DecisionChatService:
         objective_metric = (objective.get("metric_ref") or {}).get("label") or objective.get("metric_id")
         time_horizon = objective.get("time_horizon") if isinstance(objective.get("time_horizon"), dict) else {}
         lever_items = DecisionChatService._build_preview_lever_items(levers)
-        segment_items = DecisionChatService._build_preview_segment_items(levers)
+        segment_items = DecisionChatService._build_preview_segment_items(segment_dimensions, levers)
         guardrail_items = DecisionChatService._build_preview_guardrail_items(constraints)
         status = str(workspace.get("status") or "").strip().lower()
         recommended_next_action = DecisionChatService._build_preview_next_action(
@@ -1693,9 +1698,27 @@ class DecisionChatService:
         return items
 
     @staticmethod
-    def _build_preview_segment_items(levers: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def _build_preview_segment_items(
+        segment_dimensions: List[Dict[str, Any]],
+        levers: Optional[List[Dict[str, Any]]] = None,
+    ) -> List[Dict[str, Any]]:
         segments: List[Dict[str, Any]] = []
-        for lever in levers:
+        for segment in segment_dimensions:
+            if not isinstance(segment, dict):
+                continue
+            binding = segment.get("binding") if isinstance(segment.get("binding"), dict) else {}
+            dimension_ref = binding.get("dimension_ref") if isinstance(binding.get("dimension_ref"), dict) else {}
+            if not dimension_ref:
+                continue
+            segments.append({
+                "label": dimension_ref.get("label") or segment.get("label"),
+                "dimension_id": dimension_ref.get("dimension_id"),
+                "role": "segment",
+            })
+        if segments:
+            return segments
+
+        for lever in levers or []:
             if not isinstance(lever, dict):
                 continue
             binding = lever.get("binding") if isinstance(lever.get("binding"), dict) else {}

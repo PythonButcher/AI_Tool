@@ -8,11 +8,13 @@ Phase 2.5 exists to button up that gap before Phase 3 correction and ranked obse
 
 ## Current Status
 
-Status: queued after PDF export acceptance.
+Status: backend complete and verified; Gemini frontend handoff active.
 
-The preceding branch, `project_docs/active/pdf_export_unification_plan.md`, is still active. The first shared export implementation exists, but Decisions workspace export fidelity is not accepted because the generated PDF does not yet match the visible workspace window closely enough. Phase 2.5 should start only after PDF export remediation is accepted.
+The preceding branch, `project_docs/active/pdf_export_unification_plan.md`, is accepted after the Decisions workspace DOM-capture remediation. Phase 2.5 may now proceed without rebuilding PDF export.
 
-Phase 3 correction and ranked observational evidence remains planned, but it is deferred until Phase 2.5 is complete. Phase 3 should not be started while the current prompt-first frame can misclassify segmentation dimensions as levers or drop guardrail thresholds.
+Phase 3 correction and ranked observational evidence remains planned, but it has not been started. The next slice should begin only when the user explicitly starts Phase 3.
+
+May 16, 2026 implementation note: Codex added additive `decision_scope.segment_dimensions`, role-aware segment extraction, multiple guardrail parsing from compound clauses, numeric threshold preservation, `value_status` on guardrail conditions, readiness blocking for unparsed required thresholds, and chat-preview segment rendering from the active segment list. Backend tests now cover the exact May 14 acceptance prompt and nearby variants. Gemini frontend work is active at `project_docs/active/ai_hand_off/phase_2_5_gemini_frontend_segment_dimensions.md` so the opened Decisions workspace renders the active segment frame directly.
 
 ## Review Evidence
 
@@ -169,4 +171,6 @@ When Phase 2.5 is implemented, update:
 This plan if acceptance criteria or field names change during implementation
 
 Do not mark Phase 3 active again until this status file truthfully says Phase 2.5 is complete.
+
+Phase 2.5 backend work is complete as of May 16, 2026. Phase 2.5 frontend acceptance is pending Gemini implementation and review. Phase 3 remains deferred until explicitly started after that review.
 

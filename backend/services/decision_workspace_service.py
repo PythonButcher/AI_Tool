@@ -200,6 +200,13 @@ class DecisionWorkspaceService:
         if not isinstance(raw_levers, list):
             raise DecisionServiceError("levers must be an array when provided.")
 
+        raw_segment_dimensions = payload.get("segment_dimensions") or payload.get("segmentDimensions")
+        segments_were_user_supplied = isinstance(raw_segment_dimensions, list)
+        if raw_segment_dimensions is None:
+            raw_segment_dimensions = prompt_first_draft.get("segment_dimensions") or []
+        if not isinstance(raw_segment_dimensions, list):
+            raise DecisionServiceError("segment_dimensions must be an array when provided.")
+
         raw_constraints = payload.get("constraints")
         constraints_were_user_supplied = isinstance(raw_constraints, list)
         if raw_constraints is None:
@@ -214,6 +221,10 @@ class DecisionWorkspaceService:
             DecisionWorkspaceService._normalize_lever(item, resolved_context, index)
             for index, item in enumerate(raw_levers)
         ]
+        normalized_segment_dimensions = [
+            DecisionWorkspaceService._normalize_segment_dimension(item, resolved_context, index)
+            for index, item in enumerate(raw_segment_dimensions)
+        ]
         normalized_constraints = [
             DecisionWorkspaceService._normalize_constraint(item, resolved_context, index)
             for index, item in enumerate(raw_constraints)
@@ -223,6 +234,7 @@ class DecisionWorkspaceService:
             context=resolved_context,
             objective=normalized_objective,
             levers=normalized_levers,
+            segment_dimensions=normalized_segment_dimensions,
             constraints=normalized_constraints,
             applied_filters=applied_filters,
             scope_preferences=scope_preferences,
@@ -259,6 +271,7 @@ class DecisionWorkspaceService:
             "decision_scope": {
                 "objective": normalized_objective,
                 "levers": normalized_levers,
+                "segment_dimensions": normalized_segment_dimensions,
                 "constraints": normalized_constraints,
             },
             "scope_summary": DecisionWorkspaceService._generate_scope_summary(
@@ -277,6 +290,7 @@ class DecisionWorkspaceService:
                 clarification_hints=prompt_first_draft.get("clarification_hints") or [],
                 objective_source="user_input" if objective_was_user_supplied else "system_draft",
                 levers_source="user_input" if levers_were_user_supplied else ("system_draft" if normalized_levers else "none"),
+                segments_source="user_input" if segments_were_user_supplied else ("system_draft" if normalized_segment_dimensions else "none"),
                 constraints_source="user_input" if constraints_were_user_supplied else ("system_draft" if normalized_constraints else "none"),
                 prompt_frame=prompt_first_draft.get("prompt_frame") or {},
             ),
@@ -580,6 +594,7 @@ class DecisionWorkspaceService:
             return {
                 "objective": None,
                 "levers": [],
+                "segment_dimensions": [],
                 "constraints": [],
                 "clarification_hints": [],
             }
@@ -600,18 +615,24 @@ class DecisionWorkspaceService:
             prompt_matches=prompt_matches,
             prompt_frame=prompt_frame,
         )
+        segment_dimensions = DecisionWorkspaceService._draft_segment_dimensions(
+            prompt_matches=prompt_matches,
+            prompt_frame=prompt_frame,
+        )
         levers = DecisionWorkspaceService._draft_levers(
             decision_prompt=decision_prompt,
             decision_intake=decision_intake,
             prompt_matches=prompt_matches,
             objective=objective,
             constraints=constraints,
+            segment_dimensions=segment_dimensions,
             prompt_frame=prompt_frame,
         )
 
         return {
             "objective": objective,
             "levers": levers,
+            "segment_dimensions": segment_dimensions,
             "constraints": constraints,
             "prompt_frame": prompt_frame,
             "clarification_hints": DecisionWorkspaceService._build_prompt_first_clarification_hints(
@@ -619,6 +640,7 @@ class DecisionWorkspaceService:
                 prompt_matches=prompt_matches,
                 objective=objective,
                 levers=levers,
+                segment_dimensions=segment_dimensions,
                 constraints=constraints,
                 prompt_frame=prompt_frame,
             ),
@@ -667,12 +689,11 @@ class DecisionWorkspaceService:
         prompt_matches: Dict[str, List[Dict[str, Any]]],
         objective: Dict[str, Any],
         constraints: Sequence[Dict[str, Any]],
+        segment_dimensions: Sequence[Dict[str, Any]],
         prompt_frame: Dict[str, Any],
     ) -> List[Dict[str, Any]]:
         text_blob = DecisionWorkspaceService._build_prompt_text_blob(decision_prompt, decision_intake)
         lever_text = DecisionWorkspaceService._clean_text(prompt_frame.get("lever_clause")) or text_blob
-        segment_text = DecisionWorkspaceService._clean_text(prompt_frame.get("segment_clause")) or ""
-        lever_and_segment_text = " ".join(part for part in [lever_text, segment_text] if part)
         objective_metric_id = objective.get("metric_id")
         constraint_metric_ids = {
             (constraint.get("binding") or {}).get("metric_id")
@@ -705,20 +726,26 @@ class DecisionWorkspaceService:
             if len(levers) >= 2:
                 break
 
-        normalized_lever_text = DecisionWorkspaceService._normalize_phrase(lever_and_segment_text)
-        dimension_keywords_present = any(
-            keyword in normalized_lever_text
-            for keyword in ("mix", "region", "channel", "segment", "allocation", "category", "product")
+        normalized_lever_text = DecisionWorkspaceService._normalize_phrase(lever_text)
+        normalized_prompt_text = DecisionWorkspaceService._normalize_phrase(text_blob)
+        explicit_mix_lever = (
+            DecisionWorkspaceService._mentions_explicit_dimension_lever(normalized_lever_text)
+            or DecisionWorkspaceService._mentions_explicit_dimension_lever(normalized_prompt_text)
         )
-        if dimension_keywords_present:
+        if explicit_mix_lever:
+            segment_dimension_ids = {
+                (segment.get("binding") or {}).get("dimension_id")
+                for segment in segment_dimensions
+                if isinstance(segment.get("binding"), dict)
+            }
             ranked_dimension_refs = DecisionWorkspaceService._rank_prompt_refs(
-                lever_and_segment_text,
+                lever_text,
                 prompt_matches.get("dimensions") or [],
                 role="segment",
             )
             for dimension_ref in ranked_dimension_refs:
                 dimension_id = dimension_ref.get("dimension_id")
-                if not dimension_id:
+                if not dimension_id or dimension_id in segment_dimension_ids and "mix" not in normalized_lever_text:
                     continue
                 levers.append(
                     {
@@ -736,6 +763,41 @@ class DecisionWorkspaceService:
         return levers
 
     @staticmethod
+    def _draft_segment_dimensions(
+        prompt_matches: Dict[str, List[Dict[str, Any]]],
+        prompt_frame: Dict[str, Any],
+    ) -> List[Dict[str, Any]]:
+        segment_text = DecisionWorkspaceService._clean_text(prompt_frame.get("segment_clause")) or ""
+        if not segment_text:
+            return []
+
+        segments: List[Dict[str, Any]] = []
+        for dimension_ref in DecisionWorkspaceService._rank_prompt_refs(
+            segment_text,
+            prompt_matches.get("dimensions") or [],
+            role="segment",
+        ):
+            dimension_id = dimension_ref.get("dimension_id")
+            if not dimension_id or any(
+                (segment.get("binding") or {}).get("dimension_id") == dimension_id
+                for segment in segments
+                if isinstance(segment.get("binding"), dict)
+            ):
+                continue
+            label = dimension_ref.get("label") or dimension_ref.get("name") or "Segment"
+            segments.append(
+                {
+                    "label": label,
+                    "segment_role": "segment",
+                    "binding": {
+                        "dimension_id": dimension_id,
+                        **DecisionWorkspaceService._semantic_trace_from_ref(dimension_ref),
+                    },
+                }
+            )
+        return segments
+
+    @staticmethod
     def _draft_constraints(
         decision_prompt: str,
         decision_intake: Dict[str, Optional[str]],
@@ -747,45 +809,174 @@ class DecisionWorkspaceService:
         used_metric_ids = set()
 
         for clause in clauses:
-            metric_ref = DecisionWorkspaceService._find_best_prompt_metric_match(
+            ranked_guardrail_refs = DecisionWorkspaceService._rank_prompt_refs(
                 clause,
                 prompt_matches.get("metrics") or [],
                 role="guardrail",
             )
-            metric_id = metric_ref.get("metric_id") if isinstance(metric_ref, dict) else None
-            if not metric_id or metric_id in used_metric_ids:
-                continue
-            used_metric_ids.add(metric_id)
-            operator = "gte"
-            normalized_clause = DecisionWorkspaceService._normalize_phrase(clause)
-            if any(
-                word in normalized_clause
-                for word in ("cap", "limit", "under", "below", "increase", "increasing", "raise", "raising")
-            ):
-                operator = "lte"
-            constraints.append(
-                {
-                    "label": f"Protect {metric_ref.get('label') or metric_ref.get('name')}",
-                    "description": clause,
-                    "constraint_type": "metric_guardrail",
-                    "binding": {
-                        "metric_id": metric_id,
-                        **DecisionWorkspaceService._semantic_trace_from_ref(metric_ref),
-                    },
-                    "condition": {
-                        "operator": operator,
-                        "value": None,
-                        "secondary_value": None,
-                        "values": None,
-                        "unit": None,
-                    },
-                    "hardness": "hard",
-                }
+            atomic_clauses = DecisionWorkspaceService._split_constraint_clause_by_metric(
+                clause,
+                ranked_guardrail_refs,
             )
-            if len(constraints) >= 2:
+            for metric_ref, atomic_clause in atomic_clauses:
+                metric_id = metric_ref.get("metric_id") if isinstance(metric_ref, dict) else None
+                if not metric_id or metric_id in used_metric_ids:
+                    continue
+                used_metric_ids.add(metric_id)
+                constraints.append(
+                    {
+                        "label": f"Protect {metric_ref.get('label') or metric_ref.get('name')}",
+                        "description": atomic_clause or clause,
+                        "constraint_type": "metric_guardrail",
+                        "binding": {
+                            "metric_id": metric_id,
+                            **DecisionWorkspaceService._semantic_trace_from_ref(metric_ref),
+                        },
+                        "condition": DecisionWorkspaceService._parse_guardrail_condition(atomic_clause or clause),
+                        "hardness": "hard",
+                    }
+                )
+                if len(constraints) >= 3:
+                    break
+            if len(constraints) >= 3:
                 break
 
         return constraints
+
+    @staticmethod
+    def _split_constraint_clause_by_metric(
+        clause: str,
+        metric_refs: Sequence[Dict[str, Any]],
+    ) -> List[Tuple[Dict[str, Any], str]]:
+        spans: List[Tuple[int, int, Dict[str, Any]]] = []
+        for metric_ref in metric_refs:
+            span = DecisionWorkspaceService._find_ref_text_span(clause, metric_ref)
+            if span is not None:
+                spans.append((span[0], span[1], metric_ref))
+
+        if not spans:
+            return [(metric_ref, clause) for metric_ref in metric_refs[:1]]
+
+        spans.sort(key=lambda item: item[0])
+        atomic: List[Tuple[Dict[str, Any], str]] = []
+        for index, (start, _end, metric_ref) in enumerate(spans):
+            next_start = spans[index + 1][0] if index + 1 < len(spans) else len(clause)
+            segment = clause[start:next_start]
+            segment = re.sub(r"\s+\band\b\s*$", "", segment, flags=re.IGNORECASE).strip(" ,;:")
+            if segment:
+                atomic.append((metric_ref, segment))
+        return atomic
+
+    @staticmethod
+    def _find_ref_text_span(text: str, ref: Dict[str, Any]) -> Optional[Tuple[int, int]]:
+        aliases = DecisionWorkspaceService._ref_aliases(ref)
+        for alias in sorted(aliases, key=len, reverse=True):
+            alias_pattern = re.escape(alias).replace(r"\ ", r"[\s_%-]+").replace("_", r"[\s_%-]+")
+            match = re.search(rf"(?<![a-z0-9]){alias_pattern}(?![a-z0-9])", text, flags=re.IGNORECASE)
+            if match:
+                return match.span()
+        return None
+
+    @staticmethod
+    def _ref_aliases(ref: Dict[str, Any]) -> List[str]:
+        aliases: List[str] = []
+        for key in ("label", "name", "field", "metric_id", "dimension_id"):
+            value = str(ref.get(key) or "").strip()
+            if value:
+                aliases.append(value)
+        semantics = ref.get("decision_semantics") if isinstance(ref.get("decision_semantics"), dict) else {}
+        aliases.extend(str(item).strip() for item in semantics.get("aliases") or [] if str(item).strip())
+        return DecisionWorkspaceService._dedupe_strings(aliases)
+
+    @staticmethod
+    def _parse_guardrail_condition(clause: str) -> Dict[str, Any]:
+        normalized_clause = DecisionWorkspaceService._normalize_phrase(clause)
+        operator = "gte"
+        if any(
+            phrase in normalized_clause
+            for phrase in (
+                "below",
+                "under",
+                "less than",
+                "no more than",
+                "at most",
+                "cap",
+                "limit",
+                "maximum",
+                "max",
+                "low",
+            )
+        ):
+            operator = "lte"
+        elif any(
+            phrase in normalized_clause
+            for phrase in (
+                "above",
+                "over",
+                "greater than",
+                "at least",
+                "no less than",
+                "floor",
+                "minimum",
+                "min",
+            )
+        ):
+            operator = "gte"
+
+        threshold = DecisionWorkspaceService._extract_numeric_threshold(clause)
+        threshold_required = DecisionWorkspaceService._constraint_clause_requires_threshold(clause)
+        return {
+            "operator": operator,
+            "value": threshold[0] if threshold else None,
+            "secondary_value": None,
+            "values": None,
+            "unit": threshold[1] if threshold else None,
+            "value_status": "parsed" if threshold else ("unparsed" if threshold_required else "not_specified"),
+        }
+
+    @staticmethod
+    def _extract_numeric_threshold(clause: str) -> Optional[Tuple[float, Optional[str]]]:
+        match = re.search(r"(?<![a-z0-9])(\d+(?:\.\d+)?)\s*(%)?", str(clause or ""), flags=re.IGNORECASE)
+        if not match:
+            return None
+        value = float(match.group(1))
+        if value.is_integer():
+            value = int(value)
+        unit = "%" if match.group(2) else None
+        return value, unit
+
+    @staticmethod
+    def _constraint_clause_requires_threshold(clause: str) -> bool:
+        normalized = DecisionWorkspaceService._normalize_phrase(clause)
+        tokens = set(DecisionWorkspaceService._tokenize_prompt_text(clause))
+        if tokens.intersection({"target", "low", "high", "safe", "healthy"}):
+            return False
+        return any(
+            phrase in normalized
+            for phrase in (
+                "above",
+                "over",
+                "greater than",
+                "at least",
+                "no less than",
+                "below",
+                "under",
+                "less than",
+                "no more than",
+                "at most",
+            )
+        )
+
+    @staticmethod
+    def _mentions_explicit_dimension_lever(normalized_text: str) -> bool:
+        if not normalized_text:
+            return False
+        if any(phrase in normalized_text for phrase in ("mix", "allocation", "allocat", "portfolio")):
+            return True
+        return any(
+            normalized_text.startswith(verb) or f" {verb} " in normalized_text
+            for verb in ("shift", "rebalance", "reallocate", "change channel", "change region", "change segment")
+        )
 
     @staticmethod
     def _build_prompt_first_clarification_hints(
@@ -793,6 +984,7 @@ class DecisionWorkspaceService:
         prompt_matches: Dict[str, List[Dict[str, Any]]],
         objective: Dict[str, Any],
         levers: Sequence[Dict[str, Any]],
+        segment_dimensions: Sequence[Dict[str, Any]],
         constraints: Sequence[Dict[str, Any]],
         prompt_frame: Dict[str, Any],
     ) -> List[str]:
@@ -836,10 +1028,7 @@ class DecisionWorkspaceService:
             if not DecisionWorkspaceService._find_best_prompt_metric_match(clause, prompt_matches.get("metrics") or []):
                 hints.append(f"Which metric should represent the guardrail '{clause}'?")
         segment_clause = DecisionWorkspaceService._clean_text(prompt_frame.get("segment_clause"))
-        if segment_clause and not DecisionWorkspaceService._find_best_prompt_dimension_match(
-            segment_clause,
-            prompt_matches.get("dimensions") or [],
-        ):
+        if segment_clause and not segment_dimensions:
             hints.append(f"Which segment or dimension should the draft use for '{segment_clause}'?")
         if not prompt_matches.get("metrics"):
             hints.append("No strong metric match was found from the prompt, so expect metric binding follow-up.")
@@ -1351,6 +1540,7 @@ class DecisionWorkspaceService:
         clarification_hints: Sequence[str],
         objective_source: str,
         levers_source: str,
+        segments_source: str,
         constraints_source: str,
         prompt_frame: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
@@ -1364,6 +1554,7 @@ class DecisionWorkspaceService:
             "source_summary": {
                 "objective": objective_source,
                 "levers": levers_source,
+                "segments": segments_source,
                 "constraints": constraints_source,
             },
             "prompt_matches": {
@@ -1396,6 +1587,7 @@ class DecisionWorkspaceService:
             "source_summary": {
                 "objective": source_summary.get("objective") or ("user_input" if objective_present else "none"),
                 "levers": source_summary.get("levers") or ("user_input" if levers_present else "none"),
+                "segments": source_summary.get("segments") or "none",
                 "constraints": source_summary.get("constraints") or ("user_input" if constraints_present else "none"),
             },
             "prompt_matches": {
@@ -1498,6 +1690,36 @@ class DecisionWorkspaceService:
         }
 
     @staticmethod
+    def _normalize_segment_dimension(raw: Dict[str, Any], context: Dict[str, Any], index: int) -> Dict[str, Any]:
+        if not isinstance(raw, dict):
+            raise DecisionServiceError("Each segment dimension must be an object.")
+
+        label = str(raw.get("label") or "").strip()
+        binding_payload = raw.get("binding")
+        if binding_payload is None:
+            binding_payload = {}
+        elif not isinstance(binding_payload, dict):
+            raise DecisionServiceError(f"segment dimension '{label or index + 1}' has an invalid binding payload.")
+
+        binding = DecisionWorkspaceService._resolve_binding(
+            binding_input={
+                **binding_payload,
+                "dimension_name": binding_payload.get("dimension_name") or raw.get("dimension_name"),
+                "field": binding_payload.get("field") or raw.get("field"),
+            },
+            context=context,
+        )
+        dimension_ref = binding.get("dimension_ref") if isinstance(binding.get("dimension_ref"), dict) else {}
+        resolved_label = label or dimension_ref.get("label") or binding.get("field") or f"Segment {index + 1}"
+
+        return {
+            "segment_id": raw.get("segment_id") or make_identifier("segment", resolved_label, index + 1),
+            "label": resolved_label,
+            "segment_role": str(raw.get("segment_role") or "segment").strip(),
+            "binding": binding,
+        }
+
+    @staticmethod
     def _normalize_constraint(raw: Dict[str, Any], context: Dict[str, Any], index: int) -> Dict[str, Any]:
         if not isinstance(raw, dict):
             raise DecisionServiceError("Each constraint must be an object.")
@@ -1549,6 +1771,7 @@ class DecisionWorkspaceService:
             "secondary_value": raw.get("secondary_value"),
             "values": raw.get("values"),
             "unit": raw.get("unit"),
+            "value_status": raw.get("value_status"),
         }
 
     @staticmethod
@@ -1726,11 +1949,16 @@ class DecisionWorkspaceService:
 
         objective = decision_scope.get("objective")
         levers = decision_scope.get("levers")
+        segment_dimensions = decision_scope.get("segment_dimensions") or decision_scope.get("segmentDimensions") or []
         constraints = decision_scope.get("constraints")
         if not isinstance(objective, dict):
             raise DecisionServiceError("decision_workspace.decision_scope.objective is required for workspace analysis.")
         if not isinstance(levers, list):
             raise DecisionServiceError("decision_workspace.decision_scope.levers must be an array for workspace analysis.")
+        if not isinstance(segment_dimensions, list):
+            raise DecisionServiceError(
+                "decision_workspace.decision_scope.segment_dimensions must be an array for workspace analysis."
+            )
         if not isinstance(constraints, list):
             raise DecisionServiceError(
                 "decision_workspace.decision_scope.constraints must be an array for workspace analysis."
@@ -1764,6 +1992,7 @@ class DecisionWorkspaceService:
             "decision_scope": {
                 "objective": objective,
                 "levers": levers,
+                "segment_dimensions": segment_dimensions,
                 "constraints": constraints,
             },
             "scope_summary": workspace.get("scope_summary")
@@ -2109,6 +2338,7 @@ class DecisionWorkspaceService:
         context: Dict[str, Any],
         objective: Dict[str, Any],
         levers: Sequence[Dict[str, Any]],
+        segment_dimensions: Sequence[Dict[str, Any]],
         constraints: Sequence[Dict[str, Any]],
         applied_filters: List[Dict[str, Any]],
         scope_preferences: Dict[str, Any],
@@ -2163,6 +2393,15 @@ class DecisionWorkspaceService:
                 add_dimension(
                     binding.get("dimension_ref"),
                     f"Included {binding['dimension_ref']['label']} because it is directly bound to the lever '{lever['label']}'.",
+                    for_comparison=True,
+                )
+
+        for segment in segment_dimensions:
+            binding = segment.get("binding") if isinstance(segment.get("binding"), dict) else {}
+            if binding.get("dimension_ref"):
+                add_dimension(
+                    binding.get("dimension_ref"),
+                    f"Included {binding['dimension_ref']['label']} because it is an explicit segment dimension.",
                     for_comparison=True,
                 )
 
@@ -2507,15 +2746,19 @@ class DecisionWorkspaceService:
                 continue
 
             binding = constraint.get("binding") if isinstance(constraint.get("binding"), dict) else {}
+            condition = constraint.get("condition") if isinstance(constraint.get("condition"), dict) else {}
+            reason = binding.get("reason") or "The constraint needs a valid binding or clearer structure."
+            if condition.get("value_status") == "unparsed":
+                reason = "The guardrail threshold was requested but its numeric value could not be parsed."
             unknowns.append(
                 {
                     "unknown_id": make_identifier("unknown", "constraint", constraint.get("constraint_id")),
                     "label": (
                         f"Hard constraint '{constraint['label']}' is not structurally valid yet: "
-                        f"{binding.get('reason') or 'The constraint needs a valid binding or clearer structure.'}"
+                        f"{reason}"
                     )
                     if is_hard
-                    else f"Constraint '{constraint['label']}' is only partially defined: {binding.get('reason') or 'The constraint needs clearer structure.'}",
+                    else f"Constraint '{constraint['label']}' is only partially defined: {reason}",
                     "category": "constraint_gap",
                     "severity": "high" if is_hard else "medium",
                     "blocks_simulation": bool(is_hard),
@@ -2566,7 +2809,11 @@ class DecisionWorkspaceService:
             if DecisionWorkspaceService._is_constraint_structurally_valid(constraint):
                 continue
             constraint_key = constraint.get("constraint_id") or make_identifier("constraint", constraint.get("label"))
-            missing_inputs.append(f"constraints.{constraint_key}.binding")
+            condition = constraint.get("condition") if isinstance(constraint.get("condition"), dict) else {}
+            if condition.get("value_status") == "unparsed":
+                missing_inputs.append(f"constraints.{constraint_key}.condition.value")
+            else:
+                missing_inputs.append(f"constraints.{constraint_key}.binding")
 
         can_run_simulation = (
             objective_ready
@@ -2716,6 +2963,8 @@ class DecisionWorkspaceService:
     def _is_constraint_structurally_valid(constraint: Dict[str, Any]) -> bool:
         condition = constraint.get("condition")
         if not isinstance(condition, dict):
+            return False
+        if condition.get("value_status") == "unparsed":
             return False
 
         binding = constraint.get("binding") if isinstance(constraint.get("binding"), dict) else {}

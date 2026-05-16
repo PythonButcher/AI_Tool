@@ -1,6 +1,6 @@
 # Phase 3 Correction And Ranked Observational Evidence Plan
 
-> DEFERRED: May 14, 2026 PDF review showed Phase 2 semantic metadata exists, but the active prompt-first decision frame still drops or misclassifies key semantic roles. Do not start Phase 3 until `project_docs/active/decision_intelligence/current/phase_2_5_semantic_frame_completion_plan.md` is complete.
+> DEFERRED: Phase 2.5 backend semantic frame completion is complete, but Gemini frontend review for opened workspace segment rendering is active at `project_docs/active/ai_hand_off/phase_2_5_gemini_frontend_segment_dimensions.md`. Do not start Phase 3 until that Phase 2.5 frontend review is accepted and the user explicitly starts Phase 3.
 
 ## Purpose
 

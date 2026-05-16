@@ -133,6 +133,31 @@ Prompt-first decision workspace drafting now preserves semantic binding traceabi
 | `semantic_role_warnings` | `string[]` | No | Warnings when metadata is weak, ambiguous, role-conflicting, or raw-field-only |
 | `unresolved_mappings` | `object[]` | No | Present under `drafting.prompt_matches`; each item includes `mapping_type`, `status`, `reason`, `candidate_labels`, and optional `confidence` |
 
+### Decision Workspace Scope Additions
+
+Phase 2.5 adds explicit segment bindings to the active decision frame instead of representing every `by region/channel` phrase as a dimension-backed lever.
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `decision_scope.segment_dimensions` | `Segment Dimension[]` | No | Additive list of segmentation dimensions explicitly requested by prompt-first drafting or supplied by a client. Existing `decision_scope.objective`, `levers`, and `constraints` remain unchanged. |
+
+### Segment Dimension
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `segment_id` | `string` | Yes | Stable generated identifier |
+| `label` | `string` | Yes | Display label such as `region` or `channel` |
+| `segment_role` | `string` | Yes | Current value is usually `segment` |
+| `binding` | `Binding` | Yes | Dimension binding with `dimension_ref` and Phase 2 semantic trace fields when available |
+
+### Guardrail Condition Threshold Status
+
+Prompt-first guardrail conditions keep the existing `operator`, `value`, `secondary_value`, `values`, and `unit` fields. Phase 2.5 adds `value_status` so readiness can distinguish a qualitative guardrail from a failed numeric threshold parse.
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `value_status` | `string \| null` | No | `parsed` when a numeric threshold was preserved, `not_specified` when the prompt gave a qualitative guardrail, or `unparsed` when threshold language was present but no numeric value could be parsed. Hard guardrails with `value_status: "unparsed"` are not analysis-ready. |
+
 ### Time Context
 
 | Field | Type | Required | Notes |

@@ -19,6 +19,7 @@ Codex must keep context use disciplined: use targeted searches and line ranges b
 | Run Codex efficiently on substantial work | `project_docs/active/codex_harness_engineering.md` |
 | Check current Decision Intelligence status | `project_docs/active/status/decision_intelligence_execution_status.md` |
 | Confirm Codex vs Gemini ownership | `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md` |
+| Review active Codex/Gemini handoffs | `project_docs/active/ai_hand_off/README.md` |
 | Execute the current implementation plan | `project_docs/active/pdf_export_unification_plan.md` |
 | Review the council-derived roadmap | `project_docs/active/decision_intelligence/current/next_focus_execution_plan.md` |
 | Choose next implementation work | `project_docs/active/agent_council/outputs/application-next-focus-priorities/README.md` |
@@ -27,7 +28,7 @@ Codex must keep context use disciplined: use targeted searches and line ranges b
 | Work on Decision Intelligence historical plans or handoffs | `project_docs/active/decision_intelligence/README.md` first |
 | Run or update Agent Council workflow | `project_docs/active/agent_council/README.md` |
 
-Current project truth: Decision Intelligence V3 is active. Phase 4.5 hardening and Phase 1 reliability foundation are complete. Phase 2 semantic metadata plumbing is implemented, but May 14 PDF review showed the active prompt-first decision frame still drops or misclassifies key semantic roles. Before Phase 2.5 continues, the active next implementation plan is app-wide PDF export remediation at `project_docs/active/pdf_export_unification_plan.md`, because the Decisions workspace export still does not match the visible workspace window closely enough for reliable review. Phase 2.5 semantic frame completion is next after PDF export acceptance. Phase 3 correction and ranked observational evidence is deferred until Phase 2.5 is complete. Frontend implementation belongs to Gemini unless the user explicitly authorizes Codex frontend edits in the current session; the PDF export branch prompt explicitly authorizes Codex to work on the export UI and frontend export code.
+Current project truth: Decision Intelligence V3 is active. Phase 4.5 hardening and Phase 1 reliability foundation are complete. Phase 2 semantic metadata plumbing is implemented. App-wide PDF export remediation is accepted. Phase 2.5 backend semantic frame completion is complete and verified. The active handoff is Gemini frontend work at `project_docs/active/ai_hand_off/phase_2_5_gemini_frontend_segment_dimensions.md` so the opened Decisions workspace renders the backend's `decision_scope.segment_dimensions` contract directly. Phase 3 correction and ranked observational evidence is deferred until Phase 2.5 frontend review is accepted and the user explicitly starts Phase 3. Frontend implementation belongs to Gemini unless the user explicitly authorizes Codex frontend edits in the current session.
 
 Codex is the coordinator for Decision Intelligence work. This file is only for standing Codex reference, not for active Gemini task handoffs.
 
@@ -42,7 +43,7 @@ When a backend slice reaches the point where frontend work should move to Gemini
 1. An updated Gemini review plan that explains the current backend truth, frontend scope, files to inspect, acceptance behavior, and constraints.
 2. A short clean prompt the user can paste into Gemini CLI.
 
-Active Gemini task plans and handoffs belong under `project_docs/active/`, usually in `project_docs/active/decision_intelligence/current/` while active. Move completed handoffs to `project_docs/active/decision_intelligence/completed/` and keep them out of the default scan path.
+Active Gemini task plans and handoffs belong under `project_docs/active/ai_hand_off/` while active. Move completed handoffs out of the active table when done, and keep old examples in archive or completed reference paths.
 
 When creating prompts for another agent, do not use code blocks and do not over-format with many bullets. Keep the prompt clean, direct, and easy to paste.
 
