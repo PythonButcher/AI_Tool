@@ -10,14 +10,14 @@ This folder is organized so current work and completed records are no longer mix
 
 The current truth lives in `project_docs/active/status/decision_intelligence_execution_status.md`, not in older phase plans in this folder.
 
-Phase 4.5 hardening and Phase 1 reliability foundation are complete. Phase 2 semantic metadata plumbing is implemented, but May 14 PDF review showed the active prompt-first decision frame still drops or misclassifies key semantic roles. Before Phase 2.5 continues, the active next project work is app-wide PDF export unification at `project_docs/active/pdf_export_unification_plan.md`, because exports must accurately match visible app content for reliable review. After the PDF work, return to `current/phase_2_5_semantic_frame_completion_plan.md` to finish prompt-first semantic frame extraction. Phase 3 correction and ranked observational evidence is deferred until Phase 2.5 is complete.
+Phase 4.5 hardening and Phase 1 reliability foundation are complete. Phase 2 semantic metadata plumbing is implemented, but May 14 PDF review showed the active prompt-first decision frame still drops or misclassifies key semantic roles. Before Phase 2.5 continues, the active next project work is app-wide PDF export remediation at `project_docs/active/pdf_export_unification_plan.md`, because the Decisions workspace export still does not match the visible workspace window closely enough for reliable review. After the PDF work is accepted, return to `current/phase_2_5_semantic_frame_completion_plan.md` to finish prompt-first semantic frame extraction. Phase 3 correction and ranked observational evidence is deferred until Phase 2.5 is complete.
 
 ## Read These By Task
 
 | Task | Read |
 | --- | --- |
 | Resume current project work | `project_docs/active/status/decision_intelligence_execution_status.md`, then `project_docs/active/pdf_export_unification_plan.md` |
-| Resume Phase 2.5 after PDF export work | `project_docs/active/status/decision_intelligence_execution_status.md`, then `current/phase_2_5_semantic_frame_completion_plan.md` |
+| Resume Phase 2.5 after PDF export acceptance | `project_docs/active/status/decision_intelligence_execution_status.md`, then `current/phase_2_5_semantic_frame_completion_plan.md` |
 | Review the deferred Phase 3 plan | `current/phase_3_correction_and_observational_evidence_plan.md` |
 | Review the council-derived roadmap | `current/next_focus_execution_plan.md` |
 | Review completed prompt-first intake behavior | `completed/phase_3_5_decision_intake_rework.md` |

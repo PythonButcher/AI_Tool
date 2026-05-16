@@ -1,5 +1,6 @@
 import React, { useContext } from 'react';
 import axios from 'axios';
+import { FaFileCsv, FaFileExcel, FaFilePdf } from 'react-icons/fa';
 import { DataContext, useActiveDataset } from '../../context/DataContext';
 import { useWindowContext } from '../../context/WindowContext';
 import { generateAnalyticalPdfReport } from '../../utils/pdfReportExport';
@@ -52,9 +53,15 @@ function FileExport() {
 
   return (
     <div className="ExportClass">
-      <button onClick={() => handleExport('csv')}>Export as CSV</button>
-      <button onClick={() => handleExport('excel')}>Export as Excel</button>
-      <button onClick={() => handleExport('pdf')}>Export as PDF</button>
+      <button onClick={() => handleExport('csv')} aria-label="Export data as CSV" title="Export data as CSV">
+        <FaFileCsv /> CSV
+      </button>
+      <button onClick={() => handleExport('excel')} aria-label="Export data as Excel" title="Export data as Excel">
+        <FaFileExcel /> Excel
+      </button>
+      <button onClick={() => handleExport('pdf')} aria-label="Export current report as PDF" title="Export current report as PDF">
+        <FaFilePdf /> PDF
+      </button>
     </div>
   );
 }

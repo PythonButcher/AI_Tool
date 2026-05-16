@@ -98,9 +98,9 @@ Semantic collision, no-safe-match, missing metric, guardrail-only, and segment-o
 
 ## App-Wide PDF Export Unification
 
-App-wide PDF export unification is the active next implementation slice. The detailed plan lives at `project_docs/active/pdf_export_unification_plan.md`.
+App-wide PDF export remediation is the active next implementation slice. The detailed plan lives at `project_docs/active/pdf_export_unification_plan.md`.
 
-This work was moved ahead of Phase 2.5 after the first Decision Intelligence PDF export proved useful for debugging but too inaccurate and clunky for product review. The export must accurately match the visible decision, chat, chart, story, or report content being exported. Normal PDFs should be compact, polished, and same-as-window where practical, not raw JSON debug dumps.
+This work was moved ahead of Phase 2.5 after the first Decision Intelligence PDF export proved useful for debugging but too inaccurate and clunky for product review. The first shared export implementation is also not accepted yet because the Decisions workspace export still does not match the visible workspace window closely enough. The export must accurately match the visible decision, chat, chart, story, or report content being exported. Normal PDFs should be compact, polished, and same-as-window where practical, not raw JSON debug dumps.
 
 Exit criteria:
 
@@ -118,7 +118,7 @@ Normal PDF output does not dump raw JSON by default.
 
 ## Phase 2.5: Semantic Frame Completion
 
-Phase 2.5 is the next implementation slice after PDF export unification. The detailed plan lives at `project_docs/active/decision_intelligence/current/phase_2_5_semantic_frame_completion_plan.md`.
+Phase 2.5 is the next implementation slice after PDF export acceptance. The detailed plan lives at `project_docs/active/decision_intelligence/current/phase_2_5_semantic_frame_completion_plan.md`.
 
 May 14 PDF review showed that Phase 2 metadata exists, but the active prompt-first decision frame is still not reliable enough. The exact test prompt routed to `decide` and exposed semantic metadata, but `gross_margin_pct above 30%` did not become an active guardrail, `return_rate_pct below 4%` lost its threshold value, `region and channel` were inconsistent as segments, and `channel mix` was incorrectly introduced as a lever.
 
@@ -221,5 +221,5 @@ The council left four useful choices open.
 
 ## Current Slice Prompt For Codex
 
-Implement app-wide PDF export unification from `project_docs/active/pdf_export_unification_plan.md`. The export to PDF must accurately match the visible decision, chat, chart, story, or report content being exported. Build one shared, polished export system or a clearly documented adapter layer used by all current PDF export entry points. Normal PDFs should not dump raw JSON by default; they should be compact, visually aligned with the app, accessible, and smooth. Preserve current export entry points for charts, Data Story, AI Chat relevant artifacts, Decisions workspace, workflow reports, and file export where applicable. Verify with `npm --prefix frontend\frontend run build` and `git diff --check` on touched files. Do not implement Phase 2.5 semantic frame fixes in this branch.
+Continue PDF export remediation from `project_docs/active/pdf_export_unification_plan.md`. The Decisions workspace export is not complete: the PDF must be formatted much closer to the visible workspace window, not as a separate clunky report. Fix Decisions workspace export first so it preserves the visible workspace hierarchy, card grouping, compact spacing, section order, semantic labels, readiness/capability areas, analysis controls, and visible analysis results. Then confirm the shared export approach still works consistently for AI Chat relevant artifacts, charts, Data Story, workflow reports, and file export where applicable. Normal PDFs must not dump raw JSON by default. Verify with `npm --prefix frontend\frontend run build`, `git diff --check` on touched files, and at least one manual or browser-driven comparison between the Decisions workspace window and the generated PDF. Do not implement Phase 2.5 semantic frame fixes in this branch.
 
