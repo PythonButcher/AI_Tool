@@ -27,6 +27,8 @@ Preserve existing capability by default. Gemini cannot make product-reduction de
 When working from markdown handoff files written by Codex, treat their constraints as active requirements, especially around preserving contracts, preserving workflows, and avoiding frontend-only workarounds that weaken the product.
 Use `project_docs/active/` as the default documentation scan path. Do not scan `project_docs/archive/` unless an active doc explicitly tells you to or historical context is required.
 
+For active Codex-to-Gemini work, read `project_docs/active/ai_hand_off/README.md` and the specific handoff file named there. Codex owns backend logic, contracts, tests, coordination, and final application organization. Gemini owns frontend implementation and must not edit backend files unless the user explicitly changes that assignment.
+
 
 My professional and hobbyist endeavors are centered around programming with a strong emphasis on Python for data analysis, machine learning, and React for front-end development. I am actively looking to integrate Python and React in my projects. I value proactive guidance, especially in recognizing patterns and preempting issues across these technologies. My objective is to deepen my expertise and apply advanced concepts in both individual and intersecting areas of Python and React.
 

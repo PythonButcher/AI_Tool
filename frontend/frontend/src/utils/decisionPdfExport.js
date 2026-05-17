@@ -291,12 +291,31 @@ const workspaceSections = (workspace, analysis) => {
       emptyText: 'No strategic levers are currently shown.',
     },
     {
+      title: 'Segment Dimensions',
+      cards: Array.isArray(scope.segment_dimensions)
+        ? scope.segment_dimensions.map((segment) => ({
+          title: segment.label || 'Segment',
+          body: [
+            segment.segment_role || 'segment',
+            bindingSummary(segment.binding) ? `Binding: ${bindingSummary(segment.binding)}` : '',
+          ].filter(Boolean).join(' | '),
+          meta: [
+            { label: 'Role', value: segment.segment_role || 'segment' },
+            { label: 'Status', value: segment.binding?.status },
+          ],
+        }))
+        : [],
+      emptyText: 'No segmentation dimensions are currently shown.',
+    },
+    {
       title: 'Guardrails',
       cards: Array.isArray(scope.constraints)
         ? scope.constraints.map((constraint) => ({
           title: constraint.label || 'Guardrail',
           body: [
-            conditionLabel(constraint.condition) ? `Condition: ${conditionLabel(constraint.condition)}` : '',
+            constraint.condition?.value_status === 'unparsed'
+              ? 'Threshold required: Could not parse numeric limit'
+              : (conditionLabel(constraint.condition) ? `Condition: ${conditionLabel(constraint.condition)}` : ''),
             constraint.rationale,
             bindingSummary(constraint.binding) ? `Binding: ${bindingSummary(constraint.binding)}` : '',
           ].filter(Boolean).join(' | '),

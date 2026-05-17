@@ -6,7 +6,7 @@ This project is a data visualization and cleaning tool built with React (fronten
 
 Features
 
-File Upload: Supports CSV, Excel, JSON, and PDF file formats.
+File Upload: Supports CSV, Excel, and JSON file formats.
 
 Data Cleaning: Remove null values, fill missing data, and standardize datasets.
 
@@ -18,7 +18,7 @@ Drag-and-Drop Chart Builder: Users can assign fields to axes for chart generatio
 
 Multiple Chart Types: Supports Bar, Line, Pie, Scatter, and Doughnut charts.
 
-Export Options: Save cleaned data in CSV, Excel, or PDF formats.
+Export Options: Save cleaned data in CSV or Excel formats.
 
 Project Structure
 
@@ -58,7 +58,7 @@ The backend processes data uploads, cleaning, and AI interactions. Key routes in
 
 /api/cleaning (POST): Performs data cleaning operations and returns a cleaned dataset.
 
-/api/export (GET): Exports cleaned data in CSV, Excel, or PDF formats.
+/api/export (GET): Exports cleaned data in CSV or Excel formats.
 
 /ai (POST): AI chat assistant for analyzing and summarizing datasets.
 
@@ -123,7 +123,7 @@ Preview and clean data using the SideBar tools.
 
 Generate charts manually or let AI recommend the best type.
 
-Download cleaned data in CSV, Excel, or PDF formats.
+Download cleaned data in CSV or Excel formats.
 
 Roadmap
 

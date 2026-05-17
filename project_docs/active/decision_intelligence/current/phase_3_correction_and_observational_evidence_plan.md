@@ -1,6 +1,6 @@
 # Phase 3 Correction And Ranked Observational Evidence Plan
 
-> DEFERRED: May 14, 2026 PDF review showed Phase 2 semantic metadata exists, but the active prompt-first decision frame still drops or misclassifies key semantic roles. Do not start Phase 3 until `project_docs/active/decision_intelligence/current/phase_2_5_semantic_frame_completion_plan.md` is complete.
+> DEFERRED: Phase 2.5 backend semantic frame completion and Gemini frontend segment rendering are complete. Do not start Phase 3 until the user explicitly starts Phase 3.
 
 ## Purpose
 
@@ -12,7 +12,7 @@ Status: deferred until Phase 2.5 semantic frame completion is complete.
 
 Owner: Codex for backend actions, contracts, tests, and documentation. Gemini owns frontend implementation after the backend contract stabilizes and Codex prepares a scoped handoff.
 
-Phase 2 semantic metadata plumbing is implemented and frontend integration is functionally in place, but May 14 PDF review found active prompt-first frame defects that must be fixed first: dropped `gross_margin_pct` guardrail, null `return_rate_pct` threshold, inconsistent `region`/`channel` segmentation, and a false `channel mix` lever. These are tracked in `project_docs/active/decision_intelligence/current/phase_2_5_semantic_frame_completion_plan.md`.
+Phase 2 semantic metadata plumbing is implemented and frontend integration is functionally in place, but May 14 review found active prompt-first frame defects that had to be fixed first: dropped `gross_margin_pct` guardrail, null `return_rate_pct` threshold, inconsistent `region`/`channel` segmentation, and a false `channel mix` lever. These are tracked in `project_docs/active/decision_intelligence/current/phase_2_5_semantic_frame_completion_plan.md`.
 
 ## What Phase 2 Enables Now
 
