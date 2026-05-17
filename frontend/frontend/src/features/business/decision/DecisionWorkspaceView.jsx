@@ -302,6 +302,39 @@ const DecisionWorkspaceView = ({ workspace, analysis, onCreateNew, onAnalyze, se
           </section>
 
           <section className="scope-section">
+            <h3 className="section-label" style={{ marginTop: '32px' }}><FaLayerGroup /> Segment Dimensions</h3>
+            <div className="segments-list">
+              {decision_scope.segment_dimensions?.map((segment, idx) => (
+                <div key={segment.segment_id || idx} className="segment-card">
+                  <div className="segment-header">
+                    <span className="segment-label">{segment.label}</span>
+                    <span className="segment-role">{segment.segment_role || 'segment'}</span>
+                  </div>
+
+                  {segment.binding && segment.binding.status !== 'unresolved' ? (
+                    <div className="binding-resolved">
+                      <SemanticRef
+                        dimension_ref={segment.binding.dimension_ref}
+                        type="segment"
+                      />
+                    </div>
+                  ) : (
+                    <div className="binding-unresolved">
+                      <SemanticRef
+                        type="unresolved"
+                        dimension_ref={{ label: segment.binding?.binding_label || segment.label || "Unresolved Segment Binding" }}
+                      />
+                    </div>
+                  )}
+                </div>
+              ))}
+              {(!decision_scope.segment_dimensions || decision_scope.segment_dimensions.length === 0) && (
+                <div className="analysis-notice">No segmentation dimensions applied to this decision.</div>
+              )}
+            </div>
+          </section>
+
+          <section className="scope-section">
             <h3 className="section-label" style={{ marginTop: '32px' }}><FaShieldHalved /> Guardrails</h3>
             <div className="constraints-list">
               {decision_scope.constraints.map((constraint, idx) => (
@@ -319,11 +352,23 @@ const DecisionWorkspaceView = ({ workspace, analysis, onCreateNew, onAnalyze, se
                     </div>
                   )}
 
-                  <div className="constraint-rule">
-                    Condition: {constraint.condition.operator} {constraint.condition.value}
-                    {constraint.condition.secondary_value && ` and ${constraint.condition.secondary_value}`}
-                    {constraint.condition.values && ` [${constraint.condition.values.join(', ')}]`}
-                    {' '}{constraint.condition.unit}
+                  <div className={`constraint-rule ${constraint.condition?.value_status === 'unparsed' ? 'is-unparsed' : ''}`}>
+                    {constraint.condition?.value_status === 'unparsed' ? (
+                      <span className="unparsed-warning">
+                        <FaTriangleExclamation /> Threshold required: Could not parse numeric limit from prompt
+                      </span>
+                    ) : constraint.condition ? (
+                      <>
+                        Condition: {constraint.condition.operator} {constraint.condition.value}
+                        {constraint.condition.secondary_value && ` and ${constraint.condition.secondary_value}`}
+                        {constraint.condition.values && ` [${constraint.condition.values.join(', ')}]`}
+                        {' '}{constraint.condition.unit}
+                      </>
+                    ) : (
+                      <span className="unparsed-warning">
+                        <FaTriangleExclamation /> Condition details missing
+                      </span>
+                    )}
                   </div>
 
                   {constraint.binding && constraint.binding.status !== 'unresolved' ? (

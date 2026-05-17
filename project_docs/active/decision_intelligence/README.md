@@ -10,20 +10,22 @@ This folder is organized so current work and completed records are no longer mix
 
 The current truth lives in `project_docs/active/status/decision_intelligence_execution_status.md`, not in older phase plans in this folder.
 
-Phase 4.5 hardening and Phase 1 reliability foundation are complete. Phase 2 semantic metadata plumbing is implemented, but May 14 PDF review showed the active prompt-first decision frame still drops or misclassifies key semantic roles. Before Phase 2.5 continues, the active next project work is app-wide PDF export remediation at `project_docs/active/pdf_export_unification_plan.md`, because the Decisions workspace export still does not match the visible workspace window closely enough for reliable review. After the PDF work is accepted, return to `current/phase_2_5_semantic_frame_completion_plan.md` to finish prompt-first semantic frame extraction. Phase 3 correction and ranked observational evidence is deferred until Phase 2.5 is complete.
+Phase 4.5 hardening and Phase 1 reliability foundation are complete. Phase 2 semantic metadata plumbing is implemented. Phase 2.5 backend semantic frame completion and Gemini frontend segment rendering are complete and verified. The handoff at `project_docs/active/ai_hand_off/phase_2_5_gemini_frontend_segment_dimensions.md` is a completed record. Phase 3 correction and ranked observational evidence is deferred until the user explicitly starts Phase 3.
 
 ## Read These By Task
 
 | Task | Read |
 | --- | --- |
-| Resume current project work | `project_docs/active/status/decision_intelligence_execution_status.md`, then `project_docs/active/pdf_export_unification_plan.md` |
-| Resume Phase 2.5 after PDF export acceptance | `project_docs/active/status/decision_intelligence_execution_status.md`, then `current/phase_2_5_semantic_frame_completion_plan.md` |
+| Resume current project work | `project_docs/active/status/decision_intelligence_execution_status.md`, then `project_docs/active/ai_hand_off/README.md` |
+| Review completed Phase 2.5 Gemini frontend handoff | `project_docs/active/ai_hand_off/phase_2_5_gemini_frontend_segment_dimensions.md` |
+| Review Phase 2.5 backend plan | `current/phase_2_5_semantic_frame_completion_plan.md` |
 | Review the deferred Phase 3 plan | `current/phase_3_correction_and_observational_evidence_plan.md` |
 | Review the council-derived roadmap | `current/next_focus_execution_plan.md` |
 | Review completed prompt-first intake behavior | `completed/phase_3_5_decision_intake_rework.md` |
 | Work on the completed chat backend contract | `completed/decision_intelligence_v3_phase_4_backend_checkpoint.md`, `completed/decision_intelligence_v3_phase_4_chat_engine_execution_plan.md` |
 | Review old Phase 4 completion details | `completed/decision_intelligence_v3_phase_4_execution_checklist.md` |
-| Prepare or review a completed Gemini frontend handoff | the specific file in `completed/` named by the current task |
+| Prepare or review active Gemini frontend handoff | `project_docs/active/ai_hand_off/README.md` |
+| Review completed Gemini frontend handoff | the specific file in `completed/` named by the current task |
 | Understand completed Phase 4.5 intent | `completed/phase_4_5_ai_chat_decision_intelligence_plan.md` |
 
 ## Completed Or Reference-Only Files
@@ -43,6 +45,6 @@ The files below are useful records but should not be scanned by default:
 
 ## Ownership Reminder
 
-Codex owns backend logic, contracts, tests, architecture, reviews, and active Markdown coordination.
+Codex owns backend logic, contracts, tests, architecture, reviews, application organization, and active Markdown coordination. Codex has final coordination say, with the user reviewing Codex work for acceptance.
 
 Gemini owns frontend implementation unless the user explicitly authorizes Codex to edit frontend files in the current session.

@@ -18,7 +18,7 @@ After those files, read only the task-specific document listed below.
 
 | Need | Read |
 | --- | --- |
-| Execute the current implementation plan | `project_docs/active/pdf_export_unification_plan.md` |
+| Review the latest completed implementation plan | `project_docs/active/decision_intelligence/current/phase_2_5_semantic_frame_completion_plan.md` |
 | Keep Codex implementation runs efficient | `project_docs/active/codex_harness_engineering.md` |
 | Review the council-derived roadmap | `project_docs/active/decision_intelligence/current/next_focus_execution_plan.md` |
 | Choose the next implementation slice | `project_docs/active/agent_council/outputs/application-next-focus-priorities/README.md` |
@@ -26,6 +26,7 @@ After those files, read only the task-specific document listed below.
 | Work on decision object contracts | `project_docs/active/contracts/decision_objects.md` |
 | Work inside Decision Intelligence docs | `project_docs/active/decision_intelligence/README.md` first, then only the named file under `current/` or `completed/` |
 | Review frontend state architecture | `project_docs/active/reviews/react_state_flow_review.md` |
+| Review active Codex/Gemini handoffs | `project_docs/active/ai_hand_off/README.md` |
 | Run or modify Agent Council workflow | `project_docs/active/agent_council/README.md` |
 
 ## Current Project Truth
@@ -34,7 +35,7 @@ Decision Intelligence V3 is active. V2 is closed as-is and lives as historical c
 
 Phase 4.5 AI Chat Decision Intelligence hardening is complete. The product now has real chat-to-decision continuity, scoped action behavior, truthful observational-analysis language, and verified frontend hardening.
 
-The next work is not broad frontend polish and not new simulation or optimization. Phase 1 reliability foundation is complete. Phase 2 semantic metadata plumbing is implemented, but May 14 PDF review showed the active prompt-first decision frame still drops or misclassifies key semantic roles. App-wide PDF export remediation is active first because the Decisions workspace export still does not match the visible workspace window closely enough. The active next implementation plan is `project_docs/active/pdf_export_unification_plan.md`. Phase 2.5 semantic frame completion resumes after PDF export acceptance, and Phase 3 correction and ranked observational evidence is deferred until Phase 2.5 is complete. Frontend implementation remains Gemini-owned unless the user explicitly authorizes Codex frontend edits in the current session; the PDF export branch prompt explicitly authorizes Codex to work on the export UI and frontend export code.
+The next work is not broad frontend polish and not new simulation or optimization. Phase 1 reliability foundation is complete. Phase 2 semantic metadata plumbing is implemented. Phase 2.5 backend semantic frame completion and Gemini frontend segment rendering are complete and verified for the May 14 acceptance prompt. The Gemini handoff at `project_docs/active/ai_hand_off/phase_2_5_gemini_frontend_segment_dimensions.md` is now a completed record, not an active implementation request. Phase 3 correction and ranked observational evidence remains deferred until the user explicitly starts the next slice. Frontend implementation remains Gemini-owned unless the user explicitly authorizes Codex frontend edits in the current session.
 
 ## Folder Map
 
@@ -44,6 +45,7 @@ The next work is not broad frontend polish and not new simulation or optimizatio
 | `project_docs/active/codex_harness_engineering.md` | Codex-specific run efficiency, tool-output, and verification rules. | Read for substantial Codex repo work. |
 | `project_docs/active/rules/` | Standing rules and ownership boundaries. | Read when scope or frontend ownership matters. |
 | `project_docs/active/contracts/` | Backend/frontend contract references. | Read when changing or reviewing response shapes. |
+| `project_docs/active/ai_hand_off/` | Active Codex/Gemini handoffs. | Read when frontend work moves from Codex backend truth to Gemini implementation. |
 | `project_docs/active/decision_intelligence/` | Decision Intelligence navigation, current docs, and completed handoffs. | Read its README first; use `current/` for active docs and `completed/` only for reference. |
 | `project_docs/active/agent_council/` | Reusable council workflow and live planning outputs. | Read only for planning or next-focus decisions. |
 | `project_docs/active/reviews/` | Focused technical reviews. | Read only when touching the reviewed area. |

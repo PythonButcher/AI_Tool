@@ -1,5 +1,6 @@
 import unittest
 
+from backend.decision_engine import DecisionChatService
 from backend.services.decision_workspace_service import DecisionWorkspaceService
 
 
@@ -111,6 +112,107 @@ SEMANTIC_MODEL = {
     ],
 }
 
+PHASE_2_5_DATASET = [
+    {
+        "date": "2026-01-31",
+        "region": "East",
+        "channel": "Online",
+        "revenue": 100.0,
+        "gross_margin_pct": 35.0,
+        "return_rate_pct": 3.5,
+        "discount_pct": 10.0,
+        "marketing_spend": 24000.0,
+    },
+    {
+        "date": "2026-02-28",
+        "region": "West",
+        "channel": "Retail",
+        "revenue": 125.0,
+        "gross_margin_pct": 33.0,
+        "return_rate_pct": 3.8,
+        "discount_pct": 9.0,
+        "marketing_spend": 28000.0,
+    },
+]
+
+PHASE_2_5_SEMANTIC_MODEL = {
+    "version": 2,
+    "dataset": {"id": "phase_2_5_sales", "name": "Phase 2.5 Sales"},
+    "dimensions": [
+        {
+            "id": "dimension_date",
+            "name": "date",
+            "label": "date",
+            "field": "date",
+            "semantic_kind": "temporal",
+            "data_type": "datetime",
+        },
+        {
+            "id": "dimension_region",
+            "name": "region",
+            "label": "region",
+            "field": "region",
+            "semantic_kind": "categorical",
+            "data_type": "string",
+        },
+        {
+            "id": "dimension_channel",
+            "name": "channel",
+            "label": "channel",
+            "field": "channel",
+            "semantic_kind": "categorical",
+            "data_type": "string",
+        },
+    ],
+    "metrics": [
+        {
+            "id": "metric_revenue",
+            "name": "revenue",
+            "label": "revenue",
+            "field": "revenue",
+            "default_aggregation": "sum",
+            "format_hint": "currency",
+            "expression": {"type": "column_aggregation", "column": "revenue", "aggregation": "sum"},
+        },
+        {
+            "id": "metric_marketing_spend",
+            "name": "marketing_spend",
+            "label": "marketing_spend",
+            "field": "marketing_spend",
+            "default_aggregation": "sum",
+            "format_hint": "currency",
+            "expression": {"type": "column_aggregation", "column": "marketing_spend", "aggregation": "sum"},
+        },
+        {
+            "id": "metric_discount_pct",
+            "name": "discount_pct",
+            "label": "discount_pct",
+            "field": "discount_pct",
+            "default_aggregation": "mean",
+            "format_hint": "percentage",
+            "expression": {"type": "column_aggregation", "column": "discount_pct", "aggregation": "mean"},
+        },
+        {
+            "id": "metric_gross_margin_pct",
+            "name": "gross_margin_pct",
+            "label": "gross_margin_pct",
+            "field": "gross_margin_pct",
+            "default_aggregation": "mean",
+            "format_hint": "percentage",
+            "expression": {"type": "column_aggregation", "column": "gross_margin_pct", "aggregation": "mean"},
+        },
+        {
+            "id": "metric_return_rate_pct",
+            "name": "return_rate_pct",
+            "label": "return_rate_pct",
+            "field": "return_rate_pct",
+            "default_aggregation": "mean",
+            "format_hint": "percentage",
+            "expression": {"type": "column_aggregation", "column": "return_rate_pct", "aggregation": "mean"},
+        },
+    ],
+}
+
 
 def build_payload():
     return {
@@ -181,6 +283,19 @@ def build_compound_prompt_first_payload():
             "How should we grow revenue next quarter using discount rate and "
             "marketing spend changes by region without hurting gross margin?"
         ),
+    }
+
+
+def build_phase_2_5_payload(prompt):
+    return {
+        "dataset": PHASE_2_5_DATASET,
+        "dataset_ref": {
+            "source": "inline",
+            "dataset_id": "phase_2_5_sales",
+            "dataset_name": "Phase 2.5 Sales",
+        },
+        "semantic_model": PHASE_2_5_SEMANTIC_MODEL,
+        "decision_prompt": prompt,
     }
 
 
@@ -367,6 +482,7 @@ class DecisionWorkspaceServiceTests(unittest.TestCase):
         workspace = result["decision_workspace"]
         objective = workspace["decision_scope"]["objective"]
         levers = workspace["decision_scope"]["levers"]
+        segment_dimensions = workspace["decision_scope"]["segment_dimensions"]
         constraints = workspace["decision_scope"]["constraints"]
 
         lever_metric_ids = {
@@ -374,10 +490,10 @@ class DecisionWorkspaceServiceTests(unittest.TestCase):
             for lever in levers
             if isinstance(lever.get("binding"), dict)
         }
-        lever_dimension_ids = {
-            (((lever.get("binding") or {}).get("dimension_ref")) or {}).get("dimension_id")
-            for lever in levers
-            if isinstance(lever.get("binding"), dict)
+        segment_dimension_ids = {
+            (((segment.get("binding") or {}).get("dimension_ref")) or {}).get("dimension_id")
+            for segment in segment_dimensions
+            if isinstance(segment.get("binding"), dict)
         }
         constraint_metric_ids = {
             (((constraint.get("binding") or {}).get("metric_ref")) or {}).get("metric_id")
@@ -391,7 +507,7 @@ class DecisionWorkspaceServiceTests(unittest.TestCase):
         self.assertIn("metric_discount_rate", lever_metric_ids)
         self.assertIn("metric_marketing_spend", lever_metric_ids)
         self.assertNotIn("metric_revenue_sum", lever_metric_ids)
-        self.assertIn("dimension_region", lever_dimension_ids)
+        self.assertIn("dimension_region", segment_dimension_ids)
         self.assertEqual(constraint_metric_ids, {"metric_margin_pct"})
 
     def test_prompt_first_intake_preserves_prompt_frame_for_multi_clause_business_prompt(self):
@@ -406,6 +522,7 @@ class DecisionWorkspaceServiceTests(unittest.TestCase):
         workspace = result["decision_workspace"]
         objective = workspace["decision_scope"]["objective"]
         levers = workspace["decision_scope"]["levers"]
+        segment_dimensions = workspace["decision_scope"]["segment_dimensions"]
         constraints = workspace["decision_scope"]["constraints"]
         prompt_frame = workspace["drafting"]["prompt_frame"]
 
@@ -414,10 +531,10 @@ class DecisionWorkspaceServiceTests(unittest.TestCase):
             for lever in levers
             if isinstance(lever.get("binding"), dict)
         }
-        lever_dimension_ids = {
-            (((lever.get("binding") or {}).get("dimension_ref")) or {}).get("dimension_id")
-            for lever in levers
-            if isinstance(lever.get("binding"), dict)
+        segment_dimension_ids = {
+            (((segment.get("binding") or {}).get("dimension_ref")) or {}).get("dimension_id")
+            for segment in segment_dimensions
+            if isinstance(segment.get("binding"), dict)
         }
         constraint_metric_ids = {
             (((constraint.get("binding") or {}).get("metric_ref")) or {}).get("metric_id")
@@ -431,7 +548,7 @@ class DecisionWorkspaceServiceTests(unittest.TestCase):
         self.assertIn("marketing spend", prompt_frame["lever_clause"].lower())
         self.assertIn("channel", prompt_frame["segment_clause"].lower())
         self.assertIn("metric_marketing_spend", lever_metric_ids)
-        self.assertIn("dimension_channel", lever_dimension_ids)
+        self.assertIn("dimension_channel", segment_dimension_ids)
         self.assertEqual(constraint_metric_ids, {"metric_margin_pct"})
 
     def test_prompt_first_intake_asks_targeted_question_when_prompt_only_names_levers(self):
@@ -443,6 +560,7 @@ class DecisionWorkspaceServiceTests(unittest.TestCase):
         workspace = result["decision_workspace"]
         objective = workspace["decision_scope"]["objective"]
         levers = workspace["decision_scope"]["levers"]
+        segment_dimensions = workspace["decision_scope"]["segment_dimensions"]
         clarification_hints = workspace["drafting"]["clarification_hints"]
 
         lever_metric_ids = {
@@ -450,19 +568,156 @@ class DecisionWorkspaceServiceTests(unittest.TestCase):
             for lever in levers
             if isinstance(lever.get("binding"), dict)
         }
-        lever_dimension_ids = {
-            (((lever.get("binding") or {}).get("dimension_ref")) or {}).get("dimension_id")
-            for lever in levers
-            if isinstance(lever.get("binding"), dict)
+        segment_dimension_ids = {
+            (((segment.get("binding") or {}).get("dimension_ref")) or {}).get("dimension_id")
+            for segment in segment_dimensions
+            if isinstance(segment.get("binding"), dict)
         }
 
         self.assertEqual(workspace["status"], "limited")
         self.assertIsNone(objective["metric_ref"])
         self.assertIn("objective.metric_id_or_metric_name", workspace["readiness"]["missing_inputs"])
         self.assertIn("metric_discount_rate", lever_metric_ids)
-        self.assertIn("dimension_region", lever_dimension_ids)
+        self.assertIn("dimension_region", segment_dimension_ids)
         self.assertTrue(clarification_hints[0].startswith("Which metric should define success"))
         self.assertNotIn("What controllable lever", " ".join(clarification_hints))
+
+    def test_phase_2_5_acceptance_prompt_preserves_active_semantic_frame(self):
+        prompt = (
+            "How should we grow revenue next quarter using marketing_spend and discount_pct "
+            "as controllable levers, segmented by region and channel, while keeping "
+            "gross_margin_pct above 30% and return_rate_pct below 4%?"
+        )
+
+        workspace = DecisionWorkspaceService.create_workspace(build_phase_2_5_payload(prompt))["decision_workspace"]
+        scope = workspace["decision_scope"]
+
+        lever_fields = self._lever_metric_fields(scope["levers"])
+        segment_fields = self._segment_fields(scope["segment_dimensions"])
+        guardrails = self._guardrails_by_field(scope["constraints"])
+
+        self.assertEqual(scope["objective"]["metric_ref"]["field"], "revenue")
+        self.assertEqual(scope["objective"]["direction"], "maximize")
+        self.assertEqual(scope["objective"]["time_horizon"]["label"], "Next quarter")
+        self.assertEqual(lever_fields, {"marketing_spend", "discount_pct"})
+        self.assertEqual(segment_fields, {"region", "channel"})
+        self.assertEqual(set(guardrails), {"gross_margin_pct", "return_rate_pct"})
+        self.assertEqual(guardrails["gross_margin_pct"]["operator"], "gte")
+        self.assertEqual(guardrails["gross_margin_pct"]["value"], 30)
+        self.assertEqual(guardrails["gross_margin_pct"]["unit"], "%")
+        self.assertEqual(guardrails["return_rate_pct"]["operator"], "lte")
+        self.assertEqual(guardrails["return_rate_pct"]["value"], 4)
+        self.assertEqual(guardrails["return_rate_pct"]["unit"], "%")
+        self.assertFalse(any("channel mix" == str(lever.get("label") or "").lower() for lever in scope["levers"]))
+        self.assertEqual(workspace["readiness"]["readiness_state"], "analysis_ready")
+
+        # Active refs should keep Phase 2 semantic traceability, not just raw IDs.
+        self.assertIsNotNone(scope["objective"]["semantic_binding_confidence"])
+        for lever in scope["levers"]:
+            self.assertIsNotNone((lever["binding"] or {}).get("semantic_binding_confidence"))
+        for segment in scope["segment_dimensions"]:
+            self.assertIsNotNone((segment["binding"] or {}).get("semantic_binding_confidence"))
+        for constraint in scope["constraints"]:
+            self.assertIsNotNone((constraint["binding"] or {}).get("semantic_binding_confidence"))
+
+    def test_phase_2_5_segment_language_does_not_create_mix_lever(self):
+        prompt = (
+            "How should we grow revenue next quarter using marketing_spend and discount_pct, "
+            "broken down by region and channel, while keeping gross_margin_pct over 30%?"
+        )
+
+        workspace = DecisionWorkspaceService.create_workspace(build_phase_2_5_payload(prompt))["decision_workspace"]
+        scope = workspace["decision_scope"]
+
+        self.assertEqual(self._lever_metric_fields(scope["levers"]), {"marketing_spend", "discount_pct"})
+        self.assertEqual(self._segment_fields(scope["segment_dimensions"]), {"region", "channel"})
+        self.assertFalse(any((lever.get("binding") or {}).get("dimension_ref") for lever in scope["levers"]))
+        self.assertEqual(self._guardrails_by_field(scope["constraints"])["gross_margin_pct"]["value"], 30)
+
+    def test_phase_2_5_allows_explicit_channel_mix_lever(self):
+        prompt = (
+            "How should we grow revenue next quarter by region and channel while changing "
+            "channel mix and marketing_spend, keeping return_rate_pct under 4%?"
+        )
+
+        workspace = DecisionWorkspaceService.create_workspace(build_phase_2_5_payload(prompt))["decision_workspace"]
+        scope = workspace["decision_scope"]
+        dimension_levers = {
+            (((lever.get("binding") or {}).get("dimension_ref")) or {}).get("field")
+            for lever in scope["levers"]
+            if isinstance(lever.get("binding"), dict)
+        }
+
+        self.assertIn("marketing_spend", self._lever_metric_fields(scope["levers"]))
+        self.assertIn("channel", dimension_levers)
+        self.assertEqual(self._segment_fields(scope["segment_dimensions"]), {"region", "channel"})
+        self.assertEqual(self._guardrails_by_field(scope["constraints"])["return_rate_pct"]["value"], 4)
+
+    def test_phase_2_5_unparsed_required_guardrail_threshold_blocks_readiness(self):
+        prompt = (
+            "How should we grow revenue next quarter using marketing_spend, segmented by channel, "
+            "while keeping return_rate_pct below %?"
+        )
+
+        workspace = DecisionWorkspaceService.create_workspace(build_phase_2_5_payload(prompt))["decision_workspace"]
+        guardrail_condition = self._guardrails_by_field(workspace["decision_scope"]["constraints"])["return_rate_pct"]
+
+        self.assertIsNone(guardrail_condition["value"])
+        self.assertEqual(guardrail_condition["value_status"], "unparsed")
+        self.assertNotEqual(workspace["readiness"]["readiness_state"], "analysis_ready")
+        self.assertTrue(
+            any(item.endswith(".condition.value") for item in workspace["readiness"]["missing_inputs"])
+        )
+
+    def test_phase_2_5_chat_preview_uses_active_segments_not_false_mix_lever(self):
+        prompt = (
+            "How should we grow revenue next quarter using marketing_spend and discount_pct "
+            "as controllable levers, segmented by region and channel, while keeping "
+            "gross_margin_pct above 30% and return_rate_pct below 4%?"
+        )
+
+        response = DecisionChatService.handle_turn(
+            {
+                "dataset": PHASE_2_5_DATASET,
+                "semantic_model": PHASE_2_5_SEMANTIC_MODEL,
+                "user_message": prompt,
+                "conversation_history": [],
+                "session_state": {},
+            }
+        )
+
+        preview = response["draft_workspace_preview"]
+        understood = preview["decision_kickoff"]["understood"]
+
+        self.assertEqual(response["mode"], "decide")
+        self.assertEqual({item["label"] for item in understood["segments"]}, {"region", "channel"})
+        self.assertEqual({item["binding_label"] for item in understood["levers"]}, {"marketing_spend", "discount_pct"})
+        self.assertFalse(any(item["label"] == "channel mix" for item in understood["levers"]))
+        self.assertEqual({item["metric"] for item in understood["guardrails"]}, {"gross_margin_pct", "return_rate_pct"})
+
+    @staticmethod
+    def _lever_metric_fields(levers):
+        return {
+            (((lever.get("binding") or {}).get("metric_ref")) or {}).get("field")
+            for lever in levers
+            if (((lever.get("binding") or {}).get("metric_ref")) or {}).get("field")
+        }
+
+    @staticmethod
+    def _segment_fields(segment_dimensions):
+        return {
+            (((segment.get("binding") or {}).get("dimension_ref")) or {}).get("field")
+            for segment in segment_dimensions
+            if (((segment.get("binding") or {}).get("dimension_ref")) or {}).get("field")
+        }
+
+    @staticmethod
+    def _guardrails_by_field(constraints):
+        return {
+            (((constraint.get("binding") or {}).get("metric_ref")) or {}).get("field"): constraint.get("condition")
+            for constraint in constraints
+            if (((constraint.get("binding") or {}).get("metric_ref")) or {}).get("field")
+        }
 
     def test_workspace_analysis_preserves_prompt_first_drafting_metadata(self):
         workspace_result = DecisionWorkspaceService.create_workspace(build_prompt_first_payload())
