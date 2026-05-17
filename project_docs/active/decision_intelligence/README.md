@@ -10,14 +10,14 @@ This folder is organized so current work and completed records are no longer mix
 
 The current truth lives in `project_docs/active/status/decision_intelligence_execution_status.md`, not in older phase plans in this folder.
 
-Phase 4.5 hardening and Phase 1 reliability foundation are complete. Phase 2 semantic metadata plumbing is implemented. App-wide PDF export remediation is accepted. Phase 2.5 backend semantic frame completion is complete and verified. The active next work is Gemini frontend rendering for `decision_scope.segment_dimensions`, tracked at `project_docs/active/ai_hand_off/phase_2_5_gemini_frontend_segment_dimensions.md`. Phase 3 correction and ranked observational evidence is deferred until Phase 2.5 frontend review is accepted and the user explicitly starts Phase 3.
+Phase 4.5 hardening and Phase 1 reliability foundation are complete. Phase 2 semantic metadata plumbing is implemented. Phase 2.5 backend semantic frame completion and Gemini frontend segment rendering are complete and verified. The handoff at `project_docs/active/ai_hand_off/phase_2_5_gemini_frontend_segment_dimensions.md` is a completed record. Phase 3 correction and ranked observational evidence is deferred until the user explicitly starts Phase 3.
 
 ## Read These By Task
 
 | Task | Read |
 | --- | --- |
 | Resume current project work | `project_docs/active/status/decision_intelligence_execution_status.md`, then `project_docs/active/ai_hand_off/README.md` |
-| Run active Gemini frontend handoff | `project_docs/active/ai_hand_off/phase_2_5_gemini_frontend_segment_dimensions.md` |
+| Review completed Phase 2.5 Gemini frontend handoff | `project_docs/active/ai_hand_off/phase_2_5_gemini_frontend_segment_dimensions.md` |
 | Review Phase 2.5 backend plan | `current/phase_2_5_semantic_frame_completion_plan.md` |
 | Review the deferred Phase 3 plan | `current/phase_3_correction_and_observational_evidence_plan.md` |
 | Review the council-derived roadmap | `current/next_focus_execution_plan.md` |

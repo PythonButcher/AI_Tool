@@ -2,19 +2,17 @@
 
 ## Purpose
 
-Phase 2 added the semantic-role metadata needed for decision-aware drafting, but the May 14, 2026 PDF review showed that the product behavior is not yet complete. The backend can attach semantic roles, confidence, reasons, polarity, controllability, and warnings to metrics and dimensions, but the active decision frame can still lose, under-parse, or misclassify prompt terms.
+Phase 2 added the semantic-role metadata needed for decision-aware drafting, but the May 14, 2026 review showed that the product behavior was not yet complete. The backend can attach semantic roles, confidence, reasons, polarity, controllability, and warnings to metrics and dimensions, but the active decision frame could still lose, under-parse, or misclassify prompt terms.
 
 Phase 2.5 exists to button up that gap before Phase 3 correction and ranked observational evidence. This is a backend-first reliability slice focused on making the prompt-first decision frame match the user's stated objective, levers, guardrails, segments, and thresholds.
 
 ## Current Status
 
-Status: backend complete and verified; Gemini frontend handoff active.
-
-The preceding branch, `project_docs/active/pdf_export_unification_plan.md`, is accepted after the Decisions workspace DOM-capture remediation. Phase 2.5 may now proceed without rebuilding PDF export.
+Status: backend complete and verified; Gemini frontend segment rendering complete and verified.
 
 Phase 3 correction and ranked observational evidence remains planned, but it has not been started. The next slice should begin only when the user explicitly starts Phase 3.
 
-May 16, 2026 implementation note: Codex added additive `decision_scope.segment_dimensions`, role-aware segment extraction, multiple guardrail parsing from compound clauses, numeric threshold preservation, `value_status` on guardrail conditions, readiness blocking for unparsed required thresholds, and chat-preview segment rendering from the active segment list. Backend tests now cover the exact May 14 acceptance prompt and nearby variants. Gemini frontend work is active at `project_docs/active/ai_hand_off/phase_2_5_gemini_frontend_segment_dimensions.md` so the opened Decisions workspace renders the active segment frame directly.
+May 16, 2026 implementation note: Codex added additive `decision_scope.segment_dimensions`, role-aware segment extraction, multiple guardrail parsing from compound clauses, numeric threshold preservation, `value_status` on guardrail conditions, readiness blocking for unparsed required thresholds, and chat-preview segment rendering from the active segment list. Backend tests now cover the exact May 14 acceptance prompt and nearby variants. Gemini frontend work is complete at `project_docs/active/ai_hand_off/phase_2_5_gemini_frontend_segment_dimensions.md`; the opened Decisions workspace renders the active segment frame directly.
 
 ## Review Evidence
 
@@ -26,7 +24,7 @@ The test prompt was:
 
 `How should we grow revenue next quarter using marketing_spend and discount_pct as controllable levers, segmented by region and channel, while keeping gross_margin_pct above 30% and return_rate_pct below 4%?`
 
-The exported PDFs showed that Decision Chat correctly routed to `decide`, generated a workspace preview, opened the Decisions workspace, and exposed Phase 2 semantic metadata in the raw workspace export. The raw contract included `decision_semantics`, `semantic_binding_confidence`, `semantic_binding_reason`, `semantic_role_source`, `semantic_role_warnings`, aliases, polarity, controllability, and role confidence.
+The review showed that Decision Chat correctly routed to `decide`, generated a workspace preview, opened the Decisions workspace, and exposed Phase 2 semantic metadata in the raw workspace object. The raw contract included `decision_semantics`, `semantic_binding_confidence`, `semantic_binding_reason`, `semantic_role_source`, `semantic_role_warnings`, aliases, polarity, controllability, and role confidence.
 
 However, the active decision frame was not correct:
 
@@ -76,17 +74,13 @@ The system can still support a true mix lever when the user explicitly says some
 
 ### 4. Make unresolved or omitted mappings truthful
 
-If a prompt term is detected but not included in the active frame, the backend should either include it in the correct role or surface a truthful unresolved or frame-omission detail. The UI and PDF export should not claim "No unresolved mappings" when a clearly detected term such as `gross_margin_pct` was not included in the active guardrails.
+If a prompt term is detected but not included in the active frame, the backend should either include it in the correct role or surface a truthful unresolved or frame-omission detail. The UI should not claim "No unresolved mappings" when a clearly detected term such as `gross_margin_pct` was not included in the active guardrails.
 
 Preserve Phase 2 traceability fields on active bindings: `semantic_binding_confidence`, `semantic_binding_reason`, `semantic_role_source`, and `semantic_role_warnings`.
 
 ### 5. Tighten readiness semantics
 
 Readiness should be based on the active frame, not only on partial prompt matches. A decision with a hard guardrail whose threshold value failed to parse should be blocked or limited until resolved. A frame that drops one of two explicitly requested guardrails should not look fully reliable without warning.
-
-### 6. Use the accepted PDF export for review
-
-Phase 2.5 should rely on the app-wide PDF export system after it is accepted. Do not rebuild PDF export inside Phase 2.5. Use the accepted export only to verify that AI Chat and Decisions workspace output match the active backend frame.
 
 ## Tests To Add
 

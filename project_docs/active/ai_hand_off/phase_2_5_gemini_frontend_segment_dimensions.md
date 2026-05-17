@@ -2,9 +2,7 @@
 
 ## Status
 
-Ready for Gemini frontend implementation.
-
-Codex completed and verified the Phase 2.5 backend slice. A frontend pass is now needed because the opened Decisions workspace should render the new active segment frame directly, not only through scoped context or AI Chat preview fallback behavior.
+Complete. Gemini implemented the frontend slice and verified it against the May 14 acceptance prompt.
 
 ## Backend Truth
 
@@ -46,9 +44,7 @@ Also inspect these existing paths before editing so the implementation stays con
 
 `frontend/frontend/src/features/ai/AIShell.jsx`
 
-`frontend/frontend/src/utils/decisionPdfExport.js`
-
-The AI Chat preview already receives segment items from the backend. PDF export already has some `segment_dimensions` handling. The gap is the opened Decisions workspace view: it currently displays objective, strategic levers, guardrails, and scoped context, but it does not clearly render `decision_scope.segment_dimensions` as the active segmentation contract.
+The AI Chat preview already receives segment items from the backend. The gap is the opened Decisions workspace view: it currently displays objective, strategic levers, guardrails, and scoped context, but it does not clearly render `decision_scope.segment_dimensions` as the active segmentation contract.
 
 ## Acceptance Behavior
 
@@ -90,10 +86,8 @@ Open the Decisions workspace from the draft.
 
 Verify the visible workspace shows the objective, both levers, both segments, both guardrails with thresholds, and no false `channel mix` lever.
 
-Export the Decisions workspace PDF and verify the export matches the visible workspace closely enough to show the same active frame.
-
 Update `project_docs/active/status/decision_intelligence_execution_status.md` with what changed and what passed.
 
 ## Gemini Prompt
 
-Implement the Phase 2.5 frontend segment-dimensions handoff. Read `GEMINI.md`, `project_docs/active/ai_hand_off/README.md`, this handoff file, `project_docs/active/status/decision_intelligence_execution_status.md`, and `project_docs/active/contracts/decision_objects.md`. Do not edit backend files. Update the Decisions workspace frontend so `decision_scope.segment_dimensions` renders as first-class active decision-frame information alongside objective, levers, and guardrails. Use existing `SemanticRef` patterns where possible. Preserve existing workflows, PDF export behavior, and observational-analysis-only language. Make sure the May 14 prompt visibly shows objective `revenue`, levers `marketing_spend` and `discount_pct`, segments `region` and `channel`, guardrails `gross_margin_pct above 30%` and `return_rate_pct below 4%`, and no false `channel mix` lever. Run the frontend build, perform a browser verification of AI Chat to opened Decisions workspace to PDF export, and update the active status doc truthfully with results.
+Implement the Phase 2.5 frontend segment-dimensions handoff. Read `GEMINI.md`, `project_docs/active/ai_hand_off/README.md`, this handoff file, `project_docs/active/status/decision_intelligence_execution_status.md`, and `project_docs/active/contracts/decision_objects.md`. Do not edit backend files. Update the Decisions workspace frontend so `decision_scope.segment_dimensions` renders as first-class active decision-frame information alongside objective, levers, and guardrails. Use existing `SemanticRef` patterns where possible. Preserve existing workflows and observational-analysis-only language. Make sure the May 14 prompt visibly shows objective `revenue`, levers `marketing_spend` and `discount_pct`, segments `region` and `channel`, guardrails `gross_margin_pct above 30%` and `return_rate_pct below 4%`, and no false `channel mix` lever. Run the frontend build, perform browser verification from AI Chat to the opened Decisions workspace, and update the active status doc truthfully with results.

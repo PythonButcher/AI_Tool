@@ -19,7 +19,6 @@ After those files, read only the task-specific document listed below.
 | Need | Read |
 | --- | --- |
 | Review the latest completed implementation plan | `project_docs/active/decision_intelligence/current/phase_2_5_semantic_frame_completion_plan.md` |
-| Review accepted PDF export remediation context | `project_docs/active/pdf_export_unification_plan.md` |
 | Keep Codex implementation runs efficient | `project_docs/active/codex_harness_engineering.md` |
 | Review the council-derived roadmap | `project_docs/active/decision_intelligence/current/next_focus_execution_plan.md` |
 | Choose the next implementation slice | `project_docs/active/agent_council/outputs/application-next-focus-priorities/README.md` |
@@ -36,7 +35,7 @@ Decision Intelligence V3 is active. V2 is closed as-is and lives as historical c
 
 Phase 4.5 AI Chat Decision Intelligence hardening is complete. The product now has real chat-to-decision continuity, scoped action behavior, truthful observational-analysis language, and verified frontend hardening.
 
-The next work is not broad frontend polish and not new simulation or optimization. Phase 1 reliability foundation is complete. Phase 2 semantic metadata plumbing is implemented. App-wide PDF export remediation is accepted after the Decisions workspace DOM-capture remediation. Phase 2.5 backend semantic frame completion is complete and verified for the May 14 acceptance prompt. A Gemini frontend handoff is active at `project_docs/active/ai_hand_off/phase_2_5_gemini_frontend_segment_dimensions.md` so the opened Decisions workspace renders the new active segment frame directly. Phase 3 correction and ranked observational evidence remains deferred until Phase 2.5 frontend review is accepted and the user explicitly starts the next slice. Frontend implementation remains Gemini-owned unless the user explicitly authorizes Codex frontend edits in the current session.
+The next work is not broad frontend polish and not new simulation or optimization. Phase 1 reliability foundation is complete. Phase 2 semantic metadata plumbing is implemented. Phase 2.5 backend semantic frame completion and Gemini frontend segment rendering are complete and verified for the May 14 acceptance prompt. The Gemini handoff at `project_docs/active/ai_hand_off/phase_2_5_gemini_frontend_segment_dimensions.md` is now a completed record, not an active implementation request. Phase 3 correction and ranked observational evidence remains deferred until the user explicitly starts the next slice. Frontend implementation remains Gemini-owned unless the user explicitly authorizes Codex frontend edits in the current session.
 
 ## Folder Map
 

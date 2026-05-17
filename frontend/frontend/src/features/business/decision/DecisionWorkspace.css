@@ -324,7 +324,7 @@
   gap: 32px;
 }
 
-.objective-card, .lever-card, .constraint-card {
+.objective-card, .lever-card, .segment-card, .constraint-card {
   padding: 24px;
   border-radius: 16px;
   background: var(--bg-secondary);
@@ -349,6 +349,51 @@
   background: var(--bg-primary);
   border-radius: 12px;
   border: 1px solid var(--border-color);
+}
+
+.lever-header, .segment-header, .constraint-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.lever-label, .segment-label, .constraint-label {
+  font-size: 1.1rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.lever-type, .segment-role, .constraint-hardness {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  padding: 4px 8px;
+  background: var(--bg-primary);
+  border-radius: 4px;
+  opacity: 0.8;
+}
+
+.constraint-rule {
+  margin-bottom: 16px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.constraint-rule.is-unparsed {
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.05);
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px dashed rgba(245, 158, 11, 0.3);
+}
+
+.unparsed-warning {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .detail-item label {
