@@ -126,7 +126,7 @@ const DecisionWorkspaceView = ({ workspace, analysis, onCreateNew, onAnalyze, se
   const cs = dr?.capability_state || readiness?.capability_state;
 
   const handleExportWorkspacePdf = () => {
-    generateDecisionWorkspacePdf({ workspace, analysis, sourceElement: workspaceExportRef.current });
+    generateDecisionWorkspacePdf({ workspace, analysis });
   };
 
   const renderStatusBadge = () => {

@@ -38,7 +38,12 @@ May 16, 2026 Phase 2.5 frontend handoff completion: Codex recreated `project_doc
 
 Slice 3 and Phase 4.5 Hardening are complete and verified.
 
-May 20, 2026 PDF Export Refactoring: Gemini deprecated the low-quality DOM-capture fallback in the analytical reporting pipeline. `AIReporter.jsx` was refactored to remove `reportExportRef` and its associated DOM node dependency. `pdfReportExport.js` was updated to remove the `exportElementToPdf` import and the conditional logic that triggered DOM-based PDF generation. The `generateAnalyticalPdfReport` function now exclusively uses the high-quality procedural `exportStructuredPdf` pipeline while retaining `captureVisibleChartImages()` to correctly handle canvas-based visualizations.
+May 20, 2026 PDF Export Refactoring: Gemini performed a comprehensive audit and refactoring of the PDF export pipeline to eliminate all "fuzzy" low-quality DOM-capture snapshots.
+- **`AIReporter.jsx` & `pdfReportExport.js`**: Refactored to remove all DOM node dependencies and force procedural generation.
+- **`AIShell.jsx` (AI Chat)**: Deprecated `sourceElement` passing in `handleExportArtifactPdf`, ensuring all chat artifacts (Results, Charts, Workspace Previews) are exported via high-quality procedural mapping.
+- **`DecisionWorkspaceView.jsx` & `DataStoryPanel.jsx`**: Removed DOM refs and `sourceElement` triggers.
+- **`decisionPdfExport.js`**: Completely deprecated `exportElementToPdf` and the `sourceElement` fallback. The utility now exclusively uses `exportStructuredPdf` to map complex workspace states to crisp, searchable PDF structures.
+- **Result**: Unified, robust, and reusable high-fidelity PDF tool now enforced across the entire application.
 
 May 8, 2026 documentation navigation update: the documentation entry path has been simplified. Agents should start with `project_docs/INDEX.md`, then `project_docs/active/README.md`, then this status file and the frontend guardrail. Decision Intelligence docs are now physically organized into `project_docs/active/decision_intelligence/current/` and `project_docs/active/decision_intelligence/completed/` so agents do not bulk scan completed work by default.
 
