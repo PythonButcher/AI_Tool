@@ -26,7 +26,7 @@ Do not start by reading every file in `project_docs/active/decision_intelligence
 
 Decision Intelligence V3 is the active product line. Phase 4.5 AI Chat hardening is complete. The app has a real backend chat contract, grounded `ask`, `explore`, and `decide` modes, real action handling, chat-to-Decisions continuity, truthful observational-analysis language, and improved artifact rendering.
 
-Phase 1 reliability foundation is complete. Phase 2 semantic metadata plumbing is implemented, and Gemini frontend integration is functionally in place. Phase 2.5 semantic frame completion is complete and verified on the backend and frontend. The opened Decisions workspace renders `decision_scope.segment_dimensions` as first-class decision-frame information. No Phase 2.5 Gemini implementation handoff is currently active. Phase 3 correction and ranked observational evidence remains deferred until the user explicitly starts the next slice.
+Phase 1 reliability foundation is complete. Phase 2 semantic metadata plumbing is implemented, and Gemini frontend integration is functionally in place. Phase 2.5 semantic frame completion is complete and verified on the backend and frontend. The opened Decisions workspace renders `decision_scope.segment_dimensions` as first-class decision-frame information. No Phase 2.5 Gemini implementation handoff is currently active. Phase 3 correction and ranked observational evidence is the next backend-first slice and should begin only when the user explicitly starts it.
 
 ## Documentation Areas
 
@@ -44,7 +44,7 @@ Phase 1 reliability foundation is complete. Phase 2 semantic metadata plumbing i
 
 ## Current Next Work
 
-There is no active Gemini implementation handoff right now. Phase 2.5 frontend segment rendering is complete, and its handoff remains as a completed record at `project_docs/active/ai_hand_off/phase_2_5_gemini_frontend_segment_dimensions.md`. Do not start Phase 3 automatically.
+There is no active Gemini implementation handoff right now. Phase 2.5 frontend segment rendering is complete, and its handoff remains as a completed record at `project_docs/active/ai_hand_off/phase_2_5_gemini_frontend_segment_dimensions.md`. The next implementation slice is Phase 3 at `project_docs/active/decision_intelligence/current/phase_3_correction_and_observational_evidence_plan.md`. Start it only when the user explicitly says to proceed.
 
 ## Do Not Scan By Default
 

@@ -30,13 +30,15 @@ May 11, 2026 Phase 2 semantic role strengthening frontend slice: Gemini integrat
 
 May 14, 2026 Phase 2 product-behavior review: AI Chat and Decisions workspace review artifacts showed Phase 2 semantic metadata is present in raw contracts, but the active decision frame was not reliable enough to mark the product behavior complete. The test prompt was: "How should we grow revenue next quarter using marketing_spend and discount_pct as controllable levers, segmented by region and channel, while keeping gross_margin_pct above 30% and return_rate_pct below 4%?" The result correctly routed to `decide`, created a workspace, mapped objective `revenue`, and exposed semantic metadata such as `decision_semantics`, `semantic_binding_confidence`, `semantic_binding_reason`, `semantic_role_source`, polarity, controllability, aliases, and warnings. However, `gross_margin_pct above 30%` was detected only in prompt matches and did not become an active guardrail; `return_rate_pct below 4%` became a guardrail but lost its threshold value (`value: null`); `region and channel` was inconsistent, with only `channel` shown in the preview segment while `region` appeared only in scoped context; and `channel mix` was incorrectly introduced as a controllable lever even though the prompt used channel as segmentation. Phase 2.5 semantic frame completion was created at `project_docs/active/decision_intelligence/current/phase_2_5_semantic_frame_completion_plan.md`.
 
-May 14, 2026 next implementation plan correction: Phase 3 correction and ranked observational evidence remains planned, but is deferred until Phase 2.5 fixes prompt-first semantic frame extraction and guardrail threshold preservation.
+May 14, 2026 next implementation plan correction: Phase 3 correction and ranked observational evidence remains planned. Phase 2.5 resolved the prompt-first semantic frame extraction and guardrail threshold preservation blockers, so Phase 3 is now the next backend-first slice when the user explicitly starts it.
 
 May 16, 2026 Phase 2.5 Semantic Frame Completion backend verification: Codex implemented role-aware prompt-first drafting in `backend/services/decision_workspace_service.py`. The active decision frame now carries additive `decision_scope.segment_dimensions`, keeps segment clauses out of lever extraction unless the prompt explicitly asks to change or shift a mix, parses multiple guardrails from a single clause, preserves numeric percentage thresholds with `value_status`, blocks analysis readiness when a required threshold is unparsed, and keeps Phase 2 semantic trace fields on active objective, lever, segment, and guardrail bindings. `backend/decision_engine/chat_service.py` now builds workspace previews from active segment dimensions before falling back to legacy dimension-backed levers. Focused tests cover the exact May 14 acceptance prompt plus nearby segmentation, explicit mix, unparsed-threshold, and chat-preview variants. Phase 2.5 is complete and verified on the backend; Phase 3 remains deferred and has not been started.
 
 May 16, 2026 Phase 2.5 frontend handoff completion: Codex recreated `project_docs/active/ai_hand_off/` and wrote `project_docs/active/ai_hand_off/phase_2_5_gemini_frontend_segment_dimensions.md` because the opened Decisions workspace needed to render `decision_scope.segment_dimensions` as first-class active decision-frame information. Gemini completed that frontend slice. Codex remains the backend owner, application organizer, and final coordinator with the user.
 
 Slice 3 and Phase 4.5 Hardening are complete and verified.
+
+May 20, 2026 PDF Export Refactoring: Gemini deprecated the low-quality DOM-capture fallback in the analytical reporting pipeline. `AIReporter.jsx` was refactored to remove `reportExportRef` and its associated DOM node dependency. `pdfReportExport.js` was updated to remove the `exportElementToPdf` import and the conditional logic that triggered DOM-based PDF generation. The `generateAnalyticalPdfReport` function now exclusively uses the high-quality procedural `exportStructuredPdf` pipeline while retaining `captureVisibleChartImages()` to correctly handle canvas-based visualizations.
 
 May 8, 2026 documentation navigation update: the documentation entry path has been simplified. Agents should start with `project_docs/INDEX.md`, then `project_docs/active/README.md`, then this status file and the frontend guardrail. Decision Intelligence docs are now physically organized into `project_docs/active/decision_intelligence/current/` and `project_docs/active/decision_intelligence/completed/` so agents do not bulk scan completed work by default.
 
@@ -121,7 +123,7 @@ Truth:
 - [x] Phase 2 semantic role strengthening product completion through Phase 2.5: backend and Gemini frontend work are verified for opened workspace segment rendering
 - [x] Phase 2.5 semantic frame completion backend slice: implemented and verified; clear objective, lever, guardrail, segment, and threshold terms survive into the active workspace frame
 - [x] Phase 2.5 Gemini frontend segment-dimensions slice: complete; verified with build and browser-flow check
-- [ ] Phase 3 correction and ranked observational evidence backend slice: deferred until Phase 2.5 is complete
+- [ ] Phase 3 correction and ranked observational evidence backend slice: ready to start when the user explicitly starts the next slice
 - [x] Prompt-first intake reliability for the May 14 acceptance prompt: backend and frontend verified in opened Decisions workspace
 - [x] Phase 4 backend decision chat contract
 - [x] Slice 1 backend mode/state normalization
@@ -146,7 +148,7 @@ Truth:
   - **Required Active Frame**: objective `revenue`; levers `marketing_spend` and `discount_pct`; segments `region` and `channel`; guardrails `gross_margin_pct above 30%` and `return_rate_pct below 4%`; no false `channel mix` lever; no null guardrail threshold values.
   - **Contract Addition**: `decision_scope.segment_dimensions` carries active segment bindings, and guardrail conditions may include additive `value_status` to distinguish parsed, qualitative, and unparsed thresholds.
   - **Frontend Handoff**: Phase 2.5 frontend is complete; the opened Decisions workspace renders `decision_scope.segment_dimensions` as first-class decision-frame information. Verified with build and browser-flow check.
-- **Phase 3 Correction And Ranked Observational Evidence**: Plan exists at `project_docs/active/decision_intelligence/current/phase_3_correction_and_observational_evidence_plan.md`, but it is deferred until Phase 2.5 is complete.
+- **Phase 3 Correction And Ranked Observational Evidence**: Plan exists at `project_docs/active/decision_intelligence/current/phase_3_correction_and_observational_evidence_plan.md`. It is the next backend-first slice and should begin when the user explicitly starts it.
 - **Phase 1 Reliability Foundation (Frontend)**: The UI now fully supports the backend reliability contract with correct object-path normalization, state preservation, and cross-level capability merging.
   - **Reliability Boundaries**: Clear visual banners and notes communicating the "observational analysis only" constraint.
   - **Capability Matrices**: A structured display of allowed vs. unsupported capabilities (Simulation, Optimization, etc.).
@@ -244,7 +246,7 @@ Council artifact:
 
 - `project_docs/active/agent_council/outputs/application-next-focus-priorities/2026-05-01-council.json`
 
-The council concluded that the next application focus should be measurable Decision Intelligence reliability before broad feature expansion. The highest-priority reliability foundation is complete, semantic role metadata exists, and Phase 2.5 backend and frontend completion now fixes the May 14 prompt-first semantic frame defects. Phase 3 correction and ranked observational evidence remains deferred until the user explicitly starts the next slice, followed by canonical active dataset alignment, ML readiness diagnostics, and future simulation/trade-off contract design.
+The council concluded that the next application focus should be measurable Decision Intelligence reliability before broad feature expansion. The highest-priority reliability foundation is complete, semantic role metadata exists, and Phase 2.5 backend and frontend completion now fixes the May 14 prompt-first semantic frame defects. Phase 3 correction and ranked observational evidence is the next slice when the user explicitly starts it, followed by canonical active dataset alignment, ML readiness diagnostics, and future simulation/trade-off contract design.
 
 ### Previous Council Run
 
