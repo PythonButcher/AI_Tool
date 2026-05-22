@@ -95,7 +95,6 @@ export default function DataStoryPanel({ uploadedData, cleanedData, model, saved
       datasetRows: activeDataset || [],
       storyState: story,
       pipelineResults,
-      sourceElement: storyExportRef.current,
       title: 'Data Story',
       executiveSummaryOverride: story.sections
         ?.map((section) => `${section.title}\n${section.content}`)
