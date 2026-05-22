@@ -92,6 +92,7 @@ function AppContent() {
   const [aiChatOpenRequestKey, setAiChatOpenRequestKey] = useState(0);
   const [menuBarHeight, setMenuBarHeight] = useState(64);
   const [isDataPaneOpen, setIsDataPaneOpen] = useState(false);
+  const [activeDataPaneTab, setActiveDataPaneTab] = useState('catalog');
 
   // Feature Windows & Visibility State
   const [showWhiteBoard, setShowWhiteBoard] = useState(null);
@@ -560,6 +561,8 @@ function AppContent() {
             addChart={addChart}
             addDashboardKpi={addDashboardKpi}
             addDashboardChart={addDashboardChart}
+            setIsDataPaneOpen={setIsDataPaneOpen}
+            setActiveDataPaneTab={setActiveDataPaneTab}
           />
 
           <DataFilterPanel openDataFilter={openDataFilter} setOpenDataFilter={setOpenDataFilter} />
@@ -663,6 +666,11 @@ function AppContent() {
           onCreateSemanticChart={handleCreateSemanticChart}
           onCreateSemanticKpi={handleCreateSemanticKpi}
           onAddDashboardFilter={handleAddSemanticFilter}
+          onFileUploadSuccess={handleFileUpload}
+          handleApiData={handleApiData}
+          handleDatabaseData={handleDatabaseData}
+          activeTab={activeDataPaneTab}
+          setActiveTab={setActiveDataPaneTab}
         />
 
         {activeDestination !== DESTINATIONS.AI && (

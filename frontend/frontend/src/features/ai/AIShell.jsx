@@ -265,7 +265,7 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspa
     return ['answer', 'chart', 'workspace_preview', 'workspace_analysis_summary'].includes(artifact?.type);
   };
 
-  const handleExportArtifactPdf = (artifact, messageSessionState = null, messageCapabilityState = null, messageDecisionReadiness = null, sourceElement = null) => {
+  const handleExportArtifactPdf = (artifact, messageSessionState = null, messageCapabilityState = null, messageDecisionReadiness = null) => {
     if (!isPdfExportableArtifact(artifact)) return;
 
     generateDecisionArtifactPdf({
@@ -273,7 +273,6 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspa
       contextSessionState: messageSessionState || artifact.contextSessionState || sessionState,
       contextCapabilityState: messageCapabilityState || artifact.contextCapabilityState || sessionState?.capability_state,
       contextDecisionReadiness: messageDecisionReadiness || artifact.contextDecisionReadiness || sessionState?.decision_readiness,
-      sourceElement,
     });
   };
 
@@ -288,8 +287,7 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspa
           aria-label="Export result as PDF"
           onClick={(event) => {
             event.stopPropagation();
-            const sourceElement = event.currentTarget.closest('.ai-shell__active-artifact, .ai-shell__artifact-preview-card');
-            handleExportArtifactPdf(artifact, messageSessionState, messageCapabilityState, messageDecisionReadiness, sourceElement);
+            handleExportArtifactPdf(artifact, messageSessionState, messageCapabilityState, messageDecisionReadiness);
           }}
         >
           <FaFilePdf />

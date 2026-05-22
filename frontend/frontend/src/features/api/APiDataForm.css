@@ -1,64 +1,56 @@
-.api-data-form {
+.api-data-content {
+  padding: 24px;
   display: flex;
   flex-direction: column;
   gap: 20px;
-  min-width: 480px;
-  padding: 32px;
-  background: var(--bg-primary);
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
-  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.12);
-}
-
-.api-data-form__header {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.api-data-form__eyebrow {
-  margin: 0;
-  color: var(--text-secondary);
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-}
-
-.api-data-form__title {
-  margin: 0;
-  color: var(--text-primary);
-  font-size: 1.25rem;
-  font-weight: 800;
-  letter-spacing: -0.02em;
+  max-width: 600px;
+  margin: 0 auto;
 }
 
 .api-data-form__row {
   display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.api-input-group {
+  display: flex;
+  flex-direction: column;
   gap: 8px;
-  background: var(--bg-secondary);
-  padding: 6px;
-  border-radius: 8px;
-  border: 1px solid var(--border-color);
+}
+
+.api-input-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  letter-spacing: 0.05em;
 }
 
 .api-data-form__input {
-  flex: 1;
-  background: transparent;
-  border: none;
-  outline: none;
-  padding: 8px 12px;
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
   color: var(--text-primary);
   font-size: 0.95rem;
+  transition: all 0.2s ease;
+}
+
+.api-data-form__input:focus {
+  outline: none;
+  border-color: var(--text-primary);
+  background: var(--bg-primary);
 }
 
 .api-data-form__submit {
-  padding: 8px 24px;
+  padding: 14px;
   border: none;
   border-radius: 6px;
   background: var(--text-primary);
   color: var(--bg-primary);
-  font-size: 0.9rem;
+  font-size: 1rem;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -75,11 +67,20 @@
 }
 
 .api-data-form__error {
-  margin: 0;
-  padding: 10px;
-  border-radius: 6px;
-  background: color-mix(in srgb, var(--accent-red) 8%, transparent);
   color: var(--accent-red);
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   font-weight: 600;
+  margin: 0;
+  text-align: center;
+  padding: 12px;
+  background: color-mix(in srgb, var(--accent-red) 5%, transparent);
+  border-radius: 6px;
+}
+
+.api-data-hint {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  text-align: center;
+  margin: 0;
+  opacity: 0.7;
 }

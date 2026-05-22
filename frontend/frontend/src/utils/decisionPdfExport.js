@@ -1,6 +1,5 @@
 import {
   captureVisibleChartImages,
-  exportElementToPdf,
   exportStructuredPdf,
   formatPdfTimestamp,
   readablePdfLabel,
@@ -97,30 +96,6 @@ const readinessChecklistCards = (readiness = {}, decisionReadiness = {}) => [
     body: decisionReadiness.structural_readiness?.ready_for_observational_analysis ? 'Ready for observational analysis' : 'Not ready',
   },
 ];
-
-const prepareDecisionWorkspaceClone = (clone) => {
-  // html2canvas cannot parse color-mix/color() declarations; normalize only the cloned export DOM.
-  clone.querySelectorAll('[style*="color-mix"], [style*="color("]').forEach((node) => {
-    node.style.cssText = node.style.cssText
-      .replace(/color-mix\([^;]+/gi, '#f8fafc')
-      .replace(/color\([^;]+/gi, '#181f2a');
-    node.style.background = node.style.background?.includes('color-mix') || node.style.background?.includes('color(')
-      ? '#f8fafc'
-      : node.style.background;
-    node.style.backgroundColor = node.style.backgroundColor?.includes('color-mix') || node.style.backgroundColor?.includes('color(')
-      ? '#f8fafc'
-      : node.style.backgroundColor;
-    node.style.borderColor = node.style.borderColor?.includes('color-mix') || node.style.borderColor?.includes('color(')
-      ? '#d6deea'
-      : node.style.borderColor;
-    node.style.borderTopColor = node.style.borderTopColor?.includes('color-mix') || node.style.borderTopColor?.includes('color(')
-      ? '#d6deea'
-      : node.style.borderTopColor;
-    node.style.color = node.style.color?.includes('color-mix') || node.style.color?.includes('color(')
-      ? '#181f2a'
-      : node.style.color;
-  });
-};
 
 const workspacePreviewSections = (wp, readiness, capabilityState) => {
   const kickoff = wp.decision_kickoff;
@@ -398,24 +373,12 @@ export const generateDecisionArtifactPdf = async ({
   artifact,
   contextCapabilityState,
   contextDecisionReadiness,
-  sourceElement,
 }) => {
   if (!artifact) return;
 
   const content = artifact.content || artifact;
   const typeLabel = readablePdfLabel(artifact.type || 'Decision Result');
   const title = content?.title || content?.summary?.headline || content?.metric?.label || typeLabel;
-
-  if (sourceElement) {
-    const captured = await exportElementToPdf({
-      element: sourceElement,
-      title: `Decision Intelligence: ${title}`,
-      subtitle: typeLabel,
-      fileName: 'decision_ai_result',
-      footerLabel: 'Decision Intelligence Export',
-    });
-    if (captured) return;
-  }
 
   const sections = [
     {
@@ -452,21 +415,8 @@ export const generateDecisionArtifactPdf = async ({
   });
 };
 
-export const generateDecisionWorkspacePdf = async ({ workspace, analysis, sourceElement }) => {
+export const generateDecisionWorkspacePdf = async ({ workspace, analysis }) => {
   if (!workspace) return;
-
-  if (sourceElement) {
-    const captured = await exportElementToPdf({
-      element: sourceElement,
-      title: workspace.title || 'Decision Workspace Export',
-      subtitle: workspace.workspace_id || workspace.status,
-      fileName: 'decision_workspace_export',
-      footerLabel: 'Decision Workspace Export',
-      captureClassName: 'decision-workspace-pdf-capture',
-      prepareClone: prepareDecisionWorkspaceClone,
-    });
-    if (captured) return;
-  }
 
   exportStructuredPdf({
     title: workspace.title || 'Decision Workspace Export',

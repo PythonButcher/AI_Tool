@@ -1,6 +1,5 @@
 import {
   captureVisibleChartImages,
-  exportElementToPdf,
   exportStructuredPdf,
   readablePdfLabel,
   sanitizePdfText,
@@ -120,20 +119,8 @@ export const generateAnalyticalPdfReport = async ({
   pipelineResults,
   fileLabel = 'active_session_data',
   executiveSummaryOverride,
-  sourceElement,
   title = 'Analytical Report',
 }) => {
-  if (sourceElement) {
-    const captured = await exportElementToPdf({
-      element: sourceElement,
-      title,
-      subtitle: sanitizePdfText(fileLabel),
-      fileName: 'analysis_report',
-      footerLabel: 'Analytical Report',
-    });
-    if (captured) return;
-  }
-
   const stats = summarizeDataset(datasetRows);
   const executiveSummary = buildExecutiveSummary({
     storyState,
@@ -169,3 +156,4 @@ export const generateAnalyticalPdfReport = async ({
     ],
   });
 };
+

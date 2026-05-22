@@ -1,4 +1,4 @@
-import React, { useContext, useRef } from 'react';
+import React, { useContext } from 'react';
 import AICharts from '../ai/AICharts';
 import { FaFilePdf } from 'react-icons/fa';
 import { DataContext, useActiveDataset } from '../../context/DataContext';
@@ -19,7 +19,6 @@ const AIReporter = ({ summary, outliers, insights, execution, chartType, chartDa
   const activeDataset = useActiveDataset();
   const { pipelineResults } = useContext(DataContext);
   const { getWindowContentState } = useWindowContext();
-  const reportExportRef = useRef(null);
 
   const handleExportPDF = () => {
     const localSummary = [asText(summary), asText(insights), asText(outliers), asText(execution)]
@@ -30,7 +29,6 @@ const AIReporter = ({ summary, outliers, insights, execution, chartType, chartDa
       datasetRows: activeDataset || [],
       storyState: getWindowContentState('storyPanel'),
       pipelineResults,
-      sourceElement: reportExportRef.current,
       title: 'AI Reporter',
       executiveSummaryOverride: localSummary || undefined,
     });
@@ -38,7 +36,6 @@ const AIReporter = ({ summary, outliers, insights, execution, chartType, chartDa
 
   return (
     <div
-      ref={reportExportRef}
       style={{
         background: '#f9f9f9',
         border: '1px solid #ccc',

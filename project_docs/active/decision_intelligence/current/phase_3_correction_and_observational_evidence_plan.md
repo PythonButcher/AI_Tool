@@ -1,6 +1,6 @@
 # Phase 3 Correction And Ranked Observational Evidence Plan
 
-> DEFERRED: Phase 2.5 backend semantic frame completion and Gemini frontend segment rendering are complete. Do not start Phase 3 until the user explicitly starts Phase 3.
+> READY WHEN AUTHORIZED: Phase 2.5 backend semantic frame completion and Gemini frontend segment rendering are complete. Start Phase 3 when the user explicitly authorizes it.
 
 ## Purpose
 
@@ -8,7 +8,7 @@ Phase 3 builds on the completed reliability and semantic-role foundation. The sy
 
 ## Current Status
 
-Status: deferred until Phase 2.5 semantic frame completion is complete.
+Status: ready to start on explicit user authorization.
 
 Owner: Codex for backend actions, contracts, tests, and documentation. Gemini owns frontend implementation after the backend contract stabilizes and Codex prepares a scoped handoff.
 
