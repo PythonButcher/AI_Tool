@@ -45,6 +45,24 @@ May 20, 2026 PDF Export Refactoring: Gemini performed a comprehensive audit and 
 - **`decisionPdfExport.js`**: Completely deprecated `exportElementToPdf` and the `sourceElement` fallback. The utility now exclusively uses `exportStructuredPdf` to map complex workspace states to crisp, searchable PDF structures.
 - **Result**: Unified, robust, and reusable high-fidelity PDF tool now enforced across the entire application.
 
+May 21, 2026 Sidebar Data Ingestion Integration: Gemini migrated the data source intake UI (Upload, API, DB, and Hub) from floating ribbon-inline panels to a permanent, high-density sidebar system within `DataPane`.
+- **Integrated Sidebar Tabs**: Added a tab system to `DataPane` (Catalog vs Connect), allowing users to switch between field exploration and new data connections within the same "flush" vertical space.
+- **Enterprise Card Navigation**: Implemented a "Sources" landing view within the sidebar using professional cards for Local File, API, SQL Warehouse, and Data Hub.
+- **Auto-Stacking Forms**: Refactored forms to automatically stack vertically when inside the sidebar, ensuring they are "neat, tight, and flush" with the application frame regardless of screen width.
+- **Unified Handlers**: Lifted sidebar tab state to `App.jsx`, allowing `MenuBar` ribbon buttons to remotely trigger the sidebar and switch to the ingestion tab for a seamless cross-component workflow.
+
+May 21, 2026 Integrated Source Panels Refactoring: Gemini refactored the data source intake surfaces (Upload, API, Database, and Hub) to eliminate redundant shells and achieve a unified, integrated "panel-only" UI.
+- **Centralized Panel Shell**: Updated `MenuBar.jsx` and `MenuBar.css` to handle the primary inline-panel container, providing a single header, badge system, and close button for all data sources.
+- **Redundancy Removal**: Stripped internal headers, backgrounds, and duplicate "minimize" logic from `FileUpload.jsx`, `APiDataForm.jsx`, `DatabaseConnectForm.jsx`, and `DataHubWindow.jsx`.
+- **Modernized Aesthetics**: Applied a high-density professional style across all source surfaces, using `var(--bg-primary)` for content and `var(--bg-secondary)` for headers/inputs to prevent the "two-tone" cheesy look. Improved grid layouts and typography for a cleaner, unified user experience.
+
+May 21, 2026 Modal UI Refactoring: Gemini refactored the Upload, Database, and API connection modal windows to meet enterprise standards.
+- **Design Tokens**: Standardized to 4px border-radius (sharper corners), 520px consistent max-width, and 32px (var(--space-5)) uniform padding across all data intake surfaces.
+- **Typography**: Unified the heading hierarchy, removing oversized disparate styles and standardizing on a professional eyebrow/heading structure.
+- **Alignment**: Fixed cramped action icons (Minimize, Help, Close) in `FileUpload.jsx` and added identical header actions to `DatabaseConnectForm.jsx` and `ApiDataForm.jsx` for UI consistency.
+- **Responsive Behavior**: Ensured all modal containers are responsive with `width: 100%` and `max-width: 520px`.
+- **Code Health**: Updated `MenuBar.jsx` to pass `onClose` handlers uniformly and introduced `isMinimized` states for improved workspace management.
+
 May 8, 2026 documentation navigation update: the documentation entry path has been simplified. Agents should start with `project_docs/INDEX.md`, then `project_docs/active/README.md`, then this status file and the frontend guardrail. Decision Intelligence docs are now physically organized into `project_docs/active/decision_intelligence/current/` and `project_docs/active/decision_intelligence/completed/` so agents do not bulk scan completed work by default.
 
 April 30, 2026 UI tooling update: Codex corrected AI Chat pop-out behavior to use a real browser popup window through `window.open`, then portals the AI Chat React surface into that popup. The app-level minimize control in the popup now flushes the main app's minimized-window state before closing the popup, so AI Chat returns to the existing minimized dock instead of disappearing. If the popup is closed through browser chrome, AI Chat restores back into the main app instead of disappearing. Other app windows remain contained by the normal canvas/window system. The shared minimize control now exposes the correct `Minimize` accessibility label. Browser smoke verification confirmed popup minimize closes the popup and adds `AI Chat` to the main app dock.

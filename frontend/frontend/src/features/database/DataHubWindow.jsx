@@ -136,41 +136,31 @@ function DataHubWindow() {
   }, [datasets]);
 
   return (
-    <div className="datahub-window">
-      <header className="datahub-header">
-        <h3>Hub</h3>
-        <button
-          className="refresh-btn"
-          onClick={() => fetchDatasets()}
-          disabled={isLoading || !hasSearched}
-        >
-          Refresh
-        </button>
-      </header>
-
+    <div className="datahub-content">
       <section className="datahub-search-section">
         <form className="datahub-search" onSubmit={handleSearch}>
           <input
+            className="datahub-input"
             type="text"
             value={searchTerm}
             onChange={handleSearchInputChange}
-            placeholder="Search datasets"
+            placeholder="Search catalog by name or path..."
             disabled={isLoading}
           />
-          <button type="submit" disabled={isLoading}>
-            Search
+          <button className="datahub-search-btn" type="submit" disabled={isLoading}>
+            {isLoading ? "..." : "Search"}
           </button>
         </form>
       </section>
 
       <section className="datahub-status">
-        {isLoading && <p className="status loading">Loading...</p>}
+        {isLoading && <p className="status loading">Querying Warehouse...</p>}
         {!isLoading && !hasSearched && !error && (
-          <p className="status empty">Search for a dataset.</p>
+          <p className="status empty">Enter a term to search the managed catalog.</p>
         )}
         {!isLoading && hasSearched && !sortedDatasets.length && !error && (
           <p className="status empty">
-            No results found.
+            No datasets matched your query.
           </p>
         )}
         {error && <p className="status error">{error}</p>}
@@ -182,23 +172,23 @@ function DataHubWindow() {
           <table className="datahub-table">
             <thead>
               <tr>
-                <th>Name</th>
-                <th>Path</th>
-                <th></th>
+                <th>Dataset Name</th>
+                <th>Source Path</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {sortedDatasets.map((dataset) => (
                 <tr key={dataset.id}>
-                  <td>{dataset.name}</td>
-                  <td className="truncate">{dataset.path}</td>
+                  <td className="datahub-td-name">{dataset.name}</td>
+                  <td className="truncate datahub-td-path">{dataset.path}</td>
                   <td>
                     <button
-                      className="danger"
+                      className="datahub-delete-btn"
                       onClick={() => handleDelete(dataset.id)}
                       disabled={isLoading}
                     >
-                      Delete
+                      Remove
                     </button>
                   </td>
                 </tr>
@@ -209,47 +199,49 @@ function DataHubWindow() {
       </section>
 
       <section className="datahub-form-section">
-        <h4>Register</h4>
+        <h4 className="datahub-form-title">Manual Registration</h4>
         <form className="datahub-form" onSubmit={handleRegister}>
-          <label>
-            ID
-            <input
-              type="text"
-              name="id"
-              value={formState.id}
-              onChange={handleInputChange}
-              placeholder="unique-id"
-              disabled={isLoading}
-            />
-          </label>
-          <label>
-            Name
-            <input
-              type="text"
-              name="name"
-              value={formState.name}
-              onChange={handleInputChange}
-              placeholder="dataset.csv"
-              disabled={isLoading}
-            />
-          </label>
-          <label>
-            Path
-            <input
-              type="text"
-              name="path"
-              value={formState.path}
-              onChange={handleInputChange}
-              placeholder="/uploads/dataset.csv"
-              disabled={isLoading}
-            />
-          </label>
+          <div className="datahub-form-grid">
+            <div className="datahub-field">
+              <label>ID</label>
+              <input
+                type="text"
+                name="id"
+                value={formState.id}
+                onChange={handleInputChange}
+                placeholder="unique-id"
+                disabled={isLoading}
+              />
+            </div>
+            <div className="datahub-field">
+              <label>Name</label>
+              <input
+                type="text"
+                name="name"
+                value={formState.name}
+                onChange={handleInputChange}
+                placeholder="Sales_Data"
+                disabled={isLoading}
+              />
+            </div>
+            <div className="datahub-field datahub-field--wide">
+              <label>Path</label>
+              <input
+                type="text"
+                name="path"
+                value={formState.path}
+                onChange={handleInputChange}
+                placeholder="/mnt/storage/data.parquet"
+                disabled={isLoading}
+              />
+            </div>
+          </div>
           <div className="form-actions">
-            <button type="button" onClick={resetForm} disabled={isLoading}>
-              Clear
+            <button className="secondary-btn" type="button" onClick={resetForm} disabled={isLoading}>
+              Reset Form
             </button>
-            <button type="submit" className="primary" disabled={isLoading}>
-              Save
+            <button type="submit" className="primary-btn" disabled={isLoading}>
+              Register Dataset
             </button>
           </div>
         </form>

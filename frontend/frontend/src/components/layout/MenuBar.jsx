@@ -28,6 +28,7 @@ import {
   FaSun,
   FaTable,
   FaTachometerAlt,
+  FaTimes,
   FaUpload,
 } from 'react-icons/fa';
 import { TbCloudDataConnection } from 'react-icons/tb';
@@ -131,6 +132,8 @@ function MenuBar({
   addChart,
   addDashboardKpi,
   addDashboardChart,
+  setIsDataPaneOpen,
+  setActiveDataPaneTab,
 }) {
   const [activeSurface, setActiveSurface] = useState(null);
   const [isRibbonCollapsed, setIsRibbonCollapsed] = useState(true);
@@ -158,18 +161,32 @@ function MenuBar({
     if (!activeSurface) return null;
     const meta = inlinePanelMeta[activeSurface];
     let content = null;
-    if (activeSurface === 'upload') content = <FileUpload onUploadComplete={() => setActiveSurface(null)} onFileUploadSuccess={onFileUploadSuccess} />;
-    if (activeSurface === 'hub') content = <DataHubWindow />;
-    if (activeSurface === 'api') content = <ApiDataForm handleApiData={handleApiData} />;
-    if (activeSurface === 'db') content = <DatabaseConnectForm handleDatabaseData={handleDatabaseData} onClose={() => setActiveSurface(null)} />;
+    
+    if (activeSurface === 'hub') {
+      content = <DataHubWindow />;
+    }
+    
     if (!content || !meta) return null;
 
     return (
       <div className="ribbon-inline-panel">
         <div className="ribbon-inline-panel__header">
-          <h3 className="ribbon-inline-panel__title">{meta.title}</h3>
+          <div className="ribbon-inline-panel__title-group">
+            <span className="ribbon-inline-panel__badge">{meta.badge}</span>
+            <h3 className="ribbon-inline-panel__title">{meta.title}</h3>
+          </div>
+          <button 
+            type="button" 
+            className="ribbon-inline-panel__close" 
+            onClick={() => setActiveSurface(null)}
+            title="Close Panel"
+          >
+            <FaTimes />
+          </button>
         </div>
-        <div className="ribbon-inline-panel__body">{content}</div>
+        <div className="ribbon-inline-panel__body">
+          {content}
+        </div>
       </div>
     );
   };
@@ -246,9 +263,30 @@ function MenuBar({
             )}
 
             <RibbonGroup title="Sources">
-              <RibbonCommand icon={<FaUpload />} label="Upload" onClick={() => toggleSurface('upload')} active={activeSurface === 'upload'} />
-              <RibbonCommand icon={<FaServer />} label="API" onClick={() => toggleSurface('api')} active={activeSurface === 'api'} />
-              <RibbonCommand icon={<FaDatabase />} label="DB" onClick={() => toggleSurface('db')} active={activeSurface === 'db'} />
+              <RibbonCommand 
+                icon={<FaUpload />} 
+                label="Upload" 
+                onClick={() => { 
+                  setIsDataPaneOpen(true); 
+                  if (setActiveDataPaneTab) setActiveDataPaneTab('sources'); 
+                }} 
+              />
+              <RibbonCommand 
+                icon={<FaServer />} 
+                label="API" 
+                onClick={() => { 
+                  setIsDataPaneOpen(true); 
+                  if (setActiveDataPaneTab) setActiveDataPaneTab('sources'); 
+                }} 
+              />
+              <RibbonCommand 
+                icon={<FaDatabase />} 
+                label="DB" 
+                onClick={() => { 
+                  setIsDataPaneOpen(true); 
+                  if (setActiveDataPaneTab) setActiveDataPaneTab('sources'); 
+                }} 
+              />
             </RibbonGroup>
 
             <RibbonGroup title="System">
