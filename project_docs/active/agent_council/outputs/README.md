@@ -19,3 +19,5 @@ Current topics:
 `app-wide-ui-flaws/`
 
 `application-next-focus-priorities/`
+
+`compounding-phase-results/`

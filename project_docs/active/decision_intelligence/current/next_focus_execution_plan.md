@@ -14,8 +14,8 @@ The strongest next path is:
 
 1. Build a reliability benchmark and capability/readiness boundary. Completed.
 2. Strengthen semantic role detection and confidence. Completed.
-3. Add correction and richer observational evidence. Active next.
-4. Align active dataset truth across surfaces.
+3. Add correction and richer observational evidence. Completed.
+4. Align active dataset truth across surfaces. Active next.
 5. Add ML readiness diagnostics.
 6. Design future simulation and trade-off contracts without implementing simulation.
 
@@ -37,8 +37,8 @@ Do not treat ranked observational evidence as ranked recommendations.
 | --- | --- | --- | --- | --- |
 | 1 | Codex and Gemini | Complete | `rec-decision-reliability-foundation` | Add prompt benchmark fixtures, grading checks, additive capability/readiness fields, and frontend rendering of reliability truth. |
 | 2 | Codex and Gemini | Complete, with minor Gemini cleanup pending | `rec-semantic-model-role-strengthening` | Add decision-aware semantic roles, confidence, aliases, polarity, controllability, and unresolved mapping details. |
-| 3 | Codex first, Gemini after backend contract stabilizes | Active next | `rec-decision-frame-correction-loop`, `rec-ranked-observational-evidence` | Add frame correction actions and richer ranked observational evidence. |
-| 4 | Codex planning, Gemini frontend implementation | Later | `rec-canonical-active-dataset-contract` | Define and implement one active dataset source of truth across AI chat, Decisions, charts, dashboards, and workflows. |
+| 3 | Codex first, Gemini after backend contract stabilizes | Complete | `rec-decision-frame-correction-loop`, `rec-ranked-observational-evidence` | Add frame correction actions and richer ranked observational evidence. |
+| 4 | Codex planning, Gemini frontend implementation | Active next | `rec-canonical-active-dataset-contract` | Define and implement one active dataset source of truth across AI chat, Decisions, charts, dashboards, and workflows. |
 | 5 | Codex | Deferred | `rec-decision-context-ml-readiness` | Add ML readiness diagnostics without producing predictions or recommendations. |
 | 6 | Codex | Deferred design only | `rec-future-simulation-contract-design` | Design future simulation/trade-off contracts without runtime simulation or frontend claims. |
 
@@ -122,7 +122,7 @@ Phase 2 semantic confidence, reason, source, warnings, and unresolved or omissio
 
 ## Phase 3: Correction And Ranked Observational Evidence
 
-Phase 3 is deferred until Phase 2.5 is complete. The detailed plan lives at `project_docs/active/decision_intelligence/current/phase_3_correction_and_observational_evidence_plan.md`.
+Phase 3 is complete as of May 22, 2026. The detailed completed plan lives at `project_docs/active/decision_intelligence/current/phase_3_correction_and_observational_evidence_plan.md`.
 
 Phase 3 should add trust controls after semantic roles and readiness fields are stable.
 
@@ -130,7 +130,7 @@ The correction loop should let users fix objective, lever, segment, guardrail, a
 
 Ranked observational evidence should deepen `Analyze workspace` outputs with scoped diagnostics, evidence, confidence, assumptions, blockers, semantic coverage, data-quality caveats, and limitations.
 
-This phase likely needs a Gemini handoff after backend contracts are ready.
+The Gemini frontend handoff is complete at `project_docs/active/ai_hand_off/phase_3_gemini_frontend_correction_and_ranked_evidence.md`.
 
 Exit criteria:
 
@@ -144,11 +144,11 @@ The UI, when handed to Gemini, does not imply final recommendation, simulation, 
 
 ## Phase 4: Canonical Active Dataset Contract
 
-Phase 4 should align dataset truth across app surfaces. It should not become a broad shell rewrite.
+Phase 4 is the active next roadmap item. It should align dataset truth across app surfaces. It should not become a broad shell rewrite.
 
 The goal is one canonical active dataset selector and precedence rule for AI chat, Decisions, charts, dashboards, workflows, filters, cleaned data, uploaded data, and semantic model consumers.
 
-Codex should define the contract and assumptions. Gemini should implement frontend changes after a scoped handoff.
+Codex should define the contract and assumptions. Gemini should implement frontend changes from `project_docs/active/ai_hand_off/phase_4_gemini_frontend_canonical_active_dataset.md`. This Phase 4 is the canonical active dataset slice, not the completed historical chat-contract Phase 4 under `completed/`.
 
 Exit criteria:
 
