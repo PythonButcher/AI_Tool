@@ -1,0 +1,1489 @@
+{
+  "schema_version": "agent-council-output/v1",
+  "council_id": "emergency-compounding-phase-results-2026-05-23",
+  "generated_at": "2026-05-23T03:40:00Z",
+  "project_context": {
+    "project_name": "AI_Tool",
+    "current_workstream": "Decision Intelligence V3",
+    "planning_topic": "Replace the microscopic phase roadmap with a compounding-results roadmap where every unit creates obvious user-visible value.",
+    "context_summary": "Decision Intelligence V3 has completed reliability fields, semantic metadata, semantic frame completion, correction actions, ranked observational evidence, chat continuity, truthfulness hardening, and frontend rendering for recent backend slices. The active docs currently point to Phase 4 Canonical Active Dataset Contract as the next item. The exported workspace result supplied by the user is critical contrary evidence: it produced pages of readiness labels, repeated prompt text, capability boundaries, guardrails, and internal structure, but no obvious business value, quantified insight, scenario comparison, visual decision outcome, or share-worthy export. The council therefore rejects a hidden-contract-first roadmap as the organizing model and recommends outcome units centered on decision briefs, quantified evidence, scenario comparison, visual decision outcomes, and executive-ready exports while preserving truthful capability boundaries.",
+    "active_constraints": [
+      "Codex owns backend logic, contracts, tests, architecture, review, and active markdown coordination.",
+      "Gemini owns frontend implementation unless the user explicitly authorizes Codex frontend edits in the current session.",
+      "Current runtime must not imply fake simulation, optimization, causal inference, autonomous decisioning, or final recommendations.",
+      "Observational analysis remains the truth boundary until backend contracts, data prerequisites, and validation support stronger capability.",
+      "Every future implementation unit must have an obvious visible result in the app or an exportable artifact before it is considered complete.",
+      "Phase 4 dataset work is demoted from standalone hidden-contract priority unless it directly enables visible dataset trust inside a user-valued decision workflow."
+    ]
+  },
+  "sources_reviewed": [
+    {
+      "path": "project_docs/INDEX.md",
+      "source_type": "markdown",
+      "relevance": "Routes agents to active truth, current roadmap, council workflow, and compounding-results council topic.",
+      "reviewed_by": [
+        "architecture-guardian",
+        "implementation-planner"
+      ]
+    },
+    {
+      "path": "project_docs/active/README.md",
+      "source_type": "markdown",
+      "relevance": "Defines current status, scan rules, Phase 4 active-next framing, and emergency compounding-results council location.",
+      "reviewed_by": [
+        "architecture-guardian",
+        "product-ux-strategist",
+        "implementation-planner"
+      ]
+    },
+    {
+      "path": "project_docs/active/status/decision_intelligence_execution_status.md",
+      "source_type": "status",
+      "relevance": "Establishes completed Phase 1 through Phase 3 work, current Phase 4 dataset-contract priority, frontend build status, and verified capability boundaries.",
+      "reviewed_by": [
+        "architecture-guardian",
+        "decision-intelligence-specialist",
+        "data-ml-readiness-specialist",
+        "skeptic-qa-reviewer"
+      ]
+    },
+    {
+      "path": "project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md",
+      "source_type": "markdown",
+      "relevance": "Preserves Codex/Gemini ownership split and review behavior for frontend handoffs.",
+      "reviewed_by": [
+        "architecture-guardian",
+        "implementation-planner"
+      ]
+    },
+    {
+      "path": "project_docs/active/decision_intelligence/current/next_focus_execution_plan.md",
+      "source_type": "markdown",
+      "relevance": "Contains the current microscopic phase roadmap and Phase 4 canonical active dataset sequencing challenged by this council.",
+      "reviewed_by": [
+        "product-ux-strategist",
+        "decision-intelligence-specialist",
+        "data-ml-readiness-specialist",
+        "implementation-planner"
+      ]
+    },
+    {
+      "path": "project_docs/active/ai_hand_off/README.md",
+      "source_type": "handoff",
+      "relevance": "Defines active Codex/Gemini handoff structure and ownership rules that the new roadmap must preserve.",
+      "reviewed_by": [
+        "architecture-guardian",
+        "implementation-planner"
+      ]
+    },
+    {
+      "path": "project_docs/active/ai_hand_off/phase_4_gemini_frontend_canonical_active_dataset.md",
+      "source_type": "handoff",
+      "relevance": "Shows Phase 4 is currently framed as frontend state and dataset visibility alignment, useful but insufficient as a standalone high-value outcome.",
+      "reviewed_by": [
+        "product-ux-strategist",
+        "data-ml-readiness-specialist",
+        "skeptic-qa-reviewer"
+      ]
+    },
+    {
+      "path": "project_docs/active/contracts/decision_objects.md",
+      "source_type": "contract",
+      "relevance": "Documents existing DecisionBrief, DecisionSignal, Scenario, DecisionScenarioPreview, ranked diagnostics, readiness, and dataset summary contracts that can be reorganized into visible product workflows.",
+      "reviewed_by": [
+        "architecture-guardian",
+        "decision-intelligence-specialist",
+        "data-ml-readiness-specialist"
+      ]
+    },
+    {
+      "path": "project_docs/active/agent_council/outputs/compounding-phase-results/README.md",
+      "source_type": "markdown",
+      "relevance": "Defines the emergency council topic and the requirement to restructure work around compounding visible product results.",
+      "reviewed_by": [
+        "product-ux-strategist",
+        "implementation-planner",
+        "skeptic-qa-reviewer"
+      ]
+    },
+    {
+      "path": "user-provided exported workspace result evidence from 2026-05-22 request",
+      "source_type": "other",
+      "relevance": "Critical user evidence that current output is technically dense but low-value: readiness labels, repeated prompt text, capability boundaries, guardrails, and internal structure without quantified insight, scenario comparison, visual decision outcome, or share-worthy export.",
+      "reviewed_by": [
+        "product-ux-strategist",
+        "decision-intelligence-specialist",
+        "skeptic-qa-reviewer"
+      ]
+    }
+  ],
+  "participating_agents": [
+    {
+      "agent_id": "architecture-guardian",
+      "role_name": "Architecture Guardian",
+      "perspective": "Protect explicit backend-owned truth, stable contracts, and honest capability boundaries while allowing the roadmap to stop over-optimizing hidden fields.",
+      "decision_rights": "Can block proposals that require fake capabilities, frontend-only inference, hidden coupling, or contract claims not supported by backend behavior."
+    },
+    {
+      "agent_id": "product-ux-strategist",
+      "role_name": "Product/UX Strategist",
+      "perspective": "Prioritize workflows users can see, understand, export, and value without reading docs or inspecting raw contracts.",
+      "decision_rights": "Can veto work units whose completion evidence is only tests, docs, hidden fields, or debug-like UI."
+    },
+    {
+      "agent_id": "decision-intelligence-specialist",
+      "role_name": "Decision Intelligence Specialist",
+      "perspective": "Keep the product centered on decision framing, quantified evidence, trade-off thinking, guardrails, assumptions, and structured insight loops.",
+      "decision_rights": "Can require every visible outcome to improve the decision workflow rather than generic chat or dataset polish."
+    },
+    {
+      "agent_id": "data-ml-readiness-specialist",
+      "role_name": "Data/ML Readiness Specialist",
+      "perspective": "Protect dataset truth, statistical validity, scenario assumptions, readiness gates, leakage awareness, and the line between observational evidence and unsupported prediction.",
+      "decision_rights": "Can defer Monte Carlo, causal claims, forecasting, or optimization until prerequisites and validation are explicit."
+    },
+    {
+      "agent_id": "skeptic-qa-reviewer",
+      "role_name": "Skeptic/QA Reviewer",
+      "perspective": "Attack vague acceptance criteria, happy-path demos, stale state, low-value outputs, and unverified user-visible behavior.",
+      "decision_rights": "Can reject a work unit as incomplete when the visible result is not obvious or export quality is not proven."
+    },
+    {
+      "agent_id": "implementation-planner",
+      "role_name": "Implementation Planner",
+      "perspective": "Convert the debate into a practical Codex/Gemini sequence with entry criteria, exit criteria, validation paths, and doc updates.",
+      "decision_rights": "Can sequence recommendations and assign Codex versus Gemini ownership."
+    }
+  ],
+  "conversation_rounds": {
+    "round_1_independent_proposals": [
+      {
+        "agent_id": "architecture-guardian",
+        "stance": "Keep truthful contracts, but stop treating hidden additive fields as product outcomes.",
+        "claims": [
+          "The existing backend contract work is useful infrastructure, but Phase 4 as a hidden canonical dataset contract will repeat the same value failure unless it is attached to a visible decision outcome.",
+          "Dataset truth should become a visible prerequisite inside a decision brief and scenario comparison workflow, not an isolated phase that users experience as another label surface."
+        ],
+        "challenged_assumptions": [
+          "A canonical active dataset contract is not automatically high-value just because many surfaces consume data.",
+          "A backend field is not complete product work unless a user can see why it matters."
+        ],
+        "evidence": [
+          "The active status says Phase 4 Canonical Active Dataset Contract is next.",
+          "The user evidence says the current exported workspace result showed internal labels and guardrails but no obvious business value.",
+          "The contract doc already contains DecisionBrief, DecisionSignal, Scenario, and DecisionScenarioPreview shapes that can be organized into visible outcomes."
+        ],
+        "proposed_changes": [
+          "Replace phase labels with outcome units: Decision Brief, Evidence Explorer, Scenario Compare, Export Pack, and Readiness Gate.",
+          "Make dataset contract work a thin enabling slice inside the first outcome unit, visible as dataset identity, freshness, row count, transform state, and stale-data warnings."
+        ],
+        "risks_flagged": [
+          "If Phase 4 proceeds unchanged, the project will likely ship another technically correct but user-invisible surface.",
+          "If scenario work moves up without boundaries, the app may imply unsupported causal or predictive capability."
+        ]
+      },
+      {
+        "agent_id": "product-ux-strategist",
+        "stance": "The next unit must create an executive-ready result a user would want to share.",
+        "claims": [
+          "The product should lead with a one-page decision outcome, not readiness diagnostics.",
+          "A user should see the business question, objective, levers, guardrails, top quantified evidence, limitations, and next analysis choices in one coherent view."
+        ],
+        "challenged_assumptions": [
+          "More inspectability is not the same as clarity.",
+          "Repeated prompt text and guardrail labels are not a product result."
+        ],
+        "evidence": [
+          "The user explicitly reported no quantified insight, scenario comparison, visual decision outcome, or export-worthy result.",
+          "The status doc confirms PDF export refactoring has already made high-fidelity procedural export a usable asset."
+        ],
+        "proposed_changes": [
+          "Move Decision Brief generation and export ahead of broad canonical dataset alignment.",
+          "Require every future handoff to include the exact visible screen, the export artifact, and the user-facing acceptance prompt."
+        ],
+        "risks_flagged": [
+          "A dense brief could become another debug report if it repeats readiness labels instead of synthesizing evidence.",
+          "Over-polished export could hide capability boundaries if the copy is not disciplined."
+        ]
+      },
+      {
+        "agent_id": "decision-intelligence-specialist",
+        "stance": "Center the roadmap on decision loops: frame, evidence, compare, decide what to inspect next.",
+        "claims": [
+          "The current work has strong pieces, but they are not composed into a decision workflow that creates compounding insight.",
+          "Scenario comparison should move up, but it must begin as bounded sensitivity comparison or direct-adjustment scenarios, not causal Monte Carlo simulation."
+        ],
+        "challenged_assumptions": [
+          "Ranked observational evidence is not enough unless it is tied to the user's objective and surfaced as quantified trade-off context.",
+          "Scenario comparison does not have to wait for full ML readiness if the app is explicit that early scenarios are assumption-based sensitivity views."
+        ],
+        "evidence": [
+          "Phase 3 ranked diagnostics exist and are rendered.",
+          "The contract doc already defines Scenario and DecisionScenarioPreview objects with direct adjustment assumptions.",
+          "The current plan defers simulation and trade-off contract design to Phase 6."
+        ],
+        "proposed_changes": [
+          "Create a visible Decision Outcome workspace that combines corrected frame, ranked evidence, guardrail status, and quantified deltas.",
+          "Add bounded Scenario Compare as the second outcome unit, using explicit assumptions and direct adjustments before Monte Carlo."
+        ],
+        "risks_flagged": [
+          "Scenario comparison may be mistaken for prediction if labels are not strict.",
+          "A decision brief without quantified values will fail the same way the exported workspace result failed."
+        ]
+      },
+      {
+        "agent_id": "data-ml-readiness-specialist",
+        "stance": "Dataset truth still matters, but it must be visibly tied to trust and value.",
+        "claims": [
+          "Canonical active dataset work should not be removed, but it should be scoped to support visible trust: which dataset, what rows and columns, what transform state, and whether the decision result is stale.",
+          "Monte Carlo can be planned as a readiness-gated future workflow, but not implemented as real simulation until assumptions, distributions, validation, and leakage checks exist."
+        ],
+        "challenged_assumptions": [
+          "Dataset alignment alone will not satisfy the user's need for business value.",
+          "Monte Carlo is not automatically more valuable if the input assumptions are invisible or fake."
+        ],
+        "evidence": [
+          "Phase 4 handoff asks for dataset source, ID, row count, column count, and transform state across surfaces.",
+          "The next-focus plan defers ML readiness diagnostics and simulation design.",
+          "The contract doc has dataset summaries and scenario scaffolds, but current acceptance is not tied to export-worthy outcomes."
+        ],
+        "proposed_changes": [
+          "Fold Phase 4 into a visible Dataset Trust Strip and stale-result gate inside Decision Brief and Scenario Compare.",
+          "Move ML readiness diagnostics earlier only when expressed as a visible gate explaining why prediction or Monte Carlo is not available yet."
+        ],
+        "risks_flagged": [
+          "Skipping dataset truth would make future briefs and scenario comparisons unreliable.",
+          "Moving Monte Carlo too early would create false precision."
+        ]
+      },
+      {
+        "agent_id": "skeptic-qa-reviewer",
+        "stance": "No work should pass unless the user can verify the visible payoff without reading docs.",
+        "claims": [
+          "The current acceptance criteria overvalue build success, field presence, and documentation truth.",
+          "Every outcome unit needs a demo prompt, a visible acceptance path, an export check, and a negative case that proves unsupported capabilities remain truthful."
+        ],
+        "challenged_assumptions": [
+          "A browser flow is not enough if it only confirms labels render.",
+          "A PDF export is not valuable if it contains generic readiness text instead of quantified evidence and a clear decision artifact."
+        ],
+        "evidence": [
+          "The user evidence says the exported workspace result was not exciting or shareable.",
+          "The active docs list many completed slices, yet the current user still perceives low visible payoff."
+        ],
+        "proposed_changes": [
+          "Create a hard Definition of Done: visible result, quantified evidence, scenario or comparison where applicable, exportable artifact, truthful boundary, and status-doc update.",
+          "Add regression fixtures for the same prompt before and after each outcome unit to ensure the visible result compounds instead of resetting."
+        ],
+        "risks_flagged": [
+          "Agents may mark work complete after adding another renderer.",
+          "Outcome demos may become hand-picked if not tied to realistic acceptance prompts and stale-state checks."
+        ]
+      },
+      {
+        "agent_id": "implementation-planner",
+        "stance": "Replace the phase roadmap with a compounding outcome ladder and keep ownership intact.",
+        "claims": [
+          "The next roadmap should be organized by user-visible deliverables rather than Phase 4, Phase 5, and Phase 6 labels.",
+          "Codex should define backend outcome contracts and acceptance gates; Gemini should implement visible UI and export surfaces from those contracts."
+        ],
+        "challenged_assumptions": [
+          "The current active handoff should not remain active unchanged after this council because it is framed around dataset state rather than a visible decision result.",
+          "Documentation should not keep pointing agents to Phase 4 as the next work after the user has rejected the value model."
+        ],
+        "evidence": [
+          "The active handoff folder lists Phase 4 canonical active dataset as active next.",
+          "The compounding-results README explicitly asks for a replacement roadmap and doc changes after acceptance."
+        ],
+        "proposed_changes": [
+          "Create outcome unit 1: Executive Decision Brief with Dataset Trust Strip.",
+          "Create outcome unit 2: Visual Evidence Board with quantified ranked diagnostics.",
+          "Create outcome unit 3: Bounded Scenario Compare with direct adjustments and guardrail impact.",
+          "Create outcome unit 4: Export Pack for PDF/share-ready decision brief.",
+          "Defer full Monte Carlo to readiness-gated design unless explicit assumptions and validations are implemented."
+        ],
+        "risks_flagged": [
+          "The roadmap could become too broad unless each outcome unit is thin, demoable, and acceptance-gated.",
+          "Docs must be updated immediately after acceptance to prevent agents from resuming the old Phase 4 path."
+        ]
+      }
+    ],
+    "round_2_critiques": [
+      {
+        "agent_id": "architecture-guardian",
+        "stance": "Approve outcome orientation but constrain scenarios and exports to backend-owned truth.",
+        "claims": [
+          "Scenario Compare can move up only if the backend contract states direct adjustment assumptions and refuses unsupported causal claims.",
+          "Executive exports must preserve limitations and truth boundaries without making the UI feel like a wall of guardrails."
+        ],
+        "challenged_assumptions": [
+          "A Gemini-only visual solution cannot infer quantified insight that the backend did not provide.",
+          "CDD or Monte Carlo terminology should not appear as a product promise before the backend can support it."
+        ],
+        "evidence": [
+          "The frontend guardrail assigns frontend implementation to Gemini and backend contracts to Codex.",
+          "The decision objects contract already distinguishes scenarios and observational boundary fields."
+        ],
+        "proposed_changes": [
+          "Codex must produce a brief-focused contract before Gemini builds the primary result view.",
+          "Any scenario comparison UI must render assumption labels and unsupported capability boundaries from backend fields."
+        ],
+        "risks_flagged": [
+          "Frontend-only synthesis would create drift from backend truth.",
+          "Monte Carlo labels would overclaim if implemented before readiness gates."
+        ]
+      },
+      {
+        "agent_id": "product-ux-strategist",
+        "stance": "Reject another diagnostics surface; the result must look like a decision product.",
+        "claims": [
+          "A Dataset Trust Strip is only valuable if it is visually subordinate to the business result.",
+          "The first screen after a decision prompt should show a synthesized brief and visual evidence, not a raw contract explorer."
+        ],
+        "challenged_assumptions": [
+          "Users do not care about dataset precedence rules until stale or conflicting data affects their decision result.",
+          "Completeness should be judged by whether the user can explain the finding to someone else."
+        ],
+        "evidence": [
+          "The user called out no obvious business value and no shareable result.",
+          "The Phase 4 handoff acceptance is mainly dataset identity and state propagation."
+        ],
+        "proposed_changes": [
+          "Make visible business value the primary acceptance check and dataset truth the trust layer.",
+          "Use export quality as a forcing function for concise synthesis."
+        ],
+        "risks_flagged": [
+          "A trust strip could become another label-heavy band.",
+          "A brief could become generic if not anchored to quantified evidence."
+        ]
+      },
+      {
+        "agent_id": "decision-intelligence-specialist",
+        "stance": "The roadmap should compound from existing Phase 3 work rather than discard it.",
+        "claims": [
+          "Ranked observational diagnostics are valuable if transformed into an Evidence Board with numbers, relevance, limitations, and next investigation options.",
+          "CDD can be useful as a visible decision dependency map, but it should represent declared objective, levers, guardrails, segments, and assumptions rather than causal certainty."
+        ],
+        "challenged_assumptions": [
+          "Removing recently built work is unnecessary if it can be composed into a better product result.",
+          "A decision brief alone may be too static without a comparison or next-step workflow."
+        ],
+        "evidence": [
+          "Phase 3 correction and ranked observational evidence are complete.",
+          "The contract has semantic coverage and data sufficiency fields that can support an evidence board."
+        ],
+        "proposed_changes": [
+          "Use Phase 3 diagnostics as the evidence engine for the brief and visual board.",
+          "Introduce a CDD-style decision map as a bounded frame visualization, not a causal graph."
+        ],
+        "risks_flagged": [
+          "CDD language could imply causality if not renamed or bounded.",
+          "Evidence ranking could be mistaken for recommendation priority."
+        ]
+      },
+      {
+        "agent_id": "data-ml-readiness-specialist",
+        "stance": "Move scenario comparison up, but keep Monte Carlo behind a visible readiness gate.",
+        "claims": [
+          "Direct-adjustment scenario comparison is feasible earlier because it can be transparent and assumption-labeled.",
+          "Monte Carlo requires explicit uncertainty inputs, distributions, correlations, validation, and communication of non-causal assumptions."
+        ],
+        "challenged_assumptions": [
+          "Monte Carlo should not be added just because it looks advanced.",
+          "ML readiness diagnostics should be tied to visible user decisions, not another hidden capability table."
+        ],
+        "evidence": [
+          "The current plan defers ML readiness diagnostics and simulation design.",
+          "The contract's scenario scaffold already contains direct metric adjustments and assumptions."
+        ],
+        "proposed_changes": [
+          "Create Scenario Compare now as assumption-based sensitivity analysis.",
+          "Create Monte Carlo Readiness Card later that explains exactly what is missing before probabilistic simulation can run."
+        ],
+        "risks_flagged": [
+          "False precision is likely if probabilistic outputs appear without enough assumptions.",
+          "Users may treat direct adjustments as forecast if copy is weak."
+        ]
+      },
+      {
+        "agent_id": "skeptic-qa-reviewer",
+        "stance": "Every proposal needs a failure-mode acceptance check.",
+        "claims": [
+          "A good demo must prove the app avoids stale data, unsupported simulation claims, and generic exports.",
+          "Acceptance should fail if the result could be generated without the user's dataset and decision frame."
+        ],
+        "challenged_assumptions": [
+          "One happy-path prompt is not enough.",
+          "Status docs are insufficient evidence unless paired with a user-visible artifact."
+        ],
+        "evidence": [
+          "The exported workspace result apparently contained repeated prompt text, which suggests synthesis quality is not currently gated.",
+          "The active status emphasizes many technical completions that did not add perceived value."
+        ],
+        "proposed_changes": [
+          "Require three acceptance prompts per outcome unit: complete frame, incomplete frame, and unsupported advanced request.",
+          "Require export inspection for brief and scenario units."
+        ],
+        "risks_flagged": [
+          "Agents may pass visual work by rendering all fields instead of synthesizing them.",
+          "The user may still see low value if quantified insight is optional."
+        ]
+      },
+      {
+        "agent_id": "implementation-planner",
+        "stance": "The replacement roadmap must be narrow enough to execute without losing momentum.",
+        "claims": [
+          "The first outcome unit should be a thin vertical slice: one prompt creates a brief, evidence summary, dataset trust strip, and export artifact.",
+          "Phase 4 docs should be paused or rewritten after this council is accepted."
+        ],
+        "challenged_assumptions": [
+          "A complete redesign of all data surfaces is too broad for the next step.",
+          "A compounding roadmap should not mean every high-value idea moves into the first implementation unit."
+        ],
+        "evidence": [
+          "Codex harness rules require scoped plans and narrow verification.",
+          "The Phase 4 handoff names many frontend consumers, which is broad and likely to become another infrastructure-heavy slice."
+        ],
+        "proposed_changes": [
+          "Start with Decision Brief plus Dataset Trust Strip as the first vertical outcome.",
+          "Then layer Evidence Board, Scenario Compare, Export Pack, and Monte Carlo readiness in sequence."
+        ],
+        "risks_flagged": [
+          "If the first unit touches too many surfaces, it will recreate the microscopic phase problem under a bigger label.",
+          "If docs are not changed, another agent may continue Phase 4 unchanged."
+        ]
+      }
+    ],
+    "round_3_reconciliation": [
+      {
+        "agent_id": "architecture-guardian",
+        "stance": "Resolved: Phase 4 remains only as an enabling trust layer inside visible outcomes.",
+        "claims": [
+          "The council should not delete dataset truth work, but it should no longer be the primary roadmap item.",
+          "Backend contracts must provide synthesized brief data, dataset trust data, and scenario assumptions before Gemini renders them."
+        ],
+        "challenged_assumptions": [
+          "Dataset truth is not a product outcome by itself.",
+          "Frontend can improve presentation but cannot manufacture decision intelligence."
+        ],
+        "evidence": [
+          "Phase 4 handoff is active but insufficient against user evidence.",
+          "DecisionBrief and Scenario contracts already exist as stronger visible anchors."
+        ],
+        "proposed_changes": [
+          "Rename the next Codex work from Phase 4 Canonical Active Dataset Contract to Outcome 1: Executive Decision Brief with Dataset Trust.",
+          "Keep dataset precedence rules scoped to the result being briefed and exported."
+        ],
+        "risks_flagged": [
+          "Contract churn may increase if the brief contract is not additive.",
+          "Existing frontend handoff must be superseded cleanly."
+        ]
+      },
+      {
+        "agent_id": "product-ux-strategist",
+        "stance": "Resolved: The first visible artifact must be a decision brief, not a state alignment screen.",
+        "claims": [
+          "The user should immediately see quantified evidence and a shareable narrative.",
+          "The brief should have a clear visual hierarchy: business result first, trust and boundaries second."
+        ],
+        "challenged_assumptions": [
+          "Users should not have to inspect capability boundaries to discover value."
+        ],
+        "evidence": [
+          "User evidence rejected label-heavy output.",
+          "PDF export tooling has already been refactored for high-fidelity procedural generation."
+        ],
+        "proposed_changes": [
+          "Acceptance for Outcome 1 requires a visible brief and a procedural PDF export with quantified evidence.",
+          "Readiness and unsupported capability labels must be summarized, not dumped."
+        ],
+        "risks_flagged": [
+          "Brief copy could over-summarize and hide important limitations.",
+          "Export could lag behind UI if not part of the same acceptance gate."
+        ]
+      },
+      {
+        "agent_id": "decision-intelligence-specialist",
+        "stance": "Resolved: Scenario Compare moves up, Monte Carlo stays gated.",
+        "claims": [
+          "Users need comparison to feel decision value, but direct-adjustment sensitivity is the honest near-term form.",
+          "CDD should be framed as a Decision Map showing current frame and dependencies, not causal proof."
+        ],
+        "challenged_assumptions": [
+          "Scenario comparison must not be deferred until full simulation if a bounded version can add value now.",
+          "Monte Carlo should not be implemented before readiness gates."
+        ],
+        "evidence": [
+          "The user explicitly named scenario comparison, CDD, Monte Carlo, and executive-ready exports as high-value candidates.",
+          "The contract contains scenario scaffolds and direct adjustment assumptions."
+        ],
+        "proposed_changes": [
+          "Outcome 2 should turn ranked diagnostics into a visual evidence board and Decision Map.",
+          "Outcome 3 should add bounded Scenario Compare with guardrail impact and assumptions."
+        ],
+        "risks_flagged": [
+          "Decision Map may be misread as causal unless labels are precise.",
+          "Scenario Compare must distinguish sensitivity from forecast."
+        ]
+      },
+      {
+        "agent_id": "data-ml-readiness-specialist",
+        "stance": "Resolved: ML readiness becomes visible gating for advanced capabilities.",
+        "claims": [
+          "Readiness labels are low-value when dumped as content, but high-value when they explain why advanced analysis is unavailable and what data would unlock it.",
+          "Monte Carlo readiness should be a visible card after Scenario Compare, not a hidden contract field."
+        ],
+        "challenged_assumptions": [
+          "Users do not need more readiness fields; they need readiness consequences."
+        ],
+        "evidence": [
+          "The active plan currently places ML readiness after dataset alignment.",
+          "The user evidence says readiness labels without payoff are low-value."
+        ],
+        "proposed_changes": [
+          "Outcome 4 should add visible Advanced Analysis Readiness for Monte Carlo, prediction, and optimization, with exact missing prerequisites.",
+          "Do not implement probabilistic simulation until the readiness card can pass."
+        ],
+        "risks_flagged": [
+          "Readiness cards can become another wall of labels if not tied to unlockable workflows.",
+          "Monte Carlo requirements may require additional data contracts."
+        ]
+      },
+      {
+        "agent_id": "skeptic-qa-reviewer",
+        "stance": "Resolved: The new Definition of Done is user-visible and export-gated.",
+        "claims": [
+          "No future unit is complete unless the visible screen and export prove value.",
+          "Tests and docs remain necessary but are not sufficient."
+        ],
+        "challenged_assumptions": [
+          "A renderer that shows fields is not enough.",
+          "A build passing is not product acceptance."
+        ],
+        "evidence": [
+          "The user evidence is a direct failure of output acceptance quality.",
+          "The active docs currently emphasize technical completions."
+        ],
+        "proposed_changes": [
+          "Each outcome unit needs an acceptance prompt, visible result, export artifact when applicable, negative capability-boundary case, and status-doc update.",
+          "Add regression checks that fail on repeated prompt dumps and missing quantified evidence."
+        ],
+        "risks_flagged": [
+          "Acceptance could become subjective unless examples are concrete.",
+          "Export verification may add work but is required for the user's stated value bar."
+        ]
+      },
+      {
+        "agent_id": "implementation-planner",
+        "stance": "Resolved: The roadmap becomes an outcome ladder with Codex backend contracts before Gemini UI handoffs.",
+        "claims": [
+          "The council can preserve ownership split while changing acceptance: Codex produces value-focused backend contracts and Gemini renders obvious results.",
+          "The Phase 4 handoff should be superseded by a new Gemini handoff only after Codex defines Outcome 1 contract and acceptance."
+        ],
+        "challenged_assumptions": [
+          "The existing active next handoff should not remain the entry point after this council."
+        ],
+        "evidence": [
+          "AI handoff README assigns Codex coordination and Gemini frontend implementation.",
+          "Compounding-results README requires doc changes after acceptance."
+        ],
+        "proposed_changes": [
+          "Implement Outcome 1 first, then Evidence Board, Scenario Compare, Export Pack, and Advanced Readiness.",
+          "Update active docs to point to the new compounding roadmap and mark the old Phase 4 handoff as superseded or narrowed."
+        ],
+        "risks_flagged": [
+          "Docs can drift if not updated immediately.",
+          "Outcome 1 must not expand into a broad rewrite."
+        ]
+      }
+    ],
+    "round_4_synthesis": [
+      {
+        "agent_id": "implementation-planner",
+        "stance": "Final synthesis: replace the phase roadmap with compounding outcome units.",
+        "claims": [
+          "The old roadmap should be superseded as the organizing model.",
+          "The next work should be a thin vertical Decision Brief with Dataset Trust and export acceptance."
+        ],
+        "challenged_assumptions": [
+          "The current Phase 4 dataset-contract direction should not proceed unchanged."
+        ],
+        "evidence": [
+          "Reviewed active docs and user evidence support a pivot away from hidden contract fields.",
+          "Existing contracts contain enough decision objects to support a value-focused first outcome."
+        ],
+        "proposed_changes": [
+          "Adopt the resolved recommendations in this JSON as the new planning source.",
+          "Update active documentation after user acceptance."
+        ],
+        "risks_flagged": [
+          "The roadmap must stay honest about unsupported simulation and optimization.",
+          "The first unit must not expand into an all-surface rewrite."
+        ]
+      }
+    ]
+  },
+  "major_disagreements": [
+    {
+      "disagreement_id": "disagreement-phase-4-priority",
+      "topic": "Whether Phase 4 Canonical Active Dataset Contract should remain the next primary roadmap item",
+      "positions": [
+        {
+          "agent_id": "architecture-guardian",
+          "position": "Keep dataset truth, but demote it from standalone phase to visible trust layer.",
+          "rationale": "Dataset truth is architecturally necessary, but hidden precedence rules will not solve the user's value complaint."
+        },
+        {
+          "agent_id": "product-ux-strategist",
+          "position": "Do not proceed with Phase 4 unchanged.",
+          "rationale": "The current handoff centers state alignment rather than an exciting result users can export or share."
+        },
+        {
+          "agent_id": "data-ml-readiness-specialist",
+          "position": "Preserve a narrow dataset trust slice.",
+          "rationale": "Briefs and scenarios are unreliable without visible dataset identity, row counts, columns, and transform state."
+        }
+      ],
+      "status": "resolved",
+      "resolution": "Phase 4 is superseded as the primary roadmap item. Its useful parts become a Dataset Trust Strip and stale-result gate inside Outcome 1 and later scenario workflows."
+    },
+    {
+      "disagreement_id": "disagreement-scenario-timing",
+      "topic": "Whether scenario comparison should move up before ML readiness and simulation design",
+      "positions": [
+        {
+          "agent_id": "decision-intelligence-specialist",
+          "position": "Move bounded scenario comparison up.",
+          "rationale": "Scenario comparison is a visible high-value workflow and can begin as transparent sensitivity analysis."
+        },
+        {
+          "agent_id": "data-ml-readiness-specialist",
+          "position": "Do not implement Monte Carlo yet.",
+          "rationale": "Probabilistic simulation needs assumptions, distributions, validation, and leakage checks."
+        },
+        {
+          "agent_id": "architecture-guardian",
+          "position": "Allow direct-adjustment scenarios only with backend-owned assumptions and refusal boundaries.",
+          "rationale": "The app must not imply causal forecasting, optimization, or final recommendations."
+        }
+      ],
+      "status": "resolved",
+      "resolution": "Scenario Compare moves up as direct-adjustment sensitivity comparison with explicit assumptions, guardrail impact, and non-causal labeling. Monte Carlo remains readiness-gated and design-only until prerequisites are met."
+    },
+    {
+      "disagreement_id": "disagreement-cdd-language",
+      "topic": "Whether CDD-style decision mapping should be introduced",
+      "positions": [
+        {
+          "agent_id": "decision-intelligence-specialist",
+          "position": "Introduce a Decision Map.",
+          "rationale": "A visual map of objective, levers, guardrails, segments, assumptions, and evidence helps users understand the decision frame."
+        },
+        {
+          "agent_id": "data-ml-readiness-specialist",
+          "position": "Avoid causal language.",
+          "rationale": "CDD could be read as causal dependency if the app has not proven causal assumptions."
+        },
+        {
+          "agent_id": "product-ux-strategist",
+          "position": "Use visual mapping only if it clarifies the decision outcome.",
+          "rationale": "A diagram is valuable when it helps explain the result, not when it adds another internal structure view."
+        }
+      ],
+      "status": "resolved",
+      "resolution": "Use the label Decision Map, not causal diagram, for the near term. It may show declared relationships and evidence coverage, but not causal effects."
+    }
+  ],
+  "resolved_recommendations": [
+    {
+      "recommendation_id": "rec-replace-phases-with-outcome-ladder",
+      "title": "Replace microscopic phases with a compounding outcome ladder",
+      "summary": "Stop organizing the roadmap around Phase 4, Phase 5, and Phase 6 technical slices. Organize it around user-visible outcomes: Executive Decision Brief, Visual Evidence Board, Bounded Scenario Compare, Export Pack, and Advanced Analysis Readiness.",
+      "originating_agents": [
+        "product-ux-strategist",
+        "implementation-planner",
+        "skeptic-qa-reviewer"
+      ],
+      "source_paths": [
+        "project_docs/active/agent_council/outputs/compounding-phase-results/README.md",
+        "project_docs/active/decision_intelligence/current/next_focus_execution_plan.md",
+        "user-provided exported workspace result evidence from 2026-05-22 request"
+      ],
+      "priority": "critical",
+      "confidence": 0.95,
+      "implementation_timing": "now",
+      "rationale": "The user evidence proves the current phase model can complete technically valid work while failing product value. Outcome units force every slice to create something visible, understandable, exportable, and worth sharing.",
+      "impacted_areas": [
+        "project roadmap docs",
+        "AI handoff docs",
+        "Decision Intelligence backend contract planning",
+        "Gemini frontend acceptance criteria",
+        "export verification"
+      ],
+      "frontend_implications": [
+        "Gemini handoffs must describe the visible screen and export result, not only fields to render.",
+        "Frontend completion requires a browser-visible result whose business value is obvious."
+      ],
+      "backend_implications": [
+        "Codex must define synthesized outcome contracts, not just additive metadata fields.",
+        "Backend output should prefer brief-ready values, quantified evidence, assumptions, and limitations over raw diagnostic dumps."
+      ],
+      "contract_considerations": [
+        "Keep existing fields additive and backward-compatible.",
+        "Use existing DecisionBrief, DecisionSignal, Scenario, DecisionScenarioPreview, ranked diagnostics, and Dataset Summary contracts where possible.",
+        "Add only thin synthesized fields when necessary for a visible outcome."
+      ],
+      "testing_considerations": [
+        "Each outcome unit must include a complete-frame acceptance prompt, incomplete-frame blocked prompt, and unsupported-advanced-capability prompt.",
+        "Tests should fail when quantified evidence is absent from a supposedly complete brief.",
+        "Docs and tests are required but not sufficient without visible proof."
+      ],
+      "risks": [
+        "Outcome names could become phase labels in disguise if acceptance remains technical.",
+        "The first outcome could become too broad unless scoped to a vertical slice."
+      ],
+      "dependencies": [
+        "User acceptance of this council result",
+        "Docs update that supersedes the current Phase 4-first roadmap"
+      ],
+      "acceptance_signals": [
+        "Active docs no longer direct the next agent to start Phase 4 canonical dataset work unchanged.",
+        "The next implementation plan uses outcome units with visible and exportable acceptance criteria.",
+        "Each unit states what the user sees, what can be exported, what remains unsupported, and how stale or missing data is shown."
+      ]
+    },
+    {
+      "recommendation_id": "rec-outcome-1-executive-decision-brief",
+      "title": "Make the next implementation unit an Executive Decision Brief with Dataset Trust",
+      "summary": "The next build should produce a concise, quantified decision brief from a prompt-first decision workspace. It should show the business question, objective, levers, guardrails, dataset identity, top quantified evidence, limitations, and allowed next actions in one user-facing result.",
+      "originating_agents": [
+        "product-ux-strategist",
+        "decision-intelligence-specialist",
+        "data-ml-readiness-specialist",
+        "implementation-planner"
+      ],
+      "source_paths": [
+        "project_docs/active/contracts/decision_objects.md",
+        "project_docs/active/status/decision_intelligence_execution_status.md",
+        "project_docs/active/ai_hand_off/phase_4_gemini_frontend_canonical_active_dataset.md",
+        "user-provided exported workspace result evidence from 2026-05-22 request"
+      ],
+      "priority": "critical",
+      "confidence": 0.9,
+      "implementation_timing": "now",
+      "rationale": "The user explicitly needs obvious business value and export-worthy output. A brief composes existing readiness, semantics, corrections, ranked evidence, dataset summary, and export capabilities into a result users can understand.",
+      "impacted_areas": [
+        "backend decision workspace service",
+        "backend decision chat service",
+        "decision object contracts",
+        "AI Shell result rendering",
+        "Decision Workspace view",
+        "PDF export mapping",
+        "active status docs"
+      ],
+      "frontend_implications": [
+        "Gemini should render the brief as a primary result surface, not a diagnostics panel.",
+        "Readiness and unsupported capabilities should be summarized as caveats or locked advanced actions, not dumped as the main content.",
+        "Dataset trust should appear as a compact strip showing dataset name, source, row count, column count, transform state, and stale/override state."
+      ],
+      "backend_implications": [
+        "Codex should produce or normalize a brief-ready object from existing workspace analysis and ranked diagnostics.",
+        "The backend should include quantified evidence summaries and limitations derived from actual diagnostics.",
+        "The backend must preserve observational_analysis_only truth boundary."
+      ],
+      "contract_considerations": [
+        "Prefer extending DecisionBrief with brief sections that reference existing DecisionSignal and ranked diagnostic IDs.",
+        "Dataset Summary should include transform state or cleaning state where available.",
+        "No final recommendation field should be introduced."
+      ],
+      "testing_considerations": [
+        "Test that the May-style revenue prompt produces a brief with objective, levers, guardrails, segments, dataset summary, and at least one quantified evidence item when data supports it.",
+        "Test that missing or unparsed guardrails block analysis and produce a brief-ready blocker instead of fake insight.",
+        "Test that unsupported simulation requests remain bounded and are not converted into recommendations."
+      ],
+      "risks": [
+        "The brief could become generic if quantified evidence is optional.",
+        "Dataset trust could become another label wall if visually overemphasized."
+      ],
+      "dependencies": [
+        "Existing Phase 3 ranked diagnostics",
+        "Existing dataset summary fields",
+        "Existing procedural PDF export infrastructure"
+      ],
+      "acceptance_signals": [
+        "A user can run one decision prompt and see a concise decision brief with quantified evidence without opening raw JSON.",
+        "The brief identifies the active dataset and whether the result is stale or based on an override.",
+        "The brief can be exported to a PDF that contains the same business result, quantified evidence, caveats, and dataset trust context.",
+        "The output does not repeat the full prompt as filler and does not lead with readiness labels."
+      ]
+    },
+    {
+      "recommendation_id": "rec-narrow-phase-4-into-dataset-trust",
+      "title": "Narrow Phase 4 dataset work into a visible Dataset Trust Strip",
+      "summary": "Preserve the useful dataset-truth work but stop treating broad canonical active dataset alignment as the next standalone milestone. Implement the smallest dataset identity and stale-result behavior needed to make decision briefs and scenario comparisons trustworthy.",
+      "originating_agents": [
+        "architecture-guardian",
+        "data-ml-readiness-specialist",
+        "implementation-planner"
+      ],
+      "source_paths": [
+        "project_docs/active/ai_hand_off/phase_4_gemini_frontend_canonical_active_dataset.md",
+        "project_docs/active/decision_intelligence/current/next_focus_execution_plan.md",
+        "project_docs/active/contracts/decision_objects.md"
+      ],
+      "priority": "high",
+      "confidence": 0.88,
+      "implementation_timing": "now",
+      "rationale": "Dataset alignment matters, but a broad all-surface state project would not answer the user's complaint. A visible trust strip compounds into briefs, evidence boards, scenarios, and exports.",
+      "impacted_areas": [
+        "frontend active dataset state",
+        "dataset summary contract",
+        "AI Chat",
+        "Decisions workspace",
+        "export mapping",
+        "active handoff docs"
+      ],
+      "frontend_implications": [
+        "Gemini should show dataset identity only where it changes trust in the decision result.",
+        "Explicit overrides and stale state must be visible when present.",
+        "The old all-surfaces handoff should be replaced or narrowed."
+      ],
+      "backend_implications": [
+        "Codex should define what dataset summary fields are backend-owned versus frontend-derived.",
+        "Backend decision outputs should echo the dataset summary used for the brief or scenario."
+      ],
+      "contract_considerations": [
+        "Add transform_state or cleaning_state only if the current app can truthfully supply it.",
+        "Do not invent dataset IDs where none exist; mark unknowns honestly.",
+        "Maintain backward-compatible Dataset Summary fields."
+      ],
+      "testing_considerations": [
+        "Verify changing or selecting a dataset changes the dataset summary used by the decision brief.",
+        "Verify stale workspace results are marked or invalidated rather than silently reused.",
+        "Verify exports include the same dataset identity shown in the UI."
+      ],
+      "risks": [
+        "Too much surface alignment could bloat the first outcome unit.",
+        "Unknown dataset metadata could tempt frontend inference."
+      ],
+      "dependencies": [
+        "Outcome 1 brief scope",
+        "Current frontend dataset state inspection by Gemini after Codex contract definition"
+      ],
+      "acceptance_signals": [
+        "Dataset truth appears as trust context inside a valuable decision result.",
+        "No user has to inspect multiple panels to know which dataset powered the result.",
+        "The roadmap no longer asks Gemini to align every data consumer before a visible decision outcome exists."
+      ]
+    },
+    {
+      "recommendation_id": "rec-outcome-2-visual-evidence-board",
+      "title": "Turn ranked diagnostics into a Visual Evidence Board and Decision Map",
+      "summary": "After the brief, compose Phase 3 ranked observational diagnostics into a visual evidence board that shows the strongest quantified signals, covered levers, guardrails, segment coverage, limitations, and a bounded Decision Map of the current frame.",
+      "originating_agents": [
+        "decision-intelligence-specialist",
+        "product-ux-strategist",
+        "skeptic-qa-reviewer"
+      ],
+      "source_paths": [
+        "project_docs/active/contracts/decision_objects.md",
+        "project_docs/active/status/decision_intelligence_execution_status.md",
+        "user-provided exported workspace result evidence from 2026-05-22 request"
+      ],
+      "priority": "high",
+      "confidence": 0.84,
+      "implementation_timing": "next",
+      "rationale": "The app already has ranked diagnostics, but users need a visual decision outcome. An evidence board makes the diagnostic ranking legible and valuable without turning it into final recommendations.",
+      "impacted_areas": [
+        "workspace analysis contract",
+        "Decision Workspace view",
+        "AI Shell artifacts",
+        "export mapping",
+        "frontend browser acceptance"
+      ],
+      "frontend_implications": [
+        "Gemini should render quantified evidence as ranked cards or a board, with visual indicators for objective, levers, guardrails, segments, and limitations.",
+        "The Decision Map should show declared decision-frame relationships and evidence coverage, not causal effects.",
+        "The UI must not label evidence rank as recommendation priority."
+      ],
+      "backend_implications": [
+        "Codex should ensure ranked diagnostics expose brief-ready titles, quantified values where available, coverage metadata, and limitations.",
+        "Backend should provide enough structure for the Decision Map without requiring frontend inference."
+      ],
+      "contract_considerations": [
+        "Use ranked_diagnostics.semantic_coverage and data_sufficiency fields.",
+        "Add display-safe labels only if existing fields are too raw for a user-facing board.",
+        "Maintain observational_boundary."
+      ],
+      "testing_considerations": [
+        "Test that evidence board data includes at least one quantified value when the dataset supports it.",
+        "Test that low-sufficiency diagnostics are visibly caveated.",
+        "Test that evidence rank never changes allowed next actions into unsupported recommendation behavior."
+      ],
+      "risks": [
+        "A Decision Map may imply causality if labels are careless.",
+        "Evidence cards may regress into field dumps if not acceptance-gated."
+      ],
+      "dependencies": [
+        "Outcome 1 brief contract",
+        "Phase 3 ranked diagnostics"
+      ],
+      "acceptance_signals": [
+        "A user can visually identify the top evidence and why it matters to the objective.",
+        "The board shows which levers, guardrails, and segments are covered or missing.",
+        "The Decision Map is explicitly labeled as decision-frame structure and evidence coverage, not causal proof."
+      ]
+    },
+    {
+      "recommendation_id": "rec-outcome-3-bounded-scenario-compare",
+      "title": "Move bounded Scenario Compare ahead of full simulation",
+      "summary": "Add a visible scenario comparison workflow based on direct adjustments, guardrail impact, and explicit assumptions. This creates user-visible trade-off value without claiming causal simulation, Monte Carlo, optimization, or forecasts.",
+      "originating_agents": [
+        "decision-intelligence-specialist",
+        "data-ml-readiness-specialist",
+        "architecture-guardian",
+        "implementation-planner"
+      ],
+      "source_paths": [
+        "project_docs/active/contracts/decision_objects.md",
+        "project_docs/active/decision_intelligence/current/next_focus_execution_plan.md",
+        "project_docs/active/agent_council/outputs/compounding-phase-results/README.md"
+      ],
+      "priority": "high",
+      "confidence": 0.82,
+      "implementation_timing": "next",
+      "rationale": "Scenario comparison is one of the fastest ways to make Decision Intelligence feel valuable. The safe near-term path is sensitivity comparison using explicit direct adjustments and assumptions.",
+      "impacted_areas": [
+        "scenario service or scenario contract",
+        "decision workspace actions",
+        "AI Chat artifacts",
+        "Scenario Compare frontend view",
+        "PDF export mapping",
+        "tests for unsupported simulation requests"
+      ],
+      "frontend_implications": [
+        "Gemini should render side-by-side baseline and scenario cards with deltas, guardrail status, assumptions, and non-causal labels.",
+        "Scenario Compare should be visually distinct from final recommendations.",
+        "Controls should use clear inputs for lever adjustment and guardrail comparison."
+      ],
+      "backend_implications": [
+        "Codex should expose direct-adjustment scenario comparison from backend-owned calculations or existing scenario scaffold.",
+        "Backend must include assumptions and refusal states for unsupported Monte Carlo, causal simulation, and optimization requests.",
+        "Backend should compute guardrail pass/fail or unknown status where data supports it."
+      ],
+      "contract_considerations": [
+        "Reuse Scenario and DecisionScenarioPreview concepts.",
+        "Add comparison_summary and guardrail_impact only if needed and computed truthfully.",
+        "Do not call projected values forecasts unless a future validated forecasting contract exists."
+      ],
+      "testing_considerations": [
+        "Test baseline versus direct-adjustment scenario deltas.",
+        "Test guardrail impact rendering when thresholds are parsed and when thresholds are missing.",
+        "Test that Monte Carlo or optimization requests return readiness/refusal states rather than fake outputs."
+      ],
+      "risks": [
+        "Users may mistake sensitivity comparison for prediction.",
+        "Scenario controls can become misleading if they adjust outcome metrics directly without clear assumptions."
+      ],
+      "dependencies": [
+        "Outcome 1 brief",
+        "Dataset Trust Strip",
+        "Clear scenario assumption copy"
+      ],
+      "acceptance_signals": [
+        "A user can compare at least two bounded scenarios side by side and see quantified deltas.",
+        "The UI states that the comparison is direct-adjustment sensitivity analysis, not causal simulation or optimization.",
+        "Guardrail impact is visible when data and thresholds support it.",
+        "The scenario comparison can be included in an export-worthy artifact."
+      ]
+    },
+    {
+      "recommendation_id": "rec-export-pack-definition-of-done",
+      "title": "Make executive-ready export part of the Definition of Done",
+      "summary": "For brief, evidence, and scenario outcomes, completion requires a procedural export that a user would plausibly share: concise title, dataset context, quantified evidence, visual decision outcome, assumptions, caveats, and next allowed actions.",
+      "originating_agents": [
+        "product-ux-strategist",
+        "skeptic-qa-reviewer",
+        "implementation-planner"
+      ],
+      "source_paths": [
+        "project_docs/active/status/decision_intelligence_execution_status.md",
+        "user-provided exported workspace result evidence from 2026-05-22 request",
+        "project_docs/active/agent_council/outputs/compounding-phase-results/README.md"
+      ],
+      "priority": "high",
+      "confidence": 0.86,
+      "implementation_timing": "next",
+      "rationale": "The user specifically rejected an exported result that was not valuable. Export quality is the strongest forcing function against debug-like UI and low-synthesis output.",
+      "impacted_areas": [
+        "pdf report export utilities",
+        "AI Reporter",
+        "Decision Workspace export mapping",
+        "frontend export buttons",
+        "acceptance docs"
+      ],
+      "frontend_implications": [
+        "Gemini should ensure the same result hierarchy appears in UI and export.",
+        "Export actions should be available from the outcome surface, not hidden in generic artifact controls."
+      ],
+      "backend_implications": [
+        "Codex should provide export-ready fields so PDF generation does not summarize raw internals.",
+        "Backend should include limitations and assumptions as structured content."
+      ],
+      "contract_considerations": [
+        "Add export_sections only if existing brief and scenario objects cannot map cleanly.",
+        "Do not export unsupported capability promises."
+      ],
+      "testing_considerations": [
+        "Verify generated export includes quantified evidence and dataset trust context.",
+        "Reject exports that only contain readiness labels, repeated prompt text, or raw guardrail lists.",
+        "Run a focused browser/export acceptance path for outcome units."
+      ],
+      "risks": [
+        "Export verification can become time-consuming.",
+        "PDF polish may distract from backend synthesis if not scoped."
+      ],
+      "dependencies": [
+        "Existing procedural PDF export refactor",
+        "Outcome 1 brief contract"
+      ],
+      "acceptance_signals": [
+        "The exported artifact contains a clear business title, quantified evidence, dataset context, assumptions, and caveats.",
+        "The export can stand alone without the user needing to explain raw readiness fields.",
+        "The exported result is inspected as part of acceptance, not treated as a secondary nicety."
+      ]
+    },
+    {
+      "recommendation_id": "rec-advanced-readiness-gates",
+      "title": "Move advanced capability readiness into visible gates instead of hidden labels",
+      "summary": "Represent Monte Carlo, prediction, optimization, and final recommendation as visible locked or gated workflows with exact missing prerequisites. Do not implement Monte Carlo simulation until assumptions, distributions, validation strategy, and data sufficiency are in place.",
+      "originating_agents": [
+        "data-ml-readiness-specialist",
+        "architecture-guardian",
+        "skeptic-qa-reviewer"
+      ],
+      "source_paths": [
+        "project_docs/active/contracts/decision_objects.md",
+        "project_docs/active/decision_intelligence/current/next_focus_execution_plan.md",
+        "project_docs/active/status/decision_intelligence_execution_status.md"
+      ],
+      "priority": "medium",
+      "confidence": 0.8,
+      "implementation_timing": "later",
+      "rationale": "Readiness labels are low-value when dumped into results, but high-value when they explain why an advanced workflow is unavailable and what would unlock it.",
+      "impacted_areas": [
+        "capability_state contract",
+        "ML readiness diagnostics",
+        "advanced analysis UI gates",
+        "unsupported capability tests"
+      ],
+      "frontend_implications": [
+        "Gemini should show advanced workflows as gated cards only when they help the user understand next data requirements.",
+        "Locked states must be concise and actionable, not verbose capability matrices."
+      ],
+      "backend_implications": [
+        "Codex should define explicit prerequisites for Monte Carlo and predictive analysis before any runtime output exists.",
+        "Backend should continue refusing unsupported advanced requests."
+      ],
+      "contract_considerations": [
+        "Use capability_state and unsupported_capabilities as backend truth.",
+        "Future Monte Carlo readiness should include assumptions, distribution availability, row sufficiency, validation approach, leakage risk, and causal caveat fields."
+      ],
+      "testing_considerations": [
+        "Test unsupported Monte Carlo and optimization prompts.",
+        "Test readiness gates for missing target, missing lever distribution, insufficient rows, and leakage-prone features.",
+        "Test that gated advanced workflows do not appear as available actions."
+      ],
+      "risks": [
+        "Gated cards could still feel like more labels if they are not tied to high-value workflows.",
+        "Users may ask for Monte Carlo before prerequisites are implemented."
+      ],
+      "dependencies": [
+        "Outcome 3 Scenario Compare",
+        "Future ML readiness contract"
+      ],
+      "acceptance_signals": [
+        "Advanced analysis gates explain missing prerequisites in plain business language.",
+        "Unsupported capabilities remain visibly unavailable without dominating the main result.",
+        "No probabilistic simulation, optimization, or final recommendation is implied."
+      ]
+    },
+    {
+      "recommendation_id": "rec-update-docs-after-acceptance",
+      "title": "Update active docs to prevent old-roadmap resumption",
+      "summary": "After the user accepts this council result, update the active documentation so the next agent starts from the compounding-results roadmap and does not continue Phase 4 as a broad standalone dataset-contract handoff.",
+      "originating_agents": [
+        "implementation-planner",
+        "architecture-guardian",
+        "skeptic-qa-reviewer"
+      ],
+      "source_paths": [
+        "project_docs/INDEX.md",
+        "project_docs/active/README.md",
+        "project_docs/active/ai_hand_off/README.md",
+        "project_docs/active/agent_council/outputs/compounding-phase-results/README.md"
+      ],
+      "priority": "critical",
+      "confidence": 0.93,
+      "implementation_timing": "now",
+      "rationale": "The current docs still route agents to Phase 4 Canonical Active Dataset Contract as active next. If docs are not changed, future work will drift back into the roadmap the user has challenged.",
+      "impacted_areas": [
+        "project_docs/INDEX.md",
+        "project_docs/active/README.md",
+        "project_docs/active/status/decision_intelligence_execution_status.md",
+        "project_docs/active/decision_intelligence/current/next_focus_execution_plan.md",
+        "project_docs/active/ai_hand_off/README.md",
+        "project_docs/active/ai_hand_off/phase_4_gemini_frontend_canonical_active_dataset.md"
+      ],
+      "frontend_implications": [
+        "Gemini should receive a new handoff for Outcome 1 only after Codex defines the backend and contract truth.",
+        "The existing Phase 4 handoff should be marked superseded, narrowed, or paused."
+      ],
+      "backend_implications": [
+        "Codex should create the new outcome-focused plan and update status truth.",
+        "Codex should not ask Gemini to implement a broad frontend dataset alignment before the brief contract exists."
+      ],
+      "contract_considerations": [
+        "Docs should explain that dataset contract work remains an enabling trust layer.",
+        "Docs should preserve truthful capability boundaries and non-goals."
+      ],
+      "testing_considerations": [
+        "Doc updates should name the next acceptance checks and avoid stale checklist ambiguity.",
+        "Future agents should be able to identify the new first implementation unit from INDEX and active README."
+      ],
+      "risks": [
+        "Partial doc updates could create conflicting active truth.",
+        "Completed handoffs may be mistaken for active work if not clearly labeled."
+      ],
+      "dependencies": [
+        "User acceptance of the council recommendation",
+        "Codex doc coordination"
+      ],
+      "acceptance_signals": [
+        "INDEX and active README route the next agent to the compounding-results roadmap.",
+        "Status doc says Phase 4 standalone dataset contract has been superseded or narrowed.",
+        "AI handoff README no longer lists the old Phase 4 handoff as the active next frontend implementation without qualification."
+      ]
+    }
+  ],
+  "unresolved_questions": [
+    {
+      "question_id": "question-brief-data-source",
+      "question": "Should the first Executive Decision Brief be generated from existing workspace_analysis and ranked_diagnostics only, or should Codex add a thin dedicated brief synthesis service?",
+      "owner": "Codex",
+      "needed_before": "Outcome 1 backend implementation",
+      "impact": "Determines whether the first implementation is mostly contract normalization or a new backend synthesis path."
+    },
+    {
+      "question_id": "question-export-format",
+      "question": "Should acceptance require PDF only first, or also a shareable structured JSON or markdown-style executive brief export?",
+      "owner": "Codex with user decision",
+      "needed_before": "Outcome 1 export acceptance",
+      "impact": "Affects export scope and what artifact the user can immediately share."
+    },
+    {
+      "question_id": "question-direct-adjustment-scope",
+      "question": "For bounded Scenario Compare, should direct adjustments apply only to selected outcome metrics first, or to lever inputs when the data model can identify lever-to-metric relationships?",
+      "owner": "Codex",
+      "needed_before": "Outcome 3 scenario contract",
+      "impact": "Determines how conservative the first comparison is and how much risk there is of implying causality."
+    },
+    {
+      "question_id": "question-low-value-surface-retirement",
+      "question": "Which existing low-value readiness or diagnostic surfaces should be hidden, collapsed, or demoted after the new brief exists?",
+      "owner": "User with Codex review and Gemini implementation",
+      "needed_before": "Outcome 2 frontend cleanup",
+      "impact": "Affects whether the app continues to show old debug-heavy surfaces alongside the new outcome views."
+    }
+  ],
+  "risks": [
+    {
+      "risk_id": "risk-old-roadmap-drift",
+      "title": "Future agents resume Phase 4 unchanged",
+      "severity": "high",
+      "likelihood": "high",
+      "mitigation": "After user acceptance, update INDEX, active README, status, next_focus_execution_plan, and handoff README to route to the compounding outcome ladder.",
+      "owner": "Codex"
+    },
+    {
+      "risk_id": "risk-scenario-overclaim",
+      "title": "Scenario comparison is mistaken for causal simulation or forecast",
+      "severity": "high",
+      "likelihood": "medium",
+      "mitigation": "Use direct-adjustment sensitivity labels, explicit assumptions, guardrail impact, and refusal states for Monte Carlo, optimization, and causal claims.",
+      "owner": "Codex"
+    },
+    {
+      "risk_id": "risk-brief-becomes-diagnostics-dump",
+      "title": "Executive Decision Brief repeats the current low-value output pattern",
+      "severity": "critical",
+      "likelihood": "medium",
+      "mitigation": "Acceptance must fail if the brief lacks quantified evidence, repeats the prompt as filler, or leads with readiness labels instead of business findings.",
+      "owner": "Skeptic/QA Reviewer"
+    },
+    {
+      "risk_id": "risk-frontend-infers-backend-truth",
+      "title": "Frontend presentation invents synthesis not present in backend contracts",
+      "severity": "high",
+      "likelihood": "medium",
+      "mitigation": "Codex must define brief-ready and scenario-ready backend contract fields before Gemini implements the visible surfaces.",
+      "owner": "Architecture Guardian"
+    },
+    {
+      "risk_id": "risk-first-outcome-too-broad",
+      "title": "Outcome 1 expands into an all-surface rewrite",
+      "severity": "medium",
+      "likelihood": "medium",
+      "mitigation": "Limit Outcome 1 to one prompt-to-brief-to-export vertical path plus the minimal Dataset Trust Strip needed for that path.",
+      "owner": "Implementation Planner"
+    }
+  ],
+  "impacted_codebase_areas": [
+    {
+      "area": "Decision Intelligence planning docs",
+      "path_patterns": [
+        "project_docs/active/decision_intelligence/current/next_focus_execution_plan.md",
+        "project_docs/active/status/decision_intelligence_execution_status.md",
+        "project_docs/INDEX.md",
+        "project_docs/active/README.md"
+      ],
+      "why_it_matters": "These files currently route the project to Phase 4 canonical dataset work and must be updated if this council result is accepted.",
+      "change_type": "documentation"
+    },
+    {
+      "area": "Codex/Gemini handoffs",
+      "path_patterns": [
+        "project_docs/active/ai_hand_off/README.md",
+        "project_docs/active/ai_hand_off/phase_4_gemini_frontend_canonical_active_dataset.md"
+      ],
+      "why_it_matters": "The active Phase 4 frontend handoff should be superseded, paused, or narrowed into Dataset Trust after Codex defines Outcome 1.",
+      "change_type": "documentation"
+    },
+    {
+      "area": "Decision object contracts",
+      "path_patterns": [
+        "project_docs/active/contracts/decision_objects.md"
+      ],
+      "why_it_matters": "Existing DecisionBrief, DecisionSignal, Scenario, DecisionScenarioPreview, Dataset Summary, readiness, and ranked diagnostics contracts are the likely foundation for visible outcomes.",
+      "change_type": "contract"
+    },
+    {
+      "area": "Backend decision services",
+      "path_patterns": [
+        "backend/services/decision_workspace_service.py",
+        "backend/decision_engine/chat_service.py",
+        "tests/test_decision_*.py"
+      ],
+      "why_it_matters": "Codex likely needs to synthesize brief-ready, evidence-ready, and scenario-ready backend outputs before Gemini renders visible outcomes.",
+      "change_type": "backend"
+    },
+    {
+      "area": "Frontend Decision Intelligence surfaces",
+      "path_patterns": [
+        "frontend/frontend/src/features/ai/AIShell.jsx",
+        "frontend/frontend/src/features/business/decision/DecisionWorkspaceView.jsx",
+        "frontend/frontend/src/components/insights/DataPane.jsx"
+      ],
+      "why_it_matters": "Gemini will need to render the brief, evidence board, dataset trust strip, scenario compare, and advanced readiness gates after backend contract stabilization.",
+      "change_type": "frontend"
+    },
+    {
+      "area": "Export pipeline",
+      "path_patterns": [
+        "frontend/frontend/src/features/ai/AIReporter.jsx",
+        "frontend/frontend/src/utils/pdfReportExport.js",
+        "frontend/frontend/src/utils/decisionPdfExport.js"
+      ],
+      "why_it_matters": "Executive-ready export is now part of acceptance, not an optional polish step.",
+      "change_type": "frontend"
+    }
+  ],
+  "frontend_implications": [
+    "Gemini should not continue the broad Phase 4 canonical active dataset handoff unchanged after this council is accepted.",
+    "Future Gemini handoffs must name the visible result, not only fields to render.",
+    "Readiness, capability boundaries, and guardrails should be summarized as trust context, caveats, disabled advanced actions, or blockers rather than dominating the result.",
+    "Decision Brief, Evidence Board, Scenario Compare, and exports should share the same hierarchy so the product feels like a coherent workflow.",
+    "Every Gemini implementation must include a browser-visible acceptance path and, when applicable, an export verification path."
+  ],
+  "backend_implications": [
+    "Codex should build synthesized outcome contracts rather than only hidden additive metadata.",
+    "The first backend task should produce brief-ready structure from corrected decision frame, ranked diagnostics, dataset summary, assumptions, limitations, and allowed actions.",
+    "Dataset truth should be scoped first to the decision result being generated, not all app surfaces at once.",
+    "Scenario Compare should start as backend-owned direct-adjustment sensitivity with assumptions and guardrail impact, not Monte Carlo or optimization.",
+    "Unsupported simulation, optimization, autonomous decisioning, and final recommendation requests must continue to be refused or gated truthfully."
+  ],
+  "contract_considerations": [
+    "Prefer reusing DecisionBrief, DecisionSignal, Scenario, DecisionScenarioPreview, Dataset Summary, readiness, capability_state, and ranked_diagnostics before adding new schemas.",
+    "New fields should be additive, display-ready, and traceable to existing diagnostics or dataset state.",
+    "Brief outputs must include quantified evidence where available, limitations, assumptions, dataset context, and truth_boundary.",
+    "Scenario outputs must label direct adjustments as sensitivity analysis and include assumptions.",
+    "Monte Carlo readiness should be represented as gated prerequisites, not runtime simulation output."
+  ],
+  "testing_considerations": [
+    "Each outcome unit needs at least three acceptance prompts: complete decision frame, incomplete or blocked frame, and unsupported advanced-capability request.",
+    "Tests must verify visible-value data, not just field presence: quantified evidence, dataset context, caveats, and export-ready sections.",
+    "Export acceptance must reject repeated prompt dumps, generic readiness pages, and raw field lists without synthesis.",
+    "Scenario tests must verify direct-adjustment deltas, guardrail impact where possible, and non-causal assumption labels.",
+    "Browser verification should focus on one end-to-end visible outcome path rather than broad surface scans."
+  ],
+  "implementation_priority": {
+    "top_priority_ids": [
+      "rec-replace-phases-with-outcome-ladder",
+      "rec-outcome-1-executive-decision-brief",
+      "rec-narrow-phase-4-into-dataset-trust",
+      "rec-update-docs-after-acceptance"
+    ],
+    "deferred_ids": [
+      "rec-outcome-2-visual-evidence-board",
+      "rec-outcome-3-bounded-scenario-compare",
+      "rec-export-pack-definition-of-done",
+      "rec-advanced-readiness-gates"
+    ],
+    "rationale": "The immediate fix is to stop the old roadmap from driving another low-visible-value slice, then implement a thin vertical Decision Brief with Dataset Trust and export acceptance. Evidence Board and Scenario Compare are high-value next steps, while Monte Carlo and advanced readiness remain bounded until prerequisites are explicit."
+  },
+  "suggested_implementation_phases": [
+    {
+      "phase_id": "outcome-0-roadmap-reset",
+      "title": "Roadmap Reset To Outcome Ladder",
+      "owner": "Codex",
+      "objective": "Supersede the microscopic phase roadmap and create the active compounding-results plan.",
+      "recommendation_ids": [
+        "rec-replace-phases-with-outcome-ladder",
+        "rec-update-docs-after-acceptance"
+      ],
+      "entry_criteria": [
+        "User accepts or directs Codex to apply this emergency council result.",
+        "Codex confirms active docs still route to old Phase 4 dataset-contract work."
+      ],
+      "exit_criteria": [
+        "Active docs route future agents to the compounding outcome ladder.",
+        "Old Phase 4 canonical active dataset handoff is marked superseded, paused, or narrowed.",
+        "Next Codex task is Outcome 1 Executive Decision Brief with Dataset Trust."
+      ],
+      "validation_plan": [
+        "Read INDEX, active README, status, next focus plan, and handoff README after edits to confirm no conflicting active-next instruction remains.",
+        "Confirm docs preserve Codex/Gemini ownership and truthful capability boundaries."
+      ]
+    },
+    {
+      "phase_id": "outcome-1-executive-decision-brief",
+      "title": "Executive Decision Brief With Dataset Trust",
+      "owner": "Codex backend and contract first, then Gemini frontend",
+      "objective": "Create the first visible compounding result: a prompt-first decision brief with quantified evidence, dataset trust, limitations, allowed next actions, and export-ready structure.",
+      "recommendation_ids": [
+        "rec-outcome-1-executive-decision-brief",
+        "rec-narrow-phase-4-into-dataset-trust",
+        "rec-export-pack-definition-of-done"
+      ],
+      "entry_criteria": [
+        "Roadmap reset docs are active.",
+        "Codex identifies the minimal backend contract or service changes needed for brief-ready output.",
+        "Existing Phase 3 ranked diagnostics and dataset summary behavior are available."
+      ],
+      "exit_criteria": [
+        "Backend produces a brief-ready object with business question, objective, levers, guardrails, dataset trust, quantified evidence, limitations, assumptions, truth boundary, and allowed next actions.",
+        "Gemini renders the brief as a primary user-facing result.",
+        "A procedural export contains the same synthesized value without raw prompt repetition or readiness-label dumping.",
+        "Unsupported simulation and final-recommendation prompts remain truthful and bounded."
+      ],
+      "validation_plan": [
+        "Run focused backend tests for complete, blocked, and unsupported prompts.",
+        "Run frontend build after Gemini implementation.",
+        "Run one browser flow from prompt to brief to export.",
+        "Inspect export output for quantified evidence, dataset context, assumptions, and caveats."
+      ]
+    },
+    {
+      "phase_id": "outcome-2-visual-evidence-board",
+      "title": "Visual Evidence Board And Decision Map",
+      "owner": "Codex contract first, then Gemini frontend",
+      "objective": "Turn ranked observational diagnostics into a visual evidence board and bounded Decision Map that helps users understand what evidence supports the decision frame.",
+      "recommendation_ids": [
+        "rec-outcome-2-visual-evidence-board"
+      ],
+      "entry_criteria": [
+        "Outcome 1 brief is visible and exportable.",
+        "Backend ranked diagnostics include sufficient quantified evidence and coverage metadata."
+      ],
+      "exit_criteria": [
+        "Evidence Board shows ranked quantified signals, relevance, evidence strength, covered levers, guardrails, segments, data sufficiency, and limitations.",
+        "Decision Map shows objective, levers, guardrails, segments, assumptions, and evidence coverage without causal claims.",
+        "Export can include the evidence board summary."
+      ],
+      "validation_plan": [
+        "Test evidence-board payload shape from backend diagnostics.",
+        "Run browser verification that evidence cards are not raw field dumps.",
+        "Verify Decision Map labeling avoids causal, optimization, and recommendation claims."
+      ]
+    },
+    {
+      "phase_id": "outcome-3-bounded-scenario-compare",
+      "title": "Bounded Scenario Compare",
+      "owner": "Codex backend first, then Gemini frontend",
+      "objective": "Provide side-by-side direct-adjustment sensitivity comparison with assumptions, quantified deltas, dataset trust, and guardrail impact where available.",
+      "recommendation_ids": [
+        "rec-outcome-3-bounded-scenario-compare",
+        "rec-export-pack-definition-of-done"
+      ],
+      "entry_criteria": [
+        "Outcome 1 brief and Dataset Trust Strip are working.",
+        "Codex defines the scenario comparison contract and non-causal copy boundaries.",
+        "User accepts direct-adjustment sensitivity as the first scenario mode."
+      ],
+      "exit_criteria": [
+        "Scenario Compare renders baseline and at least one alternative with quantified deltas.",
+        "Assumptions and non-causal boundaries are visible.",
+        "Guardrail pass, fail, or unknown impact is visible where thresholds and data support it.",
+        "Monte Carlo, optimization, and causal simulation requests are refused or gated."
+      ],
+      "validation_plan": [
+        "Run backend tests for scenario delta calculation, guardrail impact, missing thresholds, and unsupported Monte Carlo requests.",
+        "Run frontend build and one browser scenario flow.",
+        "Verify export includes scenario comparison with assumptions and caveats."
+      ]
+    },
+    {
+      "phase_id": "outcome-4-advanced-analysis-readiness",
+      "title": "Advanced Analysis Readiness Gates",
+      "owner": "Codex backend and contract first, then Gemini frontend",
+      "objective": "Turn advanced capability readiness into concise visible gates for Monte Carlo, prediction, optimization, and final recommendation without implementing unsupported runtime capability.",
+      "recommendation_ids": [
+        "rec-advanced-readiness-gates"
+      ],
+      "entry_criteria": [
+        "Scenario Compare has shipped as bounded sensitivity analysis.",
+        "Codex defines concrete prerequisites for Monte Carlo and predictive analysis.",
+        "User explicitly wants advanced-readiness planning surfaced."
+      ],
+      "exit_criteria": [
+        "Advanced gates explain what is missing before Monte Carlo, prediction, optimization, or final recommendation can be supported.",
+        "Unsupported capabilities remain unavailable actions.",
+        "No probabilistic or optimized output is generated."
+      ],
+      "validation_plan": [
+        "Run unsupported capability prompt tests.",
+        "Run readiness tests for missing target, insufficient rows, missing distributions, leakage-prone features, and absent validation strategy.",
+        "Verify frontend gate copy is concise and does not dominate completed brief or scenario results."
+      ]
+    }
+  ],
+  "final_synthesis_summary": {
+    "executive_summary": "The council rejects continuing the current microscopic phase roadmap as the organizing model. The next work should not be broad Phase 4 dataset-contract alignment. Dataset truth remains important, but only as a visible trust layer inside user-valued outcomes. The immediate roadmap should produce an Executive Decision Brief with Dataset Trust and export acceptance, then compound into a Visual Evidence Board, bounded Scenario Compare, executive-ready export pack, and advanced capability readiness gates. Every unit must create an obvious result a user can see, understand, export, and value.",
+    "strongest_proposal": "Outcome 1: Executive Decision Brief with Dataset Trust. It converts completed backend and frontend infrastructure into the first result the user is likely to recognize as business value: quantified evidence, decision frame, dataset trust, assumptions, caveats, allowed next actions, and exportable output.",
+    "main_tradeoff": "The project must preserve truthful capability boundaries while becoming much more visibly valuable. That means moving scenario comparison up only as direct-adjustment sensitivity analysis, not Monte Carlo or causal simulation, and narrowing dataset work so it supports trust in a decision result instead of becoming another hidden infrastructure phase.",
+    "decision_for_next_agent": "Do not start the old Phase 4 canonical active dataset frontend handoff unchanged. First update the active docs after user acceptance, then have Codex define Outcome 1 backend and contract truth for an Executive Decision Brief with Dataset Trust. Gemini should receive a new frontend handoff only after that contract is stable.",
+    "non_goals": [
+      "Do not implement fake Monte Carlo simulation.",
+      "Do not imply optimization, autonomous decisioning, causal inference, prediction, or final recommendations.",
+      "Do not continue adding hidden contract fields without a visible result.",
+      "Do not ask Gemini to infer backend synthesis in the frontend.",
+      "Do not treat build success, docs, or raw field rendering as completion."
+    ],
+    "handoff_notes": "If accepted, Codex should create or update the compounding-results roadmap docs, mark the old Phase 4 handoff as superseded or narrowed, and write a new Outcome 1 plan. The first Gemini prompt should be short and focused on rendering the backend-provided brief, dataset trust strip, and export path, not on broad app-wide dataset state refactoring."
+  },
+  "metadata": {
+    "created_by": "Codex emergency Agent Council simulation",
+    "schema_path": "project_docs/active/agent_council/council_output_schema.json",
+    "validator_path": "project_docs/active/agent_council/validate_council_json.py"
+  }
+}
