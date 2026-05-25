@@ -1,41 +1,33 @@
-# AI Hand-Off
+# AI Hand-Off Map
 
-This folder is the active coordination space for Codex and Gemini handoffs.
+This folder is only for active Codex-to-Gemini handoffs.
 
-Codex is the application organizer and backend owner. Codex owns backend logic, contracts, tests, architecture decisions, status documentation, and final coordination judgment. The user and Codex review Codex backend work together before accepting it as product truth.
+## Ownership
 
-Gemini owns frontend implementation. Gemini must do React, CSS, UI rendering, browser verification, and frontend build work unless the user explicitly authorizes Codex frontend edits in the current session.
+Codex owns backend truth, contracts, tests, architecture decisions, status documentation, cleanup planning, and final coordination.
+
+Gemini owns frontend implementation, React/CSS, UI rendering, browser verification, and frontend build work unless the user explicitly authorizes Codex frontend edits in the current session.
 
 ## Active Handoffs
 
-| Handoff | Owner | Status |
-| --- | --- | --- |
-| `phase_4_gemini_frontend_canonical_active_dataset.md` | Gemini frontend | Active next |
-| `phase_3_gemini_frontend_correction_and_ranked_evidence.md` | Gemini frontend | Complete |
-| `phase_2_5_gemini_frontend_segment_dimensions.md` | Gemini frontend | Complete |
+There is no active Gemini implementation handoff right now.
 
-## Rules
+The next Gemini handoff should be written only after Codex defines the backend/contract truth for the AI Chat decision output unification plan.
 
-Codex writes backend and contract truth first, then writes the Gemini handoff when frontend work is needed.
+Active rollout: `project_docs/active/decision_intelligence/current/ai_chat_decision_output_unification_rollout.md`
 
-Gemini must not change backend files. If Gemini finds missing backend behavior, Gemini should document it in the status docs and stop for Codex review.
+## Completed Or Superseded Records
 
-Gemini must preserve existing features and workflows. Do not hide, remove, downgrade, disable, de-scope, or retire visible capability unless the user explicitly approves it.
+| Record | Location |
+| --- | --- |
+| Phase 2.5 segment rendering handoff | `project_docs/active/decision_intelligence/completed/phase_2_5_gemini_frontend_segment_dimensions.md` |
+| Phase 3 correction and ranked evidence handoff | `project_docs/active/decision_intelligence/completed/phase_3_gemini_frontend_correction_and_ranked_evidence.md` |
+| Superseded Phase 4 dataset handoff | `project_docs/archive/superseded_active_2026_05_24/phase_4_gemini_frontend_canonical_active_dataset.md` |
 
-Codex has final say on sequencing and acceptance. Gemini implements the frontend slice described in the handoff, verifies it, and updates active status docs truthfully.
+## Handoff Rule
 
-## Codex Review Budget
+When frontend work is needed, Codex must write a focused Gemini handoff that names the files to inspect, the backend truth, the acceptance behavior, the constraints, and the status-doc requirement.
 
-When Codex reviews Gemini frontend work, keep the pass narrow:
+Do not make Gemini infer backend truth from raw contracts. Do not let Gemini invent backend APIs or silently change product scope.
 
-- Read the active handoff and status truth.
-- Inspect only changed frontend files named by the handoff or Gemini summary.
-- Use targeted searches for the specific contract fields under review.
-- Do not rerun the frontend build when Gemini already reported a successful build unless Codex finds a likely syntax/import defect or the user asks for build verification.
-- Do not turn acceptance review into a broad source audit or browser QA pass unless the handoff explicitly requires browser evidence and Gemini did not provide it.
-
-The output should be short: acceptance label first, only actionable findings, then a concise Gemini prompt if a fix is needed.
-
-## Historical Examples
-
-Historical handoff examples live under `project_docs/archive/ai_handoff_legacy/`. They are examples only. Do not treat archived wording as current truth.
+Previous full handoff README was preserved at `project_docs/archive/superseded_active_2026_05_24/ai_hand_off_README_pre_map_cleanup_2026_05_24.md`.
