@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import re
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
@@ -150,6 +151,51 @@ class DecisionWorkspaceService:
                 "generated_at": generated_at,
             },
             "warnings": warnings,
+        }
+
+    @staticmethod
+    def correct_workspace(payload: Dict[str, Any]) -> Dict[str, Any]:
+        payload = payload if isinstance(payload, dict) else {}
+        generated_at = iso_timestamp()
+        context = resolve_decision_context(
+            dataset=payload.get("dataset"),
+            dataset_ref=payload.get("dataset_ref") or payload.get("datasetRef"),
+            semantic_model=payload.get("semantic_model") or payload.get("semanticModel"),
+            source="decision_workspace_correction",
+        )
+        workspace = DecisionWorkspaceService._resolve_workspace_for_analysis(payload, context)
+        correction = DecisionWorkspaceService._normalize_correction_payload(payload)
+        corrected_workspace, correction_result = DecisionWorkspaceService._apply_workspace_correction(
+            workspace=workspace,
+            context=context,
+            correction=correction,
+            generated_at=generated_at,
+        )
+        readiness = corrected_workspace["readiness"]
+        trace = DecisionWorkspaceService._build_correction_trace(
+            correction=correction,
+            correction_result=correction_result,
+            generated_at=generated_at,
+        )
+
+        return {
+            "status": "success",
+            "contract_version": "di_2_0_v1",
+            "dataset": context["dataset"],
+            "semantic_model": build_semantic_summary(context["semantic_model"]),
+            "correction_result": correction_result,
+            "decision_workspace": corrected_workspace,
+            "decision_readiness": readiness,
+            "allowed_next_actions": list(readiness.get("allowed_next_actions") or []),
+            "trace": trace,
+            "meta": {
+                "intake_mode": ((corrected_workspace.get("drafting") or {}).get("intake_mode") or "structured"),
+                "relevant_metric_count": len(corrected_workspace["scoped_context"]["relevant_metrics"]),
+                "relevant_dimension_count": len(corrected_workspace["scoped_context"]["relevant_dimensions"]),
+                "unknown_count": len(corrected_workspace["unknowns"]),
+                "generated_at": generated_at,
+            },
+            "warnings": [],
         }
 
     @staticmethod
@@ -338,6 +384,453 @@ class DecisionWorkspaceService:
                 minimum=0,
                 maximum=DecisionWorkspaceService.MAX_SECONDARY_SIGNALS,
             ),
+        }
+
+    @staticmethod
+    def _normalize_correction_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
+        raw = payload.get("correction") if isinstance(payload.get("correction"), dict) else payload
+        correction_type = str(raw.get("correction_type") or raw.get("correctionType") or "").strip()
+        target_path = str(raw.get("target_path") or raw.get("targetPath") or "").strip()
+        if not correction_type:
+            raise DecisionServiceError("correction_type is required for decision workspace correction.")
+        if not target_path:
+            raise DecisionServiceError("target_path is required for decision workspace correction.")
+        replacement = raw.get("replacement")
+        if replacement is None and correction_type != "remove_mapping":
+            raise DecisionServiceError("replacement is required for decision workspace correction.")
+        if replacement is not None and not isinstance(replacement, (dict, bool, str, int, float)):
+            raise DecisionServiceError("replacement must be an object or scalar correction value.")
+
+        allowed_types = {
+            "objective_metric",
+            "objective_direction",
+            "time_horizon",
+            "lever_binding",
+            "lever_controllability",
+            "guardrail_binding",
+            "guardrail_condition",
+            "segment_dimension",
+            "remove_mapping",
+        }
+        if correction_type not in allowed_types:
+            raise DecisionServiceError(f"Unsupported correction_type: {correction_type}")
+
+        return {
+            "correction_type": correction_type,
+            "target_path": target_path,
+            "replacement": replacement,
+            "reason": DecisionWorkspaceService._clean_text(raw.get("reason")),
+        }
+
+    @staticmethod
+    def _apply_workspace_correction(
+        *,
+        workspace: Dict[str, Any],
+        context: Dict[str, Any],
+        correction: Dict[str, Any],
+        generated_at: str,
+    ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+        corrected = copy.deepcopy(workspace)
+        decision_scope = corrected.get("decision_scope") if isinstance(corrected.get("decision_scope"), dict) else {}
+        correction_type = correction["correction_type"]
+        target_path = correction["target_path"]
+        replacement = correction.get("replacement")
+        previous_value: Any = None
+        new_value: Any = None
+
+        if correction_type == "objective_metric":
+            objective = decision_scope.get("objective") if isinstance(decision_scope.get("objective"), dict) else {}
+            previous_value = objective.get("metric_ref")
+            raw_objective = {
+                **objective,
+                **DecisionWorkspaceService._metric_replacement_to_raw(replacement, context),
+            }
+            normalized_objective = DecisionWorkspaceService._normalize_objective(raw_objective, context)
+            decision_scope["objective"] = normalized_objective
+            new_value = normalized_objective.get("metric_ref")
+
+        elif correction_type == "objective_direction":
+            objective = decision_scope.get("objective") if isinstance(decision_scope.get("objective"), dict) else {}
+            previous_value = objective.get("direction")
+            direction = DecisionWorkspaceService._scalar_replacement(
+                replacement,
+                key="direction",
+                allowed={"maximize", "minimize", "maintain", "achieve_target"},
+            )
+            objective["direction"] = direction
+            decision_scope["objective"] = objective
+            new_value = direction
+
+        elif correction_type == "time_horizon":
+            objective = decision_scope.get("objective") if isinstance(decision_scope.get("objective"), dict) else {}
+            previous_value = objective.get("time_horizon")
+            objective["time_horizon"] = DecisionWorkspaceService._normalize_time_horizon(replacement)
+            decision_scope["objective"] = objective
+            new_value = objective.get("time_horizon")
+
+        elif correction_type == "lever_binding":
+            index = DecisionWorkspaceService._require_path_index(target_path, "levers")
+            levers = list(decision_scope.get("levers") or [])
+            if index >= len(levers):
+                raise DecisionServiceError(f"target_path points to missing lever index {index}.")
+            previous_value = (levers[index].get("binding") if isinstance(levers[index], dict) else None)
+            raw_lever = {**levers[index], "binding": DecisionWorkspaceService._binding_replacement_to_raw(replacement)}
+            levers[index] = DecisionWorkspaceService._normalize_lever(raw_lever, context, index)
+            decision_scope["levers"] = levers
+            new_value = levers[index].get("binding")
+
+        elif correction_type == "lever_controllability":
+            index = DecisionWorkspaceService._require_path_index(target_path, "levers")
+            levers = list(decision_scope.get("levers") or [])
+            if index >= len(levers):
+                raise DecisionServiceError(f"target_path points to missing lever index {index}.")
+            previous_value = bool(levers[index].get("controllable"))
+            levers[index]["controllable"] = DecisionWorkspaceService._bool_replacement(replacement, "controllable")
+            decision_scope["levers"] = levers
+            new_value = bool(levers[index].get("controllable"))
+
+        elif correction_type == "guardrail_binding":
+            constraints = list(decision_scope.get("constraints") or [])
+            index = DecisionWorkspaceService._path_index(target_path, "constraints")
+            if index is None:
+                raw_constraint = DecisionWorkspaceService._guardrail_replacement_to_raw(replacement)
+                constraints.append(DecisionWorkspaceService._normalize_constraint(raw_constraint, context, len(constraints)))
+                new_value = constraints[-1]
+            else:
+                if index >= len(constraints):
+                    raise DecisionServiceError(f"target_path points to missing constraint index {index}.")
+                previous_value = constraints[index].get("binding")
+                raw_constraint = {
+                    **constraints[index],
+                    "binding": DecisionWorkspaceService._binding_replacement_to_raw(replacement),
+                }
+                constraints[index] = DecisionWorkspaceService._normalize_constraint(raw_constraint, context, index)
+                new_value = constraints[index].get("binding")
+            decision_scope["constraints"] = constraints
+
+        elif correction_type == "guardrail_condition":
+            constraints = list(decision_scope.get("constraints") or [])
+            index = DecisionWorkspaceService._require_path_index(target_path, "constraints")
+            if index >= len(constraints):
+                raise DecisionServiceError(f"target_path points to missing constraint index {index}.")
+            previous_value = constraints[index].get("condition")
+            raw_constraint = {**constraints[index], "condition": replacement}
+            constraints[index] = DecisionWorkspaceService._normalize_constraint(raw_constraint, context, index)
+            decision_scope["constraints"] = constraints
+            new_value = constraints[index].get("condition")
+
+        elif correction_type == "segment_dimension":
+            segments = list(decision_scope.get("segment_dimensions") or [])
+            index = DecisionWorkspaceService._path_index(target_path, "segment_dimensions")
+            raw_segment = DecisionWorkspaceService._segment_replacement_to_raw(replacement)
+            if index is None:
+                segments.append(DecisionWorkspaceService._normalize_segment_dimension(raw_segment, context, len(segments)))
+                new_value = segments[-1]
+            else:
+                if index >= len(segments):
+                    raise DecisionServiceError(f"target_path points to missing segment index {index}.")
+                previous_value = segments[index]
+                merged_segment = {**segments[index], **raw_segment}
+                segments[index] = DecisionWorkspaceService._normalize_segment_dimension(merged_segment, context, index)
+                new_value = segments[index]
+            decision_scope["segment_dimensions"] = segments
+
+        elif correction_type == "remove_mapping":
+            previous_value, new_value = DecisionWorkspaceService._remove_workspace_mapping(decision_scope, target_path, context)
+
+        corrected["decision_scope"] = decision_scope
+        corrected = DecisionWorkspaceService._rebuild_corrected_workspace(
+            workspace=corrected,
+            context=context,
+            correction=correction,
+            generated_at=generated_at,
+        )
+        readiness = corrected.get("readiness") if isinstance(corrected.get("readiness"), dict) else {}
+        correction_result = {
+            "status": "applied",
+            "correction_type": correction_type,
+            "target_path": target_path,
+            "summary": DecisionWorkspaceService._build_correction_summary(
+                correction_type=correction_type,
+                target_path=target_path,
+                previous_value=previous_value,
+                new_value=new_value,
+            ),
+            "previous_value": previous_value,
+            "new_value": new_value,
+            "affected_readiness_fields": [
+                "status",
+                "unknowns",
+                "readiness.readiness_state",
+                "readiness.missing_inputs",
+                "readiness.allowed_next_actions",
+            ],
+            "readiness_state": readiness.get("readiness_state"),
+            "allowed_next_actions": list(readiness.get("allowed_next_actions") or []),
+        }
+        return corrected, correction_result
+
+    @staticmethod
+    def _rebuild_corrected_workspace(
+        *,
+        workspace: Dict[str, Any],
+        context: Dict[str, Any],
+        correction: Dict[str, Any],
+        generated_at: str,
+    ) -> Dict[str, Any]:
+        decision_scope = workspace.get("decision_scope") if isinstance(workspace.get("decision_scope"), dict) else {}
+        objective = decision_scope.get("objective") if isinstance(decision_scope.get("objective"), dict) else {}
+        levers = list(decision_scope.get("levers") or [])
+        segment_dimensions = list(decision_scope.get("segment_dimensions") or [])
+        constraints = list(decision_scope.get("constraints") or [])
+        existing_scoped_context = workspace.get("scoped_context") if isinstance(workspace.get("scoped_context"), dict) else {}
+        applied_filters = list(existing_scoped_context.get("applied_filters") or [])
+        scope_preferences = {
+            "max_candidate_metrics": DecisionWorkspaceService.DEFAULT_MAX_METRICS,
+            "max_candidate_dimensions": DecisionWorkspaceService.DEFAULT_MAX_DIMENSIONS,
+            "include_diagnostics": False,
+        }
+        scoped_context = DecisionWorkspaceService._build_scoped_context(
+            context=context,
+            objective=objective,
+            levers=levers,
+            segment_dimensions=segment_dimensions,
+            constraints=constraints,
+            applied_filters=applied_filters,
+            scope_preferences=scope_preferences,
+        )
+        assumptions = DecisionWorkspaceService._generate_assumptions(
+            objective=objective,
+            levers=levers,
+            constraints=constraints,
+            scoped_context=scoped_context,
+        )
+        unknowns = DecisionWorkspaceService._generate_unknowns(
+            objective=objective,
+            levers=levers,
+            constraints=constraints,
+        )
+        readiness = DecisionWorkspaceService._evaluate_readiness(
+            objective=objective,
+            levers=levers,
+            constraints=constraints,
+            unknowns=unknowns,
+        )
+        correction_history = list(workspace.get("correction_history") or [])
+        correction_history.append({
+            "correction_type": correction["correction_type"],
+            "target_path": correction["target_path"],
+            "reason": correction.get("reason"),
+            "applied_at": generated_at,
+        })
+
+        rebuilt = dict(workspace)
+        rebuilt.update({
+            "status": DecisionWorkspaceService._derive_workspace_status(readiness),
+            "title": DecisionWorkspaceService._generate_title(objective),
+            "scope_summary": DecisionWorkspaceService._generate_scope_summary(objective, levers, constraints),
+            "scoped_context": scoped_context,
+            "assumptions": assumptions,
+            "unknowns": unknowns,
+            "readiness": readiness,
+            "correction_history": correction_history,
+        })
+        return rebuilt
+
+    @staticmethod
+    def _path_index(target_path: str, collection_name: str) -> Optional[int]:
+        patterns = [
+            rf"decision_scope\.{re.escape(collection_name)}\[(\d+)\]",
+            rf"decision_scope\.{re.escape(collection_name)}\.(\d+)",
+        ]
+        for pattern in patterns:
+            match = re.search(pattern, target_path)
+            if match:
+                return int(match.group(1))
+        return None
+
+    @staticmethod
+    def _require_path_index(target_path: str, collection_name: str) -> int:
+        index = DecisionWorkspaceService._path_index(target_path, collection_name)
+        if index is None:
+            raise DecisionServiceError(f"target_path must identify decision_scope.{collection_name}[index].")
+        return index
+
+    @staticmethod
+    def _metric_replacement_to_raw(replacement: Any, context: Dict[str, Any]) -> Dict[str, Any]:
+        raw = replacement if isinstance(replacement, dict) else {"metric_id": replacement}
+        metric_id = raw.get("metric_id") or raw.get("metricId")
+        metric_name = raw.get("metric_name") or raw.get("metricName") or raw.get("name") or raw.get("label")
+        field = raw.get("field")
+        if field and not metric_id and not metric_name:
+            metric = DecisionWorkspaceService._find_metric_by_field(context, str(field))
+            if metric:
+                metric_id = metric.get("id")
+            else:
+                metric_name = field
+        return {
+            "metric_id": metric_id,
+            "metric_name": metric_name,
+            "semantic_binding_confidence": raw.get("semantic_binding_confidence"),
+            "semantic_binding_reason": raw.get("semantic_binding_reason") or "User correction replaced the objective metric binding.",
+            "semantic_role_source": raw.get("semantic_role_source") or "user_correction",
+            "semantic_role_warnings": list(raw.get("semantic_role_warnings") or []),
+        }
+
+    @staticmethod
+    def _binding_replacement_to_raw(replacement: Any) -> Dict[str, Any]:
+        raw = replacement if isinstance(replacement, dict) else {}
+        if not raw:
+            raise DecisionServiceError("binding replacement must be an object.")
+        return {
+            "metric_id": raw.get("metric_id") or raw.get("metricId"),
+            "metric_name": raw.get("metric_name") or raw.get("metricName") or raw.get("name"),
+            "dimension_id": raw.get("dimension_id") or raw.get("dimensionId"),
+            "dimension_name": raw.get("dimension_name") or raw.get("dimensionName"),
+            "field": raw.get("field"),
+            "semantic_binding_confidence": raw.get("semantic_binding_confidence"),
+            "semantic_binding_reason": raw.get("semantic_binding_reason") or "User correction replaced the semantic binding.",
+            "semantic_role_source": raw.get("semantic_role_source") or "user_correction",
+            "semantic_role_warnings": list(raw.get("semantic_role_warnings") or []),
+        }
+
+    @staticmethod
+    def _guardrail_replacement_to_raw(replacement: Any) -> Dict[str, Any]:
+        raw = replacement if isinstance(replacement, dict) else {}
+        if not raw:
+            raise DecisionServiceError("guardrail replacement must be an object.")
+        label = str(raw.get("label") or raw.get("name") or raw.get("metric_name") or raw.get("metric_id") or "Corrected guardrail").strip()
+        condition = raw.get("condition") if isinstance(raw.get("condition"), dict) else None
+        if condition is None:
+            condition = {
+                "operator": raw.get("operator") or "gte",
+                "value": raw.get("value"),
+                "secondary_value": raw.get("secondary_value"),
+                "values": raw.get("values"),
+                "unit": raw.get("unit"),
+                "value_status": raw.get("value_status") or ("parsed" if raw.get("value") is not None else "not_specified"),
+            }
+        return {
+            "label": label,
+            "description": raw.get("description"),
+            "constraint_type": raw.get("constraint_type") or "metric_guardrail",
+            "binding": DecisionWorkspaceService._binding_replacement_to_raw(raw),
+            "condition": condition,
+            "hardness": raw.get("hardness") or "hard",
+            "rationale": raw.get("rationale"),
+        }
+
+    @staticmethod
+    def _segment_replacement_to_raw(replacement: Any) -> Dict[str, Any]:
+        raw = replacement if isinstance(replacement, dict) else {}
+        if not raw:
+            raise DecisionServiceError("segment replacement must be an object.")
+        label = str(raw.get("label") or raw.get("name") or raw.get("dimension_name") or raw.get("dimension_id") or raw.get("field") or "").strip()
+        return {
+            "label": label,
+            "segment_role": raw.get("segment_role") or "segment",
+            "binding": DecisionWorkspaceService._binding_replacement_to_raw(raw),
+        }
+
+    @staticmethod
+    def _scalar_replacement(replacement: Any, key: str, allowed: set[str]) -> str:
+        value = replacement.get(key) if isinstance(replacement, dict) else replacement
+        normalized = str(value or "").strip()
+        if normalized not in allowed:
+            raise DecisionServiceError(f"{key} must be one of: {', '.join(sorted(allowed))}.")
+        return normalized
+
+    @staticmethod
+    def _bool_replacement(replacement: Any, key: str) -> bool:
+        value = replacement.get(key) if isinstance(replacement, dict) else replacement
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, str) and value.strip().lower() in {"true", "false"}:
+            return value.strip().lower() == "true"
+        raise DecisionServiceError(f"{key} must be a boolean correction value.")
+
+    @staticmethod
+    def _remove_workspace_mapping(
+        decision_scope: Dict[str, Any],
+        target_path: str,
+        context: Dict[str, Any],
+    ) -> Tuple[Any, Any]:
+        if "decision_scope.objective.metric_ref" in target_path:
+            objective = decision_scope.get("objective") if isinstance(decision_scope.get("objective"), dict) else {}
+            previous = objective.get("metric_ref")
+            raw_objective = {**objective, "metric_id": None, "metric_name": None}
+            raw_objective.pop("metric_ref", None)
+            decision_scope["objective"] = DecisionWorkspaceService._normalize_objective(raw_objective, context)
+            return previous, None
+
+        for collection_name in ("levers", "constraints", "segment_dimensions"):
+            index = DecisionWorkspaceService._path_index(target_path, collection_name)
+            if index is None:
+                continue
+            collection = list(decision_scope.get(collection_name) or [])
+            if index >= len(collection):
+                raise DecisionServiceError(f"target_path points to missing {collection_name} index {index}.")
+            previous = collection.pop(index)
+            decision_scope[collection_name] = collection
+            return previous, None
+
+        raise DecisionServiceError("remove_mapping target_path must point to objective.metric_ref, a lever, constraint, or segment_dimension.")
+
+    @staticmethod
+    def _build_correction_summary(
+        *,
+        correction_type: str,
+        target_path: str,
+        previous_value: Any,
+        new_value: Any,
+    ) -> str:
+        previous_label = DecisionWorkspaceService._display_value_label(previous_value) or "empty"
+        new_label = DecisionWorkspaceService._display_value_label(new_value) or "empty"
+        return f"Applied {correction_type} correction at {target_path}: {previous_label} -> {new_label}."
+
+    @staticmethod
+    def _display_value_label(value: Any) -> Optional[str]:
+        if isinstance(value, dict):
+            if not value:
+                return None
+            for key in ("label", "name", "field", "metric_id", "dimension_id", "status"):
+                if value.get(key):
+                    return str(value.get(key))
+            metric_ref = value.get("metric_ref") if isinstance(value.get("metric_ref"), dict) else {}
+            dimension_ref = value.get("dimension_ref") if isinstance(value.get("dimension_ref"), dict) else {}
+            return (
+                DecisionWorkspaceService._display_value_label(metric_ref)
+                or DecisionWorkspaceService._display_value_label(dimension_ref)
+            )
+        if value is None:
+            return None
+        return str(value)
+
+    @staticmethod
+    def _build_correction_trace(
+        *,
+        correction: Dict[str, Any],
+        correction_result: Dict[str, Any],
+        generated_at: str,
+    ) -> Dict[str, Any]:
+        new_value = correction_result.get("new_value")
+        trace_source = new_value if isinstance(new_value, dict) else {}
+        semantic_confidence = trace_source.get("semantic_binding_confidence")
+        if semantic_confidence is None and isinstance(trace_source.get("binding"), dict):
+            semantic_confidence = trace_source["binding"].get("semantic_binding_confidence")
+        warnings = list(trace_source.get("semantic_role_warnings") or [])
+        if isinstance(trace_source.get("binding"), dict):
+            warnings.extend(list(trace_source["binding"].get("semantic_role_warnings") or []))
+        return {
+            "source": "user_correction",
+            "timestamp": generated_at,
+            "correction_type": correction["correction_type"],
+            "target_path": correction["target_path"],
+            "reason": correction.get("reason"),
+            "semantic_confidence": semantic_confidence,
+            "warnings": DecisionWorkspaceService._dedupe_strings(warnings),
+            "unresolved_mappings": [],
+            "observational_boundary": "observational_analysis_only",
         }
 
     @staticmethod
@@ -2010,6 +2503,7 @@ class DecisionWorkspaceService:
             "unknowns": unknowns,
             "readiness": readiness,
             "drafting": drafting,
+            "correction_history": list(workspace.get("correction_history") or []),
             "created_at": workspace.get("created_at") or iso_timestamp(),
         }
 
@@ -2024,6 +2518,11 @@ class DecisionWorkspaceService:
         scoped_diagnostics = DecisionWorkspaceService._build_scoped_diagnostics(
             context=context,
             workspace=workspace,
+            generated_at=generated_at,
+        )
+        ranked_diagnostics = DecisionWorkspaceService._build_ranked_observational_diagnostics(
+            workspace=workspace,
+            scoped_diagnostics=scoped_diagnostics,
             generated_at=generated_at,
         )
         legacy_diagnostics, legacy_warnings = DecisionWorkspaceService._build_secondary_legacy_diagnostics(
@@ -2052,8 +2551,10 @@ class DecisionWorkspaceService:
                 ),
                 "truthfulness_note": "This response is descriptive and scope-grounded. It is not a simulation or trade-off result.",
                 "scoped_diagnostics": scoped_diagnostics,
+                "ranked_diagnostics": ranked_diagnostics,
                 "legacy_diagnostics": legacy_diagnostics,
                 "notes": notes,
+                "observational_boundary": "observational_analysis_only",
                 "generated_at": generated_at,
             },
             legacy_warnings,
@@ -2149,6 +2650,187 @@ class DecisionWorkspaceService:
             )
 
         return diagnostics
+
+    @staticmethod
+    def _build_ranked_observational_diagnostics(
+        *,
+        workspace: Dict[str, Any],
+        scoped_diagnostics: Sequence[Dict[str, Any]],
+        generated_at: str,
+    ) -> List[Dict[str, Any]]:
+        ranked: List[Dict[str, Any]] = []
+        for diagnostic in scoped_diagnostics:
+            rank_features = DecisionWorkspaceService._score_observational_diagnostic(workspace, diagnostic)
+            limitations = DecisionWorkspaceService._diagnostic_limitations(workspace, diagnostic, rank_features)
+            ranked.append(
+                {
+                    "diagnostic_id": diagnostic.get("diagnostic_id"),
+                    "diagnostic_type": diagnostic.get("diagnostic_type"),
+                    "status": diagnostic.get("status"),
+                    "summary": diagnostic.get("summary"),
+                    "source_diagnostic": diagnostic,
+                    "focus_role": diagnostic.get("focus_role"),
+                    "role_tags": list(diagnostic.get("role_tags") or []),
+                    "metric_ref": diagnostic.get("metric_ref"),
+                    "time_context": diagnostic.get("time_context"),
+                    "period_context": diagnostic.get("period_context"),
+                    "evidence": diagnostic.get("evidence"),
+                    "relevance_score": rank_features["relevance_score"],
+                    "evidence_strength": rank_features["evidence_strength"],
+                    "semantic_coverage": DecisionWorkspaceService._build_semantic_coverage(workspace, diagnostic),
+                    "data_sufficiency": rank_features["data_sufficiency"],
+                    "limitations": limitations,
+                    "observational_boundary": "observational_analysis_only",
+                    "generated_at": generated_at,
+                }
+            )
+
+        ranked.sort(
+            key=lambda item: (
+                -float(item.get("relevance_score") or 0.0),
+                {"strong": 3, "moderate": 2, "weak": 1, "insufficient": 0}.get(item.get("evidence_strength"), 0) * -1,
+                str(item.get("diagnostic_id") or ""),
+            )
+        )
+        for index, diagnostic in enumerate(ranked, start=1):
+            diagnostic["evidence_rank"] = index
+        return ranked
+
+    @staticmethod
+    def _score_observational_diagnostic(
+        workspace: Dict[str, Any],
+        diagnostic: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        role_tags = set(diagnostic.get("role_tags") or [])
+        role_weight = 0.45
+        if "objective" in role_tags:
+            role_weight = 0.96
+        elif "constraint" in role_tags:
+            role_weight = 0.88
+        elif "lever" in role_tags:
+            role_weight = 0.78
+        elif "context" in role_tags:
+            role_weight = 0.58
+
+        status = diagnostic.get("status")
+        evidence = diagnostic.get("evidence") if isinstance(diagnostic.get("evidence"), dict) else {}
+        row_count = evidence.get("row_count")
+        try:
+            row_count_float = float(row_count or 0)
+        except (TypeError, ValueError):
+            row_count_float = 0.0
+
+        if status == "observed_change" and row_count_float >= 2:
+            evidence_strength = "strong"
+            evidence_weight = 1.0
+        elif status == "observed_change":
+            evidence_strength = "moderate"
+            evidence_weight = 0.74
+        elif status == "insufficient_history":
+            evidence_strength = "weak"
+            evidence_weight = 0.38
+        else:
+            evidence_strength = "insufficient"
+            evidence_weight = 0.18
+
+        readiness = workspace.get("readiness") if isinstance(workspace.get("readiness"), dict) else {}
+        readiness_weight = 1.0 if readiness.get("readiness_state") == "analysis_ready" else 0.72
+        relevance_score = round(min(1.0, (role_weight * 0.58) + (evidence_weight * 0.32) + (readiness_weight * 0.10)), 2)
+
+        return {
+            "relevance_score": relevance_score,
+            "evidence_strength": evidence_strength,
+            "data_sufficiency": {
+                "status": "sufficient" if evidence_strength in {"strong", "moderate"} else "limited",
+                "row_count": row_count,
+                "has_period_comparison": status == "observed_change",
+            },
+        }
+
+    @staticmethod
+    def _build_semantic_coverage(workspace: Dict[str, Any], diagnostic: Dict[str, Any]) -> Dict[str, Any]:
+        decision_scope = workspace.get("decision_scope") if isinstance(workspace.get("decision_scope"), dict) else {}
+        metric_ref = diagnostic.get("metric_ref") if isinstance(diagnostic.get("metric_ref"), dict) else {}
+        metric_id = metric_ref.get("metric_id")
+        coverage = {
+            "objective": False,
+            "levers": [],
+            "guardrails": [],
+            "segments": [],
+            "temporal": bool(diagnostic.get("time_context")),
+            "semantic_confidences": [],
+        }
+
+        objective = decision_scope.get("objective") if isinstance(decision_scope.get("objective"), dict) else {}
+        objective_ref = objective.get("metric_ref") if isinstance(objective.get("metric_ref"), dict) else {}
+        if objective_ref.get("metric_id") == metric_id:
+            coverage["objective"] = True
+            if objective.get("semantic_binding_confidence") is not None:
+                coverage["semantic_confidences"].append(objective.get("semantic_binding_confidence"))
+
+        for lever in decision_scope.get("levers") or []:
+            binding = lever.get("binding") if isinstance(lever.get("binding"), dict) else {}
+            bound_metric = binding.get("metric_ref") if isinstance(binding.get("metric_ref"), dict) else {}
+            if bound_metric.get("metric_id") == metric_id:
+                coverage["levers"].append({
+                    "lever_id": lever.get("lever_id"),
+                    "label": lever.get("label"),
+                    "semantic_binding_confidence": binding.get("semantic_binding_confidence"),
+                })
+                if binding.get("semantic_binding_confidence") is not None:
+                    coverage["semantic_confidences"].append(binding.get("semantic_binding_confidence"))
+
+        for constraint in decision_scope.get("constraints") or []:
+            binding = constraint.get("binding") if isinstance(constraint.get("binding"), dict) else {}
+            bound_metric = binding.get("metric_ref") if isinstance(binding.get("metric_ref"), dict) else {}
+            if bound_metric.get("metric_id") == metric_id:
+                coverage["guardrails"].append({
+                    "constraint_id": constraint.get("constraint_id"),
+                    "label": constraint.get("label"),
+                    "condition": constraint.get("condition"),
+                    "semantic_binding_confidence": binding.get("semantic_binding_confidence"),
+                })
+                if binding.get("semantic_binding_confidence") is not None:
+                    coverage["semantic_confidences"].append(binding.get("semantic_binding_confidence"))
+
+        for segment in decision_scope.get("segment_dimensions") or []:
+            binding = segment.get("binding") if isinstance(segment.get("binding"), dict) else {}
+            dimension_ref = binding.get("dimension_ref") if isinstance(binding.get("dimension_ref"), dict) else {}
+            coverage["segments"].append({
+                "segment_id": segment.get("segment_id"),
+                "label": segment.get("label"),
+                "dimension_ref": dimension_ref or None,
+                "semantic_binding_confidence": binding.get("semantic_binding_confidence"),
+            })
+            if binding.get("semantic_binding_confidence") is not None:
+                coverage["semantic_confidences"].append(binding.get("semantic_binding_confidence"))
+
+        coverage["semantic_confidences"] = [
+            round(float(value), 2)
+            for value in coverage["semantic_confidences"]
+            if value is not None
+        ]
+        return coverage
+
+    @staticmethod
+    def _diagnostic_limitations(
+        workspace: Dict[str, Any],
+        diagnostic: Dict[str, Any],
+        rank_features: Dict[str, Any],
+    ) -> List[str]:
+        limitations: List[str] = []
+        readiness = workspace.get("readiness") if isinstance(workspace.get("readiness"), dict) else {}
+        if readiness.get("readiness_state") != "analysis_ready":
+            limitations.append("The decision frame is not structurally ready; evidence is descriptive only.")
+        if rank_features.get("evidence_strength") in {"weak", "insufficient"}:
+            limitations.append("The dataset did not provide strong period-over-period evidence for this diagnostic.")
+        if diagnostic.get("status") == "metric_unavailable":
+            limitations.append("The scoped semantic metric was not available in the current semantic model.")
+        metric_ref = diagnostic.get("metric_ref") if isinstance(diagnostic.get("metric_ref"), dict) else {}
+        warnings = list(metric_ref.get("semantic_role_warnings") or [])
+        limitations.extend(warnings)
+        limitations.append("This ranking is diagnostic relevance only; it is not a recommended action order.")
+        return DecisionWorkspaceService._dedupe_strings(limitations)
 
     @staticmethod
     def _collect_scoped_metric_refs(workspace: Dict[str, Any]) -> List[Dict[str, Any]]:

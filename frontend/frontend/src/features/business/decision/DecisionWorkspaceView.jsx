@@ -1,5 +1,6 @@
 import React from 'react';
 import Typography from '@mui/material/Typography';
+import Chip from '@mui/material/Chip';
 import {
   FaCircleCheck, FaCircleExclamation, FaTriangleExclamation, FaCircleInfo,
   FaGears, FaShieldHalved, FaChartLine, FaLayerGroup, FaPlus, FaCalendarDays, FaFileLines, FaClock,
@@ -92,6 +93,129 @@ const ScopedDiagnosticCard = ({ diagnostic }) => {
       </div>
       <div className="diagnostic-summary">{summary}</div>
       {renderEvidence()}
+    </div>
+  );
+};
+
+/**
+ * RankedEvidenceCard
+ *
+ * Renders a high-fidelity ranked observational diagnostic item.
+ * Surfaces evidence strength, relevance, and data sufficiency.
+ */
+const RankedEvidenceCard = ({ rd }) => {
+  const {
+    evidence_rank,
+    relevance_score,
+    evidence_strength,
+    data_sufficiency,
+    limitations,
+    source_diagnostic,
+    semantic_coverage
+  } = rd;
+
+  const headline = source_diagnostic?.headline || source_diagnostic?.title || 'Observational Evidence';
+  const summary = source_diagnostic?.summary || source_diagnostic?.description;
+
+  const getLabel = (item) => {
+    if (!item) return '';
+    if (typeof item === 'string') return item;
+    return item.label || item.lever_id || item.constraint_id || item.segment_id || item.dimension_ref?.label || item.dimension_ref?.field || 'Unknown item';
+  };
+
+  return (
+    <div className={`ranked-evidence-card strength--${evidence_strength}`}>
+      <div className="evidence-rank-badge">{evidence_rank}</div>
+      <div className="evidence-content">
+        <div className="evidence-header">
+          <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>{headline}</Typography>
+          <div className="evidence-badges">
+            <span className={`strength-tag is-${evidence_strength}`}>{evidence_strength} Evidence</span>
+            {relevance_score !== undefined && (
+              <span className="relevance-tag">{(relevance_score * 100).toFixed(0)}% Relevance</span>
+            )}
+          </div>
+        </div>
+
+        {summary && <Typography variant="body2" className="evidence-summary">{summary}</Typography>}
+
+        {semantic_coverage && (
+          <div className="evidence-coverage" style={{ marginBottom: '16px', padding: '12px', background: 'rgba(0, 102, 255, 0.03)', borderRadius: '8px', border: '1px solid rgba(0, 102, 255, 0.05)' }}>
+            <Typography variant="overline" sx={{ fontWeight: 900, opacity: 0.5, display: 'block', mb: 1, letterSpacing: '0.1em' }}>
+              Semantic Coverage
+            </Typography>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px 24px' }}>
+              <div className="coverage-item">
+                <label style={{ fontSize: '0.65rem', fontWeight: 900, opacity: 0.4, textTransform: 'uppercase', display: 'block' }}>Core</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                  <Chip
+                    label="Objective"
+                    size="small"
+                    variant={semantic_coverage.objective ? "filled" : "outlined"}
+                    sx={{
+                      height: '20px',
+                      fontSize: '0.7rem',
+                      fontWeight: 700,
+                      bgcolor: semantic_coverage.objective ? 'var(--accent-blue)' : 'transparent',
+                      color: semantic_coverage.objective ? 'white' : 'inherit',
+                      opacity: semantic_coverage.objective ? 1 : 0.3
+                    }}
+                  />
+                  {semantic_coverage.temporal && (
+                    <Chip
+                      label="Temporal"
+                      size="small"
+                      sx={{ height: '20px', fontSize: '0.7rem', fontWeight: 700, bgcolor: 'rgba(0,0,0,0.05)' }}
+                    />
+                  )}
+                </div>
+              </div>
+
+              {(semantic_coverage.levers?.length > 0 || semantic_coverage.segments?.length > 0 || semantic_coverage.guardrails?.length > 0) && (
+                <div className="coverage-item">
+                  <label style={{ fontSize: '0.65rem', fontWeight: 900, opacity: 0.4, textTransform: 'uppercase', display: 'block' }}>Scope Covered</label>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
+                    {semantic_coverage.levers?.map((l, i) => <Chip key={i} label={getLabel(l)} size="small" variant="outlined" sx={{ height: '18px', fontSize: '0.65rem', fontWeight: 600, borderStyle: 'dashed' }} />)}
+                    {semantic_coverage.segments?.map((s, i) => <Chip key={i} label={getLabel(s)} size="small" variant="outlined" sx={{ height: '18px', fontSize: '0.65rem', fontWeight: 600, bgcolor: 'rgba(0,0,0,0.03)' }} />)}
+                    {semantic_coverage.guardrails?.map((g, i) => <Chip key={i} label={getLabel(g)} size="small" variant="outlined" sx={{ height: '18px', fontSize: '0.65rem', fontWeight: 600, color: '#f59e0b' }} />)}
+                  </div>
+                </div>
+              )}
+
+              {Array.isArray(semantic_coverage.semantic_confidences) && semantic_coverage.semantic_confidences.length > 0 && (
+                <div className="coverage-item">
+                  <label style={{ fontSize: '0.65rem', fontWeight: 900, opacity: 0.4, textTransform: 'uppercase', display: 'block' }}>Confidences</label>
+                  <div style={{ display: 'flex', gap: '12px', marginTop: '4px' }}>
+                    {semantic_coverage.semantic_confidences.map((v, i) => (
+                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <span style={{ fontSize: '0.65rem', fontWeight: 900, color: v > 0.8 ? 'var(--accent-green)' : v > 0.5 ? 'var(--accent-blue)' : '#f59e0b' }}>
+                          {(v * 100).toFixed(0)}%
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        <div className="evidence-meta">
+
+          {data_sufficiency?.status && (
+            <div className="meta-item">
+              <label>Data Sufficiency</label>
+              <span className={`status--${data_sufficiency.status}`}>{data_sufficiency.status}</span>
+            </div>
+          )}
+          {limitations?.length > 0 && (
+            <div className="meta-item limitations">
+              <label>Limitations</label>
+              <span>{limitations.join(' • ')}</span>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 };
@@ -623,6 +747,26 @@ const DecisionWorkspaceView = ({ workspace, analysis, onCreateNew, onAnalyze, se
           </div>
 
           <div className="analysis-grid" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '32px' }}>
+            {/* Ranked Observational Evidence: Phase 3 */}
+            {analysis.ranked_diagnostics?.length > 0 && (
+              <section className="analysis-section--ranked">
+                <h4 className="section-label" style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)' }}>
+                  <FaScaleBalanced /> Ranked Observational Evidence
+                </h4>
+                <div className="ranked-evidence-list">
+                  {analysis.ranked_diagnostics.map((rd, idx) => (
+                    <RankedEvidenceCard key={idx} rd={rd} />
+                  ))}
+                </div>
+                {analysis.observational_boundary && (
+                  <div className="analysis-notice" style={{ marginTop: '16px', opacity: 0.6, fontSize: '0.75rem' }}>
+                    <FaShieldHalved style={{ marginRight: '6px' }} />
+                    Ranking is by diagnostic relevance only. This is not a recommended action order or causal projection.
+                  </div>
+                )}
+              </section>
+            )}
+
             {/* Scoped Diagnostics: Primary Area */}
             <section className="analysis-section--primary">
               <h4 className="section-label" style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--accent-blue)' }}>

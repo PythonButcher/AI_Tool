@@ -36,6 +36,23 @@ Codex should default to:
 - backend validation for Gemini handoff
 - markdown coordination inside `project_docs/active/`
 
+## Gemini Frontend Review Fast Path
+
+When the user asks Codex to review Gemini frontend work, Codex should do an acceptance review, not a fresh implementation audit.
+
+Default review budget:
+
+- Read only `project_docs/INDEX.md`, `project_docs/active/README.md`, this guardrail, the active status file, and the active Gemini handoff.
+- Inspect only the frontend files named by the handoff or Gemini summary.
+- Prefer one targeted `rg` query and one focused diff over full-file reads.
+- Do not run a frontend build if Gemini already reports a successful build and the review question is contract shape, documentation truth, or a small visual/rendering mismatch.
+- Run `git diff --check` only when whitespace, generated diffs, or final acceptance is part of the question.
+- Run `npm --prefix frontend\frontend run build` only when Codex finds a likely syntax/import error, Gemini did not report a build, or the user explicitly asks for build verification.
+
+Escalate beyond that budget only when the first pass finds a concrete blocker that cannot be classified from the targeted evidence. If escalating, say why in one short sentence before running more tools.
+
+For Gemini-review answers, start with one of these exact acceptance labels: `Complete`, `Not complete`, or `Complete except for documentation cleanup.` Then list only findings that change the next action. If Gemini needs to fix something, end with a short paste-ready Gemini prompt.
+
 ## Why This Exists
 
 This guardrail exists because frontend ownership for this initiative belongs to Gemini, and Codex should support that flow without invading the UI implementation lane.

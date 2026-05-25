@@ -422,6 +422,11 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspa
         // Backend now sends decision_kickoff as an object
         const isKickoff = !!wp.decision_kickoff;
 
+        // Phase 3: Check for additive correction_result in workspace_preview
+        const hasCorrection = !!wp.correction_result;
+        const cr_res = wp.correction_result;
+        const cr_trace = wp.trace;
+
         // Helper to format object arrays into SemanticRef components
         const renderSemanticList = (items, type) => {
           if (!Array.isArray(items) || items.length === 0) return <Typography variant="body2" sx={{ opacity: 0.5 }}>Not specified</Typography>;
@@ -459,6 +464,87 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspa
           <div className={`${baseClass} is-workspace_preview`}>
             <div className="ai-shell__artifact-content">
               {isInspector && renderArtifactExportBar(artifact, lookupSessionState, lookupCapabilityState, lookupDecisionReadiness)}
+              {/* Phase 3: Render Correction if present */}
+              {hasCorrection && (
+                <div className="ai-shell__correction-container" style={{ marginBottom: '32px', padding: '16px', background: 'rgba(0, 102, 255, 0.03)', borderRadius: '12px', border: '1px solid rgba(0, 102, 255, 0.1)' }}>
+                  <header style={{ marginBottom: '16px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                      <Typography variant="overline" sx={{ fontWeight: 900, opacity: 0.5 }}>
+                        Correction Applied
+                      </Typography>
+                      {cr_res?.readiness_state && (
+                        <Chip
+                          label={cr_res.readiness_state.replace('_', ' ')}
+                          size="small"
+                          sx={{
+                            height: '18px',
+                            fontSize: '0.65rem',
+                            fontWeight: 900,
+                            textTransform: 'uppercase',
+                            bgcolor: cr_res.readiness_state === 'analysis_ready' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(245, 158, 11, 0.1)',
+                            color: cr_res.readiness_state === 'analysis_ready' ? 'var(--accent-green)' : '#f59e0b',
+                            border: '1px solid currentColor'
+                          }}
+                        />
+                      )}
+                    </div>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>
+                      {cr_res?.summary || 'Workspace mapping updated'}
+                    </Typography>
+                  </header>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '100px 1fr', gap: '8px', fontSize: '0.8rem', marginBottom: '16px' }}>
+                    <Typography variant="caption" sx={{ fontWeight: 800, opacity: 0.5 }}>TARGET</Typography>
+                    <Typography variant="caption" sx={{ fontFamily: 'monospace' }}>{cr_res?.target_path}</Typography>
+                    <Typography variant="caption" sx={{ fontWeight: 800, opacity: 0.5 }}>PREVIOUS</Typography>
+                    <Typography variant="caption" sx={{ opacity: 0.6 }}>{typeof cr_res?.previous_value === 'object' ? JSON.stringify(cr_res.previous_value) : String(cr_res?.previous_value || 'None')}</Typography>
+                    <Typography variant="caption" sx={{ fontWeight: 800, opacity: 0.5, color: 'var(--accent-blue)' }}>NEW VALUE</Typography>
+                    <Typography variant="caption" sx={{ fontWeight: 700 }}>{typeof cr_res?.new_value === 'object' ? JSON.stringify(cr_res.new_value) : String(cr_res?.new_value)}</Typography>
+                  </div>
+
+                  {cr_trace && (
+                    <div style={{ borderTop: '1px solid rgba(0,0,0,0.05)', paddingTop: '12px' }}>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginBottom: '8px' }}>
+                        {cr_trace.semantic_confidence !== undefined && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <Typography variant="caption" sx={{ fontWeight: 800, opacity: 0.4 }}>CONFIDENCE</Typography>
+                            <Typography variant="caption" sx={{ fontWeight: 700 }}>{(cr_trace.semantic_confidence * 100).toFixed(0)}%</Typography>
+                          </div>
+                        )}
+                        {cr_trace.source && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <Typography variant="caption" sx={{ fontWeight: 800, opacity: 0.4 }}>SOURCE</Typography>
+                            <Typography variant="caption" sx={{ fontWeight: 700 }}>{cr_trace.source.toUpperCase()}</Typography>
+                          </div>
+                        )}
+                        {cr_trace.observational_boundary && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <Typography variant="caption" sx={{ fontWeight: 800, opacity: 0.4 }}>BOUNDARY</Typography>
+                            <Typography variant="caption" sx={{ fontWeight: 700, color: 'var(--accent-blue)' }}>{cr_trace.observational_boundary.replace('_', ' ').toUpperCase()}</Typography>
+                          </div>
+                        )}
+                      </div>
+
+                      {cr_trace.warnings?.length > 0 && (
+                        <div style={{ marginTop: '8px' }}>
+                          {cr_trace.warnings.map((w, i) => (
+                            <Typography key={i} variant="caption" sx={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#f59e0b', fontWeight: 600, mb: 0.5 }}>
+                              <FaExclamationTriangle size={10} /> {w}
+                            </Typography>
+                          ))}
+                        </div>
+                      )}
+
+                      {cr_trace.timestamp && (
+                        <Typography variant="caption" sx={{ display: 'block', mt: 1, opacity: 0.3, fontSize: '0.65rem', textAlign: 'right' }}>
+                          Applied at {new Date(cr_trace.timestamp).toLocaleTimeString()}
+                        </Typography>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {isKickoff ? (
                 <div className="ai-shell__kickoff-container">
                   <header className="ai-shell__kickoff-header" style={{ marginBottom: '24px' }}>
@@ -672,11 +758,74 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspa
 
       case 'workspace_analysis_summary':
         const hasItems = content?.items && content.items.length > 0;
+        const rankedDiagnostics = content?.ranked_diagnostics || [];
+        const obsBoundary = content?.observational_boundary || content?.workspace_analysis?.observational_boundary;
+
         return (
           <div className={`${baseClass} is-workspace_analysis_summary`}>
             <div className="ai-shell__artifact-content">
               {isInspector && renderArtifactExportBar(artifact, lookupSessionState, lookupCapabilityState, lookupDecisionReadiness)}
-              {hasItems ? (
+
+              {rankedDiagnostics.length > 0 ? (
+                <div className="ai-shell__ranked-diagnostics" style={{ marginBottom: '32px' }}>
+                  <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                    <Typography variant="overline" sx={{ fontWeight: 900, opacity: 0.5 }}>Ranked Observational Evidence</Typography>
+                    {obsBoundary && (
+                      <span style={{ fontSize: '0.65rem', fontWeight: 900, textTransform: 'uppercase', padding: '2px 8px', borderRadius: '4px', background: 'rgba(0, 102, 255, 0.05)', color: 'var(--accent-blue)', border: '1px solid var(--accent-blue)' }}>
+                        Observational Only
+                      </span>
+                    )}
+                  </header>
+                  <div className="ai-shell__analysis-list">
+                    {rankedDiagnostics.map((rd, i) => (
+                      <div key={i} className="ai-shell__analysis-item" style={{ marginBottom: '20px', padding: '16px', background: 'var(--bg-secondary)', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '8px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ width: '24px', height: '24px', borderRadius: '50%', background: 'var(--text-primary)', color: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 900 }}>
+                              {rd.evidence_rank || (i + 1)}
+                            </span>
+                            <Typography variant="body2" sx={{ fontWeight: 800 }}>
+                              {rd.source_diagnostic?.headline || rd.source_diagnostic?.title || 'Observational Diagnostic'}
+                            </Typography>
+                          </div>
+                          <div className={`ai-shell__strength-badge is-${rd.evidence_strength}`} style={{ fontSize: '0.7rem', fontWeight: 800, padding: '2px 8px', borderRadius: '4px', border: '1px solid currentColor', opacity: 0.8 }}>
+                            {rd.evidence_strength?.toUpperCase()}
+                          </div>
+                        </div>
+
+                        <Typography variant="caption" sx={{ display: 'block', mb: 1.5, opacity: 0.8, lineHeight: 1.4 }}>
+                          {rd.source_diagnostic?.summary || rd.source_diagnostic?.description}
+                        </Typography>
+
+                        <div className="ai-shell__rd-meta" style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', borderTop: '1px solid rgba(0,0,0,0.05)', paddingTop: '12px' }}>
+                          {rd.relevance_score !== undefined && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <Typography variant="caption" sx={{ fontWeight: 800, opacity: 0.4 }}>RELEVANCE</Typography>
+                              <Typography variant="caption" sx={{ fontWeight: 700 }}>{(rd.relevance_score * 100).toFixed(0)}%</Typography>
+                            </div>
+                          )}
+                          {rd.data_sufficiency?.status && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <Typography variant="caption" sx={{ fontWeight: 800, opacity: 0.4 }}>DATA</Typography>
+                              <Typography variant="caption" sx={{ fontWeight: 700, color: rd.data_sufficiency.status === 'sufficient' ? 'var(--accent-green)' : '#f59e0b' }}>
+                                {rd.data_sufficiency.status.toUpperCase()}
+                              </Typography>
+                            </div>
+                          )}
+                        </div>
+
+                        {rd.limitations?.length > 0 && (
+                          <div style={{ marginTop: '12px', padding: '8px', background: 'rgba(0,0,0,0.03)', borderRadius: '6px' }}>
+                            <Typography variant="caption" sx={{ fontStyle: 'italic', opacity: 0.6 }}>
+                              Limitations: {rd.limitations.join(' • ')}
+                            </Typography>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : hasItems ? (
                 <div className="ai-shell__analysis-list">
                   <Typography variant="overline" sx={{ fontWeight: 900, mb: 2, display: 'block', opacity: 0.5 }}>Diagnostic Breakdown {artMode ? `• ${artMode.toUpperCase()}` : ''}</Typography>
                   {content.items.map((item, i) => {
