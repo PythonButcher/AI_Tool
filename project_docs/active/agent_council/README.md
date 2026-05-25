@@ -32,6 +32,8 @@ Current topic folders:
 
 `project_docs/active/agent_council/outputs/application-next-focus-priorities/`
 
+`project_docs/active/agent_council/outputs/compounding-phase-results/`
+
 ## Setup Summary
 
 The reusable setup now consists of an agent role definition, master council prompt, strict JSON schema, realistic sample output, usage documentation, output registry, and dependency-free validator. The framework is linked from `project_docs/INDEX.md` and `project_docs/active/status/decision_intelligence_execution_status.md`, and live outputs are stored under `project_docs/active/agent_council/outputs/`.
@@ -47,6 +49,12 @@ Before running the council, the orchestrating agent should inspect the current a
 Then paste `project_docs/active/agent_council/master_council_prompt.md` into the AI system that will simulate or coordinate the agents. Add the specific planning topic after the prompt in plain language. The council should run four rounds: independent proposals, critique, reconciliation, and final JSON synthesis.
 
 The output should be saved as JSON inside a topic folder. Use a topic slug and date-based filename inside `project_docs/active/agent_council/outputs/<topic-slug>/`. If the council creates an implementation handoff, save that handoff in the same topic folder.
+
+## Current Emergency Council Topic
+
+The active emergency topic is documented at `project_docs/active/agent_council/outputs/compounding-phase-results/README.md`.
+
+It asks the council to restructure the current Decision Intelligence roadmap around compounding, obvious product results because the current Codex/Gemini phase flow has produced too many microscopic outcomes that are hard for the user to see or trust.
 
 ## Good First Council Topic
 

@@ -1,0 +1,1189 @@
+{
+  "schema_version": "agent-council-output/v1",
+  "council_id": "application-structure-decision-dashboard-2026-05-23",
+  "generated_at": "2026-05-23T04:45:00Z",
+  "project_context": {
+    "project_name": "AI_Tool",
+    "current_workstream": "Decision Intelligence V3 application restructuring",
+    "planning_topic": "Create a clearer dashboard-style Decision Intelligence application structure with practical user-built decision assets.",
+    "context_summary": "The prior compounding-results council rejected a microscopic phase roadmap centered on hidden fields, readiness labels, repeated prompt text, and low-value internal structures. It recommended visible outcomes: Executive Decision Brief with Dataset Trust, Visual Evidence Board and Decision Map, bounded Scenario Compare, executive-ready exports, and Advanced Analysis Readiness Gates. This council converts that direction into an application structure. The product should remain a builder application, but its primary identity should become Decision Intelligence: users build decision briefs, decision maps, evidence boards, scenario comparisons, and exportable decision artifacts. Semantic concepts remain valid, but the app must communicate in a direct, down-to-earth business voice and make controls easy to adjust so the engine can rerun and update visible outcomes.",
+    "active_constraints": [
+      "Codex owns backend truth, contracts, tests, architecture, review, and project documentation.",
+      "Gemini owns frontend implementation unless the user explicitly authorizes Codex frontend edits in the current session.",
+      "The app must not imply fake simulation, optimization, causal proof, autonomous decisioning, predictions, or final recommendations.",
+      "Decision Map is the near-term safe framing; CDD or causal modeling must remain gated until assumptions, direction, validation, and confidence can be represented truthfully.",
+      "Every implementation unit must create an obvious user-visible result, not only backend fields, docs, or technical labels.",
+      "The application should help users build practical decision assets, not only inspect contract data."
+    ]
+  },
+  "sources_reviewed": [
+    {
+      "path": "project_docs/INDEX.md",
+      "source_type": "markdown",
+      "relevance": "Defines active routing and current documentation entry points.",
+      "reviewed_by": [
+        "architecture-guardian",
+        "implementation-planner"
+      ]
+    },
+    {
+      "path": "project_docs/active/README.md",
+      "source_type": "markdown",
+      "relevance": "Defines current project truth, scan rules, and active Phase 4 dataset-path routing that needs superseding.",
+      "reviewed_by": [
+        "architecture-guardian",
+        "product-ux-strategist",
+        "implementation-planner"
+      ]
+    },
+    {
+      "path": "project_docs/active/status/decision_intelligence_execution_status.md",
+      "source_type": "status",
+      "relevance": "Shows completed reliability, semantic, correction, ranked evidence, chat continuity, and frontend hardening work.",
+      "reviewed_by": [
+        "decision-intelligence-specialist",
+        "skeptic-qa-reviewer",
+        "data-ml-readiness-specialist"
+      ]
+    },
+    {
+      "path": "project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md",
+      "source_type": "markdown",
+      "relevance": "Defines Codex and Gemini ownership split for backend/contracts/docs versus frontend implementation.",
+      "reviewed_by": [
+        "architecture-guardian",
+        "implementation-planner"
+      ]
+    },
+    {
+      "path": "project_docs/active/agent_council/outputs/compounding-phase-results/2026-05-23-emergency-compounding-council.json",
+      "source_type": "other",
+      "relevance": "Prior council result that recommended replacing microscopic phases with visible outcome units.",
+      "reviewed_by": [
+        "product-ux-strategist",
+        "decision-intelligence-specialist",
+        "implementation-planner"
+      ]
+    },
+    {
+      "path": "project_docs/active/reviews/project_pruning_recommendations.md",
+      "source_type": "markdown",
+      "relevance": "Identifies cleanup candidates, surfaces to demote or rewrite, and code areas that may overpromise recommendations, Autopilot, or AutoML.",
+      "reviewed_by": [
+        "skeptic-qa-reviewer",
+        "product-ux-strategist",
+        "architecture-guardian"
+      ]
+    },
+    {
+      "path": "project_docs/active/contracts/decision_objects.md",
+      "source_type": "contract",
+      "relevance": "Defines existing decision briefs, signals, scenarios, readiness, dataset summary, and ranked diagnostics that can support the new application structure.",
+      "reviewed_by": [
+        "architecture-guardian",
+        "decision-intelligence-specialist",
+        "data-ml-readiness-specialist"
+      ]
+    },
+    {
+      "path": "project_docs/active/agent_council/outputs/application-structure-decision-dashboard/README.md",
+      "source_type": "markdown",
+      "relevance": "Defines this council topic, Decision Map/CDD context, user direction, and output handling requirements.",
+      "reviewed_by": [
+        "product-ux-strategist",
+        "implementation-planner",
+        "skeptic-qa-reviewer"
+      ]
+    }
+  ],
+  "participating_agents": [
+    {
+      "agent_id": "architecture-guardian",
+      "role_name": "Architecture Guardian",
+      "perspective": "Protect backend-owned truth, honest capability boundaries, and a stable architecture for dashboard controls, Decision Map, scenarios, and exports.",
+      "decision_rights": "Can block frontend-only inference, fake causal claims, unsupported simulation, or hidden coupling between controls and analysis."
+    },
+    {
+      "agent_id": "product-ux-strategist",
+      "role_name": "Product/UX Strategist",
+      "perspective": "Make the app feel direct, practical, and valuable: fewer labels, clearer outcomes, dashboard controls, and exportable decision assets.",
+      "decision_rights": "Can reject structures that feel like contract viewers, generic analytics dashboards, or verbose internal diagnostics."
+    },
+    {
+      "agent_id": "decision-intelligence-specialist",
+      "role_name": "Decision Intelligence Specialist",
+      "perspective": "Preserve objectives, levers, outcomes, guardrails, scenarios, assumptions, evidence, and maps as the core intelligence model.",
+      "decision_rights": "Can require every surface to improve the decision workflow rather than generic app activity."
+    },
+    {
+      "agent_id": "data-ml-readiness-specialist",
+      "role_name": "Data/ML Readiness Specialist",
+      "perspective": "Keep dataset truth, ML readiness, scenario assumptions, validation boundaries, and causal limitations explicit but not dominant.",
+      "decision_rights": "Can gate CDD, Monte Carlo, prediction, and optimization until prerequisites are represented and validated."
+    },
+    {
+      "agent_id": "skeptic-qa-reviewer",
+      "role_name": "Skeptic/QA Reviewer",
+      "perspective": "Attack overpromising surfaces, unclear acceptance criteria, repeated labels, fake recommendations, and low-value exports.",
+      "decision_rights": "Can reject any structure whose visible result is not obvious, useful, truthful, and exportable where appropriate."
+    },
+    {
+      "agent_id": "implementation-planner",
+      "role_name": "Implementation Planner",
+      "perspective": "Sequence the restructure into Codex backend/docs tasks and Gemini frontend handoffs without broad rewrites or stale docs.",
+      "decision_rights": "Can decide implementation order, owner split, validation gates, and documentation changes."
+    }
+  ],
+  "conversation_rounds": {
+    "round_1_independent_proposals": [
+      {
+        "agent_id": "architecture-guardian",
+        "stance": "Build a dashboard around backend-owned decision state instead of frontend-inferred views.",
+        "claims": [
+          "The application should have one canonical decision workspace state that powers the brief, evidence board, scenario compare, Decision Map, and export.",
+          "Dashboard controls must submit explicit updates to backend-owned frame fields or scenario parameters before rerunning analysis.",
+          "CDD must remain gated until causal assumptions and validation can be represented."
+        ],
+        "challenged_assumptions": [
+          "A visual graph is not automatically a causal model.",
+          "A dashboard control should not mutate hidden frontend-only state if the backend result claims to update."
+        ],
+        "evidence": [
+          "The contracts already define decision workspaces, briefs, signals, scenarios, readiness, and ranked diagnostics.",
+          "The guardrail assigns backend truth and contracts to Codex and frontend implementation to Gemini."
+        ],
+        "proposed_changes": [
+          "Create a backend Decision Dashboard State contract that includes frame, dataset trust, evidence summary, scenario controls, map nodes, map edges, assumptions, and export sections.",
+          "Represent Decision Map edges as declared relationship, evidence association, constraint, segment, or unknown, not causal proof."
+        ],
+        "risks_flagged": [
+          "Frontend-only maps would drift from backend truth.",
+          "CDD terminology could overclaim causality."
+        ]
+      },
+      {
+        "agent_id": "product-ux-strategist",
+        "stance": "Make the main experience a decision dashboard that users can adjust and rerun.",
+        "claims": [
+          "The first Decision Intelligence screen should not be a chat transcript or contract inspector; it should be a dashboard with a short brief, key controls, evidence, map, scenario comparison, and export action.",
+          "The app should use business language first and technical language only when it clarifies a limitation or assumption.",
+          "More content is not more value; the brief should tell the user what moved, what matters, what to change, and what to export."
+        ],
+        "challenged_assumptions": [
+          "Semantic terminology should not dominate the UI.",
+          "Users should not need to understand implementation phases to use the product."
+        ],
+        "evidence": [
+          "The prior council identified label-heavy output as the core failure.",
+          "The pruning review identified recommendation, Autopilot, and AutoML language that may distract from the practical decision workflow."
+        ],
+        "proposed_changes": [
+          "Design the main surface as: Brief at top, Controls on the left, Evidence and Map in the center, Scenario Compare on the right or below, Export in the header.",
+          "Use short labels such as Goal, What You Can Change, Limits, Evidence, Scenarios, and Export instead of exposing internal terminology everywhere."
+        ],
+        "risks_flagged": [
+          "A dashboard can become cluttered if every internal field is surfaced.",
+          "Generic analytics widgets would dilute the Decision Intelligence identity."
+        ]
+      },
+      {
+        "agent_id": "decision-intelligence-specialist",
+        "stance": "Keep levers, outcomes, guardrails, and evidence, but make them active controls.",
+        "claims": [
+          "Levers and outcomes are strong concepts when they become things users can change, compare, and rerun.",
+          "The Decision Map should show the current decision model and evidence coverage so users can see what is known, assumed, or missing.",
+          "Scenario Compare should update from the same controls rather than being a separate feature island."
+        ],
+        "challenged_assumptions": [
+          "A brief without editable model controls will feel static.",
+          "A map without evidence and scenario hooks will feel decorative."
+        ],
+        "evidence": [
+          "Phase 3 ranked diagnostics and correction fields already create the basis for evidence and frame updates.",
+          "The existing scenario service can support bounded direct-adjustment comparisons."
+        ],
+        "proposed_changes": [
+          "Create decision-control groups for outcome, levers, guardrails, segments, assumptions, scenario inputs, and map relationships.",
+          "Rerun the engine after control changes and update brief, evidence, map, and scenario comparison together."
+        ],
+        "risks_flagged": [
+          "Changing controls without a clear rerun state can create stale or confusing results.",
+          "Scenario deltas can be mistaken for forecasts if labels are weak."
+        ]
+      },
+      {
+        "agent_id": "data-ml-readiness-specialist",
+        "stance": "Use readiness as a gate behind useful workflows, not the main result.",
+        "claims": [
+          "Dataset trust should be a compact status strip, not a full phase or dominant panel.",
+          "Advanced modeling should appear as locked or gated workflows with specific missing prerequisites.",
+          "CDD should start as declared relationships and observational evidence coverage, with causal mode unavailable until assumptions and validation exist."
+        ],
+        "challenged_assumptions": [
+          "Readiness labels are valuable only when tied to what a user can or cannot do next.",
+          "AutoML should not remain prominent in Decision Intelligence unless it is reframed as readiness-gated modeling."
+        ],
+        "evidence": [
+          "The contracts define dataset summaries and unsupported capability fields.",
+          "The pruning review flagged AutoML and prediction language as needing truthfulness review."
+        ],
+        "proposed_changes": [
+          "Add a Dataset Trust Strip with dataset name, source, rows, columns, transform state, and stale state.",
+          "Add an Advanced Gates drawer for prediction, Monte Carlo, optimization, and causal CDD prerequisites."
+        ],
+        "risks_flagged": [
+          "Advanced gates can become another label wall.",
+          "AutoML may conflict with the current observational boundary if surfaced carelessly."
+        ]
+      },
+      {
+        "agent_id": "skeptic-qa-reviewer",
+        "stance": "Demote anything that overpromises or produces generic output.",
+        "claims": [
+          "Legacy Strategic Recommendations should not remain visible as final-looking advice.",
+          "Autopilot should be hidden, renamed, or rewritten unless it produces a concrete decision asset.",
+          "AutoML and prediction surfaces should be gated outside the main Decision Intelligence flow until validation boundaries are obvious."
+        ],
+        "challenged_assumptions": [
+          "A feature is not worth keeping prominent because it exists.",
+          "A result is not good if it is long but not actionable."
+        ],
+        "evidence": [
+          "The pruning review named legacy recommendations, Autopilot, and AutoML as demote-or-rewrite candidates.",
+          "The prior council said no work is complete unless the visible result is obvious and export-worthy."
+        ],
+        "proposed_changes": [
+          "Replace Strategic Recommendations with Suggested Checks or Next Investigations.",
+          "Require acceptance screenshots or browser evidence for the main decision dashboard, not only build output.",
+          "Fail acceptance if the result is mostly labels, repeated prompt text, or internal capability boundaries."
+        ],
+        "risks_flagged": [
+          "Old surfaces can undermine the new product identity even if new surfaces are added.",
+          "Agents may keep low-value screens to avoid making hard product cuts."
+        ]
+      },
+      {
+        "agent_id": "implementation-planner",
+        "stance": "Sequence as a dashboard contract first, then Gemini layout, then pruning.",
+        "claims": [
+          "Codex should define a Decision Dashboard contract and docs before Gemini builds the new main surface.",
+          "Gemini should implement the visual structure from stable backend fields and route old surfaces behind the new flow.",
+          "Pruning should be staged: docs and artifacts first, overpromising language second, feature demotion third."
+        ],
+        "challenged_assumptions": [
+          "The app does not need a total rewrite to change its landscape.",
+          "The old Phase 4 handoff should not remain the default next implementation path."
+        ],
+        "evidence": [
+          "The active docs still route to Phase 4 canonical dataset work.",
+          "The new council prompt requires JSON saved to the topic folder and validated."
+        ],
+        "proposed_changes": [
+          "Outcome A: Decision Dashboard Contract.",
+          "Outcome B: Gemini Decision Dashboard Shell.",
+          "Outcome C: Decision Map and Evidence Board.",
+          "Outcome D: Bounded Scenario Controls.",
+          "Outcome E: Product-surface pruning and export polish."
+        ],
+        "risks_flagged": [
+          "Changing too many frontend surfaces at once would increase regression risk.",
+          "Docs must be updated quickly or the old roadmap will resume."
+        ]
+      }
+    ],
+    "round_2_critiques": [
+      {
+        "agent_id": "skeptic-qa-reviewer",
+        "stance": "The dashboard idea is strong only if old overpromising surfaces are actively demoted.",
+        "claims": [
+          "Adding a new dashboard while leaving Strategic Recommendations, Autopilot recommendations, and prediction-heavy AutoML prominent would create conflicting product truth.",
+          "The first acceptance test should be whether a user can change a lever or assumption and see the brief, evidence, map, and scenario state update without reading internal fields."
+        ],
+        "challenged_assumptions": [
+          "New structure alone fixes product confusion.",
+          "Old features can remain equally prominent without harming the new identity."
+        ],
+        "evidence": [
+          "Project pruning recommendations identified legacy recommendations, Autopilot, and AutoML as likely cleanup targets.",
+          "The prior council rejected low-value label-heavy results."
+        ],
+        "proposed_changes": [
+          "Make pruning a first-class recommendation, not an afterthought.",
+          "Require visible rerun/update behavior as an acceptance signal."
+        ],
+        "risks_flagged": [
+          "The app could become two products at once: a practical decision dashboard and an old generic AI toolbox."
+        ]
+      },
+      {
+        "agent_id": "architecture-guardian",
+        "stance": "The dashboard must be backed by a state contract, not ad hoc component state.",
+        "claims": [
+          "Controls, rerun state, stale markers, and export sections need backend-owned data or documented frontend-derived fields.",
+          "Decision Map nodes and edges need a typed contract before Gemini renders the editor."
+        ],
+        "challenged_assumptions": [
+          "Frontend can safely infer map relationships from arbitrary text.",
+          "Scenario controls can update projections without a backend recalculation contract."
+        ],
+        "evidence": [
+          "Decision object contracts already define several reusable pieces but not a unified dashboard state object.",
+          "Codex/Gemini guardrail requires backend truth before frontend implementation."
+        ],
+        "proposed_changes": [
+          "Add a DecisionDashboardState contract before frontend build.",
+          "Keep the first map generated and read-only or lightly editable until update semantics are stable."
+        ],
+        "risks_flagged": [
+          "Editable maps can create mismatched state if not persisted or rerun through backend."
+        ]
+      },
+      {
+        "agent_id": "product-ux-strategist",
+        "stance": "The language system must be part of the structure.",
+        "claims": [
+          "If labels stay academic, the dashboard will still feel like an internal model.",
+          "The user asked for direct, down-to-earth results that say what to do next."
+        ],
+        "challenged_assumptions": [
+          "A visual dashboard automatically improves clarity."
+        ],
+        "evidence": [
+          "The user explicitly said sometimes more is less and asked for direct results with technical phrases only when needed."
+        ],
+        "proposed_changes": [
+          "Define UI language pairs: objective becomes Goal, lever becomes Changeable Driver, guardrail becomes Limit, segment becomes Breakdown, readiness becomes Can Run / Needs Fix, recommendation becomes Next Check.",
+          "Keep technical terms available in details or tooltips."
+        ],
+        "risks_flagged": [
+          "Oversimplification could hide important truth boundaries if not paired with details."
+        ]
+      }
+    ],
+    "round_3_reconciliation": [
+      {
+        "agent_id": "implementation-planner",
+        "stance": "Resolved structure: one Decision Dashboard with four live zones and gated advanced modeling.",
+        "claims": [
+          "The main application structure should be a Decision Dashboard, not a scattered collection of chat, legacy recommendations, Autopilot, and ML panels.",
+          "The dashboard should have four live zones: Brief, Controls, Evidence/Map, and Scenarios/Export.",
+          "Old surfaces should be demoted or rewritten so they feed the dashboard rather than compete with it."
+        ],
+        "challenged_assumptions": [
+          "The old app shell can remain unchanged and still feel like a new product.",
+          "CDD should be the first label users see."
+        ],
+        "evidence": [
+          "The prior council created outcome units that map cleanly into dashboard zones.",
+          "The current app already has decision services, brief service, scenario service, ranked evidence, and export plumbing."
+        ],
+        "proposed_changes": [
+          "Codex defines DecisionDashboardState and DecisionMap contracts.",
+          "Gemini builds a decision dashboard shell after backend contracts stabilize.",
+          "Legacy recommendation and Autopilot language is rewritten or hidden behind lower-priority routes.",
+          "AutoML moves behind Advanced Gates until validation and prediction boundaries are clear."
+        ],
+        "risks_flagged": [
+          "The first implementation must be a narrow vertical slice, not a full application rewrite."
+        ]
+      },
+      {
+        "agent_id": "decision-intelligence-specialist",
+        "stance": "Resolved model: use Decision Map now and gated CDD later.",
+        "claims": [
+          "Decision Map should be the first visual model because it can be truthful with current capabilities.",
+          "CDD can become an advanced mode only when causal assumptions, direction, confidence, validation, and unsupported simulation boundaries are explicit."
+        ],
+        "challenged_assumptions": [
+          "CDD terminology is safe by default."
+        ],
+        "evidence": [
+          "Current contracts forbid causal claims and simulation.",
+          "The user wants visual decision models and dashboard-like control changes."
+        ],
+        "proposed_changes": [
+          "Map node types: Goal, Driver, Limit, Breakdown, Evidence, Assumption, Unknown, Dataset, Scenario.",
+          "Map edge types: declared relationship, observed association, constraint, breakdown, assumption, missing evidence."
+        ],
+        "risks_flagged": [
+          "Users may interpret relationship lines as causal effects without explicit edge labels."
+        ]
+      },
+      {
+        "agent_id": "product-ux-strategist",
+        "stance": "Resolved UX: direct brief first, controls second, details on demand.",
+        "claims": [
+          "The app should open with the answer artifact, not the machinery.",
+          "Users should be able to change drivers, limits, breakdowns, assumptions, and scenarios without hunting through forms."
+        ],
+        "challenged_assumptions": [
+          "Advanced terminology should remain visible everywhere."
+        ],
+        "evidence": [
+          "The user asked for one-of-a-kind, direct, to-the-point outputs."
+        ],
+        "proposed_changes": [
+          "Use a compact Executive Brief at the top with one clear summary, top quantified evidence, and next check.",
+          "Use dashboard controls with labels like Goal, Drivers, Limits, Breakdowns, Assumptions, Scenarios.",
+          "Put technical semantics in details panels and tooltips."
+        ],
+        "risks_flagged": [
+          "Too much simplification could reduce trust if details are unavailable."
+        ]
+      }
+    ],
+    "round_4_synthesis": [
+      {
+        "agent_id": "implementation-planner",
+        "stance": "Final synthesis: restructure AI_Tool into a Decision Intelligence builder dashboard.",
+        "claims": [
+          "The new application center should be a practical Decision Dashboard where users build and update decision assets.",
+          "The dashboard should produce a brief, evidence board, decision map, scenario comparison, and export from one coherent state.",
+          "Legacy recommendations, Autopilot, and AutoML should not remain prominent unless rewritten to support this flow truthfully."
+        ],
+        "challenged_assumptions": [
+          "The app should remain a generic AI toolbox with Decision Intelligence bolted on."
+        ],
+        "evidence": [
+          "The prior council, pruning review, and active contracts all support an outcome-based dashboard structure."
+        ],
+        "proposed_changes": [
+          "Adopt the resolved recommendations and suggested phases in this council output.",
+          "Update active docs and create Codex and Gemini handoffs after user acceptance."
+        ],
+        "risks_flagged": [
+          "Without doc updates, future work will drift back to the old Phase 4 path.",
+          "Without pruning, old surfaces will undermine the new direction."
+        ]
+      }
+    ]
+  },
+  "major_disagreements": [
+    {
+      "disagreement_id": "disagreement-decision-map-vs-cdd",
+      "topic": "Whether to present the visual model as CDD immediately",
+      "positions": [
+        {
+          "agent_id": "decision-intelligence-specialist",
+          "position": "Use Decision Map now and make CDD a later gated mode.",
+          "rationale": "Current capability supports declared relationships and observational evidence, not causal proof."
+        },
+        {
+          "agent_id": "product-ux-strategist",
+          "position": "Use user-friendly labels first.",
+          "rationale": "CDD may be too technical and may distract from the practical dashboard."
+        },
+        {
+          "agent_id": "data-ml-readiness-specialist",
+          "position": "Gate CDD behind assumptions, direction, confidence, and validation.",
+          "rationale": "Causal diagrams require stronger truth boundaries than current observational analysis."
+        }
+      ],
+      "status": "resolved",
+      "resolution": "The near-term product uses Decision Map. CDD becomes a gated advanced mode only after assumptions, causal direction, confidence, validation notes, and unsupported simulation boundaries are represented."
+    },
+    {
+      "disagreement_id": "disagreement-old-surfaces",
+      "topic": "Whether to preserve legacy recommendations, Autopilot, and AutoML as prominent app surfaces",
+      "positions": [
+        {
+          "agent_id": "skeptic-qa-reviewer",
+          "position": "Demote or rewrite them before they compete with the new dashboard.",
+          "rationale": "They overpromise and create low-value or generic output risk."
+        },
+        {
+          "agent_id": "architecture-guardian",
+          "position": "Do not delete useful services blindly.",
+          "rationale": "Some services can be reused if contracts and labels are corrected."
+        },
+        {
+          "agent_id": "implementation-planner",
+          "position": "Stage demotion and rewrite after the dashboard contract exists.",
+          "rationale": "Controlled pruning avoids breaking working features before replacements exist."
+        }
+      ],
+      "status": "resolved",
+      "resolution": "Keep reusable code temporarily, but demote prominent UI and rewrite language. Legacy recommendations become Next Checks or Suggested Investigations. AutoML moves behind Advanced Gates. Autopilot must produce a decision asset or be hidden from the main flow."
+    },
+    {
+      "disagreement_id": "disagreement-dashboard-scope",
+      "topic": "How much of the application should be restructured at once",
+      "positions": [
+        {
+          "agent_id": "product-ux-strategist",
+          "position": "The main experience must change visibly.",
+          "rationale": "The user is changing the project landscape and needs a product-level shift."
+        },
+        {
+          "agent_id": "implementation-planner",
+          "position": "Start with a thin vertical Decision Dashboard slice.",
+          "rationale": "A full app rewrite would be risky and slow."
+        },
+        {
+          "agent_id": "architecture-guardian",
+          "position": "Backend state contract first.",
+          "rationale": "The dashboard must not become disconnected frontend presentation."
+        }
+      ],
+      "status": "resolved",
+      "resolution": "Implement a narrow but visible Decision Dashboard vertical slice first: brief, controls, dataset trust, evidence summary, decision map preview, scenario placeholder or bounded preview, and export structure from one backend state."
+    }
+  ],
+  "resolved_recommendations": [
+    {
+      "recommendation_id": "rec-main-decision-dashboard",
+      "title": "Make Decision Dashboard the primary application structure",
+      "summary": "Recenter the app around a dashboard where users build, adjust, rerun, and export decision assets. The dashboard should unify brief, controls, evidence, map, scenarios, dataset trust, and export from one coherent decision state.",
+      "originating_agents": [
+        "product-ux-strategist",
+        "decision-intelligence-specialist",
+        "implementation-planner"
+      ],
+      "source_paths": [
+        "project_docs/active/agent_council/outputs/compounding-phase-results/2026-05-23-emergency-compounding-council.json",
+        "project_docs/active/agent_council/outputs/application-structure-decision-dashboard/README.md",
+        "project_docs/active/contracts/decision_objects.md"
+      ],
+      "priority": "critical",
+      "confidence": 0.92,
+      "implementation_timing": "now",
+      "rationale": "The user wants an application that helps people build practical decision assets. A dashboard gives users direct controls and visible results instead of a chain of hidden phases and label-heavy artifacts.",
+      "impacted_areas": [
+        "decision workspace backend",
+        "decision contracts",
+        "AI Chat to Decisions handoff",
+        "DecisionPanel and DecisionWorkspaceView",
+        "export pipeline",
+        "active docs"
+      ],
+      "frontend_implications": [
+        "Gemini should build a main Decision Dashboard shell after Codex defines the contract.",
+        "The visible layout should prioritize brief, controls, evidence/map, scenarios, and export.",
+        "Old surfaces should route into the dashboard or be demoted."
+      ],
+      "backend_implications": [
+        "Codex should define a DecisionDashboardState payload composed from existing decision workspace, ranked diagnostics, brief, dataset trust, scenario preview, and map elements.",
+        "Backend should track stale state after control changes."
+      ],
+      "contract_considerations": [
+        "Use additive fields and existing contracts where possible.",
+        "Define dashboard sections and update semantics before frontend implementation."
+      ],
+      "testing_considerations": [
+        "Test that a complete decision prompt produces a dashboard-ready state.",
+        "Test that a control update changes stale state and rerun output.",
+        "Test unsupported simulation and final recommendation requests remain bounded."
+      ],
+      "risks": [
+        "The dashboard could become cluttered if every internal field is rendered.",
+        "A frontend-only dashboard would drift from backend truth."
+      ],
+      "dependencies": [
+        "Codex dashboard contract",
+        "User approval to supersede old Phase 4 next path"
+      ],
+      "acceptance_signals": [
+        "A user can open one Decision Intelligence surface and see the brief, controls, evidence, map, scenarios, dataset trust, and export affordance.",
+        "The result is direct, concise, and not dominated by readiness labels.",
+        "Changing a control makes the result visibly stale or reruns the engine."
+      ]
+    },
+    {
+      "recommendation_id": "rec-dashboard-control-model",
+      "title": "Create dashboard controls for goals, drivers, limits, breakdowns, assumptions, and scenarios",
+      "summary": "Turn semantic concepts into practical controls. Users should be able to change the goal, drivers, limits, breakdowns, assumptions, filters, and scenario inputs, then rerun the engine and see results update.",
+      "originating_agents": [
+        "decision-intelligence-specialist",
+        "product-ux-strategist",
+        "architecture-guardian"
+      ],
+      "source_paths": [
+        "project_docs/active/status/decision_intelligence_execution_status.md",
+        "project_docs/active/contracts/decision_objects.md",
+        "project_docs/active/agent_council/outputs/application-structure-decision-dashboard/README.md"
+      ],
+      "priority": "critical",
+      "confidence": 0.89,
+      "implementation_timing": "now",
+      "rationale": "Levers, outcomes, guardrails, and segments are valuable only when users can manipulate them and see the engine update. Controls make the app a builder rather than a report viewer.",
+      "impacted_areas": [
+        "decision workspace correction actions",
+        "scenario service",
+        "decision dashboard contract",
+        "Gemini dashboard controls"
+      ],
+      "frontend_implications": [
+        "Gemini should use dashboard controls with plain labels: Goal, Drivers, Limits, Breakdowns, Assumptions, Scenarios.",
+        "Technical semantics should appear in details or tooltips.",
+        "Controls should show stale/rerun state clearly."
+      ],
+      "backend_implications": [
+        "Codex should map controls to explicit backend correction or update actions.",
+        "Backend should recompute readiness, evidence, map, and scenario preview after accepted changes."
+      ],
+      "contract_considerations": [
+        "Define control IDs, target paths, accepted value types, stale flags, and rerun requirements.",
+        "Do not allow arbitrary frontend mutation of workspace state."
+      ],
+      "testing_considerations": [
+        "Test updating objective, lever, guardrail threshold, segment, and scenario adjustment.",
+        "Test that stale state is visible before rerun.",
+        "Test invalid updates produce useful blockers."
+      ],
+      "risks": [
+        "Controls can create false precision if scenario assumptions are unclear.",
+        "Too many controls at once can overwhelm users."
+      ],
+      "dependencies": [
+        "DecisionDashboardState contract",
+        "Existing correction loop"
+      ],
+      "acceptance_signals": [
+        "A user can change at least one driver or limit and see the dashboard update path.",
+        "The UI uses business labels first and preserves technical detail on demand.",
+        "The backend owns the accepted change and rerun state."
+      ]
+    },
+    {
+      "recommendation_id": "rec-decision-map-now-cdd-later",
+      "title": "Use Decision Map now and gate CDD as an advanced mode",
+      "summary": "Introduce a Decision Map that shows declared relationships and observational evidence coverage. Defer CDD as a causal model until assumptions, direction, confidence, validation, and unsupported simulation boundaries can be represented.",
+      "originating_agents": [
+        "decision-intelligence-specialist",
+        "data-ml-readiness-specialist",
+        "architecture-guardian"
+      ],
+      "source_paths": [
+        "project_docs/active/agent_council/outputs/application-structure-decision-dashboard/README.md",
+        "project_docs/active/contracts/decision_objects.md"
+      ],
+      "priority": "high",
+      "confidence": 0.9,
+      "implementation_timing": "now",
+      "rationale": "The user wants CDD-like visual models, but current product truth supports declared decision relationships and observational evidence, not causal proof. Decision Map gives visual value now without overclaiming.",
+      "impacted_areas": [
+        "decision map contract",
+        "DecisionWorkspaceView",
+        "frontend graph or canvas component",
+        "export mapping"
+      ],
+      "frontend_implications": [
+        "Gemini should render a map with nodes for Goal, Driver, Limit, Breakdown, Evidence, Assumption, Unknown, Dataset, and Scenario.",
+        "Edges should be labeled as declared relationship, observed association, constraint, breakdown, assumption, or missing evidence.",
+        "The UI should not call the map causal unless the advanced CDD gate is satisfied."
+      ],
+      "backend_implications": [
+        "Codex should generate typed map nodes and edges from workspace state, semantic bindings, ranked diagnostics, and assumptions.",
+        "Backend should include map limitations and evidence coverage."
+      ],
+      "contract_considerations": [
+        "Define map node and edge schemas.",
+        "Include relationship_type, confidence where available, source references, and truth_boundary.",
+        "Reserve causal fields for future gated CDD."
+      ],
+      "testing_considerations": [
+        "Test map generation for a complete decision frame.",
+        "Test missing evidence nodes for incomplete semantic coverage.",
+        "Test that no causal labels appear in default map output."
+      ],
+      "risks": [
+        "Users may interpret lines as causal effects.",
+        "A decorative map without controls or evidence would add little value."
+      ],
+      "dependencies": [
+        "DecisionDashboardState contract",
+        "Ranked diagnostics and semantic coverage"
+      ],
+      "acceptance_signals": [
+        "The map helps users understand the current decision model at a glance.",
+        "Every edge has a truthful relationship label.",
+        "CDD or causal mode remains gated."
+      ]
+    },
+    {
+      "recommendation_id": "rec-direct-business-language",
+      "title": "Adopt direct business language with technical details on demand",
+      "summary": "Translate internal terms into practical UI language: objective becomes Goal, lever becomes Driver or What You Can Change, guardrail becomes Limit, segment becomes Breakdown, recommendation becomes Next Check, readiness becomes Can Run or Needs Fix.",
+      "originating_agents": [
+        "product-ux-strategist",
+        "skeptic-qa-reviewer"
+      ],
+      "source_paths": [
+        "project_docs/active/agent_council/outputs/application-structure-decision-dashboard/README.md",
+        "project_docs/active/reviews/project_pruning_recommendations.md"
+      ],
+      "priority": "high",
+      "confidence": 0.88,
+      "implementation_timing": "now",
+      "rationale": "The user explicitly asked for one-of-a-kind, direct, down-to-earth outputs where sometimes more is less. The app should not feel like a semantic contract viewer.",
+      "impacted_areas": [
+        "frontend copy",
+        "decision dashboard labels",
+        "exports",
+        "status and handoff docs"
+      ],
+      "frontend_implications": [
+        "Gemini should use plain business labels and place technical terms in tooltips or details panels.",
+        "Exports should use concise executive language."
+      ],
+      "backend_implications": [
+        "Codex should provide display labels and concise summaries instead of forcing frontend to summarize raw fields.",
+        "Backend should keep technical fields for traceability."
+      ],
+      "contract_considerations": [
+        "Add display_label or display_sections only where existing labels are too internal.",
+        "Keep canonical field names stable for contracts."
+      ],
+      "testing_considerations": [
+        "Review output for repeated prompt text, label walls, and over-technical summaries.",
+        "Acceptance should fail if the result does not clearly tell the user what to inspect, change, compare, or export."
+      ],
+      "risks": [
+        "Oversimplification may hide important limitations if details are unavailable."
+      ],
+      "dependencies": [
+        "Decision dashboard design",
+        "Export structure"
+      ],
+      "acceptance_signals": [
+        "A non-technical user can understand the result without reading schema terms.",
+        "Technical terms remain available when needed.",
+        "The brief is concise and action-oriented without pretending to make the final decision."
+      ]
+    },
+    {
+      "recommendation_id": "rec-prune-overpromising-surfaces",
+      "title": "Demote or rewrite overpromising legacy surfaces",
+      "summary": "Legacy Strategic Recommendations, Autopilot recommendation flows, AutoML prediction surfaces, and generic workflow nodes should not remain prominent in the main Decision Intelligence path unless rewritten to support the dashboard truthfully.",
+      "originating_agents": [
+        "skeptic-qa-reviewer",
+        "product-ux-strategist",
+        "implementation-planner"
+      ],
+      "source_paths": [
+        "project_docs/active/reviews/project_pruning_recommendations.md",
+        "project_docs/active/status/decision_intelligence_execution_status.md"
+      ],
+      "priority": "high",
+      "confidence": 0.86,
+      "implementation_timing": "next",
+      "rationale": "Old surfaces can undermine the new product even if they are technically functional. Anything that overpromises recommendations, predictions, or autopilot behavior must be hidden, gated, or rewritten.",
+      "impacted_areas": [
+        "DecisionRecommendations.jsx",
+        "DecisionWorkspaceView.jsx",
+        "backend/routes/autopilot.py",
+        "AiAutopilot.jsx",
+        "AutoMLPanel.jsx",
+        "MachineLearningPanel.jsx",
+        "workflow command labels"
+      ],
+      "frontend_implications": [
+        "Gemini should rename Strategic Recommendations to Next Checks or Suggested Investigations if kept.",
+        "Autopilot should not be a primary Decision Intelligence action unless it creates a concrete decision asset.",
+        "AutoML should move behind Advanced Gates."
+      ],
+      "backend_implications": [
+        "Codex should review endpoint labels and response summaries for overclaiming.",
+        "Backend may keep services but should expose gated states and truthful labels."
+      ],
+      "contract_considerations": [
+        "Do not delete contracts that can be reused by brief, scenario, or evidence workflows.",
+        "Deprecate or alias recommendation language where needed."
+      ],
+      "testing_considerations": [
+        "Search for recommendation, prediction, forecast, optimization, and autopilot language after rewrite.",
+        "Verify main Decision Intelligence flow does not expose unsupported claims."
+      ],
+      "risks": [
+        "Removing surfaces too early could break existing navigation.",
+        "Leaving them prominent could confuse users about product capability."
+      ],
+      "dependencies": [
+        "Decision Dashboard replacement path",
+        "User approval for frontend demotion work or Gemini handoff"
+      ],
+      "acceptance_signals": [
+        "Main Decision Intelligence UI no longer leads with final-sounding recommendations.",
+        "Autopilot and AutoML are gated, rewritten, or out of the primary path.",
+        "Old services that remain have truthful labels and clear boundaries."
+      ]
+    },
+    {
+      "recommendation_id": "rec-export-decision-assets",
+      "title": "Export decision assets, not raw internal reports",
+      "summary": "Exports should package the brief, dataset trust, top evidence, Decision Map, scenario comparison, assumptions, and caveats into an executive-ready decision asset.",
+      "originating_agents": [
+        "product-ux-strategist",
+        "skeptic-qa-reviewer",
+        "decision-intelligence-specialist"
+      ],
+      "source_paths": [
+        "project_docs/active/agent_council/outputs/compounding-phase-results/2026-05-23-emergency-compounding-council.json",
+        "project_docs/active/contracts/decision_objects.md"
+      ],
+      "priority": "high",
+      "confidence": 0.84,
+      "implementation_timing": "next",
+      "rationale": "The prior exported result failed because it was not share-worthy. The new app structure must make export a first-class product proof.",
+      "impacted_areas": [
+        "decision PDF export",
+        "AIReporter",
+        "DecisionWorkspaceView",
+        "DecisionDashboardState export sections"
+      ],
+      "frontend_implications": [
+        "Gemini should expose export from the dashboard header or brief area.",
+        "Export preview should match the dashboard hierarchy."
+      ],
+      "backend_implications": [
+        "Codex should provide export-ready sections with concise titles, summaries, evidence, map, scenarios, assumptions, and caveats.",
+        "Backend should avoid forcing PDF code to synthesize raw internals."
+      ],
+      "contract_considerations": [
+        "Add export_sections if needed.",
+        "Ensure export uses the same truth boundary and dataset trust as the dashboard."
+      ],
+      "testing_considerations": [
+        "Verify exported artifact includes quantified evidence and a map or scenario summary when available.",
+        "Reject exports that contain mostly labels, repeated prompt text, or raw guardrails."
+      ],
+      "risks": [
+        "Export work can become polish-heavy unless backed by concise backend sections."
+      ],
+      "dependencies": [
+        "Decision Dashboard contract",
+        "Existing procedural PDF export pipeline"
+      ],
+      "acceptance_signals": [
+        "A user can export a decision asset that stands alone.",
+        "The export tells a concise decision story and includes caveats.",
+        "The export avoids fake final recommendations."
+      ]
+    }
+  ],
+  "unresolved_questions": [
+    {
+      "question_id": "question-dashboard-entry-point",
+      "question": "Should AI Chat remain the primary entry into Decision Dashboard, or should Decisions open directly to the dashboard with chat as an assistive side panel?",
+      "owner": "User with Codex product architecture",
+      "needed_before": "Gemini dashboard shell handoff",
+      "impact": "Determines navigation, first-screen structure, and whether chat is the front door or a supporting tool."
+    },
+    {
+      "question_id": "question-map-editing-depth",
+      "question": "Should the first Decision Map be read-only/generated, lightly editable, or fully editable?",
+      "owner": "Codex",
+      "needed_before": "Decision Map contract and frontend handoff",
+      "impact": "Determines persistence, correction actions, rerun behavior, and frontend complexity."
+    },
+    {
+      "question_id": "question-autopilot-future",
+      "question": "Should Autopilot be removed from the main product, renamed into a decision asset generator, or gated as an advanced workflow builder?",
+      "owner": "User with Codex review",
+      "needed_before": "Product surface pruning implementation",
+      "impact": "Affects whether the app remains a broad AI toolbox or becomes tightly focused on Decision Intelligence."
+    },
+    {
+      "question_id": "question-automl-positioning",
+      "question": "Should AutoML remain in the app as a separate builder tool, or be hidden behind Decision Intelligence Advanced Gates?",
+      "owner": "User with Data/ML Readiness review",
+      "needed_before": "Advanced Gates implementation",
+      "impact": "Affects capability boundaries and whether prediction-heavy functionality distracts from observational Decision Intelligence."
+    }
+  ],
+  "risks": [
+    {
+      "risk_id": "risk-dashboard-contract-gap",
+      "title": "Dashboard UI is built before backend state contract exists",
+      "severity": "high",
+      "likelihood": "medium",
+      "mitigation": "Codex defines DecisionDashboardState, controls, map, stale state, and export sections before Gemini frontend implementation.",
+      "owner": "Codex"
+    },
+    {
+      "risk_id": "risk-cdd-overclaim",
+      "title": "Decision Map is interpreted as causal CDD",
+      "severity": "high",
+      "likelihood": "medium",
+      "mitigation": "Use Decision Map label by default, type all edges, and gate causal CDD behind explicit assumptions and validation fields.",
+      "owner": "Data/ML Readiness Specialist"
+    },
+    {
+      "risk_id": "risk-old-ui-conflict",
+      "title": "Old recommendation, Autopilot, and AutoML surfaces undermine the new product identity",
+      "severity": "high",
+      "likelihood": "high",
+      "mitigation": "Demote, rewrite, or gate these surfaces after the dashboard path exists; update labels immediately where they overpromise.",
+      "owner": "Skeptic/QA Reviewer"
+    },
+    {
+      "risk_id": "risk-dashboard-clutter",
+      "title": "Decision Dashboard becomes another wall of labels",
+      "severity": "medium",
+      "likelihood": "medium",
+      "mitigation": "Brief first, controls second, details on demand. Acceptance fails if the result is not concise and useful.",
+      "owner": "Product/UX Strategist"
+    },
+    {
+      "risk_id": "risk-stale-results",
+      "title": "Users change controls but results do not clearly rerun or mark stale state",
+      "severity": "high",
+      "likelihood": "medium",
+      "mitigation": "Add stale markers and rerun contract semantics for all dashboard controls.",
+      "owner": "Architecture Guardian"
+    }
+  ],
+  "impacted_codebase_areas": [
+    {
+      "area": "Decision dashboard backend contract",
+      "path_patterns": [
+        "backend/services/decision_workspace_service.py",
+        "backend/decision_engine/chat_service.py",
+        "project_docs/active/contracts/decision_objects.md",
+        "tests/test_decision_*.py"
+      ],
+      "why_it_matters": "The dashboard must be powered by backend-owned state, not frontend inference.",
+      "change_type": "backend"
+    },
+    {
+      "area": "Decision frontend main surface",
+      "path_patterns": [
+        "frontend/frontend/src/features/business/decision/DecisionPanel.jsx",
+        "frontend/frontend/src/features/business/decision/DecisionWorkspaceView.jsx",
+        "frontend/frontend/src/features/ai/AIShell.jsx"
+      ],
+      "why_it_matters": "Gemini will need to build the Decision Dashboard shell and route existing decision state into it.",
+      "change_type": "frontend"
+    },
+    {
+      "area": "Decision Map and visual model",
+      "path_patterns": [
+        "frontend/frontend/src/features/business/decision/*",
+        "backend/services/decision_workspace_service.py",
+        "project_docs/active/contracts/decision_objects.md"
+      ],
+      "why_it_matters": "The app needs a first-class visual model for declared relationships and evidence coverage.",
+      "change_type": "contract"
+    },
+    {
+      "area": "Scenario comparison",
+      "path_patterns": [
+        "backend/services/scenario_service.py",
+        "frontend/frontend/src/features/business/decision/ScenarioPreview.jsx",
+        "project_docs/active/contracts/decision_objects.md"
+      ],
+      "why_it_matters": "Scenario controls should be integrated into the dashboard as bounded sensitivity analysis.",
+      "change_type": "backend"
+    },
+    {
+      "area": "Overpromising legacy surfaces",
+      "path_patterns": [
+        "frontend/frontend/src/features/business/decision/DecisionRecommendations.jsx",
+        "backend/services/recommendation_service.py",
+        "backend/routes/autopilot.py",
+        "frontend/frontend/src/features/ai/AiAutopilot.jsx",
+        "frontend/frontend/src/components/data_management/AutoMLPanel.jsx",
+        "frontend/frontend/src/features/machine_learning/MachineLearningPanel.jsx"
+      ],
+      "why_it_matters": "These surfaces may conflict with the new direct, truthful Decision Intelligence structure.",
+      "change_type": "frontend"
+    },
+    {
+      "area": "Active project docs and handoffs",
+      "path_patterns": [
+        "project_docs/INDEX.md",
+        "project_docs/active/README.md",
+        "project_docs/active/status/decision_intelligence_execution_status.md",
+        "project_docs/active/ai_hand_off/*.md",
+        "project_docs/active/decision_intelligence/current/*.md"
+      ],
+      "why_it_matters": "Docs still route to the old Phase 4 path and must be updated before implementation.",
+      "change_type": "documentation"
+    }
+  ],
+  "frontend_implications": [
+    "Gemini should build a new Decision Dashboard shell only after Codex defines the backend contract.",
+    "The dashboard should prioritize Brief, Controls, Evidence/Decision Map, Scenario Compare, Dataset Trust, and Export.",
+    "UI labels should be direct and business-facing, with technical terms in details or tooltips.",
+    "Legacy Strategic Recommendations should be renamed, demoted, or removed from the main flow.",
+    "Autopilot and AutoML should not remain primary Decision Intelligence surfaces unless they are rewritten or gated.",
+    "Frontend acceptance requires a visible path where changing a driver, limit, or assumption updates stale/rerun state and visible outcomes."
+  ],
+  "backend_implications": [
+    "Codex should define DecisionDashboardState as the main contract for the new structure.",
+    "Codex should define DecisionMap node and edge schemas with non-causal defaults.",
+    "Dashboard controls should map to explicit correction, update, or scenario actions.",
+    "Backend should produce concise brief and export sections so frontend does not summarize raw internals.",
+    "Scenario Compare should remain direct-adjustment sensitivity analysis unless future prerequisites unlock stronger modeling.",
+    "Unsupported advanced capabilities must remain gated and truthful."
+  ],
+  "contract_considerations": [
+    "Additive contracts should reuse existing DecisionBrief, DecisionSignal, Scenario, DecisionScenarioPreview, Dataset Summary, readiness, capability_state, and ranked_diagnostics where possible.",
+    "DecisionDashboardState should include frame summary, dataset trust, executive brief, control model, evidence summary, decision map, scenario preview, advanced gates, stale state, and export sections.",
+    "DecisionMap nodes should include node_id, node_type, label, summary, source_path or source_ref, confidence where available, and status.",
+    "DecisionMap edges should include edge_id, source_node_id, target_node_id, relationship_type, label, evidence_refs, assumptions, limitations, and causal_status.",
+    "CDD fields should be reserved or gated until causal assumptions, direction, confidence, and validation can be truthfully represented.",
+    "Display labels should be added where useful without renaming canonical contract fields."
+  ],
+  "testing_considerations": [
+    "Backend tests should verify dashboard state generation for complete, incomplete, corrected, and unsupported prompts.",
+    "Control update tests should verify stale state and rerun semantics.",
+    "Decision Map tests should verify non-causal edge labels and missing-evidence handling.",
+    "Scenario tests should verify direct-adjustment deltas, assumptions, and guardrail impact without forecast or optimization claims.",
+    "Frontend acceptance should include one focused browser flow for changing a control and observing updated brief, evidence, map, or scenario state.",
+    "Copy review should reject label-heavy, generic, or overpromising results.",
+    "Export verification should confirm a concise decision asset rather than raw internal output."
+  ],
+  "implementation_priority": {
+    "top_priority_ids": [
+      "rec-main-decision-dashboard",
+      "rec-dashboard-control-model",
+      "rec-decision-map-now-cdd-later",
+      "rec-direct-business-language"
+    ],
+    "deferred_ids": [
+      "rec-prune-overpromising-surfaces",
+      "rec-export-decision-assets"
+    ],
+    "rationale": "The immediate structure needs a backend-owned dashboard state, practical controls, Decision Map, and direct language. Pruning and export are high value but should follow once the replacement path is clear enough to avoid breaking the product without a destination."
+  },
+  "suggested_implementation_phases": [
+    {
+      "phase_id": "phase-0-doc-reset",
+      "title": "Documentation Reset For Decision Dashboard",
+      "owner": "Codex",
+      "objective": "Update active docs so the old Phase 4 dataset-contract path is superseded by the Decision Dashboard structure.",
+      "recommendation_ids": [
+        "rec-main-decision-dashboard"
+      ],
+      "entry_criteria": [
+        "User accepts this council direction.",
+        "Application structure council JSON is validated and saved."
+      ],
+      "exit_criteria": [
+        "Active docs route future agents to Decision Dashboard contract work.",
+        "Old Phase 4 handoff is marked superseded, paused, or narrowed into Dataset Trust.",
+        "Codex/Gemini ownership remains explicit."
+      ],
+      "validation_plan": [
+        "Read INDEX, active README, status, and handoff README after edits.",
+        "Confirm no active-next instruction tells Gemini to start broad Phase 4 dataset alignment unchanged."
+      ]
+    },
+    {
+      "phase_id": "phase-1-dashboard-contract",
+      "title": "Decision Dashboard State Contract",
+      "owner": "Codex",
+      "objective": "Define the backend-owned state that powers brief, controls, dataset trust, evidence, map, scenarios, gates, and export.",
+      "recommendation_ids": [
+        "rec-main-decision-dashboard",
+        "rec-dashboard-control-model",
+        "rec-direct-business-language"
+      ],
+      "entry_criteria": [
+        "Docs are reset to the new structure.",
+        "Existing decision workspace, ranked diagnostics, brief, and scenario services are inspected."
+      ],
+      "exit_criteria": [
+        "DecisionDashboardState contract is documented.",
+        "Backend can produce dashboard-ready state for at least one complete prompt.",
+        "Control update and stale/rerun semantics are defined."
+      ],
+      "validation_plan": [
+        "Run focused backend tests for dashboard state generation.",
+        "Verify unsupported capabilities remain truthful.",
+        "Review payload for concise display labels and absence of raw label walls."
+      ]
+    },
+    {
+      "phase_id": "phase-2-decision-map-contract",
+      "title": "Decision Map Contract And Generated Preview",
+      "owner": "Codex",
+      "objective": "Create typed non-causal Decision Map nodes and edges from the decision workspace and evidence coverage.",
+      "recommendation_ids": [
+        "rec-decision-map-now-cdd-later"
+      ],
+      "entry_criteria": [
+        "DecisionDashboardState exists or is drafted.",
+        "Workspace frame and ranked diagnostics provide enough source data for map generation."
+      ],
+      "exit_criteria": [
+        "DecisionMap node and edge schema is documented.",
+        "Backend produces generated map preview with typed non-causal relationships.",
+        "CDD advanced mode remains gated."
+      ],
+      "validation_plan": [
+        "Test generated map for complete and incomplete decision frames.",
+        "Verify all edges have truthful relationship types.",
+        "Search output for unsupported causal claims."
+      ]
+    },
+    {
+      "phase_id": "phase-3-gemini-dashboard-handoff",
+      "title": "Gemini Decision Dashboard Frontend Handoff",
+      "owner": "Codex writes handoff, Gemini implements frontend",
+      "objective": "Give Gemini a focused frontend task to render the dashboard shell from backend-owned state.",
+      "recommendation_ids": [
+        "rec-main-decision-dashboard",
+        "rec-dashboard-control-model",
+        "rec-decision-map-now-cdd-later",
+        "rec-direct-business-language"
+      ],
+      "entry_criteria": [
+        "Dashboard and map contracts are stable enough for frontend rendering.",
+        "Codex has verified backend payloads with focused tests."
+      ],
+      "exit_criteria": [
+        "Gemini handoff names files, visible structure, controls, map behavior, language rules, acceptance prompts, and export expectations.",
+        "Frontend implementation shows concise brief, controls, dataset trust, evidence, decision map, scenarios, and export affordance where available."
+      ],
+      "validation_plan": [
+        "Gemini runs build and one browser flow.",
+        "Codex review confirms frontend does not infer unsupported backend truth.",
+        "User-visible result is obvious and direct."
+      ]
+    },
+    {
+      "phase_id": "phase-4-prune-and-export",
+      "title": "Product Surface Pruning And Decision Asset Export",
+      "owner": "Codex coordinates, Gemini implements frontend changes",
+      "objective": "Demote or rewrite overpromising old surfaces and make export a first-class decision asset.",
+      "recommendation_ids": [
+        "rec-prune-overpromising-surfaces",
+        "rec-export-decision-assets"
+      ],
+      "entry_criteria": [
+        "Decision Dashboard path exists.",
+        "User approves demotion or rewrite of old surfaces."
+      ],
+      "exit_criteria": [
+        "Legacy recommendations, Autopilot, and AutoML no longer compete with the main Decision Intelligence flow.",
+        "Export produces a concise decision asset with brief, evidence, map, scenarios, assumptions, and caveats where available."
+      ],
+      "validation_plan": [
+        "Search UI copy for overpromising recommendation, prediction, forecast, optimization, and autopilot claims.",
+        "Run focused browser/export flow.",
+        "Inspect export for concise, truthful, share-worthy content."
+      ]
+    }
+  ],
+  "final_synthesis_summary": {
+    "executive_summary": "The council recommends changing AI_Tool from a generic AI toolbox with Decision Intelligence pieces into a practical Decision Intelligence builder dashboard. The main experience should let users build and update decision assets: a concise Executive Brief, dashboard controls for goals/drivers/limits/breakdowns/assumptions/scenarios, Dataset Trust, Evidence Board, Decision Map, bounded Scenario Compare, Advanced Gates, and export. Semantic concepts remain valid, but they should be translated into direct business language and made actionable through controls. Decision Map should ship before CDD; causal CDD remains gated until assumptions, direction, confidence, and validation can be represented truthfully.",
+    "strongest_proposal": "Build a backend-owned DecisionDashboardState and use it to power a Gemini-rendered Decision Dashboard where users can change a driver, limit, assumption, breakdown, or scenario and see the brief, evidence, map, scenario, and export state update.",
+    "main_tradeoff": "The project must visibly change its product identity without overclaiming. That means moving quickly toward dashboard controls and visual models, while keeping CDD, Monte Carlo, prediction, optimization, and final recommendations gated until the backend can support them honestly.",
+    "decision_for_next_agent": "Do not start a broad frontend redesign or old Phase 4 dataset alignment. First update active docs, then have Codex define DecisionDashboardState and DecisionMap contracts. After backend payloads are verified, write a focused Gemini handoff for the Decision Dashboard shell.",
+    "non_goals": [
+      "Do not ship CDD as causal proof in the near term.",
+      "Do not imply Monte Carlo simulation, optimization, prediction, autonomous decisioning, or final recommendations.",
+      "Do not leave old recommendation and Autopilot surfaces prominent if they conflict with the new direction.",
+      "Do not build a frontend-only dashboard that invents backend truth.",
+      "Do not produce another label-heavy artifact that users would not export or share."
+    ],
+    "handoff_notes": "The next Codex work should be documentation reset plus backend contract design. The next Gemini work should wait for a stable DecisionDashboardState and DecisionMap contract. The Gemini prompt should be concise and focused on rendering a direct, dashboard-like Decision Intelligence experience with controls, visible update state, and no unsupported claims."
+  },
+  "metadata": {
+    "created_by": "Codex application-structure Agent Council simulation",
+    "schema_path": "project_docs/active/agent_council/council_output_schema.json",
+    "validator_path": "project_docs/active/agent_council/validate_council_json.py"
+  }
+}

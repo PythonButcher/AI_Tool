@@ -287,6 +287,8 @@ class DecisionChatService:
         assistant_message = action_result["assistant_message"]
         warnings = list(action_result.get("warnings") or [])
         workspace = action_result["workspace"]
+        correction_result = action_result.get("correction_result")
+        correction_trace = action_result.get("trace")
 
         normalized_actions = DecisionChatService._normalize_available_actions(
             DecisionChatService._build_decision_actions(workspace) if workspace else [],
@@ -326,6 +328,8 @@ class DecisionChatService:
             "suggested_actions": normalized_actions,
             "artifacts": normalized_artifacts,
             "decision_workspace": workspace,
+            "correction_result": correction_result,
+            "trace": correction_trace,
             "session_state": updated_state,
             "warnings": warnings,
         }
@@ -892,6 +896,39 @@ class DecisionChatService:
         assistant_message = ""
 
         if action == "draft_workspace":
+            if isinstance(payload.get("correction"), dict):
+                if workspace is None:
+                    raise DecisionServiceError("A draft workspace is required before corrections can be applied.")
+                correction_payload = {
+                    "dataset": payload.get("dataset"),
+                    "dataset_ref": payload.get("dataset_ref") or payload.get("datasetRef"),
+                    "semantic_model": payload.get("semantic_model") or payload.get("semanticModel"),
+                    "decision_workspace": workspace,
+                    "correction": payload.get("correction"),
+                }
+                correction_result = DecisionWorkspaceService.correct_workspace(correction_payload)
+                workspace = correction_result.get("decision_workspace") or workspace
+                preview = DecisionChatService._build_workspace_preview(workspace)
+                artifacts.append({
+                    **preview,
+                    "action_id": action,
+                    "response_kind": action,
+                    "correction_result": correction_result.get("correction_result"),
+                    "trace": correction_result.get("trace"),
+                })
+                assistant_message = (
+                    (correction_result.get("correction_result") or {}).get("summary")
+                    or "The decision workspace correction was applied."
+                )
+                return {
+                    "artifacts": artifacts,
+                    "assistant_message": assistant_message,
+                    "workspace": workspace,
+                    "warnings": list(correction_result.get("warnings") or []),
+                    "correction_result": correction_result.get("correction_result"),
+                    "trace": correction_result.get("trace"),
+                }
+
             prompt = str(user_message or session_state.get("decision_prompt") or "").strip()
             if workspace is None:
                 if not prompt:
@@ -981,7 +1018,12 @@ class DecisionChatService:
                         or DecisionChatService._decision_truthfulness_note()
                     ),
                     "scoped_diagnostics": workspace_analysis.get("scoped_diagnostics") or [],
+                    "ranked_diagnostics": workspace_analysis.get("ranked_diagnostics") or [],
                     "legacy_diagnostics": workspace_analysis.get("legacy_diagnostics") or {},
+                    "observational_boundary": (
+                        workspace_analysis.get("observational_boundary")
+                        or "observational_analysis_only"
+                    ),
                 },
             ))
             assistant_message = summary_headline or "Workspace analysis completed using the current scoped draft."

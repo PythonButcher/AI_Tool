@@ -10,7 +10,7 @@ This folder is organized so current work and completed records are no longer mix
 
 The current truth lives in `project_docs/active/status/decision_intelligence_execution_status.md`, not in older phase plans in this folder.
 
-Phase 4.5 hardening and Phase 1 reliability foundation are complete. Phase 2 semantic metadata plumbing is implemented. Phase 2.5 backend semantic frame completion and Gemini frontend segment rendering are complete and verified. The handoff at `project_docs/active/ai_hand_off/phase_2_5_gemini_frontend_segment_dimensions.md` is a completed record. Phase 3 correction and ranked observational evidence is deferred until the user explicitly starts Phase 3.
+Phase 4.5 hardening and Phase 1 reliability foundation are complete. Phase 2 semantic metadata plumbing is implemented. Phase 2.5 backend semantic frame completion and Gemini frontend segment rendering are complete and verified. Phase 3 correction and ranked observational evidence is complete on the backend and frontend. The next active roadmap item is Phase 4: Canonical Active Dataset Contract. This is not the old completed Phase 4 chat-contract work; it is the post-Phase-3 dataset-truth alignment slice from `current/next_focus_execution_plan.md`.
 
 ## Read These By Task
 
@@ -19,7 +19,8 @@ Phase 4.5 hardening and Phase 1 reliability foundation are complete. Phase 2 sem
 | Resume current project work | `project_docs/active/status/decision_intelligence_execution_status.md`, then `project_docs/active/ai_hand_off/README.md` |
 | Review completed Phase 2.5 Gemini frontend handoff | `project_docs/active/ai_hand_off/phase_2_5_gemini_frontend_segment_dimensions.md` |
 | Review Phase 2.5 backend plan | `current/phase_2_5_semantic_frame_completion_plan.md` |
-| Review the deferred Phase 3 plan | `current/phase_3_correction_and_observational_evidence_plan.md` |
+| Review completed Phase 3 plan | `current/phase_3_correction_and_observational_evidence_plan.md` |
+| Start Phase 4 canonical active dataset work | `current/next_focus_execution_plan.md`, then `project_docs/active/ai_hand_off/phase_4_gemini_frontend_canonical_active_dataset.md` |
 | Review the council-derived roadmap | `current/next_focus_execution_plan.md` |
 | Review completed prompt-first intake behavior | `completed/phase_3_5_decision_intake_rework.md` |
 | Work on the completed chat backend contract | `completed/decision_intelligence_v3_phase_4_backend_checkpoint.md`, `completed/decision_intelligence_v3_phase_4_chat_engine_execution_plan.md` |

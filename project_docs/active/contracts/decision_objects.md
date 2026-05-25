@@ -158,6 +158,47 @@ Prompt-first guardrail conditions keep the existing `operator`, `value`, `second
 | --- | --- | --- | --- |
 | `value_status` | `string \| null` | No | `parsed` when a numeric threshold was preserved, `not_specified` when the prompt gave a qualitative guardrail, or `unparsed` when threshold language was present but no numeric value could be parsed. Hard guardrails with `value_status: "unparsed"` are not analysis-ready. |
 
+### Decision Frame Correction
+
+Phase 3 adds deterministic backend-owned correction behavior for an existing draft workspace. The current action-route integration preserves existing endpoint names and action IDs by applying correction payloads through the existing Decision Chat action endpoint when `action` is `draft_workspace`. Backend service callers may also use the workspace correction service directly. Corrections are explicit; the backend does not mutate arbitrary workspace fields from free-form text.
+
+Correction request payload fields:
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `correction_type` | `string` | Yes | `objective_metric`, `objective_direction`, `time_horizon`, `lever_binding`, `lever_controllability`, `guardrail_binding`, `guardrail_condition`, `segment_dimension`, or `remove_mapping` |
+| `target_path` | `string` | Yes | Stable object path such as `decision_scope.objective.metric_ref`, `decision_scope.levers[0].binding`, `decision_scope.constraints[0].condition`, or `decision_scope.segment_dimensions` |
+| `replacement` | `object \| boolean \| string \| number \| null` | Conditional | Required except for `remove_mapping`. The shape depends on correction type and may contain metric, dimension, field, condition, horizon, direction, or controllability values. |
+| `reason` | `string \| null` | No | Optional user or system reason for auditability. |
+
+Correction response fields:
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `correction_result` | `object` | Yes | Includes `status`, `correction_type`, `target_path`, `summary`, `previous_value`, `new_value`, `affected_readiness_fields`, `readiness_state`, and `allowed_next_actions` |
+| `decision_workspace` | `object` | Yes | Updated workspace with recomputed `decision_scope`, `scoped_context`, `assumptions`, `unknowns`, `readiness`, `status`, and additive `correction_history` |
+| `decision_readiness` | `Decision Readiness State` | Yes | Recomputed readiness and capability truth after the correction |
+| `allowed_next_actions` | `string[]` | Yes | Recomputed backend-approved action IDs. Existing IDs are preserved. |
+| `trace` | `object` | Yes | Includes correction source, timestamp, target path, semantic confidence when available, warnings, unresolved mapping placeholders, and `observational_boundary: "observational_analysis_only"` |
+
+The action-route response may include additive top-level `correction_result` and `trace` fields and a corrected workspace preview artifact. Existing action IDs, artifact types, readiness fields, and session-state carry-forward remain compatible.
+
+### Ranked Observational Diagnostics
+
+Phase 3 strengthens workspace analysis with `workspace_analysis.ranked_diagnostics` while preserving existing `scoped_diagnostics` and `legacy_diagnostics`. Ranking is diagnostic relevance to the current decision frame only. It is not a recommended action order, optimization result, simulation, causal claim, or final recommendation.
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `workspace_analysis.observational_boundary` | `string` | Yes | Current value is `observational_analysis_only` |
+| `workspace_analysis.ranked_diagnostics` | `object[]` | Yes | Ordered diagnostic evidence derived from the same scoped workspace analysis |
+| `evidence_rank` | `integer` | Yes | 1-based rank within the analysis response |
+| `relevance_score` | `number` | Yes | `0.0` to `1.0` score based on frame role relevance, evidence availability, and readiness |
+| `evidence_strength` | `string` | Yes | `strong`, `moderate`, `weak`, or `insufficient` |
+| `semantic_coverage` | `object` | Yes | Shows whether the diagnostic covers the objective and lists covered levers, guardrails, segments, temporal context, and semantic confidences |
+| `data_sufficiency` | `object` | Yes | Includes sufficiency status, row count when available, and whether a period comparison exists |
+| `limitations` | `string[]` | Yes | Caveats, unresolved or weak semantic evidence, readiness limitations, and the explicit diagnostic-only ranking boundary |
+| `source_diagnostic` | `object` | Yes | Original scoped diagnostic object for compatibility and traceability |
+
 ### Time Context
 
 | Field | Type | Required | Notes |

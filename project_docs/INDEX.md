@@ -26,8 +26,11 @@ After those files, read only the task-specific document listed below.
 | Work on decision object contracts | `project_docs/active/contracts/decision_objects.md` |
 | Work inside Decision Intelligence docs | `project_docs/active/decision_intelligence/README.md` first, then only the named file under `current/` or `completed/` |
 | Review frontend state architecture | `project_docs/active/reviews/react_state_flow_review.md` |
+| Review Gemini frontend work | `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md`, then the active handoff only |
 | Review active Codex/Gemini handoffs | `project_docs/active/ai_hand_off/README.md` |
+| Start Phase 4 canonical active dataset work | `project_docs/active/decision_intelligence/current/next_focus_execution_plan.md`, then `project_docs/active/ai_hand_off/phase_4_gemini_frontend_canonical_active_dataset.md` |
 | Run or modify Agent Council workflow | `project_docs/active/agent_council/README.md` |
+| Run compounding-results council | `project_docs/active/agent_council/outputs/compounding-phase-results/README.md` |
 
 ## Current Project Truth
 
@@ -35,7 +38,7 @@ Decision Intelligence V3 is active. V2 is closed as-is and lives as historical c
 
 Phase 4.5 AI Chat Decision Intelligence hardening is complete. The product now has real chat-to-decision continuity, scoped action behavior, truthful observational-analysis language, and verified frontend hardening.
 
-The next work is not broad frontend polish and not new simulation or optimization. Phase 1 reliability foundation is complete. Phase 2 semantic metadata plumbing is implemented. Phase 2.5 backend semantic frame completion and Gemini frontend segment rendering are complete and verified for the May 14 acceptance prompt. The Gemini handoff at `project_docs/active/ai_hand_off/phase_2_5_gemini_frontend_segment_dimensions.md` is now a completed record, not an active implementation request. Phase 3 correction and ranked observational evidence is the next backend-first slice and should begin only when the user explicitly starts it. Frontend implementation remains Gemini-owned unless the user explicitly authorizes Codex frontend edits in the current session.
+The next work is not broad frontend polish and not new simulation or optimization. Phase 1 reliability foundation is complete. Phase 2 semantic metadata plumbing is implemented. Phase 2.5 backend semantic frame completion and Gemini frontend segment rendering are complete and verified for the May 14 acceptance prompt. Phase 3 backend correction actions and ranked observational evidence are implemented and verified, and Gemini frontend rendering for Correction Results and Ranked Observational Evidence is complete as of May 22, 2026. The next active roadmap item is Phase 4: Canonical Active Dataset Contract, which means aligning dataset truth across AI Chat, Decisions, charts, dashboards, workflows, filters, cleaning, uploads, and semantic model consumers. Frontend implementation remains Gemini-owned unless the user explicitly authorizes Codex frontend edits in the current session.
 
 ## Folder Map
 
