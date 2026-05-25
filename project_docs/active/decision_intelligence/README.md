@@ -1,51 +1,46 @@
 # Decision Intelligence Documentation Map
 
-This folder is organized so current work and completed records are no longer mixed together.
-
-`current/` contains the active Decision Intelligence implementation plan and roadmap.
-
-`completed/` contains completed Phase 3.5/4/4.5 plans, old checklists, and Gemini handoff records. Do not scan it by default.
+This folder should stay small and easy to route.
 
 ## Current Truth
 
-The current truth lives in `project_docs/active/status/decision_intelligence_execution_status.md`, not in older phase plans in this folder.
+Decision Intelligence V3 should now be unified through AI Chat's output pane.
 
-Phase 4.5 hardening and Phase 1 reliability foundation are complete. Phase 2 semantic metadata plumbing is implemented. Phase 2.5 backend semantic frame completion and Gemini frontend segment rendering are complete and verified. Phase 3 correction and ranked observational evidence is complete on the backend and frontend. The next active roadmap item is Phase 4: Canonical Active Dataset Contract. This is not the old completed Phase 4 chat-contract work; it is the post-Phase-3 dataset-truth alignment slice from `current/next_focus_execution_plan.md`.
+AI Chat keeps normal answers, charts, exploration, decide mode, artifact inspection, and exports. Decision Intelligence becomes a richer structured artifact family inside that output pane.
 
-## Read These By Task
+The Decisions window is no longer the required continuation path in the active plan. Its future role should be decided after the AI Chat output flow is working.
 
-| Task | Read |
+## Active Plan
+
+| Need | Read |
 | --- | --- |
-| Resume current project work | `project_docs/active/status/decision_intelligence_execution_status.md`, then `project_docs/active/ai_hand_off/README.md` |
-| Review completed Phase 2.5 Gemini frontend handoff | `project_docs/active/ai_hand_off/phase_2_5_gemini_frontend_segment_dimensions.md` |
-| Review Phase 2.5 backend plan | `current/phase_2_5_semantic_frame_completion_plan.md` |
-| Review completed Phase 3 plan | `current/phase_3_correction_and_observational_evidence_plan.md` |
-| Start Phase 4 canonical active dataset work | `current/next_focus_execution_plan.md`, then `project_docs/active/ai_hand_off/phase_4_gemini_frontend_canonical_active_dataset.md` |
-| Review the council-derived roadmap | `current/next_focus_execution_plan.md` |
-| Review completed prompt-first intake behavior | `completed/phase_3_5_decision_intake_rework.md` |
-| Work on the completed chat backend contract | `completed/decision_intelligence_v3_phase_4_backend_checkpoint.md`, `completed/decision_intelligence_v3_phase_4_chat_engine_execution_plan.md` |
-| Review old Phase 4 completion details | `completed/decision_intelligence_v3_phase_4_execution_checklist.md` |
-| Prepare or review active Gemini frontend handoff | `project_docs/active/ai_hand_off/README.md` |
-| Review completed Gemini frontend handoff | the specific file in `completed/` named by the current task |
-| Understand completed Phase 4.5 intent | `completed/phase_4_5_ai_chat_decision_intelligence_plan.md` |
+| Active rollout | `current/ai_chat_decision_output_unification_rollout.md` |
+| Short current status | `../status/decision_intelligence_execution_status.md` |
+| Contract reference | `../contracts/decision_objects.md` |
+| Frontend ownership rule | `../rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md` |
 
-## Completed Or Reference-Only Files
-
-The files below are useful records but should not be scanned by default:
+## Current Folder
 
 | File | Status |
 | --- | --- |
-| `completed/decision_intelligence_v3_gemini_handoff_02_chat_decision_bridge.md` | Completed frontend handoff record. |
-| `completed/decision_intelligence_v3_gemini_handoff_03_phase_3_5_prompt_first_intake.md` | Completed or historical prompt-first frontend handoff context. |
-| `completed/slice_2_5_gemini_frontend_handoff.md` | Completed Slice 2.5 frontend handoff record. |
-| `completed/slice_3_real_action_system_gemini_frontend_handoff.md` | Completed Slice 3 frontend handoff record. |
-| `completed/phase_1_reliability_fields_gemini_handoff.md` | Completed Phase 1 reliability frontend handoff and review record. |
-| `completed/phase_2_semantic_role_strengthening_plan.md` | Completed Phase 2 backend plan and acceptance record. |
-| `completed/phase_2_semantic_role_strengthening_gemini_handoff.md` | Completed Phase 2 semantic frontend handoff record. |
-| `completed/decision_intelligence_v3_phase_4_execution_checklist.md` | Historical checklist. Some unchecked items may be stale; active status wins. |
+| `current/ai_chat_decision_output_unification_rollout.md` | Active plan |
+| `current/next_focus_execution_plan.md` | Short pointer to active plan |
 
-## Ownership Reminder
+## Completed Reference
 
-Codex owns backend logic, contracts, tests, architecture, reviews, application organization, and active Markdown coordination. Codex has final coordination say, with the user reviewing Codex work for acceptance.
+Completed Phase 2.5 and Phase 3 plans are in `completed/`. Do not scan them by default.
 
-Gemini owns frontend implementation unless the user explicitly authorizes Codex to edit frontend files in the current session.
+| File | Status |
+| --- | --- |
+| `completed/phase_2_5_semantic_frame_completion_plan.md` | Completed backend plan |
+| `completed/phase_2_5_gemini_frontend_segment_dimensions.md` | Completed frontend handoff |
+| `completed/phase_3_correction_and_observational_evidence_plan.md` | Completed backend/frontend plan |
+| `completed/phase_3_gemini_frontend_correction_and_ranked_evidence.md` | Completed frontend handoff |
+| `completed/phase_4_5_ai_chat_decision_intelligence_plan.md` | Completed AI Chat hardening plan |
+| Other files in `completed/` | Historical or completed reference only |
+
+## Superseded Reference
+
+The old standalone Phase 4 dataset plan and handoff were archived under `project_docs/archive/superseded_active_2026_05_24/`. Dataset truth is still required, but it now belongs inside the active rollout as Dataset Trust.
+
+Previous full Decision Intelligence README was preserved at `project_docs/archive/superseded_active_2026_05_24/decision_intelligence_README_pre_map_cleanup_2026_05_24.md`.

@@ -1,67 +1,57 @@
-# Project Documentation Index
+# AI_Tool Documentation Map
 
-This is the top-level documentation entry point for AI_Tool.
+Give Codex and Gemini a map, not a 1000 page instruction manual.
 
-Agents must use this file as a routing map, not as permission to scan every Markdown file. The goal is to read the smallest set of current documents needed for the task.
+This is the top-level routing file. Use it to find the smallest current document needed for the task. Do not scan every Markdown file.
 
-## Required First Reads
+## First Reads
 
-| Order | File | Purpose |
+| Order | File | Why |
 | --- | --- | --- |
-| 1 | `project_docs/active/README.md` | Main navigation hub and current scan rules. |
-| 2 | `project_docs/active/status/decision_intelligence_execution_status.md` | Current project truth and implementation status. |
-| 3 | `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md` | Codex/Gemini ownership boundary. |
+| 1 | `project_docs/active/README.md` | Active navigation and scan rules |
+| 2 | `project_docs/active/status/decision_intelligence_execution_status.md` | Short current truth |
+| 3 | `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md` | Codex/Gemini ownership |
 
-After those files, read only the task-specific document listed below.
-
-## Current Work Path
+## Current Work Map
 
 | Need | Read |
 | --- | --- |
-| Review the latest completed implementation plan | `project_docs/active/decision_intelligence/current/phase_2_5_semantic_frame_completion_plan.md` |
-| Keep Codex implementation runs efficient | `project_docs/active/codex_harness_engineering.md` |
-| Review the council-derived roadmap | `project_docs/active/decision_intelligence/current/next_focus_execution_plan.md` |
-| Choose the next implementation slice | `project_docs/active/agent_council/outputs/application-next-focus-priorities/README.md` |
-| Inspect the full latest council recommendation | `project_docs/active/agent_council/outputs/application-next-focus-priorities/2026-05-01-council.json` |
-| Work on decision object contracts | `project_docs/active/contracts/decision_objects.md` |
-| Work inside Decision Intelligence docs | `project_docs/active/decision_intelligence/README.md` first, then only the named file under `current/` or `completed/` |
-| Review frontend state architecture | `project_docs/active/reviews/react_state_flow_review.md` |
-| Review Gemini frontend work | `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md`, then the active handoff only |
-| Review active Codex/Gemini handoffs | `project_docs/active/ai_hand_off/README.md` |
-| Start Phase 4 canonical active dataset work | `project_docs/active/decision_intelligence/current/next_focus_execution_plan.md`, then `project_docs/active/ai_hand_off/phase_4_gemini_frontend_canonical_active_dataset.md` |
-| Run or modify Agent Council workflow | `project_docs/active/agent_council/README.md` |
-| Run compounding-results council | `project_docs/active/agent_council/outputs/compounding-phase-results/README.md` |
+| Review active rollout | `project_docs/active/decision_intelligence/current/ai_chat_decision_output_unification_rollout.md` |
+| Check concise current status | `project_docs/active/status/decision_intelligence_execution_status.md` |
+| Work on backend/frontend contracts | `project_docs/active/contracts/decision_objects.md` |
+| Prepare or review Gemini handoffs | `project_docs/active/ai_hand_off/README.md` |
+| Keep Codex runs efficient | `project_docs/active/codex_harness_engineering.md` |
+| Review cleanup/pruning candidates | `project_docs/active/reviews/project_pruning_recommendations.md` |
+| Run Agent Council workflow | `project_docs/active/agent_council/README.md` |
+| Find old status or superseded plans | `project_docs/archive/superseded_active_2026_05_24/` |
 
-## Current Project Truth
+## Current Product Truth
 
-Decision Intelligence V3 is active. V2 is closed as-is and lives as historical context.
+Decision Intelligence V3 is active.
 
-Phase 4.5 AI Chat Decision Intelligence hardening is complete. The product now has real chat-to-decision continuity, scoped action behavior, truthful observational-analysis language, and verified frontend hardening.
+AI Chat is now the intended primary work surface for Decision Intelligence. Existing AI Chat behavior must remain: normal answers, charts, exploration, decide mode, artifact inspection, and exports.
 
-The next work is not broad frontend polish and not new simulation or optimization. Phase 1 reliability foundation is complete. Phase 2 semantic metadata plumbing is implemented. Phase 2.5 backend semantic frame completion and Gemini frontend segment rendering are complete and verified for the May 14 acceptance prompt. Phase 3 backend correction actions and ranked observational evidence are implemented and verified, and Gemini frontend rendering for Correction Results and Ranked Observational Evidence is complete as of May 22, 2026. The next active roadmap item is Phase 4: Canonical Active Dataset Contract, which means aligning dataset truth across AI Chat, Decisions, charts, dashboards, workflows, filters, cleaning, uploads, and semantic model consumers. Frontend implementation remains Gemini-owned unless the user explicitly authorizes Codex frontend edits in the current session.
+Decision Intelligence should become a structured output in the AI Chat results pane. The Decisions window should become secondary later, likely as a saved decision library, fullscreen review, or historical asset viewer.
 
-## Folder Map
+The old standalone Phase 4 Canonical Active Dataset handoff is superseded. Dataset truth remains required, but it should be implemented as Dataset Trust inside the unified AI Chat decision output flow.
 
-| Folder | Meaning | Default Scan Rule |
-| --- | --- | --- |
-| `project_docs/active/status/` | Current execution truth. | Read first. |
-| `project_docs/active/codex_harness_engineering.md` | Codex-specific run efficiency, tool-output, and verification rules. | Read for substantial Codex repo work. |
-| `project_docs/active/rules/` | Standing rules and ownership boundaries. | Read when scope or frontend ownership matters. |
-| `project_docs/active/contracts/` | Backend/frontend contract references. | Read when changing or reviewing response shapes. |
-| `project_docs/active/ai_hand_off/` | Active Codex/Gemini handoffs. | Read when frontend work moves from Codex backend truth to Gemini implementation. |
-| `project_docs/active/decision_intelligence/` | Decision Intelligence navigation, current docs, and completed handoffs. | Read its README first; use `current/` for active docs and `completed/` only for reference. |
-| `project_docs/active/agent_council/` | Reusable council workflow and live planning outputs. | Read only for planning or next-focus decisions. |
-| `project_docs/active/reviews/` | Focused technical reviews. | Read only when touching the reviewed area. |
-| `project_docs/archive/` | Historical material. | Do not scan unless explicitly needed. |
+## Ownership
+
+| Agent | Owns |
+| --- | --- |
+| Codex | Backend truth, contracts, tests, architecture, docs, cleanup planning, review |
+| Gemini | Frontend implementation, React/CSS, browser verification, frontend status updates |
+
+Codex must not edit frontend files unless the user explicitly authorizes Codex frontend edits in the current session.
 
 ## Do Not Do This
 
-Do not scan `project_docs/archive/` for normal work.
+Do not scan `project_docs/archive/` unless this map or the user asks for historical context.
 
-Do not scan every file under `project_docs/active/decision_intelligence/`.
+Do not treat archived or completed files as active plans.
 
-Do not treat old handoffs as current tasks unless the active status or user names them.
+Do not restart the old standalone Phase 4 dataset handoff.
 
-Do not treat old checklist unchecked boxes as current blockers if the active status says the work is complete.
+Do not build a separate dashboard project before unifying the current AI Chat output flow.
 
-Do not let frontend work drift to Codex unless the user explicitly authorizes Codex frontend edits in the current session.
+Previous full index was preserved at `project_docs/archive/superseded_active_2026_05_24/INDEX_pre_map_cleanup_2026_05_24.md`.
