@@ -10,9 +10,9 @@ Phase 2.5 exists to button up that gap before Phase 3 correction and ranked obse
 
 Status: backend complete and verified; Gemini frontend segment rendering complete and verified.
 
-Phase 3 correction and ranked observational evidence remains planned, but it has not been started. The next slice should begin only when the user explicitly starts Phase 3.
+Phase 3 correction and ranked observational evidence is now complete. This file is a completed reference only.
 
-May 16, 2026 implementation note: Codex added additive `decision_scope.segment_dimensions`, role-aware segment extraction, multiple guardrail parsing from compound clauses, numeric threshold preservation, `value_status` on guardrail conditions, readiness blocking for unparsed required thresholds, and chat-preview segment rendering from the active segment list. Backend tests now cover the exact May 14 acceptance prompt and nearby variants. Gemini frontend work is complete at `project_docs/active/ai_hand_off/phase_2_5_gemini_frontend_segment_dimensions.md`; the opened Decisions workspace renders the active segment frame directly.
+May 16, 2026 implementation note: Codex added additive `decision_scope.segment_dimensions`, role-aware segment extraction, multiple guardrail parsing from compound clauses, numeric threshold preservation, `value_status` on guardrail conditions, readiness blocking for unparsed required thresholds, and chat-preview segment rendering from the active segment list. Backend tests now cover the exact May 14 acceptance prompt and nearby variants. Gemini frontend work is complete at `project_docs/active/decision_intelligence/completed/phase_2_5_gemini_frontend_segment_dimensions.md`; the opened Decisions workspace renders the active segment frame directly.
 
 ## Review Evidence
 
