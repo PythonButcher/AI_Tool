@@ -49,6 +49,16 @@ Gemini owns frontend implementation unless the user explicitly authorizes Codex 
 
 Existing backend and frontend verification details live in the archived full status file. New work must record only current facts here: files changed, checks run, and remaining gaps.
 
+## Phase 1 AI Chat Decision Output Protection - 2026-05-25
+
+Codex inspected the active backend decision chat service, decision routes, decision object contract, and focused backend tests. Existing tests already covered the main answer, chart, decide-mode preview, workspace analysis, and action response paths. Phase 1 added focused regression assertions in `tests/test_decision_chat_service.py` for stable artifact metadata on `answer`, `chart`, `workspace_preview`, and `workspace_analysis_summary`, plus a correction-action route check that preserves the existing `workspace_preview` response contract.
+
+No `decision_output` or Dataset Trust implementation started in this slice. `python -m py_compile tests\test_decision_chat_service.py` passed. `python -m unittest tests.test_decision_chat_service` could not run in the current interpreter because Flask/Werkzeug dependencies are incomplete locally; dependency installation was not approved in this session.
+
+Gemini review verdict: useful. The review confirmed the Phase 1 tests provide meaningful regression protection for current AI Chat artifact routing, metadata, decide-mode compatibility, and correction response shape, with no frontend or `GEMINI.md` changes and no premature Phase 2 implementation. Before or during Phase 2, resolve the local Flask/Werkzeug test environment so the focused backend suite can move from compile-only verification to full behavioral verification.
+
+Next active slice: Phase 2, add backend-owned Dataset Trust to AI Chat decision output payloads additively while preserving all Phase 1 protected artifact contracts.
+
 ## Canonical Resume Order
 
 | Step | Read |
