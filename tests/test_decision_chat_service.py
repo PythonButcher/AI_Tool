@@ -210,7 +210,8 @@ class DecisionChatApiTests(unittest.TestCase):
         self.assertEqual(body["artifacts"][0]["render_hint"], "chart")
         self.assertTrue(body["artifacts"][0]["inspectable"])
         self.assertEqual(body["artifacts"][0]["default_view"], "inspector")
-        self.assertEqual(body["artifacts"][0]["source"], "chart_engine")
+        self.assertEqual(body["artifacts"][0]["source"], "semantic_metric")
+        self.assertEqual(body["artifacts"][0]["content"]["meta"]["source"], "semantic_metric")
         self.assertIsNone(body["draft_workspace_preview"])
         self.assertEqual(body["action_state"]["available_action_ids"], [])
 
@@ -353,8 +354,9 @@ class DecisionChatApiTests(unittest.TestCase):
         self.assertEqual(preview["status_label"], "Structurally ready for analysis")
         self.assertEqual(understood["objective"]["metric"], "Revenue")
         self.assertEqual(understood["objective"]["time_horizon"], "Next quarter")
-        self.assertEqual({item["label"] for item in understood["levers"]}, {"Marketing Spend", "Channel mix"})
+        self.assertEqual({item["label"] for item in understood["levers"]}, {"Marketing Spend"})
         self.assertEqual({item["label"] for item in understood["segments"]}, {"Channel"})
+        self.assertEqual({item["label"] for item in preview["segment_dimensions"]}, {"Channel"})
         self.assertEqual({item["metric"] for item in understood["guardrails"]}, {"Gross Margin %"})
         self.assertEqual(kickoff["recommended_next_action"]["action_id"], "analyze_workspace")
         self.assertEqual(body["action_state"]["primary_action_id"], "analyze_workspace")
@@ -389,9 +391,10 @@ class DecisionChatApiTests(unittest.TestCase):
         self.assertEqual(understood["objective"]["time_horizon"], "Next quarter")
         self.assertEqual(
             {item["label"] for item in understood["levers"]},
-            {"Discount Rate", "Marketing Spend", "Region mix"},
+            {"Discount Rate", "Marketing Spend"},
         )
         self.assertEqual({item["label"] for item in understood["segments"]}, {"Region"})
+        self.assertEqual({item["label"] for item in preview["segment_dimensions"]}, {"Region"})
         self.assertEqual({item["metric"] for item in understood["guardrails"]}, {"Gross Margin %"})
         self.assertEqual(preview["recommended_next_action"]["action_id"], "analyze_workspace")
         self.assertIn("observational workspace analysis", preview["readiness_meaning"])
@@ -420,8 +423,9 @@ class DecisionChatApiTests(unittest.TestCase):
         self.assertEqual(understood["objective"]["metric"], "Stockout Risk Score")
         self.assertEqual(understood["objective"]["direction"], "minimize")
         self.assertEqual(understood["objective"]["time_horizon"], "Next quarter")
-        self.assertEqual({item["label"] for item in understood["levers"]}, {"Inventory On Hand", "Product Category mix"})
+        self.assertEqual({item["label"] for item in understood["levers"]}, {"Inventory On Hand"})
         self.assertEqual({item["label"] for item in understood["segments"]}, {"Product Category"})
+        self.assertEqual({item["label"] for item in preview["segment_dimensions"]}, {"Product Category"})
         self.assertEqual({item["metric"] for item in understood["guardrails"]}, {"On Time Delivery %"})
         self.assertEqual(preview["recommended_next_action"]["action_id"], "analyze_workspace")
         self.assertIn("not a recommendation", preview["truthfulness_note"])
@@ -479,13 +483,15 @@ class DecisionChatApiTests(unittest.TestCase):
         objective = workspace["decision_scope"]["objective"]
         levers = workspace["decision_scope"]["levers"]
         constraints = workspace["decision_scope"]["constraints"]
+        segment_dimensions = workspace["decision_scope"]["segment_dimensions"]
         lever_labels = {lever["label"] for lever in levers}
         constraint_labels = {constraint["label"] for constraint in constraints}
+        segment_labels = {segment["label"] for segment in segment_dimensions}
 
         self.assertEqual(objective["metric_ref"]["metric_id"], "metric_stockout_risk")
         self.assertEqual(objective["direction"], "minimize")
         self.assertIn("Inventory On Hand", lever_labels)
-        self.assertIn("Product Category mix", lever_labels)
+        self.assertIn("Product Category", segment_labels)
         self.assertIn("Protect On Time Delivery %", constraint_labels)
         self.assertEqual(body["session_state"]["decision_state"]["objective_draft"]["metric"], "Stockout Risk Score")
         self.assertIn("stockout risk", body["session_state"]["decision_prompt"].lower())
@@ -507,8 +513,10 @@ class DecisionChatApiTests(unittest.TestCase):
         workspace = body["session_state"]["draft_workspace"]
         levers = workspace["decision_scope"]["levers"]
         constraints = workspace["decision_scope"]["constraints"]
+        segment_dimensions = workspace["decision_scope"]["segment_dimensions"]
         lever_labels = {lever["label"] for lever in levers}
         constraint_labels = {constraint["label"] for constraint in constraints}
+        segment_labels = {segment["label"] for segment in segment_dimensions}
         hard_constraint_labels = {
             constraint["label"]
             for constraint in constraints
@@ -516,7 +524,7 @@ class DecisionChatApiTests(unittest.TestCase):
         }
 
         self.assertIn("Discount Rate", lever_labels)
-        self.assertIn("Region mix", lever_labels)
+        self.assertIn("Region", segment_labels)
         self.assertNotIn("Return Rate", lever_labels)
         self.assertEqual(body["session_state"]["decision_state"]["objective_draft"]["metric"], "Revenue")
         self.assertIn("Protect Gross Margin %", constraint_labels)

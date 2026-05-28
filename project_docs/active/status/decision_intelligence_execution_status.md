@@ -81,6 +81,14 @@ The next Codex session should start with a Phase 3 readiness pass, not immediate
 
 When the gate is cleared, Phase 3 should remain backend-only: document the `decision_output` contract, add a small composer service or function, return `decision_output` alongside existing `workspace_preview` and `workspace_analysis_summary`, preserve Dataset Trust, preserve all existing artifact types, and add focused tests for complete draft, incomplete draft, analyze action, and correction action.
 
+## Phase 2 Baseline Cleanup - 2026-05-28
+
+Codex cleared the 7 remaining Decision Chat baseline failures left after Phase 2. The focused suite now treats semantic metric chart requests as `source: "semantic_metric"` while preserving `type: "chart"` and chart rendering metadata. Prompt-first drafting tests now follow the Phase 2.5 contract: `by channel`, `by region`, and `by product category` are asserted through `segment_dimensions` and readable kickoff `segments`, not duplicated as fake mix levers.
+
+One backend response-shape fix was made in `backend/decision_engine/chat_service.py`: explore follow-ups can preserve a prior draft in `session_state` without surfacing that prior draft as the active top-level `draft_workspace_preview`. This keeps decision continuity available while letting answer and chart turns remain response-specific.
+
+Verification passed with `PYTHONPATH=.codex_tmp_py\site-packages python -m unittest tests.test_decision_chat_service` and `PYTHONPATH=.codex_tmp_py\site-packages python -m py_compile backend\decision_engine\chat_service.py tests\test_decision_chat_service.py`.
+
 ## Canonical Resume Order
 
 | Step | Read |

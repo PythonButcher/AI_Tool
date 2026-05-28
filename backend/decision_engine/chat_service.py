@@ -232,15 +232,18 @@ class DecisionChatService:
             grounding_summary=grounding_summary,
         )
         DecisionChatService._attach_dataset_trust_to_state(updated_state, dataset_trust)
+        # The top-level preview describes the active response artifact, while
+        # session_state may still preserve a prior draft for later decision turns.
+        response_workspace = draft_workspace if mode == "decide" else None
         draft_workspace_preview = (
             DecisionChatService._attach_dataset_trust(
                 DecisionChatService._annotate_artifacts(
-                    [DecisionChatService._build_workspace_preview(draft_workspace)],
+                    [DecisionChatService._build_workspace_preview(response_workspace)],
                     mode="decide",
                 ),
                 dataset_trust,
             )[0]
-            if draft_workspace is not None
+            if response_workspace is not None
             else None
         )
 
