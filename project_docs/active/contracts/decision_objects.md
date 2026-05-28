@@ -77,6 +77,12 @@ Current placement:
 
 `DecisionChatService.handle_action` returns top-level `dataset_trust`, adds the same object to each returned artifact, and stores it in returned session state. Chat turn and action error responses include `dataset_trust` when the request fails before a normal response can be built.
 
+### AI Chat Artifact Source
+
+Decision Chat artifacts keep a compact `source` label that describes the backend path that produced the artifact. For chart artifacts, an explicit `content.meta.source` is authoritative and is copied to top-level `artifact.source`. Charts produced by semantic metric analytics use `source: "semantic_metric"` and `content.meta.source: "semantic_metric"` because the metric resolver supplied the grouped values and semantic lineage. Raw chart artifacts that do not provide `content.meta.source` fall back to `chart_engine`.
+
+Frontend code should render by `artifact.type` and `render_hint` first. It may use `source` for lineage, badges, diagnostics, or source-specific affordances, but should not require `source === "chart_engine"` to render a chart.
+
 ### Decision Semantics For Metrics
 
 Additive role metadata attached to semantic model metrics and echoed on `Metric Reference` objects when available. Older semantic models remain valid; the backend finalizer can infer conservative defaults from names, fields, format hints, aggregation, and existing metadata.

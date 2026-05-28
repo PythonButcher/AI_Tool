@@ -38,6 +38,10 @@ Dataset truth remains important, but the old standalone Phase 4 dataset handoff 
 
 Rollout plans must be written in plain language. Use short phase names, one purpose at a time, and direct acceptance checks. If a plan mentions a technical concept such as CDD, Decision Map, Dataset Trust, gates, or dashboard state, define it immediately.
 
+## Phase Wrap-Up Rule
+
+When Codex wraps up a project phase or clears a phase gate, the final response must automatically include a clean, paste-ready prompt for starting the next session. The wrap-up summary may describe the phase just completed, but the next-session prompt must focus on the next phase's work and avoid re-explaining prior phases except for the minimum verified prerequisite state needed to start safely. The prompt should point to the current docs, name the verified state, and identify the next phase's first task without excessive bullets or code blocks.
+
 ## Current Active File
 
 `project_docs/active/decision_intelligence/current/ai_chat_decision_output_unification_rollout.md`

@@ -155,7 +155,9 @@ The artifact should compose existing workspace and analysis data into a display-
 
 Readiness gate:
 
-Do not start normal Phase 3 implementation while the focused Decision Chat backend suite is red unless the user explicitly accepts that risk. As of the Phase 2 Dataset Trust slice, `PYTHONPATH=.codex_tmp_py\site-packages python -m unittest tests.test_decision_chat_service` runs but has 7 failures in behavior Phase 3 must preserve: chart artifact source truth, explore follow-up behavior after a decision prompt, and prompt-first drafting expectations for mix levers. The next Codex session should resolve or reclassify those failures first, then start `decision_output` only after the suite is green or the exception is documented in active status.
+Cleared by the Phase 2.5 cleanup for Phase 2. `PYTHONPATH=.codex_tmp_py\site-packages python -m unittest tests.test_decision_chat_service` now passes at 25/25. Phase 3 can start as a backend slice in the next Codex session.
+
+The chart source decision for Phase 3 is to keep `source: "semantic_metric"` and `content.meta.source: "semantic_metric"` for charts produced by semantic metric analytics. Raw chart artifacts without an explicit content source may still fall back to `chart_engine`.
 
 Recommended artifact type:
 
