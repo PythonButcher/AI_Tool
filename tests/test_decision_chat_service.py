@@ -282,6 +282,66 @@ class DecisionChatApiTests(unittest.TestCase):
         self.assertEqual(body["artifacts"][0]["dataset_trust"], trust)
         self.assertEqual(body["draft_workspace_preview"]["dataset_trust"], trust)
 
+    def test_complete_decision_turn_returns_decision_output_artifact(self):
+        response = self.client.post(
+            "/api/decision/chat/turns",
+            json={
+                "dataset": DATASET,
+                "semantic_model": SEMANTIC_MODEL,
+                "user_message": "How should we grow revenue next quarter using marketing spend by channel while protecting gross margin?",
+                "conversation_history": [],
+                "session_state": {},
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.get_json()
+        self.assertEqual([artifact["type"] for artifact in body["artifacts"]], ["workspace_preview", "decision_output"])
+
+        decision_output = body["decision_output"]
+        self.assertEqual(decision_output["type"], "decision_output")
+        self.assertEqual(decision_output["render_hint"], "decision_output")
+        self.assertTrue(decision_output["inspectable"])
+        self.assertEqual(decision_output["dataset_trust"], body["dataset_trust"])
+        self.assertEqual(decision_output["readiness"]["readiness_state"], "analysis_ready")
+        self.assertEqual(decision_output["readiness"]["truth_boundary"], "observational_analysis_only")
+        self.assertEqual(decision_output["frame"]["goal"]["metric_ref"]["label"], "Revenue")
+        self.assertEqual(decision_output["frame"]["drivers"][0]["label"], "Marketing Spend")
+        self.assertEqual(decision_output["frame"]["breakdowns"][0]["label"], "Channel")
+        self.assertEqual(decision_output["evidence_board"]["status"], "not_analyzed")
+        self.assertTrue(decision_output["decision_map"]["nodes"])
+        self.assertTrue(decision_output["export_sections"])
+        self.assertIn("final_recommendation", [gate["capability"] for gate in decision_output["advanced_gates"]])
+        self.assertEqual(body["artifacts"][1]["source"], "decision_output")
+        self.assertEqual(body["artifacts"][1]["dataset_trust"], body["dataset_trust"])
+
+    def test_incomplete_decision_turn_returns_blocked_decision_output(self):
+        response = self.client.post(
+            "/api/decision/chat/turns",
+            json={
+                "dataset": DATASET,
+                "semantic_model": SEMANTIC_MODEL,
+                "user_message": "How should we adjust discount rate by region next quarter?",
+                "conversation_history": [],
+                "session_state": {},
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.get_json()
+        self.assertEqual([artifact["type"] for artifact in body["artifacts"]], ["workspace_preview", "decision_output"])
+
+        decision_output = body["decision_output"]
+        self.assertEqual(decision_output["readiness"]["readiness_state"], "blocked")
+        self.assertIn("objective.metric_id_or_metric_name", decision_output["readiness"]["missing_inputs"])
+        self.assertEqual(decision_output["evidence_board"]["status"], "not_analyzed")
+        unknown_nodes = [
+            node for node in decision_output["decision_map"]["nodes"]
+            if node["node_type"] == "unknown"
+        ]
+        self.assertTrue(unknown_nodes)
+        self.assertIn("objective.metric_id_or_metric_name", decision_output["summary"])
+
     def test_decision_turn_includes_dataset_trust_for_inline_dataset(self):
         response = self.client.post(
             "/api/decision/chat/turns",
@@ -807,6 +867,16 @@ class DecisionChatApiTests(unittest.TestCase):
         self.assertEqual(body["artifacts"][0]["render_hint"], "workspace_analysis_summary")
         self.assertEqual(body["artifacts"][0]["default_view"], "inspector")
         self.assertEqual(body["artifacts"][0]["source"], "workspace_analysis")
+        self.assertEqual(body["artifacts"][1]["type"], "decision_output")
+        self.assertEqual(body["artifacts"][1]["render_hint"], "decision_output")
+        self.assertEqual(body["artifacts"][1]["source"], "decision_output")
+        self.assertEqual(body["decision_output"]["evidence_board"]["status"], "analyzed")
+        self.assertTrue(body["decision_output"]["evidence_board"]["items"])
+        self.assertEqual(
+            body["decision_output"]["evidence_board"]["items"][0]["observational_boundary"],
+            "observational_analysis_only",
+        )
+        self.assertEqual(body["decision_output"]["dataset_trust"], body["dataset_trust"])
 
     def test_ready_workspace_actions_expose_stable_contract_and_priority(self):
         response = self.client.post(
@@ -966,8 +1036,8 @@ class DecisionChatApiTests(unittest.TestCase):
         body = action_response.get_json()
         artifact = body["artifacts"][0]
 
-        # Corrections use the existing draft_workspace action, so the response
-        # must remain a workspace_preview until the unified artifact is added.
+        # Corrections keep the existing workspace_preview first while the
+        # additive decision_output carries the updated frame for AI Chat.
         self.assertEqual(body["action"], "draft_workspace")
         self.assertEqual(body["mode"], "decide")
         self.assertEqual(artifact["type"], "workspace_preview")
@@ -980,6 +1050,16 @@ class DecisionChatApiTests(unittest.TestCase):
         self.assertEqual(body["trace"]["observational_boundary"], "observational_analysis_only")
         self.assertIn("objective.metric_id_or_metric_name", artifact["missing_inputs"])
         self.assertEqual(body["session_state"]["draft_workspace"]["readiness"]["readiness_state"], "blocked")
+        self.assertEqual(body["artifacts"][1]["type"], "decision_output")
+        self.assertEqual(body["decision_output"]["correction_state"]["status"], "updated")
+        self.assertEqual(
+            body["decision_output"]["correction_state"]["latest"]["correction_type"],
+            "remove_mapping",
+        )
+        self.assertIn(
+            "objective.metric_id_or_metric_name",
+            body["decision_output"]["readiness"]["missing_inputs"],
+        )
 
 
 if __name__ == "__main__":

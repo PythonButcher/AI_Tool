@@ -40,7 +40,7 @@ Rollout plans must be written in plain language. Use short phase names, one purp
 
 ## Phase Wrap-Up Rule
 
-When Codex wraps up a project phase or clears a phase gate, the final response must automatically include a clean, paste-ready prompt for starting the next session. The wrap-up summary may describe the phase just completed, but the next-session prompt must focus on the next phase's work and avoid re-explaining prior phases except for the minimum verified prerequisite state needed to start safely. The prompt should point to the current docs, name the verified state, and identify the next phase's first task without excessive bullets or code blocks.
+When Codex wraps up a project phase or clears a phase gate, the final response must automatically include a clean, paste-ready prompt for starting the next session. The wrap-up summary may describe the phase just completed, but the next-session prompt must not recap prior phases, review history, implementation history, or who approved earlier work. It may include only the minimum prerequisite state needed to start safely, such as `backend contract is ready` or `active handoff exists`, then point to the current docs and name the next task. Do not include sentences like `Phase N is complete`, `Codex implemented`, `reviewed by`, or detailed verification history inside the next-session prompt.
 
 ## Current Active File
 

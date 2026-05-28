@@ -8,7 +8,7 @@ Full preserved status history: `project_docs/archive/superseded_active_2026_05_2
 
 Decision Intelligence V3 is active.
 
-Phase 1 reliability foundation is complete. Phase 2 semantic metadata plumbing is complete. Phase 2.5 semantic frame completion and Phase 2 cleanup are complete. Phase 3 correction actions and ranked observational evidence are complete on the backend and frontend. Phase 4.5 AI Chat hardening is complete.
+Phase 1 reliability foundation is complete. Phase 2 semantic metadata plumbing is complete. Phase 2.5 semantic frame completion and Phase 2 cleanup are complete. Phase 3 correction actions and ranked observational evidence are complete on the backend and frontend. Phase 4.5 AI Chat hardening is complete. Phase 3 backend `decision_output` for AI Chat Decision Output Unification is complete and reviewed.
 
 The old standalone Phase 4 Canonical Active Dataset handoff is superseded as the active next path. Dataset truth is still important, but it now belongs inside the AI Chat decision output unification plan as Dataset Trust.
 
@@ -40,8 +40,8 @@ Gemini owns frontend implementation unless the user explicitly authorizes Codex 
 | Decision chat contract and actions | Complete foundation |
 | Workspace drafting and correction | Complete foundation |
 | Ranked observational evidence | Complete foundation |
-| Dataset Trust inside AI Chat output | Active next backend/frontend contract target |
-| Unified AI Chat decision output artifact | Active next Codex contract target |
+| Dataset Trust inside AI Chat output | Backend contract complete; frontend rendering next |
+| Unified AI Chat decision output artifact | Backend complete; Gemini Phase 4 rendering next |
 | Decisions window required-continuation flow | Superseded direction |
 | Legacy recommendations, Autopilot, AutoML prominence | Prune or rewrite after replacement path exists |
 
@@ -88,6 +88,18 @@ Codex cleared the 7 remaining Decision Chat baseline failures left after Phase 2
 One backend response-shape fix was made in `backend/decision_engine/chat_service.py`: explore follow-ups can preserve a prior draft in `session_state` without surfacing that prior draft as the active top-level `draft_workspace_preview`. This keeps decision continuity available while letting answer and chart turns remain response-specific.
 
 Verification passed with `PYTHONPATH=.codex_tmp_py\site-packages python -m unittest tests.test_decision_chat_service`, `PYTHONPATH=.codex_tmp_py\site-packages python -m py_compile backend\decision_engine\chat_service.py tests\test_decision_chat_service.py`, and `git diff --check`. Anti Gravity/Gemini reviewed the cleanup and found no blockers. Their only open question was the chart source label; the accepted decision for Phase 3 is to keep `semantic_metric` for semantic metric chart artifacts.
+
+## Phase 3 Backend Decision Output Slice - 2026-05-28
+
+Codex implemented the backend-owned AI Chat `decision_output` artifact additively. `backend/services/decision_output_service.py` composes Dataset Trust, frame, readiness, correction state, Evidence Board, Decision Map, Scenario Compare placeholder, advanced gates, export sections, and source refs from existing workspace and analysis objects. `backend/decision_engine/chat_service.py` now appends `decision_output` after existing `workspace_preview` artifacts for decision prompts, after `workspace_analysis_summary` for `analyze_workspace`, and after corrected `workspace_preview` artifacts for correction responses. Existing artifact types and first-artifact compatibility are preserved.
+
+The `decision_output` contract is documented in `project_docs/active/contracts/decision_objects.md`. Focused tests in `tests/test_decision_chat_service.py` now cover complete decision prompts, incomplete decision prompts, analyze action output, and correction action compatibility. No frontend files and no `GEMINI.md` files were touched.
+
+Verification passed with `PYTHONPATH=.codex_tmp_py\site-packages python -m unittest tests.test_decision_chat_service` at 27/27 and `PYTHONPATH=.codex_tmp_py\site-packages python -m py_compile backend\services\decision_output_service.py backend\decision_engine\chat_service.py tests\test_decision_chat_service.py`.
+
+Anti Gravity reviewed the Phase 3 backend diff and returned verdict: Complete. The review confirmed additive artifact positioning, Dataset Trust preservation, `observational_analysis_only` truth boundary, no unsupported recommendation/simulation/optimization/causal claims, no frontend or `GEMINI.md` changes, and sufficient tests for complete draft, incomplete draft, analyze action, and correction compatibility. The only minor observation was that `default_view` and `schema_version` were emitted by the service but not yet listed in the contract table; the contract has now been updated.
+
+Phase 4 is ready for Gemini frontend implementation. Active handoff: `project_docs/active/ai_hand_off/phase_4_gemini_ai_chat_decision_output_rendering.md`.
 
 ## Canonical Resume Order
 

@@ -83,6 +83,72 @@ Decision Chat artifacts keep a compact `source` label that describes the backend
 
 Frontend code should render by `artifact.type` and `render_hint` first. It may use `source` for lineage, badges, diagnostics, or source-specific affordances, but should not require `source === "chart_engine"` to render a chart.
 
+### AI Chat Decision Output
+
+Phase 3 of AI Chat Decision Output Unification adds a backend-owned `decision_output` artifact. It is additive and does not replace existing `workspace_preview` or `workspace_analysis_summary` artifacts during the transition. AI Chat decision prompt responses keep `workspace_preview` first for compatibility and append `decision_output`. `analyze_workspace` action responses keep `workspace_analysis_summary` first and append `decision_output`. Correction responses through the existing `draft_workspace` action keep `workspace_preview` first and append an updated `decision_output`.
+
+`decision_output` is display-ready enough for the AI Chat output pane. Frontend code should not reverse-engineer raw workspace internals for the primary decision output sections when these fields are present.
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `type` | `string` | Yes | Current value is `decision_output`. |
+| `render_hint` | `string` | Yes | Current value is `decision_output`. |
+| `inspectable` | `boolean` | Yes | Current value is `true`; artifact inspection should remain available. |
+| `default_view` | `string` | Yes | Current value is `inspector`. |
+| `schema_version` | `string` | Yes | Current value is `di_phase3_decision_output_v1`. |
+| `title` | `string` | Yes | Business-facing title derived from the current workspace title. |
+| `summary` | `string` | Yes | Executive brief text. For analyzed workspaces this comes from `workspace_analysis.summary` when available; otherwise it summarizes readiness or missing inputs. |
+| `dataset_trust` | `Dataset Trust` | Yes | Same Dataset Trust object returned top-level and attached to artifacts. |
+| `frame` | `Decision Output Frame` | Yes | Goal, Drivers, Limits, Breakdowns, Assumptions, Unknowns, and scope summary composed from the current workspace. |
+| `readiness` | `Decision Readiness State` | Yes | Existing readiness object adapted for display. The truth boundary remains `observational_analysis_only`. |
+| `correction_state` | `object` | Yes | Latest correction result when a correction was applied, plus conservative history metadata. |
+| `evidence_board` | `Decision Output Evidence Board` | Yes | Normalized view of `workspace_analysis.ranked_diagnostics`, or `not_analyzed` when analysis has not run. |
+| `decision_map` | `Decision Output Map` | Yes | Read-only map of dataset, frame, evidence, missing inputs, and advanced gates. Edges are explicitly non-causal. |
+| `scenario_compare` | `object` | Yes | Bounded scenario preview when available, otherwise a `not_applicable` object with limitations. It is not a forecast, optimizer, or causal simulation. |
+| `advanced_gates` | `object[]` | Yes | Unsupported or gated capabilities such as simulation, optimization, autonomous decisioning, and final recommendation with backend reasons. |
+| `export_sections` | `object[]` | Yes | Concise export-ready sections for Executive Brief, Dataset Trust, Decision Frame, Evidence Board, Decision Map, Scenario Compare, and Truth Boundary. |
+| `source_refs` | `object` | Yes | Trace refs back to workspace ID/status, analysis presence, ranked diagnostic IDs, correction status, and scenario status. |
+| `truth_boundary` | `string` | Yes | Current value is `observational_analysis_only`. |
+
+#### Decision Output Frame
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `goal` | `object` | Yes | Existing `decision_scope.objective` object. |
+| `drivers` | `object[]` | Yes | Existing `decision_scope.levers` objects. |
+| `limits` | `object[]` | Yes | Existing `decision_scope.constraints` objects. |
+| `breakdowns` | `object[]` | Yes | Existing `decision_scope.segment_dimensions` objects. |
+| `assumptions` | `object[]` | Yes | Existing workspace assumptions. |
+| `unknowns` | `object[]` | Yes | Existing workspace unknowns. |
+| `scope_summary` | `string \| null` | No | Existing workspace scope summary. |
+
+#### Decision Output Evidence Board
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `status` | `string` | Yes | `not_analyzed` before analysis, `analyzed` after ranked diagnostics are available. |
+| `summary` | `string` | Yes | Business-facing analysis summary or instruction to run analysis. |
+| `items` | `object[]` | Yes | Normalized ranked diagnostic items. Empty when not analyzed. |
+| `observational_boundary` | `string` | Yes | Current value is `observational_analysis_only`. |
+
+Evidence Board item fields:
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `rank` | `integer` | Yes | Evidence order copied from `evidence_rank` or generated from list order. |
+| `title` | `string` | Yes | Human-readable evidence title. |
+| `summary` | `string` | Yes | Diagnostic summary text. |
+| `covers` | `object` | Yes | Goal, Drivers, Limits, Breakdowns, and context role coverage derived from semantic coverage. |
+| `strength` | `string` | Yes | `strong`, `moderate`, `weak`, or `insufficient`. |
+| `data_sufficiency` | `object` | Yes | Existing diagnostic sufficiency object when available. |
+| `limitations` | `string[]` | Yes | Includes observational-only caveats when no diagnostic limitation is present. |
+| `source_diagnostic_id` | `string \| null` | No | Trace back to `workspace_analysis.ranked_diagnostics`. |
+| `observational_boundary` | `string` | Yes | Current value is `observational_analysis_only`. |
+
+#### Decision Output Map
+
+`decision_map` is a presentation contract, not a causal diagram. It can contain node types `dataset`, `goal`, `driver`, `limit`, `breakdown`, `evidence`, `unknown`, and `advanced_gate`. Edge types include `declared_relationship`, `observed_association`, `constraint`, `breakdown`, and `missing_evidence`. Every edge includes `causal_status: "not_causal_claim"`.
+
 ### Decision Semantics For Metrics
 
 Additive role metadata attached to semantic model metrics and echoed on `Metric Reference` objects when available. Older semantic models remain valid; the backend finalizer can infer conservative defaults from names, fields, format hints, aggregation, and existing metadata.

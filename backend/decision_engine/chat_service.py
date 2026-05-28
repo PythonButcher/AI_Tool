@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from backend.decision_engine.grounding import build_grounding_summary
 from backend.decision_engine.mode_detection import detect_chat_mode_details, is_visualization_request
 from backend.services.aichat_nlp import analyse_columns, build_chart_response, extract_dataset, interpret_nl_query
+from backend.services.decision_output_service import DecisionOutputService
 from backend.services.decision_support import DecisionServiceError, build_dataset_trust
 from backend.services.metric_resolver import MetricResolutionError, MetricResolver
 from backend.services.decision_workspace_service import DecisionWorkspaceService
@@ -129,6 +130,8 @@ class DecisionChatService:
         warnings: List[str] = []
         assistant_message = ""
         draft_workspace = DecisionChatService._extract_workspace(payload, session_state)
+        workspace_analysis: Dict[str, Any] | None = None
+        output_correction_result: Dict[str, Any] | None = None
         available_actions: List[Dict[str, Any]] = []
         analytic_state = DecisionChatService._normalize_analytic_state(session_state.get("last_analytic_context"))
 
@@ -180,6 +183,8 @@ class DecisionChatService:
                 assistant_message = action_result["assistant_message"]
                 warnings = list(action_result.get("warnings") or [])
                 draft_workspace = action_result["workspace"]
+                workspace_analysis = action_result.get("workspace_analysis")
+                output_correction_result = action_result.get("correction_result")
             elif text_action and draft_workspace is None:
                 assistant_message = "Frame a decision first, then I can show blockers, assumptions, or workspace analysis."
                 artifacts.append({
@@ -216,6 +221,14 @@ class DecisionChatService:
             })
 
         dataset_trust = DecisionChatService.build_dataset_trust_for_payload(payload, workspace=draft_workspace)
+        decision_output = DecisionChatService._build_decision_output(
+            workspace=draft_workspace,
+            dataset_trust=dataset_trust,
+            workspace_analysis=workspace_analysis,
+            correction_result=output_correction_result,
+        )
+        if decision_output is not None:
+            artifacts.append(decision_output)
         normalized_actions = DecisionChatService._normalize_available_actions(available_actions, mode=mode)
         normalized_artifacts = DecisionChatService._attach_dataset_trust(
             DecisionChatService._annotate_artifacts(artifacts, mode=mode),
@@ -267,6 +280,7 @@ class DecisionChatService:
             "suggested_actions": normalized_actions,
             "artifacts": normalized_artifacts,
             "draft_workspace_preview": draft_workspace_preview,
+            "decision_output": decision_output,
             "dataset_trust": dataset_trust,
             "session_state": updated_state,
             "grounding_summary": grounding_summary,
@@ -302,12 +316,21 @@ class DecisionChatService:
         workspace = action_result["workspace"]
         correction_result = action_result.get("correction_result")
         correction_trace = action_result.get("trace")
+        workspace_analysis = action_result.get("workspace_analysis")
 
         normalized_actions = DecisionChatService._normalize_available_actions(
             DecisionChatService._build_decision_actions(workspace) if workspace else [],
             mode="decide",
         )
         dataset_trust = DecisionChatService.build_dataset_trust_for_payload(payload, workspace=workspace)
+        decision_output = DecisionChatService._build_decision_output(
+            workspace=workspace,
+            dataset_trust=dataset_trust,
+            workspace_analysis=workspace_analysis,
+            correction_result=correction_result,
+        )
+        if decision_output is not None:
+            artifacts.append(decision_output)
         normalized_artifacts = DecisionChatService._attach_dataset_trust(
             DecisionChatService._annotate_artifacts(artifacts, mode="decide"),
             dataset_trust,
@@ -346,6 +369,7 @@ class DecisionChatService:
             "suggested_actions": normalized_actions,
             "artifacts": normalized_artifacts,
             "decision_workspace": workspace,
+            "decision_output": decision_output,
             "correction_result": correction_result,
             "trace": correction_trace,
             "dataset_trust": dataset_trust,
@@ -847,6 +871,11 @@ class DecisionChatService:
                 "inspectable": True,
                 "default_view": "inspector",
             },
+            "decision_output": {
+                "render_hint": "decision_output",
+                "inspectable": True,
+                "default_view": "inspector",
+            },
             "coming_soon": {
                 "render_hint": "coming_soon",
                 "inspectable": False,
@@ -872,6 +901,8 @@ class DecisionChatService:
             return "decision_workspace"
         if artifact_type == "workspace_analysis_summary":
             return "workspace_analysis"
+        if artifact_type == "decision_output":
+            return "decision_output"
         if artifact_type == "answer":
             if content.get("metric"):
                 return "semantic_metric"
@@ -879,6 +910,23 @@ class DecisionChatService:
                 return "raw_nlp"
             return "grounding"
         return "decision_chat"
+
+    @staticmethod
+    def _build_decision_output(
+        *,
+        workspace: Dict[str, Any] | None,
+        dataset_trust: Dict[str, Any],
+        workspace_analysis: Dict[str, Any] | None = None,
+        correction_result: Dict[str, Any] | None = None,
+    ) -> Dict[str, Any] | None:
+        if not isinstance(workspace, dict) or not workspace:
+            return None
+        return DecisionOutputService.compose(
+            workspace=workspace,
+            dataset_trust=dataset_trust,
+            workspace_analysis=workspace_analysis,
+            correction_result=correction_result,
+        )
 
     @staticmethod
     def _mode_label(mode: str) -> str:
@@ -957,6 +1005,7 @@ class DecisionChatService:
             raise DecisionServiceError(f"Unsupported decision chat action: {action}")
         artifacts: List[Dict[str, Any]] = []
         warnings: List[str] = []
+        workspace_analysis: Dict[str, Any] | None = None
         assistant_message = ""
 
         if action == "draft_workspace":
@@ -1115,6 +1164,7 @@ class DecisionChatService:
             "assistant_message": assistant_message,
             "workspace": workspace,
             "warnings": warnings,
+            "workspace_analysis": workspace_analysis,
         }
 
     @staticmethod
