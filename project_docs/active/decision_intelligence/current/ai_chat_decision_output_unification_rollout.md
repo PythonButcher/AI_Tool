@@ -153,6 +153,10 @@ Purpose: create one backend-owned artifact that can power the AI Chat decision o
 
 The artifact should compose existing workspace and analysis data into a display-ready decision asset. It should not force Gemini to reverse-engineer raw workspace internals.
 
+Readiness gate:
+
+Do not start normal Phase 3 implementation while the focused Decision Chat backend suite is red unless the user explicitly accepts that risk. As of the Phase 2 Dataset Trust slice, `PYTHONPATH=.codex_tmp_py\site-packages python -m unittest tests.test_decision_chat_service` runs but has 7 failures in behavior Phase 3 must preserve: chart artifact source truth, explore follow-up behavior after a decision prompt, and prompt-first drafting expectations for mix levers. The next Codex session should resolve or reclassify those failures first, then start `decision_output` only after the suite is green or the exception is documented in active status.
+
 Recommended artifact type:
 
 `decision_output`

@@ -178,6 +178,164 @@ def build_dataset_summary(bundle: Dict[str, Any], dataframe: pd.DataFrame) -> Di
     }
 
 
+def build_dataset_trust(
+    *,
+    dataset: Any = None,
+    dataset_ref: Optional[Dict[str, Any]] = None,
+    semantic_model: Optional[Dict[str, Any]] = None,
+    dataset_summary: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """Build conservative source-trust metadata without resolving global app state."""
+    normalized_ref = dataset_ref if isinstance(dataset_ref, dict) else {}
+    summary = dict(dataset_summary) if isinstance(dataset_summary, dict) else {}
+    source = str(summary.get("source") or normalized_ref.get("source") or "").strip().lower()
+    rows = _coerce_dataset_records(dataset)
+
+    if rows:
+        source = source or "inline"
+        summary = {
+            "source": source,
+            "dataset_id": summary.get("dataset_id") or normalized_ref.get("dataset_id"),
+            "dataset_name": (
+                summary.get("dataset_name")
+                or normalized_ref.get("dataset_name")
+                or _semantic_dataset_name(semantic_model)
+                or ("Inline Dataset" if source == "inline" else "Active Dataset")
+            ),
+            "row_count": int(summary.get("row_count") or len(rows)),
+            "column_count": int(summary.get("column_count") or len(rows[0].keys())),
+        }
+    elif summary.get("row_count") is not None or summary.get("column_count") is not None:
+        source = source or "active"
+        summary = {
+            "source": source,
+            "dataset_id": summary.get("dataset_id") or normalized_ref.get("dataset_id"),
+            "dataset_name": summary.get("dataset_name") or normalized_ref.get("dataset_name") or "Active Dataset",
+            "row_count": int(summary.get("row_count") or 0),
+            "column_count": int(summary.get("column_count") or 0),
+        }
+    else:
+        summary = None
+
+    semantic_ready = _semantic_model_has_decision_context(semantic_model)
+    warnings_list: List[str] = []
+    if summary is None:
+        warnings_list.append("No active dataset was provided for this response.")
+    if summary is not None and not normalized_ref.get("source"):
+        warnings_list.append("Dataset source was inferred from the payload because no dataset_ref.source was provided.")
+    if not semantic_ready:
+        warnings_list.append("Semantic readiness could not be confirmed from the provided semantic model.")
+
+    transform_state = _normalize_transform_state(normalized_ref, source)
+    stale_state = _normalize_stale_state(normalized_ref, source)
+    if transform_state == "unknown":
+        warnings_list.append("The backend cannot prove whether this dataset is raw, cleaned, or transformed.")
+    if stale_state == "unknown":
+        warnings_list.append("The backend cannot prove whether this dataset is current.")
+
+    return {
+        "dataset": summary,
+        "source_label": _dataset_source_label(source, summary),
+        "row_count": summary.get("row_count") if summary else 0,
+        "column_count": summary.get("column_count") if summary else 0,
+        "semantic_ready": semantic_ready,
+        "transform_state": transform_state,
+        "stale_state": stale_state,
+        "warnings": warnings_list,
+    }
+
+
+def _coerce_dataset_records(dataset: Any) -> List[Dict[str, Any]]:
+    if dataset is None:
+        return []
+    if isinstance(dataset, pd.DataFrame):
+        return dataset.to_dict(orient="records")
+    if isinstance(dataset, list) and all(isinstance(row, dict) for row in dataset):
+        return dataset
+    if isinstance(dataset, dict):
+        for key in ("data_preview", "cleanedData", "uploadedData", "rows", "data", "preview"):
+            if key in dataset:
+                records = _coerce_dataset_records(dataset.get(key))
+                if records:
+                    return records
+    return []
+
+
+def _semantic_dataset_name(semantic_model: Optional[Dict[str, Any]]) -> Optional[str]:
+    if not isinstance(semantic_model, dict):
+        return None
+    dataset_meta = semantic_model.get("dataset") if isinstance(semantic_model.get("dataset"), dict) else {}
+    name = str(dataset_meta.get("name") or "").strip()
+    return name or None
+
+
+def _semantic_model_has_decision_context(semantic_model: Optional[Dict[str, Any]]) -> bool:
+    if not isinstance(semantic_model, dict):
+        return False
+    metrics = semantic_model.get("metrics") if isinstance(semantic_model.get("metrics"), list) else []
+    dimensions = semantic_model.get("dimensions") if isinstance(semantic_model.get("dimensions"), list) else []
+    return bool(metrics or dimensions)
+
+
+def _normalize_transform_state(dataset_ref: Dict[str, Any], source: str) -> str:
+    raw_value = str(
+        dataset_ref.get("transform_state")
+        or dataset_ref.get("transformation_state")
+        or dataset_ref.get("cleaning_state")
+        or ""
+    ).strip().lower()
+    aliases = {
+        "clean": "cleaned",
+        "cleaned": "cleaned",
+        "raw": "raw",
+        "transformed": "transformed",
+        "derived": "transformed",
+    }
+    if raw_value in aliases:
+        return aliases[raw_value]
+    if dataset_ref.get("is_cleaned") is True or source == "cleaned":
+        return "cleaned"
+    if source == "inline":
+        return "raw"
+    return "unknown"
+
+
+def _normalize_stale_state(dataset_ref: Dict[str, Any], source: str) -> str:
+    raw_value = str(dataset_ref.get("stale_state") or dataset_ref.get("freshness_state") or "").strip().lower()
+    aliases = {
+        "current": "current",
+        "fresh": "current",
+        "possibly_stale": "possibly_stale",
+        "stale": "possibly_stale",
+        "unknown": "unknown",
+        "not_applicable": "not_applicable",
+    }
+    if raw_value in aliases:
+        return aliases[raw_value]
+    if dataset_ref.get("is_stale") is True:
+        return "possibly_stale"
+    if dataset_ref.get("is_stale") is False:
+        return "current"
+    if source == "inline":
+        return "not_applicable"
+    return "unknown"
+
+
+def _dataset_source_label(source: str, summary: Optional[Dict[str, Any]]) -> str:
+    labels = {
+        "active": "Active dataset",
+        "uploaded": "Uploaded data",
+        "cleaned": "Cleaned data",
+        "inline": "Inline payload",
+        "datahub": "Data Hub",
+    }
+    if source in labels:
+        return labels[source]
+    if summary is None:
+        return "No dataset"
+    return "Dataset source unknown"
+
+
 def build_semantic_summary(semantic_model: Dict[str, Any]) -> Dict[str, Any]:
     dataset_meta = semantic_model.get("dataset") if isinstance(semantic_model.get("dataset"), dict) else {}
     return {

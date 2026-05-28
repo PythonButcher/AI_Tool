@@ -59,6 +59,28 @@ Gemini review verdict: useful. The review confirmed the Phase 1 tests provide me
 
 Next active slice: Phase 2, add backend-owned Dataset Trust to AI Chat decision output payloads additively while preserving all Phase 1 protected artifact contracts.
 
+## Phase 2 Dataset Trust Backend Slice - 2026-05-26
+
+Codex resolved the local backend test runner blocker enough for focused tests to execute by installing the project requirements into the workspace-local `.codex_tmp_py/site-packages` target and running tests with `PYTHONPATH=.codex_tmp_py\site-packages`. The default `python` interpreter still does not see the user-site Flask install, and a direct user-site reinstall hit a Windows permission error while replacing MarkupSafe, so the reliable project-local test command currently needs that `PYTHONPATH` prefix.
+
+Backend Dataset Trust is now additive in AI Chat decision responses. `backend/services/decision_support.py` owns a conservative `build_dataset_trust` helper. `backend/decision_engine/chat_service.py` returns top-level `dataset_trust`, attaches the same object to returned artifacts, and stores it in returned session state where context or decision state exists. `backend/routes/decision.py` adds `dataset_trust` to Decision Chat turn/action validation errors so missing-dataset failures can still tell the frontend what the backend knows.
+
+Frontend and future Phase 3 work can rely on `dataset_trust.dataset`, `source_label`, `row_count`, `column_count`, `semantic_ready`, `transform_state`, `stale_state`, and `warnings`. Loaded datasets can report explicit source, transform, and stale state when provided. Inline payloads are identified as `Inline payload`, default to `raw`, and use `not_applicable` stale state. Missing datasets return `dataset: null`, zero counts, and warnings instead of guessing.
+
+Updated contract: `project_docs/active/contracts/decision_objects.md`. Focused tests added in `tests/test_decision_chat_service.py` cover loaded dataset, inline dataset, and missing dataset Dataset Trust behavior. No `decision_output` artifact was implemented. No frontend files or `GEMINI.md` files were touched.
+
+Verification run with `PYTHONPATH=.codex_tmp_py\site-packages`: the three new Dataset Trust tests passed, and `python -m py_compile backend\services\decision_support.py backend\decision_engine\chat_service.py backend\routes\decision.py tests\test_decision_chat_service.py` passed. The full `python -m unittest tests.test_decision_chat_service` suite now runs but still has 7 pre-existing behavioral failures unrelated to Dataset Trust: chart source expectation `chart_engine` versus current `semantic_metric`, stale `draft_workspace_preview` still present after an analytic follow-up, and several prompt-drafting expectations for mix levers such as `Channel mix`, `Region mix`, and `Product Category mix`.
+
+Phase 3 remains: define the unified `decision_output` artifact after the existing Phase 1 contracts and the new Dataset Trust contract are stable. Before treating the full chat suite as a green regression gate, the 7 baseline chat-service expectation mismatches need a separate cleanup or test-truth pass.
+
+## Phase 3 Readiness Gate - 2026-05-26
+
+The project is not yet cleanly ready to start Phase 3 implementation as a normal green-gate backend slice. Phase 2 Dataset Trust is implemented and its focused tests pass, but the focused Decision Chat suite still has 7 failures. Those failures touch behavior Phase 3 must protect: chart artifact source truth, explore follow-up behavior after a decision prompt, and prompt-first drafting expectations for mix levers such as Channel mix, Region mix, and Product Category mix.
+
+The next Codex session should start with a Phase 3 readiness pass, not immediate `decision_output` implementation. That pass should decide whether each failing assertion is a stale test expectation or a real regression, then update code or tests accordingly. Only after `PYTHONPATH=.codex_tmp_py\site-packages python -m unittest tests.test_decision_chat_service` passes, or after a documented owner-approved exception, should Codex implement the `decision_output` artifact.
+
+When the gate is cleared, Phase 3 should remain backend-only: document the `decision_output` contract, add a small composer service or function, return `decision_output` alongside existing `workspace_preview` and `workspace_analysis_summary`, preserve Dataset Trust, preserve all existing artifact types, and add focused tests for complete draft, incomplete draft, analyze action, and correction action.
+
 ## Canonical Resume Order
 
 | Step | Read |

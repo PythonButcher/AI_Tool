@@ -248,6 +248,88 @@ class DecisionChatApiTests(unittest.TestCase):
         self.assertEqual(body["action_state"]["primary_action_id"], "show_blockers")
         self.assertTrue(body["suggested_actions"][0]["description"])
 
+    def test_decision_turn_includes_dataset_trust_for_loaded_dataset(self):
+        response = self.client.post(
+            "/api/decision/chat/turns",
+            json={
+                "dataset": DATASET,
+                "dataset_ref": {
+                    "source": "active",
+                    "dataset_id": "sales_q1",
+                    "dataset_name": "Q1 Sales",
+                    "transform_state": "cleaned",
+                    "stale_state": "current",
+                },
+                "semantic_model": SEMANTIC_MODEL,
+                "user_message": "How should we grow revenue next quarter without hurting gross margin?",
+                "conversation_history": [],
+                "session_state": {},
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.get_json()
+        trust = body["dataset_trust"]
+        self.assertEqual(trust["source_label"], "Active dataset")
+        self.assertEqual(trust["dataset"]["dataset_id"], "sales_q1")
+        self.assertEqual(trust["dataset"]["dataset_name"], "Q1 Sales")
+        self.assertEqual(trust["row_count"], len(DATASET))
+        self.assertEqual(trust["column_count"], len(DATASET[0]))
+        self.assertTrue(trust["semantic_ready"])
+        self.assertEqual(trust["transform_state"], "cleaned")
+        self.assertEqual(trust["stale_state"], "current")
+        self.assertEqual(body["artifacts"][0]["dataset_trust"], trust)
+        self.assertEqual(body["draft_workspace_preview"]["dataset_trust"], trust)
+
+    def test_decision_turn_includes_dataset_trust_for_inline_dataset(self):
+        response = self.client.post(
+            "/api/decision/chat/turns",
+            json={
+                "dataset": DATASET,
+                "semantic_model": SEMANTIC_MODEL,
+                "user_message": "How should we grow revenue next quarter without hurting gross margin?",
+                "conversation_history": [],
+                "session_state": {},
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.get_json()
+        trust = body["dataset_trust"]
+        self.assertEqual(trust["source_label"], "Inline payload")
+        self.assertEqual(trust["dataset"]["source"], "inline")
+        self.assertEqual(trust["dataset"]["dataset_name"], "Q1 Sales")
+        self.assertEqual(trust["row_count"], len(DATASET))
+        self.assertEqual(trust["column_count"], len(DATASET[0]))
+        self.assertTrue(trust["semantic_ready"])
+        self.assertEqual(trust["transform_state"], "raw")
+        self.assertEqual(trust["stale_state"], "not_applicable")
+        self.assertIn("Dataset source was inferred", " ".join(trust["warnings"]))
+
+    def test_decision_turn_error_includes_dataset_trust_when_dataset_missing(self):
+        response = self.client.post(
+            "/api/decision/chat/turns",
+            json={
+                "semantic_model": SEMANTIC_MODEL,
+                "user_message": "How should we grow revenue next quarter without hurting gross margin?",
+                "conversation_history": [],
+                "session_state": {},
+            },
+        )
+
+        self.assertEqual(response.status_code, 400)
+        body = response.get_json()
+        trust = body["dataset_trust"]
+        self.assertEqual(body["status"], "error")
+        self.assertIsNone(trust["dataset"])
+        self.assertEqual(trust["source_label"], "No dataset")
+        self.assertEqual(trust["row_count"], 0)
+        self.assertEqual(trust["column_count"], 0)
+        self.assertTrue(trust["semantic_ready"])
+        self.assertEqual(trust["transform_state"], "unknown")
+        self.assertEqual(trust["stale_state"], "unknown")
+        self.assertIn("No active dataset", " ".join(trust["warnings"]))
+
     def test_turn_route_builds_decision_readable_workspace_kickoff_for_clean_prompt(self):
         response = self.client.post(
             "/api/decision/chat/turns",
