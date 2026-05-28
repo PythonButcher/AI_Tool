@@ -36,7 +36,9 @@ def decision_chat_turn_route():
     try:
         return jsonify(DecisionChatService.handle_turn(payload)), 200
     except DecisionServiceError as exc:
-        return jsonify(_error_payload("INVALID_DECISION_CHAT_TURN_REQUEST", str(exc))), 400
+        error_response = _error_payload("INVALID_DECISION_CHAT_TURN_REQUEST", str(exc))
+        error_response["dataset_trust"] = DecisionChatService.build_dataset_trust_for_payload(payload)
+        return jsonify(error_response), 400
     except Exception as exc:
         return jsonify(_error_payload("DECISION_CHAT_TURN_FAILED", f"Failed to process decision chat turn: {exc}")), 500
 
@@ -46,7 +48,9 @@ def decision_chat_action_route():
     try:
         return jsonify(DecisionChatService.handle_action(payload)), 200
     except DecisionServiceError as exc:
-        return jsonify(_error_payload("INVALID_DECISION_CHAT_ACTION_REQUEST", str(exc))), 400
+        error_response = _error_payload("INVALID_DECISION_CHAT_ACTION_REQUEST", str(exc))
+        error_response["dataset_trust"] = DecisionChatService.build_dataset_trust_for_payload(payload)
+        return jsonify(error_response), 400
     except Exception as exc:
         return jsonify(_error_payload("DECISION_CHAT_ACTION_FAILED", f"Failed to process decision chat action: {exc}")), 500
 

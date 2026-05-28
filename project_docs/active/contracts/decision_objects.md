@@ -56,6 +56,33 @@ Legacy compatibility note: existing fields such as `can_run_simulation` and `blo
 | `row_count` | `integer` | Yes | Row count for the resolved dataset |
 | `column_count` | `integer` | Yes | Column count for the resolved dataset |
 
+### Dataset Trust
+
+Phase 2 of AI Chat Decision Output Unification adds `dataset_trust` additively to Decision Chat turn and action responses and to the artifacts in those responses. `dataset_trust` is backend-owned source truth for the data that powered the response. It must stay conservative: when the backend cannot prove source, freshness, or cleaning state, it returns `unknown` and a warning instead of guessing.
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `dataset` | `Dataset Summary \| null` | Yes | Resolved dataset summary when the backend can identify row and column counts. `null` when no dataset was provided or resolved. |
+| `source_label` | `string` | Yes | Business-facing source label such as `Active dataset`, `Uploaded data`, `Cleaned data`, `Inline payload`, `Data Hub`, or `No dataset`. |
+| `row_count` | `integer` | Yes | Row count used for the response. `0` when no dataset is available. |
+| `column_count` | `integer` | Yes | Column count used for the response. `0` when no dataset is available. |
+| `semantic_ready` | `boolean` | Yes | Whether the provided semantic model has at least metric or dimension context. This is readiness for semantic grounding, not proof that every decision role is complete. |
+| `transform_state` | `string` | Yes | `cleaned`, `raw`, `transformed`, or `unknown`. Inline payloads default to `raw`; active or Data Hub datasets default to `unknown` unless the payload proves more. |
+| `stale_state` | `string` | Yes | `current`, `possibly_stale`, `unknown`, or `not_applicable`. Inline payloads default to `not_applicable`; active or Data Hub datasets default to `unknown` unless the payload proves more. |
+| `warnings` | `string[]` | Yes | Short caveats explaining missing dataset, inferred source, unproven semantic readiness, unknown transform state, or unknown stale state. |
+
+Current placement:
+
+`DecisionChatService.handle_turn` returns top-level `dataset_trust`, adds the same object to each returned artifact, and adds it under `session_state.context_summary.dataset_trust` and `session_state.decision_state.dataset_trust` when those state objects exist. `draft_workspace_preview` also receives `dataset_trust` when a draft workspace exists.
+
+`DecisionChatService.handle_action` returns top-level `dataset_trust`, adds the same object to each returned artifact, and stores it in returned session state. Chat turn and action error responses include `dataset_trust` when the request fails before a normal response can be built.
+
+### AI Chat Artifact Source
+
+Decision Chat artifacts keep a compact `source` label that describes the backend path that produced the artifact. For chart artifacts, an explicit `content.meta.source` is authoritative and is copied to top-level `artifact.source`. Charts produced by semantic metric analytics use `source: "semantic_metric"` and `content.meta.source: "semantic_metric"` because the metric resolver supplied the grouped values and semantic lineage. Raw chart artifacts that do not provide `content.meta.source` fall back to `chart_engine`.
+
+Frontend code should render by `artifact.type` and `render_hint` first. It may use `source` for lineage, badges, diagnostics, or source-specific affordances, but should not require `source === "chart_engine"` to render a chart.
+
 ### Decision Semantics For Metrics
 
 Additive role metadata attached to semantic model metrics and echoed on `Metric Reference` objects when available. Older semantic models remain valid; the backend finalizer can infer conservative defaults from names, fields, format hints, aggregation, and existing metadata.
