@@ -153,6 +153,12 @@ Purpose: create one backend-owned artifact that can power the AI Chat decision o
 
 The artifact should compose existing workspace and analysis data into a display-ready decision asset. It should not force Gemini to reverse-engineer raw workspace internals.
 
+Readiness gate:
+
+Cleared by the Phase 2.5 cleanup for Phase 2. `PYTHONPATH=.codex_tmp_py\site-packages python -m unittest tests.test_decision_chat_service` now passes at 25/25. Phase 3 can start as a backend slice in the next Codex session.
+
+The chart source decision for Phase 3 is to keep `source: "semantic_metric"` and `content.meta.source: "semantic_metric"` for charts produced by semantic metric analytics. Raw chart artifacts without an explicit content source may still fall back to `chart_engine`.
+
 Recommended artifact type:
 
 `decision_output`

@@ -202,11 +202,17 @@ class DecisionChatApiTests(unittest.TestCase):
         self.assertEqual(body["mode"], "explore")
         self.assertEqual(body["artifacts"][0]["type"], "chart")
         self.assertTrue(body["artifacts"][0]["content"]["chartData"])
+        # Phase 1 protects the existing AI Chat artifact contract before
+        # any richer decision output artifact is introduced.
         self.assertEqual(body["mode_context"]["current_mode"], "explore")
         self.assertEqual(body["mode_context"]["reason_code"], "visualization_request")
         self.assertTrue(body["artifacts"][0]["artifact_id"])
         self.assertEqual(body["artifacts"][0]["render_hint"], "chart")
         self.assertTrue(body["artifacts"][0]["inspectable"])
+        self.assertEqual(body["artifacts"][0]["default_view"], "inspector")
+        self.assertEqual(body["artifacts"][0]["source"], "semantic_metric")
+        self.assertEqual(body["artifacts"][0]["content"]["meta"]["source"], "semantic_metric")
+        self.assertIsNone(body["draft_workspace_preview"])
         self.assertEqual(body["action_state"]["available_action_ids"], [])
 
     def test_turn_route_builds_workspace_preview_for_decision_prompt(self):
@@ -224,7 +230,14 @@ class DecisionChatApiTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         body = response.get_json()
         self.assertEqual(body["mode"], "decide")
+        self.assertEqual(body["artifacts"][0]["type"], "workspace_preview")
+        self.assertEqual(body["artifacts"][0]["render_hint"], "workspace_preview")
+        self.assertTrue(body["artifacts"][0]["inspectable"])
+        self.assertEqual(body["artifacts"][0]["default_view"], "inline_and_inspector")
+        self.assertEqual(body["artifacts"][0]["source"], "decision_workspace")
         self.assertEqual(body["draft_workspace_preview"]["type"], "workspace_preview")
+        self.assertEqual(body["draft_workspace_preview"]["render_hint"], "workspace_preview")
+        self.assertTrue(body["draft_workspace_preview"]["inspectable"])
         self.assertIn("draft_workspace", body["session_state"])
         self.assertTrue(body["suggested_actions"])
         self.assertEqual(body["mode_context"]["current_mode"], "decide")
@@ -235,6 +248,88 @@ class DecisionChatApiTests(unittest.TestCase):
         self.assertIn("open_workspace", body["action_state"]["available_action_ids"])
         self.assertEqual(body["action_state"]["primary_action_id"], "show_blockers")
         self.assertTrue(body["suggested_actions"][0]["description"])
+
+    def test_decision_turn_includes_dataset_trust_for_loaded_dataset(self):
+        response = self.client.post(
+            "/api/decision/chat/turns",
+            json={
+                "dataset": DATASET,
+                "dataset_ref": {
+                    "source": "active",
+                    "dataset_id": "sales_q1",
+                    "dataset_name": "Q1 Sales",
+                    "transform_state": "cleaned",
+                    "stale_state": "current",
+                },
+                "semantic_model": SEMANTIC_MODEL,
+                "user_message": "How should we grow revenue next quarter without hurting gross margin?",
+                "conversation_history": [],
+                "session_state": {},
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.get_json()
+        trust = body["dataset_trust"]
+        self.assertEqual(trust["source_label"], "Active dataset")
+        self.assertEqual(trust["dataset"]["dataset_id"], "sales_q1")
+        self.assertEqual(trust["dataset"]["dataset_name"], "Q1 Sales")
+        self.assertEqual(trust["row_count"], len(DATASET))
+        self.assertEqual(trust["column_count"], len(DATASET[0]))
+        self.assertTrue(trust["semantic_ready"])
+        self.assertEqual(trust["transform_state"], "cleaned")
+        self.assertEqual(trust["stale_state"], "current")
+        self.assertEqual(body["artifacts"][0]["dataset_trust"], trust)
+        self.assertEqual(body["draft_workspace_preview"]["dataset_trust"], trust)
+
+    def test_decision_turn_includes_dataset_trust_for_inline_dataset(self):
+        response = self.client.post(
+            "/api/decision/chat/turns",
+            json={
+                "dataset": DATASET,
+                "semantic_model": SEMANTIC_MODEL,
+                "user_message": "How should we grow revenue next quarter without hurting gross margin?",
+                "conversation_history": [],
+                "session_state": {},
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.get_json()
+        trust = body["dataset_trust"]
+        self.assertEqual(trust["source_label"], "Inline payload")
+        self.assertEqual(trust["dataset"]["source"], "inline")
+        self.assertEqual(trust["dataset"]["dataset_name"], "Q1 Sales")
+        self.assertEqual(trust["row_count"], len(DATASET))
+        self.assertEqual(trust["column_count"], len(DATASET[0]))
+        self.assertTrue(trust["semantic_ready"])
+        self.assertEqual(trust["transform_state"], "raw")
+        self.assertEqual(trust["stale_state"], "not_applicable")
+        self.assertIn("Dataset source was inferred", " ".join(trust["warnings"]))
+
+    def test_decision_turn_error_includes_dataset_trust_when_dataset_missing(self):
+        response = self.client.post(
+            "/api/decision/chat/turns",
+            json={
+                "semantic_model": SEMANTIC_MODEL,
+                "user_message": "How should we grow revenue next quarter without hurting gross margin?",
+                "conversation_history": [],
+                "session_state": {},
+            },
+        )
+
+        self.assertEqual(response.status_code, 400)
+        body = response.get_json()
+        trust = body["dataset_trust"]
+        self.assertEqual(body["status"], "error")
+        self.assertIsNone(trust["dataset"])
+        self.assertEqual(trust["source_label"], "No dataset")
+        self.assertEqual(trust["row_count"], 0)
+        self.assertEqual(trust["column_count"], 0)
+        self.assertTrue(trust["semantic_ready"])
+        self.assertEqual(trust["transform_state"], "unknown")
+        self.assertEqual(trust["stale_state"], "unknown")
+        self.assertIn("No active dataset", " ".join(trust["warnings"]))
 
     def test_turn_route_builds_decision_readable_workspace_kickoff_for_clean_prompt(self):
         response = self.client.post(
@@ -259,8 +354,9 @@ class DecisionChatApiTests(unittest.TestCase):
         self.assertEqual(preview["status_label"], "Structurally ready for analysis")
         self.assertEqual(understood["objective"]["metric"], "Revenue")
         self.assertEqual(understood["objective"]["time_horizon"], "Next quarter")
-        self.assertEqual({item["label"] for item in understood["levers"]}, {"Marketing Spend", "Channel mix"})
+        self.assertEqual({item["label"] for item in understood["levers"]}, {"Marketing Spend"})
         self.assertEqual({item["label"] for item in understood["segments"]}, {"Channel"})
+        self.assertEqual({item["label"] for item in preview["segment_dimensions"]}, {"Channel"})
         self.assertEqual({item["metric"] for item in understood["guardrails"]}, {"Gross Margin %"})
         self.assertEqual(kickoff["recommended_next_action"]["action_id"], "analyze_workspace")
         self.assertEqual(body["action_state"]["primary_action_id"], "analyze_workspace")
@@ -295,9 +391,10 @@ class DecisionChatApiTests(unittest.TestCase):
         self.assertEqual(understood["objective"]["time_horizon"], "Next quarter")
         self.assertEqual(
             {item["label"] for item in understood["levers"]},
-            {"Discount Rate", "Marketing Spend", "Region mix"},
+            {"Discount Rate", "Marketing Spend"},
         )
         self.assertEqual({item["label"] for item in understood["segments"]}, {"Region"})
+        self.assertEqual({item["label"] for item in preview["segment_dimensions"]}, {"Region"})
         self.assertEqual({item["metric"] for item in understood["guardrails"]}, {"Gross Margin %"})
         self.assertEqual(preview["recommended_next_action"]["action_id"], "analyze_workspace")
         self.assertIn("observational workspace analysis", preview["readiness_meaning"])
@@ -326,8 +423,9 @@ class DecisionChatApiTests(unittest.TestCase):
         self.assertEqual(understood["objective"]["metric"], "Stockout Risk Score")
         self.assertEqual(understood["objective"]["direction"], "minimize")
         self.assertEqual(understood["objective"]["time_horizon"], "Next quarter")
-        self.assertEqual({item["label"] for item in understood["levers"]}, {"Inventory On Hand", "Product Category mix"})
+        self.assertEqual({item["label"] for item in understood["levers"]}, {"Inventory On Hand"})
         self.assertEqual({item["label"] for item in understood["segments"]}, {"Product Category"})
+        self.assertEqual({item["label"] for item in preview["segment_dimensions"]}, {"Product Category"})
         self.assertEqual({item["metric"] for item in understood["guardrails"]}, {"On Time Delivery %"})
         self.assertEqual(preview["recommended_next_action"]["action_id"], "analyze_workspace")
         self.assertIn("not a recommendation", preview["truthfulness_note"])
@@ -385,13 +483,15 @@ class DecisionChatApiTests(unittest.TestCase):
         objective = workspace["decision_scope"]["objective"]
         levers = workspace["decision_scope"]["levers"]
         constraints = workspace["decision_scope"]["constraints"]
+        segment_dimensions = workspace["decision_scope"]["segment_dimensions"]
         lever_labels = {lever["label"] for lever in levers}
         constraint_labels = {constraint["label"] for constraint in constraints}
+        segment_labels = {segment["label"] for segment in segment_dimensions}
 
         self.assertEqual(objective["metric_ref"]["metric_id"], "metric_stockout_risk")
         self.assertEqual(objective["direction"], "minimize")
         self.assertIn("Inventory On Hand", lever_labels)
-        self.assertIn("Product Category mix", lever_labels)
+        self.assertIn("Product Category", segment_labels)
         self.assertIn("Protect On Time Delivery %", constraint_labels)
         self.assertEqual(body["session_state"]["decision_state"]["objective_draft"]["metric"], "Stockout Risk Score")
         self.assertIn("stockout risk", body["session_state"]["decision_prompt"].lower())
@@ -413,8 +513,10 @@ class DecisionChatApiTests(unittest.TestCase):
         workspace = body["session_state"]["draft_workspace"]
         levers = workspace["decision_scope"]["levers"]
         constraints = workspace["decision_scope"]["constraints"]
+        segment_dimensions = workspace["decision_scope"]["segment_dimensions"]
         lever_labels = {lever["label"] for lever in levers}
         constraint_labels = {constraint["label"] for constraint in constraints}
+        segment_labels = {segment["label"] for segment in segment_dimensions}
         hard_constraint_labels = {
             constraint["label"]
             for constraint in constraints
@@ -422,7 +524,7 @@ class DecisionChatApiTests(unittest.TestCase):
         }
 
         self.assertIn("Discount Rate", lever_labels)
-        self.assertIn("Region mix", lever_labels)
+        self.assertIn("Region", segment_labels)
         self.assertNotIn("Return Rate", lever_labels)
         self.assertEqual(body["session_state"]["decision_state"]["objective_draft"]["metric"], "Revenue")
         self.assertIn("Protect Gross Margin %", constraint_labels)
@@ -520,6 +622,12 @@ class DecisionChatApiTests(unittest.TestCase):
         self.assertEqual(body["mode"], "explore")
         self.assertEqual(body["mode_context"]["reason_code"], "grounded_analytics_request")
         self.assertEqual(body["artifacts"][0]["type"], "answer")
+        self.assertEqual(body["artifacts"][0]["render_hint"], "answer")
+        self.assertFalse(body["artifacts"][0]["inspectable"])
+        self.assertEqual(body["artifacts"][0]["default_view"], "inline")
+        self.assertEqual(body["artifacts"][0]["source"], "semantic_metric")
+        self.assertIsNone(body["draft_workspace_preview"])
+        self.assertEqual(body["action_state"]["available_action_ids"], [])
         self.assertEqual(body["session_state"]["analytics_state"]["metric_name"], "Revenue")
 
     def test_turn_route_answers_semantic_metric_question_without_chart_keyword(self):
@@ -697,6 +805,8 @@ class DecisionChatApiTests(unittest.TestCase):
         self.assertEqual(body["artifacts"][0]["type"], "workspace_analysis_summary")
         self.assertTrue(body["artifacts"][0]["inspectable"])
         self.assertEqual(body["artifacts"][0]["render_hint"], "workspace_analysis_summary")
+        self.assertEqual(body["artifacts"][0]["default_view"], "inspector")
+        self.assertEqual(body["artifacts"][0]["source"], "workspace_analysis")
 
     def test_ready_workspace_actions_expose_stable_contract_and_priority(self):
         response = self.client.post(
@@ -823,6 +933,53 @@ class DecisionChatApiTests(unittest.TestCase):
                 self.assertEqual(artifact["content"]["response_kind"], action_id)
                 self.assertTrue(artifact["content"]["workspace_id"])
                 self.assertIn("truthfulness_note", artifact["content"])
+
+    def test_correction_action_preserves_workspace_preview_artifact_contract(self):
+        turn_response = self.client.post(
+            "/api/decision/chat/turns",
+            json={
+                "dataset": DATASET,
+                "semantic_model": SEMANTIC_MODEL,
+                "user_message": "How should we grow revenue next quarter using marketing spend by channel while protecting gross margin?",
+                "conversation_history": [],
+                "session_state": {},
+            },
+        )
+        draft_state = turn_response.get_json()["session_state"]
+
+        action_response = self.client.post(
+            "/api/decision/chat/actions",
+            json={
+                "action": "draft_workspace",
+                "dataset": DATASET,
+                "semantic_model": SEMANTIC_MODEL,
+                "session_state": draft_state,
+                "correction": {
+                    "correction_type": "remove_mapping",
+                    "target_path": "decision_scope.objective.metric_ref",
+                    "reason": "The objective mapping needs human review.",
+                },
+            },
+        )
+
+        self.assertEqual(action_response.status_code, 200)
+        body = action_response.get_json()
+        artifact = body["artifacts"][0]
+
+        # Corrections use the existing draft_workspace action, so the response
+        # must remain a workspace_preview until the unified artifact is added.
+        self.assertEqual(body["action"], "draft_workspace")
+        self.assertEqual(body["mode"], "decide")
+        self.assertEqual(artifact["type"], "workspace_preview")
+        self.assertEqual(artifact["render_hint"], "workspace_preview")
+        self.assertTrue(artifact["inspectable"])
+        self.assertEqual(artifact["default_view"], "inline_and_inspector")
+        self.assertEqual(artifact["source"], "decision_workspace")
+        self.assertEqual(artifact["correction_result"]["correction_type"], "remove_mapping")
+        self.assertEqual(body["correction_result"]["correction_type"], "remove_mapping")
+        self.assertEqual(body["trace"]["observational_boundary"], "observational_analysis_only")
+        self.assertIn("objective.metric_id_or_metric_name", artifact["missing_inputs"])
+        self.assertEqual(body["session_state"]["draft_workspace"]["readiness"]["readiness_state"], "blocked")
 
 
 if __name__ == "__main__":

@@ -40,6 +40,8 @@ Write rollout plans in plain project language. Use short phase names, one purpos
 
 When creating prompts for another agent, do not use code blocks and do not over-format with many bullets. Keep the prompt clean and paste-ready.
 
+When Codex wraps up a project phase or clears a phase gate, the final response must include a clean, paste-ready prompt for starting the next session. The user should not have to ask for this handoff prompt separately. The wrap-up summary may describe the phase just completed, but the next-session prompt must focus on the next phase's work. Do not re-explain prior phases in the next-session prompt except for the minimum verified prerequisite state needed to start safely. Keep the prompt concise, point to the current docs, name the verified state, and state the next phase's first task.
+
 ## Working Rules
 
 Always review current project Markdown before making project decisions. Start with `project_docs/INDEX.md`, then `project_docs/active/README.md`, then only the task-specific files named by those navigation docs.

@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from backend.decision_engine.grounding import build_grounding_summary
 from backend.decision_engine.mode_detection import detect_chat_mode_details, is_visualization_request
 from backend.services.aichat_nlp import analyse_columns, build_chart_response, extract_dataset, interpret_nl_query
-from backend.services.decision_support import DecisionServiceError
+from backend.services.decision_support import DecisionServiceError, build_dataset_trust
 from backend.services.metric_resolver import MetricResolutionError, MetricResolver
 from backend.services.decision_workspace_service import DecisionWorkspaceService
 
@@ -215,8 +215,12 @@ class DecisionChatService:
                 },
             })
 
+        dataset_trust = DecisionChatService.build_dataset_trust_for_payload(payload, workspace=draft_workspace)
         normalized_actions = DecisionChatService._normalize_available_actions(available_actions, mode=mode)
-        normalized_artifacts = DecisionChatService._annotate_artifacts(artifacts, mode=mode)
+        normalized_artifacts = DecisionChatService._attach_dataset_trust(
+            DecisionChatService._annotate_artifacts(artifacts, mode=mode),
+            dataset_trust,
+        )
         updated_state = DecisionChatService._build_session_state(
             session_state=session_state,
             mode=mode,
@@ -226,6 +230,21 @@ class DecisionChatService:
             analytic_state=analytic_state,
             draft_workspace=draft_workspace,
             grounding_summary=grounding_summary,
+        )
+        DecisionChatService._attach_dataset_trust_to_state(updated_state, dataset_trust)
+        # The top-level preview describes the active response artifact, while
+        # session_state may still preserve a prior draft for later decision turns.
+        response_workspace = draft_workspace if mode == "decide" else None
+        draft_workspace_preview = (
+            DecisionChatService._attach_dataset_trust(
+                DecisionChatService._annotate_artifacts(
+                    [DecisionChatService._build_workspace_preview(response_workspace)],
+                    mode="decide",
+                ),
+                dataset_trust,
+            )[0]
+            if response_workspace is not None
+            else None
         )
 
         return {
@@ -247,14 +266,8 @@ class DecisionChatService:
             ),
             "suggested_actions": normalized_actions,
             "artifacts": normalized_artifacts,
-            "draft_workspace_preview": (
-                DecisionChatService._annotate_artifacts(
-                    [DecisionChatService._build_workspace_preview(draft_workspace)],
-                    mode="decide",
-                )[0]
-                if draft_workspace is not None
-                else None
-            ),
+            "draft_workspace_preview": draft_workspace_preview,
+            "dataset_trust": dataset_trust,
             "session_state": updated_state,
             "grounding_summary": grounding_summary,
             "warnings": warnings,
@@ -294,7 +307,11 @@ class DecisionChatService:
             DecisionChatService._build_decision_actions(workspace) if workspace else [],
             mode="decide",
         )
-        normalized_artifacts = DecisionChatService._annotate_artifacts(artifacts, mode="decide")
+        dataset_trust = DecisionChatService.build_dataset_trust_for_payload(payload, workspace=workspace)
+        normalized_artifacts = DecisionChatService._attach_dataset_trust(
+            DecisionChatService._annotate_artifacts(artifacts, mode="decide"),
+            dataset_trust,
+        )
         updated_state = DecisionChatService._build_session_state(
             session_state=session_state,
             mode="decide",
@@ -305,6 +322,7 @@ class DecisionChatService:
             draft_workspace=workspace,
             grounding_summary=None,
         )
+        DecisionChatService._attach_dataset_trust_to_state(updated_state, dataset_trust)
 
         return {
             "status": "success",
@@ -330,6 +348,7 @@ class DecisionChatService:
             "decision_workspace": workspace,
             "correction_result": correction_result,
             "trace": correction_trace,
+            "dataset_trust": dataset_trust,
             "session_state": updated_state,
             "warnings": warnings,
         }
@@ -759,6 +778,51 @@ class DecisionChatService:
                 "schema_version": str(artifact.get("schema_version") or "di_phase4_5_artifact_v1"),
             })
         return annotated
+
+    @staticmethod
+    def build_dataset_trust_for_payload(
+        payload: Dict[str, Any],
+        *,
+        workspace: Dict[str, Any] | None = None,
+    ) -> Dict[str, Any]:
+        payload = payload if isinstance(payload, dict) else {}
+        semantic_model = payload.get("semantic_model") or payload.get("semanticModel")
+        dataset_summary = workspace.get("dataset") if isinstance(workspace, dict) else None
+        return build_dataset_trust(
+            dataset=extract_dataset(payload.get("dataset")),
+            dataset_ref=payload.get("dataset_ref") or payload.get("datasetRef"),
+            semantic_model=semantic_model,
+            dataset_summary=dataset_summary,
+        )
+
+    @staticmethod
+    def _attach_dataset_trust(
+        artifacts: List[Dict[str, Any]],
+        dataset_trust: Dict[str, Any],
+    ) -> List[Dict[str, Any]]:
+        trusted_artifacts: List[Dict[str, Any]] = []
+        for artifact in artifacts:
+            if not isinstance(artifact, dict):
+                continue
+            trusted_artifacts.append({
+                **artifact,
+                "dataset_trust": dict(dataset_trust),
+            })
+        return trusted_artifacts
+
+    @staticmethod
+    def _attach_dataset_trust_to_state(
+        session_state: Dict[str, Any],
+        dataset_trust: Dict[str, Any],
+    ) -> None:
+        # Session state carries the same compact trust object so later actions
+        # can display source context even before the unified artifact exists.
+        context_summary = session_state.get("context_summary")
+        if isinstance(context_summary, dict):
+            context_summary["dataset_trust"] = dict(dataset_trust)
+        decision_state = session_state.get("decision_state")
+        if isinstance(decision_state, dict):
+            decision_state["dataset_trust"] = dict(dataset_trust)
 
     @staticmethod
     def _artifact_defaults(artifact_type: str) -> Dict[str, Any]:
