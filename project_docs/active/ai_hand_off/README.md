@@ -10,9 +10,9 @@ Gemini owns frontend implementation, React/CSS, UI rendering, browser verificati
 
 ## Active Handoffs
 
-Phase 4 Gemini AI Chat decision output rendering: `project_docs/active/ai_hand_off/phase_4_gemini_ai_chat_decision_output_rendering.md`
+No active Gemini handoff is open right now.
 
-Codex has defined and verified the backend/contract truth for the AI Chat `decision_output` artifact. Gemini can now implement frontend rendering in the existing AI Chat results pane.
+Phase 5 is Codex-owned backend support for chat-native corrections. Codex should create a new focused Gemini handoff only after backend correction behavior is verified and there is concrete frontend connection work for Gemini.
 
 Active rollout: `project_docs/active/decision_intelligence/current/ai_chat_decision_output_unification_rollout.md`
 
@@ -20,6 +20,7 @@ Active rollout: `project_docs/active/decision_intelligence/current/ai_chat_decis
 
 | Record | Location |
 | --- | --- |
+| Phase 4 AI Chat decision output rendering handoff | `project_docs/active/decision_intelligence/completed/phase_4_gemini_ai_chat_decision_output_rendering.md` |
 | Phase 2.5 segment rendering handoff | `project_docs/active/decision_intelligence/completed/phase_2_5_gemini_frontend_segment_dimensions.md` |
 | Phase 3 correction and ranked evidence handoff | `project_docs/active/decision_intelligence/completed/phase_3_gemini_frontend_correction_and_ranked_evidence.md` |
 | Superseded Phase 4 dataset handoff | `project_docs/archive/superseded_active_2026_05_24/phase_4_gemini_frontend_canonical_active_dataset.md` |

@@ -99,14 +99,14 @@ Verification passed with `PYTHONPATH=.codex_tmp_py\site-packages python -m unitt
 
 Anti Gravity reviewed the Phase 3 backend diff and returned verdict: Complete. The review confirmed additive artifact positioning, Dataset Trust preservation, `observational_analysis_only` truth boundary, no unsupported recommendation/simulation/optimization/causal claims, no frontend or `GEMINI.md` changes, and sufficient tests for complete draft, incomplete draft, analyze action, and correction compatibility. The only minor observation was that `default_view` and `schema_version` were emitted by the service but not yet listed in the contract table; the contract has now been updated.
 
-Phase 4 is ready for Gemini frontend implementation. Active handoff: `project_docs/active/ai_hand_off/phase_4_gemini_ai_chat_decision_output_rendering.md`.
+Phase 4 handoff was prepared for Gemini and is now completed. Completed handoff record: `project_docs/active/decision_intelligence/completed/phase_4_gemini_ai_chat_decision_output_rendering.md`.
 
 ## Phase 4 Frontend Unified Decision Output - 2026-05-31
 
 Gemini implemented and verified Phase 4 frontend rendering for the `decision_output` artifact in the unified AI Chat results pane.
 
 Frontend changes made:
-- Added `decision_output` to rich inspectable and PDF exportable types in `AIShell.jsx`.
+- Added `decision_output` to rich inspectable types in `AIShell.jsx`. `decision_output` PDF export is intentionally deferred until the dedicated export adapter phase.
 - Implemented high-fidelity `decision_output` rendering case in `AIShell.jsx` (`renderArtifact`):
   - Executive Brief: Renders titles, summaries, and DI badges.
   - Dataset Trust: Summarizes grounding metrics, semantic readiness, stale/freshness states, and warnings.
@@ -121,8 +121,9 @@ Frontend changes made:
 Verification run:
 - Executed local `npm run build` inside `frontend/frontend` which compiled successfully with 0 errors.
 - Executed `git diff --check` which passed with 0 trailing spaces.
+- Codex review found two Phase 4 cleanup issues: a `renderSemanticList` scope bug and premature `decision_output` PDF export eligibility. Gemini corrected both in the amended remote commit: the helper is now shared safely inside `renderArtifact`, and `decision_output` is inspectable but not PDF exportable in this phase.
 
-Next active slice: Phase 5, Codex backend support for correction action updates to return updated `decision_output` instead of only `workspace_preview` and Gemini frontend connection.
+Next active slice: Phase 5, Codex backend support for chat-native corrections. Confirm correction actions return an updated `decision_output`, keep `workspace_preview` compatibility, carry corrected state into follow-up `analyze_workspace`, and write a focused Gemini handoff only if frontend connection work remains after backend verification.
 
 ## Canonical Resume Order
 
