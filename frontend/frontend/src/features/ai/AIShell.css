@@ -764,3 +764,383 @@
   border: 1px solid var(--accent-red);
   background: rgba(239, 68, 68, 0.05);
 }
+
+/* Phase 4 Unified Decision Output Premium Styling */
+.ai-shell__decision-brief-section {
+  position: relative;
+}
+
+.ai-shell__di-badge {
+  font-size: 0.65rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+}
+
+/* Dataset Trust Card */
+.ai-shell__dt-card {
+  background: linear-gradient(135deg, var(--bg-secondary), var(--bg-primary));
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  padding: 20px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  transition: all 0.2s ease;
+}
+
+.ai-shell__dt-card:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--accent-blue) 40%, var(--border-color));
+}
+
+.ai-shell__dt-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(0,0,0,0.04);
+  padding-bottom: 12px;
+}
+
+.ai-shell__dt-icon {
+  font-size: 1.2rem;
+  color: var(--text-primary);
+}
+
+.ai-shell__dt-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 12px;
+}
+
+.ai-shell__dt-metric-box {
+  background: rgba(0, 0, 0, 0.02);
+  border: 1px solid rgba(0, 0, 0, 0.04);
+  border-radius: 8px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.ai-shell__dt-metric-val {
+  font-size: 1rem;
+  font-weight: 900;
+  color: var(--text-primary);
+}
+
+.ai-shell__dt-metric-lbl {
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.5;
+  margin-top: 4px;
+}
+
+.ai-shell__dt-warnings {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+  background: rgba(245, 158, 11, 0.05);
+  border-radius: 8px;
+  padding: 10px;
+  border: 1px solid rgba(245, 158, 11, 0.1);
+}
+
+.ai-shell__dt-warning-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.75rem;
+  color: #f59e0b;
+  font-weight: 600;
+}
+
+.ai-shell__dt-warning-icon {
+  font-size: 0.8rem;
+  flex-shrink: 0;
+}
+
+/* Decision Frame & Semantic Styles */
+.ai-shell__frame-card-list {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.ai-shell__frame-list {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ai-shell__frame-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 0.82rem;
+  line-height: 1.4;
+  opacity: 0.85;
+}
+
+.ai-shell__frame-bullet {
+  font-size: 1rem;
+  color: var(--accent-blue);
+  line-height: 1;
+}
+
+.ai-shell__frame-bullet.text-amber {
+  color: #f59e0b;
+}
+
+/* Evidence Board */
+.ai-shell__evidence-boundary-badge {
+  font-size: 0.65rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background-color: rgba(0, 102, 255, 0.05);
+  color: var(--accent-blue);
+  border: 1px solid var(--accent-blue);
+  letter-spacing: 0.04em;
+}
+
+.ai-shell__evidence-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 18px;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+}
+
+.ai-shell__evidence-card:hover {
+  transform: translateX(4px);
+  border-color: color-mix(in srgb, var(--accent-green) 40%, var(--border-color));
+}
+
+.ai-shell__evidence-rank {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--text-primary);
+  color: var(--bg-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 900;
+}
+
+.ai-shell__coverage-tag {
+  font-size: 0.6rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid currentColor;
+}
+
+.ai-shell__coverage-tag.is-objective {
+  color: var(--text-primary);
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.ai-shell__coverage-tag.is-lever {
+  color: var(--accent-blue);
+  background: rgba(0, 102, 255, 0.05);
+}
+
+.ai-shell__coverage-tag.is-guardrail {
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.05);
+}
+
+.ai-shell__evidence-limitations {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(0,0,0,0.04);
+}
+
+.ai-shell__evidence-empty-slate {
+  background: rgba(0,0,0,0.01);
+  border: 1px dashed var(--border-color);
+  border-radius: 12px;
+  padding: 24px;
+  text-align: center;
+}
+
+/* Decision Structural Map */
+.ai-shell__map-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  padding: 20px;
+}
+
+.ai-shell__map-nodes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.ai-shell__map-node {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 12px;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+}
+
+.ai-shell__map-node:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.08);
+}
+
+.ai-shell__map-node.type--goal {
+  border-left: 3px solid var(--accent-blue);
+}
+
+.ai-shell__map-node.type--driver {
+  border-left: 3px solid var(--accent-green);
+}
+
+.ai-shell__map-node.type--limit {
+  border-left: 3px solid #f59e0b;
+}
+
+.ai-shell__map-node.type--breakdown {
+  border-left: 3px solid var(--text-secondary);
+}
+
+.ai-shell__map-node-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.ai-shell__map-node-badge {
+  font-size: 0.55rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  opacity: 0.5;
+}
+
+.ai-shell__map-node-confidence {
+  font-size: 0.6rem;
+  font-weight: 800;
+  color: var(--accent-green);
+}
+
+.ai-shell__map-edges-list {
+  border-top: 1px solid rgba(0,0,0,0.04);
+  padding-top: 16px;
+}
+
+.ai-shell__map-edges-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ai-shell__map-edge-item {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 0.8rem;
+}
+
+.ai-shell__edge-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.ai-shell__edge-line {
+  font-family: monospace;
+  font-size: 0.72rem;
+  opacity: 0.5;
+  margin: 0 8px;
+  position: relative;
+  text-transform: uppercase;
+}
+
+.ai-shell__edge-causal-badge {
+  font-size: 0.55rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--accent-blue);
+  background: rgba(0, 102, 255, 0.05);
+  padding: 1px 4px;
+  border-radius: 3px;
+  border: 1px solid currentColor;
+}
+
+.ai-shell__edge-label-text {
+  font-size: 0.7rem;
+  opacity: 0.6;
+}
+
+/* Scenario locked state */
+.ai-shell__scenario-locked-card {
+  background: var(--bg-secondary);
+  border: 1px dashed var(--border-color);
+  border-radius: 12px;
+  padding: 18px;
+}
+
+/* Advanced Gates Lock cards */
+.ai-shell__gates-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.ai-shell__gate-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 16px;
+  opacity: 0.85;
+  transition: all 0.2s ease;
+}
+
+.ai-shell__gate-card:hover {
+  opacity: 1;
+  border-color: var(--accent-red);
+}
+
+.ai-shell__gate-title {
+  font-size: 0.75rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-secondary);
+}
+
+.ai-shell__gate-lock-icon {
+  font-size: 0.9rem;
+}

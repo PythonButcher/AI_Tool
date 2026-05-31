@@ -17,6 +17,7 @@ import { detectToken, extractTokens } from '../../utils/mentionUtils';
 import { AICommands } from '../workflow/AiCommandBlock';
 import AICharts from './AICharts';
 import SemanticRef from '../business/decision/SemanticRef';
+import ScenarioPreview from '../business/decision/ScenarioPreview';
 import { generateDecisionArtifactPdf } from '../../utils/decisionPdfExport';
 import './AIShell.css';
 
@@ -158,7 +159,7 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspa
         if (data.artifacts && data.artifacts.length > 0) {
           const lastArt = data.artifacts[data.artifacts.length - 1];
           // Only auto-focus if it's a rich, inspectable artifact
-          const richTypes = ['chart', 'workspace_preview', 'workspace_analysis_summary'];
+          const richTypes = ['chart', 'workspace_preview', 'workspace_analysis_summary', 'decision_output'];
           if (richTypes.includes(lastArt.type)) {
             setActiveArtifact({
               ...lastArt,
@@ -327,6 +328,37 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspa
 
     const baseClass = isInspector ? "ai-shell__active-artifact" : "ai-shell__artifact-preview-card";
 
+    // Helper to format object arrays into SemanticRef components
+    const renderSemanticList = (items, type) => {
+      if (!Array.isArray(items) || items.length === 0) return <Typography variant="body2" sx={{ opacity: 0.5 }}>Not specified</Typography>;
+      return (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', paddingLeft: '12px', borderLeft: '2px solid var(--text-primary)' }}>
+          {items.map((item, i) => {
+            const metricRef = item.metric_ref || (type === 'lever' && item.binding?.binding_type === 'metric' ? item.binding.metric_ref : null);
+            const dimensionRef = item.dimension_ref || (type === 'lever' && item.binding?.binding_type === 'dimension' ? item.binding.dimension_ref : null);
+
+            if (metricRef?.metric_id || dimensionRef?.dimension_id) {
+              return <SemanticRef key={i} metric_ref={metricRef} dimension_ref={dimensionRef} type={type} compact />;
+            }
+
+            // Build a fallback ref from flattened fields
+            const fallbackLabel = item.label || item.binding_label || item.metric || item.dimension_id || item.field || item.strings || (typeof item === 'string' ? item : 'Unbound item');
+            const fallbackRef = { label: fallbackLabel };
+
+            return (
+              <SemanticRef
+                key={i}
+                metric_ref={type !== 'segment' ? fallbackRef : null}
+                dimension_ref={type === 'segment' ? fallbackRef : null}
+                type={type}
+                compact
+              />
+            );
+          })}
+        </div>
+      );
+    };
+
     // Metadata-driven visibility: In-thread we show links for inspectable rich content
     // unless render_hint explicitly asks for 'inline' presentation.
     if (!isInspector && inspectable && render_hint !== 'inline') {
@@ -337,14 +369,14 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspa
       return (
         <div className="ai-shell__artifact-preview-link" onClick={() => handleInspect(artifact, contextActions, contextSessionState, contextCapabilityState, contextDecisionReadiness)}>
           <div className="ai-shell__preview-icon">
-            {type === 'chart' ? <FaChartBar /> : type === 'workspace_preview' ? <FaLayerGroup /> : type === 'answer' ? <FaCheckCircle /> : <FaFileAlt />}
+            {type === 'chart' ? <FaChartBar /> : type === 'workspace_preview' ? <FaLayerGroup /> : type === 'decision_output' ? <FaShieldAlt /> : type === 'answer' ? <FaCheckCircle /> : <FaFileAlt />}
           </div>
           <div className="ai-shell__preview-info">
             <Typography variant="caption" className="ai-shell__preview-type">
-              {source ? `${source.toUpperCase()} • ` : ''}{type === 'chart' ? 'Visualization' : type === 'workspace_preview' ? 'Workspace' : type === 'answer' ? 'Data Result' : 'Analysis'}
+              {source ? `${source.toUpperCase()} • ` : ''}{type === 'chart' ? 'Visualization' : type === 'workspace_preview' ? 'Workspace' : type === 'decision_output' ? 'Decision Frame' : type === 'answer' ? 'Data Result' : 'Analysis'}
             </Typography>
             <Typography variant="body2" className="ai-shell__preview-title" noWrap>
-              {content?.title || content?.chartType || content?.summary?.headline || content?.metric?.label || content?.metric?.name || content?.fieldsUsed?.value || 'View Details'}
+              {artifact.title || content?.title || content?.chartType || content?.summary?.headline || content?.metric?.label || content?.metric?.name || content?.fieldsUsed?.value || 'View Details'}
             </Typography>
           </div>
           <div className="ai-shell__preview-actions">
@@ -426,37 +458,6 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspa
         const hasCorrection = !!wp.correction_result;
         const cr_res = wp.correction_result;
         const cr_trace = wp.trace;
-
-        // Helper to format object arrays into SemanticRef components
-        const renderSemanticList = (items, type) => {
-          if (!Array.isArray(items) || items.length === 0) return <Typography variant="body2" sx={{ opacity: 0.5 }}>Not specified</Typography>;
-          return (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', paddingLeft: '12px', borderLeft: '2px solid var(--text-primary)' }}>
-              {items.map((item, i) => {
-                const metricRef = item.metric_ref || (type === 'lever' && item.binding?.binding_type === 'metric' ? item.binding.metric_ref : null);
-                const dimensionRef = item.dimension_ref || (type === 'lever' && item.binding?.binding_type === 'dimension' ? item.binding.dimension_ref : null);
-
-                if (metricRef?.metric_id || dimensionRef?.dimension_id) {
-                  return <SemanticRef key={i} metric_ref={metricRef} dimension_ref={dimensionRef} type={type} compact />;
-                }
-
-                // Build a fallback ref from flattened fields
-                const fallbackLabel = item.label || item.binding_label || item.metric || item.dimension_id || item.field || item.strings || (typeof item === 'string' ? item : 'Unbound item');
-                const fallbackRef = { label: fallbackLabel };
-
-                return (
-                  <SemanticRef
-                    key={i}
-                    metric_ref={type !== 'segment' ? fallbackRef : null}
-                    dimension_ref={type === 'segment' ? fallbackRef : null}
-                    type={type}
-                    compact
-                  />
-                );
-              })}
-            </div>
-          );
-        };
 
         const unresolvedMappings = wp.drafting?.prompt_matches?.unresolved_mappings || wp.unresolved_mappings || [];
 
@@ -888,6 +889,499 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspa
           </div>
         );
 
+      case 'decision_output': {
+        const doTitle = artifact.title || artifact.content?.title || 'Decision Framework';
+        const doSummary = artifact.summary || artifact.content?.summary || '';
+        const doDt = artifact.dataset_trust || artifact.content?.dataset_trust;
+        const doFrame = artifact.frame || artifact.content?.frame;
+        const doReadiness = artifact.readiness || artifact.content?.readiness || lookupDecisionReadiness;
+        const doCorrection = artifact.correction_state || artifact.content?.correction_state;
+        const doEvidence = artifact.evidence_board || artifact.content?.evidence_board;
+        const doMap = artifact.decision_map || artifact.content?.decision_map;
+        const doScenario = artifact.scenario_compare || artifact.content?.scenario_compare;
+        const doGates = artifact.advanced_gates || artifact.content?.advanced_gates || [];
+        const doTruthBoundary = artifact.truth_boundary || artifact.content?.truth_boundary || 'observational_analysis_only';
+
+        return (
+          <div className={`${baseClass} is-decision-output`}>
+            <div className="ai-shell__artifact-content" style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+              {isInspector && renderArtifactExportBar(artifact, lookupSessionState, lookupCapabilityState, lookupDecisionReadiness)}
+
+              {/* SECTION 1: EXECUTIVE BRIEF */}
+              <div className="ai-shell__decision-brief-section">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                  <Typography variant="overline" className="ai-shell__decision-section-tag" sx={{ color: 'var(--accent-blue)', fontWeight: 900, letterSpacing: '0.15em' }}>
+                    Executive Brief
+                  </Typography>
+                  <span className="ai-shell__di-badge">
+                    DI Phase 3 V1
+                  </span>
+                </div>
+                <Typography variant="h4" sx={{ fontWeight: 900, mb: 2, letterSpacing: '-0.03em', lineHeight: 1.15 }}>
+                  {doTitle}
+                </Typography>
+                {doSummary && (
+                  <Typography variant="body1" sx={{ color: 'var(--text-primary)', opacity: 0.9, lineHeight: 1.6, fontSize: '1.05rem', fontStyle: 'italic', pl: 2, borderLeft: '3px solid var(--border-color)' }}>
+                    {doSummary}
+                  </Typography>
+                )}
+              </div>
+
+              {/* SECTION 2: DATASET TRUST */}
+              {doDt && (
+                <div className="ai-shell__decision-dataset-trust">
+                  <Typography variant="overline" sx={{ fontWeight: 900, opacity: 0.5, letterSpacing: '0.1em', display: 'block', mb: 1.5 }}>
+                    Dataset Trust
+                  </Typography>
+                  <div className="ai-shell__dt-card">
+                    <div className="ai-shell__dt-header">
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <FaDatabase className="ai-shell__dt-icon" />
+                        <div>
+                          <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>
+                            {doDt.source_label || 'Grounded Dataset'}
+                          </Typography>
+                          <Typography variant="caption" sx={{ opacity: 0.6 }}>
+                            {doDt.dataset?.dataset_name || 'Active data context'}
+                          </Typography>
+                        </div>
+                      </div>
+                      <div className="ai-shell__dt-status-badges">
+                        <Chip
+                          label={doDt.semantic_ready ? 'Semantic Ready' : 'No Semantic Model'}
+                          size="small"
+                          sx={{
+                            height: '20px',
+                            fontSize: '0.65rem',
+                            fontWeight: 800,
+                            bgcolor: doDt.semantic_ready ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                            color: doDt.semantic_ready ? 'var(--accent-green)' : 'var(--accent-red)',
+                            border: '1px solid currentColor'
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="ai-shell__dt-metrics-grid">
+                      <div className="ai-shell__dt-metric-box">
+                        <span className="ai-shell__dt-metric-val">{doDt.row_count?.toLocaleString() || 0}</span>
+                        <span className="ai-shell__dt-metric-lbl">Rows Grounded</span>
+                      </div>
+                      <div className="ai-shell__dt-metric-box">
+                        <span className="ai-shell__dt-metric-val">{doDt.column_count?.toLocaleString() || 0}</span>
+                        <span className="ai-shell__dt-metric-lbl">Columns Grounded</span>
+                      </div>
+                      <div className="ai-shell__dt-metric-box">
+                        <span className="ai-shell__dt-metric-val" style={{ textTransform: 'capitalize' }}>
+                          {doDt.transform_state || 'unknown'}
+                        </span>
+                        <span className="ai-shell__dt-metric-lbl">Transform State</span>
+                      </div>
+                      <div className="ai-shell__dt-metric-box">
+                        <span className="ai-shell__dt-metric-val" style={{ textTransform: 'capitalize' }}>
+                          {doDt.stale_state?.replace('_', ' ') || 'unknown'}
+                        </span>
+                        <span className="ai-shell__dt-metric-lbl">Freshness State</span>
+                      </div>
+                    </div>
+
+                    {doDt.warnings && doDt.warnings.length > 0 && (
+                      <div className="ai-shell__dt-warnings">
+                        {doDt.warnings.map((w, idx) => (
+                          <div key={idx} className="ai-shell__dt-warning-item">
+                            <FaExclamationTriangle className="ai-shell__dt-warning-icon" />
+                            <span>{w}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* SECTION 3: DECISION FRAME */}
+              {doFrame && (
+                <div className="ai-shell__decision-frame-section">
+                  <Typography variant="overline" sx={{ fontWeight: 900, opacity: 0.5, letterSpacing: '0.15em', display: 'block', mb: 2 }}>
+                    Decision Frame
+                  </Typography>
+
+                  <div className="ai-shell__kickoff-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '24px' }}>
+                    {/* Goal / Objective */}
+                    <div className="ai-shell__kickoff-item">
+                      <Typography variant="overline" sx={{ fontWeight: 900, opacity: 0.4, display: 'block', mb: 1 }}>Objective Goal</Typography>
+                      {doFrame.goal ? (
+                        <div style={{ paddingLeft: '12px', borderLeft: '2px solid var(--text-primary)' }}>
+                          <SemanticRef
+                            metric_ref={doFrame.goal.metric_ref || doFrame.goal.metric_id ? doFrame.goal : { label: doFrame.goal.label || 'Not specified' }}
+                            type="objective"
+                            compact
+                          />
+                        </div>
+                      ) : (
+                        <Typography variant="body2" sx={{ fontWeight: 700, borderLeft: '2px solid var(--text-primary)', pl: 1.5, opacity: 0.5 }}>Not specified</Typography>
+                      )}
+                    </div>
+
+                    {/* Drivers / Levers */}
+                    <div className="ai-shell__kickoff-item">
+                      <Typography variant="overline" sx={{ fontWeight: 900, opacity: 0.4, display: 'block', mb: 1 }}>Primary Levers</Typography>
+                      {renderSemanticList(doFrame.drivers, 'lever')}
+                    </div>
+
+                    {/* Segment Dimensions */}
+                    <div className="ai-shell__kickoff-item">
+                      <Typography variant="overline" sx={{ fontWeight: 900, opacity: 0.4, display: 'block', mb: 1 }}>Segmentation Breakdowns</Typography>
+                      {renderSemanticList(doFrame.breakdowns, 'segment')}
+                    </div>
+
+                    {/* Limits / Constraints */}
+                    <div className="ai-shell__kickoff-item" style={{ gridColumn: '1 / -1' }}>
+                      <Typography variant="overline" sx={{ fontWeight: 900, opacity: 0.4, display: 'block', mb: 1 }}>Guardrail Limits</Typography>
+                      {renderSemanticList(doFrame.limits, 'guardrail')}
+                    </div>
+                  </div>
+
+                  {/* Assumptions & Unknowns */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '24px', marginTop: '24px' }}>
+                    {doFrame.assumptions && doFrame.assumptions.length > 0 && (
+                      <div className="ai-shell__frame-card-list">
+                        <Typography variant="overline" sx={{ fontWeight: 900, opacity: 0.4, display: 'block', mb: 1 }}>Declared Assumptions</Typography>
+                        <ul className="ai-shell__frame-list">
+                          {doFrame.assumptions.map((item, idx) => (
+                            <li key={idx}>
+                              <span className="ai-shell__frame-bullet">•</span>
+                              <span>{typeof item === 'object' ? item.statement || item.label : item}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {doFrame.unknowns && doFrame.unknowns.length > 0 && (
+                      <div className="ai-shell__frame-card-list">
+                        <Typography variant="overline" sx={{ fontWeight: 900, opacity: 0.4, display: 'block', mb: 1 }}>Tracked Unknowns</Typography>
+                        <ul className="ai-shell__frame-list">
+                          {doFrame.unknowns.map((item, idx) => (
+                            <li key={idx}>
+                              <span className="ai-shell__frame-bullet text-amber">•</span>
+                              <span>{typeof item === 'object' ? item.statement || item.label : item}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* SECTION 4: CORRECTION STATE */}
+              {doCorrection && doCorrection.status === 'success' && (
+                <div className="ai-shell__correction-container" style={{ margin: 0 }}>
+                  <header style={{ marginBottom: '16px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                      <Typography variant="overline" sx={{ fontWeight: 900, opacity: 0.5 }}>
+                        Correction Active
+                      </Typography>
+                    </div>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>
+                      {doCorrection.summary || 'Workspace mapping updated'}
+                    </Typography>
+                  </header>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '100px 1fr', gap: '8px', fontSize: '0.8rem' }}>
+                    <Typography variant="caption" sx={{ fontWeight: 800, opacity: 0.5 }}>TARGET</Typography>
+                    <Typography variant="caption" sx={{ fontFamily: 'monospace' }}>{doCorrection.target_path}</Typography>
+                    <Typography variant="caption" sx={{ fontWeight: 800, opacity: 0.5 }}>PREVIOUS</Typography>
+                    <Typography variant="caption" sx={{ opacity: 0.6 }}>{typeof doCorrection.previous_value === 'object' ? JSON.stringify(doCorrection.previous_value) : String(doCorrection.previous_value || 'None')}</Typography>
+                    <Typography variant="caption" sx={{ fontWeight: 800, opacity: 0.5, color: 'var(--accent-blue)' }}>NEW VALUE</Typography>
+                    <Typography variant="caption" sx={{ fontWeight: 700 }}>{typeof doCorrection.new_value === 'object' ? JSON.stringify(doCorrection.new_value) : String(doCorrection.new_value)}</Typography>
+                  </div>
+                </div>
+              )}
+
+              {/* SECTION 5: READINESS & ACTIONS */}
+              {doReadiness && (
+                <div className="ai-shell__decision-readiness-section">
+                  <Divider sx={{ mb: 3, opacity: 0.1 }} />
+                  <div className="ai-shell__kickoff-status-block" style={{ marginBottom: '24px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
+                      <FaCheckCircle style={{ color: doReadiness.readiness_state === 'analysis_ready' ? 'var(--accent-green)' : 'var(--text-secondary)', fontSize: '1rem' }} />
+                      <Typography variant="subtitle2" sx={{ fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', fontSize: '0.75rem' }}>
+                        {doReadiness.readiness_state ? doReadiness.readiness_state.replace('_', ' ') : 'Incomplete Frame'}
+                      </Typography>
+                    </div>
+                    <Typography variant="body2" sx={{ display: 'block', opacity: 0.7, lineHeight: 1.5 }}>
+                      {doReadiness.readiness_state === 'analysis_ready' ? 'This framework is structurally complete and ready for observational analysis.' : 'Missing required inputs or bindings to begin observational analysis.'}
+                    </Typography>
+                  </div>
+
+                  {doReadiness.blocked_state?.is_blocked && doReadiness.blocked_state.blocking_missing_inputs?.length > 0 && (
+                    <div className="ai-shell__kickoff-clarifications" style={{ marginTop: '16px', marginBottom: '24px' }}>
+                      <Typography variant="overline" sx={{ fontWeight: 900, opacity: 0.5, display: 'block', mb: 2 }}>Blocking Missing Inputs</Typography>
+                      <div className="ai-shell__analysis-list">
+                        {doReadiness.blocked_state.blocking_missing_inputs.map((input, idx) => (
+                          <div key={idx} className="ai-shell__analysis-item" style={{ marginBottom: '12px' }}>
+                             <span className="ai-shell__analysis-icon is-blocker"><FaExclamationTriangle /></span>
+                             <Typography variant="body2" sx={{ fontWeight: 600 }}>{input}</Typography>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Allowed Next Actions */}
+                  {doReadiness.allowed_next_actions && doReadiness.allowed_next_actions.length > 0 && (
+                    <div className="ai-shell__readiness-actions" style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+                      {doReadiness.allowed_next_actions.map((actId, idx) => {
+                        const actDetails = lookupActions.find(a => a.action_id === actId) || { label: actId.replace('_', ' '), enabled: true };
+                        const isPrimary = actDetails.priority === 'primary' || actId === 'analyze_workspace';
+                        const isEnabled = doReadiness.allowed_next_actions.includes(actId) && actDetails.enabled !== false;
+
+                        return (
+                          <Button
+                            key={idx}
+                            variant="contained"
+                            disabled={loading || !isEnabled}
+                            startIcon={actId === 'analyze_workspace' ? <FaSearch /> : <FaTools />}
+                            sx={{
+                              borderRadius: '12px',
+                              px: 3,
+                              py: 1.25,
+                              textTransform: 'none',
+                              fontWeight: 900,
+                              fontSize: '0.85rem',
+                              bgcolor: isPrimary ? 'var(--text-primary)' : 'var(--bg-secondary)',
+                              color: isPrimary ? 'var(--bg-primary)' : 'var(--text-primary)',
+                              border: isPrimary ? 'none' : '1px solid var(--border-color)',
+                              '&:hover': {
+                                bgcolor: isPrimary ? 'var(--text-primary)' : 'var(--bg-tertiary)',
+                                filter: 'brightness(1.1)'
+                              },
+                              '&:disabled': {
+                                opacity: 0.5,
+                                bgcolor: 'var(--bg-secondary)',
+                                color: 'var(--text-secondary)'
+                              }
+                            }}
+                            onClick={() => handleActionClick(actId, lookupSessionState)}
+                          >
+                            {actDetails.label || actId.replace('_', ' ')}
+                          </Button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* SECTION 6: EVIDENCE BOARD */}
+              {doEvidence && (
+                <div className="ai-shell__decision-evidence-board">
+                  <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                    <Typography variant="overline" sx={{ fontWeight: 900, opacity: 0.5, letterSpacing: '0.15em' }}>
+                      Evidence Board
+                    </Typography>
+                    <span className="ai-shell__evidence-boundary-badge">
+                      Observational Analysis Only
+                    </span>
+                  </header>
+
+                  <Typography variant="body2" sx={{ opacity: 0.8, mb: 3 }}>
+                    {doEvidence.summary || 'Run observational analysis to ground decision drivers.'}
+                  </Typography>
+
+                  {doEvidence.status === 'analyzed' && doEvidence.items && doEvidence.items.length > 0 ? (
+                    <div className="ai-shell__evidence-list" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                      {doEvidence.items.map((rd, i) => (
+                        <div key={i} className="ai-shell__evidence-card">
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '12px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                              <span className="ai-shell__evidence-rank">
+                                {rd.rank || (i + 1)}
+                              </span>
+                              <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>
+                                {rd.title || 'Observational Insight'}
+                              </Typography>
+                            </div>
+                            <Chip
+                              label={rd.strength || 'moderate'}
+                              size="small"
+                              sx={{
+                                height: '18px',
+                                fontSize: '0.6rem',
+                                fontWeight: 800,
+                                textTransform: 'uppercase',
+                                bgcolor: rd.strength === 'strong' ? 'rgba(34, 197, 94, 0.1)' : rd.strength === 'weak' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(245, 158, 11, 0.1)',
+                                color: rd.strength === 'strong' ? 'var(--accent-green)' : rd.strength === 'weak' ? 'var(--accent-red)' : '#f59e0b',
+                                border: '1px solid currentColor'
+                              }}
+                            />
+                          </div>
+
+                          <Typography variant="body2" sx={{ opacity: 0.85, mb: 2, lineHeight: 1.5 }}>
+                            {rd.summary}
+                          </Typography>
+
+                          {/* Coverage tags */}
+                          {rd.covers && (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '12px' }}>
+                              {rd.covers.objective_covered && (
+                                <span className="ai-shell__coverage-tag is-objective">Objective Covered</span>
+                              )}
+                              {rd.covers.levers_covered?.map((lev, idx) => (
+                                <span key={idx} className="ai-shell__coverage-tag is-lever">Lever: {lev}</span>
+                              ))}
+                              {rd.covers.constraints_covered?.map((c, idx) => (
+                                <span key={idx} className="ai-shell__coverage-tag is-guardrail">Limit: {c}</span>
+                              ))}
+                            </div>
+                          )}
+
+                          {rd.limitations && rd.limitations.length > 0 && (
+                            <div className="ai-shell__evidence-limitations">
+                              <Typography variant="caption" sx={{ fontStyle: 'italic', opacity: 0.7 }}>
+                                <strong>Caveats:</strong> {rd.limitations.join(' • ')}
+                              </Typography>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="ai-shell__evidence-empty-slate">
+                      <Typography variant="caption" sx={{ opacity: 0.5, fontStyle: 'italic' }}>
+                        Observational analysis results will populate here once the frame is successfully run.
+                      </Typography>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* SECTION 7: DECISION MAP */}
+              {doMap && doMap.nodes && doMap.nodes.length > 0 && (
+                <div className="ai-shell__decision-map-section">
+                  <Typography variant="overline" sx={{ fontWeight: 900, opacity: 0.5, letterSpacing: '0.15em', display: 'block', mb: 2 }}>
+                    Decision Structural Map
+                  </Typography>
+                  <Typography variant="caption" sx={{ display: 'block', opacity: 0.6, mb: 3 }}>
+                    Interactive representation of structural relations and observational bindings. Relationships are non-causal associations.
+                  </Typography>
+
+                  <div className="ai-shell__map-container">
+                    <div className="ai-shell__map-nodes-grid">
+                      {doMap.nodes.map((node, i) => (
+                        <div key={i} className={`ai-shell__map-node type--${node.node_type || 'unknown'}`}>
+                          <div className="ai-shell__map-node-header">
+                            <span className="ai-shell__map-node-badge">{node.node_type}</span>
+                            {node.confidence !== undefined && (
+                              <span className="ai-shell__map-node-confidence">{(node.confidence * 100).toFixed(0)}%</span>
+                            )}
+                          </div>
+                          <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 0.5 }} noWrap>
+                            {node.label}
+                          </Typography>
+                          <Typography variant="caption" sx={{ opacity: 0.7, lineHeight: 1.3, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                            {node.summary}
+                          </Typography>
+                        </div>
+                      ))}
+                    </div>
+
+                    {doMap.edges && doMap.edges.length > 0 && (
+                      <div className="ai-shell__map-edges-list">
+                        <Typography variant="overline" sx={{ fontWeight: 900, opacity: 0.4, display: 'block', mb: 1.5 }}>
+                          Mapped Relationships
+                        </Typography>
+                        <div className="ai-shell__map-edges-grid">
+                          {doMap.edges.map((edge, i) => {
+                            const srcNode = doMap.nodes.find(n => n.node_id === edge.source_node_id);
+                            const tgtNode = doMap.nodes.find(n => n.node_id === edge.target_node_id);
+
+                            return (
+                              <div key={i} className="ai-shell__map-edge-item">
+                                <span className="ai-shell__edge-arrow">
+                                  <strong>{srcNode?.label || edge.source_node_id}</strong>
+                                  <span className="ai-shell__edge-line">
+                                    ‹ {edge.relationship_type?.replace('_', ' ')} ›
+                                  </span>
+                                  <strong>{tgtNode?.label || edge.target_node_id}</strong>
+                                </span>
+                                <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                                  <span className="ai-shell__edge-causal-badge">{edge.causal_status || 'not_causal_claim'}</span>
+                                  {edge.label && <span className="ai-shell__edge-label-text">{edge.label}</span>}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* SECTION 8: SCENARIO COMPARE */}
+              {doScenario && (
+                <div className="ai-shell__decision-scenario-section">
+                  <Typography variant="overline" sx={{ fontWeight: 900, opacity: 0.5, letterSpacing: '0.15em', display: 'block', mb: 2 }}>
+                    Scenario Compare
+                  </Typography>
+
+                  {doScenario.status === 'ready' ? (
+                    <ScenarioPreview preview={doScenario} />
+                  ) : (
+                    <div className="ai-shell__scenario-locked-card">
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <FaShieldAlt style={{ color: 'var(--text-secondary)', opacity: 0.4, fontSize: '1.25rem' }} />
+                        <div>
+                          <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>
+                            What-If Scenarios Standby
+                          </Typography>
+                          <Typography variant="caption" sx={{ opacity: 0.7 }}>
+                            {doScenario.summary || 'What-if comparisons require a structurally complete decision frame and active observational evidence.'}
+                          </Typography>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* SECTION 9: ADVANCED GATES */}
+              {doGates && doGates.length > 0 && (
+                <div className="ai-shell__decision-gates-section">
+                  <Typography variant="overline" sx={{ fontWeight: 900, opacity: 0.5, letterSpacing: '0.15em', display: 'block', mb: 2 }}>
+                    Advanced Capabilities (Gated)
+                  </Typography>
+                  <div className="ai-shell__gates-grid">
+                    {doGates.map((gate, i) => (
+                      <div key={i} className="ai-shell__gate-card">
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                          <span className="ai-shell__gate-title">{gate.capability?.replace('_', ' ') || 'gated capability'}</span>
+                          <span className="ai-shell__gate-lock-icon">🔒</span>
+                        </div>
+                        <Typography variant="caption" sx={{ opacity: 0.7, lineHeight: 1.4 }}>
+                          {gate.reason || 'Unsupported in the current runtime environment.'}
+                        </Typography>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* SECTION 10: RELIABILITY BOUNDARY / TRUTH NOTE */}
+              <div className="ai-shell__decision-truth-boundary-note" style={{ background: 'var(--bg-secondary)', padding: '16px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+                <Typography variant="caption" sx={{ opacity: 0.6, display: 'block', lineHeight: 1.5 }}>
+                  <FaInfoCircle style={{ marginRight: '8px', fontSize: '0.8rem', verticalAlign: 'middle', marginTop: '-2px' }} />
+                  Outputs are computed under the <strong>{doTruthBoundary.replace('_', ' ')}</strong> boundary. Observational analysis only. No simulation or causal forecast claims are supported.
+                </Typography>
+              </div>
+
+            </div>
+          </div>
+        );
+      }
+
       default:
         return null;
     }
@@ -1024,7 +1518,7 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspa
         if (data.artifacts && data.artifacts.length > 0) {
           const lastArt = data.artifacts[data.artifacts.length - 1];
           // Only auto-focus if it's a rich, inspectable artifact
-          const richTypes = ['chart', 'workspace_preview', 'workspace_analysis_summary'];
+          const richTypes = ['chart', 'workspace_preview', 'workspace_analysis_summary', 'decision_output'];
           if (richTypes.includes(lastArt.type)) {
             setActiveArtifact({
               ...lastArt,
