@@ -8,7 +8,7 @@ Full preserved status history: `project_docs/archive/superseded_active_2026_05_2
 
 Decision Intelligence V3 is active.
 
-Phase 1 reliability foundation is complete. Phase 2 semantic metadata plumbing is complete. Phase 2.5 semantic frame completion and Phase 2 cleanup are complete. Phase 3 correction actions and ranked observational evidence are complete on the backend and frontend. Phase 4.5 AI Chat hardening is complete. Phase 3 backend `decision_output` for AI Chat Decision Output Unification is complete and reviewed.
+Phase 1 reliability foundation is complete. Phase 2 semantic metadata plumbing is complete. Phase 2.5 semantic frame completion and Phase 2 cleanup are complete. Phase 3 correction actions and ranked observational evidence are complete on the backend and frontend. Phase 4.5 AI Chat hardening is complete. Phase 3 backend `decision_output` for AI Chat Decision Output Unification is complete. Phase 4 frontend rendering for AI Chat Decision Output Unification is complete and verified.
 
 The old standalone Phase 4 Canonical Active Dataset handoff is superseded as the active next path. Dataset truth is still important, but it now belongs inside the AI Chat decision output unification plan as Dataset Trust.
 
@@ -40,8 +40,8 @@ Gemini owns frontend implementation unless the user explicitly authorizes Codex 
 | Decision chat contract and actions | Complete foundation |
 | Workspace drafting and correction | Complete foundation |
 | Ranked observational evidence | Complete foundation |
-| Dataset Trust inside AI Chat output | Backend contract complete; frontend rendering next |
-| Unified AI Chat decision output artifact | Backend complete; Gemini Phase 4 rendering next |
+| Dataset Trust inside AI Chat output | Complete and verified on frontend |
+| Unified AI Chat decision output artifact | Complete and verified on frontend |
 | Decisions window required-continuation flow | Superseded direction |
 | Legacy recommendations, Autopilot, AutoML prominence | Prune or rewrite after replacement path exists |
 
@@ -100,6 +100,29 @@ Verification passed with `PYTHONPATH=.codex_tmp_py\site-packages python -m unitt
 Anti Gravity reviewed the Phase 3 backend diff and returned verdict: Complete. The review confirmed additive artifact positioning, Dataset Trust preservation, `observational_analysis_only` truth boundary, no unsupported recommendation/simulation/optimization/causal claims, no frontend or `GEMINI.md` changes, and sufficient tests for complete draft, incomplete draft, analyze action, and correction compatibility. The only minor observation was that `default_view` and `schema_version` were emitted by the service but not yet listed in the contract table; the contract has now been updated.
 
 Phase 4 is ready for Gemini frontend implementation. Active handoff: `project_docs/active/ai_hand_off/phase_4_gemini_ai_chat_decision_output_rendering.md`.
+
+## Phase 4 Frontend Unified Decision Output - 2026-05-31
+
+Gemini implemented and verified Phase 4 frontend rendering for the `decision_output` artifact in the unified AI Chat results pane.
+
+Frontend changes made:
+- Added `decision_output` to rich inspectable and PDF exportable types in `AIShell.jsx`.
+- Implemented high-fidelity `decision_output` rendering case in `AIShell.jsx` (`renderArtifact`):
+  - Executive Brief: Renders titles, summaries, and DI badges.
+  - Dataset Trust: Summarizes grounding metrics, semantic readiness, stale/freshness states, and warnings.
+  - Decision Frame: Grouped lists for objective goal, primary levers, segment dimensions, constraints, assumptions, and unknowns. Reuses `SemanticRef`.
+  - Readiness & allowed next actions: Interactive allowed action buttons and required clarifications.
+  - Evidence Board: Renders ranked observational diagnostics, evidence strength, trace tags, and limitations.
+  - Decision Map: Displays visual map cards for goal, driver, limit, and breakdown nodes with mapped relationships.
+  - Scenario Compare: Binds projections grid using `ScenarioPreview`.
+  - Advanced Gates: Renders padlocked gates for simulation, optimization, autonomous decisioning, and recommendations.
+- Premium styling added to `AIShell.css` with curated gradients, hover micro-animations, lock gates, and status cards.
+
+Verification run:
+- Executed local `npm run build` inside `frontend/frontend` which compiled successfully with 0 errors.
+- Executed `git diff --check` which passed with 0 trailing spaces.
+
+Next active slice: Phase 5, Codex backend support for correction action updates to return updated `decision_output` instead of only `workspace_preview` and Gemini frontend connection.
 
 ## Canonical Resume Order
 
