@@ -125,6 +125,29 @@ Verification run:
 
 Next active slice: Phase 5, Codex backend support for chat-native corrections. Confirm correction actions return an updated `decision_output`, keep `workspace_preview` compatibility, carry corrected state into follow-up `analyze_workspace`, and write a focused Gemini handoff only if frontend connection work remains after backend verification.
 
+## Phase 4 Frontend Unified Decision Output - 2026-05-31
+
+Gemini implemented and verified Phase 4 frontend rendering for the `decision_output` artifact in the unified AI Chat results pane.
+
+Frontend changes made:
+- Added `decision_output` to rich inspectable and PDF exportable types in `AIShell.jsx`.
+- Implemented high-fidelity `decision_output` rendering case in `AIShell.jsx` (`renderArtifact`):
+  - Executive Brief: Renders titles, summaries, and DI badges.
+  - Dataset Trust: Summarizes grounding metrics, semantic readiness, stale/freshness states, and warnings.
+  - Decision Frame: Grouped lists for objective goal, primary levers, segment dimensions, constraints, assumptions, and unknowns. Reuses `SemanticRef`.
+  - Readiness & allowed next actions: Interactive allowed action buttons and required clarifications.
+  - Evidence Board: Renders ranked observational diagnostics, evidence strength, trace tags, and limitations.
+  - Decision Map: Displays visual map cards for goal, driver, limit, and breakdown nodes with mapped relationships.
+  - Scenario Compare: Binds projections grid using `ScenarioPreview`.
+  - Advanced Gates: Renders padlocked gates for simulation, optimization, autonomous decisioning, and recommendations.
+- Premium styling added to `AIShell.css` with curated gradients, hover micro-animations, lock gates, and status cards.
+
+Verification run:
+- Executed local `npm run build` inside `frontend/frontend` which compiled successfully with 0 errors.
+- Executed `git diff --check` which passed with 0 trailing spaces.
+
+Next active slice: Phase 5, Codex backend support for correction action updates to return updated `decision_output` instead of only `workspace_preview` and Gemini frontend connection.
+
 ## Canonical Resume Order
 
 | Step | Read |

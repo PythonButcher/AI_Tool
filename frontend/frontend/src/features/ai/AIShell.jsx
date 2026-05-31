@@ -359,6 +359,37 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspa
 
     const baseClass = isInspector ? "ai-shell__active-artifact" : "ai-shell__artifact-preview-card";
 
+    // Helper to format object arrays into SemanticRef components
+    const renderSemanticList = (items, type) => {
+      if (!Array.isArray(items) || items.length === 0) return <Typography variant="body2" sx={{ opacity: 0.5 }}>Not specified</Typography>;
+      return (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', paddingLeft: '12px', borderLeft: '2px solid var(--text-primary)' }}>
+          {items.map((item, i) => {
+            const metricRef = item.metric_ref || (type === 'lever' && item.binding?.binding_type === 'metric' ? item.binding.metric_ref : null);
+            const dimensionRef = item.dimension_ref || (type === 'lever' && item.binding?.binding_type === 'dimension' ? item.binding.dimension_ref : null);
+
+            if (metricRef?.metric_id || dimensionRef?.dimension_id) {
+              return <SemanticRef key={i} metric_ref={metricRef} dimension_ref={dimensionRef} type={type} compact />;
+            }
+
+            // Build a fallback ref from flattened fields
+            const fallbackLabel = item.label || item.binding_label || item.metric || item.dimension_id || item.field || item.strings || (typeof item === 'string' ? item : 'Unbound item');
+            const fallbackRef = { label: fallbackLabel };
+
+            return (
+              <SemanticRef
+                key={i}
+                metric_ref={type !== 'segment' ? fallbackRef : null}
+                dimension_ref={type === 'segment' ? fallbackRef : null}
+                type={type}
+                compact
+              />
+            );
+          })}
+        </div>
+      );
+    };
+
     // Metadata-driven visibility: In-thread we show links for inspectable rich content
     // unless render_hint explicitly asks for 'inline' presentation.
     if (!isInspector && inspectable && render_hint !== 'inline') {
@@ -459,8 +490,11 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspa
         const cr_res = wp.correction_result;
         const cr_trace = wp.trace;
 
+<<<<<<< HEAD
 
 
+=======
+>>>>>>> 35761e8e9bd58f0e0e8c118503489d3e1753abc8
         const unresolvedMappings = wp.drafting?.prompt_matches?.unresolved_mappings || wp.unresolved_mappings || [];
 
         return (
