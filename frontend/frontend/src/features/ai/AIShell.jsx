@@ -490,11 +490,8 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspa
         const cr_res = wp.correction_result;
         const cr_trace = wp.trace;
 
-<<<<<<< HEAD
 
 
-=======
->>>>>>> 35761e8e9bd58f0e0e8c118503489d3e1753abc8
         const unresolvedMappings = wp.drafting?.prompt_matches?.unresolved_mappings || wp.unresolved_mappings || [];
 
         return (
