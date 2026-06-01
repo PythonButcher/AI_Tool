@@ -245,6 +245,8 @@ Gemini should add a renderer for `decision_output`. It should not replace the ex
 
 The right-side results pane should remain multi-purpose. Decision output is one rich artifact family, not a takeover of AI Chat.
 
+`decision_output` is inspectable in Phase 4. PDF export for `decision_output` is deferred to Phase 11 unless a dedicated export adapter is implemented earlier.
+
 Suggested visible layout:
 
 Executive Brief at top.
@@ -568,19 +570,19 @@ The export is shareable and readable without opening the app.
 
 The export avoids fake final recommendations, optimization, causal proof, and unsupported prediction claims.
 
-## First Codex Implementation Slice
+## Current Codex Implementation Slice: Phase 5
 
-Start with backend-only work.
+Start with backend-only work for chat-native corrections.
 
-Recommended first slice:
+Recommended Phase 5 slice:
 
-1. Add or document `Dataset Trust` contract in `decision_objects.md`.
-2. Add a backend composer for `decision_output` or a small composer function if a full service is premature.
-3. Return `decision_output` alongside existing `workspace_preview` for decision prompts.
-4. Return updated `decision_output` after `analyze_workspace`.
-5. Add focused backend tests proving existing `answer` and `chart` artifacts are not renamed or broken.
-6. Update active status with only the facts implemented and verified.
-7. Write a Gemini handoff only after the backend contract is stable.
+1. Inspect the current correction action path in `DecisionChatService.handle_action`.
+2. Confirm whether corrected `draft_workspace` action responses already append updated `decision_output`; if not, fix that path through the existing `decision_output` composer.
+3. Confirm corrected session state is used by follow-up `analyze_workspace`.
+4. Add focused backend tests for correction state carry-forward, updated readiness, updated `decision_output.correction_state`, and compatibility with the first `workspace_preview` artifact.
+5. Preserve existing `answer`, `chart`, `workspace_preview`, and `workspace_analysis_summary` behavior.
+6. Update active status with only verified facts.
+7. Write a Gemini handoff only if frontend connection work remains after backend verification.
 
 Suggested first files to inspect:
 
@@ -588,15 +590,15 @@ Suggested first files to inspect:
 
 `backend/services/decision_workspace_service.py`
 
-`backend/services/decision_support.py`
+`backend/services/decision_output_service.py`
 
 `tests/test_decision_chat_service.py`
 
-`tests/test_decision_workspace_service.py`
+`tests/test_decision_phase_3_correction.py` if present
 
 `project_docs/active/contracts/decision_objects.md`
 
-Do not inspect every frontend file for the first backend slice. Frontend work waits for the Gemini handoff unless explicitly authorized.
+Do not inspect every frontend file for this backend slice. Frontend work waits for a new Gemini handoff unless explicitly authorized.
 
 ## Gemini Handoff Trigger
 
