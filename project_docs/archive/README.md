@@ -14,3 +14,9 @@ The May 24, 2026 documentation cleanup preserved long or superseded active files
 
 Use that folder only when historical detail is explicitly needed.
 
+## Recent Status History
+
+Completed Decision Intelligence slice records moved out of active status on June 1, 2026:
+
+`project_docs/archive/decision_intelligence_status_history_2026_06_01.md`
+

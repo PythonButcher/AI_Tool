@@ -166,8 +166,9 @@ class DecisionOutputService:
     ) -> Dict[str, Any]:
         correction_history = workspace.get("correction_history") if isinstance(workspace.get("correction_history"), list) else []
         latest = correction_result or (correction_history[-1] if correction_history else None)
+        status = "updated" if isinstance(correction_result, dict) or correction_history else "not_applied"
         return {
-            "status": "updated" if correction_result else "not_applied",
+            "status": status,
             "latest": deepcopy(latest) if isinstance(latest, dict) else None,
             "history_count": len(correction_history),
             "truth_boundary": DecisionOutputService.TRUTH_BOUNDARY,
@@ -550,7 +551,23 @@ class DecisionOutputService:
             "workspace_status": workspace.get("status"),
             "workspace_analysis_present": isinstance(workspace_analysis, dict),
             "ranked_diagnostic_ids": diagnostic_ids,
-            "correction_status": correction_result.get("status") if isinstance(correction_result, dict) else None,
+            "correction_status": DecisionOutputService._resolve_correction_status(workspace, correction_result),
             "scenario_status": scenario_preview.get("status") if isinstance(scenario_preview, dict) else None,
             "truth_boundary": DecisionOutputService.TRUTH_BOUNDARY,
         }
+
+    @staticmethod
+    def _resolve_correction_status(
+        workspace: Dict[str, Any],
+        correction_result: Optional[Dict[str, Any]],
+    ) -> Optional[str]:
+        if isinstance(correction_result, dict):
+            return correction_result.get("status") or "applied"
+        correction_history = (
+            workspace.get("correction_history")
+            if isinstance(workspace.get("correction_history"), list)
+            else []
+        )
+        if correction_history:
+            return "applied"
+        return None

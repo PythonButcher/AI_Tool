@@ -39,10 +39,12 @@ The old standalone Phase 4 Canonical Active Dataset handoff is superseded. Datas
 
 | Agent | Owns |
 | --- | --- |
-| Codex | Backend truth, contracts, tests, architecture, docs, cleanup planning, review |
+| Codex | Backend truth, contracts, tests, architecture, docs, cleanup planning, review, and project gate facilitation |
 | Gemini | Frontend implementation, React/CSS, browser verification, frontend status updates |
 
 Codex must not edit frontend files unless the user explicitly authorizes Codex frontend edits in the current session.
+
+Codex must make the current project gate explicit after substantial Decision Intelligence work. Say whether the phase is complete end to end, backend-only complete, frontend verification needed, Gemini handoff needed, blocked, or ready for the next phase. Do not make the user infer who acts next.
 
 ## Do Not Do This
 

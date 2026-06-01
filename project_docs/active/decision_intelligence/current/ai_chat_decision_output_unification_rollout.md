@@ -570,11 +570,21 @@ The export is shareable and readable without opening the app.
 
 The export avoids fake final recommendations, optimization, causal proof, and unsupported prediction claims.
 
-## Current Codex Implementation Slice: Phase 5
+## Current Project Gate: Phase 5 Frontend Readiness Audit
 
-Start with backend-only work for chat-native corrections.
+Phase 5 backend correction carry-forward is complete and verified. Phase 5 is not yet end-to-end complete because frontend correction behavior has not been audited.
 
-Recommended Phase 5 slice:
+Do not move to Phase 6 yet. Do not send Gemini speculative work.
+
+Required next Codex slice:
+
+1. Read `project_docs/active/status/decision_intelligence_execution_status.md` and `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md`.
+2. Perform a read-only frontend readiness audit for chat-native corrections. Do not edit frontend files unless the user explicitly authorizes Codex frontend edits in the current session.
+3. Confirm whether the existing AI Chat frontend can submit a correction action to the decision chat actions endpoint and replace or refresh the active result pane with the returned updated `decision_output`.
+4. If the frontend already supports that behavior, update active status to say Phase 5 is end-to-end complete and name the evidence.
+5. If the frontend does not support that behavior, write a focused Gemini handoff naming the missing behavior, target files, artifact contract, visible acceptance check, build command, browser check, and status-doc update requirement.
+
+Completed Phase 5 backend slice:
 
 1. Inspect the current correction action path in `DecisionChatService.handle_action`.
 2. Confirm whether corrected `draft_workspace` action responses already append updated `decision_output`; if not, fix that path through the existing `decision_output` composer.
@@ -598,17 +608,19 @@ Suggested first files to inspect:
 
 `project_docs/active/contracts/decision_objects.md`
 
-Do not inspect every frontend file for this backend slice. Frontend work waits for a new Gemini handoff unless explicitly authorized.
+For the readiness audit, inspect only the frontend files needed to answer the correction-wiring question. Frontend implementation work still waits for explicit user authorization or a Gemini handoff.
 
 ## Gemini Handoff Trigger
 
-Codex should write a Gemini handoff when these are true:
+Codex should write a Gemini handoff only when these are true:
 
 `decision_output` contract is documented.
 
 Backend returns representative `decision_output` for draft, analyzed, incomplete, and corrected decision states.
 
 Focused backend tests pass.
+
+Codex has confirmed a specific frontend gap in chat-native correction behavior.
 
 The handoff names exact frontend files, visible behavior, artifact type, acceptance prompt, build command, browser check, and status-doc update requirement.
 

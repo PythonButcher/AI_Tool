@@ -10,9 +10,11 @@ Gemini owns frontend implementation, React/CSS, UI rendering, browser verificati
 
 ## Active Handoffs
 
-No active Gemini handoff is open right now.
+Phase 5 Gemini chat-native corrections handoff is open:
 
-Phase 5 is Codex-owned backend support for chat-native corrections. Codex should create a new focused Gemini handoff only after backend correction behavior is verified and there is concrete frontend connection work for Gemini.
+`project_docs/active/ai_hand_off/phase_5_gemini_chat_native_corrections.md`
+
+Codex audited the existing AI Chat frontend and found concrete frontend connection work: AI Chat can run generic decision actions, but it does not currently build or send a backend correction payload, and the `decision_output` correction-state renderer expects `status: "success"` instead of the backend `updated` state.
 
 Active rollout: `project_docs/active/decision_intelligence/current/ai_chat_decision_output_unification_rollout.md`
 
@@ -28,6 +30,8 @@ Active rollout: `project_docs/active/decision_intelligence/current/ai_chat_decis
 ## Handoff Rule
 
 When frontend work is needed, Codex must write a focused Gemini handoff that names the files to inspect, the backend truth, the acceptance behavior, the constraints, and the status-doc requirement.
+
+When Codex opens or updates an active Gemini handoff, Codex must also give the user a clean paste-ready Gemini prompt in the final response for that turn.
 
 Do not make Gemini infer backend truth from raw contracts. Do not let Gemini invent backend APIs or silently change product scope.
 

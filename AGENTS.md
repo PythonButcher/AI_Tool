@@ -34,6 +34,20 @@ When frontend work is needed, Codex writes the backend truth and a focused Gemin
 
 Codex must never create, edit, restore, delete, move, rename, patch, or otherwise modify any `GEMINI.md` file. If a `GEMINI.md` file is missing, stale, damaged, or needs new instructions, Codex must report the issue and leave the file untouched for the user or another agent.
 
+## Codex Orchestration Duty
+
+Codex is the project facilitator. At the end of substantial Decision Intelligence work, Codex must state the project gate clearly: whether the phase is complete end to end, backend-only complete, frontend-ready but unverified, blocked, or ready for the next phase.
+
+Codex must not make the user infer who acts next. State directly whether Codex continues, Gemini needs a handoff, both are done, or a specific audit is required before moving forward.
+
+If a phase has backend and frontend parts, backend verification alone is not enough to call the phase complete. Say `backend complete; frontend verification or Gemini work still required` unless frontend behavior has also been verified or the active docs define the slice as backend-only.
+
+Before writing a Gemini handoff, Codex must first confirm there is a real frontend gap from source review, browser verification, or explicit user direction. Do not send Gemini speculative work.
+
+Whenever Codex determines Gemini needs work, Codex must provide the user a clean paste-ready Gemini prompt in the same final response. Do not make the user ask for it separately.
+
+Keep active status short. Move completed slice diaries to `project_docs/archive/` once their facts are no longer the current gate.
+
 ## Communication Rule
 
 Write rollout plans in plain project language. Use short phase names, one purpose per phase, and direct acceptance checks. Explain technical terms immediately. Do not use dense shorthand such as "Decision Map now, CDD later" unless the same paragraph explains exactly what that means.

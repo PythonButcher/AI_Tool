@@ -101,7 +101,7 @@ Phase 3 of AI Chat Decision Output Unification adds a backend-owned `decision_ou
 | `dataset_trust` | `Dataset Trust` | Yes | Same Dataset Trust object returned top-level and attached to artifacts. |
 | `frame` | `Decision Output Frame` | Yes | Goal, Drivers, Limits, Breakdowns, Assumptions, Unknowns, and scope summary composed from the current workspace. |
 | `readiness` | `Decision Readiness State` | Yes | Existing readiness object adapted for display. The truth boundary remains `observational_analysis_only`. |
-| `correction_state` | `object` | Yes | Latest correction result when a correction was applied, plus conservative history metadata. |
+| `correction_state` | `object` | Yes | Latest correction result when a correction was applied, or latest workspace correction-history item when a later action such as `analyze_workspace` is using previously corrected state. `status` is `updated` when either source exists and `not_applied` when the workspace has no correction state. |
 | `evidence_board` | `Decision Output Evidence Board` | Yes | Normalized view of `workspace_analysis.ranked_diagnostics`, or `not_analyzed` when analysis has not run. |
 | `decision_map` | `Decision Output Map` | Yes | Read-only map of dataset, frame, evidence, missing inputs, and advanced gates. Edges are explicitly non-causal. |
 | `scenario_compare` | `object` | Yes | Bounded scenario preview when available, otherwise a `not_applicable` object with limitations. It is not a forecast, optimizer, or causal simulation. |
