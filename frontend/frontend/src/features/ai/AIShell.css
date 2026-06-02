@@ -1144,3 +1144,170 @@
 .ai-shell__gate-lock-icon {
   font-size: 0.9rem;
 }
+
+/* ============================================================
+   Phase 5: Chat-Native Correction Panel Styles
+   Appears inside the decision_output inspector view only.
+   ============================================================ */
+
+/* Correction Active State banner — green-tinted container */
+.ai-shell__correction-active-state {
+  transition: all 0.2s ease;
+}
+
+/* Zone wrapper that holds the trigger or the expanded form */
+.ai-shell__correction-panel-zone {
+  border-top: 1px solid var(--border-color);
+  padding-top: 16px;
+}
+
+/* Collapsed trigger button — minimal pill style */
+.ai-shell__correction-trigger-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  padding: 6px 16px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ai-shell__correction-trigger-btn:hover:not(:disabled) {
+  color: var(--text-primary);
+  border-color: var(--text-secondary);
+  background-color: var(--bg-secondary);
+  transform: translateY(-1px);
+}
+
+.ai-shell__correction-trigger-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Expanded correction form panel */
+.ai-shell__correction-form-panel {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  animation: correction-panel-in 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes correction-panel-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Header row: label + close button */
+.ai-shell__correction-form-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+/* Close button inside the expanded form */
+.ai-shell__correction-form-close {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+  line-height: 1;
+}
+
+.ai-shell__correction-form-close:hover {
+  color: var(--text-primary);
+  background: var(--bg-tertiary);
+}
+
+/* Each label + control row */
+.ai-shell__correction-form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Form field labels */
+.ai-shell__correction-form-label {
+  font-size: 0.65rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+  opacity: 0.7;
+}
+
+/* Shared input / select base styling */
+.ai-shell__correction-form-input,
+.ai-shell__correction-form-select {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  font-family: inherit;
+  color: var(--text-primary);
+  width: 100%;
+  box-sizing: border-box;
+  transition: border-color 0.15s ease;
+  outline: none;
+  appearance: none;
+}
+
+.ai-shell__correction-form-input:focus,
+.ai-shell__correction-form-select:focus {
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 2px rgba(0, 102, 255, 0.08);
+}
+
+.ai-shell__correction-form-input::placeholder {
+  color: var(--text-secondary);
+  opacity: 0.45;
+}
+
+.ai-shell__correction-form-input:disabled,
+.ai-shell__correction-form-select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Submit correction button — strong primary style */
+.ai-shell__correction-submit-btn {
+  background: var(--text-primary);
+  color: var(--bg-primary);
+  border: none;
+  border-radius: 10px;
+  padding: 10px 20px;
+  font-size: 0.82rem;
+  font-weight: 900;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  align-self: flex-start;
+  letter-spacing: 0.02em;
+}
+
+.ai-shell__correction-submit-btn:hover:not(:disabled) {
+  filter: brightness(1.15);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.ai-shell__correction-submit-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: grayscale(0.6);
+}

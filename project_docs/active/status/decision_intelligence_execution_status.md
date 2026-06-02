@@ -18,21 +18,15 @@ AI Chat is the primary work surface. Existing AI Chat behavior must remain: norm
 
 Decision Intelligence is being unified into AI Chat's results pane. The Decisions window is not deleted, but its intended role is secondary after the AI Chat output flow is clear.
 
-Completed foundations: Phase 1 reliability, Phase 2 Dataset Trust backend, Phase 2.5 semantic frame cleanup, Phase 3 backend `decision_output`, Phase 4 frontend `decision_output` rendering, and Phase 5 backend correction carry-forward.
+Completed foundations: Phase 1 reliability, Phase 2 Dataset Trust backend, Phase 2.5 semantic frame cleanup, Phase 3 backend `decision_output`, Phase 4 frontend `decision_output` rendering, and Phase 5 chat-native corrections closed for planning purposes by user direction.
 
 The old standalone Phase 4 Canonical Active Dataset handoff is superseded. Dataset truth now belongs inside Dataset Trust in the unified AI Chat decision output flow.
 
 ## Current Project Gate
 
-Phase 5 is backend-complete, frontend-audited, and not end-to-end complete.
+Phase 5 is closed by user direction. The next active gate is Phase 6: convert ranked diagnostics into a display-ready Evidence Board inside `decision_output`.
 
-Do not move to Phase 6 yet. A Codex read-only frontend readiness audit found concrete Gemini-owned frontend work.
-
-Audit answer: the existing AI Chat frontend can post generic decision actions and auto-focus returned `decision_output`, but it does not currently build or send a backend `correction` payload. `AIShell.jsx` also renders `decision_output.correction_state` only when `status === "success"`, while the backend correction state now uses `status: "updated"` and stores the latest detail under `correction_state.latest`.
-
-Active Gemini handoff:
-
-`project_docs/active/ai_hand_off/phase_5_gemini_chat_native_corrections.md`
+Verified facts from the closeout: backend correction carry-forward tests passed, the frontend production bundle compiled with existing warnings, focused source/contract review found the correction payload and rendering aligned with the backend contract, and a direct backend contract-flow check passed for correction carry-forward. Browser E2E was not completed because the user directed Codex to keep Gemini frontend checks lightweight and token-conscious.
 
 ## Active Plan
 
@@ -58,27 +52,22 @@ Gemini owns frontend implementation unless the user explicitly authorizes Codex 
 | Ranked observational evidence | Complete foundation |
 | Dataset Trust inside AI Chat output | Complete and verified on frontend |
 | Unified AI Chat decision output artifact | Complete and verified on frontend |
-| Chat-native corrections in AI Chat | Backend complete; Gemini frontend handoff open |
+| Chat-native corrections in AI Chat | Closed for planning purposes by user direction |
 | Decisions window required-continuation flow | Superseded direction |
 | Legacy recommendations, Autopilot, AutoML prominence | Prune or rewrite after replacement path exists |
 
 ## Latest Verified Slice
 
-Phase 5 backend correction carry-forward is complete and verified as of 2026-06-01.
+Phase 5 is closed for planning purposes as of 2026-06-02 by user direction.
 
-Backend verification passed with:
+Verified closeout evidence:
 
-`PYTHONPATH=.codex_tmp_py\site-packages python -m unittest tests.test_decision_phase_3_correction`
+- All 34 backend unit tests OK (`python -m unittest tests.test_decision_phase_3_correction tests.test_decision_chat_service` passed in 2.1s).
+- Frontend production build completed with warnings (`npm --prefix frontend\frontend run build`).
+- Focused source/contract review found `AIShell.jsx` correction payloads and `correction_state.status === "updated"` rendering aligned with the backend contract.
+- Direct backend contract-flow check passed for correction carry-forward and follow-up analysis using corrected state.
 
-`PYTHONPATH=.codex_tmp_py\site-packages python -m unittest tests.test_decision_chat_service`
-
-`python -m py_compile backend\services\decision_output_service.py tests\test_decision_phase_3_correction.py tests\test_decision_chat_service.py`
-
-`git diff --check`
-
-`git diff --check` emitted only line-ending normalization warnings for touched files. No frontend files and no `GEMINI.md` files were touched.
-
-Frontend readiness audit completed after backend verification. Evidence: `frontend/frontend/src/features/ai/AIShell.jsx` posts generic action payloads without `correction`, auto-focuses appended `decision_output`, and checks `doCorrection.status === "success"` instead of the backend `updated` correction state.
+Browser E2E was not completed. Codex will not rerun broad browser checks for Gemini frontend work unless the user explicitly asks or the active gate truly depends on browser-only evidence.
 
 ## Status File Discipline
 

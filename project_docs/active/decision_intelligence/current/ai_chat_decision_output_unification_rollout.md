@@ -570,19 +570,19 @@ The export is shareable and readable without opening the app.
 
 The export avoids fake final recommendations, optimization, causal proof, and unsupported prediction claims.
 
-## Current Project Gate: Phase 5 Frontend Readiness Audit
+## Current Project Gate: Phase 6 Evidence Board
 
-Phase 5 backend correction carry-forward is complete and verified. Phase 5 is not yet end-to-end complete because frontend correction behavior has not been audited.
+Phase 5 is closed for planning purposes by user direction. Do not reopen Phase 5 unless the user explicitly asks for a regression review.
 
-Do not move to Phase 6 yet. Do not send Gemini speculative work.
+The next active work is Phase 6: convert ranked diagnostics into a display-ready Evidence Board inside `decision_output`.
 
 Required next Codex slice:
 
-1. Read `project_docs/active/status/decision_intelligence_execution_status.md` and `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md`.
-2. Perform a read-only frontend readiness audit for chat-native corrections. Do not edit frontend files unless the user explicitly authorizes Codex frontend edits in the current session.
-3. Confirm whether the existing AI Chat frontend can submit a correction action to the decision chat actions endpoint and replace or refresh the active result pane with the returned updated `decision_output`.
-4. If the frontend already supports that behavior, update active status to say Phase 5 is end-to-end complete and name the evidence.
-5. If the frontend does not support that behavior, write a focused Gemini handoff naming the missing behavior, target files, artifact contract, visible acceptance check, build command, browser check, and status-doc update requirement.
+1. Read the active status, guardrail, rollout, and `decision_objects.md` contract.
+2. Inspect the existing `decision_output.evidence_board` composer behavior.
+3. Normalize `workspace_analysis.ranked_diagnostics` into display-ready Evidence Board items with title, summary, coverage, strength, data sufficiency, limitations, diagnostic trace, and observational boundary.
+4. Add focused backend tests for analyzed, not-analyzed, weak or insufficient evidence, and no unsupported recommendation/causal/optimization wording.
+5. Update the contract and active status only with verified facts.
 
 Completed Phase 5 backend slice:
 

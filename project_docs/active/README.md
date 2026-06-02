@@ -48,6 +48,10 @@ Do not create a Gemini handoff until Codex has confirmed a concrete frontend gap
 
 When Codex determines Gemini needs work, Codex must give the user a clean paste-ready Gemini prompt in the same final response. The user should not have to ask for the prompt separately.
 
+Gemini frontend reviews must stay lightweight unless the user asks for deeper verification. Codex should use the active handoff, targeted source review, focused diff, and contract evidence before running expensive tools. A source-level blocker is enough to call `Not complete`; do not keep spending tokens on builds, browser automation, or broad scans after the blocker is clear.
+
+Frontend builds are for inconclusive source review, missing or questionable Gemini build evidence, likely syntax/import failures, or explicit user requests. Browser/E2E checks are not the default review path; use them only when the gate depends on visible behavior and cheaper evidence is clean or insufficient.
+
 ## Status File Discipline
 
 The active status file is for current truth, the current gate, and the latest verified fact. It is not an implementation diary. When a phase is fully closed and verified, move detailed slice notes to `project_docs/archive/` and leave a short archive pointer in active status.

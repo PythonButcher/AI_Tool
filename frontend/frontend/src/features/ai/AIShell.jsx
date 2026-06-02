@@ -37,37 +37,6 @@ const MODES = [
   { id: 'decide', label: 'Decide', promise: 'Strategic path evaluation' },
 ];
 
-// Helper to format object arrays into SemanticRef components
-const renderSemanticList = (items, type) => {
-  if (!Array.isArray(items) || items.length === 0) return <Typography variant="body2" sx={{ opacity: 0.5 }}>Not specified</Typography>;
-  return (
-    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', paddingLeft: '12px', borderLeft: '2px solid var(--text-primary)' }}>
-      {items.map((item, i) => {
-        const metricRef = item.metric_ref || (type === 'lever' && item.binding?.binding_type === 'metric' ? item.binding.metric_ref : null);
-        const dimensionRef = item.dimension_ref || (type === 'lever' && item.binding?.binding_type === 'dimension' ? item.binding.dimension_ref : null);
-
-        if (metricRef?.metric_id || dimensionRef?.dimension_id) {
-          return <SemanticRef key={i} metric_ref={metricRef} dimension_ref={dimensionRef} type={type} compact />;
-        }
-
-        // Build a fallback ref from flattened fields
-        const fallbackLabel = item.label || item.binding_label || item.metric || item.dimension_id || item.field || item.strings || (typeof item === 'string' ? item : 'Unbound item');
-        const fallbackRef = { label: fallbackLabel };
-
-        return (
-          <SemanticRef
-            key={i}
-            metric_ref={type !== 'segment' ? fallbackRef : null}
-            dimension_ref={type === 'segment' ? fallbackRef : null}
-            type={type}
-            compact
-          />
-        );
-      })}
-    </div>
-  );
-};
-
 /**
  * AIShell (Analytics-Agent Workspace)
  *
@@ -97,6 +66,18 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspa
   const [activeArtifact, setActiveArtifact] = useState(null);
   const [isResultsPaneOpen, setIsResultsPaneOpen] = useState(true);
   const [isContextPaneOpen, setIsContextPaneOpen] = useState(false);
+
+  // Phase 5: Chat-native correction panel state
+  // correctionPanelOpen tracks whether the inline correction form is visible in the inspector
+  const [correctionPanelOpen, setCorrectionPanelOpen] = useState(false);
+  // correctionType: which backend-supported correction type the user is submitting
+  const [correctionType, setCorrectionType] = useState('time_horizon');
+  // correctionTargetPath: stable path for the selected correction type
+  const [correctionTargetPath, setCorrectionTargetPath] = useState('decision_scope.time_horizon');
+  // correctionReplacement: the new value the user wants to apply
+  const [correctionReplacement, setCorrectionReplacement] = useState('');
+  // correctionReason: optional user-facing audit reason string
+  const [correctionReason, setCorrectionReason] = useState('');
 
   // Derive mode context for visibility
   const modeContext = useMemo(() => sessionState?.mode_context || {}, [sessionState]);
@@ -209,6 +190,126 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspa
       setError("Connectivity failure during action.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  /**
+   * handleCorrectionSubmit
+   *
+   * Phase 5: Sends a deterministic correction to /api/decision/chat/actions
+   * with action: "draft_workspace" and a valid correction object.
+   *
+   * The backend contract (decision_objects.md) requires:
+   *   action: "draft_workspace"
+   *   session_state: from the artifact's scoped session state
+   *   dataset: resolved active dataset
+   *   semantic_model: current semantic model
+   *   correction: { correction_type, target_path, replacement, reason }
+   *
+   * On success, the backend returns workspace_preview (compatibility) and
+   * appended decision_output with updated correction_state.
+   * We use the last rich artifact as the active result pane artifact.
+   */
+  const handleCorrectionSubmit = async (correctionPayload, scopedSessionState = null) => {
+    if (!correctionPayload || !correctionPayload.correction_type) {
+      setError('Correction type is required.');
+      return;
+    }
+    // Require a replacement value for all types except remove_mapping
+    if (correctionPayload.correction_type !== 'remove_mapping' &&
+        (correctionPayload.replacement === '' || correctionPayload.replacement === null || correctionPayload.replacement === undefined)) {
+      setError('A replacement value is required for this correction type.');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    setCorrectionPanelOpen(false); // Close the correction form immediately while loading
+
+    let replacementValue = correctionPayload.replacement;
+
+    // Phase 5: Build contract-valid replacement shapes per the backend contract
+    if (correctionPayload.correction_type === 'time_horizon') {
+      replacementValue = {
+        kind: 'named_period',
+        label: String(correctionPayload.replacement),
+        grain: 'unknown',
+      };
+    } else if (correctionPayload.correction_type === 'objective_direction') {
+      replacementValue = String(correctionPayload.replacement);
+    } else if (correctionPayload.correction_type === 'lever_controllability') {
+      const isControllable = correctionPayload.replacement === 'true' || correctionPayload.replacement === true;
+      replacementValue = {
+        controllable: isControllable,
+      };
+    } else if (correctionPayload.correction_type === 'objective_metric') {
+      replacementValue = {
+        field: String(correctionPayload.replacement),
+      };
+    }
+
+    // Build the full request payload per the backend contract
+    const payload = {
+      action: 'draft_workspace',
+      session_state: scopedSessionState || sessionState,
+      dataset: resolveDatasetForNlp(),
+      semantic_model: semanticModel,
+      correction: {
+        correction_type: correctionPayload.correction_type,
+        target_path: correctionPayload.target_path,
+        replacement: replacementValue,
+        reason: correctionPayload.reason || null,
+      },
+    };
+
+    try {
+      const response = await axios.post(`${API_URL}/api/decision/chat/actions`, payload);
+      const data = response.data;
+
+      if (data.status === 'success') {
+        // Build the assistant message with correction context
+        const newAssistantMsg = {
+          role: 'assistant',
+          content: data.assistant_message,
+          artifacts: data.artifacts,
+          suggested_actions: data.suggested_actions || data.session_state?.available_actions || [],
+          mode: data.mode,
+          session_state: data.session_state || {}, // Scoped state carries correction context forward
+          capability_state: data.capability_state,
+          decision_readiness: data.decision_readiness,
+        };
+        setUserMessages(prev => [...prev, newAssistantMsg]);
+        // Always update global session state with the corrected session state
+        // so follow-up actions (like analyze_workspace) use the corrected state
+        setSessionState(data.session_state || {});
+        if (data.mode) setActiveMode(data.mode);
+
+        // Auto-focus the last rich artifact (backend returns workspace_preview first,
+        // then appended decision_output — we want the decision_output)
+        if (data.artifacts && data.artifacts.length > 0) {
+          const lastArt = data.artifacts[data.artifacts.length - 1];
+          const richTypes = ['chart', 'workspace_preview', 'workspace_analysis_summary', 'decision_output'];
+          if (richTypes.includes(lastArt.type)) {
+            setActiveArtifact({
+              ...lastArt,
+              contextActions: newAssistantMsg.suggested_actions,
+              contextSessionState: newAssistantMsg.session_state,
+              contextCapabilityState: newAssistantMsg.capability_state,
+              contextDecisionReadiness: newAssistantMsg.decision_readiness,
+            });
+            setIsResultsPaneOpen(true);
+          }
+        }
+      } else {
+        setError(data.error?.message || 'Correction submission failed.');
+      }
+    } catch (err) {
+      setError('Connectivity failure during correction.');
+    } finally {
+      setLoading(false);
+      // Reset correction form fields for next use
+      setCorrectionReplacement('');
+      setCorrectionReason('');
     }
   };
 
@@ -1107,28 +1208,236 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspa
                 </div>
               )}
 
-              {/* SECTION 4: CORRECTION STATE */}
-              {doCorrection && doCorrection.status === 'success' && (
-                <div className="ai-shell__correction-container" style={{ margin: 0 }}>
+              {/* SECTION 4: CORRECTION STATE
+                  Phase 5 fix: Backend uses status: "updated", not "success".
+                  Display details come from correction_state.latest when available.
+              */}
+              {doCorrection && (doCorrection.status === 'updated' || doCorrection.status === 'success') && (
+                <div className="ai-shell__correction-container ai-shell__correction-active-state" style={{ margin: 0, padding: '16px', background: 'rgba(34, 197, 94, 0.04)', borderRadius: '12px', border: '1px solid rgba(34, 197, 94, 0.15)' }}>
                   <header style={{ marginBottom: '16px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                       <Typography variant="overline" sx={{ fontWeight: 900, opacity: 0.5 }}>
                         Correction Active
                       </Typography>
+                      {/* Show correction count when history is available */}
+                      {doCorrection.history_count > 0 && (
+                        <Chip
+                          label={`${doCorrection.history_count} applied`}
+                          size="small"
+                          sx={{
+                            height: '18px',
+                            fontSize: '0.65rem',
+                            fontWeight: 900,
+                            bgcolor: 'rgba(34, 197, 94, 0.1)',
+                            color: 'var(--accent-green)',
+                            border: '1px solid currentColor',
+                          }}
+                        />
+                      )}
                     </div>
+                    {/* Read summary from correction_state.latest when present (Phase 5 backend contract) */}
                     <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>
-                      {doCorrection.summary || 'Workspace mapping updated'}
+                      {doCorrection.latest?.summary || doCorrection.summary || 'Workspace correction applied'}
                     </Typography>
                   </header>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '100px 1fr', gap: '8px', fontSize: '0.8rem' }}>
-                    <Typography variant="caption" sx={{ fontWeight: 800, opacity: 0.5 }}>TARGET</Typography>
-                    <Typography variant="caption" sx={{ fontFamily: 'monospace' }}>{doCorrection.target_path}</Typography>
-                    <Typography variant="caption" sx={{ fontWeight: 800, opacity: 0.5 }}>PREVIOUS</Typography>
-                    <Typography variant="caption" sx={{ opacity: 0.6 }}>{typeof doCorrection.previous_value === 'object' ? JSON.stringify(doCorrection.previous_value) : String(doCorrection.previous_value || 'None')}</Typography>
-                    <Typography variant="caption" sx={{ fontWeight: 800, opacity: 0.5, color: 'var(--accent-blue)' }}>NEW VALUE</Typography>
-                    <Typography variant="caption" sx={{ fontWeight: 700 }}>{typeof doCorrection.new_value === 'object' ? JSON.stringify(doCorrection.new_value) : String(doCorrection.new_value)}</Typography>
-                  </div>
+                  {/* Read detail fields from correction_state.latest per Phase 5 backend contract */}
+                  {doCorrection.latest && (
+                    <div style={{ display: 'grid', gridTemplateColumns: '100px 1fr', gap: '8px', fontSize: '0.8rem' }}>
+                      <Typography variant="caption" sx={{ fontWeight: 800, opacity: 0.5 }}>TYPE</Typography>
+                      <Typography variant="caption" sx={{ fontFamily: 'monospace', textTransform: 'capitalize' }}>
+                        {doCorrection.latest.correction_type?.replace(/_/g, ' ')}
+                      </Typography>
+                      <Typography variant="caption" sx={{ fontWeight: 800, opacity: 0.5 }}>TARGET</Typography>
+                      <Typography variant="caption" sx={{ fontFamily: 'monospace' }}>
+                        {doCorrection.latest.target_path}
+                      </Typography>
+                      <Typography variant="caption" sx={{ fontWeight: 800, opacity: 0.5 }}>PREVIOUS</Typography>
+                      <Typography variant="caption" sx={{ opacity: 0.6 }}>
+                        {typeof doCorrection.latest.previous_value === 'object'
+                          ? JSON.stringify(doCorrection.latest.previous_value)
+                          : String(doCorrection.latest.previous_value ?? 'None')}
+                      </Typography>
+                      <Typography variant="caption" sx={{ fontWeight: 800, opacity: 0.5, color: 'var(--accent-blue)' }}>NEW VALUE</Typography>
+                      <Typography variant="caption" sx={{ fontWeight: 700 }}>
+                        {typeof doCorrection.latest.new_value === 'object'
+                          ? JSON.stringify(doCorrection.latest.new_value)
+                          : String(doCorrection.latest.new_value ?? '—')}
+                      </Typography>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* SECTION 4b: APPLY CORRECTION PANEL
+                  Phase 5: Inline correction form in AI Chat results pane.
+                  Only shown when inspecting a decision_output in the results pane.
+                  Supports deterministic correction types from the backend contract.
+                  Does NOT parse arbitrary natural language.
+              */}
+              {isInspector && (
+                <div className="ai-shell__correction-panel-zone" style={{ marginTop: '4px' }}>
+                  {!correctionPanelOpen ? (
+                    // Collapsed state: show a small trigger button
+                    <button
+                      id="ai-shell-correction-trigger-btn"
+                      className="ai-shell__correction-trigger-btn"
+                      onClick={() => setCorrectionPanelOpen(true)}
+                      disabled={loading}
+                      aria-label="Apply a correction to this decision frame"
+                    >
+                      <FaTools style={{ fontSize: '0.75rem' }} />
+                      Apply Correction
+                    </button>
+                  ) : (
+                    // Expanded correction form
+                    <div
+                      id="ai-shell-correction-panel"
+                      className="ai-shell__correction-form-panel"
+                      role="form"
+                      aria-label="Decision Frame Correction Form"
+                    >
+                      <div className="ai-shell__correction-form-header">
+                        <Typography variant="overline" sx={{ fontWeight: 900, opacity: 0.5, fontSize: '0.65rem' }}>
+                          Apply Deterministic Correction
+                        </Typography>
+                        <button
+                          className="ai-shell__correction-form-close"
+                          onClick={() => {
+                            setCorrectionPanelOpen(false);
+                            setCorrectionReplacement('');
+                            setCorrectionReason('');
+                          }}
+                          aria-label="Close correction panel"
+                        >
+                          ✕
+                        </button>
+                      </div>
+
+                      {/* Correction type selector — maps to backend-supported correction types */}
+                      <div className="ai-shell__correction-form-row">
+                        <label className="ai-shell__correction-form-label" htmlFor="correction-type-select">
+                          Correction Type
+                        </label>
+                        <select
+                          id="correction-type-select"
+                          className="ai-shell__correction-form-select"
+                          value={correctionType}
+                          onChange={(e) => {
+                            const selected = e.target.value;
+                            setCorrectionType(selected);
+                            // Map correction type to its canonical target path per the contract
+                            const pathMap = {
+                              time_horizon: 'decision_scope.objective.time_horizon',
+                              objective_direction: 'decision_scope.objective.direction',
+                              objective_metric: 'decision_scope.objective.metric_ref',
+                              lever_controllability: 'decision_scope.levers[0].controllable',
+                            };
+                            setCorrectionTargetPath(pathMap[selected] || `decision_scope.${selected}`);
+
+                            // Initialize with default valid options for select fields
+                            if (selected === 'objective_direction') {
+                              setCorrectionReplacement('maximize');
+                            } else if (selected === 'lever_controllability') {
+                              setCorrectionReplacement('true');
+                            } else {
+                              setCorrectionReplacement('');
+                            }
+                          }}
+                        >
+                          <option value="time_horizon">Time Horizon</option>
+                          <option value="objective_direction">Objective Direction</option>
+                          <option value="objective_metric">Objective Metric (field name)</option>
+                          <option value="lever_controllability">Lever Controllability</option>
+                        </select>
+                      </div>
+
+                      {/* Dynamic hint + input/select for the selected correction type */}
+                      <div className="ai-shell__correction-form-row">
+                        <label className="ai-shell__correction-form-label" htmlFor="correction-replacement-input">
+                          {correctionType === 'time_horizon' && 'New Time Horizon (e.g. Q2 2026, 90 days)'}
+                          {correctionType === 'objective_direction' && 'Direction'}
+                          {correctionType === 'objective_metric' && 'Metric field name (e.g. Revenue)'}
+                          {correctionType === 'lever_controllability' && 'Controllability'}
+                        </label>
+
+                        {correctionType === 'objective_direction' ? (
+                          <select
+                            id="correction-replacement-input"
+                            className="ai-shell__correction-form-select"
+                            value={correctionReplacement || 'maximize'}
+                            onChange={(e) => setCorrectionReplacement(e.target.value)}
+                            disabled={loading}
+                          >
+                            <option value="maximize">maximize</option>
+                            <option value="minimize">minimize</option>
+                            <option value="maintain">maintain</option>
+                            <option value="achieve_target">achieve_target</option>
+                          </select>
+                        ) : correctionType === 'lever_controllability' ? (
+                          <select
+                            id="correction-replacement-input"
+                            className="ai-shell__correction-form-select"
+                            value={correctionReplacement || 'true'}
+                            onChange={(e) => setCorrectionReplacement(e.target.value)}
+                            disabled={loading}
+                          >
+                            <option value="true">Controllable (true)</option>
+                            <option value="false">Not Controllable / Outcome (false)</option>
+                          </select>
+                        ) : (
+                          <input
+                            id="correction-replacement-input"
+                            className="ai-shell__correction-form-input"
+                            type="text"
+                            placeholder={
+                              correctionType === 'time_horizon' ? 'e.g. Q2 2026' :
+                              correctionType === 'objective_metric' ? 'Field name in dataset' : ''
+                            }
+                            value={correctionReplacement}
+                            onChange={(e) => setCorrectionReplacement(e.target.value)}
+                            disabled={loading}
+                          />
+                        )}
+                      </div>
+
+                      {/* Optional reason field for auditability */}
+                      <div className="ai-shell__correction-form-row">
+                        <label className="ai-shell__correction-form-label" htmlFor="correction-reason-input">
+                          Reason (optional)
+                        </label>
+                        <input
+                          id="correction-reason-input"
+                          className="ai-shell__correction-form-input"
+                          type="text"
+                          placeholder="Why are you applying this correction?"
+                          value={correctionReason}
+                          onChange={(e) => setCorrectionReason(e.target.value)}
+                          disabled={loading}
+                        />
+                      </div>
+
+                      {/* Submit correction button — uses lookupSessionState so follow-up analyze_workspace has the corrected state */}
+                      <button
+                        id="ai-shell-correction-submit-btn"
+                        className="ai-shell__correction-submit-btn"
+                        disabled={loading || !String(correctionReplacement).trim()}
+                        onClick={() => handleCorrectionSubmit({
+                          correction_type: correctionType,
+                          target_path: correctionTargetPath,
+                          replacement: typeof correctionReplacement === 'string' ? correctionReplacement.trim() : correctionReplacement,
+                          reason: correctionReason.trim() || null,
+                        }, lookupSessionState)}
+                        aria-label="Submit correction"
+                      >
+                        {loading ? 'Applying…' : 'Submit Correction'}
+                      </button>
+
+                      <Typography variant="caption" sx={{ display: 'block', mt: 1, opacity: 0.4, fontSize: '0.65rem', lineHeight: 1.4 }}>
+                        Corrections are deterministic and backed by the decision contract. No simulation, optimization, or causal inference is applied.
+                      </Typography>
+                    </div>
+                  )}
                 </div>
               )}
 

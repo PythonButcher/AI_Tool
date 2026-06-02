@@ -54,7 +54,9 @@ Write rollout plans in plain project language. Use short phase names, one purpos
 
 When creating prompts for another agent, do not use code blocks and do not over-format with many bullets. Keep the prompt clean and paste-ready.
 
-When Codex wraps up a project phase or clears a phase gate, the final response must include a clean, paste-ready prompt for starting the next session. The user should not have to ask for this handoff prompt separately. The wrap-up summary may describe the phase just completed, but the next-session prompt must never recap prior phases, review history, implementation history, or who approved earlier work. It may include only the minimum prerequisite state needed to start safely, such as `backend contract is ready` or `active handoff exists`, then point to the current docs and name the next task. Do not include sentences like `Phase N is complete`, `Codex implemented`, `reviewed by`, or detailed verification history inside the next-session prompt.
+When Codex wraps up a project phase or clears a phase gate (or whenever the user requests a kick-off / next-session / new phase prompt), the final response must include a clean, paste-ready prompt for starting the next session. The user should not have to ask for this handoff prompt separately.
+CRITICAL: The generated kick-off/next-session prompt MUST NEVER mention or refer to ANY previous phase names or numbers (e.g., do not say "Phase 4", "Phase 5", "previous phase", or recap what was just completed). It MUST NOT recap prior accomplishments, review history, implementation history, or who approved earlier work. It must start directly and cleanly by naming only the next standalone goal, specifying the target file, and listing the active doc links for the current task. Keep the prompt completely forward-looking and decoupled from history. Do not include sentences like "Phase N is complete", "Gemini did X", "reviewed by", or detailed verification history inside the next-session prompt.
+
 
 ## Working Rules
 
