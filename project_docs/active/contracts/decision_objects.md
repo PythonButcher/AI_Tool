@@ -85,7 +85,7 @@ Frontend code should render by `artifact.type` and `render_hint` first. It may u
 
 ### AI Chat Decision Output
 
-Phase 3 of AI Chat Decision Output Unification adds a backend-owned `decision_output` artifact. It is additive and does not replace existing `workspace_preview` or `workspace_analysis_summary` artifacts during the transition. AI Chat decision prompt responses keep `workspace_preview` first for compatibility and append `decision_output`. `analyze_workspace` action responses keep `workspace_analysis_summary` first and append `decision_output`. Correction responses through the existing `draft_workspace` action keep `workspace_preview` first and append an updated `decision_output`.
+Phase 3 of AI Chat Decision Output Unification adds a backend-owned `decision_output` artifact. It is additive and does not replace existing `workspace_preview` or `workspace_analysis_summary` artifacts during the transition. AI Chat decision prompt responses keep `workspace_preview` first for compatibility and append `decision_output`. `analyze_workspace` action responses keep `workspace_analysis_summary` first and append `decision_output`. Correction responses through the existing `draft_workspace` action keep `workspace_preview` first and append an updated `decision_output`. Phase 6 normalizes ranked diagnostics into a display-ready Evidence Board inside this artifact.
 
 `decision_output` is display-ready enough for the AI Chat output pane. Frontend code should not reverse-engineer raw workspace internals for the primary decision output sections when these fields are present.
 
@@ -127,7 +127,7 @@ Phase 3 of AI Chat Decision Output Unification adds a backend-owned `decision_ou
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
 | `status` | `string` | Yes | `not_analyzed` before analysis, `analyzed` after ranked diagnostics are available. |
-| `summary` | `string` | Yes | Business-facing analysis summary or instruction to run analysis. |
+| `summary` | `string` | Yes | Business-facing analysis summary, instruction to run analysis, or a conservative note that analysis ran without ranked diagnostics. |
 | `items` | `object[]` | Yes | Normalized ranked diagnostic items. Empty when not analyzed. |
 | `observational_boundary` | `string` | Yes | Current value is `observational_analysis_only`. |
 
@@ -137,13 +137,15 @@ Evidence Board item fields:
 | --- | --- | --- | --- |
 | `rank` | `integer` | Yes | Evidence order copied from `evidence_rank` or generated from list order. |
 | `title` | `string` | Yes | Human-readable evidence title. |
-| `summary` | `string` | Yes | Diagnostic summary text. |
-| `covers` | `object` | Yes | Goal, Drivers, Limits, Breakdowns, and context role coverage derived from semantic coverage. |
+| `summary` | `string` | Yes | Diagnostic summary text, falling back to the source diagnostic summary or a conservative diagnostic-status summary. |
+| `covers` | `object` | Yes | Goal, Drivers, Limits, Breakdowns, context role coverage, and temporal coverage derived from semantic coverage. Current keys are `goal`, `drivers`, `limits`, `breakdowns`, `context_roles`, and `temporal`. |
 | `strength` | `string` | Yes | `strong`, `moderate`, `weak`, or `insufficient`. |
-| `data_sufficiency` | `object` | Yes | Existing diagnostic sufficiency object when available. |
-| `limitations` | `string[]` | Yes | Includes observational-only caveats when no diagnostic limitation is present. |
-| `source_diagnostic_id` | `string \| null` | No | Trace back to `workspace_analysis.ranked_diagnostics`. |
+| `data_sufficiency` | `object` | Yes | Normalized sufficiency object. Current keys include `status`, `row_count`, `has_period_comparison`, and `summary`. `status` is `sufficient`, `limited`, or `insufficient` when the backend can determine it. |
+| `limitations` | `string[]` | Yes | Always includes an observational-only caveat. Weak, insufficient, or limited items include an additional caution that the item is for review, not a decision rule. |
+| `source_diagnostic_id` | `string \| null` | Yes | Trace back to `workspace_analysis.ranked_diagnostics` or its nested `source_diagnostic`. Present as `null` only when no diagnostic ID exists. |
 | `observational_boundary` | `string` | Yes | Current value is `observational_analysis_only`. |
+
+Reliability boundary: Evidence Board items are not recommendations, optimized actions, causal proof, simulations, forecasts, or autonomous decisions. Titles and summaries should describe observed diagnostic evidence only. Limitations may mention unsupported capabilities only to explicitly deny them.
 
 #### Decision Output Map
 

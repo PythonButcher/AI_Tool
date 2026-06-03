@@ -10,6 +10,11 @@ class DecisionOutputService:
     """Compose an additive AI Chat artifact from existing decision workspace data."""
 
     TRUTH_BOUNDARY = "observational_analysis_only"
+    EVIDENCE_STRENGTHS = {"strong", "moderate", "weak", "insufficient"}
+    OBSERVATIONAL_LIMITATION = (
+        "This evidence is observational only; it is not advice, a causal claim, "
+        "an optimization result, or a final recommendation."
+    )
 
     @staticmethod
     def compose(
@@ -110,7 +115,7 @@ class DecisionOutputService:
         if readiness_state == "analysis_ready":
             return (
                 f"The decision frame for {title} is ready for observational analysis. "
-                "No final recommendation, simulation, optimization, or autonomous decision is produced."
+                "No final recommendation, simulation, optimization, or autonomous decisioning is performed."
             )
         if missing:
             return (
@@ -199,6 +204,8 @@ class DecisionOutputService:
             summary_text = str(summary.get("headline") or summary.get("summary") or "").strip()
         else:
             summary_text = str(summary or "").strip()
+        if not items and not summary_text:
+            summary_text = "Analysis ran, but no ranked diagnostics were available for the current decision frame."
         return {
             "status": "analyzed",
             "summary": summary_text or "Ranked observational evidence is available for this decision frame.",
@@ -208,19 +215,19 @@ class DecisionOutputService:
 
     @staticmethod
     def _build_evidence_item(index: int, diagnostic: Dict[str, Any]) -> Dict[str, Any]:
-        rank = diagnostic.get("evidence_rank") or index
-        source_id = diagnostic.get("diagnostic_id") or (diagnostic.get("source_diagnostic") or {}).get("diagnostic_id")
+        rank = DecisionOutputService._coerce_positive_int(diagnostic.get("evidence_rank"), index)
+        source_id = DecisionOutputService._source_diagnostic_id(diagnostic)
         covers = DecisionOutputService._build_evidence_covers(diagnostic)
-        limitations = list(diagnostic.get("limitations") or [])
-        if not limitations:
-            limitations = ["This is observational evidence only; it is not a causal claim or final recommendation."]
+        strength = DecisionOutputService._normalize_evidence_strength(diagnostic)
+        data_sufficiency = DecisionOutputService._normalize_data_sufficiency(diagnostic, strength)
+        limitations = DecisionOutputService._normalize_evidence_limitations(diagnostic, strength, data_sufficiency)
         return {
             "rank": rank,
             "title": DecisionOutputService._build_evidence_title(diagnostic, rank),
-            "summary": str(diagnostic.get("summary") or "").strip(),
+            "summary": DecisionOutputService._build_evidence_summary(diagnostic),
             "covers": covers,
-            "strength": diagnostic.get("evidence_strength") or "insufficient",
-            "data_sufficiency": deepcopy(diagnostic.get("data_sufficiency") or {}),
+            "strength": strength,
+            "data_sufficiency": data_sufficiency,
             "limitations": limitations,
             "source_diagnostic_id": source_id,
             "observational_boundary": diagnostic.get("observational_boundary") or DecisionOutputService.TRUTH_BOUNDARY,
@@ -228,6 +235,9 @@ class DecisionOutputService:
 
     @staticmethod
     def _build_evidence_title(diagnostic: Dict[str, Any], rank: int) -> str:
+        explicit_title = str(diagnostic.get("title") or "").strip()
+        if explicit_title:
+            return explicit_title
         metric_ref = diagnostic.get("metric_ref") if isinstance(diagnostic.get("metric_ref"), dict) else {}
         dimension_ref = diagnostic.get("dimension_ref") if isinstance(diagnostic.get("dimension_ref"), dict) else {}
         label = metric_ref.get("label") or dimension_ref.get("label") or diagnostic.get("focus_role")
@@ -236,15 +246,138 @@ class DecisionOutputService:
         return f"Evidence {rank}"
 
     @staticmethod
+    def _build_evidence_summary(diagnostic: Dict[str, Any]) -> str:
+        summary = str(diagnostic.get("summary") or "").strip()
+        if summary:
+            return summary
+        source_diagnostic = (
+            diagnostic.get("source_diagnostic")
+            if isinstance(diagnostic.get("source_diagnostic"), dict)
+            else {}
+        )
+        source_summary = str(source_diagnostic.get("summary") or "").strip()
+        if source_summary:
+            return source_summary
+        status = str(diagnostic.get("status") or source_diagnostic.get("status") or "diagnostic").replace("_", " ")
+        return f"Evidence item is available from a ranked {status} diagnostic."
+
+    @staticmethod
     def _build_evidence_covers(diagnostic: Dict[str, Any]) -> Dict[str, Any]:
         coverage = diagnostic.get("semantic_coverage") if isinstance(diagnostic.get("semantic_coverage"), dict) else {}
         return {
             "goal": bool(coverage.get("objective")),
-            "drivers": deepcopy(coverage.get("levers") if isinstance(coverage.get("levers"), list) else []),
-            "limits": deepcopy(coverage.get("guardrails") if isinstance(coverage.get("guardrails"), list) else []),
-            "breakdowns": deepcopy(coverage.get("segments") if isinstance(coverage.get("segments"), list) else []),
-            "context_roles": list(diagnostic.get("role_tags") or []),
+            "drivers": DecisionOutputService._list_of_dicts(coverage.get("levers")),
+            "limits": DecisionOutputService._list_of_dicts(coverage.get("guardrails")),
+            "breakdowns": DecisionOutputService._list_of_dicts(coverage.get("segments")),
+            "context_roles": DecisionOutputService._list_of_strings(diagnostic.get("role_tags")),
+            "temporal": bool(coverage.get("temporal")),
         }
+
+    @staticmethod
+    def _normalize_evidence_strength(diagnostic: Dict[str, Any]) -> str:
+        strength = str(diagnostic.get("evidence_strength") or "").strip().lower()
+        if strength in DecisionOutputService.EVIDENCE_STRENGTHS:
+            return strength
+        data_sufficiency = diagnostic.get("data_sufficiency") if isinstance(diagnostic.get("data_sufficiency"), dict) else {}
+        status = str(data_sufficiency.get("status") or "").strip().lower()
+        if status in {"sufficient", "ready"}:
+            return "moderate"
+        if status in {"limited", "partial"}:
+            return "weak"
+        return "insufficient"
+
+    @staticmethod
+    def _normalize_data_sufficiency(diagnostic: Dict[str, Any], strength: str) -> Dict[str, Any]:
+        source = diagnostic.get("data_sufficiency") if isinstance(diagnostic.get("data_sufficiency"), dict) else {}
+        evidence = diagnostic.get("evidence") if isinstance(diagnostic.get("evidence"), dict) else {}
+        if strength in {"strong", "moderate"}:
+            default_status = "sufficient"
+        elif strength == "weak":
+            default_status = "limited"
+        else:
+            default_status = "insufficient"
+        normalized = deepcopy(source)
+        normalized["status"] = str(normalized.get("status") or default_status)
+        normalized["row_count"] = normalized.get("row_count", evidence.get("row_count"))
+        normalized["has_period_comparison"] = bool(
+            normalized.get("has_period_comparison")
+            or diagnostic.get("status") == "observed_change"
+        )
+        normalized.setdefault(
+            "summary",
+            DecisionOutputService._data_sufficiency_summary(normalized["status"]),
+        )
+        return normalized
+
+    @staticmethod
+    def _data_sufficiency_summary(status: str) -> str:
+        normalized = str(status or "").strip().lower()
+        if normalized == "sufficient":
+            return "The diagnostic has enough observed data for descriptive comparison."
+        if normalized == "limited":
+            return "The diagnostic has partial evidence and should be read with caution."
+        if normalized == "insufficient":
+            return "The diagnostic does not have enough observed data for a reliable comparison."
+        return "Data sufficiency could not be fully determined from the diagnostic payload."
+
+    @staticmethod
+    def _normalize_evidence_limitations(
+        diagnostic: Dict[str, Any],
+        strength: str,
+        data_sufficiency: Dict[str, Any],
+    ) -> List[str]:
+        limitations = DecisionOutputService._list_of_strings(diagnostic.get("limitations"))
+        if DecisionOutputService.OBSERVATIONAL_LIMITATION not in limitations:
+            limitations.append(DecisionOutputService.OBSERVATIONAL_LIMITATION)
+        sufficiency_status = str(data_sufficiency.get("status") or "").lower()
+        if strength in {"weak", "insufficient"} or sufficiency_status in {"limited", "insufficient"}:
+            limitations.append("Evidence strength is limited; use this item as a prompt for review, not as a decision rule.")
+        return DecisionOutputService._dedupe_strings(limitations)
+
+    @staticmethod
+    def _source_diagnostic_id(diagnostic: Dict[str, Any]) -> Optional[str]:
+        source_diagnostic = (
+            diagnostic.get("source_diagnostic")
+            if isinstance(diagnostic.get("source_diagnostic"), dict)
+            else {}
+        )
+        source_id = diagnostic.get("source_diagnostic_id") or diagnostic.get("diagnostic_id") or source_diagnostic.get("diagnostic_id")
+        return str(source_id) if source_id else None
+
+    @staticmethod
+    def _coerce_positive_int(value: Any, fallback: int) -> int:
+        try:
+            parsed = int(value)
+        except (TypeError, ValueError):
+            parsed = int(fallback)
+        return parsed if parsed > 0 else int(fallback)
+
+    @staticmethod
+    def _list_of_dicts(value: Any) -> List[Dict[str, Any]]:
+        if not isinstance(value, list):
+            return []
+        return [deepcopy(item) for item in value if isinstance(item, dict)]
+
+    @staticmethod
+    def _list_of_strings(value: Any) -> List[str]:
+        if not isinstance(value, list):
+            return []
+        return [str(item).strip() for item in value if str(item).strip()]
+
+    @staticmethod
+    def _dedupe_strings(values: List[str]) -> List[str]:
+        seen = set()
+        deduped: List[str] = []
+        for value in values:
+            text = str(value or "").strip()
+            if not text:
+                continue
+            key = text.lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            deduped.append(text)
+        return deduped
 
     @staticmethod
     def _build_decision_map(
@@ -527,7 +660,7 @@ class DecisionOutputService:
                 "summary": readiness.get("truth_boundary") or DecisionOutputService.TRUTH_BOUNDARY,
                 "items": [
                     "No final recommendation is produced.",
-                    "No simulation, optimization, causal proof, or autonomous decision is produced.",
+                    "No simulation, optimization, causal proof, or autonomous decisioning is performed.",
                 ],
             },
         ]
@@ -542,9 +675,9 @@ class DecisionOutputService:
     ) -> Dict[str, Any]:
         ranked = workspace_analysis.get("ranked_diagnostics") if isinstance(workspace_analysis, dict) else []
         diagnostic_ids = [
-            item.get("diagnostic_id")
+            DecisionOutputService._source_diagnostic_id(item)
             for item in (ranked if isinstance(ranked, list) else [])
-            if isinstance(item, dict) and item.get("diagnostic_id")
+            if isinstance(item, dict) and DecisionOutputService._source_diagnostic_id(item)
         ]
         return {
             "workspace_id": workspace.get("workspace_id"),

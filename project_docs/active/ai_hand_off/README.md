@@ -16,6 +16,12 @@ Phase 5 Gemini chat-native corrections handoff is open:
 
 Codex audited the existing AI Chat frontend and found concrete frontend connection work: AI Chat can run generic decision actions, but it does not currently build or send a backend correction payload, and the `decision_output` correction-state renderer expects `status: "success"` instead of the backend `updated` state.
 
+Phase 6 Gemini Evidence Board rendering alignment handoff is open:
+
+`project_docs/active/ai_hand_off/phase_6_gemini_evidence_board_rendering.md`
+
+Codex audited the AI Chat Evidence Board rendering against the backend contract and identified concrete rendering gaps (e.g. incorrect coverage tag keys under `rd.covers`, missing breakdowns, context roles, temporal context, missing data sufficiency status/summary, and missing source diagnostic trace ID).
+
 Active rollout: `project_docs/active/decision_intelligence/current/ai_chat_decision_output_unification_rollout.md`
 
 ## Completed Or Superseded Records

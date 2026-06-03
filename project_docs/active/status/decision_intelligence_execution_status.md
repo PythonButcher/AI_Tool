@@ -24,9 +24,9 @@ The old standalone Phase 4 Canonical Active Dataset handoff is superseded. Datas
 
 ## Current Project Gate
 
-Phase 5 is closed by user direction. The next active gate is Phase 6: convert ranked diagnostics into a display-ready Evidence Board inside `decision_output`.
+Phase 6 backend Evidence Board is complete. `decision_output.evidence_board` now normalizes `workspace_analysis.ranked_diagnostics` into display-ready items with rank, title, summary, coverage, strength, data sufficiency, limitations, and diagnostic trace.
 
-Verified facts from the closeout: backend correction carry-forward tests passed, the frontend production bundle compiled with existing warnings, focused source/contract review found the correction payload and rendering aligned with the backend contract, and a direct backend contract-flow check passed for correction carry-forward. Browser E2E was not completed because the user directed Codex to keep Gemini frontend checks lightweight and token-conscious.
+Current gate: backend and contract complete; frontend display rendering gaps identified by Codex audit. Active Gemini handoff is open at `project_docs/active/ai_hand_off/phase_6_gemini_evidence_board_rendering.md`.
 
 ## Active Plan
 
@@ -53,21 +53,21 @@ Gemini owns frontend implementation unless the user explicitly authorizes Codex 
 | Dataset Trust inside AI Chat output | Complete and verified on frontend |
 | Unified AI Chat decision output artifact | Complete and verified on frontend |
 | Chat-native corrections in AI Chat | Closed for planning purposes by user direction |
+| Evidence Board inside decision output | Backend complete and contract updated |
 | Decisions window required-continuation flow | Superseded direction |
 | Legacy recommendations, Autopilot, AutoML prominence | Prune or rewrite after replacement path exists |
 
 ## Latest Verified Slice
 
-Phase 5 is closed for planning purposes as of 2026-06-02 by user direction.
+Phase 6 backend Evidence Board completed as of 2026-06-02.
 
-Verified closeout evidence:
+Verified evidence:
 
-- All 34 backend unit tests OK (`python -m unittest tests.test_decision_phase_3_correction tests.test_decision_chat_service` passed in 2.1s).
-- Frontend production build completed with warnings (`npm --prefix frontend\frontend run build`).
-- Focused source/contract review found `AIShell.jsx` correction payloads and `correction_state.status === "updated"` rendering aligned with the backend contract.
-- Direct backend contract-flow check passed for correction carry-forward and follow-up analysis using corrected state.
+- Full Python unit test discovery passed: `python -m unittest discover tests` ran 59 tests OK in 2.060s with `PYTHONPATH` pointed at existing user-site and `.codex_tmp_py` dependencies.
+- Focused chat contract suite passed: `python -m unittest tests.test_decision_chat_service` ran 28 tests OK.
+- Evidence Board tests cover analyzed output, not-analyzed output, sparse ranked diagnostics, weak or insufficient evidence normalization, diagnostic trace IDs, and observational-only limitations.
 
-Browser E2E was not completed. Codex will not rerun broad browser checks for Gemini frontend work unless the user explicitly asks or the active gate truly depends on browser-only evidence.
+Frontend build and browser E2E were not run for this backend-only slice. Codex will not rerun broad browser checks for Gemini frontend work unless the user explicitly asks or the active gate truly depends on browser-only evidence.
 
 ## Status File Discipline
 

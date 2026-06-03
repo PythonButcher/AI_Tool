@@ -3,6 +3,7 @@ import unittest
 from flask import Flask
 
 from backend.routes.decision import decision_bp
+from backend.services.decision_output_service import DecisionOutputService
 
 
 DATASET = [
@@ -872,11 +873,141 @@ class DecisionChatApiTests(unittest.TestCase):
         self.assertEqual(body["artifacts"][1]["source"], "decision_output")
         self.assertEqual(body["decision_output"]["evidence_board"]["status"], "analyzed")
         self.assertTrue(body["decision_output"]["evidence_board"]["items"])
+        evidence_item = body["decision_output"]["evidence_board"]["items"][0]
+        for field in (
+            "rank",
+            "title",
+            "summary",
+            "covers",
+            "strength",
+            "data_sufficiency",
+            "limitations",
+            "source_diagnostic_id",
+        ):
+            self.assertIn(field, evidence_item)
+        self.assertEqual(evidence_item["rank"], 1)
+        self.assertIn(evidence_item["strength"], {"strong", "moderate", "weak", "insufficient"})
+        self.assertIn(evidence_item["data_sufficiency"]["status"], {"sufficient", "limited", "insufficient"})
+        self.assertIsNotNone(evidence_item["source_diagnostic_id"])
+        self.assertIn("goal", evidence_item["covers"])
+        self.assertIn("drivers", evidence_item["covers"])
+        self.assertIn("limits", evidence_item["covers"])
+        self.assertIn("breakdowns", evidence_item["covers"])
+        self.assertIn("context_roles", evidence_item["covers"])
+        reliability_text = " ".join(evidence_item["limitations"]).lower()
+        self.assertIn("observational", reliability_text)
+        self.assertIn("not advice", reliability_text)
+        display_text = f"{evidence_item['title']} {evidence_item['summary']}".lower()
+        self.assertNotIn("final recommendation", display_text)
+        self.assertNotIn("optimization", display_text)
         self.assertEqual(
             body["decision_output"]["evidence_board"]["items"][0]["observational_boundary"],
             "observational_analysis_only",
         )
         self.assertEqual(body["decision_output"]["dataset_trust"], body["dataset_trust"])
+
+    def test_decision_output_normalizes_sparse_ranked_diagnostics_for_evidence_board(self):
+        workspace = {
+            "workspace_id": "workspace_sparse_evidence",
+            "status": "analysis_ready",
+            "title": "Sparse Evidence Workspace",
+            "decision_scope": {
+                "objective": {
+                    "statement": "Grow revenue",
+                    "metric_ref": {"metric_id": "metric_revenue_sum", "label": "Revenue"},
+                },
+                "levers": [],
+                "segment_dimensions": [],
+                "constraints": [],
+            },
+            "readiness": {
+                "readiness_state": "analysis_ready",
+                "truth_boundary": "observational_analysis_only",
+                "missing_inputs": [],
+                "unsupported_capabilities": [
+                    "simulation",
+                    "optimization",
+                    "autonomous_decisioning",
+                    "final_recommendation",
+                ],
+            },
+        }
+        dataset_trust = {
+            "dataset": {
+                "source": "inline",
+                "dataset_id": None,
+                "dataset_name": "Inline payload",
+                "row_count": 4,
+                "column_count": 2,
+            },
+            "source_label": "Inline payload",
+            "row_count": 4,
+            "column_count": 2,
+            "semantic_ready": True,
+            "transform_state": "raw",
+            "stale_state": "not_applicable",
+            "warnings": [],
+        }
+        workspace_analysis = {
+            "summary": {"headline": "Sparse evidence has been ranked for review."},
+            "ranked_diagnostics": [
+                {
+                    "diagnostic_id": "diagnostic_limited_discount",
+                    "evidence_rank": "1",
+                    "summary": "Discount rate evidence is present but limited.",
+                    "evidence_strength": "unexpected",
+                    "semantic_coverage": {
+                        "objective": False,
+                        "levers": [{"lever_id": "lever_discount", "label": "Discount Rate"}],
+                        "guardrails": [],
+                        "segments": [],
+                        "temporal": False,
+                    },
+                    "data_sufficiency": {"status": "limited"},
+                    "limitations": [],
+                    "role_tags": ["lever"],
+                },
+                {
+                    "source_diagnostic": {
+                        "diagnostic_id": "diagnostic_missing_history",
+                        "summary": "Revenue lacks enough history for a comparison.",
+                        "status": "insufficient_history",
+                    },
+                    "evidence_strength": "insufficient",
+                },
+            ],
+            "observational_boundary": "observational_analysis_only",
+        }
+
+        output = DecisionOutputService.compose(
+            workspace=workspace,
+            dataset_trust=dataset_trust,
+            workspace_analysis=workspace_analysis,
+        )
+
+        evidence_board = output["evidence_board"]
+        self.assertEqual(evidence_board["status"], "analyzed")
+        self.assertEqual(len(evidence_board["items"]), 2)
+
+        limited_item = evidence_board["items"][0]
+        self.assertEqual(limited_item["rank"], 1)
+        self.assertEqual(limited_item["strength"], "weak")
+        self.assertEqual(limited_item["data_sufficiency"]["status"], "limited")
+        self.assertEqual(limited_item["source_diagnostic_id"], "diagnostic_limited_discount")
+        self.assertEqual(limited_item["covers"]["drivers"][0]["label"], "Discount Rate")
+
+        insufficient_item = evidence_board["items"][1]
+        self.assertEqual(insufficient_item["rank"], 2)
+        self.assertEqual(insufficient_item["strength"], "insufficient")
+        self.assertEqual(insufficient_item["data_sufficiency"]["status"], "insufficient")
+        self.assertEqual(insufficient_item["source_diagnostic_id"], "diagnostic_missing_history")
+        self.assertIn("Revenue lacks enough history", insufficient_item["summary"])
+
+        for item in evidence_board["items"]:
+            reliability_text = " ".join(item["limitations"]).lower()
+            self.assertIn("observational", reliability_text)
+            self.assertIn("not advice", reliability_text)
+            self.assertNotIn("optimized advice", f"{item['title']} {item['summary']}".lower())
 
     def test_ready_workspace_actions_expose_stable_contract_and_priority(self):
         response = self.client.post(
