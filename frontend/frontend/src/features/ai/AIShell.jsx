@@ -1564,18 +1564,89 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspa
                             {rd.summary}
                           </Typography>
 
-                          {/* Coverage tags */}
+                          {/* Coverage tags — aligned to Phase 6 backend contract keys:
+                              rd.covers.goal (bool), rd.covers.drivers (obj[]),
+                              rd.covers.limits (obj[]), rd.covers.breakdowns (obj[]),
+                              rd.covers.context_roles (string[]), rd.covers.temporal (bool) */}
                           {rd.covers && (
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '12px' }}>
-                              {rd.covers.objective_covered && (
+                              {/* Objective / Goal coverage */}
+                              {rd.covers.goal && (
                                 <span className="ai-shell__coverage-tag is-objective">Objective Covered</span>
                               )}
-                              {rd.covers.levers_covered?.map((lev, idx) => (
-                                <span key={idx} className="ai-shell__coverage-tag is-lever">Lever: {lev}</span>
+                              {/* Lever / Driver coverage — each item is an object with label or name */}
+                              {Array.isArray(rd.covers.drivers) && rd.covers.drivers.map((drv, idx) => (
+                                <span key={`drv-${idx}`} className="ai-shell__coverage-tag is-lever">
+                                  Lever: {drv.label || drv.name || drv.metric_id || 'Driver'}
+                                </span>
                               ))}
-                              {rd.covers.constraints_covered?.map((c, idx) => (
-                                <span key={idx} className="ai-shell__coverage-tag is-guardrail">Limit: {c}</span>
+                              {/* Limit / Constraint coverage — each item is an object with label or name */}
+                              {Array.isArray(rd.covers.limits) && rd.covers.limits.map((lim, idx) => (
+                                <span key={`lim-${idx}`} className="ai-shell__coverage-tag is-guardrail">
+                                  Limit: {lim.label || lim.name || lim.dimension_id || 'Constraint'}
+                                </span>
                               ))}
+                              {/* Breakdown / Segment coverage — each item is an object with label or name */}
+                              {Array.isArray(rd.covers.breakdowns) && rd.covers.breakdowns.map((bd, idx) => (
+                                <span key={`bd-${idx}`} className="ai-shell__coverage-tag is-segment">
+                                  Segment: {bd.label || bd.name || bd.dimension_id || 'Breakdown'}
+                                </span>
+                              ))}
+                              {/* Context roles — each item is a plain string role tag */}
+                              {Array.isArray(rd.covers.context_roles) && rd.covers.context_roles.map((role, idx) => (
+                                <span key={`role-${idx}`} className="ai-shell__coverage-tag is-context">
+                                  {role}
+                                </span>
+                              ))}
+                              {/* Temporal context — boolean flag */}
+                              {rd.covers.temporal && (
+                                <span className="ai-shell__coverage-tag is-temporal">Temporal Context</span>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Data Sufficiency — rd.data_sufficiency.status + rd.data_sufficiency.summary */}
+                          {rd.data_sufficiency && (
+                            <div className="ai-shell__evidence-sufficiency" style={{ marginBottom: '10px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                                <Typography variant="caption" sx={{ fontWeight: 900, opacity: 0.4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                                  Data
+                                </Typography>
+                                {rd.data_sufficiency.status && (
+                                  <span
+                                    className={`ai-shell__coverage-tag is-sufficiency-${rd.data_sufficiency.status}`}
+                                    style={{
+                                      color: rd.data_sufficiency.status === 'sufficient'
+                                        ? 'var(--accent-green)'
+                                        : rd.data_sufficiency.status === 'insufficient'
+                                          ? 'var(--accent-red)'
+                                          : '#f59e0b',
+                                      background: rd.data_sufficiency.status === 'sufficient'
+                                        ? 'rgba(34, 197, 94, 0.07)'
+                                        : rd.data_sufficiency.status === 'insufficient'
+                                          ? 'rgba(239, 68, 68, 0.07)'
+                                          : 'rgba(245, 158, 11, 0.07)',
+                                    }}
+                                  >
+                                    {rd.data_sufficiency.status.toUpperCase()}
+                                  </span>
+                                )}
+                                {rd.data_sufficiency.row_count != null && (
+                                  <Typography variant="caption" sx={{ opacity: 0.45, fontSize: '0.65rem' }}>
+                                    {rd.data_sufficiency.row_count.toLocaleString()} rows
+                                  </Typography>
+                                )}
+                                {rd.data_sufficiency.has_period_comparison && (
+                                  <Typography variant="caption" sx={{ opacity: 0.45, fontSize: '0.65rem' }}>
+                                    • period comparison
+                                  </Typography>
+                                )}
+                              </div>
+                              {rd.data_sufficiency.summary && (
+                                <Typography variant="caption" sx={{ display: 'block', opacity: 0.6, lineHeight: 1.4, fontStyle: 'italic', pl: 0.5 }}>
+                                  {rd.data_sufficiency.summary}
+                                </Typography>
+                              )}
                             </div>
                           )}
 
@@ -1583,6 +1654,15 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspa
                             <div className="ai-shell__evidence-limitations">
                               <Typography variant="caption" sx={{ fontStyle: 'italic', opacity: 0.7 }}>
                                 <strong>Caveats:</strong> {rd.limitations.join(' • ')}
+                              </Typography>
+                            </div>
+                          )}
+
+                          {/* Source Diagnostic Trace — rd.source_diagnostic_id for correlation */}
+                          {rd.source_diagnostic_id && (
+                            <div className="ai-shell__evidence-trace" style={{ marginTop: '10px', paddingTop: '8px', borderTop: '1px solid rgba(0,0,0,0.04)' }}>
+                              <Typography variant="caption" sx={{ opacity: 0.3, fontFamily: 'monospace', fontSize: '0.6rem', letterSpacing: '0.02em' }}>
+                                Source: {rd.source_diagnostic_id}
                               </Typography>
                             </div>
                           )}

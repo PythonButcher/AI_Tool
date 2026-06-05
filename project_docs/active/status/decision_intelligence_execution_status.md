@@ -18,15 +18,15 @@ AI Chat is the primary work surface. Existing AI Chat behavior must remain: norm
 
 Decision Intelligence is being unified into AI Chat's results pane. The Decisions window is not deleted, but its intended role is secondary after the AI Chat output flow is clear.
 
-Completed foundations: Phase 1 reliability, Phase 2 Dataset Trust backend, Phase 2.5 semantic frame cleanup, Phase 3 backend `decision_output`, Phase 4 frontend `decision_output` rendering, and Phase 5 chat-native corrections closed for planning purposes by user direction.
+Completed foundations: Phase 1 reliability, Phase 2 Dataset Trust backend, Phase 2.5 semantic frame cleanup, Phase 3 backend `decision_output`, Phase 4 frontend `decision_output` rendering, Phase 5 chat-native corrections closed for planning purposes by user direction, and Phase 6 Evidence Board rendering.
 
 The old standalone Phase 4 Canonical Active Dataset handoff is superseded. Dataset truth now belongs inside Dataset Trust in the unified AI Chat decision output flow.
 
 ## Current Project Gate
 
-Phase 6 backend Evidence Board is complete. `decision_output.evidence_board` now normalizes `workspace_analysis.ranked_diagnostics` into display-ready items with rank, title, summary, coverage, strength, data sufficiency, limitations, and diagnostic trace.
+Phase 6 Evidence Board rendering alignment is complete. `decision_output.evidence_board` frontend rendering now correctly consumes the backend contract, including coverage keys, data sufficiency metrics, and source diagnostic traces.
 
-Current gate: backend and contract complete; frontend display rendering gaps identified by Codex audit. Active Gemini handoff is open at `project_docs/active/ai_hand_off/phase_6_gemini_evidence_board_rendering.md`.
+Current gate: Phase 7 Decision Map contract is next. Codex owns the next backend slice: tighten the backend-owned `decision_output.decision_map` contract, ensure nodes and edges trace dataset, frame, evidence, missing inputs, and advanced gates, and keep every edge explicitly non-causal.
 
 ## Active Plan
 
@@ -53,21 +53,22 @@ Gemini owns frontend implementation unless the user explicitly authorizes Codex 
 | Dataset Trust inside AI Chat output | Complete and verified on frontend |
 | Unified AI Chat decision output artifact | Complete and verified on frontend |
 | Chat-native corrections in AI Chat | Closed for planning purposes by user direction |
-| Evidence Board inside decision output | Backend complete and contract updated |
+| Evidence Board inside decision output | Complete and verified end-to-end |
+| Decision Map inside decision output | Next backend contract gate |
 | Decisions window required-continuation flow | Superseded direction |
 | Legacy recommendations, Autopilot, AutoML prominence | Prune or rewrite after replacement path exists |
 
 ## Latest Verified Slice
 
-Phase 6 backend Evidence Board completed as of 2026-06-02.
+Phase 6 Evidence Board rendering aligned and completed as of the current session.
 
 Verified evidence:
 
 - Full Python unit test discovery passed: `python -m unittest discover tests` ran 59 tests OK in 2.060s with `PYTHONPATH` pointed at existing user-site and `.codex_tmp_py` dependencies.
 - Focused chat contract suite passed: `python -m unittest tests.test_decision_chat_service` ran 28 tests OK.
 - Evidence Board tests cover analyzed output, not-analyzed output, sparse ranked diagnostics, weak or insufficient evidence normalization, diagnostic trace IDs, and observational-only limitations.
-
-Frontend build and browser E2E were not run for this backend-only slice. Codex will not rerun broad browser checks for Gemini frontend work unless the user explicitly asks or the active gate truly depends on browser-only evidence.
+- Frontend React build passed: `npm --prefix frontend\frontend run build` completed successfully.
+- Code hygiene passed: `git diff --check` returned no whitespace errors.
 
 ## Status File Discipline
 

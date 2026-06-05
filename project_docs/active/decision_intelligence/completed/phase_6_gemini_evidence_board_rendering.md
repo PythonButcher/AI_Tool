@@ -1,3 +1,5 @@
+> COMPLETED REFERENCE ONLY: This file is not part of the active handoff path. Current truth lives in `project_docs/active/status/decision_intelligence_execution_status.md` and the active rollout.
+
 # Phase 6 Gemini Handoff: Evidence Board Rendering Alignment
 
 ## Purpose

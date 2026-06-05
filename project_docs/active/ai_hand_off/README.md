@@ -10,17 +10,9 @@ Gemini owns frontend implementation, React/CSS, UI rendering, browser verificati
 
 ## Active Handoffs
 
-Phase 5 Gemini chat-native corrections handoff is open:
+No active Gemini handoff is open right now.
 
-`project_docs/active/ai_hand_off/phase_5_gemini_chat_native_corrections.md`
-
-Codex audited the existing AI Chat frontend and found concrete frontend connection work: AI Chat can run generic decision actions, but it does not currently build or send a backend correction payload, and the `decision_output` correction-state renderer expects `status: "success"` instead of the backend `updated` state.
-
-Phase 6 Gemini Evidence Board rendering alignment handoff is open:
-
-`project_docs/active/ai_hand_off/phase_6_gemini_evidence_board_rendering.md`
-
-Codex audited the AI Chat Evidence Board rendering against the backend contract and identified concrete rendering gaps (e.g. incorrect coverage tag keys under `rd.covers`, missing breakdowns, context roles, temporal context, missing data sufficiency status/summary, and missing source diagnostic trace ID).
+The next active gate is backend-owned Phase 7 Decision Map contract work. Do not create a Gemini handoff until Codex has verified a concrete frontend gap after the backend contract is updated and tested.
 
 Active rollout: `project_docs/active/decision_intelligence/current/ai_chat_decision_output_unification_rollout.md`
 
@@ -29,6 +21,8 @@ Active rollout: `project_docs/active/decision_intelligence/current/ai_chat_decis
 | Record | Location |
 | --- | --- |
 | Phase 4 AI Chat decision output rendering handoff | `project_docs/active/decision_intelligence/completed/phase_4_gemini_ai_chat_decision_output_rendering.md` |
+| Phase 5 chat-native corrections handoff | `project_docs/active/decision_intelligence/completed/phase_5_gemini_chat_native_corrections.md` |
+| Phase 6 Evidence Board rendering handoff | `project_docs/active/decision_intelligence/completed/phase_6_gemini_evidence_board_rendering.md` |
 | Phase 2.5 segment rendering handoff | `project_docs/active/decision_intelligence/completed/phase_2_5_gemini_frontend_segment_dimensions.md` |
 | Phase 3 correction and ranked evidence handoff | `project_docs/active/decision_intelligence/completed/phase_3_gemini_frontend_correction_and_ranked_evidence.md` |
 | Superseded Phase 4 dataset handoff | `project_docs/archive/superseded_active_2026_05_24/phase_4_gemini_frontend_canonical_active_dataset.md` |

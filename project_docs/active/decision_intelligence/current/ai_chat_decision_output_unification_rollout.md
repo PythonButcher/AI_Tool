@@ -570,37 +570,40 @@ The export is shareable and readable without opening the app.
 
 The export avoids fake final recommendations, optimization, causal proof, and unsupported prediction claims.
 
-## Current Project Gate: Phase 6 Evidence Board
+## Current Project Gate: Phase 7 Decision Map Contract
 
-Phase 5 is closed for planning purposes by user direction. Do not reopen Phase 5 unless the user explicitly asks for a regression review.
+Phase 6 Evidence Board is complete end-to-end. Do not reopen Phase 6 unless the user explicitly asks for a regression review.
 
-The next active work is Phase 6: convert ranked diagnostics into a display-ready Evidence Board inside `decision_output`.
+The next active work is Phase 7: make the backend-owned `decision_output.decision_map` contract practical and reliable. Decision Map means a read-only explanation of how dataset, goal, drivers, limits, breakdowns, evidence, missing inputs, and advanced gates relate. It is not a causal diagram.
 
 Required next Codex slice:
 
 1. Read the active status, guardrail, rollout, and `decision_objects.md` contract.
-2. Inspect the existing `decision_output.evidence_board` composer behavior.
-3. Normalize `workspace_analysis.ranked_diagnostics` into display-ready Evidence Board items with title, summary, coverage, strength, data sufficiency, limitations, diagnostic trace, and observational boundary.
-4. Add focused backend tests for analyzed, not-analyzed, weak or insufficient evidence, and no unsupported recommendation/causal/optimization wording.
-5. Update the contract and active status only with verified facts.
+2. Inspect the existing `decision_output.decision_map` composer behavior.
+3. Ensure map nodes cover dataset, goal, drivers, limits, breakdowns, evidence, missing inputs or unknowns, and advanced gates when present.
+4. Ensure map edges use explicit relationship types and always carry `causal_status: "not_causal_claim"`.
+5. Add focused backend tests for complete frames, incomplete frames, analyzed frames with Evidence Board items, and no unsupported recommendation, causal, simulation, or optimization wording.
+6. Update the Decision Map contract and active status only with verified facts.
+
+Completed Phase 6 slice:
+
+1. Normalized `workspace_analysis.ranked_diagnostics` into display-ready Evidence Board items inside `decision_output`.
+2. Added contract coverage for rank, title, summary, coverage, strength, data sufficiency, limitations, and diagnostic trace.
+3. Aligned AI Chat Evidence Board rendering to the backend contract.
+4. Verified backend tests, frontend build, and `git diff --check`.
 
 Completed Phase 5 backend slice:
 
-1. Inspect the current correction action path in `DecisionChatService.handle_action`.
-2. Confirm whether corrected `draft_workspace` action responses already append updated `decision_output`; if not, fix that path through the existing `decision_output` composer.
-3. Confirm corrected session state is used by follow-up `analyze_workspace`.
-4. Add focused backend tests for correction state carry-forward, updated readiness, updated `decision_output.correction_state`, and compatibility with the first `workspace_preview` artifact.
-5. Preserve existing `answer`, `chart`, `workspace_preview`, and `workspace_analysis_summary` behavior.
-6. Update active status with only verified facts.
-7. Write a Gemini handoff only if frontend connection work remains after backend verification.
+1. Confirmed correction action responses append updated `decision_output`.
+2. Confirmed corrected state is used by follow-up `analyze_workspace`.
+3. Added focused backend tests for correction state carry-forward and updated `decision_output.correction_state`.
+4. Preserved existing `answer`, `chart`, `workspace_preview`, and `workspace_analysis_summary` behavior.
 
 Suggested first files to inspect:
 
-`backend/decision_engine/chat_service.py`
-
-`backend/services/decision_workspace_service.py`
-
 `backend/services/decision_output_service.py`
+
+`backend/decision_engine/chat_service.py`
 
 `tests/test_decision_chat_service.py`
 
@@ -608,19 +611,19 @@ Suggested first files to inspect:
 
 `project_docs/active/contracts/decision_objects.md`
 
-For the readiness audit, inspect only the frontend files needed to answer the correction-wiring question. Frontend implementation work still waits for explicit user authorization or a Gemini handoff.
+`frontend/frontend/src/features/ai/AIShell.jsx` only for source-level contract audit after backend changes are verified. Frontend implementation work still waits for explicit user authorization or a Gemini handoff.
 
 ## Gemini Handoff Trigger
 
 Codex should write a Gemini handoff only when these are true:
 
-`decision_output` contract is documented.
+`decision_map` contract is documented.
 
-Backend returns representative `decision_output` for draft, analyzed, incomplete, and corrected decision states.
+Backend returns representative `decision_output.decision_map` for draft, analyzed, incomplete, and corrected decision states.
 
 Focused backend tests pass.
 
-Codex has confirmed a specific frontend gap in chat-native correction behavior.
+Codex has confirmed a specific frontend rendering gap in Decision Map behavior.
 
 The handoff names exact frontend files, visible behavior, artifact type, acceptance prompt, build command, browser check, and status-doc update requirement.
 
