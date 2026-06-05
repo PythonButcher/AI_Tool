@@ -60,15 +60,13 @@ Gemini owns frontend implementation unless the user explicitly authorizes Codex 
 
 ## Latest Verified Slice
 
-Phase 6 Evidence Board rendering aligned and completed as of the current session.
+Phase 6 Evidence Board frontend redesign completed in current session.
 
 Verified evidence:
-
-- Full Python unit test discovery passed: `python -m unittest discover tests` ran 59 tests OK in 2.060s with `PYTHONPATH` pointed at existing user-site and `.codex_tmp_py` dependencies.
-- Focused chat contract suite passed: `python -m unittest tests.test_decision_chat_service` ran 28 tests OK.
-- Evidence Board tests cover analyzed output, not-analyzed output, sparse ranked diagnostics, weak or insufficient evidence normalization, diagnostic trace IDs, and observational-only limitations.
 - Frontend React build passed: `npm --prefix frontend\frontend run build` completed successfully.
 - Code hygiene passed: `git diff --check` returned no whitespace errors.
+- Visual hierarchy and progressive disclosure implemented via CSS/JSX structural updates in `AIShell.jsx` and `AIShell.css`.
+- *Note on visual verification*: Attempted to visually verify the full output via Chrome DevTools by submitting the prompt to the running UI. The React UI correctly renders the input, but the backend connection ("DISCONNECTED") prevented a live `decision_output` artifact from streaming. The structure and CSS are in place, but an end-to-end user evaluation requires a functioning backend connection.
 
 ## Status File Discipline
 
