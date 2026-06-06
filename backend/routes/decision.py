@@ -2,6 +2,7 @@ from flask import Blueprint, jsonify, request
 
 from backend.decision_engine import DecisionChatService
 from backend.services.decision_brief_service import generate_decision_brief
+from backend.services.decision_graph_service import DecisionGraphService
 from backend.services.decision_pipeline_service import run_decision_pipeline
 from backend.services.decision_signal_service import generate_decision_signals
 from backend.services.decision_support import DecisionServiceError
@@ -63,6 +64,28 @@ def analyze_workspace_route():
         return jsonify(_error_payload("INVALID_DECISION_WORKSPACE_ANALYSIS_REQUEST", str(exc))), 400
     except Exception as exc:
         return jsonify(_error_payload("DECISION_WORKSPACE_ANALYSIS_FAILED", f"Failed to analyze decision workspace: {exc}")), 500
+
+
+@decision_bp.route("/graph/candidates", methods=["POST"])
+def decision_graph_candidates_route():
+    payload = request.get_json(silent=True) or {}
+    try:
+        return jsonify(DecisionGraphService.discover_candidates(payload)), 200
+    except DecisionServiceError as exc:
+        return jsonify(_error_payload("INVALID_DECISION_GRAPH_CANDIDATE_REQUEST", str(exc))), 400
+    except Exception as exc:
+        return jsonify(_error_payload("DECISION_GRAPH_CANDIDATE_DISCOVERY_FAILED", f"Failed to discover graph candidates: {exc}")), 500
+
+
+@decision_bp.route("/graph/build", methods=["POST"])
+def decision_graph_build_route():
+    payload = request.get_json(silent=True) or {}
+    try:
+        return jsonify(DecisionGraphService.build_graph(payload)), 200
+    except DecisionServiceError as exc:
+        return jsonify(_error_payload("INVALID_DECISION_GRAPH_BUILD_REQUEST", str(exc))), 400
+    except Exception as exc:
+        return jsonify(_error_payload("DECISION_GRAPH_BUILD_FAILED", f"Failed to build decision graph: {exc}")), 500
 
 @decision_bp.route("/signals/generate", methods=["POST"])
 def generate_signals_route():

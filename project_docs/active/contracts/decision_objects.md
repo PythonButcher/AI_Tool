@@ -151,7 +151,102 @@ Reliability boundary: Evidence Board items are not recommendations, optimized ac
 
 `decision_map` is a presentation contract, not a causal diagram. It can contain node types `dataset`, `goal`, `driver`, `limit`, `breakdown`, `evidence`, `unknown`, and `advanced_gate`. Edge types include `declared_relationship`, `observed_association`, `constraint`, `breakdown`, and `missing_evidence`. Every edge includes `causal_status: "not_causal_claim"`.
 
-Phase 7 shifts the next active graph work from this compact read-only `decision_output.decision_map` toward a separate user-guided `decision_graph` builder contract. Until Phase 7.1 is implemented and verified, `decision_map` remains the current compact display object. Future `decision_graph` work must support user-selected variables, evidence coverage edges, observed association edges, edge metrics, data sufficiency, limitations, and explicit reliability labels. It must not imply causal proof, optimization, simulation, prediction certainty, autonomous decisioning, or final recommendations.
+Phase 7 shifts graph work from this compact read-only `decision_output.decision_map` toward a separate user-guided `decision_graph` builder contract. `decision_map` remains the current compact display object inside `decision_output`; `decision_graph` is the backend data foundation for the future interactive builder.
+
+### Decision Graph
+
+Phase 7.1 adds a backend-owned `decision_graph` contract for variable discovery and cold graph generation from user-selected variables. It is separate from `decision_output.decision_map`.
+
+Routes:
+
+| Route | Method | Purpose |
+| --- | --- | --- |
+| `/api/decision/graph/candidates` | `POST` | Return graph-eligible semantic metrics and dimensions from the resolved dataset context. |
+| `/api/decision/graph/build` | `POST` | Return graph nodes and edges for selected variables, selected evidence, and a graph mode. |
+
+Request fields for both routes reuse existing dataset context inputs: `dataset`, `dataset_ref`, and `semantic_model`. Graph build also accepts:
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `graph_mode` | `string` | No | `evidence_coverage`, `observed_association`, or `mixed`. Default is `mixed`. |
+| `selected_variables` | `object \| object[] \| string[]` | Build yes | Preferred object keys are `metric_ids` and `dimension_ids`. A list may contain variable IDs or objects with `variable_id`. |
+| `selected_evidence_ids` | `string[]` | No | Filters Evidence Board items by `source_diagnostic_id`, `evidence_id`, or rank. If omitted, all provided Evidence Board items are eligible. |
+| `evidence_board` | `Decision Output Evidence Board` | No | Source for evidence coverage edges. May also be passed as `decision_output.evidence_board`. |
+| `frame` | `Decision Output Frame` | No | Helps map Evidence Board role coverage to selected variables, especially goal coverage. May also be passed as `decision_output.frame` or derived from a workspace decision scope. |
+| `filters` | `object[]` | No | Existing metric-resolver style filters applied before observed association metrics are computed. |
+
+Candidate response fields:
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `type` | `string` | Yes | `decision_graph_candidates`. |
+| `schema_version` | `string` | Yes | Current value is `di_phase7_1_decision_graph_v1`. |
+| `dataset` | `Dataset Summary` | Yes | Resolved dataset summary. |
+| `variable_candidates` | `Decision Graph Variable[]` | Yes | Eligible and ineligible metric and dimension candidates. |
+| `data_sufficiency` | `object` | Yes | Dataset-level row count and candidate counts. |
+| `limitations` | `string[]` | Yes | Conservative notes about candidate availability. |
+| `truth_boundary` | `string` | Yes | Current value is `observational_analysis_only`. |
+
+Graph response fields:
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `type` | `string` | Yes | `decision_graph`. |
+| `render_hint` | `string` | Yes | `decision_graph`. |
+| `schema_version` | `string` | Yes | Current value is `di_phase7_1_decision_graph_v1`. |
+| `graph_mode` | `string` | Yes | Normalized graph mode used. |
+| `dataset` | `Dataset Summary` | Yes | Resolved dataset summary. |
+| `selected_variables` | `Decision Graph Variable[]` | Yes | Variables resolved from the request. Unknown IDs are returned with `eligible: false`. |
+| `variable_candidates` | `Decision Graph Variable[]` | Yes | Full candidate list for the same dataset context. |
+| `nodes` | `Decision Graph Node[]` | Yes | Selected variable nodes plus evidence nodes when coverage mode is used. |
+| `edges` | `Decision Graph Edge[]` | Yes | Evidence coverage and/or observed association edges. |
+| `data_sufficiency` | `object` | Yes | Graph-level sufficiency including row count, selected variable count, and edge count. |
+| `limitations` | `string[]` | Yes | Graph-level limitations. |
+| `reliability_labels` | `object` | Yes | Legend for coverage and observed association edge reliability labels. |
+| `truth_boundary` | `string` | Yes | Current value is `observational_analysis_only`. |
+
+Decision Graph Variable fields:
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `variable_id` | `string` | Yes | Metric ID or dimension ID. |
+| `variable_type` | `string` | Yes | `metric`, `dimension`, or `unknown`. |
+| `label` | `string` | Yes | Display label from the semantic model or selected ID fallback. |
+| `field` | `string \| null` | Yes | Backing field when available. |
+| `ref` | `Metric Reference \| Dimension Reference \| null` | Yes | Semantic reference when resolved. |
+| `eligible` | `boolean` | Yes | Whether the backend can inspect the variable in the current dataset. |
+| `data_type` | `string` | Yes | `numeric`, `categorical`, `temporal`, `numeric_dimension`, or `unknown`. |
+| `semantic_role` | `string` | Yes | Conservative role such as `objective_candidate`, `driver_candidate`, `limit_candidate`, `breakdown_candidate`, `temporal`, `metric`, or `dimension`. |
+| `data_sufficiency` | `object` | Yes | Row count, non-null count, missing count, status, and summary. |
+| `limitations` | `string[]` | Yes | Variable-level limitations. |
+
+Decision Graph Edge fields:
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `edge_id` | `string` | Yes | Stable generated edge identifier. |
+| `source_node_id` | `string` | Yes | Source graph node ID. |
+| `target_node_id` | `string` | Yes | Target graph node ID. |
+| `relationship_type` | `string` | Yes | `evidence_coverage` or `observed_association`. |
+| `evidence_basis` | `string` | Yes | `ranked_diagnostic_coverage` or `dataset_observed_association`. |
+| `causal_status` | `string` | Yes | Current backend-generated edges use `not_causal_claim`. Future user hypothesis edges must use `user_hypothesis_not_validated`. |
+| `reliability_label` | `string` | Yes | `observed_supported`, `observed_limited`, or `observed_insufficient`. |
+| `label` | `string` | Yes | Short display label. |
+| `summary` | `string` | Yes | Short backend-owned edge explanation. |
+| `metrics` | `object` | Yes | Edge metrics. Observed associations include `method`, `strength`, `direction`, sample size, and method-specific values such as `correlation`, `top_groups`, `trend_correlation`, or `cramers_v`. Coverage edges include `evidence_strength` and source diagnostic trace. |
+| `data_sufficiency` | `object` | Yes | `status`, row/sample counts where available, and summary. |
+| `limitations` | `string[]` | Yes | Edge-level limitations. |
+
+Implemented first-pass observed association methods:
+
+| Variable pair | Method |
+| --- | --- |
+| Numeric metric to numeric metric | `pearson_correlation` with correlation, direction, sample size, and missing pair count. |
+| Categorical dimension to numeric metric | `group_mean_difference` with top groups, group count, sample size, and top-bottom delta. |
+| Temporal dimension to numeric metric | `observed_time_trend` with trend correlation, first/last values, delta, and sample size. |
+| Categorical dimension to categorical dimension | `distribution_association` with Cramer's V when enough rows exist. |
+
+Reliability boundary: `decision_graph` is descriptive graph data only. It must not render as causal proof, optimization, simulation, prediction certainty, autonomous decisioning, or final recommendations. The backend currently supports coverage and observed association edges only.
 
 ### Decision Semantics For Metrics
 
