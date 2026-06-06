@@ -12,7 +12,9 @@ Gemini owns frontend implementation, React/CSS, UI rendering, browser verificati
 
 No active Gemini handoff is open right now.
 
-The next active gate is backend-owned Phase 7 Decision Map contract work. Do not create a Gemini handoff until Codex has verified a concrete frontend gap after the backend contract is updated and tested.
+The next active gate is backend-owned Phase 7.1 Decision Graph Data Foundation. Do not create a Gemini handoff until Codex has documented and tested the backend `decision_graph` request and response contract.
+
+Phase 7.2 will require an Antigravity handoff for the interactive Decision Graph workspace. That handoff must include the exact backend API shape, graph package decision expectations, required UI files, interaction acceptance checks, build command, browser verification, and status update requirement. Gemini should not invent backend APIs or graph semantics.
 
 Active rollout: `project_docs/active/decision_intelligence/current/ai_chat_decision_output_unification_rollout.md`
 

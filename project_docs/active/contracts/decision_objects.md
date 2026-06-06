@@ -151,6 +151,8 @@ Reliability boundary: Evidence Board items are not recommendations, optimized ac
 
 `decision_map` is a presentation contract, not a causal diagram. It can contain node types `dataset`, `goal`, `driver`, `limit`, `breakdown`, `evidence`, `unknown`, and `advanced_gate`. Edge types include `declared_relationship`, `observed_association`, `constraint`, `breakdown`, and `missing_evidence`. Every edge includes `causal_status: "not_causal_claim"`.
 
+Phase 7 shifts the next active graph work from this compact read-only `decision_output.decision_map` toward a separate user-guided `decision_graph` builder contract. Until Phase 7.1 is implemented and verified, `decision_map` remains the current compact display object. Future `decision_graph` work must support user-selected variables, evidence coverage edges, observed association edges, edge metrics, data sufficiency, limitations, and explicit reliability labels. It must not imply causal proof, optimization, simulation, prediction certainty, autonomous decisioning, or final recommendations.
+
 ### Decision Semantics For Metrics
 
 Additive role metadata attached to semantic model metrics and echoed on `Metric Reference` objects when available. Older semantic models remain valid; the backend finalizer can infer conservative defaults from names, fields, format hints, aggregation, and existing metadata.

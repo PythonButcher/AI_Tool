@@ -26,7 +26,7 @@ The old standalone Phase 4 Canonical Active Dataset handoff is superseded. Datas
 
 Phase 6 Evidence Board rendering alignment is complete. `decision_output.evidence_board` frontend rendering now correctly consumes the backend contract, including coverage keys, data sufficiency metrics, and source diagnostic traces.
 
-Current gate: Phase 7 Decision Map contract is next. Codex owns the next backend slice: tighten the backend-owned `decision_output.decision_map` contract, ensure nodes and edges trace dataset, frame, evidence, missing inputs, and advanced gates, and keep every edge explicitly non-causal.
+Current gate: Phase 7.1 Decision Graph Data Foundation is next. Codex owns the next backend slice: define and implement the first `decision_graph` request and response contract for user-selected variables, evidence coverage edges, observed association edges, edge metrics, data sufficiency, limitations, and explicit reliability labels.
 
 ## Active Plan
 
@@ -54,7 +54,7 @@ Gemini owns frontend implementation unless the user explicitly authorizes Codex 
 | Unified AI Chat decision output artifact | Complete and verified on frontend |
 | Chat-native corrections in AI Chat | Closed for planning purposes by user direction |
 | Evidence Board inside decision output | Complete and verified end-to-end |
-| Decision Map inside decision output | Next backend contract gate |
+| Decision Graph Builder | Phase 7.1 backend data foundation next |
 | Decisions window required-continuation flow | Superseded direction |
 | Legacy recommendations, Autopilot, AutoML prominence | Prune or rewrite after replacement path exists |
 
