@@ -26,9 +26,9 @@ The old standalone Phase 4 Canonical Active Dataset handoff is superseded. Datas
 
 Phase 6 Evidence Board rendering alignment is complete. `decision_output.evidence_board` frontend rendering now correctly consumes the backend contract, including coverage keys, data sufficiency metrics, and source diagnostic traces.
 
-Current gate: Phase 7.1 Decision Graph Data Foundation is backend-complete. Codex implemented the first `decision_graph` request and response contract for variable candidates, user-selected variables, graph nodes, evidence coverage edges, observed association edges, edge metrics, data sufficiency, limitations, and explicit reliability labels.
+Current gate: Phase 7.2 Interactive Decision Graph Workspace frontend UI is complete.
 
-Next gate: Phase 7.2 Interactive Decision Graph Workspace is frontend-owned and requires a focused Gemini handoff before implementation. No frontend graph workspace has been implemented yet.
+Next gate: User validation and feedback on the Interactive Decision Graph Workspace layout and interactions.
 
 ## Active Plan
 
@@ -56,21 +56,20 @@ Gemini owns frontend implementation unless the user explicitly authorizes Codex 
 | Unified AI Chat decision output artifact | Complete and verified on frontend |
 | Chat-native corrections in AI Chat | Closed for planning purposes by user direction |
 | Evidence Board inside decision output | Complete and verified end-to-end |
-| Decision Graph Builder | Phase 7.1 backend data foundation complete; Phase 7.2 frontend workspace next |
+| Decision Graph Builder | Phase 7.2 frontend workspace complete; pending user validation |
 | Decisions window required-continuation flow | Superseded direction |
 | Legacy recommendations, Autopilot, AutoML prominence | Prune or rewrite after replacement path exists |
 
 ## Latest Verified Slice
 
-Phase 7.1 Decision Graph Data Foundation completed as a backend-only slice.
+Phase 7.2 Interactive Decision Graph Workspace frontend completed end-to-end and runtime errors resolved.
 
 Verified evidence:
-- Added `DecisionGraphService` with candidate discovery and graph build support for `evidence_coverage`, `observed_association`, and `mixed` modes.
-- Added `/api/decision/graph/candidates` and `/api/decision/graph/build` backend routes.
-- Added focused backend tests for candidate discovery, selected-variable graph generation, evidence coverage edges, observed association edge metrics, insufficient-data behavior, safe display wording, and route contracts.
-- Focused graph tests passed: `PYTHONPATH=.codex_tmp_py\site-packages python -m unittest tests.test_decision_graph_service`.
-- Shared compatibility tests passed: `PYTHONPATH=.codex_tmp_py\site-packages python -m unittest tests.test_decision_chat_service tests.test_decision_reliability_benchmark`.
-- Dependency note: the default `python` environment did not see Flask. Verification used the workspace temp dependency path `.codex_tmp_py\site-packages`, which contains the project test dependencies.
+- Developed the Decision Graph API endpoints inside `decisionApi.js` (`getDecisionGraphCandidates`, `buildDecisionGraph`).
+- Built the main workspace shell `DecisionGraphWorkspace.jsx` and successfully integrated it into `App.jsx` and `CanvasContainer.jsx`.
+- Developed the node and edge components inside `DecisionGraphCanvas.jsx` using `@xyflow/react`, implementing the required semantic stylings without causal implications.
+- Resolved a transient `Element type is invalid` rendering error and integrated `DecisionGraphCanvas` into the main workspace.
+- Verified build via `npm run build`, tested HMR flow, and ensured no runtime errors exist.
 
 ## Status File Discipline
 

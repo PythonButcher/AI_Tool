@@ -1186,6 +1186,26 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspa
                           </Button>
                         );
                       })}
+                      <Button
+                        variant="contained"
+                        disabled={loading}
+                        startIcon={<FaLayerGroup />}
+                        size="small"
+                        sx={{
+                          borderRadius: '8px',
+                          textTransform: 'none',
+                          fontWeight: 800,
+                          bgcolor: 'var(--accent-blue)',
+                          color: '#fff',
+                          '&:hover': {
+                            bgcolor: 'var(--accent-blue)',
+                            filter: 'brightness(1.1)'
+                          }
+                        }}
+                        onClick={() => handleActionClick('open_workspace', lookupSessionState)}
+                      >
+                        Launch Decision Graph
+                      </Button>
                     </div>
                   </div>
                 )}

@@ -30,6 +30,7 @@ import {
   FaTachometerAlt,
   FaTimes,
   FaUpload,
+  FaProjectDiagram,
 } from 'react-icons/fa';
 import { TbCloudDataConnection } from 'react-icons/tb';
 import { ThemeContext } from '../../context/ThemeContext';
@@ -134,6 +135,7 @@ function MenuBar({
   addDashboardChart,
   setIsDataPaneOpen,
   setActiveDataPaneTab,
+  onOpenDecisionGraph,
 }) {
   const [activeSurface, setActiveSurface] = useState(null);
   const [isRibbonCollapsed, setIsRibbonCollapsed] = useState(true);
@@ -250,6 +252,11 @@ function MenuBar({
                   onClick={onRunDecision} 
                   disabled={!(decisionReadiness?.decision_ready && (decisionReadiness?.missing_requirements?.length || 0) === 0)} 
                   emphasized 
+                />
+                <RibbonCommand
+                  icon={<FaProjectDiagram />}
+                  label="Graph"
+                  onClick={onOpenDecisionGraph}
                 />
               </RibbonGroup>
             )}

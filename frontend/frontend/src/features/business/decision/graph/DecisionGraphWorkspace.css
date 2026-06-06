@@ -1,0 +1,152 @@
+.decision-graph-workspace {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  background: var(--bg-primary, #ffffff);
+  color: var(--text-primary, #333333);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  overflow: hidden;
+}
+
+.graph-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 16px;
+  background: var(--bg-secondary, #f5f5f5);
+  border-bottom: 1px solid var(--border-color, #e0e0e0);
+}
+
+.graph-controls-left, .graph-controls-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.control-btn {
+  padding: 6px 12px;
+  background: var(--bg-primary, #ffffff);
+  border: 1px solid var(--border-color, #ccc);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.control-btn:hover {
+  background: var(--hover-bg, #e8e8e8);
+}
+
+.control-btn.primary {
+  background: var(--primary-color, #0056b3);
+  color: white;
+  border-color: var(--primary-color, #0056b3);
+}
+
+.control-btn.primary:hover {
+  background: var(--primary-hover-color, #004494);
+}
+
+.zoom-level {
+  font-size: 14px;
+  font-weight: 500;
+  min-width: 48px;
+  text-align: center;
+}
+
+.graph-main-area {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.variable-tray {
+  width: 250px;
+  background: var(--bg-secondary, #f9f9f9);
+  border-right: 1px solid var(--border-color, #e0e0e0);
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.variable-tray h3 {
+  margin-top: 0;
+  margin-bottom: 16px;
+  font-size: 16px;
+}
+
+.add-variable-btn {
+  width: 100%;
+  padding: 8px;
+  background: transparent;
+  border: 1px dashed var(--border-color, #ccc);
+  border-radius: 4px;
+  cursor: pointer;
+  margin-bottom: 16px;
+}
+
+.add-variable-btn:hover {
+  background: var(--hover-bg, #eee);
+}
+
+.variable-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.variable-item {
+  padding: 8px;
+  background: var(--bg-primary, #ffffff);
+  border: 1px solid var(--border-color, #eee);
+  border-radius: 4px;
+  margin-bottom: 8px;
+  cursor: pointer;
+}
+
+.variable-item:hover {
+  border-color: var(--primary-color, #0056b3);
+}
+
+.graph-canvas-container {
+  flex: 1;
+  position: relative;
+  background: var(--canvas-bg, #f0f0f0);
+  background-image: 
+    linear-gradient(rgba(200, 200, 200, 0.2) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(200, 200, 200, 0.2) 1px, transparent 1px);
+  background-size: 20px 20px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.canvas-placeholder {
+  color: #888;
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.graph-inspector {
+  width: 300px;
+  background: var(--bg-secondary, #f9f9f9);
+  border-left: 1px solid var(--border-color, #e0e0e0);
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.graph-inspector h3 {
+  margin-top: 0;
+  margin-bottom: 16px;
+  font-size: 16px;
+}
+
+.empty-inspector {
+  color: #888;
+  font-size: 14px;
+  font-style: italic;
+}
