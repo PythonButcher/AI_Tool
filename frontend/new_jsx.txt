@@ -1,0 +1,365 @@
+      case 'decision_output': {
+        const doTitle = artifact.title || artifact.content?.title || 'Decision Framework';
+        const doSummary = artifact.summary || artifact.content?.summary || '';
+        const doDt = artifact.dataset_trust || artifact.content?.dataset_trust;
+        const doFrame = artifact.frame || artifact.content?.frame;
+        const doReadiness = artifact.readiness || artifact.content?.readiness || lookupDecisionReadiness;
+        const doCorrection = artifact.correction_state || artifact.content?.correction_state;
+        const doEvidence = artifact.evidence_board || artifact.content?.evidence_board;
+        const doMap = artifact.decision_map || artifact.content?.decision_map;
+        const doScenario = artifact.scenario_compare || artifact.content?.scenario_compare;
+        const doGates = artifact.advanced_gates || artifact.content?.advanced_gates || [];
+        const doTruthBoundary = artifact.truth_boundary || artifact.content?.truth_boundary || 'observational_analysis_only';
+
+        return (
+          <div className={`${baseClass} is-decision-output`}>
+            <div className="ai-shell__artifact-content" style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+              {isInspector && renderArtifactExportBar(artifact, lookupSessionState, lookupCapabilityState, lookupDecisionReadiness)}
+
+              {/* 1. EXECUTIVE BRIEF */}
+              <div className="ai-shell__do-brief">
+                <Typography variant="h4" className="ai-shell__do-title">{doTitle}</Typography>
+                {doSummary && (
+                  <Typography variant="body1" className="ai-shell__do-summary">
+                    {doSummary}
+                  </Typography>
+                )}
+              </div>
+
+              {/* 2. DATASET TRUST (Compact Strip) */}
+              {doDt && (
+                <div className="ai-shell__do-trust-strip">
+                  <div className="ai-shell__do-trust-main">
+                    <FaDatabase className="ai-shell__do-trust-icon" />
+                    <Typography variant="caption" sx={{ fontWeight: 800 }}>
+                      {doDt.source_label || 'Grounded'}: {doDt.dataset?.dataset_name || 'Active dataset'}
+                    </Typography>
+                    {doDt.semantic_ready ? (
+                      <span className="ai-shell__do-trust-badge is-good">Semantic Ready</span>
+                    ) : (
+                      <span className="ai-shell__do-trust-badge is-warn">No Semantic Model</span>
+                    )}
+                  </div>
+                  <Tooltip title={`Rows: ${doDt.row_count?.toLocaleString() || 0} • Cols: ${doDt.column_count?.toLocaleString() || 0} • Transforms: ${doDt.transform_state || 'unknown'} • Freshness: ${doDt.stale_state?.replace('_', ' ') || 'unknown'}`} arrow>
+                    <span className="ai-shell__do-trust-details">Health Metrics <FaInfoCircle /></span>
+                  </Tooltip>
+                  {doDt.warnings && doDt.warnings.length > 0 && (
+                    <div className="ai-shell__do-trust-warnings">
+                      {doDt.warnings.map((w, idx) => (
+                        <Tooltip key={idx} title={w} arrow>
+                          <span className="ai-shell__do-trust-warning-icon"><FaExclamationTriangle /></span>
+                        </Tooltip>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* 3. DECISION FRAME */}
+              {doFrame && (
+                <div className="ai-shell__do-frame">
+                  <Typography variant="overline" className="ai-shell__do-section-lbl">Decision Frame</Typography>
+                  <div className="ai-shell__do-frame-grid">
+                    <div className="ai-shell__do-frame-col">
+                      <Typography variant="caption" className="ai-shell__do-frame-col-lbl">Target & Drivers</Typography>
+                      <div className="ai-shell__do-frame-list">
+                        <div className="ai-shell__do-frame-row">
+                          <span className="ai-shell__do-frame-role">Goal</span>
+                          {doFrame.goal ? (
+                            <SemanticRef metric_ref={doFrame.goal.metric_ref || doFrame.goal.metric_id ? doFrame.goal : { label: doFrame.goal.label || 'Not specified' }} type="objective" compact />
+                          ) : <span className="ai-shell__do-frame-empty">Not specified</span>}
+                        </div>
+                        <div className="ai-shell__do-frame-row">
+                          <span className="ai-shell__do-frame-role">Levers</span>
+                          <span className="ai-shell__do-frame-vals">{renderSemanticList(doFrame.drivers, 'lever')}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="ai-shell__do-frame-col">
+                      <Typography variant="caption" className="ai-shell__do-frame-col-lbl">Constraints & Breakdowns</Typography>
+                      <div className="ai-shell__do-frame-list">
+                        <div className="ai-shell__do-frame-row">
+                          <span className="ai-shell__do-frame-role">Limits</span>
+                          <span className="ai-shell__do-frame-vals">{renderSemanticList(doFrame.limits, 'guardrail')}</span>
+                        </div>
+                        <div className="ai-shell__do-frame-row">
+                          <span className="ai-shell__do-frame-role">Segments</span>
+                          <span className="ai-shell__do-frame-vals">{renderSemanticList(doFrame.breakdowns, 'segment')}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  {(doFrame.assumptions?.length > 0 || doFrame.unknowns?.length > 0) && (
+                    <details className="ai-shell__do-frame-details">
+                      <summary>Assumptions & Unknowns ({((doFrame.assumptions?.length || 0) + (doFrame.unknowns?.length || 0))})</summary>
+                      <div className="ai-shell__do-frame-details-body">
+                        {doFrame.assumptions?.map((item, idx) => <div key={`a-${idx}`} className="ai-shell__do-detail-item">• {typeof item === 'object' ? item.statement || item.label : item}</div>)}
+                        {doFrame.unknowns?.map((item, idx) => <div key={`u-${idx}`} className="ai-shell__do-detail-item is-warn">• {typeof item === 'object' ? item.statement || item.label : item}</div>)}
+                      </div>
+                    </details>
+                  )}
+                </div>
+              )}
+
+              {/* 4. READINESS & ACTIONS (AND CORRECTION STATE) */}
+              <div className="ai-shell__do-action-bar">
+                {doCorrection && (doCorrection.status === 'updated' || doCorrection.status === 'success') && (
+                  <div className="ai-shell__do-correction-toast">
+                    <FaTools className="ai-shell__do-correction-icon" />
+                    <span>{doCorrection.latest?.summary || doCorrection.summary || 'Correction applied'}</span>
+                    {doCorrection.latest && (
+                      <Tooltip title={`Target: ${doCorrection.latest.target_path} | Prev: ${typeof doCorrection.latest.previous_value === 'object' ? JSON.stringify(doCorrection.latest.previous_value) : String(doCorrection.latest.previous_value ?? 'None')} | New: ${typeof doCorrection.latest.new_value === 'object' ? JSON.stringify(doCorrection.latest.new_value) : String(doCorrection.latest.new_value ?? '—')}`} arrow>
+                        <span className="ai-shell__do-correction-diff">Details</span>
+                      </Tooltip>
+                    )}
+                  </div>
+                )}
+                
+                {doReadiness && (
+                  <div className="ai-shell__do-readiness">
+                    <div className="ai-shell__do-readiness-status">
+                      <FaCheckCircle className={`ai-shell__do-readiness-icon ${doReadiness.readiness_state === 'analysis_ready' ? 'is-ready' : 'is-standby'}`} />
+                      <div>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                          {doReadiness.readiness_state ? doReadiness.readiness_state.replace('_', ' ') : 'Incomplete Frame'}
+                        </Typography>
+                      </div>
+                    </div>
+                    {doReadiness.blocked_state?.is_blocked && doReadiness.blocked_state.blocking_missing_inputs?.length > 0 && (
+                      <div className="ai-shell__do-readiness-blockers">
+                        <span className="ai-shell__do-readiness-blocker-lbl">Missing Inputs:</span>
+                        {doReadiness.blocked_state.blocking_missing_inputs.join(', ')}
+                      </div>
+                    )}
+                    <div className="ai-shell__do-readiness-actions">
+                      {doReadiness.allowed_next_actions?.map((actId, idx) => {
+                        const actDetails = lookupActions.find(a => a.action_id === actId) || { label: actId.replace('_', ' '), enabled: true };
+                        const isPrimary = actDetails.priority === 'primary' || actId === 'analyze_workspace';
+                        const isEnabled = doReadiness.allowed_next_actions.includes(actId) && actDetails.enabled !== false;
+                        return (
+                          <Button
+                            key={idx}
+                            variant={isPrimary ? "contained" : "outlined"}
+                            disabled={loading || !isEnabled}
+                            startIcon={actId === 'analyze_workspace' ? <FaSearch /> : <FaTools />}
+                            size="small"
+                            sx={{
+                              borderRadius: '8px',
+                              textTransform: 'none',
+                              fontWeight: 800,
+                              bgcolor: isPrimary ? 'var(--text-primary)' : 'transparent',
+                              color: isPrimary ? 'var(--bg-primary)' : 'var(--text-primary)',
+                              borderColor: 'var(--text-primary)',
+                              '&:hover': {
+                                bgcolor: isPrimary ? 'var(--text-primary)' : 'var(--bg-secondary)',
+                                filter: isPrimary ? 'brightness(1.1)' : 'none'
+                              }
+                            }}
+                            onClick={() => handleActionClick(actId, lookupSessionState)}
+                          >
+                            {actDetails.label || actId.replace('_', ' ')}
+                          </Button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Inline Correction Panel (Phase 5) */}
+                {isInspector && (
+                  <div className="ai-shell__correction-panel-zone" style={{ marginTop: '12px' }}>
+                    {!correctionPanelOpen ? (
+                      <button id="ai-shell-correction-trigger-btn" className="ai-shell__correction-trigger-btn" onClick={() => setCorrectionPanelOpen(true)} disabled={loading}>
+                        <FaTools style={{ fontSize: '0.75rem' }} /> Adjust Frame
+                      </button>
+                    ) : (
+                      <div id="ai-shell-correction-panel" className="ai-shell__correction-form-panel">
+                        <div className="ai-shell__correction-form-header">
+                          <Typography variant="overline" sx={{ fontWeight: 900, opacity: 0.5 }}>Apply Correction</Typography>
+                          <button className="ai-shell__correction-form-close" onClick={() => { setCorrectionPanelOpen(false); setCorrectionReplacement(''); setCorrectionReason(''); }}>✕</button>
+                        </div>
+                        <div className="ai-shell__correction-form-row">
+                          <label className="ai-shell__correction-form-label">Type</label>
+                          <select className="ai-shell__correction-form-select" value={correctionType} onChange={(e) => {
+                              const selected = e.target.value;
+                              setCorrectionType(selected);
+                              const pathMap = { time_horizon: 'decision_scope.objective.time_horizon', objective_direction: 'decision_scope.objective.direction', objective_metric: 'decision_scope.objective.metric_ref', lever_controllability: 'decision_scope.levers[0].controllable' };
+                              setCorrectionTargetPath(pathMap[selected] || `decision_scope.${selected}`);
+                              if (selected === 'objective_direction') setCorrectionReplacement('maximize');
+                              else if (selected === 'lever_controllability') setCorrectionReplacement('true');
+                              else setCorrectionReplacement('');
+                            }}>
+                            <option value="time_horizon">Time Horizon</option>
+                            <option value="objective_direction">Objective Direction</option>
+                            <option value="objective_metric">Objective Metric</option>
+                            <option value="lever_controllability">Lever Controllability</option>
+                          </select>
+                        </div>
+                        <div className="ai-shell__correction-form-row">
+                          <label className="ai-shell__correction-form-label">New Value</label>
+                          {correctionType === 'objective_direction' ? (
+                            <select className="ai-shell__correction-form-select" value={correctionReplacement || 'maximize'} onChange={(e) => setCorrectionReplacement(e.target.value)} disabled={loading}>
+                              <option value="maximize">maximize</option><option value="minimize">minimize</option><option value="maintain">maintain</option><option value="achieve_target">achieve_target</option>
+                            </select>
+                          ) : correctionType === 'lever_controllability' ? (
+                            <select className="ai-shell__correction-form-select" value={correctionReplacement || 'true'} onChange={(e) => setCorrectionReplacement(e.target.value)} disabled={loading}>
+                              <option value="true">Controllable</option><option value="false">Outcome (false)</option>
+                            </select>
+                          ) : (
+                            <input className="ai-shell__correction-form-input" type="text" value={correctionReplacement} onChange={(e) => setCorrectionReplacement(e.target.value)} disabled={loading} />
+                          )}
+                        </div>
+                        <div className="ai-shell__correction-form-row">
+                          <label className="ai-shell__correction-form-label">Reason (optional)</label>
+                          <input className="ai-shell__correction-form-input" type="text" value={correctionReason} onChange={(e) => setCorrectionReason(e.target.value)} disabled={loading} />
+                        </div>
+                        <button className="ai-shell__correction-submit-btn" disabled={loading || !String(correctionReplacement).trim()} onClick={() => handleCorrectionSubmit({ correction_type: correctionType, target_path: correctionTargetPath, replacement: typeof correctionReplacement === 'string' ? correctionReplacement.trim() : correctionReplacement, reason: correctionReason.trim() || null }, lookupSessionState)}>
+                          {loading ? 'Applying…' : 'Submit'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* 5. EVIDENCE BOARD */}
+              {doEvidence && (
+                <div className="ai-shell__do-evidence">
+                  <Typography variant="overline" className="ai-shell__do-section-lbl">Evidence Board</Typography>
+                  {doEvidence.status === 'analyzed' && doEvidence.items && doEvidence.items.length > 0 ? (
+                    <div className="ai-shell__do-evidence-grid">
+                      {doEvidence.items.map((rd, i) => (
+                        <div key={i} className="ai-shell__do-evidence-card">
+                          <div className="ai-shell__do-evidence-body">
+                            <div className="ai-shell__do-evidence-header">
+                              <div className="ai-shell__do-evidence-title-row">
+                                <span className="ai-shell__do-evidence-rank">{rd.rank || (i + 1)}</span>
+                                <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>{rd.title || 'Observational Insight'}</Typography>
+                              </div>
+                              <div className="ai-shell__do-evidence-actions">
+                                <span className={`ai-shell__do-evidence-strength is-${rd.strength || 'moderate'}`}>
+                                  {rd.strength?.toUpperCase() || 'MODERATE'}
+                                </span>
+                                {rd.source_diagnostic_id && (
+                                  <Tooltip title={`Source ID: ${rd.source_diagnostic_id}`} arrow>
+                                    <span className="ai-shell__do-evidence-source"><FaInfoCircle /></span>
+                                  </Tooltip>
+                                )}
+                              </div>
+                            </div>
+                            <Typography variant="body2" className="ai-shell__do-evidence-summary">
+                              {rd.summary}
+                            </Typography>
+                          </div>
+                          
+                          <div className="ai-shell__do-evidence-footer">
+                            {rd.covers && (
+                              <div className="ai-shell__do-evidence-meta">
+                                <strong>Coverage:</strong> {[
+                                  rd.covers.goal && 'Goal',
+                                  ...(rd.covers.drivers?.map(d => d.label || d.name) || []),
+                                  ...(rd.covers.limits?.map(l => l.label || l.name) || []),
+                                  ...(rd.covers.breakdowns?.map(b => b.label || b.name) || [])
+                                ].filter(Boolean).join(', ') || 'General'}
+                              </div>
+                            )}
+                            
+                            <div className="ai-shell__do-evidence-health">
+                              {rd.data_sufficiency && (
+                                <span className={`ai-shell__do-evidence-sufficiency is-${rd.data_sufficiency.status}`}>
+                                  <FaCircle size={6} /> {rd.data_sufficiency.status === 'sufficient' ? 'Data Sufficient' : 'Data Limited'}
+                                </span>
+                              )}
+                              {rd.limitations && rd.limitations.length > 0 && (
+                                <Tooltip title={rd.limitations.join(' • ')} arrow>
+                                  <span className="ai-shell__do-evidence-caveats"><FaExclamationTriangle size={10} /> {rd.limitations.length} Caveats</span>
+                                </Tooltip>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <Typography variant="body2" sx={{ opacity: 0.6, fontStyle: 'italic', mt: 1 }}>
+                      {doEvidence.summary || 'Run observational analysis to ground decision drivers.'}
+                    </Typography>
+                  )}
+                </div>
+              )}
+
+              {/* 6. SECONDARY SECTIONS (Map, Compare, Gates) */}
+              <div className="ai-shell__do-secondary">
+                {/* DECISION MAP */}
+                {doMap && doMap.nodes && doMap.nodes.length > 0 && (
+                  <details className="ai-shell__do-secondary-details">
+                    <summary>Decision Map</summary>
+                    <div className="ai-shell__do-map-wrap">
+                      <div className="ai-shell__do-map-nodes">
+                        {doMap.nodes.map((node, i) => (
+                          <div key={i} className={`ai-shell__do-map-node is-${node.node_type || 'unknown'}`}>
+                            <span className="ai-shell__do-map-node-lbl">{node.label}</span>
+                            <span className="ai-shell__do-map-node-type">{node.node_type}</span>
+                          </div>
+                        ))}
+                      </div>
+                      {doMap.edges && doMap.edges.length > 0 && (
+                        <div className="ai-shell__do-map-edges">
+                          {doMap.edges.map((edge, i) => {
+                            const srcNode = doMap.nodes.find(n => n.node_id === edge.source_node_id);
+                            const tgtNode = doMap.nodes.find(n => n.node_id === edge.target_node_id);
+                            return (
+                              <div key={i} className="ai-shell__do-map-edge">
+                                {srcNode?.label || edge.source_node_id} ‹ {edge.relationship_type?.replace('_', ' ')} › {tgtNode?.label || edge.target_node_id}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </details>
+                )}
+
+                {/* SCENARIO COMPARE */}
+                {doScenario && (
+                  <details className="ai-shell__do-secondary-details">
+                    <summary>Scenario Compare</summary>
+                    <div className="ai-shell__do-scenario-wrap">
+                      {doScenario.status === 'ready' ? (
+                        <ScenarioPreview preview={doScenario} />
+                      ) : (
+                        <span className="ai-shell__do-scenario-locked">
+                          <FaShieldAlt /> {doScenario.summary || 'Requires complete frame and active evidence.'}
+                        </span>
+                      )}
+                    </div>
+                  </details>
+                )}
+
+                {/* ADVANCED GATES */}
+                {doGates && doGates.length > 0 && (
+                  <details className="ai-shell__do-secondary-details">
+                    <summary>Advanced Capabilities</summary>
+                    <div className="ai-shell__do-gates-wrap">
+                      {doGates.map((gate, i) => (
+                        <div key={i} className="ai-shell__do-gate-card">
+                          <span className="ai-shell__do-gate-title">{gate.capability?.replace('_', ' ') || 'capability'}</span>
+                          <span className="ai-shell__do-gate-reason">{gate.reason || 'Unsupported'}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </details>
+                )}
+              </div>
+
+              {/* 7. RELIABILITY BOUNDARY */}
+              <div className="ai-shell__do-reliability-boundary">
+                <FaInfoCircle />
+                <span>
+                  <strong>Observational Boundary:</strong> {doTruthBoundary.replace('_', ' ')}. No causal forecast claims supported.
+                </span>
+              </div>
+            </div>
+          </div>
+        );
+      }

@@ -37,37 +37,6 @@ const MODES = [
   { id: 'decide', label: 'Decide', promise: 'Strategic path evaluation' },
 ];
 
-// Helper to format object arrays into SemanticRef components
-const renderSemanticList = (items, type) => {
-  if (!Array.isArray(items) || items.length === 0) return <Typography variant="body2" sx={{ opacity: 0.5 }}>Not specified</Typography>;
-  return (
-    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', paddingLeft: '12px', borderLeft: '2px solid var(--text-primary)' }}>
-      {items.map((item, i) => {
-        const metricRef = item.metric_ref || (type === 'lever' && item.binding?.binding_type === 'metric' ? item.binding.metric_ref : null);
-        const dimensionRef = item.dimension_ref || (type === 'lever' && item.binding?.binding_type === 'dimension' ? item.binding.dimension_ref : null);
-
-        if (metricRef?.metric_id || dimensionRef?.dimension_id) {
-          return <SemanticRef key={i} metric_ref={metricRef} dimension_ref={dimensionRef} type={type} compact />;
-        }
-
-        // Build a fallback ref from flattened fields
-        const fallbackLabel = item.label || item.binding_label || item.metric || item.dimension_id || item.field || item.strings || (typeof item === 'string' ? item : 'Unbound item');
-        const fallbackRef = { label: fallbackLabel };
-
-        return (
-          <SemanticRef
-            key={i}
-            metric_ref={type !== 'segment' ? fallbackRef : null}
-            dimension_ref={type === 'segment' ? fallbackRef : null}
-            type={type}
-            compact
-          />
-        );
-      })}
-    </div>
-  );
-};
-
 /**
  * AIShell (Analytics-Agent Workspace)
  *
@@ -97,6 +66,18 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspa
   const [activeArtifact, setActiveArtifact] = useState(null);
   const [isResultsPaneOpen, setIsResultsPaneOpen] = useState(true);
   const [isContextPaneOpen, setIsContextPaneOpen] = useState(false);
+
+  // Phase 5: Chat-native correction panel state
+  // correctionPanelOpen tracks whether the inline correction form is visible in the inspector
+  const [correctionPanelOpen, setCorrectionPanelOpen] = useState(false);
+  // correctionType: which backend-supported correction type the user is submitting
+  const [correctionType, setCorrectionType] = useState('time_horizon');
+  // correctionTargetPath: stable path for the selected correction type
+  const [correctionTargetPath, setCorrectionTargetPath] = useState('decision_scope.time_horizon');
+  // correctionReplacement: the new value the user wants to apply
+  const [correctionReplacement, setCorrectionReplacement] = useState('');
+  // correctionReason: optional user-facing audit reason string
+  const [correctionReason, setCorrectionReason] = useState('');
 
   // Derive mode context for visibility
   const modeContext = useMemo(() => sessionState?.mode_context || {}, [sessionState]);
@@ -209,6 +190,126 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspa
       setError("Connectivity failure during action.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  /**
+   * handleCorrectionSubmit
+   *
+   * Phase 5: Sends a deterministic correction to /api/decision/chat/actions
+   * with action: "draft_workspace" and a valid correction object.
+   *
+   * The backend contract (decision_objects.md) requires:
+   *   action: "draft_workspace"
+   *   session_state: from the artifact's scoped session state
+   *   dataset: resolved active dataset
+   *   semantic_model: current semantic model
+   *   correction: { correction_type, target_path, replacement, reason }
+   *
+   * On success, the backend returns workspace_preview (compatibility) and
+   * appended decision_output with updated correction_state.
+   * We use the last rich artifact as the active result pane artifact.
+   */
+  const handleCorrectionSubmit = async (correctionPayload, scopedSessionState = null) => {
+    if (!correctionPayload || !correctionPayload.correction_type) {
+      setError('Correction type is required.');
+      return;
+    }
+    // Require a replacement value for all types except remove_mapping
+    if (correctionPayload.correction_type !== 'remove_mapping' &&
+        (correctionPayload.replacement === '' || correctionPayload.replacement === null || correctionPayload.replacement === undefined)) {
+      setError('A replacement value is required for this correction type.');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    setCorrectionPanelOpen(false); // Close the correction form immediately while loading
+
+    let replacementValue = correctionPayload.replacement;
+
+    // Phase 5: Build contract-valid replacement shapes per the backend contract
+    if (correctionPayload.correction_type === 'time_horizon') {
+      replacementValue = {
+        kind: 'named_period',
+        label: String(correctionPayload.replacement),
+        grain: 'unknown',
+      };
+    } else if (correctionPayload.correction_type === 'objective_direction') {
+      replacementValue = String(correctionPayload.replacement);
+    } else if (correctionPayload.correction_type === 'lever_controllability') {
+      const isControllable = correctionPayload.replacement === 'true' || correctionPayload.replacement === true;
+      replacementValue = {
+        controllable: isControllable,
+      };
+    } else if (correctionPayload.correction_type === 'objective_metric') {
+      replacementValue = {
+        field: String(correctionPayload.replacement),
+      };
+    }
+
+    // Build the full request payload per the backend contract
+    const payload = {
+      action: 'draft_workspace',
+      session_state: scopedSessionState || sessionState,
+      dataset: resolveDatasetForNlp(),
+      semantic_model: semanticModel,
+      correction: {
+        correction_type: correctionPayload.correction_type,
+        target_path: correctionPayload.target_path,
+        replacement: replacementValue,
+        reason: correctionPayload.reason || null,
+      },
+    };
+
+    try {
+      const response = await axios.post(`${API_URL}/api/decision/chat/actions`, payload);
+      const data = response.data;
+
+      if (data.status === 'success') {
+        // Build the assistant message with correction context
+        const newAssistantMsg = {
+          role: 'assistant',
+          content: data.assistant_message,
+          artifacts: data.artifacts,
+          suggested_actions: data.suggested_actions || data.session_state?.available_actions || [],
+          mode: data.mode,
+          session_state: data.session_state || {}, // Scoped state carries correction context forward
+          capability_state: data.capability_state,
+          decision_readiness: data.decision_readiness,
+        };
+        setUserMessages(prev => [...prev, newAssistantMsg]);
+        // Always update global session state with the corrected session state
+        // so follow-up actions (like analyze_workspace) use the corrected state
+        setSessionState(data.session_state || {});
+        if (data.mode) setActiveMode(data.mode);
+
+        // Auto-focus the last rich artifact (backend returns workspace_preview first,
+        // then appended decision_output — we want the decision_output)
+        if (data.artifacts && data.artifacts.length > 0) {
+          const lastArt = data.artifacts[data.artifacts.length - 1];
+          const richTypes = ['chart', 'workspace_preview', 'workspace_analysis_summary', 'decision_output'];
+          if (richTypes.includes(lastArt.type)) {
+            setActiveArtifact({
+              ...lastArt,
+              contextActions: newAssistantMsg.suggested_actions,
+              contextSessionState: newAssistantMsg.session_state,
+              contextCapabilityState: newAssistantMsg.capability_state,
+              contextDecisionReadiness: newAssistantMsg.decision_readiness,
+            });
+            setIsResultsPaneOpen(true);
+          }
+        }
+      } else {
+        setError(data.error?.message || 'Correction submission failed.');
+      }
+    } catch (err) {
+      setError('Connectivity failure during correction.');
+    } finally {
+      setLoading(false);
+      // Reset correction form fields for next use
+      setCorrectionReplacement('');
+      setCorrectionReason('');
     }
   };
 
@@ -940,260 +1041,143 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspa
             <div className="ai-shell__artifact-content" style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
               {isInspector && renderArtifactExportBar(artifact, lookupSessionState, lookupCapabilityState, lookupDecisionReadiness)}
 
-              {/* SECTION 1: EXECUTIVE BRIEF */}
-              <div className="ai-shell__decision-brief-section">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
-                  <Typography variant="overline" className="ai-shell__decision-section-tag" sx={{ color: 'var(--accent-blue)', fontWeight: 900, letterSpacing: '0.15em' }}>
-                    Executive Brief
-                  </Typography>
-                  <span className="ai-shell__di-badge">
-                    DI Phase 3 V1
-                  </span>
-                </div>
-                <Typography variant="h4" sx={{ fontWeight: 900, mb: 2, letterSpacing: '-0.03em', lineHeight: 1.15 }}>
-                  {doTitle}
-                </Typography>
+              {/* 1. EXECUTIVE BRIEF */}
+              <div className="ai-shell__do-brief">
+                <Typography variant="h4" className="ai-shell__do-title">{doTitle}</Typography>
                 {doSummary && (
-                  <Typography variant="body1" sx={{ color: 'var(--text-primary)', opacity: 0.9, lineHeight: 1.6, fontSize: '1.05rem', fontStyle: 'italic', pl: 2, borderLeft: '3px solid var(--border-color)' }}>
+                  <Typography variant="body1" className="ai-shell__do-summary">
                     {doSummary}
                   </Typography>
                 )}
               </div>
 
-              {/* SECTION 2: DATASET TRUST */}
+              {/* 2. DATASET TRUST (Compact Strip) */}
               {doDt && (
-                <div className="ai-shell__decision-dataset-trust">
-                  <Typography variant="overline" sx={{ fontWeight: 900, opacity: 0.5, letterSpacing: '0.1em', display: 'block', mb: 1.5 }}>
-                    Dataset Trust
-                  </Typography>
-                  <div className="ai-shell__dt-card">
-                    <div className="ai-shell__dt-header">
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <FaDatabase className="ai-shell__dt-icon" />
-                        <div>
-                          <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>
-                            {doDt.source_label || 'Grounded Dataset'}
-                          </Typography>
-                          <Typography variant="caption" sx={{ opacity: 0.6 }}>
-                            {doDt.dataset?.dataset_name || 'Active data context'}
-                          </Typography>
-                        </div>
-                      </div>
-                      <div className="ai-shell__dt-status-badges">
-                        <Chip
-                          label={doDt.semantic_ready ? 'Semantic Ready' : 'No Semantic Model'}
-                          size="small"
-                          sx={{
-                            height: '20px',
-                            fontSize: '0.65rem',
-                            fontWeight: 800,
-                            bgcolor: doDt.semantic_ready ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                            color: doDt.semantic_ready ? 'var(--accent-green)' : 'var(--accent-red)',
-                            border: '1px solid currentColor'
-                          }}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="ai-shell__dt-metrics-grid">
-                      <div className="ai-shell__dt-metric-box">
-                        <span className="ai-shell__dt-metric-val">{doDt.row_count?.toLocaleString() || 0}</span>
-                        <span className="ai-shell__dt-metric-lbl">Rows Grounded</span>
-                      </div>
-                      <div className="ai-shell__dt-metric-box">
-                        <span className="ai-shell__dt-metric-val">{doDt.column_count?.toLocaleString() || 0}</span>
-                        <span className="ai-shell__dt-metric-lbl">Columns Grounded</span>
-                      </div>
-                      <div className="ai-shell__dt-metric-box">
-                        <span className="ai-shell__dt-metric-val" style={{ textTransform: 'capitalize' }}>
-                          {doDt.transform_state || 'unknown'}
-                        </span>
-                        <span className="ai-shell__dt-metric-lbl">Transform State</span>
-                      </div>
-                      <div className="ai-shell__dt-metric-box">
-                        <span className="ai-shell__dt-metric-val" style={{ textTransform: 'capitalize' }}>
-                          {doDt.stale_state?.replace('_', ' ') || 'unknown'}
-                        </span>
-                        <span className="ai-shell__dt-metric-lbl">Freshness State</span>
-                      </div>
-                    </div>
-
-                    {doDt.warnings && doDt.warnings.length > 0 && (
-                      <div className="ai-shell__dt-warnings">
-                        {doDt.warnings.map((w, idx) => (
-                          <div key={idx} className="ai-shell__dt-warning-item">
-                            <FaExclamationTriangle className="ai-shell__dt-warning-icon" />
-                            <span>{w}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* SECTION 3: DECISION FRAME */}
-              {doFrame && (
-                <div className="ai-shell__decision-frame-section">
-                  <Typography variant="overline" sx={{ fontWeight: 900, opacity: 0.5, letterSpacing: '0.15em', display: 'block', mb: 2 }}>
-                    Decision Frame
-                  </Typography>
-
-                  <div className="ai-shell__kickoff-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '24px' }}>
-                    {/* Goal / Objective */}
-                    <div className="ai-shell__kickoff-item">
-                      <Typography variant="overline" sx={{ fontWeight: 900, opacity: 0.4, display: 'block', mb: 1 }}>Objective Goal</Typography>
-                      {doFrame.goal ? (
-                        <div style={{ paddingLeft: '12px', borderLeft: '2px solid var(--text-primary)' }}>
-                          <SemanticRef
-                            metric_ref={doFrame.goal.metric_ref || doFrame.goal.metric_id ? doFrame.goal : { label: doFrame.goal.label || 'Not specified' }}
-                            type="objective"
-                            compact
-                          />
-                        </div>
-                      ) : (
-                        <Typography variant="body2" sx={{ fontWeight: 700, borderLeft: '2px solid var(--text-primary)', pl: 1.5, opacity: 0.5 }}>Not specified</Typography>
-                      )}
-                    </div>
-
-                    {/* Drivers / Levers */}
-                    <div className="ai-shell__kickoff-item">
-                      <Typography variant="overline" sx={{ fontWeight: 900, opacity: 0.4, display: 'block', mb: 1 }}>Primary Levers</Typography>
-                      {renderSemanticList(doFrame.drivers, 'lever')}
-                    </div>
-
-                    {/* Segment Dimensions */}
-                    <div className="ai-shell__kickoff-item">
-                      <Typography variant="overline" sx={{ fontWeight: 900, opacity: 0.4, display: 'block', mb: 1 }}>Segmentation Breakdowns</Typography>
-                      {renderSemanticList(doFrame.breakdowns, 'segment')}
-                    </div>
-
-                    {/* Limits / Constraints */}
-                    <div className="ai-shell__kickoff-item" style={{ gridColumn: '1 / -1' }}>
-                      <Typography variant="overline" sx={{ fontWeight: 900, opacity: 0.4, display: 'block', mb: 1 }}>Guardrail Limits</Typography>
-                      {renderSemanticList(doFrame.limits, 'guardrail')}
-                    </div>
-                  </div>
-
-                  {/* Assumptions & Unknowns */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '24px', marginTop: '24px' }}>
-                    {doFrame.assumptions && doFrame.assumptions.length > 0 && (
-                      <div className="ai-shell__frame-card-list">
-                        <Typography variant="overline" sx={{ fontWeight: 900, opacity: 0.4, display: 'block', mb: 1 }}>Declared Assumptions</Typography>
-                        <ul className="ai-shell__frame-list">
-                          {doFrame.assumptions.map((item, idx) => (
-                            <li key={idx}>
-                              <span className="ai-shell__frame-bullet">•</span>
-                              <span>{typeof item === 'object' ? item.statement || item.label : item}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                    {doFrame.unknowns && doFrame.unknowns.length > 0 && (
-                      <div className="ai-shell__frame-card-list">
-                        <Typography variant="overline" sx={{ fontWeight: 900, opacity: 0.4, display: 'block', mb: 1 }}>Tracked Unknowns</Typography>
-                        <ul className="ai-shell__frame-list">
-                          {doFrame.unknowns.map((item, idx) => (
-                            <li key={idx}>
-                              <span className="ai-shell__frame-bullet text-amber">•</span>
-                              <span>{typeof item === 'object' ? item.statement || item.label : item}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* SECTION 4: CORRECTION STATE */}
-              {doCorrection && doCorrection.status === 'success' && (
-                <div className="ai-shell__correction-container" style={{ margin: 0 }}>
-                  <header style={{ marginBottom: '16px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                      <Typography variant="overline" sx={{ fontWeight: 900, opacity: 0.5 }}>
-                        Correction Active
-                      </Typography>
-                    </div>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>
-                      {doCorrection.summary || 'Workspace mapping updated'}
+                <div className="ai-shell__do-trust-strip">
+                  <div className="ai-shell__do-trust-main">
+                    <FaDatabase className="ai-shell__do-trust-icon" />
+                    <Typography variant="caption" sx={{ fontWeight: 800 }}>
+                      {doDt.source_label || 'Grounded'}: {doDt.dataset?.dataset_name || 'Active dataset'}
                     </Typography>
-                  </header>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '100px 1fr', gap: '8px', fontSize: '0.8rem' }}>
-                    <Typography variant="caption" sx={{ fontWeight: 800, opacity: 0.5 }}>TARGET</Typography>
-                    <Typography variant="caption" sx={{ fontFamily: 'monospace' }}>{doCorrection.target_path}</Typography>
-                    <Typography variant="caption" sx={{ fontWeight: 800, opacity: 0.5 }}>PREVIOUS</Typography>
-                    <Typography variant="caption" sx={{ opacity: 0.6 }}>{typeof doCorrection.previous_value === 'object' ? JSON.stringify(doCorrection.previous_value) : String(doCorrection.previous_value || 'None')}</Typography>
-                    <Typography variant="caption" sx={{ fontWeight: 800, opacity: 0.5, color: 'var(--accent-blue)' }}>NEW VALUE</Typography>
-                    <Typography variant="caption" sx={{ fontWeight: 700 }}>{typeof doCorrection.new_value === 'object' ? JSON.stringify(doCorrection.new_value) : String(doCorrection.new_value)}</Typography>
+                    {doDt.semantic_ready ? (
+                      <span className="ai-shell__do-trust-badge is-good">Semantic Ready</span>
+                    ) : (
+                      <span className="ai-shell__do-trust-badge is-warn">No Semantic Model</span>
+                    )}
                   </div>
-                </div>
-              )}
-
-              {/* SECTION 5: READINESS & ACTIONS */}
-              {doReadiness && (
-                <div className="ai-shell__decision-readiness-section">
-                  <Divider sx={{ mb: 3, opacity: 0.1 }} />
-                  <div className="ai-shell__kickoff-status-block" style={{ marginBottom: '24px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
-                      <FaCheckCircle style={{ color: doReadiness.readiness_state === 'analysis_ready' ? 'var(--accent-green)' : 'var(--text-secondary)', fontSize: '1rem' }} />
-                      <Typography variant="subtitle2" sx={{ fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', fontSize: '0.75rem' }}>
-                        {doReadiness.readiness_state ? doReadiness.readiness_state.replace('_', ' ') : 'Incomplete Frame'}
-                      </Typography>
-                    </div>
-                    <Typography variant="body2" sx={{ display: 'block', opacity: 0.7, lineHeight: 1.5 }}>
-                      {doReadiness.readiness_state === 'analysis_ready' ? 'This framework is structurally complete and ready for observational analysis.' : 'Missing required inputs or bindings to begin observational analysis.'}
-                    </Typography>
-                  </div>
-
-                  {doReadiness.blocked_state?.is_blocked && doReadiness.blocked_state.blocking_missing_inputs?.length > 0 && (
-                    <div className="ai-shell__kickoff-clarifications" style={{ marginTop: '16px', marginBottom: '24px' }}>
-                      <Typography variant="overline" sx={{ fontWeight: 900, opacity: 0.5, display: 'block', mb: 2 }}>Blocking Missing Inputs</Typography>
-                      <div className="ai-shell__analysis-list">
-                        {doReadiness.blocked_state.blocking_missing_inputs.map((input, idx) => (
-                          <div key={idx} className="ai-shell__analysis-item" style={{ marginBottom: '12px' }}>
-                             <span className="ai-shell__analysis-icon is-blocker"><FaExclamationTriangle /></span>
-                             <Typography variant="body2" sx={{ fontWeight: 600 }}>{input}</Typography>
-                          </div>
-                        ))}
-                      </div>
+                  <Tooltip title={`Rows: ${doDt.row_count?.toLocaleString() || 0} • Cols: ${doDt.column_count?.toLocaleString() || 0} • Transforms: ${doDt.transform_state || 'unknown'} • Freshness: ${doDt.stale_state?.replace('_', ' ') || 'unknown'}`} arrow>
+                    <span className="ai-shell__do-trust-details">Health Metrics <FaInfoCircle /></span>
+                  </Tooltip>
+                  {doDt.warnings && doDt.warnings.length > 0 && (
+                    <div className="ai-shell__do-trust-warnings">
+                      {doDt.warnings.map((w, idx) => (
+                        <Tooltip key={idx} title={w} arrow>
+                          <span className="ai-shell__do-trust-warning-icon"><FaExclamationTriangle /></span>
+                        </Tooltip>
+                      ))}
                     </div>
                   )}
+                </div>
+              )}
 
-                  {/* Allowed Next Actions */}
-                  {doReadiness.allowed_next_actions && doReadiness.allowed_next_actions.length > 0 && (
-                    <div className="ai-shell__readiness-actions" style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
-                      {doReadiness.allowed_next_actions.map((actId, idx) => {
+              {/* 3. DECISION FRAME */}
+              {doFrame && (
+                <div className="ai-shell__do-frame">
+                  <Typography variant="overline" className="ai-shell__do-section-lbl">Decision Frame</Typography>
+                  <div className="ai-shell__do-frame-grid">
+                    <div className="ai-shell__do-frame-col">
+                      <Typography variant="caption" className="ai-shell__do-frame-col-lbl">Target & Drivers</Typography>
+                      <div className="ai-shell__do-frame-list">
+                        <div className="ai-shell__do-frame-row">
+                          <span className="ai-shell__do-frame-role">Goal</span>
+                          {doFrame.goal ? (
+                            <SemanticRef metric_ref={doFrame.goal.metric_ref || doFrame.goal.metric_id ? doFrame.goal : { label: doFrame.goal.label || 'Not specified' }} type="objective" compact />
+                          ) : <span className="ai-shell__do-frame-empty">Not specified</span>}
+                        </div>
+                        <div className="ai-shell__do-frame-row">
+                          <span className="ai-shell__do-frame-role">Levers</span>
+                          <span className="ai-shell__do-frame-vals">{renderSemanticList(doFrame.drivers, 'lever')}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="ai-shell__do-frame-col">
+                      <Typography variant="caption" className="ai-shell__do-frame-col-lbl">Constraints & Breakdowns</Typography>
+                      <div className="ai-shell__do-frame-list">
+                        <div className="ai-shell__do-frame-row">
+                          <span className="ai-shell__do-frame-role">Limits</span>
+                          <span className="ai-shell__do-frame-vals">{renderSemanticList(doFrame.limits, 'guardrail')}</span>
+                        </div>
+                        <div className="ai-shell__do-frame-row">
+                          <span className="ai-shell__do-frame-role">Segments</span>
+                          <span className="ai-shell__do-frame-vals">{renderSemanticList(doFrame.breakdowns, 'segment')}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  {(doFrame.assumptions?.length > 0 || doFrame.unknowns?.length > 0) && (
+                    <details className="ai-shell__do-frame-details">
+                      <summary>Assumptions & Unknowns ({((doFrame.assumptions?.length || 0) + (doFrame.unknowns?.length || 0))})</summary>
+                      <div className="ai-shell__do-frame-details-body">
+                        {doFrame.assumptions?.map((item, idx) => <div key={`a-${idx}`} className="ai-shell__do-detail-item">• {typeof item === 'object' ? item.statement || item.label : item}</div>)}
+                        {doFrame.unknowns?.map((item, idx) => <div key={`u-${idx}`} className="ai-shell__do-detail-item is-warn">• {typeof item === 'object' ? item.statement || item.label : item}</div>)}
+                      </div>
+                    </details>
+                  )}
+                </div>
+              )}
+
+              {/* 4. READINESS & ACTIONS (AND CORRECTION STATE) */}
+              <div className="ai-shell__do-action-bar">
+                {doCorrection && (doCorrection.status === 'updated' || doCorrection.status === 'success') && (
+                  <div className="ai-shell__do-correction-toast">
+                    <FaTools className="ai-shell__do-correction-icon" />
+                    <span>{doCorrection.latest?.summary || doCorrection.summary || 'Correction applied'}</span>
+                    {doCorrection.latest && (
+                      <Tooltip title={`Target: ${doCorrection.latest.target_path} | Prev: ${typeof doCorrection.latest.previous_value === 'object' ? JSON.stringify(doCorrection.latest.previous_value) : String(doCorrection.latest.previous_value ?? 'None')} | New: ${typeof doCorrection.latest.new_value === 'object' ? JSON.stringify(doCorrection.latest.new_value) : String(doCorrection.latest.new_value ?? '—')}`} arrow>
+                        <span className="ai-shell__do-correction-diff">Details</span>
+                      </Tooltip>
+                    )}
+                  </div>
+                )}
+
+                {doReadiness && (
+                  <div className="ai-shell__do-readiness">
+                    <div className="ai-shell__do-readiness-status">
+                      <FaCheckCircle className={`ai-shell__do-readiness-icon ${doReadiness.readiness_state === 'analysis_ready' ? 'is-ready' : 'is-standby'}`} />
+                      <div>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                          {doReadiness.readiness_state ? doReadiness.readiness_state.replace('_', ' ') : 'Incomplete Frame'}
+                        </Typography>
+                      </div>
+                    </div>
+                    {doReadiness.blocked_state?.is_blocked && doReadiness.blocked_state.blocking_missing_inputs?.length > 0 && (
+                      <div className="ai-shell__do-readiness-blockers">
+                        <span className="ai-shell__do-readiness-blocker-lbl">Missing Inputs:</span>
+                        {doReadiness.blocked_state.blocking_missing_inputs.join(', ')}
+                      </div>
+                    )}
+                    <div className="ai-shell__do-readiness-actions">
+                      {doReadiness.allowed_next_actions?.map((actId, idx) => {
                         const actDetails = lookupActions.find(a => a.action_id === actId) || { label: actId.replace('_', ' '), enabled: true };
                         const isPrimary = actDetails.priority === 'primary' || actId === 'analyze_workspace';
                         const isEnabled = doReadiness.allowed_next_actions.includes(actId) && actDetails.enabled !== false;
-
                         return (
                           <Button
                             key={idx}
-                            variant="contained"
+                            variant={isPrimary ? "contained" : "outlined"}
                             disabled={loading || !isEnabled}
                             startIcon={actId === 'analyze_workspace' ? <FaSearch /> : <FaTools />}
+                            size="small"
                             sx={{
-                              borderRadius: '12px',
-                              px: 3,
-                              py: 1.25,
+                              borderRadius: '8px',
                               textTransform: 'none',
-                              fontWeight: 900,
-                              fontSize: '0.85rem',
-                              bgcolor: isPrimary ? 'var(--text-primary)' : 'var(--bg-secondary)',
+                              fontWeight: 800,
+                              bgcolor: isPrimary ? 'var(--text-primary)' : 'transparent',
                               color: isPrimary ? 'var(--bg-primary)' : 'var(--text-primary)',
-                              border: isPrimary ? 'none' : '1px solid var(--border-color)',
+                              borderColor: 'var(--text-primary)',
                               '&:hover': {
-                                bgcolor: isPrimary ? 'var(--text-primary)' : 'var(--bg-tertiary)',
-                                filter: 'brightness(1.1)'
-                              },
-                              '&:disabled': {
-                                opacity: 0.5,
-                                bgcolor: 'var(--bg-secondary)',
-                                color: 'var(--text-secondary)'
+                                bgcolor: isPrimary ? 'var(--text-primary)' : 'var(--bg-secondary)',
+                                filter: isPrimary ? 'brightness(1.1)' : 'none'
                               }
                             }}
                             onClick={() => handleActionClick(actId, lookupSessionState)}
@@ -1203,213 +1187,203 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspa
                         );
                       })}
                     </div>
-                  )}
-                </div>
-              )}
+                  </div>
+                )}
 
-              {/* SECTION 6: EVIDENCE BOARD */}
+                {/* Inline Correction Panel (Phase 5) */}
+                {isInspector && (
+                  <div className="ai-shell__correction-panel-zone" style={{ marginTop: '12px' }}>
+                    {!correctionPanelOpen ? (
+                      <button id="ai-shell-correction-trigger-btn" className="ai-shell__correction-trigger-btn" onClick={() => setCorrectionPanelOpen(true)} disabled={loading}>
+                        <FaTools style={{ fontSize: '0.75rem' }} /> Adjust Frame
+                      </button>
+                    ) : (
+                      <div id="ai-shell-correction-panel" className="ai-shell__correction-form-panel">
+                        <div className="ai-shell__correction-form-header">
+                          <Typography variant="overline" sx={{ fontWeight: 900, opacity: 0.5 }}>Apply Correction</Typography>
+                          <button className="ai-shell__correction-form-close" onClick={() => { setCorrectionPanelOpen(false); setCorrectionReplacement(''); setCorrectionReason(''); }}>✕</button>
+                        </div>
+                        <div className="ai-shell__correction-form-row">
+                          <label className="ai-shell__correction-form-label">Type</label>
+                          <select className="ai-shell__correction-form-select" value={correctionType} onChange={(e) => {
+                              const selected = e.target.value;
+                              setCorrectionType(selected);
+                              const pathMap = { time_horizon: 'decision_scope.objective.time_horizon', objective_direction: 'decision_scope.objective.direction', objective_metric: 'decision_scope.objective.metric_ref', lever_controllability: 'decision_scope.levers[0].controllable' };
+                              setCorrectionTargetPath(pathMap[selected] || `decision_scope.${selected}`);
+                              if (selected === 'objective_direction') setCorrectionReplacement('maximize');
+                              else if (selected === 'lever_controllability') setCorrectionReplacement('true');
+                              else setCorrectionReplacement('');
+                            }}>
+                            <option value="time_horizon">Time Horizon</option>
+                            <option value="objective_direction">Objective Direction</option>
+                            <option value="objective_metric">Objective Metric</option>
+                            <option value="lever_controllability">Lever Controllability</option>
+                          </select>
+                        </div>
+                        <div className="ai-shell__correction-form-row">
+                          <label className="ai-shell__correction-form-label">New Value</label>
+                          {correctionType === 'objective_direction' ? (
+                            <select className="ai-shell__correction-form-select" value={correctionReplacement || 'maximize'} onChange={(e) => setCorrectionReplacement(e.target.value)} disabled={loading}>
+                              <option value="maximize">maximize</option><option value="minimize">minimize</option><option value="maintain">maintain</option><option value="achieve_target">achieve_target</option>
+                            </select>
+                          ) : correctionType === 'lever_controllability' ? (
+                            <select className="ai-shell__correction-form-select" value={correctionReplacement || 'true'} onChange={(e) => setCorrectionReplacement(e.target.value)} disabled={loading}>
+                              <option value="true">Controllable</option><option value="false">Outcome (false)</option>
+                            </select>
+                          ) : (
+                            <input className="ai-shell__correction-form-input" type="text" value={correctionReplacement} onChange={(e) => setCorrectionReplacement(e.target.value)} disabled={loading} />
+                          )}
+                        </div>
+                        <div className="ai-shell__correction-form-row">
+                          <label className="ai-shell__correction-form-label">Reason (optional)</label>
+                          <input className="ai-shell__correction-form-input" type="text" value={correctionReason} onChange={(e) => setCorrectionReason(e.target.value)} disabled={loading} />
+                        </div>
+                        <button className="ai-shell__correction-submit-btn" disabled={loading || !String(correctionReplacement).trim()} onClick={() => handleCorrectionSubmit({ correction_type: correctionType, target_path: correctionTargetPath, replacement: typeof correctionReplacement === 'string' ? correctionReplacement.trim() : correctionReplacement, reason: correctionReason.trim() || null }, lookupSessionState)}>
+                          {loading ? 'Applying…' : 'Submit'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* 5. EVIDENCE BOARD */}
               {doEvidence && (
-                <div className="ai-shell__decision-evidence-board">
-                  <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                    <Typography variant="overline" sx={{ fontWeight: 900, opacity: 0.5, letterSpacing: '0.15em' }}>
-                      Evidence Board
-                    </Typography>
-                    <span className="ai-shell__evidence-boundary-badge">
-                      Observational Analysis Only
-                    </span>
-                  </header>
-
-                  <Typography variant="body2" sx={{ opacity: 0.8, mb: 3 }}>
-                    {doEvidence.summary || 'Run observational analysis to ground decision drivers.'}
-                  </Typography>
-
+                <div className="ai-shell__do-evidence">
+                  <Typography variant="overline" className="ai-shell__do-section-lbl">Evidence Board</Typography>
                   {doEvidence.status === 'analyzed' && doEvidence.items && doEvidence.items.length > 0 ? (
-                    <div className="ai-shell__evidence-list" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div className="ai-shell__do-evidence-grid">
                       {doEvidence.items.map((rd, i) => (
-                        <div key={i} className="ai-shell__evidence-card">
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '12px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                              <span className="ai-shell__evidence-rank">
-                                {rd.rank || (i + 1)}
-                              </span>
-                              <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>
-                                {rd.title || 'Observational Insight'}
-                              </Typography>
+                        <div key={i} className="ai-shell__do-evidence-card">
+                          <div className="ai-shell__do-evidence-body">
+                            <div className="ai-shell__do-evidence-header">
+                              <div className="ai-shell__do-evidence-title-row">
+                                <span className="ai-shell__do-evidence-rank">{rd.rank || (i + 1)}</span>
+                                <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>{rd.title || 'Observational Insight'}</Typography>
+                              </div>
+                              <div className="ai-shell__do-evidence-actions">
+                                <span className={`ai-shell__do-evidence-strength is-${rd.strength || 'moderate'}`}>
+                                  {rd.strength?.toUpperCase() || 'MODERATE'}
+                                </span>
+                                {rd.source_diagnostic_id && (
+                                  <Tooltip title={`Source ID: ${rd.source_diagnostic_id}`} arrow>
+                                    <span className="ai-shell__do-evidence-source"><FaInfoCircle /></span>
+                                  </Tooltip>
+                                )}
+                              </div>
                             </div>
-                            <Chip
-                              label={rd.strength || 'moderate'}
-                              size="small"
-                              sx={{
-                                height: '18px',
-                                fontSize: '0.6rem',
-                                fontWeight: 800,
-                                textTransform: 'uppercase',
-                                bgcolor: rd.strength === 'strong' ? 'rgba(34, 197, 94, 0.1)' : rd.strength === 'weak' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(245, 158, 11, 0.1)',
-                                color: rd.strength === 'strong' ? 'var(--accent-green)' : rd.strength === 'weak' ? 'var(--accent-red)' : '#f59e0b',
-                                border: '1px solid currentColor'
-                              }}
-                            />
+                            <Typography variant="body2" className="ai-shell__do-evidence-summary">
+                              {rd.summary}
+                            </Typography>
                           </div>
 
-                          <Typography variant="body2" sx={{ opacity: 0.85, mb: 2, lineHeight: 1.5 }}>
-                            {rd.summary}
-                          </Typography>
+                          <div className="ai-shell__do-evidence-footer">
+                            {rd.covers && (
+                              <div className="ai-shell__do-evidence-meta">
+                                <strong>Coverage:</strong> {[
+                                  rd.covers.goal && 'Goal',
+                                  ...(rd.covers.drivers?.map(d => d.label || d.name) || []),
+                                  ...(rd.covers.limits?.map(l => l.label || l.name) || []),
+                                  ...(rd.covers.breakdowns?.map(b => b.label || b.name) || [])
+                                ].filter(Boolean).join(', ') || 'General'}
+                              </div>
+                            )}
 
-                          {/* Coverage tags */}
-                          {rd.covers && (
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '12px' }}>
-                              {rd.covers.objective_covered && (
-                                <span className="ai-shell__coverage-tag is-objective">Objective Covered</span>
+                            <div className="ai-shell__do-evidence-health">
+                              {rd.data_sufficiency && (
+                                <span className={`ai-shell__do-evidence-sufficiency is-${rd.data_sufficiency.status}`}>
+                                  <FaCircle size={6} /> {rd.data_sufficiency.status === 'sufficient' ? 'Data Sufficient' : 'Data Limited'}
+                                </span>
                               )}
-                              {rd.covers.levers_covered?.map((lev, idx) => (
-                                <span key={idx} className="ai-shell__coverage-tag is-lever">Lever: {lev}</span>
-                              ))}
-                              {rd.covers.constraints_covered?.map((c, idx) => (
-                                <span key={idx} className="ai-shell__coverage-tag is-guardrail">Limit: {c}</span>
-                              ))}
+                              {rd.limitations && rd.limitations.length > 0 && (
+                                <Tooltip title={rd.limitations.join(' • ')} arrow>
+                                  <span className="ai-shell__do-evidence-caveats"><FaExclamationTriangle size={10} /> {rd.limitations.length} Caveats</span>
+                                </Tooltip>
+                              )}
                             </div>
-                          )}
-
-                          {rd.limitations && rd.limitations.length > 0 && (
-                            <div className="ai-shell__evidence-limitations">
-                              <Typography variant="caption" sx={{ fontStyle: 'italic', opacity: 0.7 }}>
-                                <strong>Caveats:</strong> {rd.limitations.join(' • ')}
-                              </Typography>
-                            </div>
-                          )}
+                          </div>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <div className="ai-shell__evidence-empty-slate">
-                      <Typography variant="caption" sx={{ opacity: 0.5, fontStyle: 'italic' }}>
-                        Observational analysis results will populate here once the frame is successfully run.
-                      </Typography>
-                    </div>
+                    <Typography variant="body2" sx={{ opacity: 0.6, fontStyle: 'italic', mt: 1 }}>
+                      {doEvidence.summary || 'Run observational analysis to ground decision drivers.'}
+                    </Typography>
                   )}
                 </div>
               )}
 
-              {/* SECTION 7: DECISION MAP */}
-              {doMap && doMap.nodes && doMap.nodes.length > 0 && (
-                <div className="ai-shell__decision-map-section">
-                  <Typography variant="overline" sx={{ fontWeight: 900, opacity: 0.5, letterSpacing: '0.15em', display: 'block', mb: 2 }}>
-                    Decision Structural Map
-                  </Typography>
-                  <Typography variant="caption" sx={{ display: 'block', opacity: 0.6, mb: 3 }}>
-                    Interactive representation of structural relations and observational bindings. Relationships are non-causal associations.
-                  </Typography>
-
-                  <div className="ai-shell__map-container">
-                    <div className="ai-shell__map-nodes-grid">
-                      {doMap.nodes.map((node, i) => (
-                        <div key={i} className={`ai-shell__map-node type--${node.node_type || 'unknown'}`}>
-                          <div className="ai-shell__map-node-header">
-                            <span className="ai-shell__map-node-badge">{node.node_type}</span>
-                            {node.confidence !== undefined && (
-                              <span className="ai-shell__map-node-confidence">{(node.confidence * 100).toFixed(0)}%</span>
-                            )}
+              {/* 6. SECONDARY SECTIONS (Map, Compare, Gates) */}
+              <div className="ai-shell__do-secondary">
+                {/* DECISION MAP */}
+                {doMap && doMap.nodes && doMap.nodes.length > 0 && (
+                  <details className="ai-shell__do-secondary-details">
+                    <summary>Decision Map</summary>
+                    <div className="ai-shell__do-map-wrap">
+                      <div className="ai-shell__do-map-nodes">
+                        {doMap.nodes.map((node, i) => (
+                          <div key={i} className={`ai-shell__do-map-node is-${node.node_type || 'unknown'}`}>
+                            <span className="ai-shell__do-map-node-lbl">{node.label}</span>
+                            <span className="ai-shell__do-map-node-type">{node.node_type}</span>
                           </div>
-                          <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 0.5 }} noWrap>
-                            {node.label}
-                          </Typography>
-                          <Typography variant="caption" sx={{ opacity: 0.7, lineHeight: 1.3, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                            {node.summary}
-                          </Typography>
-                        </div>
-                      ))}
-                    </div>
-
-                    {doMap.edges && doMap.edges.length > 0 && (
-                      <div className="ai-shell__map-edges-list">
-                        <Typography variant="overline" sx={{ fontWeight: 900, opacity: 0.4, display: 'block', mb: 1.5 }}>
-                          Mapped Relationships
-                        </Typography>
-                        <div className="ai-shell__map-edges-grid">
+                        ))}
+                      </div>
+                      {doMap.edges && doMap.edges.length > 0 && (
+                        <div className="ai-shell__do-map-edges">
                           {doMap.edges.map((edge, i) => {
                             const srcNode = doMap.nodes.find(n => n.node_id === edge.source_node_id);
                             const tgtNode = doMap.nodes.find(n => n.node_id === edge.target_node_id);
-
                             return (
-                              <div key={i} className="ai-shell__map-edge-item">
-                                <span className="ai-shell__edge-arrow">
-                                  <strong>{srcNode?.label || edge.source_node_id}</strong>
-                                  <span className="ai-shell__edge-line">
-                                    ‹ {edge.relationship_type?.replace('_', ' ')} ›
-                                  </span>
-                                  <strong>{tgtNode?.label || edge.target_node_id}</strong>
-                                </span>
-                                <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
-                                  <span className="ai-shell__edge-causal-badge">{edge.causal_status || 'not_causal_claim'}</span>
-                                  {edge.label && <span className="ai-shell__edge-label-text">{edge.label}</span>}
-                                </div>
+                              <div key={i} className="ai-shell__do-map-edge">
+                                {srcNode?.label || edge.source_node_id} ‹ {edge.relationship_type?.replace('_', ' ')} › {tgtNode?.label || edge.target_node_id}
                               </div>
                             );
                           })}
                         </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* SECTION 8: SCENARIO COMPARE */}
-              {doScenario && (
-                <div className="ai-shell__decision-scenario-section">
-                  <Typography variant="overline" sx={{ fontWeight: 900, opacity: 0.5, letterSpacing: '0.15em', display: 'block', mb: 2 }}>
-                    Scenario Compare
-                  </Typography>
-
-                  {doScenario.status === 'ready' ? (
-                    <ScenarioPreview preview={doScenario} />
-                  ) : (
-                    <div className="ai-shell__scenario-locked-card">
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <FaShieldAlt style={{ color: 'var(--text-secondary)', opacity: 0.4, fontSize: '1.25rem' }} />
-                        <div>
-                          <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>
-                            What-If Scenarios Standby
-                          </Typography>
-                          <Typography variant="caption" sx={{ opacity: 0.7 }}>
-                            {doScenario.summary || 'What-if comparisons require a structurally complete decision frame and active observational evidence.'}
-                          </Typography>
-                        </div>
-                      </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              )}
+                  </details>
+                )}
 
-              {/* SECTION 9: ADVANCED GATES */}
-              {doGates && doGates.length > 0 && (
-                <div className="ai-shell__decision-gates-section">
-                  <Typography variant="overline" sx={{ fontWeight: 900, opacity: 0.5, letterSpacing: '0.15em', display: 'block', mb: 2 }}>
-                    Advanced Capabilities (Gated)
-                  </Typography>
-                  <div className="ai-shell__gates-grid">
-                    {doGates.map((gate, i) => (
-                      <div key={i} className="ai-shell__gate-card">
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                          <span className="ai-shell__gate-title">{gate.capability?.replace('_', ' ') || 'gated capability'}</span>
-                          <span className="ai-shell__gate-lock-icon">🔒</span>
+                {/* SCENARIO COMPARE */}
+                {doScenario && (
+                  <details className="ai-shell__do-secondary-details">
+                    <summary>Scenario Compare</summary>
+                    <div className="ai-shell__do-scenario-wrap">
+                      {doScenario.status === 'ready' ? (
+                        <ScenarioPreview preview={doScenario} />
+                      ) : (
+                        <span className="ai-shell__do-scenario-locked">
+                          <FaShieldAlt /> {doScenario.summary || 'Requires complete frame and active evidence.'}
+                        </span>
+                      )}
+                    </div>
+                  </details>
+                )}
+
+                {/* ADVANCED GATES */}
+                {doGates && doGates.length > 0 && (
+                  <details className="ai-shell__do-secondary-details">
+                    <summary>Advanced Capabilities</summary>
+                    <div className="ai-shell__do-gates-wrap">
+                      {doGates.map((gate, i) => (
+                        <div key={i} className="ai-shell__do-gate-card">
+                          <span className="ai-shell__do-gate-title">{gate.capability?.replace('_', ' ') || 'capability'}</span>
+                          <span className="ai-shell__do-gate-reason">{gate.reason || 'Unsupported'}</span>
                         </div>
-                        <Typography variant="caption" sx={{ opacity: 0.7, lineHeight: 1.4 }}>
-                          {gate.reason || 'Unsupported in the current runtime environment.'}
-                        </Typography>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* SECTION 10: RELIABILITY BOUNDARY / TRUTH NOTE */}
-              <div className="ai-shell__decision-truth-boundary-note" style={{ background: 'var(--bg-secondary)', padding: '16px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
-                <Typography variant="caption" sx={{ opacity: 0.6, display: 'block', lineHeight: 1.5 }}>
-                  <FaInfoCircle style={{ marginRight: '8px', fontSize: '0.8rem', verticalAlign: 'middle', marginTop: '-2px' }} />
-                  Outputs are computed under the <strong>{doTruthBoundary.replace('_', ' ')}</strong> boundary. Observational analysis only. No simulation or causal forecast claims are supported.
-                </Typography>
+                      ))}
+                    </div>
+                  </details>
+                )}
               </div>
 
+              {/* 7. RELIABILITY BOUNDARY */}
+              <div className="ai-shell__do-reliability-boundary">
+                <FaInfoCircle />
+                <span>
+                  <strong>Observational Boundary:</strong> {doTruthBoundary.replace('_', ' ')}. No causal forecast claims supported.
+                </span>
+              </div>
             </div>
           </div>
         );

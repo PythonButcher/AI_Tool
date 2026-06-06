@@ -376,57 +376,162 @@ Each item has a limitation or boundary note when evidence is weak, insufficient,
 
 No item is labeled as final advice or optimized action.
 
-## Phase 7: Add Decision Map Contract
+## Phase 7: Build The Decision Graph Builder
 
-Purpose: define a practical map of the decision structure and evidence coverage.
+Purpose: turn the old compact Decision Map idea into a real user-guided analysis surface.
 
-Decision Map means a visual explanation of how the current decision pieces relate. It is not a causal diagram. It should not claim that a driver causes an outcome unless future causal support is explicitly built.
+Decision Graph Builder means the user can select variables or nodes, choose how relationships should be inspected, and review measurable graph edges with evidence strength, data sufficiency, limitations, and clear reliability labels. It is not a static exported image and not a causal proof engine.
+
+The full builder should likely live as its own work surface near Automation because graph construction needs room for a variable tray, canvas, filters, and an inspector. AI Chat should remain the launch and explanation layer: it can suggest a graph, open the builder, and summarize graph results inside `decision_output`, but it should not become the entire graph-building UI.
+
+Package choice is intentionally open. Gemini/Antigravity may reuse `@xyflow/react` if it remains the best fit, or choose another legitimate, stable, better-looking graph package after inspecting current frontend dependencies and integration risk. The chosen package must support interactive nodes, edges, custom styling, selection, fit-to-view, and future expandability without destabilizing existing AI Chat behavior.
+
+Reliability boundary:
+
+Edges must be explicitly labeled by evidence type. `observed_association` means the backend found a measurable relationship in the dataset. `coverage` means evidence covers a decision variable. `user_hypothesis` means the user proposed a directional relationship. None of these are causal proof. Future causal analysis stays behind Advanced Gates until backend support exists.
+
+### Phase 7.1: Graph Data And Analysis Foundation
+
+Purpose: create the backend-owned Decision Graph contract and enough analysis to return cold, inspectable results from selected variables.
 
 Codex backend target:
 
-Add a generated `decision_map` object to `decision_output`.
+Add a `decision_graph` contract that is separate from the legacy compact `decision_output.decision_map`. The graph request should accept selected variables, selected evidence items when relevant, optional filters or breakdowns, and a graph mode such as `evidence_coverage`, `observed_association`, or `mixed`.
 
-Suggested node types:
+The first useful backend graph should support:
 
-`goal`, `driver`, `limit`, `breakdown`, `evidence`, `assumption`, `unknown`, `dataset`, `scenario`, `advanced_gate`
+| Capability | Meaning |
+| --- | --- |
+| Variable candidates | Backend returns eligible metrics and dimensions from the semantic model and active dataset. |
+| User selection | Request includes selected metric IDs, dimension IDs, and optional evidence IDs. |
+| Evidence coverage edges | Edges connect evidence items to the variables they cover. |
+| Observed association edges | Edges connect selected variables when the backend can compute a conservative observed relationship. |
+| Edge metrics | Edges carry relationship strength, direction when safe, row count or sample size, sufficiency status, and limitations. |
+| Reliability labels | Every edge declares `relationship_type`, `evidence_basis`, and `causal_status: "not_causal_claim"` unless it is a user hypothesis, which must use `causal_status: "user_hypothesis_not_validated"`. |
 
-Suggested edge types:
+Recommended first analysis methods:
 
-`declared_relationship`, `observed_association`, `constraint`, `breakdown`, `assumption`, `missing_evidence`, `scenario_input`
+| Variable pair | First-pass method |
+| --- | --- |
+| numeric to numeric | Correlation or monotonic association with row count and missingness. |
+| categorical to numeric | Group difference summary with top group deltas and sample sizes. |
+| categorical to categorical | Distribution association summary only if sample size is sufficient. |
+| temporal to numeric | Observed trend or period comparison when a temporal dimension is available. |
 
-Suggested node fields:
-
-`node_id`, `node_type`, `label`, `summary`, `status`, `source_path`, `confidence`, `warnings`
-
-Suggested edge fields:
-
-`edge_id`, `source_node_id`, `target_node_id`, `relationship_type`, `label`, `evidence_refs`, `limitations`, `causal_status`
-
-`causal_status` should be `not_causal_claim` by default.
+Do not add regression, causal discovery, synthetic control, Monte Carlo, optimization, autonomous decisions, or final recommendations in this slice.
 
 Likely Codex files:
 
-`backend/services/decision_output_service.py`
+`backend/services/decision_graph_service.py` if the implementation warrants a separate service.
 
-`project_docs/active/contracts/decision_objects.md`
+`backend/services/decision_output_service.py` only for compact graph summary attachment.
+
+`backend/routes/decision.py` if a new action or endpoint is needed.
+
+`backend/decision_engine/chat_service.py` if AI Chat needs a graph action or artifact.
 
 `tests/test_decision_chat_service.py`
 
-Likely Gemini files later:
+Potential new tests such as `tests/test_decision_graph_service.py`.
 
-New or existing decision output component under `frontend/frontend/src/features/ai/` or `features/business/decision/`
-
-Implementation notes:
-
-Start read-only. Do not build a full map editor in the first pass.
+`project_docs/active/contracts/decision_objects.md`
 
 Acceptance:
 
-Decision output includes map nodes and edges for the current frame.
+The backend can return graph variable candidates for a loaded dataset and semantic model.
 
-All edges have non-causal relationship labels unless a future gated causal feature exists.
+The backend can return a graph from user-selected variables.
 
-Incomplete frames show unknown or missing-evidence nodes rather than hiding gaps.
+Observed association edges include measurable evidence and data sufficiency.
+
+Coverage edges connect Evidence Board items to selected decision variables.
+
+Every edge has a reliability label and explicitly avoids causal proof, optimization, simulation, prediction certainty, or final advice.
+
+Existing AI Chat answer, chart, workspace preview, workspace analysis summary, and `decision_output` rendering contracts remain compatible.
+
+Suggested verification:
+
+Run focused graph service tests first, then `python -m unittest tests.test_decision_chat_service tests.test_decision_reliability_benchmark`. If a new endpoint is added, include route tests for candidate discovery and graph build requests.
+
+### Phase 7.2: Interactive Decision Graph Workspace
+
+Purpose: build the user-facing graph construction surface after the Phase 7.1 backend contract is stable.
+
+Gemini/Antigravity frontend target:
+
+Create a dedicated Decision Graph workspace near Automation or in the same product region as workflow-building tools. AI Chat should provide a launch affordance and compact graph preview, but the full builder should have its own space.
+
+Expected UI:
+
+| Area | Purpose |
+| --- | --- |
+| Variable tray | Metrics, dimensions, Evidence Board items, and current decision-frame nodes that the user can select. |
+| Graph canvas | Interactive nodes and edges with clear visual difference between observed associations, evidence coverage, missing evidence, and user hypotheses. |
+| Inspector | Shows selected node or edge details: why it exists, relationship strength, data sufficiency, sample size, limitations, and source refs. |
+| Controls | Graph mode, selected variables, filters, fit-to-view, layout reset, and save/open behavior. |
+| AI Chat bridge | Chat can open the graph workspace and summarize selected graph results without hiding the full controls. |
+
+Package choice:
+
+Gemini should evaluate whether `@xyflow/react` is still the right dependency. It is acceptable to reuse it. It is also acceptable to choose another stable package if it is meaningfully better for this app. The handoff must document the choice, why it was chosen, and what integration risks were checked.
+
+Likely Gemini files:
+
+`frontend/frontend/src/App.jsx`
+
+`frontend/frontend/src/components/layout/MenuBar.jsx` or the navigation component that owns the Automation icon region.
+
+`frontend/frontend/src/features/ai/AIShell.jsx`
+
+Potential new files under `frontend/frontend/src/features/business/decision/graph/`
+
+Existing API helpers under `frontend/frontend/src/features/business/decision/decisionApi.js` or a new focused graph API helper.
+
+Acceptance:
+
+The user can open Decision Graph from the main workspace and from an AI Chat decision output.
+
+The user can select variables and request graph generation.
+
+The graph displays returned nodes and edges with readable labels and a useful inspector.
+
+Observed associations, evidence coverage, missing evidence, and user hypotheses look visually distinct.
+
+The UI does not imply causal proof, optimization, or final recommendations.
+
+Existing AI Chat answer, chart, workspace preview, decision output, artifact inspection, and export behavior still work.
+
+Required Antigravity handoff:
+
+Codex must write a focused handoff after Phase 7.1 backend tests pass. The handoff must name the exact backend request and response shape, package constraints, files to inspect, visual acceptance checks, build command, browser checks, and status-doc update requirement. Do not ask Gemini to invent backend APIs.
+
+### Phase 7.3: User Hypotheses And Graph-To-Action Flow
+
+Purpose: let the user add or approve hypothesis edges and turn graph findings into follow-up analysis actions without pretending the app has proven causality.
+
+Backend/frontend target:
+
+Support user-created directional edges with explicit `relationship_type: "user_hypothesis"` and `causal_status: "user_hypothesis_not_validated"`. The app should let users select an edge and choose follow-up actions such as break down by a dimension, monitor the relationship, send to Scenario Compare when appropriate, or ask AI Chat to explain the evidence and missing data.
+
+Expected capabilities:
+
+| Capability | Meaning |
+| --- | --- |
+| Add hypothesis edge | User can connect selected nodes directionally as a stated assumption or hypothesis. |
+| Validate readiness | Backend reports whether the data can even inspect the hypothesis observationally. |
+| Convert to follow-up | User can request breakdowns, monitoring, scenario compare, or AI Chat explanation from a selected node or edge. |
+| Save graph state | Graph selections and user hypotheses can be carried in session state or a saved decision asset. |
+
+Acceptance:
+
+User hypotheses are visually and contractually separate from observed associations.
+
+The app can explain what evidence exists, what is missing, and what follow-up checks are available.
+
+No user-created edge is rendered as causal proof.
+
+Graph-to-action flows preserve the existing Decision Intelligence reliability boundary.
 
 ## Phase 8: Fold Scenario Compare Into Decision Output
 
@@ -570,27 +675,48 @@ The export is shareable and readable without opening the app.
 
 The export avoids fake final recommendations, optimization, causal proof, and unsupported prediction claims.
 
-## Current Codex Implementation Slice: Phase 5
+## Current Project Gate: Phase 7.1 Decision Graph Data Foundation
 
-Start with backend-only work for chat-native corrections.
+Phase 6 Evidence Board is complete end-to-end. Do not reopen Phase 6 unless the user explicitly asks for a regression review.
 
-Recommended Phase 5 slice:
+The next active work is Phase 7.1: build the backend foundation for Decision Graph Builder. Decision Graph Builder is a user-guided analysis surface where selected variables become graph nodes and measurable evidence becomes graph edges. It is not a static exported image and not a causal proof tool.
 
-1. Inspect the current correction action path in `DecisionChatService.handle_action`.
-2. Confirm whether corrected `draft_workspace` action responses already append updated `decision_output`; if not, fix that path through the existing `decision_output` composer.
-3. Confirm corrected session state is used by follow-up `analyze_workspace`.
-4. Add focused backend tests for correction state carry-forward, updated readiness, updated `decision_output.correction_state`, and compatibility with the first `workspace_preview` artifact.
-5. Preserve existing `answer`, `chart`, `workspace_preview`, and `workspace_analysis_summary` behavior.
-6. Update active status with only verified facts.
-7. Write a Gemini handoff only if frontend connection work remains after backend verification.
+Required next Codex slice:
+
+1. Read the active status, guardrail, rollout, and `decision_objects.md` contract.
+2. Inspect current `decision_output.decision_map` behavior only as existing context, not as the final product shape.
+3. Design the backend `decision_graph` request and response contract for variable candidates, selected variables, nodes, edges, edge metrics, data sufficiency, limitations, and reliability labels.
+4. Implement the first backend graph service or equivalent composer for variable candidates, evidence coverage edges, and conservative observed association edges.
+5. Add focused backend tests for candidate discovery, selected-variable graph generation, evidence coverage edges, observed association edge metrics, insufficient-data behavior, and no unsupported recommendation, causal, simulation, prediction, or optimization wording.
+6. Update the contract and active status only with verified facts.
+
+Completed Phase 6 slice:
+
+1. Normalized `workspace_analysis.ranked_diagnostics` into display-ready Evidence Board items inside `decision_output`.
+2. Added contract coverage for rank, title, summary, coverage, strength, data sufficiency, limitations, and diagnostic trace.
+3. Aligned AI Chat Evidence Board rendering to the backend contract.
+4. Verified backend tests, frontend build, and `git diff --check`.
+
+Completed Phase 5 backend slice:
+
+1. Confirmed correction action responses append updated `decision_output`.
+2. Confirmed corrected state is used by follow-up `analyze_workspace`.
+3. Added focused backend tests for correction state carry-forward and updated `decision_output.correction_state`.
+4. Preserved existing `answer`, `chart`, `workspace_preview`, and `workspace_analysis_summary` behavior.
 
 Suggested first files to inspect:
 
-`backend/decision_engine/chat_service.py`
+`backend/services/decision_output_service.py`
 
 `backend/services/decision_workspace_service.py`
 
-`backend/services/decision_output_service.py`
+`backend/services/decision_support.py`
+
+`backend/services/metric_resolver.py`
+
+`backend/decision_engine/chat_service.py`
+
+`backend/routes/decision.py`
 
 `tests/test_decision_chat_service.py`
 
@@ -598,19 +724,21 @@ Suggested first files to inspect:
 
 `project_docs/active/contracts/decision_objects.md`
 
-Do not inspect every frontend file for this backend slice. Frontend work waits for a new Gemini handoff unless explicitly authorized.
+Frontend implementation work waits for Phase 7.2 and a focused Antigravity handoff after Phase 7.1 backend contract and tests are complete.
 
 ## Gemini Handoff Trigger
 
-Codex should write a Gemini handoff when these are true:
+Codex should write a Gemini handoff only when these are true:
 
-`decision_output` contract is documented.
+The `decision_graph` request and response contract is documented.
 
-Backend returns representative `decision_output` for draft, analyzed, incomplete, and corrected decision states.
+Backend returns representative graph candidates and graph results for selected variables.
 
 Focused backend tests pass.
 
-The handoff names exact frontend files, visible behavior, artifact type, acceptance prompt, build command, browser check, and status-doc update requirement.
+Codex has enough backend truth to prevent Gemini from inventing APIs or graph semantics.
+
+The handoff names exact frontend files, package-selection expectations, visible behavior, graph interaction requirements, backend request/response shape, acceptance prompt, build command, browser check, and status-doc update requirement.
 
 ## Documentation Updates Required During Work
 

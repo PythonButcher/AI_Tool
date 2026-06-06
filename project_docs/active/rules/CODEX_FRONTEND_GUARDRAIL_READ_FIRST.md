@@ -49,7 +49,11 @@ Default review budget:
 - Run `git diff --check` only when whitespace, generated diffs, or final acceptance is part of the question.
 - Run `npm --prefix frontend\frontend run build` only when Codex finds a likely syntax/import error, Gemini did not report a build, or the user explicitly asks for build verification.
 
-Escalate beyond that budget only when the first pass finds a concrete blocker that cannot be classified from the targeted evidence. If escalating, say why in one short sentence before running more tools.
+Stop when targeted source review proves the gate. A concrete contract, payload, state, or rendering blocker is enough to answer `Not complete`; do not run builds, browser automation, or broad scans after the blocker is already clear.
+
+Escalate beyond the default budget only when the first pass cannot classify the gate from targeted evidence. If escalating, say why in one short sentence before running more tools.
+
+Browser and E2E checks are not the default path for Gemini review. Use them only when the user explicitly asks for them, the gate depends on visible browser behavior, or no cheaper source/build evidence can answer the question. If browser tooling is unavailable or fails, report that limit instead of trying multiple alternate browser stacks unless the user asks for deeper verification.
 
 For Gemini-review answers, start with one of these exact acceptance labels: `Complete`, `Not complete`, or `Complete except for documentation cleanup.` Then list only findings that change the next action. If Gemini needs to fix something, end with a short paste-ready Gemini prompt.
 
