@@ -77,6 +77,9 @@ checkpoints/
 wandb/
 mlruns/
 
+# Temporary Chrome profiles / browser testing caches
+.codex_tmp_chrome*/
+
 # =========================
 # Coverage / Testing
 # =========================

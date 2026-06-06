@@ -2737,11 +2737,18 @@ class DecisionWorkspaceService:
         readiness_weight = 1.0 if readiness.get("readiness_state") == "analysis_ready" else 0.72
         relevance_score = round(min(1.0, (role_weight * 0.58) + (evidence_weight * 0.32) + (readiness_weight * 0.10)), 2)
 
+        if evidence_strength in {"strong", "moderate"}:
+            sufficiency_status = "sufficient"
+        elif evidence_strength == "weak":
+            sufficiency_status = "limited"
+        else:
+            sufficiency_status = "insufficient"
+
         return {
             "relevance_score": relevance_score,
             "evidence_strength": evidence_strength,
             "data_sufficiency": {
-                "status": "sufficient" if evidence_strength in {"strong", "moderate"} else "limited",
+                "status": sufficiency_status,
                 "row_count": row_count,
                 "has_period_comparison": status == "observed_change",
             },
@@ -2830,6 +2837,9 @@ class DecisionWorkspaceService:
         warnings = list(metric_ref.get("semantic_role_warnings") or [])
         limitations.extend(warnings)
         limitations.append("This ranking is diagnostic relevance only; it is not a recommended action order.")
+        limitations.append(
+            "This diagnostic is observational only; it is not a causal claim, optimization result, or final recommendation."
+        )
         return DecisionWorkspaceService._dedupe_strings(limitations)
 
     @staticmethod

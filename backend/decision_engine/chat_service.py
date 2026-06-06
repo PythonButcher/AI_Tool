@@ -919,6 +919,7 @@ class DecisionChatService:
         workspace_analysis: Dict[str, Any] | None = None,
         correction_result: Dict[str, Any] | None = None,
     ) -> Dict[str, Any] | None:
+        """Compose the display artifact while keeping Evidence Board normalization centralized."""
         if not isinstance(workspace, dict) or not workspace:
             return None
         return DecisionOutputService.compose(

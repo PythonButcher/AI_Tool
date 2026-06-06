@@ -171,6 +171,99 @@ class DecisionPhase3CorrectionTests(unittest.TestCase):
         self.assertEqual(action_response["session_state"]["draft_workspace"]["readiness"]["readiness_state"], "blocked")
         self.assertEqual(action_response["correction_result"]["correction_type"], "remove_mapping")
 
+    def test_chat_correction_updates_decision_output_and_follow_up_analysis_state(self):
+        workspace = DecisionWorkspaceService.create_workspace(build_payload())["decision_workspace"]
+
+        correction_response = DecisionChatService.handle_action(
+            {
+                "action": "draft_workspace",
+                "dataset": DATASET,
+                "dataset_ref": {"source": "inline", "dataset_id": "sales_q1", "dataset_name": "Q1 Sales"},
+                "semantic_model": SEMANTIC_MODEL,
+                "session_state": {"draft_workspace": workspace},
+                "correction": {
+                    "correction_type": "objective_metric",
+                    "target_path": "decision_scope.objective.metric_ref",
+                    "replacement": {"metric_id": "metric_margin_pct"},
+                    "reason": "Gross margin is the active success measure.",
+                },
+            }
+        )
+
+        corrected_workspace = correction_response["decision_workspace"]
+        correction_output = correction_response["decision_output"]
+
+        self.assertEqual([artifact["type"] for artifact in correction_response["artifacts"]], ["workspace_preview", "decision_output"])
+        self.assertEqual(correction_response["artifacts"][0]["source"], "decision_workspace")
+        self.assertEqual(correction_response["artifacts"][1]["source"], "decision_output")
+        self.assertEqual(correction_output["frame"]["goal"]["metric_ref"]["metric_id"], "metric_margin_pct")
+        self.assertEqual(correction_output["dataset_trust"], correction_response["dataset_trust"])
+        self.assertEqual(correction_output["correction_state"]["status"], "updated")
+        self.assertEqual(correction_output["correction_state"]["latest"]["correction_type"], "objective_metric")
+        self.assertEqual(correction_output["readiness"]["readiness_state"], "analysis_ready")
+        self.assertIn("analyze_workspace", correction_output["readiness"]["allowed_next_actions"])
+        self.assertEqual(
+            correction_response["session_state"]["draft_workspace"]["decision_scope"]["objective"]["metric_ref"]["metric_id"],
+            "metric_margin_pct",
+        )
+        self.assertEqual(
+            corrected_workspace["decision_scope"]["objective"]["metric_ref"]["metric_id"],
+            "metric_margin_pct",
+        )
+
+        analysis_response = DecisionChatService.handle_action(
+            {
+                "action": "analyze_workspace",
+                "dataset": DATASET,
+                "dataset_ref": {"source": "inline", "dataset_id": "sales_q1", "dataset_name": "Q1 Sales"},
+                "semantic_model": SEMANTIC_MODEL,
+                "session_state": correction_response["session_state"],
+            }
+        )
+        analysis_output = analysis_response["decision_output"]
+
+        self.assertEqual(
+            [artifact["type"] for artifact in analysis_response["artifacts"]],
+            ["workspace_analysis_summary", "decision_output"],
+        )
+        self.assertEqual(analysis_output["frame"]["goal"]["metric_ref"]["metric_id"], "metric_margin_pct")
+        self.assertEqual(analysis_output["evidence_board"]["status"], "analyzed")
+        self.assertTrue(analysis_output["evidence_board"]["items"])
+        self.assertEqual(analysis_output["correction_state"]["status"], "updated")
+        self.assertEqual(analysis_output["correction_state"]["history_count"], 1)
+        self.assertEqual(analysis_output["correction_state"]["latest"]["correction_type"], "objective_metric")
+        self.assertEqual(analysis_output["source_refs"]["correction_status"], "applied")
+        self.assertEqual(analysis_output["dataset_trust"], analysis_response["dataset_trust"])
+
+    def test_normal_answer_and_chart_routing_stay_unchanged_after_correction_support(self):
+        answer_response = DecisionChatService.handle_turn(
+            {
+                "dataset": DATASET,
+                "semantic_model": SEMANTIC_MODEL,
+                "user_message": "What is total revenue?",
+                "conversation_history": [],
+                "session_state": {},
+            }
+        )
+        chart_response = DecisionChatService.handle_turn(
+            {
+                "dataset": DATASET,
+                "semantic_model": SEMANTIC_MODEL,
+                "user_message": "Show revenue by region as a chart",
+                "conversation_history": [],
+                "session_state": {},
+            }
+        )
+
+        self.assertEqual(answer_response["artifacts"][0]["type"], "answer")
+        self.assertEqual(answer_response["artifacts"][0]["render_hint"], "answer")
+        self.assertIsNone(answer_response["decision_output"])
+        self.assertIsNone(answer_response["draft_workspace_preview"])
+        self.assertEqual(chart_response["artifacts"][0]["type"], "chart")
+        self.assertEqual(chart_response["artifacts"][0]["render_hint"], "chart")
+        self.assertIsNone(chart_response["decision_output"])
+        self.assertIsNone(chart_response["draft_workspace_preview"])
+
     def test_analyze_workspace_returns_ranked_observational_diagnostics(self):
         workspace = DecisionWorkspaceService.create_workspace(build_payload())["decision_workspace"]
 
