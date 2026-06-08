@@ -133,14 +133,30 @@ const AssociationEdge = memo(({
   });
 
   const isSelected = selected || data?.selected;
-  // Use a dashed line to indicate observed association without implying direct causation
   const isWeak = data?.strength === 'weak';
+  const isEvidenceCoverage = data?.relationshipType === 'evidence_coverage';
   
+  // Visual distinction:
+  // Evidence coverage: solid cool-blue line.
+  // Observed association: dashed neutral/gray line.
+  // Both: Explicitly non-causal (no arrowheads).
+
+  let strokeColor = isSelected ? '#3b82f6' : '#6b7280';
+  let dashArray = 'none';
+
+  if (isEvidenceCoverage) {
+    strokeColor = isSelected ? '#2563eb' : '#60a5fa'; // Blue spectrum
+    dashArray = 'none'; // Solid for coverage
+  } else {
+    strokeColor = isSelected ? '#3b82f6' : (isWeak ? '#9ca3af' : '#6b7280');
+    dashArray = '6 6'; // Dashed for observed association
+  }
+
   const edgeStyle = {
     ...style,
     strokeWidth: isSelected ? 3 : 2,
-    stroke: isSelected ? '#3b82f6' : (isWeak ? '#9ca3af' : '#6b7280'),
-    strokeDasharray: isWeak ? '4 4' : 'none',
+    stroke: strokeColor,
+    strokeDasharray: dashArray,
     transition: 'all 0.2s ease',
   };
 

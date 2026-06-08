@@ -42,7 +42,7 @@ const MODES = [
  *
  * Re-implemented as a high-fidelity workspace with split conversation and inspection.
  */
-function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspace }) {
+function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspace, onOpenDecisionGraph }) {
   const {
     cleanedData,
     fullData,
@@ -1202,7 +1202,11 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspa
                             filter: 'brightness(1.1)'
                           }
                         }}
-                        onClick={() => handleActionClick('open_workspace', lookupSessionState)}
+                        onClick={() => {
+                          if (onOpenDecisionGraph) {
+                            onOpenDecisionGraph({ evidence_board: doEvidence, frame: doFrame });
+                          }
+                        }}
                       >
                         Launch Decision Graph
                       </Button>

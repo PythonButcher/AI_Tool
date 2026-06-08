@@ -62,14 +62,15 @@ Gemini owns frontend implementation unless the user explicitly authorizes Codex 
 
 ## Latest Verified Slice
 
-Phase 7.2 Interactive Decision Graph Workspace frontend completed end-to-end and runtime errors resolved.
+Phase 7.1/7.2 Interactive Decision Graph Workspace frontend aligned with backend contract and runtime errors resolved.
 
 Verified evidence:
-- Developed the Decision Graph API endpoints inside `decisionApi.js` (`getDecisionGraphCandidates`, `buildDecisionGraph`).
-- Built the main workspace shell `DecisionGraphWorkspace.jsx` and successfully integrated it into `App.jsx` and `CanvasContainer.jsx`.
-- Developed the node and edge components inside `DecisionGraphCanvas.jsx` using `@xyflow/react`, implementing the required semantic stylings without causal implications.
-- Resolved a transient `Element type is invalid` rendering error and integrated `DecisionGraphCanvas` into the main workspace.
-- Verified build via `npm run build`, tested HMR flow, and ensured no runtime errors exist.
+- Node mappings now correctly use `node.node_id`.
+- Edge mappings now correctly use `edge.source_node_id` and `edge.target_node_id`.
+- `evidence_board` and `frame` are now dynamically passed into the workspace context when launching from AI Chat `decision_output`.
+- Visually differentiated `evidence_coverage` (solid blue) from `observed_association` (dashed gray) while maintaining non-causal restrictions.
+- Expanded edge metrics in the inspector to include sample sizes, correlation, data sufficiency, and top groups.
+- `git diff --check` and `npm run build` executed and verified with no errors.
 
 ## Status File Discipline
 
