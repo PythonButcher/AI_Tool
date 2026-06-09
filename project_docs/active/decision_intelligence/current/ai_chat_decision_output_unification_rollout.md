@@ -683,16 +683,13 @@ Phase 7.1 Decision Graph Data Foundation is complete. The backend `decision_grap
 
 Phase 7.2 Interactive Decision Graph Workspace is complete. The user can open the workspace, select variables, build a graph from the backend contract, inspect evidence coverage and observed association edges, and use the accepted modernized graph UI in light and dark themes.
 
-The next active work is Phase 7.3: let users add or approve hypothesis edges and turn graph findings into follow-up analysis actions without presenting those edges as causal proof.
+Phase 7.3 User Hypotheses And Graph-To-Action Flow is complete for current planning purposes. The backend supports user hypothesis graph edges with `relationship_type: "user_hypothesis"` and `causal_status: "user_hypothesis_not_validated"`, plus safe graph-to-action planning for breakdown, monitor, explain evidence, explain missing data, and Scenario Compare when appropriate. The frontend now has a production Add Hypothesis flow, passes full `decision_graph` context to graph actions, and keeps user hypotheses visually and semantically separate from observed associations.
 
-Required next Codex slice:
+Current gate: ready for the next Decision Intelligence slice.
 
-1. Read the active status, guardrail, rollout, and `decision_objects.md` contract.
-2. Inspect the current `decision_graph` backend contract and graph workspace integration before changing payloads.
-3. Define the user-hypothesis edge contract with explicit non-causal fields such as `relationship_type: "user_hypothesis"` and `causal_status: "user_hypothesis_not_validated"`.
-4. Define graph-to-action request and response semantics for safe follow-up actions such as breakdown, monitor, explain evidence, explain missing data, or send to Scenario Compare when appropriate.
-5. Implement the backend contract and focused tests first. Frontend work waits until the backend shape is verified or the user explicitly authorizes Codex to continue into frontend.
-6. Update contracts and active status only with verified facts.
+Completed frontend handoff:
+
+`project_docs/active/decision_intelligence/completed/phase_7_3_gemini_user_hypotheses_graph_to_action.md`
 
 Completed Phase 6 slice:
 
@@ -732,11 +729,15 @@ Suggested first files to inspect:
 
 `project_docs/active/contracts/decision_objects.md`
 
-Frontend implementation work for Phase 7.3 waits for backend contract readiness and a focused handoff unless the user explicitly authorizes Codex frontend edits in the current session.
+Frontend implementation work for future slices should use a fresh active handoff unless the user explicitly authorizes Codex frontend edits in the current session.
 
 ## Gemini Handoff Trigger
 
-Codex should write a Gemini handoff only when these are true:
+The Gemini handoff trigger was satisfied for Phase 7.3 backend readiness, and the handoff is now completed:
+
+`project_docs/active/decision_intelligence/completed/phase_7_3_gemini_user_hypotheses_graph_to_action.md`
+
+Future Gemini handoffs should be written only when these are true:
 
 The `decision_graph` request and response contract is documented.
 

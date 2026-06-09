@@ -21,6 +21,7 @@ const VariableTray = ({
   onBuildGraph,
   loading,
   hasDecisionContext,
+  onAddHypothesis,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -91,6 +92,19 @@ const VariableTray = ({
         <FiGitBranchIcon />
         <span>{loading ? 'Building graph' : 'Build graph'}</span>
       </button>
+
+      {selectedVariableIds.size === 2 && onAddHypothesis && (
+        <button
+          className="graph-build-button"
+          type="button"
+          onClick={onAddHypothesis}
+          disabled={loading}
+          style={{ background: 'linear-gradient(135deg, #8b5cf6, #6d28d9)', marginBottom: '14px' }}
+        >
+          <FiGitBranchIcon />
+          <span>Add Hypothesis</span>
+        </button>
+      )}
 
       <div className="selected-strip" aria-label="Selected variables">
         <div className="selected-strip__label">Selected</div>

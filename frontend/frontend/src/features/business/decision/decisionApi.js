@@ -99,3 +99,23 @@ export const buildDecisionGraph = async (payload) => {
     throw error?.response?.data || error;
   }
 };
+
+/**
+ * Plans a follow-up action from a decision graph node or edge.
+ *
+ * @param {Object} payload - The action plan request payload.
+ * @param {string} payload.action_id - Action ID (e.g., breakdown, send_to_scenario_compare).
+ * @param {Object} [payload.decision_graph] - The full decision graph.
+ * @param {Object} [payload.target_edge] - Selected edge.
+ * @param {Object} [payload.target_node] - Selected node.
+ * @returns {Promise<Object>} The action planning response.
+ */
+export const planDecisionGraphAction = async (payload) => {
+  try {
+    const response = await axios.post(`${API_URL}/api/decision/graph/actions`, payload);
+    return response.data;
+  } catch (error) {
+    console.error('Error planning decision graph action:', error);
+    throw error?.response?.data || error;
+  }
+};

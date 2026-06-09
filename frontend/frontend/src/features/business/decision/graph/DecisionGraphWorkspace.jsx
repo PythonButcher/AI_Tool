@@ -78,6 +78,8 @@ const DecisionGraphWorkspace = ({ dataset, semanticModel, initialContext }) => {
   const [loading, setLoading] = useState(false);
   const [selectedElement, setSelectedElement] = useState(null);
   const [error, setError] = useState(null);
+  const [userHypotheses, setUserHypotheses] = useState([]);
+  const [rawGraphData, setRawGraphData] = useState(null);
 
   const hasDecisionContext = Boolean(initialContext?.evidence_board || initialContext?.frame);
 
@@ -117,7 +119,7 @@ const DecisionGraphWorkspace = ({ dataset, semanticModel, initialContext }) => {
     });
   };
 
-  const handleBuildGraph = async () => {
+  const handleBuildGraph = async (extraPayload = {}) => {
     if (selectedVariableIds.size === 0) {
       setError('Select at least one variable before building the graph.');
       return;
@@ -126,17 +128,22 @@ const DecisionGraphWorkspace = ({ dataset, semanticModel, initialContext }) => {
     try {
       setLoading(true);
       setError(null);
+      const currentHypotheses = extraPayload.user_hypotheses || userHypotheses;
       const payload = {
         dataset,
         semantic_model: semanticModel,
         selected_variables: Array.from(selectedVariableIds),
         graph_mode: 'mixed',
       };
+      if (currentHypotheses.length > 0) {
+        payload.user_hypotheses = currentHypotheses;
+      }
 
       if (initialContext?.evidence_board) payload.evidence_board = initialContext.evidence_board;
       if (initialContext?.frame) payload.frame = initialContext.frame;
 
       const response = await buildDecisionGraph(payload);
+      setRawGraphData(response);
 
       if (response?.nodes) {
         const positionedNodes = layoutGraphNodes(response.nodes);
@@ -183,6 +190,20 @@ const DecisionGraphWorkspace = ({ dataset, semanticModel, initialContext }) => {
     setNodes([]);
     setEdges([]);
     setSelectedElement(null);
+    setUserHypotheses([]);
+    setRawGraphData(null);
+  };
+
+  const handleAddHypothesis = () => {
+    if (selectedVariableIds.size !== 2) return;
+    const [source, target] = Array.from(selectedVariableIds);
+    const newHypothesis = {
+      source_variable_id: source,
+      target_variable_id: target,
+    };
+    const updatedHypotheses = [...userHypotheses, newHypothesis];
+    setUserHypotheses(updatedHypotheses);
+    handleBuildGraph({ user_hypotheses: updatedHypotheses });
   };
 
   return (
@@ -196,27 +217,28 @@ const DecisionGraphWorkspace = ({ dataset, semanticModel, initialContext }) => {
       />
 
       <div className="graph-main-area">
-        <VariableTray
-          candidates={candidates}
-          selectedVariableIds={selectedVariableIds}
-          toggleVariableSelection={toggleVariableSelection}
-          onBuildGraph={handleBuildGraph}
-          loading={loading}
-          hasDecisionContext={hasDecisionContext}
-        />
-
-        <main className="graph-canvas-container" aria-label="Decision graph canvas">
-          <DecisionGraphCanvas
-            nodes={nodes}
-            edges={edges}
-            onNodesChange={(changes) => setNodes((currentNodes) => applyNodeChanges(changes, currentNodes))}
-            onEdgesChange={(changes) => setEdges((currentEdges) => applyEdgeChanges(changes, currentEdges))}
-            onNodeClick={(_, node) => setSelectedElement({ type: 'node', data: node.data })}
-            onEdgeClick={(_, edge) => setSelectedElement({ type: 'edge', data: edge.data })}
+          <VariableTray
+            candidates={candidates}
+            selectedVariableIds={selectedVariableIds}
+            toggleVariableSelection={toggleVariableSelection}
+            onBuildGraph={() => handleBuildGraph()}
+            onAddHypothesis={handleAddHypothesis}
+            loading={loading}
+            hasDecisionContext={hasDecisionContext}
           />
-        </main>
 
-        <InspectorPanel selectedElement={selectedElement} />
+          <main className="graph-canvas-container" aria-label="Decision graph canvas">
+            <DecisionGraphCanvas
+              nodes={nodes}
+              edges={edges}
+              onNodesChange={(changes) => setNodes((currentNodes) => applyNodeChanges(changes, currentNodes))}
+              onEdgesChange={(changes) => setEdges((currentEdges) => applyEdgeChanges(changes, currentEdges))}
+              onNodeClick={(_, node) => setSelectedElement({ type: 'node', data: node.data })}
+              onEdgeClick={(_, edge) => setSelectedElement({ type: 'edge', data: edge.data })}
+            />
+          </main>
+
+          <InspectorPanel selectedElement={selectedElement} decisionGraph={rawGraphData} />
       </div>
     </div>
   );

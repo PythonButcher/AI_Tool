@@ -84,14 +84,15 @@ const AssociationEdge = memo(({
 
   const relationshipType = data?.relationshipType || 'observed_association';
   const isCoverage = relationshipType === 'evidence_coverage';
+  const isHypothesis = relationshipType === 'user_hypothesis';
   const strength = data?.strength || 'observed';
-  const label = data?.displayLabel || data?.label || (isCoverage ? 'Coverage' : 'Observed');
+  const label = data?.displayLabel || data?.label || (isCoverage ? 'Coverage' : isHypothesis ? 'Hypothesis' : 'Observed');
 
   const edgeStyle = {
     ...style,
-    stroke: selected ? '#1d4ed8' : isCoverage ? '#0f766e' : '#64748b',
-    strokeWidth: selected ? 3 : isCoverage ? 2.4 : 1.8,
-    strokeDasharray: isCoverage ? 'none' : '7 7',
+    stroke: selected ? '#1d4ed8' : isCoverage ? '#0f766e' : isHypothesis ? '#8b5cf6' : '#64748b',
+    strokeWidth: selected ? 3 : isCoverage ? 2.4 : isHypothesis ? 2.0 : 1.8,
+    strokeDasharray: isCoverage ? 'none' : isHypothesis ? '4 4' : '7 7',
   };
 
   return (
@@ -100,11 +101,12 @@ const AssociationEdge = memo(({
       <EdgeLabelRenderer>
         <button
           type="button"
-          className={`decision-edge-label decision-edge-label--${isCoverage ? 'coverage' : 'association'} ${selected ? 'is-selected' : ''}`}
+          className={`decision-edge-label decision-edge-label--${isCoverage ? 'coverage' : isHypothesis ? 'hypothesis' : 'association'} ${selected ? 'is-selected' : ''}`}
           style={{ transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)` }}
         >
           <span>{label}</span>
-          {!isCoverage && <small>{strength}</small>}
+          {!isCoverage && !isHypothesis && <small>{strength}</small>}
+          {isHypothesis && <small>Unvalidated</small>}
         </button>
       </EdgeLabelRenderer>
     </>

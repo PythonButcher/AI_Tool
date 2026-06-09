@@ -87,6 +87,17 @@ def decision_graph_build_route():
     except Exception as exc:
         return jsonify(_error_payload("DECISION_GRAPH_BUILD_FAILED", f"Failed to build decision graph: {exc}")), 500
 
+
+@decision_bp.route("/graph/actions", methods=["POST"])
+def decision_graph_action_route():
+    payload = request.get_json(silent=True) or {}
+    try:
+        return jsonify(DecisionGraphService.plan_graph_action(payload)), 200
+    except DecisionServiceError as exc:
+        return jsonify(_error_payload("INVALID_DECISION_GRAPH_ACTION_REQUEST", str(exc))), 400
+    except Exception as exc:
+        return jsonify(_error_payload("DECISION_GRAPH_ACTION_FAILED", f"Failed to plan graph action: {exc}")), 500
+
 @decision_bp.route("/signals/generate", methods=["POST"])
 def generate_signals_route():
     payload = request.get_json(silent=True) or {}

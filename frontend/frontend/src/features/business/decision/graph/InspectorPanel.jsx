@@ -1,5 +1,6 @@
-import React from 'react';
-import { FiAlertTriangle, FiBarChart2, FiInfo, FiLink2, FiShield, FiTarget } from 'react-icons/fi';
+import React, { useState, useEffect } from 'react';
+import { FiAlertTriangle, FiBarChart2, FiInfo, FiLink2, FiShield, FiTarget, FiActivity, FiSearch, FiHelpCircle, FiPieChart, FiTrendingUp } from 'react-icons/fi';
+import { planDecisionGraphAction } from '../decisionApi';
 
 const formatLabel = (value) => String(value || '')
   .replace(/_/g, ' ')
@@ -18,6 +19,9 @@ const relationshipCopy = (edge) => {
   if (edge?.relationship_type === 'evidence_coverage') {
     return 'This edge shows that an Evidence Board item covers the selected decision variable. It is evidence coverage, not a causal claim.';
   }
+  if (edge?.relationship_type === 'user_hypothesis') {
+    return 'This edge is a user-stated assumption. It is not validated and does not represent an observed association or causal proof.';
+  }
   return 'This edge shows a conservative observed association in the available dataset. It is descriptive and non-causal.';
 };
 
@@ -27,7 +31,32 @@ const reliabilityTone = (label) => {
   return 'limited';
 };
 
-const InspectorPanel = ({ selectedElement }) => {
+const InspectorPanel = ({ selectedElement, decisionGraph }) => {
+  const [planningResponse, setPlanningResponse] = useState(null);
+  const [planningLoading, setPlanningLoading] = useState(false);
+
+  useEffect(() => {
+    setPlanningResponse(null);
+  }, [selectedElement]);
+
+  const handleAction = async (actionId, targetType, rawTarget) => {
+    setPlanningLoading(true);
+    setPlanningResponse(null);
+    try {
+      const res = await planDecisionGraphAction({
+        action_id: actionId,
+        decision_graph: decisionGraph,
+        target_edge: targetType === 'edge' ? rawTarget : undefined,
+        target_node: targetType === 'node' ? rawTarget : undefined,
+      });
+      setPlanningResponse(res);
+    } catch (err) {
+      setPlanningResponse({ error: 'Failed to plan action. ' + (err?.message || '') });
+    } finally {
+      setPlanningLoading(false);
+    }
+  };
+
   if (!selectedElement) {
     return (
       <aside className="graph-inspector" aria-label="Decision graph inspector">
@@ -54,6 +83,13 @@ const InspectorPanel = ({ selectedElement }) => {
   return (
     <aside className="graph-inspector" aria-label="Decision graph inspector">
       {type === 'node' ? <NodeInspector node={rawNode} label={data?.label} /> : <EdgeInspector edge={rawEdge} label={data?.label} />}
+      <GraphActions
+        targetType={type}
+        rawTarget={type === 'node' ? rawNode : rawEdge}
+        onAction={handleAction}
+        loading={planningLoading}
+        response={planningResponse}
+      />
     </aside>
   );
 };
@@ -241,6 +277,105 @@ const InspectorUnavailable = ({ title }) => (
     <h4>{title}</h4>
     <p>No detailed contract data is available for this graph item.</p>
   </div>
+);
+
+const actionIcons = {
+  breakdown: <FiPieChart aria-hidden="true" />,
+  monitor: <FiActivity aria-hidden="true" />,
+  explain_evidence: <FiSearch aria-hidden="true" />,
+  explain_missing_data: <FiHelpCircle aria-hidden="true" />,
+  send_to_scenario_compare: <FiTrendingUp aria-hidden="true" />
+};
+
+const actionLabels = {
+  breakdown: 'Break down',
+  monitor: 'Monitor',
+  explain_evidence: 'Explain evidence',
+  explain_missing_data: 'Explain missing data',
+  send_to_scenario_compare: 'Scenario Compare'
+};
+
+const GraphActions = ({ targetType, rawTarget, onAction, loading, response }) => {
+  if (!rawTarget) return null;
+
+  let actions = [];
+  if (targetType === 'edge' && rawTarget.followup_actions) {
+    actions = rawTarget.followup_actions;
+  } else {
+    // Default available actions if not explicitly provided
+    actions = Object.keys(actionLabels).map(id => ({
+      action_id: id,
+      enabled: true,
+      status: 'ready'
+    }));
+  }
+
+  return (
+    <section className="inspector-section inspector-section--actions">
+      <h4>Follow-up Actions</h4>
+      <div className="graph-actions-grid" style={{ display: 'grid', gap: '8px', marginBottom: '12px' }}>
+        {actions.map(action => {
+          const isScenarioCompare = action.action_id === 'send_to_scenario_compare';
+          const isHypothesis = rawTarget?.relationship_type === 'user_hypothesis';
+          const isBlockedByHypothesis = isScenarioCompare && isHypothesis && action.status === 'needs_observed_metric_edge';
+          const isBlocked = !action.enabled || isBlockedByHypothesis;
+
+          return (
+            <button
+              key={action.action_id}
+              className="graph-action-btn"
+              disabled={isBlocked || loading}
+              onClick={() => onAction(action.action_id, targetType, rawTarget)}
+              title={isBlockedByHypothesis ? 'Needs observed metric edge' : ''}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px',
+                border: '1px solid #d8e0ea', borderRadius: '8px', background: '#fff',
+                cursor: isBlocked ? 'not-allowed' : 'pointer',
+                opacity: isBlocked ? 0.6 : 1,
+                color: '#344054', fontWeight: 600, fontSize: '12px'
+              }}
+            >
+              {actionIcons[action.action_id] || <FiActivity aria-hidden="true" />}
+              {actionLabels[action.action_id] || formatLabel(action.action_id)}
+            </button>
+          );
+        })}
+      </div>
+
+      {loading && <p className="inspector-muted">Planning action...</p>}
+
+      {response && !response.error && (
+        <div className="action-response" style={{ marginTop: '12px', padding: '12px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', fontWeight: 700, color: '#0f766e' }}>
+            <FiCheckCircle aria-hidden="true" />
+            Planned: {formatLabel(response.action_id)}
+          </div>
+          <p style={{ margin: '0 0 8px', fontSize: '12px', color: '#475467' }}>{response.summary}</p>
+          {response.explanation && response.explanation.length > 0 && (
+            <ul style={{ margin: 0, paddingLeft: '16px', fontSize: '11px', color: '#667085' }}>
+              {response.explanation.map((exp, i) => <li key={i}>{exp}</li>)}
+            </ul>
+          )}
+          <p style={{ marginTop: '8px', fontSize: '10px', color: '#94a3b8', fontStyle: 'italic' }}>
+            This is a planning response. The action has not been executed.
+          </p>
+        </div>
+      )}
+
+      {response && response.error && (
+        <div className="action-response action-response--error" style={{ marginTop: '12px', padding: '12px', background: '#fef2f2', borderRadius: '8px', border: '1px solid #fecaca', color: '#991b1b', fontSize: '12px' }}>
+          {response.error}
+        </div>
+      )}
+    </section>
+  );
+};
+
+const FiCheckCircle = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+  </svg>
 );
 
 export default InspectorPanel;

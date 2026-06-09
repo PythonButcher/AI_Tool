@@ -183,7 +183,7 @@ class DecisionGraphServiceTests(unittest.TestCase):
     def test_candidate_discovery_returns_metric_and_dimension_variables(self):
         result = DecisionGraphService.discover_candidates(build_payload())
 
-        self.assertEqual(result["contract_version"], "di_phase7_1_decision_graph_v1")
+        self.assertEqual(result["contract_version"], "di_phase7_3_decision_graph_v1")
         self.assertEqual(result["type"], "decision_graph_candidates")
         self.assertEqual(result["data_sufficiency"]["status"], "sufficient")
         candidates = {item["variable_id"]: item for item in result["variable_candidates"]}
@@ -211,6 +211,57 @@ class DecisionGraphServiceTests(unittest.TestCase):
             self.assertEqual(edge["causal_status"], "not_causal_claim")
             self.assertIn(edge["reliability_label"], {"observed_supported", "observed_limited", "observed_insufficient"})
             self.assertIn("data_sufficiency", edge)
+            self.assertIn("followup_actions", edge)
+
+    def test_user_hypothesis_edges_are_directional_and_explicitly_not_validated(self):
+        payload = build_graph_payload()
+        payload["graph_mode"] = "observed_association"
+        payload["user_hypotheses"] = [
+            {
+                "source_variable_id": "metric_marketing_spend",
+                "target_variable_id": "metric_revenue_sum",
+                "rationale": "Marketing spend may precede revenue movement.",
+            }
+        ]
+
+        result = DecisionGraphService.build_graph(payload)
+        hypothesis_edges = [edge for edge in result["edges"] if edge["relationship_type"] == "user_hypothesis"]
+
+        self.assertEqual(len(hypothesis_edges), 1)
+        edge = hypothesis_edges[0]
+        self.assertEqual(edge["source_node_id"], "node_metric_metric_marketing_spend")
+        self.assertEqual(edge["target_node_id"], "node_metric_metric_revenue_sum")
+        self.assertEqual(edge["evidence_basis"], "user_stated_hypothesis")
+        self.assertEqual(edge["causal_status"], "user_hypothesis_not_validated")
+        self.assertEqual(edge["reliability_label"], "user_hypothesis_unvalidated")
+        self.assertEqual(edge["metrics"]["validation_status"], "not_validated")
+        self.assertTrue(
+            any(action["action_id"] == "send_to_scenario_compare" and not action["enabled"] for action in edge["followup_actions"])
+        )
+        self.assertIn("user_hypothesis", result["reliability_labels"])
+        self.assertEqual(result["graph_state"]["state_kind"], "decision_graph_build_state")
+        self.assertEqual(
+            result["graph_state"]["user_hypotheses"][0]["causal_status"],
+            "user_hypothesis_not_validated",
+        )
+        self.assertIn("metric_marketing_spend", result["graph_state"]["selected_variables"]["metric_ids"])
+        self.assertIn("dimension_region", result["graph_state"]["selected_variables"]["dimension_ids"])
+
+    def test_invalid_user_hypothesis_edges_are_reported_without_fabricating_edges(self):
+        payload = build_graph_payload()
+        payload["graph_mode"] = "evidence_coverage"
+        payload["user_hypotheses"] = [
+            {
+                "source_variable_id": "metric_marketing_spend",
+                "target_variable_id": "metric_missing",
+            }
+        ]
+
+        result = DecisionGraphService.build_graph(payload)
+        hypothesis_edges = [edge for edge in result["edges"] if edge["relationship_type"] == "user_hypothesis"]
+
+        self.assertEqual(hypothesis_edges, [])
+        self.assertTrue(any("metric_marketing_spend -> metric_missing" in item for item in result["limitations"]))
 
     def test_evidence_coverage_edges_connect_evidence_to_selected_variables(self):
         payload = build_graph_payload()
@@ -242,6 +293,7 @@ class DecisionGraphServiceTests(unittest.TestCase):
         self.assertEqual(metric_edge["metrics"]["sample_size"], 4)
         self.assertIsNotNone(metric_edge["metrics"]["correlation"])
         self.assertIn(metric_edge["metrics"]["direction"], {"positive", "negative", "no_clear_direction"})
+        self.assertTrue(any(action["action_id"] == "monitor" and action["enabled"] for action in metric_edge["followup_actions"]))
 
     def test_insufficient_data_behavior_keeps_edge_but_labels_it(self):
         payload = {
@@ -301,6 +353,77 @@ class DecisionGraphServiceTests(unittest.TestCase):
         for forbidden in ("recommendation", "simulation", "prediction", "optimization"):
             self.assertNotIn(forbidden, display_text)
 
+    def test_graph_action_explain_evidence_returns_safe_non_executing_response(self):
+        graph = DecisionGraphService.build_graph(build_graph_payload())
+        edge = next(edge for edge in graph["edges"] if edge["relationship_type"] == "observed_association")
+
+        result = DecisionGraphService.plan_graph_action({
+            "action_id": "explain_evidence",
+            "decision_graph": graph,
+            "edge_id": edge["edge_id"],
+        })
+
+        self.assertEqual(result["type"], "decision_graph_action_response")
+        self.assertEqual(result["action_id"], "explain_evidence")
+        self.assertEqual(result["action_status"], "ready")
+        self.assertFalse(result["response_semantics"]["executes_analysis"])
+        self.assertFalse(result["response_semantics"]["causal_claim"])
+        self.assertEqual(result["target"]["edge_id"], edge["edge_id"])
+
+    def test_graph_action_breakdown_prepares_metric_dimension_followup_payload(self):
+        graph = DecisionGraphService.build_graph(build_graph_payload())
+        edge = next(edge for edge in graph["edges"] if edge["metrics"].get("method") == "group_mean_difference")
+
+        result = DecisionGraphService.plan_graph_action({
+            "action_id": "breakdown",
+            "decision_graph": graph,
+            "target_edge": edge,
+        })
+
+        self.assertEqual(result["action_status"], "ready")
+        self.assertEqual(result["request_payload"]["action"], "analyze_workspace")
+        self.assertIn("metric_revenue_sum", result["request_payload"]["analysis_preferences"]["metric_ids"])
+        self.assertIn("Region", result["request_payload"]["analysis_preferences"]["group_by"])
+        self.assertFalse(result["response_semantics"]["causal_claim"])
+
+    def test_graph_action_monitor_prepares_spec_without_creating_automation(self):
+        graph = DecisionGraphService.build_graph(build_graph_payload())
+        metric_node = next(node for node in graph["nodes"] if node.get("variable_id") == "metric_revenue_sum")
+
+        result = DecisionGraphService.plan_graph_action({
+            "action_id": "monitor",
+            "decision_graph": graph,
+            "target_node": metric_node,
+        })
+
+        self.assertEqual(result["action_status"], "ready")
+        self.assertEqual(result["request_payload"]["action_type"], "monitor_relationship")
+        self.assertEqual(result["request_payload"]["metric_ids"], ["metric_revenue_sum"])
+        self.assertIsNone(result["request_payload"]["schedule"])
+        self.assertFalse(result["response_semantics"]["executes_analysis"])
+        self.assertFalse(result["response_semantics"]["causal_claim"])
+
+    def test_graph_action_blocks_scenario_compare_for_unvalidated_user_hypothesis(self):
+        payload = build_graph_payload()
+        payload["user_hypotheses"] = [
+            {
+                "source_variable_id": "metric_marketing_spend",
+                "target_variable_id": "metric_revenue_sum",
+            }
+        ]
+        graph = DecisionGraphService.build_graph(payload)
+        edge = next(edge for edge in graph["edges"] if edge["relationship_type"] == "user_hypothesis")
+
+        result = DecisionGraphService.plan_graph_action({
+            "action_id": "send_to_scenario_compare",
+            "decision_graph": graph,
+            "target_edge": edge,
+        })
+
+        self.assertEqual(result["action_status"], "needs_observed_metric_edge")
+        self.assertEqual(result["response_semantics"]["scenario_semantics"], "direct_adjustment_only")
+        self.assertFalse(result["response_semantics"]["causal_claim"])
+
     def test_routes_return_candidate_and_graph_contracts(self):
         candidates_response = self.client.post("/api/decision/graph/candidates", json=build_payload())
         graph_response = self.client.post("/api/decision/graph/build", json=build_graph_payload())
@@ -309,6 +432,22 @@ class DecisionGraphServiceTests(unittest.TestCase):
         self.assertEqual(graph_response.status_code, 200)
         self.assertEqual(candidates_response.get_json()["type"], "decision_graph_candidates")
         self.assertEqual(graph_response.get_json()["type"], "decision_graph")
+
+    def test_route_returns_graph_action_contract(self):
+        graph = DecisionGraphService.build_graph(build_graph_payload())
+        edge = graph["edges"][0]
+        response = self.client.post(
+            "/api/decision/graph/actions",
+            json={
+                "action_id": "explain_missing_data",
+                "decision_graph": graph,
+                "target_edge": edge,
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()["type"], "decision_graph_action_response")
+        self.assertEqual(response.get_json()["action_id"], "explain_missing_data")
 
 
 if __name__ == "__main__":

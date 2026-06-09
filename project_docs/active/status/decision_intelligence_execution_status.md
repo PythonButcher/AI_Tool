@@ -28,11 +28,25 @@ Phase 7.1 Decision Graph backend data foundation is complete. The backend contra
 
 Phase 7.2 Interactive Decision Graph Workspace is complete. The workspace is integrated with the `decision_graph` backend contract, opens from AI Chat, builds selected-variable graphs, distinguishes evidence coverage from observed association edges, shows inspector metrics and limitations, and has an accepted Codex UI modernization with dark-theme support.
 
-Current gate: Phase 7.2 is closed end-to-end.
+Phase 7.3 User Hypotheses And Graph-To-Action Flow is complete for current planning purposes. Backend contract and tests are verified. Gemini reported frontend build, diff, and focused browser verification; Codex targeted source review accepted the prior frontend blockers as fixed.
 
-Next gate: Phase 7.3 User Hypotheses And Graph-To-Action Flow.
+Current gate: ready for the next Decision Intelligence slice. No active Gemini handoff is open for this flow.
 
 ## Latest Verified Slice
+
+Phase 7.3 User Hypotheses And Graph-To-Action Flow was implemented and verified.
+
+Verified evidence:
+- `decision_graph` schema version is now `di_phase7_3_decision_graph_v1`.
+- `/api/decision/graph/build` accepts additive `user_hypotheses` and returns directional `relationship_type: "user_hypothesis"` edges with `evidence_basis: "user_stated_hypothesis"`, `causal_status: "user_hypothesis_not_validated"`, `reliability_label: "user_hypothesis_unvalidated"`, unvalidated metrics, data sufficiency, limitations, and per-edge follow-up action availability.
+- Graph build responses include `graph_state` so selected variables, selected evidence, filters, and accepted user hypotheses can be carried in frontend session state or a saved decision asset without implying server-side persistence.
+- `/api/decision/graph/actions` returns safe planning responses for `breakdown`, `monitor`, `explain_evidence`, `explain_missing_data`, and `send_to_scenario_compare`; it returns request semantics and does not execute causal validation, monitoring automation, or scenario evaluation.
+- Scenario Compare planning is blocked for unvalidated user hypothesis edges until an observed metric edge is selected.
+- `PYTHONPATH=.codex_tmp_py\site-packages python -m unittest tests.test_decision_graph_service tests.test_decision_chat_service tests.test_decision_reliability_benchmark` passed at 44/44.
+- Gemini reported `npm --prefix frontend\frontend run build`, `git diff --check`, and focused browser verification passed.
+- Codex targeted source review verified the production `Add Hypothesis` control, persisted `userHypotheses` state, full `decision_graph` context passed to `/api/decision/graph/actions`, visually distinct user hypothesis edges, and explicit user-hypothesis inspector copy that does not describe hypotheses as observed associations.
+
+Prior verified slice:
 
 Phase 7.2 Interactive Decision Graph Workspace was finalized after a Codex UI modernization pass.
 

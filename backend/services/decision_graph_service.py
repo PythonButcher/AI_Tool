@@ -22,10 +22,17 @@ from backend.services.metric_resolver import MetricResolver
 class DecisionGraphService:
     """Build cold, inspectable graph data without advanced inference claims."""
 
-    CONTRACT_VERSION = "di_phase7_1_decision_graph_v1"
+    CONTRACT_VERSION = "di_phase7_3_decision_graph_v1"
     TRUTH_BOUNDARY = "observational_analysis_only"
     DEFAULT_MODE = "mixed"
     GRAPH_MODES = {"evidence_coverage", "observed_association", "mixed"}
+    GRAPH_ACTIONS = {
+        "breakdown",
+        "monitor",
+        "explain_evidence",
+        "explain_missing_data",
+        "send_to_scenario_compare",
+    }
     MIN_PAIR_SAMPLE_SIZE = 3
     SUFFICIENT_PAIR_SAMPLE_SIZE = 4
 
@@ -73,6 +80,14 @@ class DecisionGraphService:
         if graph_mode in {"observed_association", "mixed"}:
             edges.extend(DecisionGraphService._build_observed_associations(context, selected_variables, payload))
 
+        hypothesis_edges, hypothesis_limitations = DecisionGraphService._build_user_hypothesis_edges(
+            payload=payload,
+            selected_variables=selected_variables,
+        )
+        edges.extend(hypothesis_edges)
+        for edge in edges:
+            edge["followup_actions"] = DecisionGraphService._followup_actions_for_edge(edge)
+
         graph_sufficiency = DecisionGraphService._graph_sufficiency(
             context=context,
             selected_variables=selected_variables,
@@ -85,6 +100,7 @@ class DecisionGraphService:
             limitations.append("No selected variables were resolved from the request.")
         if not edges:
             limitations.append("No graph edges could be built from the selected variables and evidence.")
+        limitations.extend(hypothesis_limitations)
 
         return {
             "status": "success",
@@ -98,6 +114,12 @@ class DecisionGraphService:
             "variable_candidates": candidates,
             "nodes": nodes,
             "edges": edges,
+            "graph_state": DecisionGraphService._build_graph_state(
+                payload=payload,
+                graph_mode=graph_mode,
+                selected_variables=selected_variables,
+                edges=edges,
+            ),
             "data_sufficiency": graph_sufficiency,
             "limitations": limitations,
             "reliability_labels": {
@@ -111,7 +133,43 @@ class DecisionGraphService:
                     "evidence_basis": "dataset_observed_association",
                     "causal_status": "not_causal_claim",
                 },
+                "user_hypothesis": {
+                    "relationship_type": "user_hypothesis",
+                    "evidence_basis": "user_stated_hypothesis",
+                    "causal_status": "user_hypothesis_not_validated",
+                },
             },
+            "available_graph_actions": DecisionGraphService._available_graph_actions(),
+            "truth_boundary": DecisionGraphService.TRUTH_BOUNDARY,
+        }
+
+    @staticmethod
+    def plan_graph_action(payload: Dict[str, Any]) -> Dict[str, Any]:
+        payload = payload if isinstance(payload, dict) else {}
+        action_id = DecisionGraphService._normalize_graph_action(payload.get("action_id") or payload.get("actionId"))
+        graph = payload.get("decision_graph") or payload.get("decisionGraph") or payload.get("graph") or {}
+        graph = graph if isinstance(graph, dict) else {}
+        edge = DecisionGraphService._resolve_action_edge(payload, graph)
+        node = DecisionGraphService._resolve_action_node(payload, graph)
+        if edge is None and node is None:
+            raise DecisionServiceError("Graph action requests require target_edge, target_node, or a resolvable edge_id/node_id.")
+
+        target = DecisionGraphService._action_target(edge=edge, node=node, graph=graph)
+        action = DecisionGraphService._build_graph_action(action_id, edge=edge, node=node, graph=graph, payload=payload)
+        return {
+            "status": "success",
+            "contract_version": DecisionGraphService.CONTRACT_VERSION,
+            "type": "decision_graph_action_response",
+            "render_hint": "decision_graph_action_response",
+            "schema_version": DecisionGraphService.CONTRACT_VERSION,
+            "action_id": action_id,
+            "action_status": action["action_status"],
+            "target": target,
+            "summary": action["summary"],
+            "request_payload": action["request_payload"],
+            "response_semantics": action["response_semantics"],
+            "explanation": action["explanation"],
+            "limitations": action["limitations"],
             "truth_boundary": DecisionGraphService.TRUTH_BOUNDARY,
         }
 
@@ -489,11 +547,563 @@ class DecisionGraphService:
             "metrics": {
                 **metrics,
                 "variable_pair_type": pair_type,
+                "source_variable_id": left.get("variable_id"),
+                "target_variable_id": right.get("variable_id"),
             },
             "data_sufficiency": sufficiency,
             "limitations": DecisionGraphService._edge_limitations([
                 "Association metrics depend on observed rows available after filters and missing-value handling."
             ]),
+        }
+
+    @staticmethod
+    def _build_user_hypothesis_edges(
+        *,
+        payload: Dict[str, Any],
+        selected_variables: Sequence[Dict[str, Any]],
+    ) -> Tuple[List[Dict[str, Any]], List[str]]:
+        raw_items = (
+            payload.get("user_hypotheses")
+            or payload.get("userHypotheses")
+            or payload.get("hypothesis_edges")
+            or payload.get("hypothesisEdges")
+            or []
+        )
+        if not isinstance(raw_items, list):
+            raise DecisionServiceError("user_hypotheses must be an array when provided.")
+
+        selected_by_id = {str(variable.get("variable_id")): variable for variable in selected_variables}
+        node_by_id = {
+            str(variable.get("variable_id")): DecisionGraphService._variable_node_id(variable)
+            for variable in selected_variables
+        }
+        edges: List[Dict[str, Any]] = []
+        limitations: List[str] = []
+        for index, item in enumerate(raw_items, start=1):
+            if not isinstance(item, dict):
+                limitations.append("A user hypothesis edge was ignored because it was not an object.")
+                continue
+            source_id = DecisionGraphService._hypothesis_variable_id(item, "source")
+            target_id = DecisionGraphService._hypothesis_variable_id(item, "target")
+            if not source_id or not target_id:
+                limitations.append("A user hypothesis edge was ignored because source and target variables are required.")
+                continue
+            if source_id == target_id:
+                limitations.append(f"User hypothesis '{source_id}' was ignored because source and target are the same variable.")
+                continue
+            source = selected_by_id.get(source_id)
+            target = selected_by_id.get(target_id)
+            if source is None or target is None:
+                limitations.append(
+                    f"User hypothesis '{source_id} -> {target_id}' was ignored because both endpoints must be selected graph variables."
+                )
+                continue
+
+            edge_id = str(item.get("hypothesis_id") or item.get("hypothesisId") or "").strip()
+            if not edge_id:
+                edge_id = make_identifier("edge", "hypothesis", source_id, target_id, index)
+            sufficiency = DecisionGraphService._hypothesis_sufficiency(source, target)
+            label = str(item.get("label") or "").strip() or f"Hypothesis: {source.get('label')} -> {target.get('label')}"
+            summary = str(item.get("summary") or "").strip() or (
+                "User-stated directional hypothesis. The backend has not validated this relationship as causal or observational."
+            )
+            edges.append({
+                "edge_id": edge_id,
+                "source_node_id": node_by_id[source_id],
+                "target_node_id": node_by_id[target_id],
+                "relationship_type": "user_hypothesis",
+                "evidence_basis": "user_stated_hypothesis",
+                "causal_status": "user_hypothesis_not_validated",
+                "reliability_label": "user_hypothesis_unvalidated",
+                "label": label,
+                "summary": summary,
+                "metrics": {
+                    "method": "user_stated_hypothesis",
+                    "direction": "user_proposed_directional",
+                    "validation_status": "not_validated",
+                    "source_variable_id": source_id,
+                    "target_variable_id": target_id,
+                    "rationale": str(item.get("rationale") or item.get("reason") or "").strip() or None,
+                },
+                "data_sufficiency": sufficiency,
+                "limitations": DecisionGraphService._edge_limitations([
+                    "User hypotheses are assumptions for follow-up inspection and are not validated causal claims.",
+                    "Use observed associations, evidence explanations, or missing-data checks before treating this as supported.",
+                ]),
+            })
+        return edges, limitations
+
+    @staticmethod
+    def _hypothesis_variable_id(item: Dict[str, Any], side: str) -> str:
+        snake = f"{side}_variable_id"
+        camel = f"{side}VariableId"
+        node_snake = f"{side}_node_id"
+        node_camel = f"{side}NodeId"
+        value = item.get(snake) or item.get(camel) or item.get(side)
+        if not value:
+            value = DecisionGraphService._variable_id_from_node_id(item.get(node_snake) or item.get(node_camel))
+        return str(value or "").strip()
+
+    @staticmethod
+    def _variable_id_from_node_id(value: Any) -> str:
+        text = str(value or "").strip()
+        for prefix in ("node_metric_", "node_dimension_"):
+            if text.startswith(prefix):
+                return text[len(prefix):]
+        return text
+
+    @staticmethod
+    def _hypothesis_sufficiency(source: Dict[str, Any], target: Dict[str, Any]) -> Dict[str, Any]:
+        source_status = str((source.get("data_sufficiency") or {}).get("status") or "insufficient")
+        target_status = str((target.get("data_sufficiency") or {}).get("status") or "insufficient")
+        statuses = {source_status, target_status}
+        if "insufficient" in statuses:
+            status = "insufficient"
+        elif "limited" in statuses:
+            status = "limited"
+        else:
+            status = "limited"
+        row_count = max(
+            int((source.get("data_sufficiency") or {}).get("row_count") or 0),
+            int((target.get("data_sufficiency") or {}).get("row_count") or 0),
+        )
+        return {
+            "status": status,
+            "row_count": row_count,
+            "validation_status": "not_validated",
+            "summary": (
+                "Both variables are present enough for follow-up observational inspection, but the user hypothesis itself is not validated."
+                if status != "insufficient"
+                else "The user hypothesis cannot be inspected until both endpoint variables have enough usable data."
+            ),
+        }
+
+    @staticmethod
+    def _available_graph_actions() -> List[Dict[str, Any]]:
+        return [
+            {
+                "action_id": "breakdown",
+                "label": "Break down",
+                "description": "Prepare a metric-by-dimension follow-up request when the selected graph target has both roles.",
+            },
+            {
+                "action_id": "monitor",
+                "label": "Monitor",
+                "description": "Prepare a monitoring specification for selected metrics or relationships.",
+            },
+            {
+                "action_id": "explain_evidence",
+                "label": "Explain evidence",
+                "description": "Explain the observed evidence and reliability boundary for the selected graph item.",
+            },
+            {
+                "action_id": "explain_missing_data",
+                "label": "Explain missing data",
+                "description": "Explain missing fields, low sample size, and other inspection blockers.",
+            },
+            {
+                "action_id": "send_to_scenario_compare",
+                "label": "Send to Scenario Compare",
+                "description": "Prepare a bounded direct-adjustment Scenario Compare request only when a metric target is available.",
+            },
+        ]
+
+    @staticmethod
+    def _followup_actions_for_edge(edge: Dict[str, Any]) -> List[Dict[str, Any]]:
+        relationship_type = edge.get("relationship_type")
+        has_metric = bool(DecisionGraphService._edge_metric_ids(edge))
+        return [
+            {
+                "action_id": "breakdown",
+                "enabled": has_metric,
+                "status": "ready" if has_metric else "needs_metric",
+            },
+            {
+                "action_id": "monitor",
+                "enabled": has_metric,
+                "status": "ready" if has_metric else "needs_metric",
+            },
+            {
+                "action_id": "explain_evidence",
+                "enabled": True,
+                "status": "ready",
+            },
+            {
+                "action_id": "explain_missing_data",
+                "enabled": True,
+                "status": "ready",
+            },
+            {
+                "action_id": "send_to_scenario_compare",
+                "enabled": has_metric and relationship_type != "user_hypothesis",
+                "status": "ready" if has_metric and relationship_type != "user_hypothesis" else "needs_observed_metric_edge",
+            },
+        ]
+
+    @staticmethod
+    def _normalize_graph_action(value: Any) -> str:
+        action_id = str(value or "").strip().lower()
+        aliases = {
+            "break_down": "breakdown",
+            "break_down_metric": "breakdown",
+            "explain_missing": "explain_missing_data",
+            "missing_data": "explain_missing_data",
+            "scenario_compare": "send_to_scenario_compare",
+            "send_to_scenario": "send_to_scenario_compare",
+        }
+        action_id = aliases.get(action_id, action_id)
+        if action_id not in DecisionGraphService.GRAPH_ACTIONS:
+            raise DecisionServiceError(
+                "action_id must be one of breakdown, monitor, explain_evidence, explain_missing_data, or send_to_scenario_compare."
+            )
+        return action_id
+
+    @staticmethod
+    def _resolve_action_edge(payload: Dict[str, Any], graph: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        target_edge = payload.get("target_edge") or payload.get("targetEdge") or payload.get("edge")
+        if isinstance(target_edge, dict):
+            return deepcopy(target_edge)
+        edge_id = str(payload.get("edge_id") or payload.get("edgeId") or "").strip()
+        if not edge_id:
+            return None
+        for edge in graph.get("edges") or []:
+            if isinstance(edge, dict) and str(edge.get("edge_id") or "").strip() == edge_id:
+                return deepcopy(edge)
+        return None
+
+    @staticmethod
+    def _resolve_action_node(payload: Dict[str, Any], graph: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        target_node = payload.get("target_node") or payload.get("targetNode") or payload.get("node")
+        if isinstance(target_node, dict):
+            return deepcopy(target_node)
+        node_id = str(payload.get("node_id") or payload.get("nodeId") or "").strip()
+        if not node_id:
+            return None
+        for node in graph.get("nodes") or []:
+            if isinstance(node, dict) and str(node.get("node_id") or "").strip() == node_id:
+                return deepcopy(node)
+        return None
+
+    @staticmethod
+    def _action_target(
+        *,
+        edge: Optional[Dict[str, Any]],
+        node: Optional[Dict[str, Any]],
+        graph: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        if edge is not None:
+            variables = DecisionGraphService._variables_for_edge(edge, graph)
+            return {
+                "target_type": "edge",
+                "edge_id": edge.get("edge_id"),
+                "relationship_type": edge.get("relationship_type"),
+                "causal_status": edge.get("causal_status"),
+                "source_variable": variables.get("source"),
+                "target_variable": variables.get("target"),
+            }
+        return {
+            "target_type": "node",
+            "node_id": node.get("node_id"),
+            "node_type": node.get("node_type") or node.get("variable_type"),
+            "variable_id": node.get("variable_id"),
+            "label": node.get("label"),
+        }
+
+    @staticmethod
+    def _build_graph_action(
+        action_id: str,
+        *,
+        edge: Optional[Dict[str, Any]],
+        node: Optional[Dict[str, Any]],
+        graph: Dict[str, Any],
+        payload: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        variables = DecisionGraphService._variables_for_edge(edge, graph) if edge is not None else {}
+        target_node = node or variables.get("target") or variables.get("source") or {}
+        metric_ids = DecisionGraphService._target_metric_ids(edge=edge, node=target_node, variables=variables)
+        dimension_fields = DecisionGraphService._target_dimension_fields(edge=edge, node=target_node, variables=variables)
+        relationship_type = edge.get("relationship_type") if isinstance(edge, dict) else None
+        limitations = DecisionGraphService._action_limitations(edge=edge, node=target_node)
+
+        if action_id == "explain_evidence":
+            return DecisionGraphService._explain_evidence_action(edge=edge, node=target_node, limitations=limitations)
+        if action_id == "explain_missing_data":
+            return DecisionGraphService._explain_missing_data_action(edge=edge, node=target_node, limitations=limitations)
+        if action_id == "breakdown":
+            return DecisionGraphService._breakdown_action(metric_ids, dimension_fields, payload, limitations)
+        if action_id == "monitor":
+            return DecisionGraphService._monitor_action(metric_ids, edge=edge, node=target_node, limitations=limitations)
+        return DecisionGraphService._scenario_compare_action(
+            metric_ids=metric_ids,
+            dimension_fields=dimension_fields,
+            relationship_type=relationship_type,
+            payload=payload,
+            limitations=limitations,
+        )
+
+    @staticmethod
+    def _variables_for_edge(edge: Optional[Dict[str, Any]], graph: Dict[str, Any]) -> Dict[str, Optional[Dict[str, Any]]]:
+        if not isinstance(edge, dict):
+            return {"source": None, "target": None}
+        nodes = {
+            str(node.get("node_id")): node
+            for node in graph.get("nodes") or []
+            if isinstance(node, dict)
+        }
+        selected = {
+            str(variable.get("variable_id")): variable
+            for variable in graph.get("selected_variables") or graph.get("variable_candidates") or []
+            if isinstance(variable, dict)
+        }
+
+        def resolve(node_id: Any, variable_id: Any) -> Optional[Dict[str, Any]]:
+            node = nodes.get(str(node_id))
+            if isinstance(node, dict) and node.get("variable_id"):
+                return selected.get(str(node.get("variable_id"))) or node
+            if variable_id:
+                return selected.get(str(variable_id)) or {"variable_id": variable_id, "variable_type": "unknown", "label": variable_id}
+            return None
+
+        metrics = edge.get("metrics") if isinstance(edge.get("metrics"), dict) else {}
+        return {
+            "source": resolve(edge.get("source_node_id"), metrics.get("source_variable_id")),
+            "target": resolve(edge.get("target_node_id"), metrics.get("target_variable_id")),
+        }
+
+    @staticmethod
+    def _target_metric_ids(
+        *,
+        edge: Optional[Dict[str, Any]],
+        node: Optional[Dict[str, Any]],
+        variables: Optional[Dict[str, Optional[Dict[str, Any]]]] = None,
+    ) -> List[str]:
+        metric_ids = []
+        for variable in [node, (variables or {}).get("source"), (variables or {}).get("target")]:
+            if isinstance(variable, dict) and (variable.get("variable_type") or variable.get("node_type")) == "metric":
+                metric_ids.append(variable.get("variable_id"))
+        if isinstance(node, dict) and node.get("variable_type") == "metric":
+            metric_ids.append(node.get("variable_id"))
+        if isinstance(edge, dict):
+            for key in ("source_variable_id", "target_variable_id"):
+                value = (edge.get("metrics") or {}).get(key) if isinstance(edge.get("metrics"), dict) else None
+                if value and str(value).startswith("metric_"):
+                    metric_ids.append(value)
+        return DecisionGraphService._dedupe(metric_ids)
+
+    @staticmethod
+    def _target_dimension_fields(
+        *,
+        edge: Optional[Dict[str, Any]],
+        node: Optional[Dict[str, Any]],
+        variables: Dict[str, Optional[Dict[str, Any]]],
+    ) -> List[str]:
+        fields = []
+        for variable in [node, variables.get("source"), variables.get("target")]:
+            if isinstance(variable, dict) and variable.get("variable_type") == "dimension":
+                fields.append(variable.get("field") or variable.get("variable_id"))
+        if isinstance(edge, dict):
+            metrics = edge.get("metrics") if isinstance(edge.get("metrics"), dict) else {}
+            for group in metrics.get("top_groups") or []:
+                if isinstance(group, dict) and group.get("dimension_field"):
+                    fields.append(group.get("dimension_field"))
+        return DecisionGraphService._dedupe(fields)
+
+    @staticmethod
+    def _edge_metric_ids(edge: Dict[str, Any]) -> List[str]:
+        if not isinstance(edge, dict):
+            return []
+        metrics = edge.get("metrics") if isinstance(edge.get("metrics"), dict) else {}
+        values = [metrics.get("source_variable_id"), metrics.get("target_variable_id")]
+        return DecisionGraphService._dedupe([value for value in values if str(value or "").startswith("metric_")])
+
+    @staticmethod
+    def _action_limitations(
+        *,
+        edge: Optional[Dict[str, Any]],
+        node: Optional[Dict[str, Any]],
+    ) -> List[str]:
+        limitations = []
+        if isinstance(edge, dict):
+            limitations.extend(edge.get("limitations") or [])
+            if edge.get("relationship_type") == "user_hypothesis":
+                limitations.append("User hypothesis edges must be validated observationally before downstream comparison work.")
+        if isinstance(node, dict):
+            limitations.extend(node.get("limitations") or [])
+        limitations.append("Graph actions prepare follow-up requests; they do not prove causality or make final decisions.")
+        return DecisionGraphService._dedupe(limitations)
+
+    @staticmethod
+    def _explain_evidence_action(
+        *,
+        edge: Optional[Dict[str, Any]],
+        node: Dict[str, Any],
+        limitations: List[str],
+    ) -> Dict[str, Any]:
+        summary = edge.get("summary") if isinstance(edge, dict) else node.get("summary")
+        return {
+            "action_status": "ready",
+            "summary": summary or "Evidence explanation is available for this graph target.",
+            "request_payload": {
+                "action_type": "explain_evidence",
+                "target_edge_id": edge.get("edge_id") if isinstance(edge, dict) else None,
+                "target_node_id": node.get("node_id"),
+            },
+            "response_semantics": {
+                "result_type": "explanation",
+                "executes_analysis": False,
+                "causal_claim": False,
+            },
+            "explanation": [
+                "Use the edge basis, metrics, sufficiency, and limitations to explain what evidence exists.",
+                "If the target is a user hypothesis, describe it as user-stated and not validated.",
+            ],
+            "limitations": limitations,
+        }
+
+    @staticmethod
+    def _explain_missing_data_action(
+        *,
+        edge: Optional[Dict[str, Any]],
+        node: Dict[str, Any],
+        limitations: List[str],
+    ) -> Dict[str, Any]:
+        sufficiency = edge.get("data_sufficiency") if isinstance(edge, dict) else node.get("data_sufficiency")
+        return {
+            "action_status": "ready",
+            "summary": "Missing-data explanation is available from the selected graph item's sufficiency and limitation fields.",
+            "request_payload": {
+                "action_type": "explain_missing_data",
+                "data_sufficiency": sufficiency or {},
+                "limitations": limitations,
+            },
+            "response_semantics": {
+                "result_type": "missing_data_explanation",
+                "executes_analysis": False,
+                "causal_claim": False,
+            },
+            "explanation": [
+                "Report row counts, sample size, missing fields, and unresolved variables when available.",
+                "Explain whether the blocker prevents observational inspection or only makes it limited.",
+            ],
+            "limitations": limitations,
+        }
+
+    @staticmethod
+    def _breakdown_action(
+        metric_ids: List[str],
+        dimension_fields: List[str],
+        payload: Dict[str, Any],
+        limitations: List[str],
+    ) -> Dict[str, Any]:
+        ready = bool(metric_ids and dimension_fields)
+        return {
+            "action_status": "ready" if ready else "needs_input",
+            "summary": (
+                "A metric breakdown request can be prepared from the selected graph target."
+                if ready
+                else "Breakdown needs one metric and one breakdown dimension."
+            ),
+            "request_payload": {
+                "route_hint": "/api/decision/chat/actions",
+                "action": "analyze_workspace",
+                "analysis_preferences": {
+                    "focus": "breakdown",
+                    "metric_ids": metric_ids,
+                    "group_by": dimension_fields,
+                    "filters": payload.get("filters") or [],
+                },
+            },
+            "response_semantics": {
+                "result_type": "observational_breakdown_request",
+                "executes_analysis": False,
+                "causal_claim": False,
+            },
+            "explanation": [
+                "Use this to ask the existing workspace analysis path for a metric-by-dimension view.",
+                "The result is a breakdown for inspection, not proof of a driver.",
+            ],
+            "limitations": limitations,
+        }
+
+    @staticmethod
+    def _monitor_action(
+        metric_ids: List[str],
+        *,
+        edge: Optional[Dict[str, Any]],
+        node: Dict[str, Any],
+        limitations: List[str],
+    ) -> Dict[str, Any]:
+        ready = bool(metric_ids)
+        return {
+            "action_status": "ready" if ready else "needs_metric",
+            "summary": (
+                "A monitoring specification can be prepared for the metric target."
+                if ready
+                else "Monitoring needs at least one metric variable."
+            ),
+            "request_payload": {
+                "action_type": "monitor_relationship",
+                "metric_ids": metric_ids,
+                "edge_id": edge.get("edge_id") if isinstance(edge, dict) else None,
+                "node_id": node.get("node_id"),
+                "thresholds": [],
+                "schedule": None,
+            },
+            "response_semantics": {
+                "result_type": "monitoring_specification",
+                "executes_analysis": False,
+                "causal_claim": False,
+            },
+            "explanation": [
+                "Monitoring tracks future observed values or relationship diagnostics.",
+                "Thresholds and cadence require user approval before any automation is created.",
+            ],
+            "limitations": limitations,
+        }
+
+    @staticmethod
+    def _scenario_compare_action(
+        *,
+        metric_ids: List[str],
+        dimension_fields: List[str],
+        relationship_type: Optional[str],
+        payload: Dict[str, Any],
+        limitations: List[str],
+    ) -> Dict[str, Any]:
+        ready = bool(metric_ids) and relationship_type != "user_hypothesis"
+        status = "ready" if ready else ("needs_observed_metric_edge" if metric_ids else "needs_metric")
+        return {
+            "action_status": status,
+            "summary": (
+                "A bounded Scenario Compare request can be prepared as a direct metric adjustment scaffold."
+                if ready
+                else "Scenario Compare is blocked until an observed metric target is selected."
+            ),
+            "request_payload": {
+                "route_hint": "/api/decision/scenarios/evaluate",
+                "name": "Graph follow-up scenario compare",
+                "metric_targets": [
+                    {
+                        "metric_id": metric_id,
+                        "adjustment_type": "percent",
+                        "adjustment_value": 0.0,
+                    }
+                    for metric_id in metric_ids[:1]
+                ],
+                "group_by": dimension_fields[:1],
+                "filters": payload.get("filters") or [],
+            },
+            "response_semantics": {
+                "result_type": "scenario_compare_request",
+                "executes_analysis": False,
+                "scenario_semantics": "direct_adjustment_only",
+                "causal_claim": False,
+            },
+            "explanation": [
+                "Scenario Compare uses direct adjustments on observed metric baselines.",
+                "It is not a forecast, simulation, optimizer, or causal model.",
+            ],
+            "limitations": limitations,
         }
 
     @staticmethod
@@ -670,6 +1280,69 @@ class DecisionGraphService:
             "metric_candidate_count": len(context.get("metrics") or []),
             "dimension_candidate_count": len(context.get("dimensions") or []),
             "summary": DecisionGraphService._sufficiency_summary(status),
+        }
+
+    @staticmethod
+    def _build_graph_state(
+        *,
+        payload: Dict[str, Any],
+        graph_mode: str,
+        selected_variables: Sequence[Dict[str, Any]],
+        edges: Sequence[Dict[str, Any]],
+    ) -> Dict[str, Any]:
+        metric_ids = [
+            variable.get("variable_id")
+            for variable in selected_variables
+            if variable.get("variable_type") == "metric" and variable.get("variable_id")
+        ]
+        dimension_ids = [
+            variable.get("variable_id")
+            for variable in selected_variables
+            if variable.get("variable_type") == "dimension" and variable.get("variable_id")
+        ]
+        user_hypotheses = []
+        for edge in edges:
+            if not isinstance(edge, dict) or edge.get("relationship_type") != "user_hypothesis":
+                continue
+            metrics = edge.get("metrics") if isinstance(edge.get("metrics"), dict) else {}
+            user_hypotheses.append({
+                "hypothesis_id": edge.get("edge_id"),
+                "source_variable_id": metrics.get("source_variable_id"),
+                "target_variable_id": metrics.get("target_variable_id"),
+                "label": edge.get("label"),
+                "summary": edge.get("summary"),
+                "rationale": metrics.get("rationale"),
+                "causal_status": edge.get("causal_status"),
+                "validation_status": metrics.get("validation_status"),
+            })
+        raw_evidence_ids = (
+            payload.get("selected_evidence_ids")
+            or payload.get("selectedEvidenceIds")
+            or payload.get("evidence_ids")
+            or payload.get("evidenceIds")
+            or []
+        )
+        selected_evidence_ids = [
+            str(item).strip()
+            for item in raw_evidence_ids
+            if str(item).strip()
+        ] if isinstance(raw_evidence_ids, list) else []
+        return {
+            "schema_version": DecisionGraphService.CONTRACT_VERSION,
+            "state_kind": "decision_graph_build_state",
+            "persistence": "client_session_or_saved_decision_asset",
+            "graph_mode": graph_mode,
+            "selected_variables": {
+                "metric_ids": DecisionGraphService._dedupe(metric_ids),
+                "dimension_ids": DecisionGraphService._dedupe(dimension_ids),
+            },
+            "selected_evidence_ids": selected_evidence_ids,
+            "user_hypotheses": user_hypotheses,
+            "filters": deepcopy(payload.get("filters") or []),
+            "truth_boundary": DecisionGraphService.TRUTH_BOUNDARY,
+            "limitations": [
+                "Graph state is a carry-forward payload for UI session state or saved decision assets; this endpoint does not persist it server-side."
+            ],
         }
 
     @staticmethod
