@@ -80,6 +80,7 @@ const DecisionGraphWorkspace = ({ dataset, semanticModel, initialContext }) => {
   const [error, setError] = useState(null);
   const [userHypotheses, setUserHypotheses] = useState([]);
   const [rawGraphData, setRawGraphData] = useState(null);
+  const [isInspectorOpen, setIsInspectorOpen] = useState(true);
 
   const hasDecisionContext = Boolean(initialContext?.evidence_board || initialContext?.frame);
 
@@ -214,9 +215,11 @@ const DecisionGraphWorkspace = ({ dataset, semanticModel, initialContext }) => {
         graphStats={graphStats}
         hasDecisionContext={hasDecisionContext}
         onClearGraph={handleClearGraph}
+        isInspectorOpen={isInspectorOpen}
+        onToggleInspector={() => setIsInspectorOpen(prev => !prev)}
       />
 
-      <div className="graph-main-area">
+      <div className={`graph-main-area ${!isInspectorOpen ? 'graph-main-area--inspector-closed' : ''}`}>
           <VariableTray
             candidates={candidates}
             selectedVariableIds={selectedVariableIds}
@@ -233,12 +236,18 @@ const DecisionGraphWorkspace = ({ dataset, semanticModel, initialContext }) => {
               edges={edges}
               onNodesChange={(changes) => setNodes((currentNodes) => applyNodeChanges(changes, currentNodes))}
               onEdgesChange={(changes) => setEdges((currentEdges) => applyEdgeChanges(changes, currentEdges))}
-              onNodeClick={(_, node) => setSelectedElement({ type: 'node', data: node.data })}
-              onEdgeClick={(_, edge) => setSelectedElement({ type: 'edge', data: edge.data })}
+              onNodeClick={(_, node) => {
+                setSelectedElement({ type: 'node', data: node.data });
+                setIsInspectorOpen(true);
+              }}
+              onEdgeClick={(_, edge) => {
+                setSelectedElement({ type: 'edge', data: edge.data });
+                setIsInspectorOpen(true);
+              }}
             />
           </main>
 
-          <InspectorPanel selectedElement={selectedElement} decisionGraph={rawGraphData} />
+          {isInspectorOpen && <InspectorPanel selectedElement={selectedElement} decisionGraph={rawGraphData} />}
       </div>
     </div>
   );

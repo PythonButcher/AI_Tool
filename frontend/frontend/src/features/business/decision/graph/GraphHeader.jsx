@@ -1,7 +1,7 @@
 import React from 'react';
-import { FiActivity, FiGitBranch, FiInfo, FiRefreshCw, FiShield } from 'react-icons/fi';
+import { FiActivity, FiGitBranch, FiInfo, FiRefreshCw, FiShield, FiSidebar } from 'react-icons/fi';
 
-const GraphHeader = ({ loading, error, graphStats, hasDecisionContext, onClearGraph }) => {
+const GraphHeader = ({ loading, error, graphStats, hasDecisionContext, onClearGraph, isInspectorOpen, onToggleInspector }) => {
   const selectedCount = graphStats?.selectedCount || 0;
   const nodeCount = graphStats?.nodeCount || 0;
   const edgeCount = graphStats?.edgeCount || 0;
@@ -46,6 +46,9 @@ const GraphHeader = ({ loading, error, graphStats, hasDecisionContext, onClearGr
             <FiRefreshCw aria-hidden="true" />
           </button>
         )}
+        <button className={`graph-icon-button ${isInspectorOpen ? 'is-active' : ''}`} type="button" onClick={onToggleInspector} title="Toggle inspector">
+          <FiSidebar aria-hidden="true" />
+        </button>
       </div>
     </div>
   );
