@@ -1,118 +1,68 @@
-import React, { useMemo, memo } from 'react';
+import React, { memo, useMemo } from 'react';
 import {
-  ReactFlow,
-  Controls,
   Background,
+  BaseEdge,
+  Controls,
+  EdgeLabelRenderer,
   Handle,
   Position,
-  BaseEdge,
-  EdgeLabelRenderer,
+  ReactFlow,
   getBezierPath,
 } from '@xyflow/react';
+import { FiAlertCircle, FiBarChart2, FiDatabase, FiFileText, FiLink2, FiShield } from 'react-icons/fi';
 import '@xyflow/react/dist/style.css';
 
-/**
- * Custom Node: VariableNode
- * Displays a variable with non-causal visual indicators.
- */
+const nodeKind = (data) => {
+  const raw = data?.rawNodeData || {};
+  return raw.node_type || raw.variable_type || raw.type || 'variable';
+};
+
+const kindLabel = (kind) => {
+  if (kind === 'metric') return 'Metric';
+  if (kind === 'dimension') return 'Dimension';
+  if (kind === 'evidence') return 'Evidence';
+  return 'Variable';
+};
+
+const kindIcon = (kind) => {
+  if (kind === 'metric') return <FiBarChart2 aria-hidden="true" />;
+  if (kind === 'dimension') return <FiDatabase aria-hidden="true" />;
+  if (kind === 'evidence') return <FiFileText aria-hidden="true" />;
+  return <FiLink2 aria-hidden="true" />;
+};
+
 const VariableNode = memo(({ data, selected }) => {
-  const isInsufficient = data.insufficientData;
-  const isSelected = selected || data.selected;
-
-  // Aesthetic colors & shadows
-  const baseBg = isInsufficient ? '#f8f9fa' : '#ffffff';
-  const borderColor = isSelected ? '#3b82f6' : (isInsufficient ? '#d1d5db' : '#9ca3af');
-  const textColor = isInsufficient ? '#9ca3af' : '#1f2937';
-  const shadow = isSelected 
-    ? '0 4px 12px rgba(59, 130, 246, 0.3), 0 0 0 2px rgba(59, 130, 246, 0.2)' 
-    : '0 2px 4px rgba(0,0,0,0.05)';
-
-  const nodeStyle = {
-    padding: '12px 16px',
-    borderRadius: '12px',
-    background: baseBg,
-    border: `2px solid ${borderColor}`,
-    boxShadow: shadow,
-    color: textColor,
-    minWidth: '160px',
-    textAlign: 'center',
-    position: 'relative',
-    opacity: isInsufficient ? 0.85 : 1,
-    fontFamily: '"Inter", "Roboto", sans-serif',
-    transition: 'all 0.2s ease',
-    // Striped background for insufficient data to make it distinct
-    ...(isInsufficient && {
-      backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(0,0,0,0.02) 10px, rgba(0,0,0,0.02) 20px)'
-    })
-  };
-
-  const labelStyle = {
-    fontWeight: isSelected ? '700' : '600',
-    fontSize: '14px',
-    marginBottom: '8px',
-    color: isSelected ? '#1e40af' : textColor,
-  };
-
-  const badgeContainerStyle = {
-    display: 'flex',
-    justifyContent: 'center',
-    flexWrap: 'wrap',
-    gap: '6px',
-    marginTop: '4px',
-    fontSize: '11px',
-  };
-
-  const badgeStyle = (bgColor, fgColor, borderCol) => ({
-    background: bgColor,
-    color: fgColor,
-    padding: '3px 8px',
-    borderRadius: '12px',
-    fontWeight: '600',
-    border: `1px solid ${borderCol}`
-  });
+  const kind = nodeKind(data);
+  const insufficient = data.insufficientData;
+  const supported = data.evidenceCoverage || data.reliability;
 
   return (
-    <div style={nodeStyle}>
-      <Handle type="target" position={Position.Top} style={{ opacity: 0 }} />
-      
-      <div style={labelStyle}>{data.label || 'Variable'}</div>
-      
-      <div style={badgeContainerStyle}>
-        {data.evidenceCoverage && (
-          <span 
-            style={badgeStyle('#e0f2fe', '#0369a1', '#bae6fd')} 
-            title="Evidence Coverage"
-          >
-            Cov: {data.evidenceCoverage}
-          </span>
-        )}
-        {data.reliability && (
-          <span 
-            style={badgeStyle('#fef3c7', '#b45309', '#fde68a')} 
-            title="Reliability"
-          >
-            Rel: {data.reliability}
-          </span>
+    <div className={`decision-node decision-node--${kind} ${selected ? 'is-selected' : ''} ${insufficient ? 'is-insufficient' : ''}`}>
+      <Handle className="decision-node__handle" type="target" position={Position.Top} />
+      <Handle className="decision-node__handle" type="target" position={Position.Left} />
+
+      <div className="decision-node__top">
+        <span className="decision-node__kind">{kindIcon(kind)} {kindLabel(kind)}</span>
+        {insufficient && <span className="decision-node__warning"><FiAlertCircle aria-hidden="true" /> Limited</span>}
+      </div>
+
+      <div className="decision-node__label">{data.label || 'Variable'}</div>
+
+      <div className="decision-node__footer">
+        {supported ? (
+          <span><FiShield aria-hidden="true" /> Evidence tracked</span>
+        ) : (
+          <span>Ready for inspection</span>
         )}
       </div>
 
-      {isInsufficient && (
-        <div style={{ fontSize: '11px', marginTop: '8px', fontStyle: 'italic', color: '#9ca3af', fontWeight: '500' }}>
-          Insufficient Data
-        </div>
-      )}
-
-      <Handle type="source" position={Position.Bottom} style={{ opacity: 0 }} />
+      <Handle className="decision-node__handle" type="source" position={Position.Right} />
+      <Handle className="decision-node__handle" type="source" position={Position.Bottom} />
     </div>
   );
 });
 
-/**
- * Custom Edge: AssociationEdge
- * Explicitly non-causal: no arrowheads, labeled "Association"
- */
 const AssociationEdge = memo(({
-  id,
   sourceX,
   sourceY,
   targetX,
@@ -132,70 +82,35 @@ const AssociationEdge = memo(({
     targetPosition,
   });
 
-  const isSelected = selected || data?.selected;
-  const isWeak = data?.strength === 'weak';
-  const isEvidenceCoverage = data?.relationshipType === 'evidence_coverage';
-  
-  // Visual distinction:
-  // Evidence coverage: solid cool-blue line.
-  // Observed association: dashed neutral/gray line.
-  // Both: Explicitly non-causal (no arrowheads).
-
-  let strokeColor = isSelected ? '#3b82f6' : '#6b7280';
-  let dashArray = 'none';
-
-  if (isEvidenceCoverage) {
-    strokeColor = isSelected ? '#2563eb' : '#60a5fa'; // Blue spectrum
-    dashArray = 'none'; // Solid for coverage
-  } else {
-    strokeColor = isSelected ? '#3b82f6' : (isWeak ? '#9ca3af' : '#6b7280');
-    dashArray = '6 6'; // Dashed for observed association
-  }
+  const relationshipType = data?.relationshipType || 'observed_association';
+  const isCoverage = relationshipType === 'evidence_coverage';
+  const strength = data?.strength || 'observed';
+  const label = data?.displayLabel || data?.label || (isCoverage ? 'Coverage' : 'Observed');
 
   const edgeStyle = {
     ...style,
-    strokeWidth: isSelected ? 3 : 2,
-    stroke: strokeColor,
-    strokeDasharray: dashArray,
-    transition: 'all 0.2s ease',
+    stroke: selected ? '#1d4ed8' : isCoverage ? '#0f766e' : '#64748b',
+    strokeWidth: selected ? 3 : isCoverage ? 2.4 : 1.8,
+    strokeDasharray: isCoverage ? 'none' : '7 7',
   };
 
   return (
     <>
-      {/* Note: markerEnd is intentionally omitted to prevent causal arrowheads */}
       <BaseEdge path={edgePath} style={edgeStyle} />
-      
-      {data?.label && (
-        <EdgeLabelRenderer>
-          <div
-            style={{
-              position: 'absolute',
-              transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
-              background: isSelected ? '#eff6ff' : '#ffffff',
-              padding: '4px 8px',
-              borderRadius: '8px',
-              fontSize: '11px',
-              fontWeight: '600',
-              color: isSelected ? '#1e40af' : '#4b5563',
-              border: `1px solid ${isSelected ? '#bfdbfe' : '#e5e7eb'}`,
-              boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-              pointerEvents: 'all',
-              fontFamily: '"Inter", "Roboto", sans-serif',
-            }}
-            className="nodrag nopan"
-          >
-            {data.label}
-          </div>
-        </EdgeLabelRenderer>
-      )}
+      <EdgeLabelRenderer>
+        <button
+          type="button"
+          className={`decision-edge-label decision-edge-label--${isCoverage ? 'coverage' : 'association'} ${selected ? 'is-selected' : ''}`}
+          style={{ transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)` }}
+        >
+          <span>{label}</span>
+          {!isCoverage && <small>{strength}</small>}
+        </button>
+      </EdgeLabelRenderer>
     </>
   );
 });
 
-/**
- * DecisionGraphCanvas Component
- * Renders a non-causal relationship graph using @xyflow/react
- */
 export const DecisionGraphCanvas = ({
   nodes,
   edges,
@@ -205,12 +120,19 @@ export const DecisionGraphCanvas = ({
   onNodeClick,
   onEdgeClick,
 }) => {
-  // Memoize custom types to prevent re-renders
   const nodeTypes = useMemo(() => ({ variable: VariableNode }), []);
   const edgeTypes = useMemo(() => ({ association: AssociationEdge }), []);
+  const hasGraph = nodes.length > 0;
 
   return (
-    <div style={{ width: '100%', height: '100%', background: '#fafafa', borderRadius: '12px', overflow: 'hidden' }}>
+    <div className="graph-canvas-stage">
+      {!hasGraph && (
+        <div className="graph-empty-overlay">
+          <div className="graph-empty-overlay__mark"><FiLink2 aria-hidden="true" /></div>
+          <h3>Build a decision graph</h3>
+          <p>Select variables in the build scope panel, then generate a graph to inspect observed relationships and evidence coverage.</p>
+        </div>
+      )}
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -222,10 +144,11 @@ export const DecisionGraphCanvas = ({
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         fitView
+        fitViewOptions={{ padding: 0.18 }}
         attributionPosition="bottom-right"
       >
-        <Background color="#ccc" gap={16} />
-        <Controls />
+        <Background color="#cbd5e1" gap={22} size={1.2} />
+        <Controls position="bottom-left" showInteractive={false} />
       </ReactFlow>
     </div>
   );

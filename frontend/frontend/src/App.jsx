@@ -144,7 +144,8 @@ function AppContent() {
   const handleOpenDecisionGraph = useCallback((context = null) => {
     setDecisionGraphContext(context);
     setShowDecisionGraph(true);
-  }, []);
+    restoreWindow('decisionGraph');
+  }, [restoreWindow]);
 
   const handleStatsSelect = useCallback((statType) => setSelectedStat(statType), []);
 
