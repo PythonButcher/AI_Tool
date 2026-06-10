@@ -34,14 +34,19 @@ Current gate: ready for the next Decision Intelligence slice. No active Gemini h
 
 ## Latest Verified Slice
 
-Gemini enhanced and modernized the Decision Graph UI based on user direction.
+Gemini applied an extreme flat, cohesive enterprise UI overhaul to the Decision Graph based on further user direction.
 
 Verified evidence:
-- Replaced semi-transparent gradients with solid colors for a sleeker, modern aesthetic in both dark and light themes.
-- Added a collapsible Inspector panel toggle to the workspace header to maximize canvas space.
-- Configured the Inspector panel to auto-open when a user selects a node or edge.
+- Completely rewrote `GraphHeader.jsx` to be a pure flat text-driven header with zero pill backgrounds or boxes, matching Google Cloud Platform aesthetics.
+- Flattened the UI completely by removing all box-shadows, borders, and border-radiuses (`border-radius: 0`), resulting in stark, flush rectangles.
+- Removed margins between buttons (`variable-option`) so they sit perfectly flush against each other without lines.
+- Stripped inline gradients from `VariableTray.jsx` (e.g., the Add Hypothesis button) and made all buttons stark, full-width solid colored blocks.
+- Adopted an edge-to-edge container layout driven strictly by background color contrast (`#f1f3f4` vs `#ffffff`), enforcing the "no lines" requirement.
+- Removed a CSS grid transition (`grid-template-columns`) from the workspace grid that was causing ResizeObserver loops and breaking the window's draggable resize behavior when expanded.
+- Restored `flex-shrink: 0` to the header to prevent vertical layout collapse during resize events.
+- Fixed an issue where the flat design overhaul hardcoded light mode colors in the CSS, breaking the app's dark theme capability. The UI now fully supports native `#202124` / `#ffffff` theme swapping.
+- Completely rewrote `VariableTray.jsx` from scratch. Replaced the old "chunky blocks" and chip displays with a modern, sleek Material 3 list view featuring flat rows, native checkboxes, subtle hover states, and a clean search input to perfectly match Google's enterprise aesthetics.
 - `npm --prefix frontend\frontend run build` completed successfully.
-- The UI now reflects the polished, solid-color design requested by the user.
 
 Prior verified slice:
 

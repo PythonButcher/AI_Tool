@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { FiBarChart2, FiCheck, FiDatabase, FiSearch } from 'react-icons/fi';
+import { FiBarChart2, FiDatabase, FiSearch, FiX } from 'react-icons/fi';
 
 const variableTypeLabel = (candidate) => {
   const type = candidate?.variable_type || candidate?.type || 'variable';
@@ -50,118 +50,98 @@ const VariableTray = ({
     return Array.from(groups.entries());
   }, [candidates, searchTerm]);
 
-  const selectedCandidates = useMemo(
-    () => candidates.filter((candidate) => selectedVariableIds.has(candidate.variable_id)),
-    [candidates, selectedVariableIds]
-  );
-
   const canBuild = selectedVariableIds.size > 0 && !loading;
 
   return (
-    <aside className="variable-tray" aria-label="Decision graph variable selection">
-      <div className="variable-tray__header">
-        <div>
-          <h3>Build Scope</h3>
-          <p>Select variables to inspect as a graph.</p>
-        </div>
-        <span className="variable-tray__count">{selectedVariableIds.size}</span>
-      </div>
-
-      {!hasDecisionContext && (
-        <div className="graph-context-note">
-          Evidence coverage is unavailable because this graph was opened without AI Chat decision context.
-        </div>
-      )}
-
-      <label className="graph-search">
-        <FiSearch aria-hidden="true" />
-        <input
-          type="text"
-          placeholder="Search metrics or dimensions"
-          value={searchTerm}
-          onChange={(event) => setSearchTerm(event.target.value)}
-        />
-      </label>
-
-      <button
-        className="graph-build-button"
-        type="button"
-        onClick={onBuildGraph}
-        disabled={!canBuild}
-      >
-        <FiGitBranchIcon />
-        <span>{loading ? 'Building graph' : 'Build graph'}</span>
-      </button>
-
-      {selectedVariableIds.size === 2 && onAddHypothesis && (
-        <button
-          className="graph-build-button"
-          type="button"
-          onClick={onAddHypothesis}
-          disabled={loading}
-          style={{ background: 'linear-gradient(135deg, #8b5cf6, #6d28d9)', marginBottom: '14px' }}
-        >
-          <FiGitBranchIcon />
-          <span>Add Hypothesis</span>
-        </button>
-      )}
-
-      <div className="selected-strip" aria-label="Selected variables">
-        <div className="selected-strip__label">Selected</div>
-        {selectedCandidates.length === 0 ? (
-          <p>No variables selected yet.</p>
-        ) : (
-          <div className="selected-strip__chips">
-            {selectedCandidates.map((candidate) => (
-              <span key={candidate.variable_id}>{candidate.label || candidate.name || candidate.variable_id}</span>
-            ))}
+    <aside className="vt-container" aria-label="Build Scope Selection">
+      <div className="vt-header">
+        <h3 className="vt-title">Build Scope</h3>
+        {!hasDecisionContext && (
+          <div className="vt-context-warning">
+            Evidence coverage unavailable (No AI Chat context)
           </div>
         )}
       </div>
 
-      <div className="variable-groups">
+      <div className="vt-search-box">
+        <FiSearch className="vt-search-icon" aria-hidden="true" />
+        <input
+          type="text"
+          className="vt-search-input"
+          placeholder="Search metrics or dimensions..."
+          value={searchTerm}
+          onChange={(event) => setSearchTerm(event.target.value)}
+        />
+        {searchTerm && (
+          <button className="vt-search-clear" onClick={() => setSearchTerm('')}>
+            <FiX aria-hidden="true" />
+          </button>
+        )}
+      </div>
+
+      <div className="vt-actions">
+        <button
+          className="vt-btn vt-btn--primary"
+          type="button"
+          onClick={onBuildGraph}
+          disabled={!canBuild}
+        >
+          {loading ? 'Building graph...' : 'Build graph'}
+        </button>
+
+        {selectedVariableIds.size === 2 && onAddHypothesis && (
+          <button
+            className="vt-btn vt-btn--secondary"
+            type="button"
+            onClick={onAddHypothesis}
+            disabled={loading}
+          >
+            Add Hypothesis
+          </button>
+        )}
+      </div>
+
+      <div className="vt-selected-status">
+        <span>{selectedVariableIds.size} selected variables</span>
+      </div>
+
+      <div className="vt-list">
         {filteredGroups.length === 0 ? (
-          <p className="variable-empty">No variables match this search.</p>
+          <div className="vt-empty-state">No variables found</div>
         ) : filteredGroups.map(([type, groupCandidates]) => (
-          <section className="variable-group" key={type}>
-            <div className="variable-group__title">
-              <span>{groupTitle(type)}</span>
-              <small>{groupCandidates.length}</small>
-            </div>
+          <div className="vt-group" key={type}>
+            <div className="vt-group-title">{groupTitle(type)}</div>
             {groupCandidates.map((candidate) => {
               const selected = selectedVariableIds.has(candidate.variable_id);
               const label = candidate.label || candidate.name || candidate.variable_id;
               return (
-                <button
+                <label
                   key={candidate.variable_id}
-                  type="button"
-                  className={`variable-option ${selected ? 'is-selected' : ''}`}
-                  onClick={() => toggleVariableSelection(candidate.variable_id)}
+                  className={`vt-item ${selected ? 'is-selected' : ''}`}
                 >
-                  <span className="variable-option__icon">
+                  <div className="vt-item-icon">
                     {candidate.variable_type === 'metric' ? <FiBarChart2 aria-hidden="true" /> : <FiDatabase aria-hidden="true" />}
-                  </span>
-                  <span className="variable-option__body">
-                    <span className="variable-option__label">{label}</span>
-                    <span className="variable-option__meta">{variableTypeLabel(candidate)}</span>
-                  </span>
-                  <span className="variable-option__check">
-                    {selected && <FiCheck aria-hidden="true" />}
-                  </span>
-                </button>
+                  </div>
+                  <div className="vt-item-content">
+                    <div className="vt-item-name">{label}</div>
+                    <div className="vt-item-type">{variableTypeLabel(candidate)}</div>
+                  </div>
+                  <div className="vt-item-control">
+                    <input
+                      type="checkbox"
+                      checked={selected}
+                      onChange={() => toggleVariableSelection(candidate.variable_id)}
+                      className="vt-checkbox"
+                    />
+                  </div>
+                </label>
               );
             })}
-          </section>
+          </div>
         ))}
       </div>
     </aside>
   );
 };
-
-const FiGitBranchIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-    <path d="M7 7a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm0 0v10a3 3 0 1 0 3 3H7m10-7a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm0 0c0 2.5-2 4-5 4H7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-  </svg>
-);
 
 export default VariableTray;

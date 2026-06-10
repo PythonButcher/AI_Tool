@@ -7,50 +7,52 @@ const GraphHeader = ({ loading, error, graphStats, hasDecisionContext, onClearGr
   const edgeCount = graphStats?.edgeCount || 0;
 
   return (
-    <div className="graph-header">
+    <header className="graph-header">
       <div className="graph-header__identity">
         <div className="graph-header__mark">
-          <FiGitBranch aria-hidden="true" />
+          <FiGitBranch aria-hidden="true" size={20} />
         </div>
-        <div>
+        <div className="graph-header__title-group">
           <h2>Decision Graph</h2>
-          <p>Inspect variables, evidence coverage, and observed associations.</p>
+          <div className="graph-header__meta">
+            <span>{selectedCount} selected variables</span>
+            <span>&bull;</span>
+            <span>{nodeCount} nodes</span>
+            <span>&bull;</span>
+            <span>{edgeCount} edges</span>
+          </div>
         </div>
-      </div>
-
-      <div className="graph-header__stats" aria-label="Graph summary">
-        <span><strong>{selectedCount}</strong> selected</span>
-        <span><strong>{nodeCount}</strong> nodes</span>
-        <span><strong>{edgeCount}</strong> edges</span>
       </div>
 
       <div className="graph-header__right">
-        <div className="graph-legend" aria-label="Graph edge legend">
-          <span className="graph-legend__item">
-            <span className="graph-legend__line graph-legend__line--coverage" />
-            Evidence coverage
+        <div className="graph-header__legend">
+          <span>
+            <span className="legend-line legend-line--coverage" />
+            Coverage
           </span>
-          <span className="graph-legend__item">
-            <span className="graph-legend__line graph-legend__line--association" />
-            Observed association
+          <span>
+            <span className="legend-line legend-line--observed" />
+            Observed
           </span>
         </div>
 
-        <div className={`graph-status ${error ? 'graph-status--error' : loading ? 'graph-status--loading' : 'graph-status--ready'}`}>
-          {error ? <FiInfo aria-hidden="true" /> : loading ? <FiActivity aria-hidden="true" /> : <FiShield aria-hidden="true" />}
-          <span>{error || (loading ? 'Working' : hasDecisionContext ? 'Decision context' : 'Dataset only')}</span>
+        <div className={`graph-header__status ${error ? 'is-error' : loading ? 'is-loading' : 'is-ready'}`}>
+          {error ? <FiInfo size={16} aria-hidden="true" /> : loading ? <FiActivity size={16} aria-hidden="true" /> : <FiShield size={16} aria-hidden="true" />}
+          <span>{error || (loading ? 'Working...' : hasDecisionContext ? 'Decision context active' : 'Dataset only')}</span>
         </div>
 
-        {nodeCount > 0 && (
-          <button className="graph-icon-button" type="button" onClick={onClearGraph} title="Clear graph">
-            <FiRefreshCw aria-hidden="true" />
+        <div className="graph-header__actions">
+          {nodeCount > 0 && (
+            <button type="button" className="graph-icon-button" onClick={onClearGraph} title="Clear graph">
+              <FiRefreshCw size={20} aria-hidden="true" />
+            </button>
+          )}
+          <button type="button" className={`graph-icon-button ${isInspectorOpen ? 'is-active' : ''}`} onClick={onToggleInspector} title="Toggle inspector">
+            <FiSidebar size={20} aria-hidden="true" />
           </button>
-        )}
-        <button className={`graph-icon-button ${isInspectorOpen ? 'is-active' : ''}`} type="button" onClick={onToggleInspector} title="Toggle inspector">
-          <FiSidebar aria-hidden="true" />
-        </button>
+        </div>
       </div>
-    </div>
+    </header>
   );
 };
 
