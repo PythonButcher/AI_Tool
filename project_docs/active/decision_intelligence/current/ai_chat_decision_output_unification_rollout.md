@@ -675,20 +675,21 @@ The export is shareable and readable without opening the app.
 
 The export avoids fake final recommendations, optimization, causal proof, and unsupported prediction claims.
 
-## Current Project Gate: Phase 7.1 Decision Graph Data Foundation
+## Current Project Gate: Phase 7.3 User Hypotheses And Graph-To-Action Flow
 
 Phase 6 Evidence Board is complete end-to-end. Do not reopen Phase 6 unless the user explicitly asks for a regression review.
 
-The next active work is Phase 7.1: build the backend foundation for Decision Graph Builder. Decision Graph Builder is a user-guided analysis surface where selected variables become graph nodes and measurable evidence becomes graph edges. It is not a static exported image and not a causal proof tool.
+Phase 7.1 Decision Graph Data Foundation is complete. The backend `decision_graph` contract and routes support graph candidate discovery and graph generation for selected variables, evidence coverage edges, observed association edges, edge metrics, data sufficiency, limitations, reliability labels, and the observational reliability boundary.
 
-Required next Codex slice:
+Phase 7.2 Interactive Decision Graph Workspace is complete. The user can open the workspace, select variables, build a graph from the backend contract, inspect evidence coverage and observed association edges, and use the accepted modernized graph UI in light and dark themes.
 
-1. Read the active status, guardrail, rollout, and `decision_objects.md` contract.
-2. Inspect current `decision_output.decision_map` behavior only as existing context, not as the final product shape.
-3. Design the backend `decision_graph` request and response contract for variable candidates, selected variables, nodes, edges, edge metrics, data sufficiency, limitations, and reliability labels.
-4. Implement the first backend graph service or equivalent composer for variable candidates, evidence coverage edges, and conservative observed association edges.
-5. Add focused backend tests for candidate discovery, selected-variable graph generation, evidence coverage edges, observed association edge metrics, insufficient-data behavior, and no unsupported recommendation, causal, simulation, prediction, or optimization wording.
-6. Update the contract and active status only with verified facts.
+Phase 7.3 User Hypotheses And Graph-To-Action Flow is complete for current planning purposes. The backend supports user hypothesis graph edges with `relationship_type: "user_hypothesis"` and `causal_status: "user_hypothesis_not_validated"`, plus safe graph-to-action planning for breakdown, monitor, explain evidence, explain missing data, and Scenario Compare when appropriate. The frontend now has a production Add Hypothesis flow, passes full `decision_graph` context to graph actions, and keeps user hypotheses visually and semantically separate from observed associations.
+
+Current gate: ready for the next Decision Intelligence slice.
+
+Completed frontend handoff:
+
+`project_docs/active/decision_intelligence/completed/phase_7_3_gemini_user_hypotheses_graph_to_action.md`
 
 Completed Phase 6 slice:
 
@@ -714,21 +715,29 @@ Suggested first files to inspect:
 
 `backend/services/metric_resolver.py`
 
+`backend/services/decision_graph_service.py` if present
+
 `backend/decision_engine/chat_service.py`
 
 `backend/routes/decision.py`
 
 `tests/test_decision_chat_service.py`
 
+`tests/test_decision_graph_service.py` if present
+
 `tests/test_decision_phase_3_correction.py` if present
 
 `project_docs/active/contracts/decision_objects.md`
 
-Frontend implementation work waits for Phase 7.2 and a focused Antigravity handoff after Phase 7.1 backend contract and tests are complete.
+Frontend implementation work for future slices should use a fresh active handoff unless the user explicitly authorizes Codex frontend edits in the current session.
 
 ## Gemini Handoff Trigger
 
-Codex should write a Gemini handoff only when these are true:
+The Gemini handoff trigger was satisfied for Phase 7.3 backend readiness, and the handoff is now completed:
+
+`project_docs/active/decision_intelligence/completed/phase_7_3_gemini_user_hypotheses_graph_to_action.md`
+
+Future Gemini handoffs should be written only when these are true:
 
 The `decision_graph` request and response contract is documented.
 

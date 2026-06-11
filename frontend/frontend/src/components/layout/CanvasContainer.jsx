@@ -24,6 +24,7 @@ import DashboardFilterBar from '../../features/dashboard/DashboardFilterBar';
 import KpiCardWindow from '../../features/dashboard/KpiCardWindow';
 import { WINDOW_SIZING } from '../../utils/windowSizing';
 import DecisionPanel from '../../features/business/decision/DecisionPanel';
+import DecisionGraphWorkspace from '../../features/business/decision/graph/DecisionGraphWorkspace';
 import DestinationHome from './DestinationHome';
 import { FaCompress, FaExternalLinkAlt } from 'react-icons/fa';
 
@@ -91,6 +92,10 @@ function CanvasContainer({
   onDestinationSelect,
   setShowDataVisual,
   setIsDataPaneOpen,
+  showDecisionGraph,
+  setShowDecisionGraph,
+  onOpenDecisionGraph,
+  decisionGraphContext,
 }) {
   const {
     minimizedWindows,
@@ -158,7 +163,7 @@ function CanvasContainer({
         addDashboardKpi();
         break;
       case 'new_chart':
-        addDashboardChart({ 
+        addDashboardChart({
           chartType: 'Bar',
           dataSourceMode: isDashboardDest ? 'semantic' : 'raw'
         });
@@ -167,14 +172,14 @@ function CanvasContainer({
         console.warn('Unknown destination home action:', action);
     }
   }, [
-    setShowDataVisual, 
-    onOpenAiChat, 
-    setShowAiWorkflow, 
-    restoreWindow, 
-    onRunDecision, 
+    setShowDataVisual,
+    onOpenAiChat,
+    setShowAiWorkflow,
+    restoreWindow,
+    onRunDecision,
     onDestinationSelect,
     activeDestination,
-    setShowDataPreview, 
+    setShowDataPreview,
     addDashboardKpi,
     addDashboardChart,
     isDashboardDest,
@@ -723,7 +728,7 @@ function CanvasContainer({
       if (item.itemType === 'kpi') {
         const isPopulated = !!item.semanticConfig?.metricId;
         const sizing = isPopulated ? WINDOW_SIZING.KPI.POPULATED : WINDOW_SIZING.KPI.BLANK;
-        
+
         return (
           <WindowFrame
             {...getWindowProps(item.id, `📌 ${item.title || 'KPI Card'}`, () => removeDashboardItem(item.id), () => minimizeWindow(item.id, item.title || 'KPI Card'))}
@@ -797,8 +802,8 @@ function CanvasContainer({
       minWidth={WINDOW_SIZING.DECISION_PANEL.minW}
       minHeight={WINDOW_SIZING.DECISION_PANEL.minH}
     >
-      <DecisionPanel 
-        bundle={decisionBundle} 
+      <DecisionPanel
+        bundle={decisionBundle}
         onActionClick={onDecisionAction}
         readiness={decisionReadiness}
         warnings={decisionWarnings}
@@ -811,6 +816,21 @@ function CanvasContainer({
         onAnalyzeWorkspace={onAnalyzeWorkspace}
         onResetWorkspace={onResetDecisionWorkspace}
         datasetContext={getDecisionPayloadBase ? getDecisionPayloadBase() : {}}
+      />
+    </WindowFrame>
+  ) : null;
+
+  const decisionGraphElement = (showDecisionGraph && !minimizedWindows.decisionGraph) ? (
+    <WindowFrame
+      {...getWindowProps('decisionGraph', '📊 Decision Graph', () => setShowDecisionGraph(false), () => minimizeWindow('decisionGraph', 'Decision Graph'))}
+      initialState={getInitialState('decisionGraph', 9, 25, WINDOW_SIZING.DECISION_PANEL.defW, WINDOW_SIZING.DECISION_PANEL.defH, WINDOW_SIZING.DECISION_PANEL.minW, WINDOW_SIZING.DECISION_PANEL.minH)}
+      minWidth={WINDOW_SIZING.DECISION_PANEL.minW}
+      minHeight={WINDOW_SIZING.DECISION_PANEL.minH}
+    >
+      <DecisionGraphWorkspace
+        dataset={getDecisionPayloadBase ? getDecisionPayloadBase().dataset : null}
+        semanticModel={getDecisionPayloadBase ? getDecisionPayloadBase().semantic_model : null}
+        initialContext={decisionGraphContext}
       />
     </WindowFrame>
   ) : null;
@@ -974,11 +994,12 @@ function CanvasContainer({
       isMinimized={!!minimizedWindows.aiChat}
       isExternalWindow={isAiChatPoppedOut && !!aiChatPopupRoot}
     >
-      <AIShell 
+      <AIShell
         setShowAIChart={setShowAIChart}
         setAiChartType={setAiChartType}
         setAiChartData={setAiChartData}
         onOpenWorkspace={onOpenDecisionWorkspace}
+        onOpenDecisionGraph={onOpenDecisionGraph}
       />
     </WindowFrame>
   ) : null;
@@ -1011,7 +1032,7 @@ function CanvasContainer({
       const hasAiWorkflowWindows = outputWindows.length > 0;
       return !showAiWorkflow && !showAIChart && !showStoryPanel && !showWhiteBoard && !hasAiWorkflowWindows && !showAiChat;
     }
-    if (isDecisionDest) return !showDecisionPanel && charts.length === 0;
+    if (isDecisionDest) return !showDecisionPanel && !showDecisionGraph && charts.length === 0;
     return true;
   }, [
     isWorkspaceDest,
@@ -1030,6 +1051,7 @@ function CanvasContainer({
     showWhiteBoard,
     outputWindows.length,
     showDecisionPanel,
+    showDecisionGraph,
     showAiChat,
   ]);
 
@@ -1042,13 +1064,13 @@ function CanvasContainer({
       >
         {isDashboardDest && <DashboardFilterBar />}
         {shouldShowHome && (
-          <DestinationHome 
-            activeDestination={activeDestination} 
-            onAction={handleDestinationHomeAction} 
+          <DestinationHome
+            activeDestination={activeDestination}
+            onAction={handleDestinationHomeAction}
             readiness={decisionReadiness}
           />
         )}
-        
+
         {/* Render relevant windows for the active destination */}
         {(isAiDest || isWorkspaceDest) && workflowElements}
         {(isWorkspaceDest || isExploreDest) && dataPreviewElement}
@@ -1061,6 +1083,7 @@ function CanvasContainer({
         {(isExploreDest || isDecisionDest) && chartElements}
         {isDashboardDest && dashboardElements}
         {isDecisionDest && decisionPanelElement}
+        {(isDecisionDest || isAiDest) && decisionGraphElement}
       </div>
       {aiChatPortal}
       <MinimizedDock />

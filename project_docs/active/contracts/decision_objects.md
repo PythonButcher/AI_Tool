@@ -151,7 +151,155 @@ Reliability boundary: Evidence Board items are not recommendations, optimized ac
 
 `decision_map` is a presentation contract, not a causal diagram. It can contain node types `dataset`, `goal`, `driver`, `limit`, `breakdown`, `evidence`, `unknown`, and `advanced_gate`. Edge types include `declared_relationship`, `observed_association`, `constraint`, `breakdown`, and `missing_evidence`. Every edge includes `causal_status: "not_causal_claim"`.
 
-Phase 7 shifts the next active graph work from this compact read-only `decision_output.decision_map` toward a separate user-guided `decision_graph` builder contract. Until Phase 7.1 is implemented and verified, `decision_map` remains the current compact display object. Future `decision_graph` work must support user-selected variables, evidence coverage edges, observed association edges, edge metrics, data sufficiency, limitations, and explicit reliability labels. It must not imply causal proof, optimization, simulation, prediction certainty, autonomous decisioning, or final recommendations.
+Phase 7 shifts graph work from this compact read-only `decision_output.decision_map` toward a separate user-guided `decision_graph` builder contract. `decision_map` remains the current compact display object inside `decision_output`; `decision_graph` is the backend data foundation for the future interactive builder.
+
+### Decision Graph
+
+Phase 7.3 extends the backend-owned `decision_graph` contract for variable discovery, cold graph generation, user hypothesis edges, and safe graph-to-action planning. It is separate from `decision_output.decision_map`.
+
+Routes:
+
+| Route | Method | Purpose |
+| --- | --- | --- |
+| `/api/decision/graph/candidates` | `POST` | Return graph-eligible semantic metrics and dimensions from the resolved dataset context. |
+| `/api/decision/graph/build` | `POST` | Return graph nodes and edges for selected variables, selected evidence, user hypotheses, and a graph mode. |
+| `/api/decision/graph/actions` | `POST` | Plan a safe follow-up action from a selected graph node or edge. This route returns request semantics; it does not execute causal validation, monitoring automation, or scenario evaluation. |
+
+Request fields for both routes reuse existing dataset context inputs: `dataset`, `dataset_ref`, and `semantic_model`. Graph build also accepts:
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `graph_mode` | `string` | No | `evidence_coverage`, `observed_association`, or `mixed`. Default is `mixed`. |
+| `selected_variables` | `object \| object[] \| string[]` | Build yes | Preferred object keys are `metric_ids` and `dimension_ids`. A list may contain variable IDs or objects with `variable_id`. |
+| `selected_evidence_ids` | `string[]` | No | Filters Evidence Board items by `source_diagnostic_id`, `evidence_id`, or rank. If omitted, all provided Evidence Board items are eligible. |
+| `evidence_board` | `Decision Output Evidence Board` | No | Source for evidence coverage edges. May also be passed as `decision_output.evidence_board`. |
+| `frame` | `Decision Output Frame` | No | Helps map Evidence Board role coverage to selected variables, especially goal coverage. May also be passed as `decision_output.frame` or derived from a workspace decision scope. |
+| `filters` | `object[]` | No | Existing metric-resolver style filters applied before observed association metrics are computed. |
+| `user_hypotheses` | `object[]` | No | User-stated directional hypothesis edges. Each item should include `source_variable_id` and `target_variable_id`; camelCase aliases and node IDs are accepted. Hypothesis endpoints must be selected graph variables. |
+
+Candidate response fields:
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `type` | `string` | Yes | `decision_graph_candidates`. |
+| `schema_version` | `string` | Yes | Current value is `di_phase7_3_decision_graph_v1`. |
+| `dataset` | `Dataset Summary` | Yes | Resolved dataset summary. |
+| `variable_candidates` | `Decision Graph Variable[]` | Yes | Eligible and ineligible metric and dimension candidates. |
+| `data_sufficiency` | `object` | Yes | Dataset-level row count and candidate counts. |
+| `limitations` | `string[]` | Yes | Conservative notes about candidate availability. |
+| `truth_boundary` | `string` | Yes | Current value is `observational_analysis_only`. |
+
+Graph response fields:
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `type` | `string` | Yes | `decision_graph`. |
+| `render_hint` | `string` | Yes | `decision_graph`. |
+| `schema_version` | `string` | Yes | Current value is `di_phase7_3_decision_graph_v1`. |
+| `graph_mode` | `string` | Yes | Normalized graph mode used. |
+| `dataset` | `Dataset Summary` | Yes | Resolved dataset summary. |
+| `selected_variables` | `Decision Graph Variable[]` | Yes | Variables resolved from the request. Unknown IDs are returned with `eligible: false`. |
+| `variable_candidates` | `Decision Graph Variable[]` | Yes | Full candidate list for the same dataset context. |
+| `nodes` | `Decision Graph Node[]` | Yes | Selected variable nodes plus evidence nodes when coverage mode is used. |
+| `edges` | `Decision Graph Edge[]` | Yes | Evidence coverage, observed association, and/or user hypothesis edges. |
+| `graph_state` | `Decision Graph State` | Yes | Carry-forward build state for UI session state or saved decision assets. The endpoint returns the object but does not persist it server-side. |
+| `data_sufficiency` | `object` | Yes | Graph-level sufficiency including row count, selected variable count, and edge count. |
+| `limitations` | `string[]` | Yes | Graph-level limitations. |
+| `reliability_labels` | `object` | Yes | Legend for evidence coverage, observed association, and user hypothesis edge reliability labels. |
+| `available_graph_actions` | `object[]` | Yes | Backend-known follow-up action types: `breakdown`, `monitor`, `explain_evidence`, `explain_missing_data`, and `send_to_scenario_compare`. |
+| `truth_boundary` | `string` | Yes | Current value is `observational_analysis_only`. |
+
+Decision Graph Variable fields:
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `variable_id` | `string` | Yes | Metric ID or dimension ID. |
+| `variable_type` | `string` | Yes | `metric`, `dimension`, or `unknown`. |
+| `label` | `string` | Yes | Display label from the semantic model or selected ID fallback. |
+| `field` | `string \| null` | Yes | Backing field when available. |
+| `ref` | `Metric Reference \| Dimension Reference \| null` | Yes | Semantic reference when resolved. |
+| `eligible` | `boolean` | Yes | Whether the backend can inspect the variable in the current dataset. |
+| `data_type` | `string` | Yes | `numeric`, `categorical`, `temporal`, `numeric_dimension`, or `unknown`. |
+| `semantic_role` | `string` | Yes | Conservative role such as `objective_candidate`, `driver_candidate`, `limit_candidate`, `breakdown_candidate`, `temporal`, `metric`, or `dimension`. |
+| `data_sufficiency` | `object` | Yes | Row count, non-null count, missing count, status, and summary. |
+| `limitations` | `string[]` | Yes | Variable-level limitations. |
+
+Decision Graph Edge fields:
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `edge_id` | `string` | Yes | Stable generated edge identifier. |
+| `source_node_id` | `string` | Yes | Source graph node ID. |
+| `target_node_id` | `string` | Yes | Target graph node ID. |
+| `relationship_type` | `string` | Yes | `evidence_coverage`, `observed_association`, or `user_hypothesis`. |
+| `evidence_basis` | `string` | Yes | `ranked_diagnostic_coverage`, `dataset_observed_association`, or `user_stated_hypothesis`. |
+| `causal_status` | `string` | Yes | Backend-generated coverage and observed association edges use `not_causal_claim`. User hypothesis edges must use `user_hypothesis_not_validated`. |
+| `reliability_label` | `string` | Yes | `observed_supported`, `observed_limited`, `observed_insufficient`, or `user_hypothesis_unvalidated`. |
+| `label` | `string` | Yes | Short display label. |
+| `summary` | `string` | Yes | Short backend-owned edge explanation. |
+| `metrics` | `object` | Yes | Edge metrics. Observed associations include `method`, `strength`, `direction`, endpoint variable IDs, sample size, and method-specific values such as `correlation`, `top_groups`, `trend_correlation`, or `cramers_v`. Coverage edges include `evidence_strength` and source diagnostic trace. User hypotheses include `method: "user_stated_hypothesis"`, `direction: "user_proposed_directional"`, `validation_status: "not_validated"`, endpoint variable IDs, and optional rationale. |
+| `data_sufficiency` | `object` | Yes | `status`, row/sample counts where available, and summary. |
+| `limitations` | `string[]` | Yes | Edge-level limitations. |
+| `followup_actions` | `object[]` | Yes | Per-edge action availability. Each item includes `action_id`, `enabled`, and `status`. Scenario Compare is not enabled for `user_hypothesis` edges until observational evidence is selected. |
+
+User hypothesis edge semantics:
+
+`relationship_type: "user_hypothesis"` means the user proposed a directional relationship between two selected graph variables. It is a stated assumption for follow-up inspection only. It is never causal proof, never an observed backend association, and never a decision rule. The required causal field is `causal_status: "user_hypothesis_not_validated"` and the required evidence basis is `evidence_basis: "user_stated_hypothesis"`.
+
+Decision Graph State fields:
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `schema_version` | `string` | Yes | Current value is `di_phase7_3_decision_graph_v1`. |
+| `state_kind` | `string` | Yes | `decision_graph_build_state`. |
+| `persistence` | `string` | Yes | `client_session_or_saved_decision_asset`; this route does not persist graph state server-side. |
+| `graph_mode` | `string` | Yes | The normalized graph mode used for the build. |
+| `selected_variables` | `object` | Yes | Object with `metric_ids` and `dimension_ids` arrays. |
+| `selected_evidence_ids` | `string[]` | Yes | Evidence IDs selected for coverage edges. Empty when none were provided. |
+| `user_hypotheses` | `object[]` | Yes | Accepted user hypothesis carry-forward items with `hypothesis_id`, endpoint variable IDs, label, summary, optional rationale, `causal_status`, and `validation_status`. |
+| `filters` | `object[]` | Yes | Filters copied from the build request. |
+| `truth_boundary` | `string` | Yes | Current value is `observational_analysis_only`. |
+| `limitations` | `string[]` | Yes | Includes a note that the endpoint returns state for carry-forward but does not persist it server-side. |
+
+Graph action request fields for `/api/decision/graph/actions`:
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `action_id` | `string` | Yes | `breakdown`, `monitor`, `explain_evidence`, `explain_missing_data`, or `send_to_scenario_compare`. Aliases such as `break_down_metric` and `scenario_compare` are normalized. |
+| `decision_graph` | `Decision Graph` | No | Full graph response used to resolve `edge_id` or `node_id`. May also be passed as `graph`. |
+| `target_edge` | `Decision Graph Edge` | No | Selected edge object. Required when `edge_id` is not provided. |
+| `edge_id` | `string` | No | Selected edge ID resolved against `decision_graph.edges`. |
+| `target_node` | `Decision Graph Node` | No | Selected node object. Required when `node_id` is not provided and there is no target edge. |
+| `node_id` | `string` | No | Selected node ID resolved against `decision_graph.nodes`. |
+| `filters` | `object[]` | No | Optional filters copied into prepared follow-up request payloads. |
+
+Graph action response fields:
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `type` | `string` | Yes | `decision_graph_action_response`. |
+| `render_hint` | `string` | Yes | `decision_graph_action_response`. |
+| `schema_version` / `contract_version` | `string` | Yes | Current value is `di_phase7_3_decision_graph_v1`. |
+| `action_id` | `string` | Yes | Normalized action ID. |
+| `action_status` | `string` | Yes | `ready`, `needs_input`, `needs_metric`, or `needs_observed_metric_edge`. |
+| `target` | `object` | Yes | Resolved target node or edge summary, including relationship type and causal status when an edge is selected. |
+| `summary` | `string` | Yes | Backend-owned summary of what the follow-up can safely do. |
+| `request_payload` | `object` | Yes | Prepared request semantics for a future UI or AI Chat handoff. It may include a route hint, but this route does not execute the follow-up. |
+| `response_semantics` | `object` | Yes | Declares `executes_analysis: false` and `causal_claim: false`; Scenario Compare responses also declare `scenario_semantics: "direct_adjustment_only"`. |
+| `explanation` | `string[]` | Yes | Plain-language guidance for the UI or AI Chat explanation. |
+| `limitations` | `string[]` | Yes | Reliability and missing-data caveats copied from the selected graph item plus graph-action boundary notes. |
+| `truth_boundary` | `string` | Yes | Current value is `observational_analysis_only`. |
+
+Implemented first-pass observed association methods:
+
+| Variable pair | Method |
+| --- | --- |
+| Numeric metric to numeric metric | `pearson_correlation` with correlation, direction, sample size, and missing pair count. |
+| Categorical dimension to numeric metric | `group_mean_difference` with top groups, group count, sample size, and top-bottom delta. |
+| Temporal dimension to numeric metric | `observed_time_trend` with trend correlation, first/last values, delta, and sample size. |
+| Categorical dimension to categorical dimension | `distribution_association` with Cramer's V when enough rows exist. |
+
+Reliability boundary: `decision_graph` is descriptive graph data only. It must not render as causal proof, optimization, simulation, prediction certainty, autonomous decisioning, or final recommendations. User hypothesis edges are user-stated assumptions and must stay visually and contractually separate from observed associations.
 
 ### Decision Semantics For Metrics
 

@@ -36,6 +36,20 @@ Codex should default to:
 - backend validation for Gemini handoff
 - markdown coordination inside `project_docs/active/`
 
+## Codex Gatekeeping Checklist
+
+Before Codex sends any Gemini or Antigravity frontend implementation prompt, Codex must verify and state the backend readiness level from source, not from assumptions:
+
+- `backend_not_ready`: backend route, service, contract, or tests are missing. The frontend prompt must use explicit JSON mocks and say the real API is not ready.
+- `backend_contract_ready`: backend contract and representative route/service behavior are implemented and verified. The frontend prompt must name exact endpoints, request fields, response fields, and acceptance checks.
+- `frontend_repair_only`: backend is ready but frontend integration is incomplete or incorrect. The prompt must name the exact source blockers and avoid broad new scope.
+
+Codex must not mark a frontend phase complete from another agent's claim alone. Completion requires targeted source review against the active contract, plus build or browser verification only when the review gate actually depends on it.
+
+When active docs disagree, Codex must call out the conflict and treat source plus the active contract as the gate until the status file is corrected. The active status file must not be used as proof of completion when it is the item being audited.
+
+Every substantial Decision Intelligence wrap-up must state exactly whose turn is next: Codex, Gemini/Antigravity, user validation, or no one.
+
 ## Gemini Frontend Review Fast Path
 
 When the user asks Codex to review Gemini frontend work, Codex should do an acceptance review, not a fresh implementation audit.
