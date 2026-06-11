@@ -128,6 +128,8 @@ function AppContent() {
   const [workspaceAnalysis, setWorkspaceAnalysis] = useState(null);
   const [decisionReadiness, setDecisionReadiness] = useState(EMPTY_DECISION_READINESS);
   const [decisionWarnings, setDecisionWarnings] = useState([]);
+  const [showDecisionGraph, setShowDecisionGraph] = useState(false);
+  const [decisionGraphContext, setDecisionGraphContext] = useState(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
@@ -137,6 +139,12 @@ function AppContent() {
     setShowAiChat(true);
     restoreWindow('aiChat');
     setAiChatOpenRequestKey((prev) => prev + 1);
+  }, [restoreWindow]);
+
+  const handleOpenDecisionGraph = useCallback((context = null) => {
+    setDecisionGraphContext(context);
+    setShowDecisionGraph(true);
+    restoreWindow('decisionGraph');
   }, [restoreWindow]);
 
   const handleStatsSelect = useCallback((statType) => setSelectedStat(statType), []);
@@ -488,7 +496,7 @@ function AppContent() {
         return;
       }
       if (chart) {
-        const newMapping = { ...chart.mapping, [axisLabel]: fieldName };
+        const newMapping = { ...(chart.mapping || {}), [axisLabel]: fieldName };
         updateChart(targetChartId, { dataSourceMode: 'raw', mapping: newMapping });
       }
       return;
@@ -527,6 +535,9 @@ function AppContent() {
             aiReportReady={aiReportReady}
             onAiReportClick={handleAiReportOpen}
             isSnowing={isSnowing}
+            showDecisionGraph={showDecisionGraph}
+            setShowDecisionGraph={setShowDecisionGraph}
+            onOpenDecisionGraph={handleOpenDecisionGraph}
             onSnowToggle={() => setIsSnowing((prev) => !prev)}
             onDashboardToggle={handleDashboardToggle}
             isDashboardVisible={dashboardState.isVisible}
@@ -648,6 +659,10 @@ function AppContent() {
               decisionWarnings={decisionWarnings}
               onOpenAiChat={handleOpenAiChat}
               onRunDecision={handleRunDecision}
+              showDecisionGraph={showDecisionGraph}
+              setShowDecisionGraph={setShowDecisionGraph}
+              onOpenDecisionGraph={handleOpenDecisionGraph}
+              decisionGraphContext={decisionGraphContext}
               onResetDecisionWorkspace={handleResetDecisionWorkspace}
               onDestinationSelect={handleDestinationSelect}
               setShowDataVisual={setShowDataVisual}

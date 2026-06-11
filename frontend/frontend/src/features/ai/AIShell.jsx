@@ -42,7 +42,7 @@ const MODES = [
  *
  * Re-implemented as a high-fidelity workspace with split conversation and inspection.
  */
-function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspace }) {
+function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspace, onOpenDecisionGraph }) {
   const {
     cleanedData,
     fullData,
@@ -1186,6 +1186,30 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspa
                           </Button>
                         );
                       })}
+                      <Button
+                        variant="contained"
+                        disabled={loading}
+                        startIcon={<FaLayerGroup />}
+                        size="small"
+                        sx={{
+                          borderRadius: '8px',
+                          textTransform: 'none',
+                          fontWeight: 800,
+                          bgcolor: 'var(--accent-blue)',
+                          color: '#fff',
+                          '&:hover': {
+                            bgcolor: 'var(--accent-blue)',
+                            filter: 'brightness(1.1)'
+                          }
+                        }}
+                        onClick={() => {
+                          if (onOpenDecisionGraph) {
+                            onOpenDecisionGraph({ evidence_board: doEvidence, frame: doFrame });
+                          }
+                        }}
+                      >
+                        Launch Decision Graph
+                      </Button>
                     </div>
                   </div>
                 )}
