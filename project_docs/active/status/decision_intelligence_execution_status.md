@@ -34,6 +34,17 @@ Current gate: ready for the next Decision Intelligence slice. No active Gemini h
 
 ## Latest Verified Slice
 
+Gemini applied a new UI polish pass to the Decision Graph Workspace based on user direction, reverting the previous extreme flat enterprise aesthetic in favor of a modern, slightly rounded, bordered, and softly shadowed panel style matching a provided reference.
+
+Verified evidence:
+- Replaced stark flat variables in `DecisionGraphWorkspace.css` with a refined color palette matching the modern UI reference (e.g. `indigo` accent colors, slightly softer backgrounds).
+- Re-introduced `border-radius: 8px`, `border: 1px solid var(--graph-line)`, and subtle `box-shadow` to the main panels, headers, and nodes to restore depth and separation.
+- Ensured dark mode theme variables (`[data-theme='dark']`) correctly handle these re-introduced borders and shadows, maintaining readability and visual hierarchy in dark mode.
+- `npm --prefix frontend\frontend run build` completed successfully.
+- Maintained all existing features and component structures as requested, purely applying CSS UI polish.
+
+Prior verified slice:
+
 Gemini applied an extreme flat, cohesive enterprise UI overhaul to the Decision Graph based on further user direction.
 
 Verified evidence:
