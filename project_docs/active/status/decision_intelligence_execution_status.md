@@ -18,21 +18,43 @@ AI Chat is the primary work surface. Existing AI Chat behavior must remain: norm
 
 Decision Intelligence is being unified into AI Chat's results pane. The Decisions window is not deleted, but its intended role is secondary after the AI Chat output flow is clear.
 
-Completed foundations: Phase 1 reliability, Phase 2 Dataset Trust backend, Phase 2.5 semantic frame cleanup, Phase 3 backend `decision_output`, Phase 4 frontend `decision_output` rendering, Phase 5 chat-native corrections closed for planning purposes by user direction, Phase 6 Evidence Board rendering, Phase 7.1 Decision Graph backend data foundation, and Phase 7.2 Interactive Decision Graph Workspace.
+Completed foundations: AI Chat answer/chart protection, Dataset Trust, backend `decision_output`, frontend `decision_output` rendering, chat-native corrections, Evidence Board rendering, Decision Graph backend data foundation, Interactive Decision Graph Workspace, User Hypotheses and Graph-To-Action Flow, and Scenario Compare in the AI Chat decision output.
 
 The old standalone Phase 4 Canonical Active Dataset handoff is superseded. Dataset truth now belongs inside Dataset Trust in the unified AI Chat decision output flow.
 
 ## Current Project Gate
 
-Phase 7.1 Decision Graph backend data foundation is complete. The backend contract and endpoints support variable candidates, selected variables, graph nodes, evidence coverage edges, observed association edges, edge metrics, data sufficiency, limitations, reliability labels, and the observational reliability boundary.
+Current gate: ready for the next Decision Intelligence slice. Use this status file as the single current source of truth. Use `project_docs/active/decision_intelligence/current/ai_chat_decision_output_unification_rollout.md` for implementation details only, and use `project_docs/active/contracts/decision_objects.md` when payload details are needed.
 
-Phase 7.2 Interactive Decision Graph Workspace is complete. The workspace is integrated with the `decision_graph` backend contract, opens from AI Chat, builds selected-variable graphs, distinguishes evidence coverage from observed association edges, shows inspector metrics and limitations, and has an accepted Codex UI modernization with dark-theme support.
-
-Phase 7.3 User Hypotheses And Graph-To-Action Flow is complete for current planning purposes. Backend contract and tests are verified. Gemini reported frontend build, diff, and focused browser verification; Codex targeted source review accepted the prior frontend blockers as fixed.
-
-Current gate: ready for the next Decision Intelligence slice. No active Gemini handoff is open for this flow.
+Latest completed slice: Scenario Compare is folded into the AI Chat decision output. Backend and frontend implementation are complete by source review and build verification.
 
 ## Latest Verified Slice
+
+Phase 8 Scenario Compare rendering in the AI Chat decision output is implemented and verified.
+
+Verified evidence:
+- `AIShell.jsx` passes `decision_output.scenario_compare` into `ScenarioPreview`.
+- `ScenarioPreview.jsx` handles the `not_applicable` state by showing summary and limitations instead of fabricated projections.
+- The prior adjustment-chip blocker is repaired: `ScenarioPreview.jsx` now maps `inputs.metric_targets[].adjustment_type` and `inputs.metric_targets[].adjustment_value`.
+- Projection deltas now use bounded `sensitivity delta` wording instead of forecast-like `expected change`.
+- `ScenarioPreview.jsx` guards nullable `delta_pct`, falls back to `delta_value`, and renders `Delta unavailable` when neither delta is numeric.
+- `npm --prefix frontend\frontend run build` completed successfully with existing repo warnings.
+- `git diff --check` passed with line-ending warnings only.
+- Codex did not run browser verification in this review.
+
+Prior verified slice:
+
+Phase 8 backend Scenario Compare contract work is verified.
+
+Verified evidence:
+- `decision_output.scenario_compare` now normalizes supported scenario previews into a display-ready object with `status`, `summary`, `inputs`, `baseline`, `comparison`, `projections`, `assumptions`, `limitations`, `source_scenario_ids`, and `truth_boundary`.
+- Missing, skipped, or projection-less scenario data returns a conservative `not_applicable` object instead of fabricated projections.
+- Decision Chat can attach an existing bounded `scenario_preview` from request or session state to the composed `decision_output`; chat does not run scenario evaluation directly.
+- Decision Pipeline scenario previews now carry `source_scenario_ids` traced from the existing scenario service response.
+- Scenario Compare language remains bounded to direct adjustment or sensitivity comparison and explicitly denies forecast, optimizer, simulation, causal model, autonomous decision, and final recommendation semantics.
+- `PYTHONPATH=.codex_tmp_py\site-packages python -m unittest tests.test_decision_chat_service tests.test_decision_pipeline_service tests.test_decision_phase_3_correction tests.test_decision_graph_service tests.test_decision_reliability_benchmark tests.test_decision_workspace_service` passed at 72/72.
+
+Prior verified slice:
 
 Gemini applied a new UI polish pass to the Decision Graph Workspace based on user direction, reverting the previous extreme flat enterprise aesthetic in favor of a modern, slightly rounded, bordered, and softly shadowed panel style matching a provided reference.
 
@@ -101,4 +123,3 @@ Keep this file short. When a phase is fully closed and verified, move detailed s
 | 2 | `project_docs/active/README.md` |
 | 3 | `project_docs/active/status/decision_intelligence_execution_status.md` |
 | 4 | `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md` |
-| 5 | `project_docs/active/decision_intelligence/current/ai_chat_decision_output_unification_rollout.md` |

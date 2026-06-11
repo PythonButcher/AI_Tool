@@ -44,7 +44,7 @@ The sample file is an example artifact only. It demonstrates the required shape 
 
 Start by choosing a planning topic. Good topics are questions like what the next Decision Intelligence slice should be, whether a proposed UI handoff is strong enough, whether a backend contract is ready for Gemini, or which risks should gate the next implementation phase.
 
-Before running the council, the orchestrating agent should inspect the current active project docs. Start with `project_docs/INDEX.md`, then `project_docs/active/README.md`, then the active status and frontend guardrail. For Decision Intelligence work, use `project_docs/active/decision_intelligence/current/next_focus_execution_plan.md` for the current plan and read completed plans or handoffs only when the topic explicitly needs historical evidence.
+Before running the council, the orchestrating agent should inspect the current active project docs. Start with `project_docs/INDEX.md`, then `project_docs/active/README.md`, then the active status and frontend guardrail. For Decision Intelligence work, use `project_docs/active/status/decision_intelligence_execution_status.md` for the current gate and `project_docs/active/decision_intelligence/current/ai_chat_decision_output_unification_rollout.md` only for implementation details. Read completed plans or handoffs only when the topic explicitly needs historical evidence.
 
 Then paste `project_docs/active/agent_council/master_council_prompt.md` into the AI system that will simulate or coordinate the agents. Add the specific planning topic after the prompt in plain language. The council should run four rounds: independent proposals, critique, reconciliation, and final JSON synthesis.
 

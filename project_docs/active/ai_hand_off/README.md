@@ -12,7 +12,7 @@ Gemini owns frontend implementation, React/CSS, UI rendering, browser verificati
 
 No active Gemini handoff is open.
 
-Active rollout: `project_docs/active/decision_intelligence/current/ai_chat_decision_output_unification_rollout.md`
+Current truth: `project_docs/active/status/decision_intelligence_execution_status.md`
 
 Recently completed handoff:
 

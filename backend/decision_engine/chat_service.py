@@ -221,11 +221,13 @@ class DecisionChatService:
             })
 
         dataset_trust = DecisionChatService.build_dataset_trust_for_payload(payload, workspace=draft_workspace)
+        scenario_preview = DecisionChatService._extract_scenario_preview(payload, session_state)
         decision_output = DecisionChatService._build_decision_output(
             workspace=draft_workspace,
             dataset_trust=dataset_trust,
             workspace_analysis=workspace_analysis,
             correction_result=output_correction_result,
+            scenario_preview=scenario_preview,
         )
         if decision_output is not None:
             artifacts.append(decision_output)
@@ -323,11 +325,13 @@ class DecisionChatService:
             mode="decide",
         )
         dataset_trust = DecisionChatService.build_dataset_trust_for_payload(payload, workspace=workspace)
+        scenario_preview = DecisionChatService._extract_scenario_preview(payload, session_state)
         decision_output = DecisionChatService._build_decision_output(
             workspace=workspace,
             dataset_trust=dataset_trust,
             workspace_analysis=workspace_analysis,
             correction_result=correction_result,
+            scenario_preview=scenario_preview,
         )
         if decision_output is not None:
             artifacts.append(decision_output)
@@ -918,6 +922,7 @@ class DecisionChatService:
         dataset_trust: Dict[str, Any],
         workspace_analysis: Dict[str, Any] | None = None,
         correction_result: Dict[str, Any] | None = None,
+        scenario_preview: Dict[str, Any] | None = None,
     ) -> Dict[str, Any] | None:
         """Compose the display artifact while keeping Evidence Board normalization centralized."""
         if not isinstance(workspace, dict) or not workspace:
@@ -927,6 +932,7 @@ class DecisionChatService:
             dataset_trust=dataset_trust,
             workspace_analysis=workspace_analysis,
             correction_result=correction_result,
+            scenario_preview=scenario_preview,
         )
 
     @staticmethod
@@ -945,6 +951,15 @@ class DecisionChatService:
             return workspace
         workspace = session_state.get("draft_workspace")
         return workspace if isinstance(workspace, dict) else None
+
+    @staticmethod
+    def _extract_scenario_preview(payload: Dict[str, Any], session_state: Dict[str, Any]) -> Dict[str, Any] | None:
+        """Accept a precomputed bounded scenario preview without running scenario evaluation in chat."""
+        scenario_preview = payload.get("scenario_preview") or payload.get("scenarioPreview")
+        if isinstance(scenario_preview, dict):
+            return scenario_preview
+        scenario_preview = session_state.get("scenario_preview") or session_state.get("scenarioPreview")
+        return scenario_preview if isinstance(scenario_preview, dict) else None
 
     @staticmethod
     def _should_rebuild_decision_workspace(

@@ -10,9 +10,8 @@ This file is the active navigation hub. If this file conflicts with an archived 
 | --- | --- | --- |
 | 1 | `project_docs/active/status/decision_intelligence_execution_status.md` | Short current truth |
 | 2 | `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md` | Ownership boundary |
-| 3 | `project_docs/active/decision_intelligence/current/ai_chat_decision_output_unification_rollout.md` | Active rollout |
-| 4 | `project_docs/active/contracts/decision_objects.md` | Contract reference when touching payloads |
-| 5 | `project_docs/active/codex_harness_engineering.md` | Run efficiency for substantial Codex work |
+| 3 | `project_docs/active/contracts/decision_objects.md` | Contract reference when touching payloads |
+| 4 | `project_docs/active/codex_harness_engineering.md` | Run efficiency for substantial Codex work |
 
 ## Current Direction
 
@@ -27,7 +26,8 @@ Dataset truth remains important, but the old standalone Phase 4 dataset handoff 
 | Area | Location | Rule |
 | --- | --- | --- |
 | Status | `project_docs/active/status/` | Keep short; archive long history |
-| Current rollout | `project_docs/active/decision_intelligence/current/` | One active plan only |
+| Current status | `project_docs/active/status/decision_intelligence_execution_status.md` | Single current source of truth |
+| Implementation reference | `project_docs/active/decision_intelligence/current/ai_chat_decision_output_unification_rollout.md` | Phase details and acceptance guidance; status file wins on current gate |
 | Completed plans | `project_docs/active/decision_intelligence/completed/` | Reference only |
 | Contracts | `project_docs/active/contracts/` | Backend/frontend payload truth |
 | Handoffs | `project_docs/active/ai_hand_off/` | Active handoffs only |
@@ -60,9 +60,11 @@ The active status file is for current truth, the current gate, and the latest ve
 
 When Codex wraps up a project phase or clears a phase gate, the final response must automatically include a clean, paste-ready prompt for starting the next session. The wrap-up summary may describe the phase just completed, but the next-session prompt must not recap prior phases, review history, implementation history, or who approved earlier work. It may include only the minimum prerequisite state needed to start safely, such as `backend contract is ready` or `active handoff exists`, then point to the current docs and name the next task. Do not include sentences like `Phase N is complete`, `Codex implemented`, `reviewed by`, or detailed verification history inside the next-session prompt.
 
+Before sending a final response after substantial Decision Intelligence work, Codex must run this stop check: did this response clear a backend gate, clear a frontend gate, wrap a project phase, mark a goal complete, or identify Gemini as the next owner? If yes, include the paste-ready next-session or Gemini prompt in the final response. A status summary without that prompt is incomplete.
+
 ## Current Active File
 
-`project_docs/active/decision_intelligence/current/ai_chat_decision_output_unification_rollout.md`
+`project_docs/active/status/decision_intelligence_execution_status.md`
 
 ## Superseded Or Completed Records
 

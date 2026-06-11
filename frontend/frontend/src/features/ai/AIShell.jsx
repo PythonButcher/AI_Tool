@@ -1374,13 +1374,7 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspa
                   <details className="ai-shell__do-secondary-details">
                     <summary>Scenario Compare</summary>
                     <div className="ai-shell__do-scenario-wrap">
-                      {doScenario.status === 'ready' ? (
-                        <ScenarioPreview preview={doScenario} />
-                      ) : (
-                        <span className="ai-shell__do-scenario-locked">
-                          <FaShieldAlt /> {doScenario.summary || 'Requires complete frame and active evidence.'}
-                        </span>
-                      )}
+                      <ScenarioPreview preview={doScenario} />
                     </div>
                   </details>
                 )}
