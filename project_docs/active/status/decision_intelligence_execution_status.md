@@ -24,30 +24,27 @@ The old standalone Phase 4 Canonical Active Dataset handoff is superseded. Datas
 
 ## Current Project Gate
 
-Phase 8 is fully verified and complete. 
+Phase 10 is fully verified and complete. All legacy Decision state routing has been purged.
 
-Current gate is **Phase 9: Redefine The Decisions Window**.
+Current gate is **Wait for user verification or next feature instruction**.
 
 Use this status file as the single current source of truth. Use `project_docs/active/decision_intelligence/current/ai_chat_decision_output_unification_rollout.md` for implementation details only, and use `project_docs/active/contracts/decision_objects.md` when payload details are needed.
 
 ## Latest Verified Slice
 
-Phase 8 Scenario Compare frontend blockers are repaired and verified.
+## Phase 10: Purge Legacy Decision State (Active Execution)
+**Status:** IMPLEMENTED (Codex & Antigravity)
 
-Verified evidence:
-- `AIShell.jsx` securely passes `decision_output.scenario_compare` into `ScenarioPreview`.
-- `ScenarioPreview.jsx` securely handles the `not_applicable` state by showing summary and limitations instead of fabricated projections.
-- The prior adjustment-chip blocker is repaired: `ScenarioPreview.jsx` now strictly parses `inputs.metric_targets[].adjustment_type` and `adjustment_value` into clean, signed percent or absolute labels.
-- Rendered `decision_output.scenario_compare` inside `AIShell.jsx` and rewrote `ScenarioPreview.jsx` to correctly map the new data contract (inputs, baseline, comparison, projections, assumptions, limitations, source_scenario_ids).
-- Fixed adjustment chip mapping to securely parse `inputs.metric_targets[].adjustment_type` and `adjustment_value` into clean, signed percent or absolute labels.
-- Fixed projection delta mapping to avoid NaN% issues by guarding against missing `delta_pct` and falling back to `delta_value` or a conservative 'Delta unavailable' state.
-- Removed forecast-like wording (e.g. "expected change") and explicitly implemented bounded terminology ("direct adjustment delta" or "sensitivity delta") within projection values.
-- The "not_applicable" state explicitly renders the unavailable summary and limitations without fabricating charts or empty spaces.
-- Explicitly described Scenario Compare as "Direct Adjustment Comparison" in the UI to prevent it from being misinterpreted as a forecast or simulation.
-- Designed UI within `AIShell.css` ensuring visual harmony with the decision output layout.
-- `npm --prefix frontend\frontend run build` completed successfully.
-- `git diff --check` passed cleanly.
-- Browser verification confirmed bounded state renders correctly.
+**Focus:** Complete the deletion of legacy window/panel state for Decisions from the frontend `App.jsx`, `SideBar.jsx`, and `DataPane.jsx` since AI Chat handles everything natively.
+
+**Goals:**
+1. [x] Re-route `open_workspace` action to trigger the native `decision_output` review in `AIShell.jsx`.
+2. [x] Delete `DESTINATIONS.DECISIONS` entirely.
+3. [x] Remove `showDecisionPanel`, `decisionWorkspace`, `decisionBundle` logic from `App.jsx`.
+4. [x] Ensure `Decision Graph` remains as the only standalone popout tool.
+
+**Current Blockers:** 
+- None. Fully implemented and integrated.
 
 ## Status File Discipline
 

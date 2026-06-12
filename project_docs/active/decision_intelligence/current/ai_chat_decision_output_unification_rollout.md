@@ -581,6 +581,10 @@ The output says direct adjustment or sensitivity comparison, not forecast or cau
 
 Purpose: decide what role the existing Decisions window should play after AI Chat output works.
 
+Architecture decision note:
+
+`project_docs/active/decision_intelligence/current/decisions_window_future_role.md`
+
 Do not start this before Phase 4 is usable. The Decisions window should not be removed first because it currently contains working frontend renderers and continuity behavior.
 
 Likely options:

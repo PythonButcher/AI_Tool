@@ -23,7 +23,6 @@ import MachineLearningPanel from '../../features/machine_learning/MachineLearnin
 import DashboardFilterBar from '../../features/dashboard/DashboardFilterBar';
 import KpiCardWindow from '../../features/dashboard/KpiCardWindow';
 import { WINDOW_SIZING } from '../../utils/windowSizing';
-import DecisionPanel from '../../features/business/decision/DecisionPanel';
 import DecisionGraphWorkspace from '../../features/business/decision/graph/DecisionGraphWorkspace';
 import DestinationHome from './DestinationHome';
 import { FaCompress, FaExternalLinkAlt } from 'react-icons/fa';
@@ -32,7 +31,6 @@ const DESTINATIONS = {
   WORKSPACE: 'workspace',
   EXPLORE: 'explore',
   DASHBOARDS: 'dashboards',
-  DECISIONS: 'decisions',
   AI: 'ai',
 };
 
@@ -118,7 +116,6 @@ function CanvasContainer({
   const isDashboardDest = activeDestination === DESTINATIONS.DASHBOARDS;
   const isExploreDest = activeDestination === DESTINATIONS.EXPLORE;
   const isWorkspaceDest = activeDestination === DESTINATIONS.WORKSPACE;
-  const isDecisionDest = activeDestination === DESTINATIONS.DECISIONS;
   const isAiDest = activeDestination === DESTINATIONS.AI;
 
   const handleDestinationHomeAction = useCallback((action) => {
@@ -134,20 +131,8 @@ function CanvasContainer({
         restoreWindow('aiWorkflowLab');
         break;
       case 'run_intelligence':
-        if (activeDestination !== DESTINATIONS.DECISIONS) {
-          onDestinationSelect(DESTINATIONS.DECISIONS);
-        }
         onRunDecision();
         break;
-      case 'go_to_decisions':
-        onDestinationSelect(DESTINATIONS.DECISIONS);
-        break;
-      case 'ai_chart':
-        onOpenAiChat();
-        break;
-      case 'upload':
-        // Trigger data preview which handles intake
-        setShowDataPreview(true);
         restoreWindow('dataPreview');
         break;
       case 'hub':
@@ -795,30 +780,6 @@ function CanvasContainer({
     </WindowFrame>
   ) : null;
 
-  const decisionPanelElement = (showDecisionPanel && !minimizedWindows.decisionPanel) ? (
-    <WindowFrame
-      {...getWindowProps('decisionPanel', '🧠 Decision Intelligence', () => setShowDecisionPanel(false), () => minimizeWindow('decisionPanel', 'Decision Intelligence'))}
-      initialState={getInitialState('decisionPanel', 9, 25, WINDOW_SIZING.DECISION_PANEL.defW, WINDOW_SIZING.DECISION_PANEL.defH, WINDOW_SIZING.DECISION_PANEL.minW, WINDOW_SIZING.DECISION_PANEL.minH)}
-      minWidth={WINDOW_SIZING.DECISION_PANEL.minW}
-      minHeight={WINDOW_SIZING.DECISION_PANEL.minH}
-    >
-      <DecisionPanel
-        bundle={decisionBundle}
-        onActionClick={onDecisionAction}
-        readiness={decisionReadiness}
-        warnings={decisionWarnings}
-        onRunDecision={onRunDecision}
-        onOpenAiChat={onOpenAiChat}
-        setIsDataPaneOpen={setIsDataPaneOpen}
-        workspace={decisionWorkspace}
-        workspaceAnalysis={workspaceAnalysis}
-        onCreateWorkspace={onCreateDecisionWorkspace}
-        onAnalyzeWorkspace={onAnalyzeWorkspace}
-        onResetWorkspace={onResetDecisionWorkspace}
-        datasetContext={getDecisionPayloadBase ? getDecisionPayloadBase() : {}}
-      />
-    </WindowFrame>
-  ) : null;
 
   const decisionGraphElement = (showDecisionGraph && !minimizedWindows.decisionGraph) ? (
     <WindowFrame
@@ -1032,14 +993,12 @@ function CanvasContainer({
       const hasAiWorkflowWindows = outputWindows.length > 0;
       return !showAiWorkflow && !showAIChart && !showStoryPanel && !showWhiteBoard && !hasAiWorkflowWindows && !showAiChat;
     }
-    if (isDecisionDest) return !showDecisionPanel && !showDecisionGraph && charts.length === 0;
     return true;
   }, [
     isWorkspaceDest,
     isExploreDest,
     isDashboardDest,
     isAiDest,
-    isDecisionDest,
     showDataPreview,
     showRawViewer,
     showMachineLearning,
@@ -1050,7 +1009,6 @@ function CanvasContainer({
     showStoryPanel,
     showWhiteBoard,
     outputWindows.length,
-    showDecisionPanel,
     showDecisionGraph,
     showAiChat,
   ]);
@@ -1080,10 +1038,9 @@ function CanvasContainer({
         {isAiDest && workflowLabElement}
         {isAiDest && whiteBoardElement}
         {isAiDest && storyPanelElement}
-        {(isExploreDest || isDecisionDest) && chartElements}
+        {isExploreDest && chartElements}
         {isDashboardDest && dashboardElements}
-        {isDecisionDest && decisionPanelElement}
-        {(isDecisionDest || isAiDest) && decisionGraphElement}
+        {isAiDest && decisionGraphElement}
       </div>
       {aiChatPortal}
       <MinimizedDock />

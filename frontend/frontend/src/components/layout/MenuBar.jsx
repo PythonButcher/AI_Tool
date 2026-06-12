@@ -31,6 +31,7 @@ import {
   FaTimes,
   FaUpload,
   FaProjectDiagram,
+  FaShieldAlt,
 } from 'react-icons/fa';
 import { TbCloudDataConnection } from 'react-icons/tb';
 import { ThemeContext } from '../../context/ThemeContext';
@@ -39,7 +40,6 @@ const DESTINATIONS = {
   WORKSPACE: 'workspace',
   EXPLORE: 'explore',
   DASHBOARDS: 'dashboards',
-  DECISIONS: 'decisions',
   AI: 'ai',
 };
 
@@ -68,7 +68,7 @@ const inlinePanelMeta = {
 
 /**
  * RibbonCommand
- * Simplified for high-density professional UI. 
+ * Simplified for high-density professional UI.
  * Shows only icon and concise label.
  */
 function RibbonCommand({
@@ -128,8 +128,6 @@ function MenuBar({
   showCleaningForm,
   setShowExportPanel,
   showExportPanel,
-  onRunDecision,
-  decisionReadiness,
   addChart,
   addDashboardKpi,
   addDashboardChart,
@@ -163,11 +161,11 @@ function MenuBar({
     if (!activeSurface) return null;
     const meta = inlinePanelMeta[activeSurface];
     let content = null;
-    
+
     if (activeSurface === 'hub') {
       content = <DataHubWindow />;
     }
-    
+
     if (!content || !meta) return null;
 
     return (
@@ -177,9 +175,9 @@ function MenuBar({
             <span className="ribbon-inline-panel__badge">{meta.badge}</span>
             <h3 className="ribbon-inline-panel__title">{meta.title}</h3>
           </div>
-          <button 
-            type="button" 
-            className="ribbon-inline-panel__close" 
+          <button
+            type="button"
+            className="ribbon-inline-panel__close"
             onClick={() => setActiveSurface(null)}
             title="Close Panel"
           >
@@ -244,25 +242,10 @@ function MenuBar({
                 <RibbonCommand icon={<FaFilter />} label="Filters" onClick={() => setOpenDataFilter(true)} />
               </RibbonGroup>
             )}
-            {activeDestination === DESTINATIONS.DECISIONS && (
-              <RibbonGroup title="Decisions">
-                <RibbonCommand 
-                  icon={<FaLightbulb />} 
-                  label="Analyze" 
-                  onClick={onRunDecision} 
-                  disabled={!(decisionReadiness?.decision_ready && (decisionReadiness?.missing_requirements?.length || 0) === 0)} 
-                  emphasized 
-                />
-                <RibbonCommand
-                  icon={<FaProjectDiagram />}
-                  label="Graph"
-                  onClick={onOpenDecisionGraph}
-                />
-              </RibbonGroup>
-            )}
             {activeDestination === DESTINATIONS.AI && (
               <RibbonGroup title="AI Suite">
                 <RibbonCommand icon={<FaRobot />} label="Chat" onClick={onOpenAiChat} emphasized />
+                <RibbonCommand icon={<FaProjectDiagram />} label="Graph" onClick={onOpenDecisionGraph} />
                 <RibbonCommand icon={<FaPlus />} label="Automation" onClick={onOpenAiWorkflow} />
                 <RibbonCommand icon={<FaFileAlt />} label="Report" onClick={onAiReportClick} disabled={!aiReportReady} />
                 <RibbonCommand icon={<FaBook />} label="Narrative" onClick={onOpenStoryboard} />
@@ -270,29 +253,29 @@ function MenuBar({
             )}
 
             <RibbonGroup title="Sources">
-              <RibbonCommand 
-                icon={<FaUpload />} 
-                label="Upload" 
-                onClick={() => { 
-                  setIsDataPaneOpen(true); 
-                  if (setActiveDataPaneTab) setActiveDataPaneTab('sources'); 
-                }} 
+              <RibbonCommand
+                icon={<FaUpload />}
+                label="Upload"
+                onClick={() => {
+                  setIsDataPaneOpen(true);
+                  if (setActiveDataPaneTab) setActiveDataPaneTab('sources');
+                }}
               />
-              <RibbonCommand 
-                icon={<FaServer />} 
-                label="API" 
-                onClick={() => { 
-                  setIsDataPaneOpen(true); 
-                  if (setActiveDataPaneTab) setActiveDataPaneTab('sources'); 
-                }} 
+              <RibbonCommand
+                icon={<FaServer />}
+                label="API"
+                onClick={() => {
+                  setIsDataPaneOpen(true);
+                  if (setActiveDataPaneTab) setActiveDataPaneTab('sources');
+                }}
               />
-              <RibbonCommand 
-                icon={<FaDatabase />} 
-                label="DB" 
-                onClick={() => { 
-                  setIsDataPaneOpen(true); 
-                  if (setActiveDataPaneTab) setActiveDataPaneTab('sources'); 
-                }} 
+              <RibbonCommand
+                icon={<FaDatabase />}
+                label="DB"
+                onClick={() => {
+                  setIsDataPaneOpen(true);
+                  if (setActiveDataPaneTab) setActiveDataPaneTab('sources');
+                }}
               />
             </RibbonGroup>
 
