@@ -24,27 +24,37 @@ The old standalone Phase 4 Canonical Active Dataset handoff is superseded. Datas
 
 ## Current Project Gate
 
-Phase 10 is fully verified and complete. All legacy Decision state routing has been purged.
+Legacy Decision state routing is **fully purged**. The frontend paths that exposed or called old Decision-window behavior have been removed.
 
-Current gate is **Wait for user verification or next feature instruction**.
+Current gate is **ready for conflicting-surface prune planning**.
+
+Next standalone goal: review and plan the safe rewrite, demotion, or gating of app surfaces that still imply unsupported final recommendations, optimization, autonomous decisions, prediction certainty, or causal proof.
 
 Use this status file as the single current source of truth. Use `project_docs/active/decision_intelligence/current/ai_chat_decision_output_unification_rollout.md` for implementation details only, and use `project_docs/active/contracts/decision_objects.md` when payload details are needed.
 
 ## Latest Verified Slice
 
-## Phase 10: Purge Legacy Decision State (Active Execution)
-**Status:** IMPLEMENTED (Codex & Antigravity)
+## Legacy Decision State Purge Audit
+**Status:** COMPLETE
 
-**Focus:** Complete the deletion of legacy window/panel state for Decisions from the frontend `App.jsx`, `SideBar.jsx`, and `DataPane.jsx` since AI Chat handles everything natively.
+**Focus:** Ensure AI Chat owns the decision continuation path and legacy Decisions-window routing is not exposed as a required next step.
 
-**Goals:**
-1. [x] Re-route `open_workspace` action to trigger the native `decision_output` review in `AIShell.jsx`.
-2. [x] Delete `DESTINATIONS.DECISIONS` entirely.
-3. [x] Remove `showDecisionPanel`, `decisionWorkspace`, `decisionBundle` logic from `App.jsx`.
-4. [x] Ensure `Decision Graph` remains as the only standalone popout tool.
+**Verified facts:**
+1. `App.jsx`, `SideBar.jsx`, `MenuBar.jsx`, and `DataPane.jsx` no longer define `DESTINATIONS.DECISIONS`.
+2. `App.jsx` no longer passes legacy Decision panel/workspace state into `CanvasContainer`.
+3. `CanvasContainer.jsx`, `DestinationHome.jsx`, and `FieldsPanel.jsx` have been purged of legacy Decision props, actions, and routing cases.
+4. `open_workspace` in `AIShell.jsx` strictly inspects the latest `decision_output` through `handleInspect` and shows an in-chat explanation when no active decision output exists.
+5. Decision Intelligence CTAs in `DestinationHome.jsx` now strictly route to AI Chat.
+6. `npm --prefix frontend\frontend run build` passes successfully.
 
-**Current Blockers:** 
-- None. Fully implemented and integrated.
+**Current Blockers:**
+- None.
+
+## Next Focus
+
+Review product-code candidates in `project_docs/active/decision_intelligence/current/ai_chat_decision_output_unification_rollout.md` and `project_docs/active/reviews/project_pruning_recommendations.md`.
+
+Do not delete useful product code before confirming a replacement path or user approval. Codex should start with source review, backend-contract truth, and a scoped handoff if frontend changes are needed.
 
 ## Status File Discipline
 

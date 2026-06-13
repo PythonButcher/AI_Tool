@@ -42,7 +42,7 @@ const MODES = [
  *
  * Re-implemented as a high-fidelity workspace with split conversation and inspection.
  */
-function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspace, onOpenDecisionGraph, onActiveDecisionOutputChange }) {
+function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenDecisionGraph }) {
   const {
     cleanedData,
     fullData,
@@ -90,13 +90,6 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspa
   const [highlightedIndex, setHighlightedIndex] = useState(0);
 
   const inputRef = useRef(null);
-  useEffect(() => {
-    if (activeArtifact && activeArtifact.type === 'decision_output') {
-      if (onActiveDecisionOutputChange) {
-        onActiveDecisionOutputChange(activeArtifact);
-      }
-    }
-  }, [activeArtifact, onActiveDecisionOutputChange]);
 
   const chatBodyRef = useRef(null);
 
@@ -124,11 +117,16 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspa
   };
 
   const handleActionClick = async (actionId, scopedSessionState = null) => {
-    // Phase 10: Map open_workspace to an in-chat inspector view of the most recent decision_output/workspace_preview artifact
+    // Phase 10: Map open_workspace to an in-chat inspector view of the most recent decision_output artifact
     if (actionId === 'open_workspace') {
-      const relevantArtifact = [...userMessages].reverse().flatMap(msg => msg.artifacts || []).find(a => a.type === 'decision_output' || a.type === 'workspace_preview');
+      const relevantArtifact = [...userMessages].reverse().flatMap(msg => msg.artifacts || []).find(a => a.type === 'decision_output');
       if (relevantArtifact) {
         handleInspect(relevantArtifact, null, scopedSessionState || sessionState);
+      } else {
+        setUserMessages(prev => [...prev, {
+          role: "assistant",
+          content: "No active decision output is available to open. Please describe your objective to start a new decision analysis."
+        }]);
       }
       return;
     }
@@ -157,12 +155,6 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenWorkspa
       const data = response.data;
 
       if (data.status === 'success') {
-        // If the action response itself contains a workspace, and it's an open intent, handle it
-        if (actionId === 'open_workspace' && data.decision_workspace && onOpenWorkspace) {
-          onOpenWorkspace(data.decision_workspace);
-          setLoading(false);
-          return;
-        }
 
         const newAssistantMsg = {
           role: "assistant",

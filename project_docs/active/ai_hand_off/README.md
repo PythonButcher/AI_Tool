@@ -10,13 +10,9 @@ Gemini owns frontend implementation, React/CSS, UI rendering, browser verificati
 
 ## Active Handoffs
 
-`project_docs/active/ai_hand_off/decision_review_library_frontend.md`
+None.
 
 Current truth: `project_docs/active/status/decision_intelligence_execution_status.md`
-
-Recently completed handoff:
-
-`project_docs/active/decision_intelligence/completed/phase_7_3_gemini_user_hypotheses_graph_to_action.md`
 
 ## Handoff Rule
 

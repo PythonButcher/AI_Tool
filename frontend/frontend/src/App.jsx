@@ -504,6 +504,7 @@ function AppContent() {
               onDestinationSelect={handleDestinationSelect}
               setShowDataVisual={setShowDataVisual}
               setIsDataPaneOpen={setIsDataPaneOpen}
+              onOpenAiChat={handleOpenAiChat}
             >
               <DatasetInfo selectedStat={selectedStat} />
             </CanvasContainer>

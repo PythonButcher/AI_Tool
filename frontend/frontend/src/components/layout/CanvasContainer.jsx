@@ -72,21 +72,8 @@ function CanvasContainer({
   setShowMachineLearning,
   showAiChat,
   setShowAiChat,
-  showDecisionPanel,
-  setShowDecisionPanel,
-  decisionBundle,
-  decisionWorkspace,
-  workspaceAnalysis,
-  onCreateDecisionWorkspace,
-  onAnalyzeWorkspace,
-  onOpenDecisionWorkspace,
-  getDecisionPayloadBase,
-  onDecisionAction,
   decisionReadiness,
-  decisionWarnings,
   onOpenAiChat,
-  onRunDecision,
-  onResetDecisionWorkspace,
   onDestinationSelect,
   setShowDataVisual,
   setIsDataPaneOpen,
@@ -130,11 +117,6 @@ function CanvasContainer({
         setShowAiWorkflow(true);
         restoreWindow('aiWorkflowLab');
         break;
-      case 'run_intelligence':
-        onRunDecision();
-        break;
-        restoreWindow('dataPreview');
-        break;
       case 'hub':
         // In the new shell, 'hub' is basically the data preview/management window
         setShowDataPreview(true);
@@ -161,7 +143,6 @@ function CanvasContainer({
     onOpenAiChat,
     setShowAiWorkflow,
     restoreWindow,
-    onRunDecision,
     onDestinationSelect,
     activeDestination,
     setShowDataPreview,
@@ -789,8 +770,8 @@ function CanvasContainer({
       minHeight={WINDOW_SIZING.DECISION_PANEL.minH}
     >
       <DecisionGraphWorkspace
-        dataset={getDecisionPayloadBase ? getDecisionPayloadBase().dataset : null}
-        semanticModel={getDecisionPayloadBase ? getDecisionPayloadBase().semantic_model : null}
+        dataset={null}
+        semanticModel={null}
         initialContext={decisionGraphContext}
       />
     </WindowFrame>
@@ -959,7 +940,6 @@ function CanvasContainer({
         setShowAIChart={setShowAIChart}
         setAiChartType={setAiChartType}
         setAiChartData={setAiChartData}
-        onOpenWorkspace={onOpenDecisionWorkspace}
         onOpenDecisionGraph={onOpenDecisionGraph}
       />
     </WindowFrame>

@@ -60,7 +60,7 @@ const DestinationHome = ({ activeDestination, onAction, readiness }) => {
         <div className="dest-home__bridge">
           <FaLightbulb />
           <span>Your data is prepared for <strong>Decision Intelligence</strong>.</span>
-          <button onClick={() => onAction('run_intelligence')}>Analyze</button>
+          <button onClick={() => onAction('ai_chat')}>Analyze in AI Chat</button>
         </div>
       )}
     </div>
@@ -137,7 +137,7 @@ const DestinationHome = ({ activeDestination, onAction, readiness }) => {
         <div className="dest-home__bridge">
           <FaBrain />
           <span>Setup complete. <strong>Decision Intelligence</strong> can now analyze these metrics.</span>
-          <button onClick={() => onAction('go_to_decisions')}>Decisions</button>
+          <button onClick={() => onAction('ai_chat')}>AI Chat</button>
         </div>
       )}
     </div>
