@@ -1,5 +1,9 @@
 # App-Wide UI Flaws Gemini Handoff
 
+## Superseded Notice
+
+This handoff is historical and accepted as done. Do not use it as the current Gemini implementation prompt. Current Decision Intelligence frontend work is routed by `project_docs/active/status/decision_intelligence_execution_status.md` and `project_docs/active/decision_intelligence/current/ai_chat_emergency_overhaul_action_plan.md`.
+
 ## Purpose
 
 This handoff turns the Agent Council's app-wide UI flaw review into a Gemini implementation prompt.
@@ -18,7 +22,7 @@ Validate it with:
 
 ## Current Truth
 
-This is a Gemini frontend implementation task. Codex is coordinating the handoff.
+This was a Gemini frontend implementation task. It is not the active handoff.
 
 Preserve the current dark, dense, professional, operations-focused theme. Do not turn the app into a marketing-style interface. Do not remove, hide, downgrade, or simplify existing capability unless the user explicitly approves that change.
 
@@ -30,9 +34,9 @@ Decision Intelligence Slice 3 behavior must be preserved: primary and secondary 
 
 The highest-risk flaw is that AI chat actions on older cards may execute using the latest component-level `sessionState` rather than the state represented by that card. This must be checked and fixed before broad visual cleanup.
 
-The second major flaw is continuity. Chat `open_workspace` should carry the same draft workspace into the Decisions destination instead of leaving chat and Decisions as parallel products.
+The old continuity instruction is superseded. Chat `open_workspace` is now a compatibility action id; visible AI Chat behavior should use decision review or decision output language and must not require a jump into the old Decisions destination.
 
-The third major flaw is truthfulness. UI copy must not imply simulation, optimization, autonomous decisioning, ranked recommendations, finalized strategy, or final decisions. Use operational language such as draft decision frame, ready for structured analysis, observational analysis, review blockers, and open workspace.
+The third major flaw is truthfulness. UI copy must not imply simulation, optimization, autonomous decisioning, ranked recommendations, finalized strategy, or final decisions. Use operational language such as draft decision frame, ready for structured analysis, observational analysis, review blockers, and review decision output.
 
 The fourth flaw is inspectability. Draft previews and analysis summaries should expose enough backend-provided structure for users to see what was understood and why the analysis result matters. Use existing fields when present, including decision kickoff, prompt frame, objective, levers, segments, guardrails, assumptions, blockers, scoped diagnostics, and legacy diagnostics.
 
@@ -100,7 +104,7 @@ Manually verify the incomplete prompt: `How should we adjust discount rate by re
 
 Run a two-prompt stale-card check: ask the ready prompt, then ask a second unrelated decision prompt, then click `Analyze workspace` on the first card. The result must match the first card's workspace, not the newest session state.
 
-Verify `Open workspace` from AI chat navigates to Decisions and shows the same drafted workspace context.
+Verify AI Chat does not expose `Open workspace` as a visible no-op or required Decisions-window continuation. When this compatibility action appears, it should be relabeled or suppressed in favor of decision output review.
 
 Verify `Analyze workspace` renders observational diagnostic detail without simulation, optimizer, autonomous recommendation, or final-decision language.
 
@@ -112,14 +116,14 @@ Update `project_docs/active/status/decision_intelligence_execution_status.md` tr
 
 ## Short Gemini CLI Prompt
 
-Read `project_docs/INDEX.md` first, then the active frontend guardrail, Decision Intelligence status, Phase 4.5 plan, React state-flow review, and `project_docs/active/agent_council/outputs/app-wide-ui-flaws/gemini_handoff.md`. Implement the first app-wide UI flaw cleanup before adding any new features. Preserve the current dark, dense, professional operations-focused theme and preserve all existing AI chat, chart, dashboard, workflow, and Decision Intelligence capability.
+Do not use this historical prompt for current work. Read `project_docs/INDEX.md`, `project_docs/active/README.md`, `project_docs/active/status/decision_intelligence_execution_status.md`, `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md`, and `project_docs/active/decision_intelligence/current/ai_chat_emergency_overhaul_action_plan.md` instead.
 
 Focus first on correctness and trust. In `frontend/frontend/src/features/ai/AIShell.jsx`, verify and fix older chat card actions so they execute against that card's own decision/session context, not the latest component-level `sessionState`. Support both top-level and nested `recommended_next_action` shapes without duplicate action buttons. Keep disabled actions non-executable and keep availability explanations visible.
 
-Then fix chat-to-Decisions continuity. If the backend action returns a draft or opened decision workspace, wire `open_workspace` through the frontend so AI chat can navigate to the Decisions destination and hydrate the same workspace in `DecisionPanel` instead of starting a fresh flow. Touch `App.jsx`, `CanvasContainer.jsx`, `AIShell.jsx`, and Decision components as needed. If the backend response lacks required data, document the gap for Codex instead of inventing fake frontend-only workspace state.
+Do not implement chat-to-Decisions continuity from this handoff. Current work should keep the decision flow finishable inside AI Chat and should treat the Decisions window as secondary.
 
-Clean the visible UI truthfulness and tone. Keep the theme, but remove or rewrite language that implies simulation, optimization, autonomous decisioning, ranked recommendations, finalized strategy, or final decisions. Use language like draft decision frame, ready for structured analysis, observational analysis, review blockers, and open workspace. Reduce marketing-like empty-state copy while keeping the app polished and work-focused.
+Clean the visible UI truthfulness and tone. Keep the theme, but remove or rewrite language that implies simulation, optimization, autonomous decisioning, ranked recommendations, finalized strategy, or final decisions. Use language like draft decision frame, ready for structured analysis, observational analysis, review blockers, and review decision output. Reduce marketing-like empty-state copy while keeping the app polished and work-focused.
 
 Improve inspectability without adding features. Render existing backend-provided decision draft and analysis details where available, including objective, levers, segments, guardrails, assumptions, blockers, prompt framing, scoped diagnostics, and legacy diagnostics. Hide, disable, or truthfully label AI shell tabs and context surfaces that are not backed by real session state. Make semantic definitions easier to discover in Decisions and Dashboards when readiness is incomplete.
 
-Add accessible names for icon-only controls and run verification. Build the frontend, test the ready marketing-spend/channel/gross-margin prompt, test the incomplete discount-rate/region prompt, run the two-prompt stale-card action check, verify Open workspace carries the same context into Decisions, search UI copy for unsupported capability claims, keyboard-test the main AI controls, and add or run focused frontend tests where practical. Update `project_docs/active/status/decision_intelligence_execution_status.md` truthfully when done.
+Add accessible names for icon-only controls and run verification. Build the frontend, test the ready marketing-spend/channel/gross-margin prompt, test the incomplete discount-rate/region prompt, run the two-prompt stale-card action check, verify AI Chat does not show `Open workspace` as a visible no-op or required Decisions-window continuation, search UI copy for unsupported capability claims, keyboard-test the main AI controls, and add or run focused frontend tests where practical. Update `project_docs/active/status/decision_intelligence_execution_status.md` truthfully when done.

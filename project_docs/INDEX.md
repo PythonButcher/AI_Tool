@@ -18,6 +18,7 @@ This is the top-level routing file. Use it to find the smallest current document
 | --- | --- |
 | Check concise current status | `project_docs/active/status/decision_intelligence_execution_status.md` |
 | Review Decision Intelligence implementation details | `project_docs/active/decision_intelligence/current/ai_chat_decision_output_unification_rollout.md` |
+| Implement current AI Chat emergency overhaul | `project_docs/active/decision_intelligence/current/ai_chat_emergency_overhaul_action_plan.md` |
 | Work on backend/frontend contracts | `project_docs/active/contracts/decision_objects.md` |
 | Prepare or review Gemini handoffs | `project_docs/active/ai_hand_off/README.md` |
 | Keep Codex runs efficient | `project_docs/active/codex_harness_engineering.md` |

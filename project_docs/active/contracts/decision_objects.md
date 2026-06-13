@@ -16,12 +16,14 @@ Additive readiness metadata returned by Decision Chat responses and Decision Wor
 | `truth_boundary` | `string` | Yes | Current value is `observational_analysis_only` |
 | `structural_readiness` | `object` | Yes | Flags for `ready_for_observational_analysis`, `ready_for_recommendation`, `ready_for_simulation`, `ready_for_optimization`, `ready_for_autonomous_decisioning`, and `missing_inputs` |
 | `blocked_state` | `object` | Yes | Includes `is_blocked`, `blocked_action_ids`, `blocking_missing_inputs`, and `blocking_unknown_ids` |
-| `allowed_next_actions` | `string[]` | Yes | Backend-approved action IDs such as `analyze_workspace`, `show_blockers`, `open_workspace`, and `show_assumptions` |
+| `allowed_next_actions` | `string[]` | Yes | Backend-approved action IDs such as `analyze_workspace`, `show_blockers`, `open_workspace`, and `show_assumptions`. `open_workspace` is a compatibility id only; frontend code must use backend-provided action labels/descriptions and must not infer old Decisions-window navigation from the id. |
 | `capability_state` | `object` | Yes | Capability map described below |
 | `unsupported_capabilities` | `string[]` | Yes | Current values include `simulation`, `optimization`, `autonomous_decisioning`, and `final_recommendation` |
 | `not_ready_for_recommendation` | `boolean` | Yes | Current Decision Intelligence output remains observational and should not be rendered as a final recommendation |
 
 Legacy compatibility note: existing fields such as `can_run_simulation` and `blocks_simulation` remain available for older frontend code. They must not be interpreted as a current runtime simulation feature. New code should prefer `capability_state.simulation.status == "unsupported"` and `truth_boundary == "observational_analysis_only"`.
+
+Action compatibility note: `open_workspace` may still appear in backend action ids for older clients and saved state. Current user-facing metadata should describe AI Chat decision review, decision output inspection, blockers, assumptions, analysis, graph tooling, or export. It must not be presented as a required jump from AI Chat into the old Decisions window.
 
 ### Capability State
 

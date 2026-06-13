@@ -23,20 +23,6 @@ import './AIShell.css';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
-const WORKSPACE_TABS = [
-  { id: 'threads', label: 'Threads', icon: <FaRegCommentDots /> },
-  { id: 'playbooks', label: 'Playbooks', icon: <FaBook /> },
-  { id: 'definitions', label: 'Definitions', icon: <FaDatabase /> },
-  { id: 'briefs', label: 'Briefs', icon: <FaFileAlt /> },
-  { id: 'checks', label: 'Checks', icon: <FaShieldAlt /> },
-];
-
-const MODES = [
-  { id: 'ask', label: 'Inquire', promise: 'Grounded factual analysis' },
-  { id: 'explore', label: 'Explore', promise: 'Visual trend discovery' },
-  { id: 'decide', label: 'Decide', promise: 'Strategic path evaluation' },
-];
-
 /**
  * AIShell (Analytics-Agent Workspace)
  *
@@ -58,14 +44,11 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenDecisio
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [awaitingCleanInstructions, setAwaitingCleanInstructions] = useState(false);
-  const [activeWorkspaceTab, setActiveWorkspaceTab] = useState('threads');
-
   // Phase 4 Logic State
   const [sessionState, setSessionState] = useState({});
   const [activeMode, setActiveMode] = useState('ask');
   const [activeArtifact, setActiveArtifact] = useState(null);
   const [isResultsPaneOpen, setIsResultsPaneOpen] = useState(true);
-  const [isContextPaneOpen, setIsContextPaneOpen] = useState(false);
 
   // Phase 5: Chat-native correction panel state
   // correctionPanelOpen tracks whether the inline correction form is visible in the inspector
@@ -141,7 +124,6 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenDecisio
 
     setLoading(true);
     setError(null);
-    setActiveArtifact(null); // Clear stale inspector state immediately
 
     const payload = {
       action: actionId,
@@ -1488,7 +1470,6 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenDecisio
 
     setLoading(true);
     setError(null);
-    setActiveArtifact(null); // Clear stale inspector state immediately
 
     const dsContext = resolveDatasetForNlp();
     const msg = userInput;
@@ -1603,116 +1584,30 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenDecisio
   };
 
   const handleKeyDown = (e) => {
-    if (!isMentionOpen) return;
-    const filtered = datasets.filter((ds) => ds.name.toLowerCase().includes(mentionQuery?.toLowerCase() || ""));
-    if (filtered.length === 0) return;
-    if (e.key === 'ArrowDown') { e.preventDefault(); setHighlightedIndex(prev => (prev < filtered.length - 1 ? prev + 1 : prev)); }
-    else if (e.key === 'ArrowUp') { e.preventDefault(); setHighlightedIndex(prev => (prev > 0 ? prev - 1 : prev)); }
-    else if (e.key === 'Enter') { e.preventDefault(); handleMentionSelect(filtered[highlightedIndex].name); setHighlightedIndex(0); }
-    else if (e.key === 'Escape') setIsMentionOpen(false);
+    if (isMentionOpen) {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setIsMentionOpen(false);
+        return;
+      }
+      const filtered = datasets.filter((ds) => ds.name.toLowerCase().includes(mentionQuery?.toLowerCase() || ""));
+      if (filtered.length > 0) {
+        if (e.key === 'ArrowDown') { e.preventDefault(); setHighlightedIndex(prev => (prev < filtered.length - 1 ? prev + 1 : prev)); return; }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); setHighlightedIndex(prev => (prev > 0 ? prev - 1 : prev)); return; }
+        else if (e.key === 'Enter') { e.preventDefault(); handleMentionSelect(filtered[highlightedIndex].name); setHighlightedIndex(0); return; }
+      }
+    }
+    
+    // Normal chat behavior
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
   };
 
   return (
     <div className="ai-shell">
-      {/* 1. Side Command Rail */}
-      <aside className="ai-shell__rail">
-        <div className="ai-shell__rail-top">
-          {MODES.map(m => (
-            <Tooltip key={m.id} title={m.label} placement="right">
-              <button
-                className={`ai-shell__rail-item ${activeMode === m.id ? 'is-active' : ''}`}
-                onClick={() => handleModeChange(null, m.id)}
-                aria-label={m.label}
-              >
-                {m.id === 'ask' ? <FaRegCommentDots /> : m.id === 'explore' ? <FaChartBar /> : <FaLightbulb />}
-              </button>
-            </Tooltip>
-          ))}
-        </div>
-        <div className="ai-shell__rail-middle">
-          <div className="ai-shell__rail-divider" />
-          <Tooltip title="Skills" placement="right">
-            <button className="ai-shell__rail-item is-disabled" aria-label="Skills">
-              <FaTools /><span className="ai-shell__dot-alert" />
-            </button>
-          </Tooltip>
-          <Tooltip title="Library" placement="right">
-            <button className="ai-shell__rail-item" onClick={() => {/* Placeholder for Library */}} aria-label="Library">
-              <FaHistory />
-            </button>
-          </Tooltip>
-          <Tooltip title="Context & Metadata" placement="right">
-            <button
-              className={`ai-shell__rail-item ${isContextPaneOpen ? 'is-active' : ''}`}
-              onClick={() => setIsContextPaneOpen(true)}
-              aria-label="Context & Metadata"
-            >
-              <FaLayerGroup />
-            </button>
-          </Tooltip>
-        </div>
-      </aside>
 
-      {/* 1.5 Context Drawer (Consolidated Pop-out) */}
-      <Drawer
-        anchor="left"
-        open={isContextPaneOpen}
-        onClose={() => setIsContextPaneOpen(false)}
-        PaperProps={{
-          sx: {
-            width: 350,
-            bgcolor: 'var(--bg-primary)',
-            borderRight: '1px solid var(--border-color)',
-            boxShadow: '20px 0 50px rgba(0,0,0,0.3)',
-            color: 'var(--text-primary)',
-            padding: '32px'
-          }
-        }}
-      >
-        <Box sx={{ mb: 4, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Typography variant="overline" sx={{ fontWeight: 900, letterSpacing: '0.15em' }}>Context & Grounding</Typography>
-          <IconButton onClick={() => setIsContextPaneOpen(false)} size="small" sx={{ color: 'var(--text-secondary)' }} aria-label="Close Context"><FaChevronRight style={{ transform: 'rotate(180deg)' }} /></IconButton>
-        </Box>
-
-        <div className="ai-shell__secondary-content" style={{ padding: 0 }}>
-          <div className="ai-shell__ghost-item">
-            <div className="ai-shell__ghost-label"><FaDatabase /> Grounding Sources</div>
-            <div className="ai-shell__ghost-box"><Typography variant="caption" sx={{ opacity: 0.6 }}>No active grounding sources in immediate focus.</Typography></div>
-          </div>
-
-          <div className="ai-shell__ghost-item">
-            <div className="ai-shell__ghost-label"><FaHistory /> Analysis History</div>
-            <div className="ai-shell__ghost-placeholder">
-              <div className="ai-shell__ghost-bar" style={{ width: '80%' }} /><div className="ai-shell__ghost-bar" style={{ width: '60%' }} /><div className="ai-shell__ghost-bar" style={{ width: '90%' }} />
-            </div>
-          </div>
-
-          <div className="ai-shell__ghost-item">
-            <div className="ai-shell__ghost-label"><FaLightbulb /> Decision Bridge</div>
-            <div className="ai-shell__ghost-draft">
-              <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>Strategy Bridge</Typography>
-              <Typography variant="caption" sx={{ opacity: 0.5 }}>Reserved for handoff to structured observational analysis.</Typography>
-            </div>
-          </div>
-
-          <Divider sx={{ my: 2, borderColor: 'var(--border-color)' }} />
-
-          <div className="ai-shell__context-module">
-            <div className="ai-shell__module-header"><span className="ai-shell__module-title">Schema Metadata</span><span className="ai-shell__coming-soon">Soon</span></div>
-            <div className="ai-shell__module-empty">No metadata overrides detected.</div>
-          </div>
-
-          <div className="ai-shell__context-module">
-            <div className="ai-shell__module-header"><span className="ai-shell__module-title">Enterprise Glossary</span><span className="ai-shell__coming-soon">Soon</span></div>
-            <div className="ai-shell__module-empty">Agent glossary sync inactive.</div>
-          </div>
-
-          <div className="ai-shell__context-module">
-            <div className="ai-shell__module-header"><span className="ai-shell__module-title">Hard Constraints</span><span className="ai-shell__coming-soon">Soon</span></div>
-            <div className="ai-shell__module-empty">No explicit constraints identified in thread.</div>
-          </div>
-        </div>
-      </Drawer>
 
       {/* 2. Primary Conversation Workspace */}
       <main className="ai-shell__workspace">
@@ -1734,58 +1629,17 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenDecisio
           </div>
         </header>
 
-        {/* Workspace Level Tabs */}
-        <div className="ai-shell__workspace-tabs">
-          <Tabs value={activeWorkspaceTab} onChange={(e, v) => setActiveWorkspaceTab(v)} variant="scrollable" scrollButtons="auto">
-            {WORKSPACE_TABS.map(tab => {
-              // Only allow Threads and Briefs for now as they are the most functional
-              const isFunctional = ['threads', 'briefs'].includes(tab.id);
-              return (
-                <Tab
-                  key={tab.id}
-                  label={tab.label}
-                  value={tab.id}
-                  className={`ai-shell__workspace-tab ${!isFunctional ? 'is-disabled' : ''}`}
-                  disabled={!isFunctional}
-                />
-              );
-            })}
-          </Tabs>
-        </div>
 
-        {/* Functional Mode Selector */}
-        <div className="ai-shell__mode-bar">
-          <div className="ai-shell__mode-container">
-            <div className="ai-shell__mode-group">
-              {MODES.map(m => (
-                <button
-                  key={m.id}
-                  className={`ai-shell__mode-btn ${activeMode === m.id ? 'is-active' : ''}`}
-                  onClick={() => handleModeChange(null, m.id)}
-                >
-                  <span>{m.label}</span>
-                  <span className="ai-shell__mode-promise">{m.promise}</span>
-                </button>
-              ))}
-            </div>
-            {modeContext.reason && (
-              <div className="ai-shell__mode-reason">
-                <FaInfoCircle className="ai-shell__mode-reason-icon" />
-                <Typography variant="caption">{modeContext.reason}</Typography>
-              </div>
-            )}
-          </div>
-        </div>
 
         <div className="ai-shell__conversation" ref={chatBodyRef}>
           {userMessages.length === 0 && (
             <div className="ai-shell__welcome-hero">
               <div className="ai-shell__hero-icon"><FaRobot /></div>
               <Typography variant="h4" className="ai-shell__hero-title">
-                {activeMode === 'decide' ? 'Draft Decision Frame' : activeMode === 'explore' ? 'Grounded Exploration' : 'Agent Intelligence'}
+                Agent Intelligence
               </Typography>
               <Typography variant="body1" className="ai-shell__hero-subtitle">
-                {activeMode === 'decide' ? 'Frame complex business decisions to evaluate levers and uncertainty.' : activeMode === 'explore' ? 'Identify trends and distributions across your grounded dataset sources.' : 'Ask for high-level summaries or query specific metric performance.'}
+                Ask for high-level summaries, explore datasets, or frame complex business decisions.
               </Typography>
               <div className="ai-shell__hero-actions">
                 <Chip icon={<FaPlus />} label="Dataset Bridge" onClick={() => setUserInput('@')} clickable />
@@ -1851,7 +1705,7 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenDecisio
           <div className="ai-shell__input-wrapper">
              {isMentionOpen && <MentionDropdown query={mentionQuery} position={mentionPosition} onSelect={handleMentionSelect} onClose={() => setIsMentionOpen(false)} highlightedIndex={highlightedIndex} onHighlight={setHighlightedIndex} />}
             <div className="ai-shell__input-bar">
-              <TextField inputRef={inputRef} onKeyDown={handleKeyDown} placeholder={activeMode === 'decide' ? "Frame a decision..." : "Inquire, type @ for data..."} variant="standard" fullWidth value={userInput} onChange={handleInputChange} disabled={loading} multiline maxRows={6} InputProps={{ disableUnderline: true }} />
+              <TextField inputRef={inputRef} onKeyDown={handleKeyDown} placeholder="Ask a question, type @ for data..." variant="standard" fullWidth value={userInput} onChange={handleInputChange} disabled={loading} multiline maxRows={6} InputProps={{ disableUnderline: true }} />
               <button className="ai-shell__send-btn" onClick={handleSendMessage} disabled={loading || !userInput.trim()} aria-label="Send Message">{loading ? <div className="ai-shell__spinner" /> : <FaPaperPlane className="ai-shell__send-icon" />}</button>
             </div>
           </div>
@@ -1878,9 +1732,7 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenDecisio
           )}
         </div>
 
-        <div className="ai-shell__pane-footer" style={{ padding: '24px', background: 'var(--bg-primary)', borderTop: '1px solid var(--border-color)', marginTop: 'auto' }}>
-          <Typography variant="caption" sx={{ opacity: 0.3, fontWeight: 800, letterSpacing: '0.1em' }}>DI PHASE 4 • WORKSPACE AGENT V1</Typography>
-        </div>
+
       </aside>
     </div>
   );

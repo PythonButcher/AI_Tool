@@ -24,7 +24,7 @@ This agent should ask whether a user can understand what state they are in, what
 
 Expected focus:
 
-Make AI chat, decision workspace handoff, artifacts, and action surfaces understandable without hiding capability. Preserve existing workflows while reducing ambiguity. Push for clear mode language, action consequence clarity, and honest presentation of incomplete capability.
+Make AI Chat decision output, review actions, artifacts, and action surfaces understandable without hiding capability. Preserve existing workflows while reducing ambiguity. Push for clear mode language, action consequence clarity, and honest presentation of incomplete capability.
 
 ## Decision Intelligence Specialist
 

@@ -58,7 +58,7 @@ It asks the council to restructure the current Decision Intelligence roadmap aro
 
 ## Good First Council Topic
 
-A strong next live topic is: "What should the first measurable Decision Intelligence reliability slice include after Phase 4.5 hardening?" That topic fits the current project truth because it can examine prompt benchmark fixtures, readiness fields, semantic role gaps, active dataset alignment, and truthful frontend handoff needs without changing runtime behavior.
+A strong next live topic is: "What reliability checks should guard the AI Chat emergency overhaul before broader pruning resumes?" That topic fits the current project truth because it can examine prompt benchmark fixtures, readiness fields, semantic role gaps, active dataset alignment, and truthful frontend handoff needs without changing runtime behavior.
 
 ## How To Validate Council JSON
 
@@ -74,7 +74,7 @@ The validator is intentionally lightweight. It is good enough for council handof
 
 The workflow matches the existing project division of labor. Codex remains responsible for backend logic, contracts, architecture, review, and markdown coordination. Gemini remains responsible for frontend implementation unless the user explicitly authorizes Codex frontend work in the current session.
 
-The council also preserves the current Decision Intelligence truth. Phase 4.5 is about improving a real chat-first decision workflow: mode clarity, prompt-first intake reliability, action fidelity, artifact quality, workspace handoff quality, and evaluation coverage. The council should not recommend fake simulation, fake optimization, fake autonomous recommendation behavior, or fake upload ingestion.
+The council also preserves the current Decision Intelligence truth. The active direction is AI Chat-first decision review: mode clarity, prompt-first intake reliability, action fidelity, artifact quality, in-chat decision output review, export, and evaluation coverage. The council should not recommend fake simulation, fake optimization, fake autonomous recommendation behavior, fake upload ingestion, or a required jump from AI Chat into the old Decisions window.
 
 ## What Good Council Output Looks Like
 

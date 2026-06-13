@@ -1,4 +1,4 @@
-"""Phase 4 chat orchestration for Decision Intelligence."""
+"""AI Chat orchestration for Decision Intelligence."""
 
 from __future__ import annotations
 
@@ -16,10 +16,10 @@ from backend.services.decision_workspace_service import DecisionWorkspaceService
 
 class DecisionChatService:
     """
-    First Phase 4 backend slice for chat-first Decision Intelligence.
+    Backend chat service for AI Chat-first Decision Intelligence.
 
-    The service keeps the contract stable and grounded while we build out the
-    larger decision engine package behind it.
+    The service keeps the contract stable and grounded while decision review,
+    analysis, and export are unified inside AI Chat.
     """
 
     CONTRACT_VERSION = "di_v3_phase4_5_chat_v1"
@@ -67,13 +67,15 @@ class DecisionChatService:
             },
         },
         "open_workspace": {
-            "label": "Open workspace",
-            "intent": "open_decisions_workspace",
-            "description": "Open the structured Decisions workspace and continue from this draft.",
+            # Compatibility id retained for older clients; visible copy should
+            # describe AI Chat decision review, not the old Decisions window.
+            "label": "Review decision output",
+            "intent": "inspect_decision_output",
+            "description": "Review the structured decision output in AI Chat without leaving the chat flow.",
             "payload_expectations": {
                 "required": ["session_state.draft_workspace"],
                 "optional": ["decision_workspace"],
-                "produces": ["workspace_preview", "workspace_handoff"],
+                "produces": ["workspace_preview", "decision_review"],
             },
         },
     }
@@ -1160,20 +1162,24 @@ class DecisionChatService:
 
         elif action == "open_workspace":
             if workspace is None:
-                raise DecisionServiceError("A draft workspace is required before it can be opened.")
+                raise DecisionServiceError("A draft workspace is required before decision output can be reviewed.")
             preview = DecisionChatService._build_workspace_preview(workspace)
             artifacts.append({
                 **preview,
-                "title": "Open workspace handoff",
+                "title": "Decision output review",
                 "action_id": action,
                 "response_kind": action,
-                "handoff": {
-                    "target": "decisions",
+                "review_target": {
+                    "surface": "ai_chat",
+                    "artifact_type": "decision_output",
                     "workspace_id": workspace.get("workspace_id"),
                     "workspace_status": workspace.get("status"),
                 },
             })
-            assistant_message = "Open this draft in the Decisions destination to continue structured work."
+            assistant_message = (
+                "Review this decision output in AI Chat. Use analysis, blockers, assumptions, graph, "
+                "or export actions from the chat result when they are available."
+            )
 
         return {
             "artifacts": artifacts,
@@ -2055,6 +2061,6 @@ class DecisionChatService:
                 action_id="open_workspace",
                 mode="decide",
                 priority="secondary",
-                availability_reason="A structured draft workspace exists and can be opened in Decisions.",
+                availability_reason="A structured decision output is available for in-chat review.",
             ),
         ]

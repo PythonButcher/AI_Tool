@@ -27,6 +27,7 @@ Dataset truth remains important, but the old standalone Phase 4 dataset handoff 
 | --- | --- | --- |
 | Status | `project_docs/active/status/` | Keep short; archive long history |
 | Current status | `project_docs/active/status/decision_intelligence_execution_status.md` | Single current source of truth |
+| Current AI Chat emergency plan | `project_docs/active/decision_intelligence/current/ai_chat_emergency_overhaul_action_plan.md` | Active implementation plan for AI Chat-only overhaul |
 | Implementation reference | `project_docs/active/decision_intelligence/current/ai_chat_decision_output_unification_rollout.md` | Phase details and acceptance guidance; status file wins on current gate |
 | Completed plans | `project_docs/active/decision_intelligence/completed/` | Reference only |
 | Contracts | `project_docs/active/contracts/` | Backend/frontend payload truth |

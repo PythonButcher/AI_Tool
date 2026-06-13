@@ -12,6 +12,8 @@ Accepted as done.
 
 Codex review found no blocking findings in Gemini's final pass. The remaining caveat is that no frontend test files exist for this project yet, so the final acceptance relied on build verification, source review, copy search, contract alignment, and Gemini's documented manual checks.
 
+This topic is historical and must not be used as a current Gemini implementation prompt. Current Decision Intelligence work is routed by `project_docs/active/status/decision_intelligence_execution_status.md` and `project_docs/active/decision_intelligence/current/ai_chat_emergency_overhaul_action_plan.md`.
+
 ## Artifacts
 
 Council JSON:
@@ -30,4 +32,4 @@ Run this from the repository root:
 
 ## Topic Boundary
 
-This topic is about UI correctness and trust before new feature work. It covers AI action state, chat-to-Decisions continuity, truthful capability language, inspectability, inert AI shell surfaces, semantic recovery, accessibility, and verification.
+This topic is about UI correctness and trust before new feature work. It covered AI action state, truthful capability language, inspectability, inert AI shell surfaces, semantic recovery, accessibility, and verification. Its old chat-to-Decisions continuity guidance is superseded by the current AI Chat-first decision output direction.

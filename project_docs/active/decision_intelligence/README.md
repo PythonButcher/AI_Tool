@@ -15,6 +15,7 @@ The Decisions window is no longer the required continuation path in the active p
 | Need | Read |
 | --- | --- |
 | Short current status | `../status/decision_intelligence_execution_status.md` |
+| Current AI Chat emergency overhaul | `current/ai_chat_emergency_overhaul_action_plan.md` |
 | Implementation details | `current/ai_chat_decision_output_unification_rollout.md` |
 | Contract reference | `../contracts/decision_objects.md` |
 | Frontend ownership rule | `../rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md` |
@@ -23,6 +24,7 @@ The Decisions window is no longer the required continuation path in the active p
 
 | File | Status |
 | --- | --- |
+| `current/ai_chat_emergency_overhaul_action_plan.md` | Active implementation plan for the current AI Chat-only overhaul gate |
 | `current/ai_chat_decision_output_unification_rollout.md` | Implementation reference; status file wins on current gate |
 
 ## Completed Reference
