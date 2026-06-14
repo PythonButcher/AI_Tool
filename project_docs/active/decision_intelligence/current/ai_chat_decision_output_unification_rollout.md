@@ -1,8 +1,10 @@
 # AI Chat Decision Output Unification Rollout
 
+> IMPLEMENTATION REFERENCE: This file preserves phase details, likely files, acceptance checks, and product constraints. It is not the current gate source. For current truth and next action, read `project_docs/active/status/decision_intelligence_execution_status.md`; if this file disagrees with status, the status file wins.
+
 ## Purpose
 
-This is the active implementation rollout for Decision Intelligence.
+This is the implementation reference for Decision Intelligence.
 
 The goal is to unite the work already built into one clear application flow. AI Chat stays the main work surface. Existing AI Chat outputs must remain: normal answers, charts, exploration results, workspace previews, artifact inspection, and PDF export. Decision Intelligence becomes a richer structured output in the AI Chat results pane, not a separate required dashboard and not a forced jump into the Decisions window.
 
@@ -579,6 +581,10 @@ The output says direct adjustment or sensitivity comparison, not forecast or cau
 
 Purpose: decide what role the existing Decisions window should play after AI Chat output works.
 
+Architecture decision note:
+
+`project_docs/active/decision_intelligence/current/decisions_window_future_role.md`
+
 Do not start this before Phase 4 is usable. The Decisions window should not be removed first because it currently contains working frontend renderers and continuity behavior.
 
 Likely options:
@@ -675,79 +681,34 @@ The export is shareable and readable without opening the app.
 
 The export avoids fake final recommendations, optimization, causal proof, and unsupported prediction claims.
 
-## Current Project Gate: Phase 7.3 User Hypotheses And Graph-To-Action Flow
+## Current Gate Pointer
 
-Phase 6 Evidence Board is complete end-to-end. Do not reopen Phase 6 unless the user explicitly asks for a regression review.
+The current project gate lives in `project_docs/active/status/decision_intelligence_execution_status.md`.
 
-Phase 7.1 Decision Graph Data Foundation is complete. The backend `decision_graph` contract and routes support graph candidate discovery and graph generation for selected variables, evidence coverage edges, observed association edges, edge metrics, data sufficiency, limitations, reliability labels, and the observational reliability boundary.
+Use this rollout file for implementation details, likely files, constraints, and acceptance checks only. Do not treat this file as proof that a phase is currently open or complete. If this file and the status file disagree, update this file or ignore it; the status file wins.
 
-Phase 7.2 Interactive Decision Graph Workspace is complete. The user can open the workspace, select variables, build a graph from the backend contract, inspect evidence coverage and observed association edges, and use the accepted modernized graph UI in light and dark themes.
+Completed foundation details remain here so future agents can understand how each slice was intended to be implemented:
 
-Phase 7.3 User Hypotheses And Graph-To-Action Flow is complete for current planning purposes. The backend supports user hypothesis graph edges with `relationship_type: "user_hypothesis"` and `causal_status: "user_hypothesis_not_validated"`, plus safe graph-to-action planning for breakdown, monitor, explain evidence, explain missing data, and Scenario Compare when appropriate. The frontend now has a production Add Hypothesis flow, passes full `decision_graph` context to graph actions, and keeps user hypotheses visually and semantically separate from observed associations.
+1. Chat-native corrections append updated `decision_output`, carry corrected state into follow-up analysis, and preserve existing `answer`, `chart`, `workspace_preview`, and `workspace_analysis_summary` behavior.
+2. Evidence Board normalizes `workspace_analysis.ranked_diagnostics` into display-ready `decision_output.evidence_board` items with strength, data sufficiency, limitations, and diagnostic trace.
+3. Decision Graph backend and frontend work supports graph candidates, selected-variable graph generation, evidence coverage edges, observed association edges, user hypothesis edges, graph-to-action planning, and the observational reliability boundary.
+4. Scenario Compare is folded into `decision_output.scenario_compare` as bounded direct adjustment or sensitivity comparison inside the AI Chat decision output.
 
-Current gate: ready for the next Decision Intelligence slice.
-
-Completed frontend handoff:
-
-`project_docs/active/decision_intelligence/completed/phase_7_3_gemini_user_hypotheses_graph_to_action.md`
-
-Completed Phase 6 slice:
-
-1. Normalized `workspace_analysis.ranked_diagnostics` into display-ready Evidence Board items inside `decision_output`.
-2. Added contract coverage for rank, title, summary, coverage, strength, data sufficiency, limitations, and diagnostic trace.
-3. Aligned AI Chat Evidence Board rendering to the backend contract.
-4. Verified backend tests, frontend build, and `git diff --check`.
-
-Completed Phase 5 backend slice:
-
-1. Confirmed correction action responses append updated `decision_output`.
-2. Confirmed corrected state is used by follow-up `analyze_workspace`.
-3. Added focused backend tests for correction state carry-forward and updated `decision_output.correction_state`.
-4. Preserved existing `answer`, `chart`, `workspace_preview`, and `workspace_analysis_summary` behavior.
-
-Suggested first files to inspect:
-
-`backend/services/decision_output_service.py`
-
-`backend/services/decision_workspace_service.py`
-
-`backend/services/decision_support.py`
-
-`backend/services/metric_resolver.py`
-
-`backend/services/decision_graph_service.py` if present
-
-`backend/decision_engine/chat_service.py`
-
-`backend/routes/decision.py`
-
-`tests/test_decision_chat_service.py`
-
-`tests/test_decision_graph_service.py` if present
-
-`tests/test_decision_phase_3_correction.py` if present
-
-`project_docs/active/contracts/decision_objects.md`
-
-Frontend implementation work for future slices should use a fresh active handoff unless the user explicitly authorizes Codex frontend edits in the current session.
+Future frontend implementation work should use a fresh active handoff unless the user explicitly authorizes Codex frontend edits in the current session.
 
 ## Gemini Handoff Trigger
 
-The Gemini handoff trigger was satisfied for Phase 7.3 backend readiness, and the handoff is now completed:
-
-`project_docs/active/decision_intelligence/completed/phase_7_3_gemini_user_hypotheses_graph_to_action.md`
-
 Future Gemini handoffs should be written only when these are true:
 
-The `decision_graph` request and response contract is documented.
+The backend contract or mock contract needed by the frontend is documented.
 
-Backend returns representative graph candidates and graph results for selected variables.
+Representative backend route or service behavior is implemented and verified, or the handoff clearly says the real API is not ready and provides explicit JSON mocks.
 
-Focused backend tests pass.
+Focused backend tests pass when backend behavior changed.
 
-Codex has enough backend truth to prevent Gemini from inventing APIs or graph semantics.
+Codex has enough backend truth to prevent Gemini from inventing APIs, payload semantics, or reliability language.
 
-The handoff names exact frontend files, package-selection expectations, visible behavior, graph interaction requirements, backend request/response shape, acceptance prompt, build command, browser check, and status-doc update requirement.
+The handoff names exact frontend files, visible behavior, backend request and response shape, acceptance checks, build command, browser check, and status-doc update requirement.
 
 ## Documentation Updates Required During Work
 

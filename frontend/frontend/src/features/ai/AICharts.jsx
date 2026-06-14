@@ -10,12 +10,6 @@ import { getDynamicColors } from '../../utils/ChartStyles';
  */
 function AICharts({ aiChartType, aiChartData }) {
 
-  console.log(
-    `AICharts PROPS (from AIReporter): aiChartType: '${aiChartType}', aiChartData:`, aiChartData,
-    `| typeof: ${typeof aiChartData}`,
-    `| isArray: ${Array.isArray(aiChartData)}`,
-    `| length: ${Array.isArray(aiChartData) ? aiChartData.length : 'N/A'}`
-  );
   /* 1️⃣ Normalise chart-type strings coming back from the LLM */
   const normalizedChartType = useMemo(() => {
     if (!aiChartType) return null;
@@ -69,11 +63,6 @@ function AICharts({ aiChartType, aiChartData }) {
     }));
     return { ...preparedData, datasets };
   }, [preparedData]);
-
-  /* 3️⃣ Debug */
-  useEffect(() => {
-    console.log('📊 AICharts ready:', { normalizedChartType, preparedData });
-  }, [normalizedChartType, preparedData]);
 
   /* 4️⃣ Graceful fallback */
   if (!preparedData) {

@@ -19,7 +19,6 @@ import DataCleaningForm from './components/data_management/DataCleaningForm';
 import './App.css';
 import { MuiThemeContext } from './context/MuiThemeContext';
 import { useWindowContext } from './context/WindowContext';
-import { runDecisionPipeline, createDecisionWorkspace, analyzeDecisionWorkspace } from './features/business/decision/decisionApi';
 import GlobalDragOverlay from './components/layout/GlobalDragOverlay';
 
 const parseRecords = (source) => {
@@ -40,15 +39,7 @@ const DESTINATIONS = {
   WORKSPACE: 'workspace',
   EXPLORE: 'explore',
   DASHBOARDS: 'dashboards',
-  DECISIONS: 'decisions',
   AI: 'ai',
-};
-
-const EMPTY_DECISION_READINESS = {
-  dataset_loaded: false,
-  semantic_ready: false,
-  decision_ready: false,
-  missing_requirements: ['dataset', 'semantic_model', 'metrics'],
 };
 
 function AppContent() {
@@ -122,12 +113,6 @@ function AppContent() {
   // AI & Decision Intelligence State
   const [aiChartData, setAiChartData] = useState(null);
   const [aiChartType, setAiChartType] = useState('Bar');
-  const [showDecisionPanel, setShowDecisionPanel] = useState(false);
-  const [decisionBundle, setDecisionBundle] = useState(null);
-  const [decisionWorkspace, setDecisionWorkspace] = useState(null);
-  const [workspaceAnalysis, setWorkspaceAnalysis] = useState(null);
-  const [decisionReadiness, setDecisionReadiness] = useState(EMPTY_DECISION_READINESS);
-  const [decisionWarnings, setDecisionWarnings] = useState([]);
   const [showDecisionGraph, setShowDecisionGraph] = useState(false);
   const [decisionGraphContext, setDecisionGraphContext] = useState(null);
 
@@ -158,11 +143,6 @@ function AppContent() {
     } else if (destination === DESTINATIONS.DASHBOARDS) {
       setActiveWorkflow('dashboard');
       openDashboard();
-    } else if (destination === DESTINATIONS.DECISIONS) {
-      setActiveWorkflow('business');
-      closeDashboard();
-      setShowDecisionPanel(true);
-      restoreWindow('decisionPanel');
     } else if (destination === DESTINATIONS.AI) {
       setActiveWorkflow('ai');
       closeDashboard();
@@ -263,82 +243,7 @@ function AppContent() {
     }
   }, [activeWorkflow, openDashboard, setDashboardFilters]);
 
-  const getExplicitDecisionRows = useCallback(() => {
-    const cleanedRows = normalizeDatasetRows(cleanedData);
-    if (cleanedRows.length > 0) return cleanedRows;
-    const fullRows = normalizeDatasetRows(fullData);
-    if (fullRows.length > 0) return fullRows;
-    return normalizeDatasetRows(uploadedData);
-  }, [cleanedData, fullData, uploadedData]);
 
-  const resetDecisionStateToNoDataset = useCallback(() => {
-    setDecisionBundle(null);
-    setDecisionWarnings([]);
-    setDecisionReadiness(EMPTY_DECISION_READINESS);
-  }, []);
-
-  const getDecisionPayloadBase = useCallback(() => {
-    const datasetRows = getExplicitDecisionRows();
-    const resolvedSemanticModel = semanticModel || uploadedData?.semantic_model || null;
-    const semanticDataset = resolvedSemanticModel?.dataset;
-
-    return {
-      dataset: datasetRows.length > 0 ? datasetRows : null,
-      semantic_model: datasetRows.length > 0 ? resolvedSemanticModel : null,
-      dataset_ref: datasetRows.length > 0 && semanticDataset?.id ? {
-        source: 'datahub',
-        dataset_id: semanticDataset.id,
-        dataset_name: semanticDataset.name,
-      } : null,
-    };
-  }, [getExplicitDecisionRows, semanticModel, uploadedData]);
-
-  const fetchDecisionReadiness = useCallback(async () => {
-    try {
-      const datasetRows = getExplicitDecisionRows();
-      if (datasetRows.length === 0) {
-        resetDecisionStateToNoDataset();
-        return;
-      }
-      const payload = getDecisionPayloadBase();
-      const result = await runDecisionPipeline(payload);
-      if (result.readiness) setDecisionReadiness(result.readiness);
-      if (result.warnings) setDecisionWarnings(result.warnings);
-    } catch (err) {
-      console.error('[DecisionIntelligence] Readiness fetch failed:', err);
-    }
-  }, [getDecisionPayloadBase, getExplicitDecisionRows, resetDecisionStateToNoDataset]);
-
-  const handleRunDecision = useCallback(async () => {
-    try {
-      const datasetRows = getExplicitDecisionRows();
-      if (datasetRows.length === 0) {
-        resetDecisionStateToNoDataset();
-        return;
-      }
-      const payload = {
-        ...getDecisionPayloadBase(),
-        include_anomaly_detection: true,
-        include_scenario_preview: true,
-      };
-      const result = await runDecisionPipeline(payload);
-      if (result.readiness) setDecisionReadiness(result.readiness);
-      if (result.warnings) setDecisionWarnings(result.warnings);
-      if (result.status === 'success') {
-        setDecisionBundle(result.decision_bundle);
-        setShowDecisionPanel(true);
-        restoreWindow('decisionPanel');
-      }
-    } catch (err) {
-      console.error('[DecisionIntelligence] Execution failed:', err);
-    }
-  }, [getDecisionPayloadBase, getExplicitDecisionRows, resetDecisionStateToNoDataset, restoreWindow]);
-
-  useEffect(() => {
-    if (getExplicitDecisionRows().length === 0) {
-      resetDecisionStateToNoDataset();
-    }
-  }, [getExplicitDecisionRows, resetDecisionStateToNoDataset]);
 
   const handleDecisionAction = useCallback((action) => {
     if (action.action_type === 'break_down_metric') {
@@ -354,57 +259,7 @@ function AppContent() {
     }
   }, [addChart]);
 
-  const handleCreateDecisionWorkspace = useCallback(async (payload) => {
-    try {
-      const result = await createDecisionWorkspace(payload);
-      if (result.status === 'success') {
-        setDecisionWorkspace(result.decision_workspace);
-        setDecisionReadiness(result.decision_workspace.readiness);
-        if (result.warnings) setDecisionWarnings(result.warnings);
-        // Clear old analysis when a new workspace is created
-        setWorkspaceAnalysis(null);
-      }
-    } catch (err) {
-      console.error('[DecisionIntelligence] Workspace creation failed:', err);
-    }
-  }, []);
-
-  const handleAnalyzeWorkspace = useCallback(async () => {
-    try {
-      if (!decisionWorkspace) return;
-      
-      const payload = {
-        ...getDecisionPayloadBase(),
-        decision_workspace: decisionWorkspace
-      };
-      
-      const result = await analyzeDecisionWorkspace(payload);
-      if (result.status === 'success') {
-        setWorkspaceAnalysis(result.workspace_analysis);
-        // Sync workspace status if it changed during analysis
-        if (result.decision_workspace) {
-          setDecisionWorkspace(result.decision_workspace);
-        }
-      }
-    } catch (err) {
-      console.error('[DecisionIntelligence] Workspace analysis failed:', err);
-    }
-  }, [decisionWorkspace, getDecisionPayloadBase]);
-
-  const handleOpenDecisionWorkspace = useCallback((workspace) => {
-    setDecisionWorkspace(workspace);
-    setWorkspaceAnalysis(null);
-    setShowDecisionPanel(true);
-    restoreWindow('decisionPanel');
-    handleDestinationSelect(DESTINATIONS.DECISIONS);
-  }, [handleDestinationSelect, restoreWindow]);
-
-  const handleResetDecisionWorkspace = useCallback(() => {
-    setDecisionWorkspace(null);
-    setWorkspaceAnalysis(null);
-    setDecisionBundle(null);
-    fetchDecisionReadiness();
-  }, [fetchDecisionReadiness]);
+  // Legacy decision workspace functions removed in Phase 10
 
   useLoadRawData(showRawViewer, rawUploadFile, setFullData);
 
@@ -423,11 +278,6 @@ function AppContent() {
     if (transformed) setChartData(transformed);
   }, [cleanedData, chartMapping]);
 
-  useEffect(() => {
-    if (activeWorkflow === 'business') {
-      fetchDecisionReadiness();
-    }
-  }, [activeWorkflow, fetchDecisionReadiness, uploadedData, semanticModel]);
 
   const handleFieldDrop = useCallback((axis, field) => {
     setChartMapping((prev) => {
@@ -567,13 +417,15 @@ function AppContent() {
             setShowCleaningForm={setShowCleaningForm}
             showExportPanel={showExportPanel}
             setShowExportPanel={setShowExportPanel}
-            onRunDecision={handleRunDecision}
-            decisionReadiness={decisionReadiness}
+
             addChart={addChart}
             addDashboardKpi={addDashboardKpi}
             addDashboardChart={addDashboardChart}
             setIsDataPaneOpen={setIsDataPaneOpen}
             setActiveDataPaneTab={setActiveDataPaneTab}
+            cleanedData={cleanedData}
+            fullData={fullData}
+            semanticModel={semanticModel}
           />
 
           <DataFilterPanel openDataFilter={openDataFilter} setOpenDataFilter={setOpenDataFilter} />
@@ -645,28 +497,19 @@ function AppContent() {
               setShowMachineLearning={setShowMachineLearning}
               showAiChat={showAiChat}
               setShowAiChat={setShowAiChat}
-              showDecisionPanel={showDecisionPanel}
-              setShowDecisionPanel={setShowDecisionPanel}
-              decisionBundle={decisionBundle}
-              decisionWorkspace={decisionWorkspace}
-              workspaceAnalysis={workspaceAnalysis}
-              onCreateDecisionWorkspace={handleCreateDecisionWorkspace}
-              onAnalyzeWorkspace={handleAnalyzeWorkspace}
-              onOpenDecisionWorkspace={handleOpenDecisionWorkspace}
-              getDecisionPayloadBase={getDecisionPayloadBase}
-              onDecisionAction={handleDecisionAction}
-              decisionReadiness={decisionReadiness}
-              decisionWarnings={decisionWarnings}
-              onOpenAiChat={handleOpenAiChat}
-              onRunDecision={handleRunDecision}
               showDecisionGraph={showDecisionGraph}
               setShowDecisionGraph={setShowDecisionGraph}
-              onOpenDecisionGraph={handleOpenDecisionGraph}
               decisionGraphContext={decisionGraphContext}
-              onResetDecisionWorkspace={handleResetDecisionWorkspace}
+              fullData={fullData}
+              semanticModel={semanticModel}
+              activeWorkflow={activeWorkflow}
+              setActiveWorkflow={setActiveWorkflow}
+              onOpenDecisionGraph={handleOpenDecisionGraph}
+
               onDestinationSelect={handleDestinationSelect}
               setShowDataVisual={setShowDataVisual}
               setIsDataPaneOpen={setIsDataPaneOpen}
+              onOpenAiChat={handleOpenAiChat}
             >
               <DatasetInfo selectedStat={selectedStat} />
             </CanvasContainer>

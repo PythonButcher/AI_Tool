@@ -16,12 +16,14 @@ Additive readiness metadata returned by Decision Chat responses and Decision Wor
 | `truth_boundary` | `string` | Yes | Current value is `observational_analysis_only` |
 | `structural_readiness` | `object` | Yes | Flags for `ready_for_observational_analysis`, `ready_for_recommendation`, `ready_for_simulation`, `ready_for_optimization`, `ready_for_autonomous_decisioning`, and `missing_inputs` |
 | `blocked_state` | `object` | Yes | Includes `is_blocked`, `blocked_action_ids`, `blocking_missing_inputs`, and `blocking_unknown_ids` |
-| `allowed_next_actions` | `string[]` | Yes | Backend-approved action IDs such as `analyze_workspace`, `show_blockers`, `open_workspace`, and `show_assumptions` |
+| `allowed_next_actions` | `string[]` | Yes | Backend-approved action IDs such as `analyze_workspace`, `show_blockers`, `open_workspace`, and `show_assumptions`. `open_workspace` is a compatibility id only; frontend code must use backend-provided action labels/descriptions and must not infer old Decisions-window navigation from the id. |
 | `capability_state` | `object` | Yes | Capability map described below |
 | `unsupported_capabilities` | `string[]` | Yes | Current values include `simulation`, `optimization`, `autonomous_decisioning`, and `final_recommendation` |
 | `not_ready_for_recommendation` | `boolean` | Yes | Current Decision Intelligence output remains observational and should not be rendered as a final recommendation |
 
 Legacy compatibility note: existing fields such as `can_run_simulation` and `blocks_simulation` remain available for older frontend code. They must not be interpreted as a current runtime simulation feature. New code should prefer `capability_state.simulation.status == "unsupported"` and `truth_boundary == "observational_analysis_only"`.
+
+Action compatibility note: `open_workspace` may still appear in backend action ids for older clients and saved state. Current user-facing metadata should describe AI Chat decision review, decision output inspection, blockers, assumptions, analysis, graph tooling, or export. It must not be presented as a required jump from AI Chat into the old Decisions window.
 
 ### Capability State
 
@@ -104,7 +106,7 @@ Phase 3 of AI Chat Decision Output Unification adds a backend-owned `decision_ou
 | `correction_state` | `object` | Yes | Latest correction result when a correction was applied, or latest workspace correction-history item when a later action such as `analyze_workspace` is using previously corrected state. `status` is `updated` when either source exists and `not_applied` when the workspace has no correction state. |
 | `evidence_board` | `Decision Output Evidence Board` | Yes | Normalized view of `workspace_analysis.ranked_diagnostics`, or `not_analyzed` when analysis has not run. |
 | `decision_map` | `Decision Output Map` | Yes | Read-only map of dataset, frame, evidence, missing inputs, and advanced gates. Edges are explicitly non-causal. |
-| `scenario_compare` | `object` | Yes | Bounded scenario preview when available, otherwise a `not_applicable` object with limitations. It is not a forecast, optimizer, or causal simulation. |
+| `scenario_compare` | `Decision Output Scenario Compare` | Yes | Bounded scenario preview when available, otherwise a `not_applicable` object with limitations. It is not a forecast, optimizer, simulation, causal model, autonomous decision, or final recommendation. |
 | `advanced_gates` | `object[]` | Yes | Unsupported or gated capabilities such as simulation, optimization, autonomous decisioning, and final recommendation with backend reasons. |
 | `export_sections` | `object[]` | Yes | Concise export-ready sections for Executive Brief, Dataset Trust, Decision Frame, Evidence Board, Decision Map, Scenario Compare, and Truth Boundary. |
 | `source_refs` | `object` | Yes | Trace refs back to workspace ID/status, analysis presence, ranked diagnostic IDs, correction status, and scenario status. |
@@ -152,6 +154,27 @@ Reliability boundary: Evidence Board items are not recommendations, optimized ac
 `decision_map` is a presentation contract, not a causal diagram. It can contain node types `dataset`, `goal`, `driver`, `limit`, `breakdown`, `evidence`, `unknown`, and `advanced_gate`. Edge types include `declared_relationship`, `observed_association`, `constraint`, `breakdown`, and `missing_evidence`. Every edge includes `causal_status: "not_causal_claim"`.
 
 Phase 7 shifts graph work from this compact read-only `decision_output.decision_map` toward a separate user-guided `decision_graph` builder contract. `decision_map` remains the current compact display object inside `decision_output`; `decision_graph` is the backend data foundation for the future interactive builder.
+
+#### Decision Output Scenario Compare
+
+Phase 8 folds the existing bounded scenario preview into `decision_output.scenario_compare` as a display-ready object. The backend accepts an already-built `scenario_preview` from the chat payload or session state and normalizes it; chat does not run scenario evaluation directly. The existing decision pipeline creates that preview through `backend/services/scenario_service.py`, which applies direct percent or absolute adjustments to observed semantic metric baselines.
+
+`scenario_compare` must be rendered as a direct adjustment or sensitivity comparison only. It must not be described as a forecast, optimizer, simulation, causal model, autonomous decision, or final recommendation.
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `status` | `string` | Yes | `ready` when a supported scenario preview with projection data is available; otherwise `not_applicable`. |
+| `summary` | `string` | Yes | Business-facing summary. Ready summaries describe bounded Scenario Compare using direct adjustments on observed baselines. |
+| `inputs` | `object` | Yes | Normalized suggested inputs with `name`, `filters`, `group_by`, and `metric_targets`. Empty values are returned when not applicable. |
+| `baseline` | `object` | Yes | `status`, `metrics`, and `period_context`. Each metric includes `metric_ref`, `baseline_value`, and `baseline_label`. |
+| `comparison` | `object` | Yes | Display metadata with `method: "direct_adjustment_sensitivity"`, `status`, `summary`, `target_count`, `group_by`, recommendation/signal trace IDs, and `period_context`. |
+| `projections` | `object[]` | Yes | Normalized direct-adjustment projection rows from the existing scenario preview. Current fields include `metric_ref`, `adjustment`, `baseline_value`, `baseline_label`, `projected_value`, `projected_label`, `delta_value`, `delta_pct`, and `comparison_summary`. |
+| `assumptions` | `string[]` | Yes | Includes source scenario assumptions plus explicit direct-adjustment-only and unsupported-capability boundary text. |
+| `limitations` | `string[]` | Yes | Includes direct adjustment/sensitivity boundary and cautions against treating the comparison as a decision rule. |
+| `source_scenario_ids` | `string[]` | Yes | Trace IDs from the underlying scenario service response when available. Empty when not applicable. |
+| `truth_boundary` | `string` | Yes | Current value is `observational_analysis_only`. |
+
+Unavailable scenario data is not fabricated. If no preview is attached, the preview is not ready, or projection rows are missing, `scenario_compare.status` is `not_applicable`, `projections` is empty, `baseline.status` and `comparison.status` are `not_available`, and `limitations` explain that no scenario projection data was available.
 
 ### Decision Graph
 
@@ -880,6 +903,7 @@ Represents a Phase 3 lightweight scenario suggestion generated from the connecte
 | `suggested_inputs` | `object` | Yes | Lightweight scenario input proposal for future UI or automation use |
 | `projections` | `object[]` | Yes | Condensed projected metric outputs derived from the existing scenario service |
 | `assumptions` | `string[]` | Yes | Explicit scenario-preview assumptions |
+| `source_scenario_ids` | `string[]` | Yes | Trace IDs from the `evaluate_scenario` response used to build the preview. Empty when no scenario preview is generated. |
 | `generated_at` | `string` | Yes | ISO timestamp |
 
 ### `suggested_inputs` schema
@@ -998,6 +1022,9 @@ Represents the Phase 3 unified decision-pipeline output.
     ],
     "assumptions": [
       "Scenario projections apply direct metric adjustments only."
+    ],
+    "source_scenario_ids": [
+      "scenario_decision_pipeline_preview_2026_04_04t150000_00_00"
     ],
     "generated_at": "2026-04-04T15:00:00+00:00"
   }

@@ -8,71 +8,52 @@
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
-/* 1. Command Rail (Navigation) */
-.ai-shell__rail {
-  width: 64px;
+
+
+/* 1. Left Command Rail */
+.ai-shell__left-rail {
+  width: 60px;
   background-color: var(--bg-secondary);
   border-right: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
   align-items: center;
-  padding: 20px 0;
+  padding: 16px 0;
   flex-shrink: 0;
   z-index: 10;
 }
 
-.ai-shell__rail-top,
-.ai-shell__rail-middle,
-.ai-shell__rail-bottom {
+.ai-shell__rail-top, .ai-shell__rail-bottom {
   display: flex;
   flex-direction: column;
-  gap: 16px;
   align-items: center;
-}
-
-.ai-shell__rail-middle {
-  margin: auto 0;
-}
-
-.ai-shell__rail-divider {
-  width: 24px;
-  height: 1px;
-  background-color: var(--border-color);
-  margin: 8px 0;
+  gap: 16px;
 }
 
 .ai-shell__rail-item {
   width: 40px;
   height: 40px;
-  border-radius: 10px;
-  background: transparent;
-  border: none;
-  color: var(--text-secondary);
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
+  color: var(--text-secondary);
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  font-size: 1.1rem;
+  transition: all 0.2s ease;
+  font-size: 1.2rem;
 }
 
-.ai-shell__rail-item:hover:not(.is-disabled) {
-  background-color: var(--bg-tertiary);
+.ai-shell__rail-item:hover {
+  background-color: var(--bg-primary);
   color: var(--text-primary);
-  transform: translateY(-1px);
 }
 
 .ai-shell__rail-item.is-active {
-  background-color: var(--text-primary);
-  color: var(--bg-primary);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  background-color: var(--primary-light);
+  color: var(--primary-main);
 }
 
-.ai-shell__rail-item.is-disabled {
-  opacity: 0.4;
-  cursor: default;
-}
 
 /* 2. Primary Workspace (Conversation Heavy) */
 .ai-shell__workspace {
@@ -161,107 +142,7 @@
   color: var(--accent-red);
 }
 
-/* App-Specific Workspace Tabs */
-.ai-shell__workspace-tabs {
-  background-color: var(--bg-secondary);
-  border-bottom: 1px solid var(--border-color);
-  min-height: 40px !important;
-}
 
-.ai-shell__workspace-tab {
-  text-transform: none !important;
-  font-weight: 700 !important;
-  font-size: 0.75rem !important;
-  min-width: 100px !important;
-  min-height: 40px !important;
-  color: var(--text-secondary) !important;
-  opacity: 0.7;
-}
-
-.ai-shell__workspace-tab.Mui-selected {
-  color: var(--text-primary) !important;
-  opacity: 1;
-}
-
-/* Mode Control (Functional) */
-.ai-shell__mode-bar {
-  padding: 12px 24px;
-  background-color: var(--bg-primary);
-  border-bottom: 1px solid var(--border-color);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.ai-shell__mode-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-}
-
-.ai-shell__mode-group {
-  display: flex;
-  background-color: var(--bg-secondary);
-  padding: 4px;
-  border-radius: 10px;
-  border: 1px solid var(--border-color);
-}
-
-.ai-shell__mode-reason {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--text-secondary);
-  opacity: 0.8;
-  animation: fadeIn 0.3s ease-out;
-}
-
-.ai-shell__mode-reason-icon {
-  font-size: 0.7rem;
-  color: var(--text-primary);
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(-4px); }
-  to { opacity: 0.8; transform: translateY(0); }
-}
-
-.ai-shell__mode-btn {
-  padding: 6px 20px;
-  border-radius: 8px;
-  border: none;
-  background: transparent;
-  color: var(--text-secondary);
-  font-size: 0.75rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-}
-
-.ai-shell__mode-btn:hover:not(.is-active) {
-  color: var(--text-primary);
-}
-
-.ai-shell__mode-btn.is-active {
-  background-color: var(--text-primary);
-  color: var(--bg-primary);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-.ai-shell__mode-promise {
-  font-size: 0.55rem;
-  font-weight: 600;
-  opacity: 0.8;
-  text-transform: none;
-  letter-spacing: 0;
-}
 
 /* Conversation Area */
 .ai-shell__conversation {
@@ -407,6 +288,7 @@
   height: 100%;
   border-left: 1px solid var(--border-color);
   overflow-y: auto;
+  min-width: 0;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -1704,14 +1586,209 @@
   font-family: monospace;
 }
 .ai-shell__do-scenario-wrap {
-  margin-top: 12px;
+  padding: 12px 0 0 0;
 }
+
 .ai-shell__do-scenario-locked {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  padding: 16px;
+  background: var(--bg-secondary);
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+}
+
+.ai-shell__do-scenario-ready {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ai-shell__do-scenario-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  background: var(--bg-secondary);
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+}
+
+.ai-shell__do-scenario-summary {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--text-primary);
+}
+
+.ai-shell__do-scenario-method {
+  font-size: 0.65rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: rgba(0, 102, 255, 0.1);
+  color: var(--accent-blue);
+  border: 1px solid rgba(0, 102, 255, 0.2);
+  white-space: nowrap;
+}
+
+.ai-shell__do-scenario-inputs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.ai-shell__do-scenario-inputs-lbl {
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  margin-right: 4px;
+}
+
+.ai-shell__do-scenario-input-tag {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 16px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
+
+.ai-shell__do-scenario-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+.ai-shell__do-scenario-card {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.ai-shell__do-scenario-metric {
+  font-size: 0.8rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+  display: block;
+  margin-bottom: 12px;
+}
+
+.ai-shell__do-scenario-vals {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 0.8rem;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.ai-shell__do-scenario-val-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ai-shell__do-scenario-val-lbl {
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  opacity: 0.8;
+}
+
+.ai-shell__do-scenario-val {
+  font-size: 1.1rem;
+  font-weight: 900;
+  color: var(--text-primary);
+}
+
+.ai-shell__do-scenario-val.is-projected {
+  color: var(--accent-blue);
+}
+
+.ai-shell__do-scenario-arrow {
+  color: var(--text-secondary);
   opacity: 0.5;
+  font-weight: 900;
+  font-size: 1.2rem;
+  padding: 0 8px;
+}
+
+.ai-shell__do-scenario-delta {
+  font-size: 0.75rem;
+  font-weight: 800;
+  padding: 6px 12px;
+  border-radius: 6px;
+  text-align: center;
+}
+
+.ai-shell__do-scenario-delta.is-up {
+  background: rgba(34, 197, 94, 0.1);
+  color: var(--accent-green);
+}
+
+.ai-shell__do-scenario-delta.is-down {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--accent-red);
+}
+
+.ai-shell__do-scenario-delta.is-unavailable {
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  opacity: 0.7;
+}
+
+.ai-shell__do-scenario-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  background: var(--bg-secondary);
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  font-size: 0.8rem;
+  margin-top: 8px;
+}
+
+.ai-shell__do-scenario-footer-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 800;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.ai-shell__do-scenario-assumptions ul,
+.ai-shell__do-scenario-limitations ul {
+  margin: 0;
+  padding-left: 20px;
+  opacity: 0.8;
+}
+
+.ai-shell__do-scenario-limitations .ai-shell__do-scenario-footer-title {
+  color: var(--accent-red);
+}
+
+.ai-shell__do-scenario-trace {
+  font-size: 0.65rem;
+  font-family: monospace;
+  color: var(--text-secondary);
+  opacity: 0.5;
+  text-align: right;
+  margin-top: 8px;
 }
 .ai-shell__do-gates-wrap {
   margin-top: 12px;

@@ -16,9 +16,13 @@ Council JSON:
 
 `project_docs/active/agent_council/outputs/application-next-focus-priorities/2026-05-01-council.json`
 
-Derived active execution plan:
+Current Decision Intelligence source of truth:
 
-`project_docs/active/decision_intelligence/current/next_focus_execution_plan.md`
+`project_docs/active/status/decision_intelligence_execution_status.md`
+
+Decision Intelligence implementation reference:
+
+`project_docs/active/decision_intelligence/current/ai_chat_decision_output_unification_rollout.md`
 
 ## Validation
 

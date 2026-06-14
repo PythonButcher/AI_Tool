@@ -124,6 +124,7 @@ class DecisionPipelineServiceTests(unittest.TestCase):
         self.assertEqual(result["decision_bundle"]["signals"], [])
         self.assertEqual(result["decision_bundle"]["recommendations"], [])
         self.assertEqual(result["decision_bundle"]["scenario_preview"]["status"], "not_applicable")
+        self.assertEqual(result["decision_bundle"]["scenario_preview"]["source_scenario_ids"], [])
 
     def test_pipeline_can_skip_scenario_preview_but_still_return_decision_artifacts(self):
         payload = build_payload()
@@ -142,7 +143,18 @@ class DecisionPipelineServiceTests(unittest.TestCase):
         self.assertGreaterEqual(len(result["decision_bundle"]["signals"]), 1)
         self.assertGreaterEqual(len(result["decision_bundle"]["recommendations"]), 1)
         self.assertEqual(result["decision_bundle"]["scenario_preview"]["status"], "not_requested")
+        self.assertEqual(result["decision_bundle"]["scenario_preview"]["source_scenario_ids"], [])
         self.assertEqual(result["meta"]["scenario_preview_status"], "not_requested")
+
+    def test_pipeline_scenario_preview_exposes_source_scenario_trace(self):
+        result = run_decision_pipeline(build_payload())
+
+        self.assertEqual(result["status"], "success")
+        preview = result["decision_bundle"]["scenario_preview"]
+        self.assertEqual(preview["status"], "ready")
+        self.assertTrue(preview["projections"])
+        self.assertTrue(preview["source_scenario_ids"])
+        self.assertTrue(preview["source_scenario_ids"][0].startswith("scenario_"))
 
 
 if __name__ == "__main__":

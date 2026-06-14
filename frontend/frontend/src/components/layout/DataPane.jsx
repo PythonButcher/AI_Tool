@@ -24,7 +24,6 @@ const DESTINATIONS = {
   WORKSPACE: 'workspace',
   EXPLORE: 'explore',
   DASHBOARDS: 'dashboards',
-  DECISIONS: 'decisions',
   AI: 'ai',
 };
 
@@ -47,7 +46,7 @@ const DataPane = ({
   const [activeSource, setActiveSource] = useState(null); // 'upload', 'api', 'db', 'hub'
 
   // Determine which panel to show based on destination
-  const showSemantic = activeDestination === DESTINATIONS.DASHBOARDS || activeDestination === DESTINATIONS.DECISIONS;
+  const showSemantic = activeDestination === DESTINATIONS.DASHBOARDS;
   
   const getHeaderInfo = () => {
     if (activeTab === 'sources') {
@@ -56,8 +55,6 @@ const DataPane = ({
     switch (activeDestination) {
       case DESTINATIONS.DASHBOARDS:
         return { title: 'Definitions', icon: <FaTachometerAlt />, eyebrow: 'Dashboard Seeds' };
-      case DESTINATIONS.DECISIONS:
-        return { title: 'Semantic Layer', icon: <FaBrain />, eyebrow: 'Business Logic' };
       case DESTINATIONS.EXPLORE:
         return { title: 'Field Catalog', icon: <FaChartBar />, eyebrow: 'Exploration' };
       default:

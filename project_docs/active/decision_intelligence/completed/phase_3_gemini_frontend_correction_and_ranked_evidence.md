@@ -88,4 +88,4 @@ Update `project_docs/active/status/decision_intelligence_execution_status.md` wi
 
 ## Gemini CLI Prompt
 
-No active Gemini prompt remains for this completed Phase 3 handoff. The old Phase 4 dataset handoff is superseded. Use `project_docs/active/decision_intelligence/current/ai_chat_decision_output_unification_rollout.md` for the active product direction.
+No active Gemini prompt remains for this completed Phase 3 handoff. The old Phase 4 dataset handoff is superseded. Use `project_docs/active/status/decision_intelligence_execution_status.md` for the active product direction.

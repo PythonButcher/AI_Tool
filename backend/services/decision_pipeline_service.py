@@ -63,6 +63,7 @@ def _empty_scenario_preview(summary: str, generated_at: str, status: str = "not_
         },
         "projections": [],
         "assumptions": [],
+        "source_scenario_ids": [],
         "generated_at": generated_at,
     }
 
@@ -242,6 +243,7 @@ def _build_scenario_preview(
         "suggested_inputs": suggested_inputs,
         "projections": [],
         "assumptions": [],
+        "source_scenario_ids": [],
         "generated_at": generated_at,
     }
 
@@ -324,6 +326,7 @@ def _build_scenario_preview(
                 for projected_metric in scenario.get("projected_metrics") or []
             ],
             "assumptions": scenario.get("assumptions") or [],
+            "source_scenario_ids": [scenario["scenario_id"]] if scenario.get("scenario_id") else [],
             "generated_at": scenario.get("generated_at") or generated_at,
         },
         list(scenario_response.get("warnings") or []),

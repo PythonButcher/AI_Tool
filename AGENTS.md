@@ -12,7 +12,7 @@ This file is the first routing helper for AI_Tool. It should point agents to cur
 | Understand current truth and scan rules | `project_docs/active/README.md` |
 | Check current Decision Intelligence status | `project_docs/active/status/decision_intelligence_execution_status.md` |
 | Confirm Codex vs Gemini ownership | `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md` |
-| Review the active rollout | `project_docs/active/decision_intelligence/current/ai_chat_decision_output_unification_rollout.md` |
+| Review Decision Intelligence implementation details | `project_docs/active/decision_intelligence/current/ai_chat_decision_output_unification_rollout.md` |
 | Work on contracts | `project_docs/active/contracts/decision_objects.md` |
 | Review active Codex/Gemini handoffs | `project_docs/active/ai_hand_off/README.md` |
 | Run Codex efficiently on substantial work | `project_docs/active/codex_harness_engineering.md` |
@@ -47,6 +47,14 @@ Before writing a Gemini handoff, Codex must first confirm there is a real fronte
 Whenever Codex determines Gemini needs work, Codex must provide the user a clean paste-ready Gemini prompt in the same final response. Do not make the user ask for it separately.
 
 Keep active status short. Move completed slice diaries to `project_docs/archive/` once their facts are no longer the current gate.
+
+## Final Response Stop Check
+
+Before every final response after substantial Decision Intelligence work, Codex must explicitly check whether it wrapped up a project phase, cleared a backend gate, cleared a frontend gate, or identified that Gemini takes over next.
+
+If yes, the final response must include a clean, paste-ready next-session or Gemini prompt. This is required even when the backend work is complete, the goal is marked complete, or the response already states the project gate. Do not end with only a status summary.
+
+The next-session prompt must be forward-looking only. It must name the next standalone goal, target file or files, active docs to read, exact contract or source fields to use, acceptance checks, build command when relevant, and browser check when frontend work is needed. It must not recap prior phase names, prior verification history, or who completed earlier work.
 
 ## Communication Rule
 

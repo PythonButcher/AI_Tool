@@ -14,8 +14,9 @@ The Decisions window is no longer the required continuation path in the active p
 
 | Need | Read |
 | --- | --- |
-| Active rollout | `current/ai_chat_decision_output_unification_rollout.md` |
 | Short current status | `../status/decision_intelligence_execution_status.md` |
+| Current AI Chat emergency overhaul | `current/ai_chat_emergency_overhaul_action_plan.md` |
+| Implementation details | `current/ai_chat_decision_output_unification_rollout.md` |
 | Contract reference | `../contracts/decision_objects.md` |
 | Frontend ownership rule | `../rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md` |
 
@@ -23,8 +24,8 @@ The Decisions window is no longer the required continuation path in the active p
 
 | File | Status |
 | --- | --- |
-| `current/ai_chat_decision_output_unification_rollout.md` | Active plan |
-| `current/next_focus_execution_plan.md` | Short pointer to active plan |
+| `current/ai_chat_emergency_overhaul_action_plan.md` | Active implementation plan for the current AI Chat-only overhaul gate |
+| `current/ai_chat_decision_output_unification_rollout.md` | Implementation reference; status file wins on current gate |
 
 ## Completed Reference
 
@@ -41,6 +42,6 @@ Completed Phase 2.5 and Phase 3 plans are in `completed/`. Do not scan them by d
 
 ## Superseded Reference
 
-The old standalone Phase 4 dataset plan and handoff were archived under `project_docs/archive/superseded_active_2026_05_24/`. Dataset truth is still required, but it now belongs inside the active rollout as Dataset Trust.
+The old standalone Phase 4 dataset plan and handoff were archived under `project_docs/archive/superseded_active_2026_05_24/`. Dataset truth is still required, but it now belongs inside Dataset Trust in the unified AI Chat decision output.
 
 Previous full Decision Intelligence README was preserved at `project_docs/archive/superseded_active_2026_05_24/decision_intelligence_README_pre_map_cleanup_2026_05_24.md`.

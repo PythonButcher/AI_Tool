@@ -558,32 +558,185 @@ class DecisionOutputService:
     @staticmethod
     def _build_scenario_compare(scenario_preview: Optional[Dict[str, Any]]) -> Dict[str, Any]:
         if not isinstance(scenario_preview, dict):
-            return {
-                "status": "not_applicable",
-                "summary": "No bounded scenario preview is attached to this decision output.",
-                "inputs": {},
-                "baseline": None,
-                "comparison": None,
-                "projections": [],
-                "assumptions": [
-                    "Scenario Compare is a bounded direct-adjustment preview when available; it is not a forecast or causal simulation."
-                ],
-                "limitations": ["No scenario preview was generated for this response."],
-                "source_scenario_ids": [],
-            }
+            return DecisionOutputService._scenario_compare_not_applicable(
+                "No bounded scenario preview is attached to this decision output."
+            )
+
+        preview_status = str(scenario_preview.get("status") or "not_applicable").strip().lower()
+        projections = DecisionOutputService._list_of_dicts(scenario_preview.get("projections"))
+        if preview_status != "ready":
+            summary = str(
+                scenario_preview.get("summary")
+                or "Scenario Compare is not applicable for this decision output."
+            ).strip()
+            return DecisionOutputService._scenario_compare_not_applicable(summary)
+        if not projections:
+            return DecisionOutputService._scenario_compare_not_applicable(
+                "Scenario Compare is not applicable because the scenario preview did not include projection data."
+            )
+
+        inputs = DecisionOutputService._normalize_scenario_inputs(scenario_preview.get("suggested_inputs"))
+        normalized_projections = [
+            DecisionOutputService._normalize_scenario_projection(projection)
+            for projection in projections
+        ]
+        baseline = DecisionOutputService._build_scenario_baseline(
+            projections=normalized_projections,
+            period_context=scenario_preview.get("period_context"),
+        )
+        comparison = DecisionOutputService._build_scenario_comparison(
+            scenario_preview=scenario_preview,
+            inputs=inputs,
+            projections=normalized_projections,
+        )
+        assumptions = DecisionOutputService._dedupe_strings(
+            DecisionOutputService._list_of_strings(scenario_preview.get("assumptions"))
+            + [
+                "Scenario Compare applies direct adjustments to observed metric baselines only.",
+                "It is not a forecast, not an optimizer, not a simulation, not a causal model, and not a final recommendation.",
+            ]
+        )
+        limitations = DecisionOutputService._dedupe_strings(
+            [
+                "Scenario Compare is a bounded direct adjustment or sensitivity comparison.",
+                "It does not estimate causal effects, future demand, uncertainty bands, or optimal actions.",
+                "Use the comparison as an observational planning aid, not as a decision rule.",
+            ]
+        )
+        target_count = len(normalized_projections)
         return {
-            "status": scenario_preview.get("status") or "ready",
-            "summary": scenario_preview.get("summary") or "Scenario preview is available.",
-            "inputs": deepcopy(scenario_preview.get("suggested_inputs") or {}),
-            "baseline": scenario_preview.get("baseline"),
-            "comparison": scenario_preview.get("comparison"),
-            "projections": deepcopy(scenario_preview.get("projections") or []),
-            "assumptions": list(scenario_preview.get("assumptions") or []),
-            "limitations": [
-                "Scenario Compare uses direct adjustments only and is not a forecast, optimizer, or causal simulation."
-            ],
-            "source_scenario_ids": list(scenario_preview.get("source_scenario_ids") or []),
+            "status": "ready",
+            "summary": (
+                f"Prepared bounded Scenario Compare for {target_count} metric target"
+                f"{'s' if target_count != 1 else ''} using direct adjustments on observed baselines."
+            ),
+            "inputs": inputs,
+            "baseline": baseline,
+            "comparison": comparison,
+            "projections": normalized_projections,
+            "assumptions": assumptions,
+            "limitations": limitations,
+            "source_scenario_ids": DecisionOutputService._scenario_source_ids(scenario_preview),
+            "truth_boundary": DecisionOutputService.TRUTH_BOUNDARY,
         }
+
+    @staticmethod
+    def _scenario_compare_not_applicable(summary: str) -> Dict[str, Any]:
+        return {
+            "status": "not_applicable",
+            "summary": summary,
+            "inputs": {
+                "name": None,
+                "filters": [],
+                "group_by": [],
+                "metric_targets": [],
+            },
+            "baseline": {
+                "status": "not_available",
+                "metrics": [],
+                "period_context": None,
+            },
+            "comparison": {
+                "method": "direct_adjustment_sensitivity",
+                "status": "not_available",
+                "target_count": 0,
+                "group_by": [],
+                "based_on_recommendation_ids": [],
+                "based_on_signal_ids": [],
+                "period_context": None,
+            },
+            "projections": [],
+            "assumptions": [
+                "Scenario Compare applies direct adjustments to observed metric baselines only when scenario data is available."
+            ],
+            "limitations": [
+                "No scenario projection data was available for this decision output.",
+                "It is not a forecast, not an optimizer, not a simulation, not a causal model, and not a final recommendation.",
+            ],
+            "source_scenario_ids": [],
+            "truth_boundary": DecisionOutputService.TRUTH_BOUNDARY,
+        }
+
+    @staticmethod
+    def _normalize_scenario_inputs(value: Any) -> Dict[str, Any]:
+        inputs = value if isinstance(value, dict) else {}
+        return {
+            "name": inputs.get("name"),
+            "filters": DecisionOutputService._list_of_dicts(inputs.get("filters")),
+            "group_by": DecisionOutputService._list_of_strings(inputs.get("group_by") or inputs.get("groupBy")),
+            "metric_targets": DecisionOutputService._list_of_dicts(inputs.get("metric_targets") or inputs.get("metricTargets")),
+        }
+
+    @staticmethod
+    def _normalize_scenario_projection(projection: Dict[str, Any]) -> Dict[str, Any]:
+        return {
+            "metric_ref": deepcopy(projection.get("metric_ref") or {}),
+            "adjustment": deepcopy(projection.get("adjustment") or {}),
+            "baseline_value": projection.get("baseline_value"),
+            "baseline_label": projection.get("baseline_label"),
+            "projected_value": projection.get("projected_value"),
+            "projected_label": projection.get("projected_label"),
+            "delta_value": projection.get("delta_value"),
+            "delta_pct": projection.get("delta_pct"),
+            "comparison_summary": deepcopy(projection.get("comparison_summary")) if isinstance(projection.get("comparison_summary"), dict) else None,
+        }
+
+    @staticmethod
+    def _build_scenario_baseline(
+        *,
+        projections: List[Dict[str, Any]],
+        period_context: Any,
+    ) -> Dict[str, Any]:
+        metrics = []
+        for projection in projections:
+            metrics.append({
+                "metric_ref": deepcopy(projection.get("metric_ref") or {}),
+                "baseline_value": projection.get("baseline_value"),
+                "baseline_label": projection.get("baseline_label"),
+            })
+        return {
+            "status": "available" if metrics else "not_available",
+            "metrics": metrics,
+            "period_context": deepcopy(period_context) if isinstance(period_context, dict) else None,
+        }
+
+    @staticmethod
+    def _build_scenario_comparison(
+        *,
+        scenario_preview: Dict[str, Any],
+        inputs: Dict[str, Any],
+        projections: List[Dict[str, Any]],
+    ) -> Dict[str, Any]:
+        return {
+            "method": "direct_adjustment_sensitivity",
+            "status": "available" if projections else "not_available",
+            "summary": "Compares observed metric baselines with direct adjustment values.",
+            "target_count": len(projections),
+            "group_by": list(inputs.get("group_by") or []),
+            "based_on_recommendation_ids": DecisionOutputService._list_of_strings(
+                scenario_preview.get("based_on_recommendation_ids")
+                or scenario_preview.get("basedOnRecommendationIds")
+            ),
+            "based_on_signal_ids": DecisionOutputService._list_of_strings(
+                scenario_preview.get("based_on_signal_ids")
+                or scenario_preview.get("basedOnSignalIds")
+            ),
+            "period_context": deepcopy(scenario_preview.get("period_context")) if isinstance(scenario_preview.get("period_context"), dict) else None,
+        }
+
+    @staticmethod
+    def _scenario_source_ids(scenario_preview: Dict[str, Any]) -> List[str]:
+        source_ids = DecisionOutputService._list_of_strings(
+            scenario_preview.get("source_scenario_ids")
+            or scenario_preview.get("sourceScenarioIds")
+            or scenario_preview.get("scenario_ids")
+            or scenario_preview.get("scenarioIds")
+        )
+        for key in ("source_scenario_id", "sourceScenarioId", "scenario_id", "scenarioId"):
+            value = scenario_preview.get(key)
+            if isinstance(value, str) and value.strip():
+                source_ids.append(value.strip())
+        return DecisionOutputService._dedupe_strings(source_ids)
 
     @staticmethod
     def _build_advanced_gates(readiness: Dict[str, Any]) -> List[Dict[str, Any]]:

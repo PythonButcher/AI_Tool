@@ -1,4 +1,4 @@
-"""Phase 4 chat orchestration for Decision Intelligence."""
+"""AI Chat orchestration for Decision Intelligence."""
 
 from __future__ import annotations
 
@@ -6,7 +6,11 @@ from decimal import Decimal, InvalidOperation
 from typing import Any, Dict, List, Optional, Tuple
 
 from backend.decision_engine.grounding import build_grounding_summary
-from backend.decision_engine.mode_detection import detect_chat_mode_details, is_visualization_request
+from backend.decision_engine.mode_detection import (
+    detect_chat_mode_details,
+    is_decision_request,
+    is_visualization_request,
+)
 from backend.services.aichat_nlp import analyse_columns, build_chart_response, extract_dataset, interpret_nl_query
 from backend.services.decision_output_service import DecisionOutputService
 from backend.services.decision_support import DecisionServiceError, build_dataset_trust
@@ -16,10 +20,10 @@ from backend.services.decision_workspace_service import DecisionWorkspaceService
 
 class DecisionChatService:
     """
-    First Phase 4 backend slice for chat-first Decision Intelligence.
+    Backend chat service for AI Chat-first Decision Intelligence.
 
-    The service keeps the contract stable and grounded while we build out the
-    larger decision engine package behind it.
+    The service keeps the contract stable and grounded while decision review,
+    analysis, and export are unified inside AI Chat.
     """
 
     CONTRACT_VERSION = "di_v3_phase4_5_chat_v1"
@@ -67,13 +71,15 @@ class DecisionChatService:
             },
         },
         "open_workspace": {
-            "label": "Open workspace",
-            "intent": "open_decisions_workspace",
-            "description": "Open the structured Decisions workspace and continue from this draft.",
+            # Compatibility id retained for older clients; visible copy should
+            # describe AI Chat decision review, not the old Decisions window.
+            "label": "Review decision output",
+            "intent": "inspect_decision_output",
+            "description": "Review the structured decision output in AI Chat without leaving the chat flow.",
             "payload_expectations": {
                 "required": ["session_state.draft_workspace"],
                 "optional": ["decision_workspace"],
-                "produces": ["workspace_preview", "workspace_handoff"],
+                "produces": ["workspace_preview", "decision_review"],
             },
         },
     }
@@ -171,7 +177,16 @@ class DecisionChatService:
         # follow-up commands execute the same backend actions as explicit chips.
         elif mode == "decide":
             text_action = DecisionChatService._detect_decision_text_action(user_message)
-            if text_action and draft_workspace is not None:
+            should_rebuild_workspace = DecisionChatService._should_rebuild_decision_workspace(
+                payload=payload,
+                session_state=session_state,
+                user_message=user_message,
+                mode_details=mode_details,
+                draft_workspace=draft_workspace,
+            )
+            if should_rebuild_workspace:
+                draft_workspace = DecisionChatService._create_draft_workspace(payload, user_message)
+            elif text_action and draft_workspace is not None:
                 action_result = DecisionChatService._execute_decision_action(
                     action=text_action,
                     payload=payload,
@@ -194,14 +209,6 @@ class DecisionChatService:
                         "message": assistant_message,
                     },
                 })
-            elif DecisionChatService._should_rebuild_decision_workspace(
-                payload=payload,
-                session_state=session_state,
-                user_message=user_message,
-                mode_details=mode_details,
-                draft_workspace=draft_workspace,
-            ):
-                draft_workspace = DecisionChatService._create_draft_workspace(payload, user_message)
             elif draft_workspace is None:
                 draft_workspace = DecisionChatService._create_draft_workspace(payload, user_message)
             if draft_workspace is not None and not artifacts:
@@ -221,11 +228,13 @@ class DecisionChatService:
             })
 
         dataset_trust = DecisionChatService.build_dataset_trust_for_payload(payload, workspace=draft_workspace)
+        scenario_preview = DecisionChatService._extract_scenario_preview(payload, session_state)
         decision_output = DecisionChatService._build_decision_output(
             workspace=draft_workspace,
             dataset_trust=dataset_trust,
             workspace_analysis=workspace_analysis,
             correction_result=output_correction_result,
+            scenario_preview=scenario_preview,
         )
         if decision_output is not None:
             artifacts.append(decision_output)
@@ -323,11 +332,13 @@ class DecisionChatService:
             mode="decide",
         )
         dataset_trust = DecisionChatService.build_dataset_trust_for_payload(payload, workspace=workspace)
+        scenario_preview = DecisionChatService._extract_scenario_preview(payload, session_state)
         decision_output = DecisionChatService._build_decision_output(
             workspace=workspace,
             dataset_trust=dataset_trust,
             workspace_analysis=workspace_analysis,
             correction_result=correction_result,
+            scenario_preview=scenario_preview,
         )
         if decision_output is not None:
             artifacts.append(decision_output)
@@ -918,6 +929,7 @@ class DecisionChatService:
         dataset_trust: Dict[str, Any],
         workspace_analysis: Dict[str, Any] | None = None,
         correction_result: Dict[str, Any] | None = None,
+        scenario_preview: Dict[str, Any] | None = None,
     ) -> Dict[str, Any] | None:
         """Compose the display artifact while keeping Evidence Board normalization centralized."""
         if not isinstance(workspace, dict) or not workspace:
@@ -927,6 +939,7 @@ class DecisionChatService:
             dataset_trust=dataset_trust,
             workspace_analysis=workspace_analysis,
             correction_result=correction_result,
+            scenario_preview=scenario_preview,
         )
 
     @staticmethod
@@ -947,6 +960,15 @@ class DecisionChatService:
         return workspace if isinstance(workspace, dict) else None
 
     @staticmethod
+    def _extract_scenario_preview(payload: Dict[str, Any], session_state: Dict[str, Any]) -> Dict[str, Any] | None:
+        """Accept a precomputed bounded scenario preview without running scenario evaluation in chat."""
+        scenario_preview = payload.get("scenario_preview") or payload.get("scenarioPreview")
+        if isinstance(scenario_preview, dict):
+            return scenario_preview
+        scenario_preview = session_state.get("scenario_preview") or session_state.get("scenarioPreview")
+        return scenario_preview if isinstance(scenario_preview, dict) else None
+
+    @staticmethod
     def _should_rebuild_decision_workspace(
         *,
         payload: Dict[str, Any],
@@ -956,7 +978,11 @@ class DecisionChatService:
         draft_workspace: Dict[str, Any] | None,
     ) -> bool:
         """Detect when a new decision question should replace stale chat draft state."""
-        if (mode_details or {}).get("reason_code") != "decision_request":
+        explicit_decision_request = (
+            (mode_details or {}).get("reason_code") == "decision_request"
+            or is_decision_request(user_message)
+        )
+        if not explicit_decision_request:
             return False
         if isinstance(payload.get("decision_workspace") or payload.get("decisionWorkspace"), dict):
             return False
@@ -1145,20 +1171,24 @@ class DecisionChatService:
 
         elif action == "open_workspace":
             if workspace is None:
-                raise DecisionServiceError("A draft workspace is required before it can be opened.")
+                raise DecisionServiceError("A draft workspace is required before decision output can be reviewed.")
             preview = DecisionChatService._build_workspace_preview(workspace)
             artifacts.append({
                 **preview,
-                "title": "Open workspace handoff",
+                "title": "Decision output review",
                 "action_id": action,
                 "response_kind": action,
-                "handoff": {
-                    "target": "decisions",
+                "review_target": {
+                    "surface": "ai_chat",
+                    "artifact_type": "decision_output",
                     "workspace_id": workspace.get("workspace_id"),
                     "workspace_status": workspace.get("status"),
                 },
             })
-            assistant_message = "Open this draft in the Decisions destination to continue structured work."
+            assistant_message = (
+                "Review this decision output in AI Chat. Use analysis, blockers, assumptions, graph, "
+                "or export actions from the chat result when they are available."
+            )
 
         return {
             "artifacts": artifacts,
@@ -2040,6 +2070,6 @@ class DecisionChatService:
                 action_id="open_workspace",
                 mode="decide",
                 priority="secondary",
-                availability_reason="A structured draft workspace exists and can be opened in Decisions.",
+                availability_reason="A structured decision output is available for in-chat review.",
             ),
         ]

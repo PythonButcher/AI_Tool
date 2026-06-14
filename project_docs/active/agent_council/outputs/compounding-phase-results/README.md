@@ -30,7 +30,7 @@ Required:
 
 `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md`
 
-`project_docs/active/decision_intelligence/current/next_focus_execution_plan.md`
+`project_docs/active/decision_intelligence/current/ai_chat_decision_output_unification_rollout.md`
 
 `project_docs/active/ai_hand_off/README.md`
 
@@ -40,7 +40,7 @@ Optional only if needed:
 
 `project_docs/archive/superseded_active_2026_05_24/phase_4_gemini_frontend_canonical_active_dataset.md`
 
-That Phase 4 handoff is superseded. The active rollout is now `project_docs/active/decision_intelligence/current/ai_chat_decision_output_unification_rollout.md`.
+That Phase 4 handoff is superseded. Current truth is now `project_docs/active/status/decision_intelligence_execution_status.md`.
 
 ## What The Council Must Produce
 
@@ -66,4 +66,4 @@ Do not break the Codex/Gemini ownership model. Codex remains backend/contracts/d
 
 ## Paste-Ready Council Prompt
 
-Run an emergency Agent Council for AI_Tool focused on compounding phase results. Read `project_docs/INDEX.md`, `project_docs/active/README.md`, `project_docs/active/status/decision_intelligence_execution_status.md`, `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md`, `project_docs/active/decision_intelligence/current/next_focus_execution_plan.md`, `project_docs/active/ai_hand_off/README.md`, and `project_docs/active/agent_council/outputs/compounding-phase-results/README.md`. The current plan is not working for the user: Codex and Gemini are shipping many technical slices, but the results are too microscopic, too hard to see, and too dependent on fighting prompts or reading docs. Restructure the roadmap into a different model where every unit of work creates obvious, compounding product results. Preserve the app direction toward trustworthy Decision Intelligence and preserve the Codex/Gemini ownership split, but challenge the current phase structure, acceptance criteria, handoff style, demo requirements, and documentation flow. Return JSON only, matching `project_docs/active/agent_council/council_output_schema.json`.
+Run an emergency Agent Council for AI_Tool focused on compounding phase results. Read `project_docs/INDEX.md`, `project_docs/active/README.md`, `project_docs/active/status/decision_intelligence_execution_status.md`, `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md`, `project_docs/active/decision_intelligence/current/ai_chat_decision_output_unification_rollout.md`, `project_docs/active/ai_hand_off/README.md`, and `project_docs/active/agent_council/outputs/compounding-phase-results/README.md`. The current plan is not working for the user: Codex and Gemini are shipping many technical slices, but the results are too microscopic, too hard to see, and too dependent on fighting prompts or reading docs. Restructure the roadmap into a different model where every unit of work creates obvious, compounding product results. Preserve the app direction toward trustworthy Decision Intelligence and preserve the Codex/Gemini ownership split, but challenge the current phase structure, acceptance criteria, handoff style, demo requirements, and documentation flow. Return JSON only, matching `project_docs/active/agent_council/council_output_schema.json`.

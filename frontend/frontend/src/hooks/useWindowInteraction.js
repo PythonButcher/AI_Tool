@@ -57,6 +57,8 @@ export const useWindowInteraction = ({
   const initialW = initialState?.w;
   const initialH = initialState?.h;
 
+  const lastInitialRef = useRef({ x: initialX, y: initialY, w: initialW, h: initialH });
+
   // Sync state if props change (e.g. Smart Split updates this window from parent)
   useEffect(() => {
     if (draggingRef.current || resizingRef.current) return;
@@ -65,17 +67,28 @@ export const useWindowInteraction = ({
     const current = { ...stateRef.current };
 
     if (initialX !== undefined && initialY !== undefined && initialW !== undefined && initialH !== undefined) {
-        // Only update if difference is significant to avoid jitter
-        if (Math.abs(current.x - initialX) > 1 ||
-            Math.abs(current.y - initialY) > 1 ||
-            Math.abs(current.w - initialW) > 1 ||
-            Math.abs(current.h - initialH) > 1) {
+        const lastInit = lastInitialRef.current;
+        const initChanged = 
+            Math.abs(initialX - lastInit.x) > 1 ||
+            Math.abs(initialY - lastInit.y) > 1 ||
+            Math.abs(initialW - lastInit.w) > 1 ||
+            Math.abs(initialH - lastInit.h) > 1;
+
+        if (initChanged) {
+            lastInitialRef.current = { x: initialX, y: initialY, w: initialW, h: initialH };
             
-            current.x = initialX;
-            current.y = initialY;
-            current.w = initialW;
-            current.h = initialH;
-            needsUpdate = true;
+            // Only update if difference is significant to avoid jitter
+            if (Math.abs(current.x - initialX) > 1 ||
+                Math.abs(current.y - initialY) > 1 ||
+                Math.abs(current.w - initialW) > 1 ||
+                Math.abs(current.h - initialH) > 1) {
+                
+                current.x = initialX;
+                current.y = initialY;
+                current.w = initialW;
+                current.h = initialH;
+                needsUpdate = true;
+            }
         }
     }
 
