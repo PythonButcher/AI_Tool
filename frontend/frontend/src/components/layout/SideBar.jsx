@@ -1,6 +1,5 @@
 import React from 'react';
 import {
-  FaBrain,
   FaChartBar,
   FaDatabase,
   FaRobot,
@@ -12,16 +11,14 @@ const DESTINATIONS = {
   WORKSPACE: 'workspace',
   EXPLORE: 'explore',
   DASHBOARDS: 'dashboards',
-  DECISIONS: 'decisions',
   AI: 'ai',
 };
 
 const navigationItems = [
+  { id: DESTINATIONS.AI, label: 'AI Suite', icon: <FaRobot /> },
   { id: DESTINATIONS.WORKSPACE, label: 'Workspace', icon: <FaDatabase /> },
   { id: DESTINATIONS.EXPLORE, label: 'Explore', icon: <FaChartBar /> },
   { id: DESTINATIONS.DASHBOARDS, label: 'Dashboards', icon: <FaTachometerAlt /> },
-  { id: DESTINATIONS.DECISIONS, label: 'Decisions', icon: <FaBrain /> },
-  { id: DESTINATIONS.AI, label: 'AI', icon: <FaRobot /> },
 ];
 
 /**

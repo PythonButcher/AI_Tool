@@ -335,7 +335,6 @@ const DESTINATIONS = {
   WORKSPACE: 'workspace',
   EXPLORE: 'explore',
   DASHBOARDS: 'dashboards',
-  DECISIONS: 'decisions',
   AI: 'ai',
 };
 
@@ -497,8 +496,6 @@ function FieldsPanel({
         return item.source === 'raw';
       case DESTINATIONS.DASHBOARDS:
         return item.source === 'semantic' || item.type === 'temporal';
-      case DESTINATIONS.DECISIONS:
-        return item.source === 'semantic';
       case DESTINATIONS.EXPLORE:
       case DESTINATIONS.AI:
       default:

@@ -44,7 +44,7 @@ The sample file is an example artifact only. It demonstrates the required shape 
 
 Start by choosing a planning topic. Good topics are questions like what the next Decision Intelligence slice should be, whether a proposed UI handoff is strong enough, whether a backend contract is ready for Gemini, or which risks should gate the next implementation phase.
 
-Before running the council, the orchestrating agent should inspect the current active project docs. Start with `project_docs/INDEX.md`, then `project_docs/active/README.md`, then the active status and frontend guardrail. For Decision Intelligence work, use `project_docs/active/decision_intelligence/current/next_focus_execution_plan.md` for the current plan and read completed plans or handoffs only when the topic explicitly needs historical evidence.
+Before running the council, the orchestrating agent should inspect the current active project docs. Start with `project_docs/INDEX.md`, then `project_docs/active/README.md`, then the active status and frontend guardrail. For Decision Intelligence work, use `project_docs/active/status/decision_intelligence_execution_status.md` for the current gate and `project_docs/active/decision_intelligence/current/ai_chat_decision_output_unification_rollout.md` only for implementation details. Read completed plans or handoffs only when the topic explicitly needs historical evidence.
 
 Then paste `project_docs/active/agent_council/master_council_prompt.md` into the AI system that will simulate or coordinate the agents. Add the specific planning topic after the prompt in plain language. The council should run four rounds: independent proposals, critique, reconciliation, and final JSON synthesis.
 
@@ -58,7 +58,7 @@ It asks the council to restructure the current Decision Intelligence roadmap aro
 
 ## Good First Council Topic
 
-A strong next live topic is: "What should the first measurable Decision Intelligence reliability slice include after Phase 4.5 hardening?" That topic fits the current project truth because it can examine prompt benchmark fixtures, readiness fields, semantic role gaps, active dataset alignment, and truthful frontend handoff needs without changing runtime behavior.
+A strong next live topic is: "What reliability checks should guard the AI Chat emergency overhaul before broader pruning resumes?" That topic fits the current project truth because it can examine prompt benchmark fixtures, readiness fields, semantic role gaps, active dataset alignment, and truthful frontend handoff needs without changing runtime behavior.
 
 ## How To Validate Council JSON
 
@@ -74,7 +74,7 @@ The validator is intentionally lightweight. It is good enough for council handof
 
 The workflow matches the existing project division of labor. Codex remains responsible for backend logic, contracts, architecture, review, and markdown coordination. Gemini remains responsible for frontend implementation unless the user explicitly authorizes Codex frontend work in the current session.
 
-The council also preserves the current Decision Intelligence truth. Phase 4.5 is about improving a real chat-first decision workflow: mode clarity, prompt-first intake reliability, action fidelity, artifact quality, workspace handoff quality, and evaluation coverage. The council should not recommend fake simulation, fake optimization, fake autonomous recommendation behavior, or fake upload ingestion.
+The council also preserves the current Decision Intelligence truth. The active direction is AI Chat-first decision review: mode clarity, prompt-first intake reliability, action fidelity, artifact quality, in-chat decision output review, export, and evaluation coverage. The council should not recommend fake simulation, fake optimization, fake autonomous recommendation behavior, fake upload ingestion, or a required jump from AI Chat into the old Decisions window.
 
 ## What Good Council Output Looks Like
 

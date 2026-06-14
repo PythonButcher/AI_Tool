@@ -311,10 +311,96 @@ class DecisionChatApiTests(unittest.TestCase):
         self.assertEqual(decision_output["frame"]["breakdowns"][0]["label"], "Channel")
         self.assertEqual(decision_output["evidence_board"]["status"], "not_analyzed")
         self.assertTrue(decision_output["decision_map"]["nodes"])
+        self.assertEqual(decision_output["scenario_compare"]["status"], "not_applicable")
+        self.assertEqual(decision_output["scenario_compare"]["projections"], [])
         self.assertTrue(decision_output["export_sections"])
         self.assertIn("final_recommendation", [gate["capability"] for gate in decision_output["advanced_gates"]])
         self.assertEqual(body["artifacts"][1]["source"], "decision_output")
         self.assertEqual(body["artifacts"][1]["dataset_trust"], body["dataset_trust"])
+
+    def test_decision_output_includes_supported_scenario_compare(self):
+        scenario_preview = {
+            "status": "ready",
+            "summary": "Prepared one scenario preview target from the top chart-compatible recommendations.",
+            "based_on_recommendation_ids": ["recommendation_review_revenue"],
+            "based_on_signal_ids": ["signal_revenue_change"],
+            "period_context": {
+                "label": "Apr 2026",
+                "comparison_label": "Mar 2026",
+                "current_label": "Apr 2026",
+                "previous_label": "Mar 2026",
+            },
+            "suggested_inputs": {
+                "name": "Revenue sensitivity check",
+                "filters": [],
+                "group_by": ["Region"],
+                "metric_targets": [
+                    {
+                        "metric_id": "metric_revenue_sum",
+                        "adjustment_type": "percent",
+                        "adjustment_value": 0.08,
+                    }
+                ],
+            },
+            "projections": [
+                {
+                    "metric_ref": {
+                        "metric_id": "metric_revenue_sum",
+                        "label": "Revenue",
+                        "field": "Revenue",
+                    },
+                    "adjustment": {"type": "percent", "value": 0.08},
+                    "baseline_value": 505.0,
+                    "baseline_label": "Current Context (Apr 2026)",
+                    "projected_value": 545.4,
+                    "projected_label": "Adjusted Context (Apr 2026)",
+                    "delta_value": 40.4,
+                    "delta_pct": 0.08,
+                    "comparison_summary": {"direction": "up", "delta_pct": 0.08},
+                }
+            ],
+            "assumptions": ["Percent adjustments are applied directly to observed metric baselines."],
+            "source_scenario_ids": ["scenario_revenue_sensitivity"],
+        }
+
+        response = self.client.post(
+            "/api/decision/chat/turns",
+            json={
+                "dataset": DATASET,
+                "semantic_model": SEMANTIC_MODEL,
+                "scenario_preview": scenario_preview,
+                "user_message": "How should we grow revenue next quarter using marketing spend by region while protecting gross margin?",
+                "conversation_history": [],
+                "session_state": {},
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.get_json()
+        scenario_compare = body["decision_output"]["scenario_compare"]
+
+        self.assertEqual(scenario_compare["status"], "ready")
+        self.assertEqual(scenario_compare["inputs"]["metric_targets"][0]["metric_id"], "metric_revenue_sum")
+        self.assertEqual(scenario_compare["baseline"]["metrics"][0]["baseline_value"], 505.0)
+        self.assertEqual(scenario_compare["comparison"]["method"], "direct_adjustment_sensitivity")
+        self.assertEqual(scenario_compare["comparison"]["target_count"], 1)
+        self.assertEqual(scenario_compare["projections"][0]["projected_value"], 545.4)
+        self.assertEqual(scenario_compare["source_scenario_ids"], ["scenario_revenue_sensitivity"])
+        self.assertEqual(scenario_compare["truth_boundary"], "observational_analysis_only")
+
+        boundary_text = " ".join(
+            [
+                scenario_compare["summary"],
+                *scenario_compare["assumptions"],
+                *scenario_compare["limitations"],
+            ]
+        ).lower()
+        self.assertIn("direct adjustment", boundary_text)
+        self.assertIn("not a forecast", boundary_text)
+        self.assertIn("not an optimizer", boundary_text)
+        self.assertIn("not a simulation", boundary_text)
+        self.assertIn("not a causal model", boundary_text)
+        self.assertIn("not a final recommendation", boundary_text)
 
     def test_incomplete_decision_turn_returns_blocked_decision_output(self):
         response = self.client.post(
@@ -621,6 +707,34 @@ class DecisionChatApiTests(unittest.TestCase):
         self.assertEqual(body["artifacts"][0]["type"], "workspace_analysis_summary")
         self.assertEqual(body["artifacts"][0]["title"], "Current blockers")
         self.assertIn("objective.metric_id_or_metric_name", body["artifacts"][0]["content"]["missing_inputs"])
+
+    def test_decision_prompt_with_blocker_word_frames_decision_first(self):
+        response = self.client.post(
+            "/api/decision/chat/turns",
+            json={
+                "dataset": DATASET,
+                "semantic_model": SEMANTIC_MODEL,
+                "user_message": (
+                    "Help me make a business decision: should we raise prices next quarter "
+                    "or keep prices stable? Build the decision frame first using the active "
+                    "dataset. Include the objective, decision options, key levers, constraints, "
+                    "assumptions, unknowns, blockers, and what evidence is available."
+                ),
+                "conversation_history": [],
+                "session_state": {},
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.get_json()
+        self.assertEqual(body["mode"], "decide")
+        self.assertNotEqual(
+            body["assistant_message"],
+            "Frame a decision first, then I can show blockers, assumptions, or workspace analysis.",
+        )
+        self.assertIn("draft_workspace", body["session_state"])
+        self.assertEqual([artifact["type"] for artifact in body["artifacts"]], ["workspace_preview", "decision_output"])
+        self.assertEqual(body["decision_output"]["type"], "decision_output")
 
     def test_textual_analyze_workspace_executes_observational_analysis(self):
         turn_response = self.client.post(

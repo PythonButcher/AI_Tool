@@ -1,6 +1,6 @@
 # Phase 4 Gemini Handoff: AI Chat Decision Output Rendering
 
-> COMPLETED REFERENCE ONLY: This handoff is no longer active. Current work starts from `project_docs/active/status/decision_intelligence_execution_status.md` and `project_docs/active/decision_intelligence/current/ai_chat_decision_output_unification_rollout.md`.
+> COMPLETED REFERENCE ONLY: This handoff is no longer active. Current work starts from `project_docs/active/status/decision_intelligence_execution_status.md`.
 
 ## Purpose
 
@@ -48,7 +48,7 @@ Run `npm --prefix frontend\frontend run build`, `git diff --check`, and one focu
 
 ## Paste-Ready Gemini Prompt
 
-Start Phase 4 frontend work for AI Chat Decision Output Unification in the AI_Tool repo. First read `project_docs/INDEX.md`, `project_docs/active/README.md`, `project_docs/active/status/decision_intelligence_execution_status.md`, `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md`, `project_docs/active/decision_intelligence/current/ai_chat_decision_output_unification_rollout.md`, `project_docs/active/contracts/decision_objects.md`, and this completed reference file only if historical Phase 4 handoff details are needed.
+Start Phase 4 frontend work for AI Chat Decision Output Unification in the AI_Tool repo. First read `project_docs/INDEX.md`, `project_docs/active/README.md`, `project_docs/active/status/decision_intelligence_execution_status.md`, `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md`, `project_docs/active/contracts/decision_objects.md`, and this completed reference file only if historical Phase 4 handoff details are needed.
 
 The backend `decision_output` contract is ready. Implement frontend rendering for that artifact in the existing AI Chat results pane. Preserve existing answer, chart, exploration, workspace preview, workspace analysis summary, artifact inspection, and export behavior. Render by `artifact.type` and `render_hint`, not by artifact position. `decision_output` may be appended after the existing compatibility artifact and is also available as top-level `body.decision_output`.
 

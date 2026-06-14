@@ -29,3 +29,5 @@ My professional and hobbyist endeavors are centered around programming with a st
 
 ### TRIGGER WORDS:
 - **"Explanation only":** I only want an explanation of something, do not even consider editing code, only explanation.
+### MARKDOWN PLANNING AUTHORITY:
+Only Codex is allowed to create, modify, or extend project plans in Markdown files. Gemini/Antigravity must not invent new chunks, phases, goals, roadmap items, implementation plans, acceptance gates, or next-session prompts in Markdown; if the active Markdown plan is missing, unclear, stale, or does not contain the requested next step, Gemini/Antigravity must stop and report the gap to the user or Codex instead of creating or extending the plan. Antigravity is allowed to make suggestions for consideration, but no write access to md implementation files is allowed.

@@ -395,6 +395,15 @@ export const generateDecisionArtifactPdf = async ({
     sections.push(...workspacePreviewSections(content, contextDecisionReadiness || content.decision_readiness || {}, contextCapabilityState || content.capability_state || {}));
   } else if (artifact.type === 'workspace_analysis_summary') {
     sections.push(...analysisSummarySections(content));
+  } else if (artifact.type === 'decision_output') {
+    if (Array.isArray(content.export_sections) && content.export_sections.length > 0) {
+      sections.push(...content.export_sections);
+    } else {
+      sections.push({
+        title: 'Decision Output',
+        body: content.summary || 'Decision output details are not available for export.'
+      });
+    }
   } else if (artifact.type === 'answer') {
     sections.push(...answerSections(content));
   } else if (artifact.type === 'chart') {
