@@ -1,14 +1,14 @@
 import React, { useState, useContext, useEffect, useRef, useMemo } from 'react';
 import axios from 'axios';
 import {
-  FaRobot, FaRegCommentDots, FaTools, FaBook, FaDatabase, FaPlus, FaLightbulb,
-  FaHistory, FaChartBar, FaShieldAlt, FaCircle, FaInfoCircle, FaPaperPlane,
-  FaCheckCircle, FaExclamationTriangle, FaExternalLinkAlt, FaLayerGroup, FaFileAlt,
+  FaRobot, FaTools, FaDatabase, FaPlus, FaLayerGroup,
+  FaChartBar, FaShieldAlt, FaCircle, FaInfoCircle, FaPaperPlane,
+  FaCheckCircle, FaExclamationTriangle, FaExternalLinkAlt, FaFileAlt,
   FaEye, FaChevronRight, FaTerminal, FaSearch, FaCloud, FaFilePdf
 } from "react-icons/fa";
 import {
-  TextField, Button, Box, Typography, Divider, Tooltip, Chip,
-  Avatar, Tabs, Tab, Drawer, IconButton
+  TextField, Button, Typography, Divider, Tooltip, Chip,
+  Avatar, IconButton
 } from '@mui/material';
 import { DataContext } from '../../context/DataContext';
 import { WarehouseContext } from '../../context/WarehouseContext';
@@ -62,8 +62,7 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenDecisio
   // correctionReason: optional user-facing audit reason string
   const [correctionReason, setCorrectionReason] = useState('');
 
-  // Derive mode context for visibility
-  const modeContext = useMemo(() => sessionState?.mode_context || {}, [sessionState]);
+
 
   // Mention State
   const [mentionQuery, setMentionQuery] = useState(null);
@@ -117,8 +116,23 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenDecisio
     if (actionId === 'open_decision_graph' && onOpenDecisionGraph) {
       // Look for the most recent decision_output for context
       const relevantArtifact = [...userMessages].reverse().flatMap(msg => msg.artifacts || []).find(a => a.type === 'decision_output');
-      const payload = relevantArtifact?.content?.decision_output || {};
-      onOpenDecisionGraph({ evidence_board: payload.evidence_board, frame: payload.frame });
+      const payload = relevantArtifact?.content?.decision_output || relevantArtifact?.content || {};
+
+      const datasetContext = typeof resolveDatasetForNlp === 'function' ? resolveDatasetForNlp() : null;
+      if (!datasetContext || !semanticModel) {
+        setUserMessages(prev => [...prev, {
+          role: "assistant",
+          content: "Decision Graph requires an active dataset and semantic model."
+        }]);
+        return;
+      }
+
+      onOpenDecisionGraph({
+        evidence_board: payload.evidence_board,
+        frame: payload.frame,
+        dataset: datasetContext,
+        semantic_model: semanticModel
+      });
       return;
     }
 
@@ -297,19 +311,6 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenDecisio
     }
   };
 
-  const handleModeChange = (event, newMode) => {
-    if (!newMode) return;
-    setActiveMode(newMode);
-    setSessionState(prev => ({
-      ...prev,
-      active_mode: newMode,
-      mode_context: {
-        ...(prev.mode_context || {}),
-        reason: null // Clear stale backend reason on manual override
-      }
-    }));
-  };
-
   const renderAnswerArtifact = (content) => {
     if (!content) return null;
 
@@ -379,7 +380,7 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenDecisio
   };
 
   const isPdfExportableArtifact = (artifact) => {
-    return ['answer', 'chart', 'workspace_preview', 'workspace_analysis_summary'].includes(artifact?.type);
+    return ['answer', 'chart', 'workspace_preview', 'workspace_analysis_summary', 'decision_output'].includes(artifact?.type);
   };
 
   const handleExportArtifactPdf = (artifact, messageSessionState = null, messageCapabilityState = null, messageDecisionReadiness = null) => {
@@ -798,6 +799,7 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenDecisio
 
                     {wp.recommended_next_action && (() => {
                       const actionId = wp.recommended_next_action?.action_id || wp.recommended_next_action;
+                      if (actionId === 'open_workspace') return null;
 
                       // Use the scoped lookupActions from renderArtifact scope
                       const fullAction = lookupActions.find(a => a.action_id === actionId) || wp.recommended_next_action;
@@ -1302,7 +1304,7 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenDecisio
                         </div>
                       )}
                       <div className="ai-shell__do-readiness-actions" style={{ flexWrap: 'wrap' }}>
-                        {doReadiness.allowed_next_actions?.map((actId, idx) => {
+                        {doReadiness.allowed_next_actions?.filter(actId => actId !== 'open_workspace').map((actId, idx) => {
                           const actDetails = lookupActions.find(a => a.action_id === actId) || { label: actId.replace(/_/g, ' '), enabled: true };
                           const isPrimary = actDetails.priority === 'primary' || actId === 'analyze_workspace';
                           const isEnabled = doReadiness.allowed_next_actions.includes(actId) && actDetails.enabled !== false;
@@ -1333,32 +1335,70 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenDecisio
                             </Button>
                           );
                         })}
-                        <Button
-                          variant="contained"
-                          disabled={loading}
-                          startIcon={<FaLayerGroup />}
-                          size="large"
-                          sx={{
-                            borderRadius: '8px',
-                            textTransform: 'none',
-                            fontWeight: 800,
-                            px: 3,
-                            py: 1,
-                            bgcolor: 'var(--accent-blue)',
-                            color: '#fff',
-                            '&:hover': {
-                              bgcolor: 'var(--accent-blue)',
-                              filter: 'brightness(1.1)'
-                            }
-                          }}
-                          onClick={() => {
-                            if (onOpenDecisionGraph) {
-                              onOpenDecisionGraph({ evidence_board: doEvidence, frame: doFrame });
-                            }
-                          }}
-                        >
-                          Launch Decision Graph
-                        </Button>
+                        {(() => {
+                          const datasetContext = typeof resolveDatasetForNlp === 'function' ? resolveDatasetForNlp() : null;
+                          const hasData = datasetContext && !!semanticModel;
+
+                          if (!hasData) {
+                            return (
+                              <Tooltip title="Decision Graph requires an active dataset and semantic model." arrow placement="top">
+                                <span>
+                                  <Button
+                                    variant="contained"
+                                    disabled={true}
+                                    startIcon={<FaLayerGroup />}
+                                    size="large"
+                                    sx={{
+                                      borderRadius: '8px',
+                                      textTransform: 'none',
+                                      fontWeight: 800,
+                                      px: 3,
+                                      py: 1,
+                                      bgcolor: 'var(--bg-secondary)',
+                                      color: 'var(--text-secondary)',
+                                    }}
+                                  >
+                                    Launch Decision Graph
+                                  </Button>
+                                </span>
+                              </Tooltip>
+                            );
+                          }
+
+                          return (
+                            <Button
+                              variant="contained"
+                              disabled={loading}
+                              startIcon={<FaLayerGroup />}
+                              size="large"
+                              sx={{
+                                borderRadius: '8px',
+                                textTransform: 'none',
+                                fontWeight: 800,
+                                px: 3,
+                                py: 1,
+                                bgcolor: 'var(--accent-blue)',
+                                color: '#fff',
+                                '&:hover': {
+                                  bgcolor: 'var(--accent-blue)',
+                                  filter: 'brightness(1.1)'
+                                }
+                              }}
+                              onClick={() => {
+                                if (onOpenDecisionGraph) {
+                                  onOpenDecisionGraph({
+                                    evidence_board: doEvidence,
+                                    frame: doFrame,
+                                    dataset: datasetContext,
+                                    semantic_model: semanticModel
+                                  });
+                                }
+                              }}
+                            >
+                              Launch Decision Graph
+                            </Button>
+                          );
+                        })()}
                       </div>
                     </div>
                   )}
@@ -1608,6 +1648,25 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenDecisio
   return (
     <div className="ai-shell">
 
+      {/* 1. Left Command Rail (Future Tools) */}
+      <nav className="ai-shell__left-rail">
+        <div className="ai-shell__rail-top">
+           <Tooltip title="AI Chat" placement="right">
+             <div className="ai-shell__rail-item is-active"><FaRobot /></div>
+           </Tooltip>
+           <Tooltip title="Data Connections (Future)" placement="right">
+             <div className="ai-shell__rail-item"><FaDatabase /></div>
+           </Tooltip>
+           <Tooltip title="Custom Workflows (Future)" placement="right">
+             <div className="ai-shell__rail-item"><FaTools /></div>
+           </Tooltip>
+        </div>
+        <div className="ai-shell__rail-bottom">
+           <Tooltip title="Agent Settings (Future)" placement="right">
+             <div className="ai-shell__rail-item"><FaLayerGroup /></div>
+           </Tooltip>
+        </div>
+      </nav>
 
       {/* 2. Primary Conversation Workspace */}
       <main className="ai-shell__workspace">

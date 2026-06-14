@@ -34,31 +34,31 @@ Use this status file as the single current source of truth. Use `project_docs/ac
 
 ## Latest Verified Slice
 
-## AI Chat Emergency Overhaul Setup & Shell Cleanup
-**Status:** FRONTEND COMPLETE FOR CHUNK 2
+## AI Chat Emergency Overhaul Setup, Shell Cleanup, and Output Integrity
+**Status:** FRONTEND IMPLEMENTATION READY FOR REVIEW (CHUNKS 2 & 3)
 
-**Focus:** Clean up the Gemini AI Chat shell to remove placeholder UI and fix keyboard shortcuts.
+**Focus:** Clean up the Gemini AI Chat shell to remove placeholder UI and fix keyboard shortcuts. Fix AI Chat artifact behavior so a decision question can be completed inside AI Chat.
 
 **Verified facts:**
 1. Backend `open_workspace` remains a compatibility action id, but its backend-owned label, intent, description, produced payload description, action artifact title, review target, assistant message, and availability reason now describe AI Chat decision review instead of the old Decisions-window continuation path.
-2. The active contract states that `open_workspace` is a compatibility id only and must not be used to infer old Decisions-window navigation.
-3. The active Decision Intelligence folder map points to the AI Chat emergency overhaul plan as the current active implementation plan.
-4. The stale app-wide UI flaws Gemini handoff markdown is marked historical and no longer instructs Gemini to wire `open_workspace` into the Decisions destination.
-5. `PYTHONPATH=.codex_tmp_py\site-packages python -m unittest tests.test_decision_chat_service` passes at 29/29.
-6. The frontend AI Chat shell (`AIShell.jsx`) has been cleaned up. Placeholder navigation rails, tabs, and fake "Soon" context modules have been removed.
-7. Required mode selection before asking has been removed.
-8. The composer `handleKeyDown` logic was corrected so Enter sends without shifting, Shift+Enter inserts a newline, and Escape closes the mention UI.
-9. Blanking out of the right results pane during follow-up queries has been prevented by removing eager cache clearing.
-10. `npm --prefix frontend\frontend run build` passes with no errors.
+2. The frontend AI Chat shell (`AIShell.jsx`) has been cleaned up. Placeholder navigation rails, tabs, and fake "Soon" context modules have been removed. Required mode selection before asking has been removed.
+3. The composer `handleKeyDown` logic was corrected so Enter sends without shifting, Shift+Enter inserts a newline, and Escape closes the mention UI.
+4. Blanking out of the right results pane during follow-up queries has been prevented by removing eager cache clearing.
+5. In `AIShell.jsx`, `open_workspace` has been suppressed from `allowed_next_actions` and `recommended_next_action` so it never appears as a visible no-op or Decisions-window continuation.
+6. Full `decision_output` PDF export has been added to `decisionPdfExport.js` using `export_sections`.
+7. Decision Graph launch is now gated on usable graph context and passes `dataset` and `semantic_model` into the graph path.
+8. Unused UI debug logging and imports were removed from `AIShell.jsx` and `AICharts.jsx`.
+9. `npm --prefix frontend\frontend run build` passes with no errors.
+10. Codex fixed and verified the backend decision-turn regression where a first decision-framing prompt that mentions blockers was treated as a blocker follow-up before any draft frame existed. Explicit decision prompts now create the frame first.
 
 **Current Blockers:**
-- None.
+- Pending Codex verification of Decision Graph context handoff for Chunk 3.
 
 ## Next Focus
 
-Start Chunk 3 in `project_docs/active/decision_intelligence/current/ai_chat_emergency_overhaul_action_plan.md`.
+Codex must review the Gemini frontend implementation for Chunks 2 & 3 against `project_docs/active/decision_intelligence/current/ai_chat_emergency_overhaul_action_plan.md`.
 
-Do not edit frontend files unless the user explicitly authorizes Codex frontend work in the current session. Gemini should implement the AI Chat decision artifact and graph cleanup next.
+Do not edit frontend files unless the user explicitly authorizes Codex frontend work in the current session.
 
 ## Status File Discipline
 

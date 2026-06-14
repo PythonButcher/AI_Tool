@@ -423,6 +423,9 @@ function AppContent() {
             addDashboardChart={addDashboardChart}
             setIsDataPaneOpen={setIsDataPaneOpen}
             setActiveDataPaneTab={setActiveDataPaneTab}
+            cleanedData={cleanedData}
+            fullData={fullData}
+            semanticModel={semanticModel}
           />
 
           <DataFilterPanel openDataFilter={openDataFilter} setOpenDataFilter={setOpenDataFilter} />
@@ -497,6 +500,8 @@ function AppContent() {
               showDecisionGraph={showDecisionGraph}
               setShowDecisionGraph={setShowDecisionGraph}
               decisionGraphContext={decisionGraphContext}
+              fullData={fullData}
+              semanticModel={semanticModel}
               activeWorkflow={activeWorkflow}
               setActiveWorkflow={setActiveWorkflow}
               onOpenDecisionGraph={handleOpenDecisionGraph}

@@ -81,6 +81,7 @@ function CanvasContainer({
   setShowDecisionGraph,
   onOpenDecisionGraph,
   decisionGraphContext,
+  semanticModel,
 }) {
   const {
     minimizedWindows,
@@ -770,8 +771,8 @@ function CanvasContainer({
       minHeight={WINDOW_SIZING.DECISION_PANEL.minH}
     >
       <DecisionGraphWorkspace
-        dataset={null}
-        semanticModel={null}
+        dataset={decisionGraphContext?.dataset || (cleanedData?.length > 0 ? cleanedData : fullData?.length > 0 ? fullData : null)}
+        semanticModel={decisionGraphContext?.semantic_model || semanticModel}
         initialContext={decisionGraphContext}
       />
     </WindowFrame>

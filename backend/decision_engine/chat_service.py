@@ -6,7 +6,11 @@ from decimal import Decimal, InvalidOperation
 from typing import Any, Dict, List, Optional, Tuple
 
 from backend.decision_engine.grounding import build_grounding_summary
-from backend.decision_engine.mode_detection import detect_chat_mode_details, is_visualization_request
+from backend.decision_engine.mode_detection import (
+    detect_chat_mode_details,
+    is_decision_request,
+    is_visualization_request,
+)
 from backend.services.aichat_nlp import analyse_columns, build_chart_response, extract_dataset, interpret_nl_query
 from backend.services.decision_output_service import DecisionOutputService
 from backend.services.decision_support import DecisionServiceError, build_dataset_trust
@@ -173,7 +177,16 @@ class DecisionChatService:
         # follow-up commands execute the same backend actions as explicit chips.
         elif mode == "decide":
             text_action = DecisionChatService._detect_decision_text_action(user_message)
-            if text_action and draft_workspace is not None:
+            should_rebuild_workspace = DecisionChatService._should_rebuild_decision_workspace(
+                payload=payload,
+                session_state=session_state,
+                user_message=user_message,
+                mode_details=mode_details,
+                draft_workspace=draft_workspace,
+            )
+            if should_rebuild_workspace:
+                draft_workspace = DecisionChatService._create_draft_workspace(payload, user_message)
+            elif text_action and draft_workspace is not None:
                 action_result = DecisionChatService._execute_decision_action(
                     action=text_action,
                     payload=payload,
@@ -196,14 +209,6 @@ class DecisionChatService:
                         "message": assistant_message,
                     },
                 })
-            elif DecisionChatService._should_rebuild_decision_workspace(
-                payload=payload,
-                session_state=session_state,
-                user_message=user_message,
-                mode_details=mode_details,
-                draft_workspace=draft_workspace,
-            ):
-                draft_workspace = DecisionChatService._create_draft_workspace(payload, user_message)
             elif draft_workspace is None:
                 draft_workspace = DecisionChatService._create_draft_workspace(payload, user_message)
             if draft_workspace is not None and not artifacts:
@@ -973,7 +978,11 @@ class DecisionChatService:
         draft_workspace: Dict[str, Any] | None,
     ) -> bool:
         """Detect when a new decision question should replace stale chat draft state."""
-        if (mode_details or {}).get("reason_code") != "decision_request":
+        explicit_decision_request = (
+            (mode_details or {}).get("reason_code") == "decision_request"
+            or is_decision_request(user_message)
+        )
+        if not explicit_decision_request:
             return False
         if isinstance(payload.get("decision_workspace") or payload.get("decisionWorkspace"), dict):
             return False

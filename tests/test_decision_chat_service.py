@@ -708,6 +708,34 @@ class DecisionChatApiTests(unittest.TestCase):
         self.assertEqual(body["artifacts"][0]["title"], "Current blockers")
         self.assertIn("objective.metric_id_or_metric_name", body["artifacts"][0]["content"]["missing_inputs"])
 
+    def test_decision_prompt_with_blocker_word_frames_decision_first(self):
+        response = self.client.post(
+            "/api/decision/chat/turns",
+            json={
+                "dataset": DATASET,
+                "semantic_model": SEMANTIC_MODEL,
+                "user_message": (
+                    "Help me make a business decision: should we raise prices next quarter "
+                    "or keep prices stable? Build the decision frame first using the active "
+                    "dataset. Include the objective, decision options, key levers, constraints, "
+                    "assumptions, unknowns, blockers, and what evidence is available."
+                ),
+                "conversation_history": [],
+                "session_state": {},
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.get_json()
+        self.assertEqual(body["mode"], "decide")
+        self.assertNotEqual(
+            body["assistant_message"],
+            "Frame a decision first, then I can show blockers, assumptions, or workspace analysis.",
+        )
+        self.assertIn("draft_workspace", body["session_state"])
+        self.assertEqual([artifact["type"] for artifact in body["artifacts"]], ["workspace_preview", "decision_output"])
+        self.assertEqual(body["decision_output"]["type"], "decision_output")
+
     def test_textual_analyze_workspace_executes_observational_analysis(self):
         turn_response = self.client.post(
             "/api/decision/chat/turns",

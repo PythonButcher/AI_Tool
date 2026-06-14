@@ -134,6 +134,9 @@ function MenuBar({
   setIsDataPaneOpen,
   setActiveDataPaneTab,
   onOpenDecisionGraph,
+  cleanedData,
+  fullData,
+  semanticModel,
 }) {
   const [activeSurface, setActiveSurface] = useState(null);
   const [isRibbonCollapsed, setIsRibbonCollapsed] = useState(true);
@@ -245,7 +248,13 @@ function MenuBar({
             {activeDestination === DESTINATIONS.AI && (
               <RibbonGroup title="AI Suite">
                 <RibbonCommand icon={<FaRobot />} label="Chat" onClick={onOpenAiChat} emphasized />
-                <RibbonCommand icon={<FaProjectDiagram />} label="Graph" onClick={onOpenDecisionGraph} />
+                <RibbonCommand
+                  icon={<FaProjectDiagram />}
+                  label="Graph"
+                  onClick={onOpenDecisionGraph}
+                  disabled={!semanticModel || (!cleanedData?.length && !fullData?.length)}
+                  description={(!semanticModel || (!cleanedData?.length && !fullData?.length)) ? "Decision Graph requires an active dataset and semantic model." : "Decision Graph"}
+                />
                 <RibbonCommand icon={<FaPlus />} label="Automation" onClick={onOpenAiWorkflow} />
                 <RibbonCommand icon={<FaFileAlt />} label="Report" onClick={onAiReportClick} disabled={!aiReportReady} />
                 <RibbonCommand icon={<FaBook />} label="Narrative" onClick={onOpenStoryboard} />
