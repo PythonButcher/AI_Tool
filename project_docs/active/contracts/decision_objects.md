@@ -684,22 +684,22 @@ Represents a high-level summary of what matters in a dataset or resolved slice.
 
 ## Recommendation
 
-Represents a suggested next action derived from one or more decision signals.
+Represents a suggested follow-up check derived from one or more decision signals. The legacy field name remains `Recommendation` for API compatibility, but current payloads are observational review aids, not final recommendations, optimized actions, or autonomous decisions.
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
 | `recommendation_id` | `string` | Yes | Stable generated identifier |
-| `recommendation_type` | `string` | Yes | `investigate`, `monitor`, `validate`, `optimize` |
+| `recommendation_type` | `string` | Yes | Current emitted values are `investigate`, `monitor`, or `validate`. Legacy saved objects may contain `optimize`, but new runtime output should not use it. |
 | `priority` | `string` | Yes | `low`, `medium`, `high` |
 | `status` | `string` | Yes | Phase 1 uses `proposed` |
 | `title` | `string` | Yes | Short action-oriented headline |
-| `summary` | `string` | Yes | Human-readable recommendation |
+| `summary` | `string` | Yes | Human-readable follow-up check summary |
 | `dataset` | `Dataset Summary` | Yes | Resolved dataset context |
 | `based_on_signal_ids` | `string[]` | Yes | Traceability back to DecisionSignal objects |
 | `metric_ref` | `Metric Reference \| null` | No | Present when tied to a metric |
 | `dimension_ref` | `Dimension Reference \| null` | No | Present when tied to a dimension |
-| `actions` | `object[]` | Yes | Structured next-step hints |
-| `expected_outcome` | `string` | Yes | High-level expected result |
+| `actions` | `object[]` | Yes | Structured next-check hints |
+| `expected_outcome` | `string` | Yes | High-level review result to look for; this is not a promised business outcome |
 | `confidence` | `number` | Yes | `0.0` to `1.0` |
 | `created_at` | `string` | Yes | ISO timestamp |
 
@@ -891,14 +891,14 @@ Represents a Phase 1 what-if evaluation scaffold. The object is intentionally li
 
 ## DecisionScenarioPreview
 
-Represents a Phase 3 lightweight scenario suggestion generated from the connected decision pipeline. It reuses the existing scenario service but returns only preview-oriented inputs and projection summaries.
+Represents a Phase 3 lightweight scenario suggestion generated from the connected decision pipeline. It reuses the existing scenario service but returns only preview-oriented inputs and direct-adjustment projection summaries.
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
 | `status` | `string` | Yes | `ready`, `not_applicable`, or `not_requested` |
 | `summary` | `string` | Yes | Short explanation of whether a preview was prepared |
-| `based_on_recommendation_ids` | `string[]` | Yes | Ordered recommendation identifiers used to prepare the preview |
-| `based_on_signal_ids` | `string[]` | Yes | Ordered signal identifiers traced through the recommendations |
+| `based_on_recommendation_ids` | `string[]` | Yes | Ordered legacy recommendation identifiers used to prepare the preview; treat these as follow-up-check references in current UI copy |
+| `based_on_signal_ids` | `string[]` | Yes | Ordered signal identifiers traced through the follow-up checks |
 | `period_context` | `Period Context \| null` | No | Shared business-facing time/comparison context for the preview when available |
 | `suggested_inputs` | `object` | Yes | Lightweight scenario input proposal for future UI or automation use |
 | `projections` | `object[]` | Yes | Condensed projected metric outputs derived from the existing scenario service |
@@ -921,7 +921,7 @@ Represents a Phase 3 lightweight scenario suggestion generated from the connecte
 | --- | --- | --- | --- |
 | `metric_id` | `string` | Yes | Semantic metric identifier |
 | `adjustment_type` | `string` | Yes | Phase 3 uses `percent` |
-| `adjustment_value` | `number` | Yes | Deterministic lightweight adjustment inferred from top signals/recommendations |
+| `adjustment_value` | `number` | Yes | Deterministic lightweight adjustment inferred from top signals and follow-up checks |
 
 ### `projections[]` schema
 
@@ -945,8 +945,8 @@ Represents the Phase 3 unified decision-pipeline output.
 | --- | --- | --- | --- |
 | `signals` | `DecisionSignal[]` | Yes | Final ranked and filtered signals for the pipeline run |
 | `brief` | `DecisionBrief` | Yes | Brief generated from the final filtered signals |
-| `recommendations` | `Recommendation[]` | Yes | Recommendations derived from the same signal set |
-| `scenario_preview` | `DecisionScenarioPreview` | Yes | Lightweight preview generated from top recommendations or a predictable no-op object |
+| `recommendations` | `Recommendation[]` | Yes | Legacy field name for follow-up checks derived from the same signal set |
+| `scenario_preview` | `DecisionScenarioPreview` | Yes | Lightweight preview generated from top follow-up checks or a predictable no-op object |
 
 ### Example
 
@@ -966,7 +966,7 @@ Represents the Phase 3 unified decision-pipeline output.
   },
   "recommendations": [
     {
-      "recommendation_id": "recommendation_optimize_signal_metric_delta_metric_revenue_sum_2026_04_04t150000_00_00_2026_04_04t150000_00_00",
+      "recommendation_id": "recommendation_investigate_signal_metric_delta_metric_revenue_sum_2026_04_04t150000_00_00_2026_04_04t150000_00_00",
       "based_on_signal_ids": [
         "signal_metric_delta_metric_revenue_sum_2026_04_04t150000_00_00"
       ]
@@ -975,7 +975,7 @@ Represents the Phase 3 unified decision-pipeline output.
   "scenario_preview": {
     "status": "ready",
     "based_on_recommendation_ids": [
-      "recommendation_optimize_signal_metric_delta_metric_revenue_sum_2026_04_04t150000_00_00_2026_04_04t150000_00_00"
+      "recommendation_investigate_signal_metric_delta_metric_revenue_sum_2026_04_04t150000_00_00_2026_04_04t150000_00_00"
     ],
     "based_on_signal_ids": [
       "signal_metric_delta_metric_revenue_sum_2026_04_04t150000_00_00"

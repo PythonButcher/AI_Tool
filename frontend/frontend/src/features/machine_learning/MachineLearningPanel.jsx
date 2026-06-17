@@ -51,7 +51,7 @@ const modelQualityHint = (modelId, metrics = {}) => {
     if (Number.isFinite(r2)) {
       if (r2 >= 0.85) return 'Strong fit for this dataset.';
       if (r2 >= 0.6) return 'Moderate fit; still useful but can improve.';
-      return 'Weak fit; add features or more data for better predictions.';
+      return 'Weak fit; add features or more data for better model outputs.';
     }
     return null;
   }
@@ -218,7 +218,8 @@ const CustomMLContent = () => {
 
           {Array.isArray(trainingResult.predictions) && (
             <div>
-              <h4>Predictions (first 10)</h4>
+              <h4>Model Output Preview (first 10)</h4>
+              <p className="ml-preview-note">Note: Outputs depend on current dataset/features and are for validation only, not decision certainty.</p>
               <pre>{JSON.stringify(trainingResult.predictions.slice(0, 10), null, 2)}</pre>
             </div>
           )}

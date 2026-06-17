@@ -321,7 +321,7 @@ class DecisionChatApiTests(unittest.TestCase):
     def test_decision_output_includes_supported_scenario_compare(self):
         scenario_preview = {
             "status": "ready",
-            "summary": "Prepared one scenario preview target from the top chart-compatible recommendations.",
+            "summary": "Prepared one scenario preview target from the top chart-compatible follow-up checks.",
             "based_on_recommendation_ids": ["recommendation_review_revenue"],
             "based_on_signal_ids": ["signal_revenue_change"],
             "period_context": {

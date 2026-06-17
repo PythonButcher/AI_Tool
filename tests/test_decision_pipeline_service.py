@@ -134,7 +134,7 @@ class DecisionPipelineServiceTests(unittest.TestCase):
 
         # Expected when this passes:
         # - the decision pipeline is considered ready with dataset + semantic metrics
-        # - signals and recommendations are still produced
+        # - signals and follow-up checks are still produced under the legacy recommendations field
         # - scenario preview explicitly says it was not requested, which is the stable contract
         self.assertEqual(result["status"], "success")
         self.assertTrue(result["readiness"]["dataset_loaded"])
@@ -142,6 +142,8 @@ class DecisionPipelineServiceTests(unittest.TestCase):
         self.assertTrue(result["readiness"]["decision_ready"])
         self.assertGreaterEqual(len(result["decision_bundle"]["signals"]), 1)
         self.assertGreaterEqual(len(result["decision_bundle"]["recommendations"]), 1)
+        for item in result["decision_bundle"]["recommendations"]:
+            self.assertNotEqual(item.get("recommendation_type"), "optimize")
         self.assertEqual(result["decision_bundle"]["scenario_preview"]["status"], "not_requested")
         self.assertEqual(result["decision_bundle"]["scenario_preview"]["source_scenario_ids"], [])
         self.assertEqual(result["meta"]["scenario_preview_status"], "not_requested")
@@ -152,6 +154,9 @@ class DecisionPipelineServiceTests(unittest.TestCase):
         self.assertEqual(result["status"], "success")
         preview = result["decision_bundle"]["scenario_preview"]
         self.assertEqual(preview["status"], "ready")
+        self.assertIn("follow-up checks", preview["summary"])
+        for item in result["decision_bundle"]["recommendations"]:
+            self.assertNotEqual(item.get("recommendation_type"), "optimize")
         self.assertTrue(preview["projections"])
         self.assertTrue(preview["source_scenario_ids"])
         self.assertTrue(preview["source_scenario_ids"][0].startswith("scenario_"))

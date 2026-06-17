@@ -235,7 +235,7 @@ def _build_scenario_preview(
         "summary": (
             "Scenario preview generation was skipped for this run."
             if not include_scenario_preview
-            else "No chart-compatible recommendations produced a scenario preview."
+            else "No chart-compatible follow-up checks produced a scenario preview."
         ),
         "based_on_recommendation_ids": [],
         "based_on_signal_ids": [],
@@ -305,7 +305,7 @@ def _build_scenario_preview(
             "status": "ready",
             "summary": (
                 f"Prepared {len(metric_targets)} scenario preview target"
-                f"{'s' if len(metric_targets) != 1 else ''} from the top chart-compatible recommendations."
+                f"{'s' if len(metric_targets) != 1 else ''} from the top chart-compatible follow-up checks."
             ),
             "based_on_recommendation_ids": based_on_recommendation_ids,
             "based_on_signal_ids": based_on_signal_ids,

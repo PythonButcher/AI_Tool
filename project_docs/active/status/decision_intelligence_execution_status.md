@@ -26,39 +26,32 @@ The old standalone Phase 4 Canonical Active Dataset handoff is superseded. Datas
 
 Legacy Decision state routing is **fully purged**. The frontend paths that exposed or called old Decision-window behavior have been removed.
 
-Current gate is **AI Chat Emergency Overhaul setup and implementation**.
+Current gate is **conflicting-surface prune and language alignment**.
 
-Next standalone goal: make AI Chat one coherent product surface before broader conflicting-surface pruning resumes. The active implementation plan is `project_docs/active/decision_intelligence/current/ai_chat_emergency_overhaul_action_plan.md`.
+Status: **COMPLETE**.
+
+Codex audited backend-owned language and representative frontend source for unsupported final recommendations, optimization, autonomous decisions, prediction certainty, causal proof, and required Decisions-window continuation paths. Backend and contract copy now keep legacy recommendation field names only for API compatibility while describing current runtime output as observational follow-up checks. Gemini edited frontend files to align the visible copy.
 
 Use this status file as the single current source of truth. Use `project_docs/active/decision_intelligence/current/ai_chat_decision_output_unification_rollout.md` for implementation details only, and use `project_docs/active/contracts/decision_objects.md` when payload details are needed.
 
 ## Latest Verified Slice
 
-## AI Chat Emergency Overhaul Setup, Shell Cleanup, and Output Integrity
-**Status:** FRONTEND IMPLEMENTATION READY FOR REVIEW (CHUNKS 2 & 3)
-
-**Focus:** Clean up the Gemini AI Chat shell to remove placeholder UI and fix keyboard shortcuts. Fix AI Chat artifact behavior so a decision question can be completed inside AI Chat.
+## Conflicting-Surface Backend And Contract Language Alignment
+**Status:** COMPLETE
 
 **Verified facts:**
-1. Backend `open_workspace` remains a compatibility action id, but its backend-owned label, intent, description, produced payload description, action artifact title, review target, assistant message, and availability reason now describe AI Chat decision review instead of the old Decisions-window continuation path.
-2. The frontend AI Chat shell (`AIShell.jsx`) has been cleaned up. Placeholder navigation rails, tabs, and fake "Soon" context modules have been removed. Required mode selection before asking has been removed.
-3. The composer `handleKeyDown` logic was corrected so Enter sends without shifting, Shift+Enter inserts a newline, and Escape closes the mention UI.
-4. Blanking out of the right results pane during follow-up queries has been prevented by removing eager cache clearing.
-5. In `AIShell.jsx`, `open_workspace` has been suppressed from `allowed_next_actions` and `recommended_next_action` so it never appears as a visible no-op or Decisions-window continuation.
-6. Full `decision_output` PDF export has been added to `decisionPdfExport.js` using `export_sections`.
-7. Decision Graph launch is now gated on usable graph context and passes `dataset` and `semantic_model` into the graph path.
-8. Unused UI debug logging and imports were removed from `AIShell.jsx` and `AICharts.jsx`.
-9. `npm --prefix frontend\frontend run build` passes with no errors.
-10. Codex fixed and verified the backend decision-turn regression where a first decision-framing prompt that mentions blockers was treated as a blocker follow-up before any draft frame existed. Explicit decision prompts now create the frame first.
-
-**Current Blockers:**
-- Pending Codex verification of Decision Graph context handoff for Chunk 3.
+1. `backend/routes/autopilot.py`, `backend/services/workflow_storage.py`, and existing workflow template JSON no longer present Autopilot or workflow insight nodes as business recommendations or recommended actions.
+2. `backend/services/recommendation_service.py` no longer emits `recommendation_type: "optimize"` for positive metric movement and rewrites outcome language as observed association or review result language.
+3. `backend/services/decision_pipeline_service.py` now describes scenario preview inputs as chart-compatible follow-up checks rather than top recommendations.
+4. `project_docs/active/contracts/decision_objects.md` documents `Recommendation` as a legacy API field name for observational follow-up checks and states that new runtime output should not emit `optimize`.
+5. Focused backend verification passed with `PYTHONPATH=C:\Users\18022\Desktop\AI_Tool\.codex_tmp_py\site-packages python -m unittest tests.test_decision_pipeline_service tests.test_decision_chat_service`.
+6. Gemini updated `decisionPdfExport.js`, `AutoMLPanel.jsx`, and `MachineLearningPanel.jsx` to remove implication of autonomous decisioning, certainty, final recommendations, and optimization. AI Chat boundary, Scenario Compare, and Decision Graph are aligned. The frontend build is successful.
 
 ## Next Focus
 
-Codex must review the Gemini frontend implementation for Chunks 2 & 3 against `project_docs/active/decision_intelligence/current/ai_chat_emergency_overhaul_action_plan.md`.
+Next focus is **final AI Chat decision export**.
 
-Do not edit frontend files unless the user explicitly authorizes Codex frontend work in the current session.
+Do not implement the final export work until the user explicitly starts that task. The next implementation goal should make the AI Chat `decision_output` PDF export feel like a complete shareable decision asset while preserving normal AI Chat answer, chart, exploration, artifact inspection, existing exports, optional Decision Graph tooling, and the observational-only truth boundary.
 
 ## Status File Discipline
 
