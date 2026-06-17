@@ -8,6 +8,8 @@ The main goal is to prevent a single implementation session from spending excess
 
 This file applies to Codex. It is not a Gemini rule file.
 
+For reusable agent-harness structure, hook-ready checks, and future-project templates, use `project_docs/active/agent_harness/README.md`. This file remains the Codex run-efficiency rule; the agent harness folder owns reusable harness architecture.
+
 Past expensive branches may be useful examples, but they are not global templates. Codex must derive the run shape from the current task, active plan, and touched subsystem instead of reusing the last branch's verification pattern.
 
 ## Entry Rule
@@ -88,3 +90,11 @@ Codex should pause broad exploration when it has enough local context to make a 
 Codex should stop retrying a noisy or failing tool path after two attempts unless the next attempt changes the diagnostic strategy.
 
 Codex should ask for direction when the task requires expanding beyond the active plan, changing ownership boundaries, or spending substantial browser or artifact verification on a side issue.
+
+## Harness Validation
+
+For changes to agent instructions, hook scripts, routing docs, or harness templates, run:
+
+`python .codex/hooks/agent_harness_check.py`
+
+Then run `git diff --check`.
