@@ -1,0 +1,14 @@
+# Example Codex hook configuration for AI_Tool.
+#
+# This file is documentation, not an active config. Review it, then copy the
+# relevant entries into the Codex config location you use for this repo.
+
+[[hooks.PreToolUse]]
+matcher = "^Bash$|^apply_patch$|^Edit$|^Write$"
+
+[[hooks.PreToolUse.hooks]]
+type = "command"
+command = 'python "$(git rev-parse --show-toplevel)/.codex/hooks/pre_tool_use_policy.py"'
+command_windows = 'python "$(git rev-parse --show-toplevel)/.codex/hooks/pre_tool_use_policy.py"'
+timeout = 10
+statusMessage = "Checking repo harness policy"

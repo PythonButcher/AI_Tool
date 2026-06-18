@@ -105,7 +105,7 @@ const workspacePreviewSections = (wp, readiness, capabilityState) => {
     {
       title: 'Decision Kickoff',
       keyValues: [
-        { label: 'Title', value: wp.title || 'Untitled Decision Framework' },
+        { label: 'Title', value: wp.title || 'Untitled Decision Output' },
         { label: 'Status', value: wp.status_label || wp.status },
         { label: 'Summary', value: kickoff?.summary || kickoff || wp.scope_summary || wp.summary },
         { label: 'Objective', value: labelForValue(wp.objective_metric) },
@@ -115,9 +115,9 @@ const workspacePreviewSections = (wp, readiness, capabilityState) => {
     {
       title: 'Visible Frame',
       cards: [
-        { title: 'Primary Levers', body: listLabels(wp.levers).join(' | ') || 'Not specified' },
+        { title: 'Primary Drivers', body: listLabels(wp.levers).join(' | ') || 'Not specified' },
         { title: 'Segmentation', body: listLabels(wp.segment_dimensions).join(' | ') || 'Not specified' },
-        { title: 'Guardrails', body: listLabels(wp.guardrails).join(' | ') || 'Not specified' },
+        { title: 'Limits (Guardrails)', body: listLabels(wp.guardrails).join(' | ') || 'Not specified' },
       ],
     },
     {
@@ -218,7 +218,7 @@ const workspaceSections = (workspace, analysis) => {
     {
       title: 'Workspace Header',
       keyValues: [
-        { label: 'Title', value: workspace.title || 'Untitled Decision Workspace' },
+        { label: 'Title', value: workspace.title || 'Untitled Decision Output' },
         { label: 'Status', value: workspace.status },
         { label: 'Workspace ID', value: workspace.workspace_id },
         { label: 'Prepared', value: formatPdfTimestamp(workspace.created_at) },
@@ -248,7 +248,7 @@ const workspaceSections = (workspace, analysis) => {
       ],
     },
     {
-      title: 'Strategic Levers',
+      title: 'Drivers (Levers)',
       cards: Array.isArray(scope.levers)
         ? scope.levers.map((lever) => ({
           title: lever.label || 'Lever',
@@ -263,7 +263,7 @@ const workspaceSections = (workspace, analysis) => {
           ],
         }))
         : [],
-      emptyText: 'No strategic levers are currently shown.',
+      emptyText: 'No drivers are currently shown.',
     },
     {
       title: 'Segment Dimensions',
@@ -283,7 +283,7 @@ const workspaceSections = (workspace, analysis) => {
       emptyText: 'No segmentation dimensions are currently shown.',
     },
     {
-      title: 'Guardrails',
+      title: 'Limits (Guardrails)',
       cards: Array.isArray(scope.constraints)
         ? scope.constraints.map((constraint) => ({
           title: constraint.label || 'Guardrail',
@@ -300,7 +300,7 @@ const workspaceSections = (workspace, analysis) => {
           ],
         }))
         : [],
-      emptyText: 'No guardrails are currently shown.',
+      emptyText: 'No limits are currently shown.',
     },
     {
       title: 'Scoped Context',
@@ -328,11 +328,11 @@ const workspaceSections = (workspace, analysis) => {
       cards: readinessChecklistCards(rawReadiness, readiness),
     },
     {
-      title: 'Workspace Readiness Architecture',
+      title: 'Decision Output Readiness',
       cards: [
         { title: 'Objective', body: rawReadiness.objective_ready ? 'Ready' : 'Needs review' },
-        { title: 'Levers', body: rawReadiness.lever_ready ? 'Ready' : 'Needs review' },
-        { title: 'Guardrails', body: rawReadiness.constraint_ready ? 'Ready' : 'Needs review' },
+        { title: 'Drivers', body: rawReadiness.lever_ready ? 'Ready' : 'Needs review' },
+        { title: 'Limits', body: rawReadiness.constraint_ready ? 'Ready' : 'Needs review' },
       ],
     },
     {
@@ -428,10 +428,10 @@ export const generateDecisionWorkspacePdf = async ({ workspace, analysis }) => {
   if (!workspace) return;
 
   exportStructuredPdf({
-    title: workspace.title || 'Decision Workspace Export',
+    title: workspace.title || 'Decision Output Export',
     subtitle: workspace.workspace_id || workspace.status,
     fileName: 'decision_workspace_export',
-    footerLabel: 'Decision Workspace Export',
+    footerLabel: 'Decision Output Export',
     sections: workspaceSections(workspace, analysis),
   });
 };

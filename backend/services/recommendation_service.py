@@ -116,7 +116,7 @@ def _recommendation_from_signal(context: Dict[str, Any], signal: Dict[str, Any],
 
     if signal_type == "metric_delta":
         direction = signal.get("direction")
-        recommendation_type = "optimize" if direction == "up" else "investigate"
+        recommendation_type = "investigate"
         title = (
             f"Break down the {metric_ref['label']} increase"
             if direction == "up"
@@ -150,14 +150,14 @@ def _recommendation_from_signal(context: Dict[str, Any], signal: Dict[str, Any],
                 )
             )
         expected_outcome = (
-            "Identify which business segment is sustaining the increase."
+            "Identify which business segment appears associated with the observed increase."
             if direction == "up"
-            else "Identify which business segment is responsible for the decline."
+            else "Identify which business segment appears associated with the observed decline."
         )
         breakdown_suffix = f" by {resolved_dimension_ref['label']}" if resolved_dimension_ref else ""
         summary = (
             f"{signal.get('summary')} Start with a simple breakdown"
-            f"{breakdown_suffix} to find the driver."
+            f"{breakdown_suffix} to find where the observed movement is concentrated."
         )
     elif signal_type == "anomaly_rate":
         title = "Isolate where anomalous behavior is clustering"
@@ -178,9 +178,9 @@ def _recommendation_from_signal(context: Dict[str, Any], signal: Dict[str, Any],
         if time_action:
             time_action["payload"].update(signal_payload)
             actions.append(time_action)
-        expected_outcome = "Separate data quality issues from real operational changes."
+        expected_outcome = "Separate possible data quality issues from observed operational changes."
         summary = (
-            f"{signal.get('summary')} Use one segmentation view and one time view before deciding whether to treat this as noise or a real business shift."
+            f"{signal.get('summary')} Use one segmentation view and one time view before treating this as noise or a real business shift."
         )
     elif signal_type == "dimension_concentration":
         target_dimension_ref = dimension_ref or resolved_dimension_ref or {"label": "the dominant segment", "field": None}
@@ -202,9 +202,9 @@ def _recommendation_from_signal(context: Dict[str, Any], signal: Dict[str, Any],
         if time_action:
             time_action["payload"].update(signal_payload)
             actions.append(time_action)
-        expected_outcome = "Reduce concentration risk and understand whether it is structural or temporary."
+        expected_outcome = "Understand whether concentration appears structural, temporary, or data-limited."
         summary = (
-            f"{signal.get('summary')} Measure how much of {metric_ref['label'] if metric_ref else 'performance'} depends on this segment before deciding whether to diversify or monitor."
+            f"{signal.get('summary')} Measure how much of {metric_ref['label'] if metric_ref else 'performance'} is concentrated in this segment before choosing any response."
         )
     else:
         title = "Validate the affected field before relying on it"
@@ -226,7 +226,7 @@ def _recommendation_from_signal(context: Dict[str, Any], signal: Dict[str, Any],
         if time_action:
             time_action["payload"].update(signal_payload)
             actions.append(time_action)
-        expected_outcome = "Improve data reliability before downstream decisions use the field."
+        expected_outcome = "Clarify data reliability before downstream analysis relies on the field."
         summary = (
             f"{signal.get('summary')} Check whether the issue is concentrated in one segment or recent periods before trusting downstream comparisons."
         )

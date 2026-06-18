@@ -44,9 +44,9 @@
         "type": "insights",
         "label": "Decision Insights",
         "command": "/insights",
-        "description": "Turn signals into recommended actions.",
+        "description": "Turn signals into bounded follow-up checks.",
         "params": {
-          "goal": "Surface the next actions a business user should take."
+          "goal": "Surface observational checks a business user can review."
         },
         "position": {
           "x": 740,

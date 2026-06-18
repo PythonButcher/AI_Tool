@@ -26,39 +26,34 @@ The old standalone Phase 4 Canonical Active Dataset handoff is superseded. Datas
 
 Legacy Decision state routing is **fully purged**. The frontend paths that exposed or called old Decision-window behavior have been removed.
 
-Current gate is **AI Chat Emergency Overhaul setup and implementation**.
+Current gate is **final AI Chat decision export**.
 
-Next standalone goal: make AI Chat one coherent product surface before broader conflicting-surface pruning resumes. The active implementation plan is `project_docs/active/decision_intelligence/current/ai_chat_emergency_overhaul_action_plan.md`.
+Status: **COMPLETE**.
+
+Backend `decision_output.export_sections` now contains PDF-ready sections for Executive Brief, Dataset Trust, Goal, Drivers, Limits, Breakdowns, Evidence Board, Decision Map Summary, Scenario Compare, Assumptions and Unknowns, and Truth Boundary. The existing frontend export source reads `content.export_sections`, and a production-build browser check generated a readable AI Chat decision PDF from the active `decision_output`.
 
 Use this status file as the single current source of truth. Use `project_docs/active/decision_intelligence/current/ai_chat_decision_output_unification_rollout.md` for implementation details only, and use `project_docs/active/contracts/decision_objects.md` when payload details are needed.
 
 ## Latest Verified Slice
 
-## AI Chat Emergency Overhaul Setup, Shell Cleanup, and Output Integrity
-**Status:** FRONTEND IMPLEMENTATION READY FOR REVIEW (CHUNKS 2 & 3)
-
-**Focus:** Clean up the Gemini AI Chat shell to remove placeholder UI and fix keyboard shortcuts. Fix AI Chat artifact behavior so a decision question can be completed inside AI Chat.
+## Final AI Chat Decision Export
+**Status:** COMPLETE
 
 **Verified facts:**
-1. Backend `open_workspace` remains a compatibility action id, but its backend-owned label, intent, description, produced payload description, action artifact title, review target, assistant message, and availability reason now describe AI Chat decision review instead of the old Decisions-window continuation path.
-2. The frontend AI Chat shell (`AIShell.jsx`) has been cleaned up. Placeholder navigation rails, tabs, and fake "Soon" context modules have been removed. Required mode selection before asking has been removed.
-3. The composer `handleKeyDown` logic was corrected so Enter sends without shifting, Shift+Enter inserts a newline, and Escape closes the mention UI.
-4. Blanking out of the right results pane during follow-up queries has been prevented by removing eager cache clearing.
-5. In `AIShell.jsx`, `open_workspace` has been suppressed from `allowed_next_actions` and `recommended_next_action` so it never appears as a visible no-op or Decisions-window continuation.
-6. Full `decision_output` PDF export has been added to `decisionPdfExport.js` using `export_sections`.
-7. Decision Graph launch is now gated on usable graph context and passes `dataset` and `semantic_model` into the graph path.
-8. Unused UI debug logging and imports were removed from `AIShell.jsx` and `AICharts.jsx`.
-9. `npm --prefix frontend\frontend run build` passes with no errors.
-10. Codex fixed and verified the backend decision-turn regression where a first decision-framing prompt that mentions blockers was treated as a blocker follow-up before any draft frame existed. Explicit decision prompts now create the frame first.
-
-**Current Blockers:**
-- Pending Codex verification of Decision Graph context handoff for Chunk 3.
+1. `backend/services/decision_output_service.py` builds PDF-renderable `body` content for every export section, not only non-rendered summaries.
+2. Export sections now cover Executive Brief, Dataset Trust, Goal, Drivers, Limits, Breakdowns, Evidence Board, Decision Map Summary, Scenario Compare, Assumptions and Unknowns, and Truth Boundary.
+3. Dataset Trust export includes source, dataset, row count, column count, semantic readiness, transform state, freshness, and warnings.
+4. Goal, Drivers, Limits, Breakdowns, Evidence Board, Scenario Compare, Assumptions, and Unknowns export as cards when detail is available.
+5. Truth Boundary export explicitly states observational-only limits and unsupported final recommendation, optimization, simulation, causal proof, prediction certainty, and autonomous decisioning.
+6. `project_docs/active/contracts/decision_objects.md` documents the current `export_sections` shape and section order.
+7. Focused backend verification passed with `PYTHONPATH=C:\Users\18022\Desktop\AI_Tool\.codex_tmp_py\site-packages python -m unittest tests.test_decision_chat_service`.
+8. Frontend production build passed with `npm --prefix frontend\frontend run build`; it completed with existing lint warnings only.
+9. Browser validation against the production build sent an AI Chat decision prompt, received backend-produced `workspace_preview` and `decision_output` artifacts, found three enabled PDF export buttons, clicked the active decision output export button, and downloaded `decision_ai_result_2026-06-17.pdf` with `%PDF-` header.
+10. PDF text extraction found 3 pages and verified all required export sections plus the final recommendation, simulation, optimization, causal proof, prediction certainty, and autonomous decisioning boundary text.
 
 ## Next Focus
 
-Codex must review the Gemini frontend implementation for Chunks 2 & 3 against `project_docs/active/decision_intelligence/current/ai_chat_emergency_overhaul_action_plan.md`.
-
-Do not edit frontend files unless the user explicitly authorizes Codex frontend work in the current session.
+Next focus is **select the next Decision Intelligence product slice**. The final AI Chat decision export gate is complete.
 
 ## Status File Discipline
 

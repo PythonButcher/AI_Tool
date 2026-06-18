@@ -16,6 +16,7 @@ This file is the first routing helper for AI_Tool. It should point agents to cur
 | Work on contracts | `project_docs/active/contracts/decision_objects.md` |
 | Review active Codex/Gemini handoffs | `project_docs/active/ai_hand_off/README.md` |
 | Run Codex efficiently on substantial work | `project_docs/active/codex_harness_engineering.md` |
+| Improve or reuse the agent harness | `project_docs/active/agent_harness/README.md` |
 | Find archived historical detail | `project_docs/archive/README.md` |
 
 ## Current Product Direction

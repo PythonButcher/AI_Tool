@@ -81,9 +81,9 @@ def generate_autopilot_workflow():
             run_id,
             3,
             "INSIGHTS",
-            "Business Recommendations",
+            "Evidence Takeaways",
             "/insights",
-            "Summarize key findings and business-ready takeaways.",
+            "Summarize key findings, review needs, and bounded follow-up checks.",
         ),
     ]
 
@@ -106,7 +106,7 @@ def generate_autopilot_workflow():
         {
             "id": f"autopilot-{run_id}",
             "name": "Autopilot Insight Workflow",
-            "description": "Auto-generated analysis pipeline for summary, anomalies, visuals, and recommendations.",
+            "description": "Auto-generated analysis pipeline for summary, anomalies, visuals, and bounded follow-up checks.",
             "category": "Autopilot",
             "nodes": nodes,
             "edges": edges,

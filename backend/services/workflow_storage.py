@@ -82,8 +82,8 @@ DEFAULT_TEMPLATE_DEFINITIONS = [
                 "type": "insights",
                 "label": "Decision Insights",
                 "command": "/insights",
-                "description": "Turn signals into recommended actions.",
-                "params": {"goal": "Surface the next actions a business user should take."},
+                "description": "Turn signals into bounded follow-up checks.",
+                "params": {"goal": "Surface observational checks a business user can review."},
                 "position": {"x": 740, "y": 180},
             },
         ],
@@ -135,7 +135,7 @@ DEFAULT_TEMPLATE_DEFINITIONS = [
     {
         "id": "template-ai-analysis",
         "name": "AI Analysis Workflow",
-        "description": "Full analysis path for summary, anomaly review, visualization, and recommendations.",
+        "description": "Full analysis path for summary, anomaly review, visualization, and bounded follow-up checks.",
         "is_template": True,
         "category": "Analysis",
         "nodes": [
@@ -169,10 +169,10 @@ DEFAULT_TEMPLATE_DEFINITIONS = [
             {
                 "id": "insights-step",
                 "type": "insights",
-                "label": "Recommendations",
+                "label": "Follow-up Checks",
                 "command": "/insights",
-                "description": "Translate analysis into action.",
-                "params": {"goal": "Recommend next actions for business users."},
+                "description": "Translate analysis into reviewable next checks.",
+                "params": {"goal": "Suggest observational checks for business users to review."},
                 "position": {"x": 940, "y": 180},
             },
         ],
