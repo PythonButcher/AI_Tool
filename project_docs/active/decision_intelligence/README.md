@@ -4,35 +4,36 @@ This folder should stay small and easy to route.
 
 ## Current Truth
 
-Decision Intelligence V3 should now be unified through AI Chat's output pane.
+Decision Intelligence V3 is unified through AI Chat's output pane.
 
-AI Chat keeps normal answers, charts, exploration, decide mode, artifact inspection, and exports. Decision Intelligence becomes a richer structured artifact family inside that output pane.
+AI Chat keeps normal answers, charts, exploration, decide mode, artifact inspection, and exports. Decision Intelligence is now a richer structured artifact family inside that output pane.
 
-The Decisions window is no longer the required continuation path in the active plan. Its future role should be decided after the AI Chat output flow is working.
+The Decisions window is no longer the required continuation path. Its future role should be decided only by a new approved slice.
 
-## Active Plan
+## Current References
 
 | Need | Read |
 | --- | --- |
 | Short current status | `../status/decision_intelligence_execution_status.md` |
-| Current AI Chat emergency overhaul | `current/ai_chat_emergency_overhaul_action_plan.md` |
-| Implementation details | `current/ai_chat_decision_output_unification_rollout.md` |
+| Completed AI Chat rollout details | `current/ai_chat_decision_output_unification_rollout.md` |
 | Contract reference | `../contracts/decision_objects.md` |
 | Frontend ownership rule | `../rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md` |
+| Completed AI Chat emergency overhaul | `completed/ai_chat_emergency_overhaul_action_plan.md` |
 
 ## Current Folder
 
 | File | Status |
 | --- | --- |
-| `current/ai_chat_emergency_overhaul_action_plan.md` | Active implementation plan for the current AI Chat-only overhaul gate |
-| `current/ai_chat_decision_output_unification_rollout.md` | Implementation reference; status file wins on current gate |
+| `current/ai_chat_decision_output_unification_rollout.md` | Completed implementation reference; status file wins on current gate |
+| `current/decisions_window_future_role.md` | Approved architecture note for a possible future secondary Decisions-window role |
 
 ## Completed Reference
 
-Completed Phase 2.5 and Phase 3 plans are in `completed/`. Do not scan them by default.
+Completed plans and handoffs are in `completed/`. Do not scan them by default.
 
 | File | Status |
 | --- | --- |
+| `completed/ai_chat_emergency_overhaul_action_plan.md` | Completed AI Chat-only overhaul plan |
 | `completed/phase_2_5_semantic_frame_completion_plan.md` | Completed backend plan |
 | `completed/phase_2_5_gemini_frontend_segment_dimensions.md` | Completed frontend handoff |
 | `completed/phase_3_correction_and_observational_evidence_plan.md` | Completed backend/frontend plan |

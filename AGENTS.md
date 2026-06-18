@@ -21,9 +21,9 @@ This file is the first routing helper for AI_Tool. It should point agents to cur
 
 ## Current Product Direction
 
-Decision Intelligence should be unified through AI Chat, not split into a separate required Decisions-window flow. AI Chat keeps its existing answer, chart, exploration, artifact, and export behavior. Decision Intelligence becomes a richer structured output in the AI Chat results pane.
+Decision Intelligence is unified through AI Chat, not split into a separate required Decisions-window flow. AI Chat keeps its existing answer, chart, exploration, artifact, and export behavior. Decision Intelligence now has a richer structured output in the AI Chat results pane, including export-ready decision sections.
 
-The Decisions window is not deleted. Its future role should be secondary: saved decision library, fullscreen review, or historical asset viewer after the AI Chat output flow is clear.
+The Decisions window is not deleted. Its future role remains secondary: saved decision library, fullscreen review, or historical asset viewer after a dedicated next slice defines the persistence and review behavior.
 
 ## Ownership
 

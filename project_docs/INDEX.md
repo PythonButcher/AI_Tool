@@ -18,7 +18,6 @@ This is the top-level routing file. Use it to find the smallest current document
 | --- | --- |
 | Check concise current status | `project_docs/active/status/decision_intelligence_execution_status.md` |
 | Review Decision Intelligence implementation details | `project_docs/active/decision_intelligence/current/ai_chat_decision_output_unification_rollout.md` |
-| Implement current AI Chat emergency overhaul | `project_docs/active/decision_intelligence/current/ai_chat_emergency_overhaul_action_plan.md` |
 | Work on backend/frontend contracts | `project_docs/active/contracts/decision_objects.md` |
 | Prepare or review Gemini handoffs | `project_docs/active/ai_hand_off/README.md` |
 | Keep Codex runs efficient | `project_docs/active/codex_harness_engineering.md` |
@@ -29,11 +28,11 @@ This is the top-level routing file. Use it to find the smallest current document
 
 ## Current Product Truth
 
-Decision Intelligence V3 is active.
+Decision Intelligence V3 is active, and the 11-phase AI Chat decision-output rollout is complete.
 
 AI Chat is now the intended primary work surface for Decision Intelligence. Existing AI Chat behavior must remain: normal answers, charts, exploration, decide mode, artifact inspection, and exports.
 
-Decision Intelligence should become a structured output in the AI Chat results pane. The Decisions window should become secondary later, likely as a saved decision library, fullscreen review, or historical asset viewer.
+Decision Intelligence now appears as a structured output in the AI Chat results pane. The Decisions window should remain secondary unless a new approved slice defines saved decision library, fullscreen review, or historical asset behavior.
 
 The old standalone Phase 4 Canonical Active Dataset handoff is superseded. Dataset truth remains required, but it should be implemented as Dataset Trust inside the unified AI Chat decision output flow.
 
