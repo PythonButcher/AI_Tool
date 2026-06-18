@@ -12,11 +12,11 @@ Full older preserved status history:
 
 ## Current Truth
 
-Decision Intelligence V3 is active.
+Decision Intelligence V3 is active, and the 11-phase AI Chat decision-output rollout is complete.
 
 AI Chat is the primary work surface. Existing AI Chat behavior must remain: normal answers, charting, exploration, decide mode, artifact inspection, and exports.
 
-Decision Intelligence is being unified into AI Chat's results pane. The Decisions window is not deleted, but its intended role is secondary after the AI Chat output flow is clear.
+Decision Intelligence is unified into AI Chat's results pane. The Decisions window is not deleted, but its intended role is secondary unless a future approved slice defines saved decision library, fullscreen review, or historical asset behavior.
 
 Completed foundations: AI Chat answer/chart protection, Dataset Trust, backend `decision_output`, frontend `decision_output` rendering, chat-native corrections, Evidence Board rendering, Decision Graph backend data foundation, Interactive Decision Graph Workspace, User Hypotheses and Graph-To-Action Flow, and Scenario Compare in the AI Chat decision output.
 
@@ -26,13 +26,13 @@ The old standalone Phase 4 Canonical Active Dataset handoff is superseded. Datas
 
 Legacy Decision state routing is **fully purged**. The frontend paths that exposed or called old Decision-window behavior have been removed.
 
-Current gate is **final AI Chat decision export**.
+Current gate is **Decision Intelligence active rollout complete**.
 
 Status: **COMPLETE**.
 
-Backend `decision_output.export_sections` now contains PDF-ready sections for Executive Brief, Dataset Trust, Goal, Drivers, Limits, Breakdowns, Evidence Board, Decision Map Summary, Scenario Compare, Assumptions and Unknowns, and Truth Boundary. The existing frontend export source reads `content.export_sections`, and a production-build browser check generated a readable AI Chat decision PDF from the active `decision_output`.
+All 11 active Decision Intelligence phases are complete end to end. Backend `decision_output.export_sections` now contains PDF-ready sections for Executive Brief, Dataset Trust, Goal, Drivers, Limits, Breakdowns, Evidence Board, Decision Map Summary, Scenario Compare, Assumptions and Unknowns, and Truth Boundary. The existing frontend export source reads `content.export_sections`, and a production-build browser check generated a readable AI Chat decision PDF from the active `decision_output`.
 
-Use this status file as the single current source of truth. Use `project_docs/active/decision_intelligence/current/ai_chat_decision_output_unification_rollout.md` for implementation details only, and use `project_docs/active/contracts/decision_objects.md` when payload details are needed.
+Use this status file as the single current source of truth. Use `project_docs/active/decision_intelligence/current/ai_chat_decision_output_unification_rollout.md` for completed implementation details only, and use `project_docs/active/contracts/decision_objects.md` when payload details are needed.
 
 ## Latest Verified Slice
 
@@ -53,7 +53,9 @@ Use this status file as the single current source of truth. Use `project_docs/ac
 
 ## Next Focus
 
-Next focus is **select the next Decision Intelligence product slice**. The final AI Chat decision export gate is complete.
+Next focus is **select the next standalone Decision Intelligence product slice**. There is no active Gemini handoff and no open implementation gate in the 11-phase AI Chat rollout.
+
+Recommended candidates should be selected from current product needs, not from the completed rollout history. Likely next-slice areas include Decisions-window secondary review/library behavior, real decision-asset persistence, advanced gated analysis readiness, or broader app cleanup from `project_docs/active/reviews/project_pruning_recommendations.md`.
 
 ## Status File Discipline
 

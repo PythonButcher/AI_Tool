@@ -12,7 +12,7 @@ Accepted as done.
 
 Codex review found no blocking findings in Gemini's final pass. The remaining caveat is that no frontend test files exist for this project yet, so the final acceptance relied on build verification, source review, copy search, contract alignment, and Gemini's documented manual checks.
 
-This topic is historical and must not be used as a current Gemini implementation prompt. Current Decision Intelligence work is routed by `project_docs/active/status/decision_intelligence_execution_status.md` and `project_docs/active/decision_intelligence/current/ai_chat_emergency_overhaul_action_plan.md`.
+This topic is historical and must not be used as a current Gemini implementation prompt. Current Decision Intelligence truth is routed by `project_docs/active/status/decision_intelligence_execution_status.md`; completed rollout details live in `project_docs/active/decision_intelligence/current/ai_chat_decision_output_unification_rollout.md`.
 
 ## Artifacts
 

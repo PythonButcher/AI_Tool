@@ -1,14 +1,14 @@
 # AI Chat Decision Output Unification Rollout
 
-> IMPLEMENTATION REFERENCE: This file preserves phase details, likely files, acceptance checks, and product constraints. It is not the current gate source. For current truth and next action, read `project_docs/active/status/decision_intelligence_execution_status.md`; if this file disagrees with status, the status file wins.
+> COMPLETED IMPLEMENTATION REFERENCE: This file preserves phase details, likely files, acceptance checks, and product constraints for the completed 11-phase AI Chat decision-output rollout. It is not the current gate source. For current truth and next action, read `project_docs/active/status/decision_intelligence_execution_status.md`; if this file disagrees with status, the status file wins.
 
 ## Purpose
 
 This is the implementation reference for Decision Intelligence.
 
-The goal is to unite the work already built into one clear application flow. AI Chat stays the main work surface. Existing AI Chat outputs must remain: normal answers, charts, exploration results, workspace previews, artifact inspection, and PDF export. Decision Intelligence becomes a richer structured output in the AI Chat results pane, not a separate required dashboard and not a forced jump into the Decisions window.
+The goal was to unite the work already built into one clear application flow. AI Chat stays the main work surface. Existing AI Chat outputs must remain: normal answers, charts, exploration results, workspace previews, artifact inspection, and PDF export. Decision Intelligence is a richer structured output in the AI Chat results pane, not a separate required dashboard and not a forced jump into the Decisions window.
 
-The Decisions window is not deleted in this rollout. Its likely future role is secondary: saved decision library, fullscreen review, or historical asset viewer after the AI Chat output flow is working.
+The Decisions window is not deleted in this rollout. Its likely future role is secondary: saved decision library, fullscreen review, or historical asset viewer after a dedicated future slice defines the needed persistence and review behavior.
 
 Shorter prior draft preserved at `project_docs/archive/superseded_active_2026_05_24/ai_chat_decision_output_unification_rollout_short_2026_05_24.md`.
 
@@ -685,7 +685,7 @@ The export avoids fake final recommendations, optimization, causal proof, and un
 
 The current project gate lives in `project_docs/active/status/decision_intelligence_execution_status.md`.
 
-Use this rollout file for implementation details, likely files, constraints, and acceptance checks only. Do not treat this file as proof that a phase is currently open or complete. If this file and the status file disagree, update this file or ignore it; the status file wins.
+Use this rollout file for completed implementation details, likely files, constraints, and acceptance checks only. Do not treat this file as proof that a phase is currently open. If this file and the status file disagree, update this file or ignore it; the status file wins.
 
 Completed foundation details remain here so future agents can understand how each slice was intended to be implemented:
 

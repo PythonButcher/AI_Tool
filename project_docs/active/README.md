@@ -18,9 +18,11 @@ This file is the active navigation hub. If this file conflicts with an archived 
 
 AI Chat is the primary work surface. Existing AI Chat answers, charts, exploration outputs, artifact inspection, and exports must remain.
 
-Decision Intelligence should become a richer structured output inside the AI Chat results pane. The Decisions window should later become secondary: saved decision library, fullscreen review, or historical asset viewer.
+Decision Intelligence is now a richer structured output inside the AI Chat results pane. The completed rollout includes Dataset Trust, decision framing, chat-native corrections, Evidence Board, Decision Graph support, Scenario Compare, and export-ready decision sections.
 
-Dataset truth remains important, but the old standalone Phase 4 dataset handoff is superseded. Dataset truth should now appear as Dataset Trust inside the AI Chat decision output.
+The Decisions window remains secondary. It should not become a required continuation path unless a new approved slice defines a saved decision library, fullscreen review, or historical asset viewer.
+
+Dataset truth remains important, but the old standalone Phase 4 dataset handoff is superseded. Dataset truth now appears as Dataset Trust inside the AI Chat decision output.
 
 ## Active Areas
 
@@ -28,8 +30,7 @@ Dataset truth remains important, but the old standalone Phase 4 dataset handoff 
 | --- | --- | --- |
 | Status | `project_docs/active/status/` | Keep short; archive long history |
 | Current status | `project_docs/active/status/decision_intelligence_execution_status.md` | Single current source of truth |
-| Current AI Chat emergency plan | `project_docs/active/decision_intelligence/current/ai_chat_emergency_overhaul_action_plan.md` | Active implementation plan for AI Chat-only overhaul |
-| Implementation reference | `project_docs/active/decision_intelligence/current/ai_chat_decision_output_unification_rollout.md` | Phase details and acceptance guidance; status file wins on current gate |
+| Implementation reference | `project_docs/active/decision_intelligence/current/ai_chat_decision_output_unification_rollout.md` | Completed rollout details and acceptance guidance; status file wins on current gate |
 | Completed plans | `project_docs/active/decision_intelligence/completed/` | Reference only |
 | Contracts | `project_docs/active/contracts/` | Backend/frontend payload truth |
 | Agent harness | `project_docs/active/agent_harness/` | Reusable agent backbone, hooks, and validation |
@@ -78,5 +79,6 @@ Before sending a final response after substantial Decision Intelligence work, Co
 | Old Phase 4 Gemini dataset handoff | `project_docs/archive/superseded_active_2026_05_24/phase_4_gemini_frontend_canonical_active_dataset.md` |
 | Completed Phase 2.5 plan | `project_docs/active/decision_intelligence/completed/phase_2_5_semantic_frame_completion_plan.md` |
 | Completed Phase 3 plan | `project_docs/active/decision_intelligence/completed/phase_3_correction_and_observational_evidence_plan.md` |
+| Completed AI Chat emergency overhaul plan | `project_docs/active/decision_intelligence/completed/ai_chat_emergency_overhaul_action_plan.md` |
 
 Previous full active README was preserved at `project_docs/archive/superseded_active_2026_05_24/active_README_pre_map_cleanup_2026_05_24.md`.
