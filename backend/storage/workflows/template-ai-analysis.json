@@ -1,7 +1,7 @@
 {
   "id": "template-ai-analysis",
   "name": "AI Analysis Workflow",
-  "description": "Full analysis path for summary, anomaly review, visualization, and recommendations.",
+  "description": "Full analysis path for summary, anomaly review, visualization, and bounded follow-up checks.",
   "category": "Analysis",
   "is_template": true,
   "source_workflow_id": null,
@@ -50,11 +50,11 @@
       {
         "id": "insights-step",
         "type": "insights",
-        "label": "Recommendations",
+        "label": "Follow-up Checks",
         "command": "/insights",
-        "description": "Translate analysis into action.",
+        "description": "Translate analysis into reviewable next checks.",
         "params": {
-          "goal": "Recommend next actions for business users."
+          "goal": "Suggest observational checks for business users to review."
         },
         "position": {
           "x": 940,

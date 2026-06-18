@@ -42,7 +42,7 @@ const ModelCard = ({ model, isBest, problemType }) => {
     <div className={`model-card ${isBest ? 'best-model' : ''}`}>
       <div className="model-card-header">
         <h4>{model.model_name}</h4>
-        {isBest && <span className="best-badge"><FaCheckCircle /> Best</span>}
+        {isBest && <span className="best-badge"><FaCheckCircle /> Top Candidate</span>}
       </div>
       <div className="model-card-metrics">
         {problemType === 'regression' ? (
@@ -108,7 +108,7 @@ function AutoMLPanel() {
           <div>
             <h3>AutoML Problem Solver</h3>
             <p className="automl-subtitle">
-              Automatically detect problem type, preprocess data, and find the best predictive model.
+              Automatically detect problem type, preprocess data, and evaluate candidate predictive models.
             </p>
           </div>
         </div>
@@ -182,14 +182,14 @@ function AutoMLPanel() {
               <span className="value">{results.target_column}</span>
             </div>
             <div className="summary-item">
-              <span className="label">Best Model:</span>
+              <span className="label">Top Candidate:</span>
               <span className="value highlight">{bestModel.model_name}</span>
             </div>
           </div>
 
           <div className="results-grid-container">
             <div className="best-model-section">
-              <h4><FaCheckCircle /> Winning Model</h4>
+              <h4><FaCheckCircle /> Top Candidate Model</h4>
               <ModelCard
                 model={allModels.find((m) => m.model_id === bestModel.model_id) || bestModel}
                 isBest={true}
@@ -262,7 +262,7 @@ function AutoMLPanel() {
 
             {Array.isArray(results.prediction_preview) && results.prediction_preview.length > 0 && (
               <div className="automl-detail-card">
-                <h5>Prediction Preview</h5>
+                <h5>Prediction Preview (Requires Validation)</h5>
                 <pre>{JSON.stringify(results.prediction_preview, null, 2)}</pre>
               </div>
             )}
@@ -270,7 +270,7 @@ function AutoMLPanel() {
 
           <div className="automl-footer-note">
             <p>
-              <FaChartLine /> Models were ranked by {getPrimaryMetricLabel(results.problem_type)} on a hold-out test split.
+              <FaChartLine /> Candidate models were ranked by {getPrimaryMetricLabel(results.problem_type)} on a hold-out test split. These outputs require further validation before decision use.
             </p>
           </div>
         </div>

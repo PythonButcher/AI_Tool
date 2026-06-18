@@ -12,6 +12,7 @@ This file is the active navigation hub. If this file conflicts with an archived 
 | 2 | `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md` | Ownership boundary |
 | 3 | `project_docs/active/contracts/decision_objects.md` | Contract reference when touching payloads |
 | 4 | `project_docs/active/codex_harness_engineering.md` | Run efficiency for substantial Codex work |
+| 5 | `project_docs/active/agent_harness/README.md` | Reusable harness, hooks, and future-project template |
 
 ## Current Direction
 
@@ -31,6 +32,7 @@ Dataset truth remains important, but the old standalone Phase 4 dataset handoff 
 | Implementation reference | `project_docs/active/decision_intelligence/current/ai_chat_decision_output_unification_rollout.md` | Phase details and acceptance guidance; status file wins on current gate |
 | Completed plans | `project_docs/active/decision_intelligence/completed/` | Reference only |
 | Contracts | `project_docs/active/contracts/` | Backend/frontend payload truth |
+| Agent harness | `project_docs/active/agent_harness/` | Reusable agent backbone, hooks, and validation |
 | Handoffs | `project_docs/active/ai_hand_off/` | Active handoffs only |
 | Reviews | `project_docs/active/reviews/` | Focused review docs |
 | Archive | `project_docs/archive/` | Historical context only |
