@@ -766,57 +766,323 @@ class DecisionOutputService:
         scenario_compare: Dict[str, Any],
         readiness: Dict[str, Any],
     ) -> List[Dict[str, Any]]:
+        # Keep these sections self-contained because the PDF export path renders
+        # this backend-owned payload directly instead of re-reading workspace internals.
+        dataset = dataset_trust.get("dataset") if isinstance(dataset_trust.get("dataset"), dict) else {}
+        goal = frame.get("goal") if isinstance(frame.get("goal"), dict) else {}
+        drivers = frame.get("drivers") if isinstance(frame.get("drivers"), list) else []
+        limits = frame.get("limits") if isinstance(frame.get("limits"), list) else []
+        breakdowns = frame.get("breakdowns") if isinstance(frame.get("breakdowns"), list) else []
+        assumptions = frame.get("assumptions") if isinstance(frame.get("assumptions"), list) else []
+        unknowns = frame.get("unknowns") if isinstance(frame.get("unknowns"), list) else []
+        evidence_items = evidence_board.get("items") if isinstance(evidence_board.get("items"), list) else []
+        scenario_projections = (
+            scenario_compare.get("projections")
+            if isinstance(scenario_compare.get("projections"), list)
+            else []
+        )
+        scenario_comparison = (
+            scenario_compare.get("comparison")
+            if isinstance(scenario_compare.get("comparison"), dict)
+            else {}
+        )
+        unsupported = DecisionOutputService._dedupe_strings(
+            list(readiness.get("unsupported_capabilities") or [])
+            + ["simulation", "optimization", "autonomous_decisioning", "final_recommendation"]
+        )
         return [
-            {
-                "section_id": "executive_brief",
-                "title": "Executive Brief",
-                "summary": summary,
-                "items": [],
-            },
-            {
-                "section_id": "dataset_trust",
-                "title": "Dataset Trust",
-                "summary": dataset_trust.get("source_label") or "Dataset source is unknown.",
-                "items": list(dataset_trust.get("warnings") or []),
-            },
-            {
-                "section_id": "decision_frame",
-                "title": "Decision Frame",
-                "summary": frame.get("scope_summary") or "Decision frame drafted from the current workspace.",
-                "items": [
-                    f"Drivers: {len(frame.get('drivers') or [])}",
-                    f"Limits: {len(frame.get('limits') or [])}",
-                    f"Breakdowns: {len(frame.get('breakdowns') or [])}",
+            DecisionOutputService._export_section(
+                section_id="executive_brief",
+                title="Executive Brief",
+                body=summary,
+                keyValues=[
+                    {"label": "Readiness", "value": readiness.get("readiness_state")},
+                    {"label": "Truth Boundary", "value": readiness.get("truth_boundary") or DecisionOutputService.TRUTH_BOUNDARY},
                 ],
-            },
-            {
-                "section_id": "evidence_board",
-                "title": "Evidence Board",
-                "summary": evidence_board.get("summary"),
-                "items": [item.get("title") for item in evidence_board.get("items") or [] if item.get("title")],
-            },
-            {
-                "section_id": "decision_map",
-                "title": "Decision Map",
-                "summary": decision_map.get("summary"),
-                "items": [f"Nodes: {len(decision_map.get('nodes') or [])}", f"Edges: {len(decision_map.get('edges') or [])}"],
-            },
-            {
-                "section_id": "scenario_compare",
-                "title": "Scenario Compare",
-                "summary": scenario_compare.get("summary"),
-                "items": list(scenario_compare.get("limitations") or []),
-            },
-            {
-                "section_id": "truth_boundary",
-                "title": "Truth Boundary",
-                "summary": readiness.get("truth_boundary") or DecisionOutputService.TRUTH_BOUNDARY,
-                "items": [
+                items=[
+                    "This is a decision-support export from AI Chat, not a final recommendation.",
+                    "The output preserves the current observational-only reliability boundary.",
+                ],
+            ),
+            DecisionOutputService._export_section(
+                section_id="dataset_trust",
+                title="Dataset Trust",
+                body=(
+                    "Dataset Trust summarizes what data powered this AI Chat decision output and where "
+                    "the backend could not prove source, freshness, or preparation state."
+                ),
+                keyValues=[
+                    {"label": "Source", "value": dataset_trust.get("source_label") or "Unknown"},
+                    {"label": "Dataset", "value": dataset.get("dataset_name")},
+                    {"label": "Dataset ID", "value": dataset.get("dataset_id")},
+                    {"label": "Rows", "value": dataset_trust.get("row_count")},
+                    {"label": "Columns", "value": dataset_trust.get("column_count")},
+                    {"label": "Semantic Ready", "value": DecisionOutputService._yes_no(dataset_trust.get("semantic_ready"))},
+                    {"label": "Transform State", "value": dataset_trust.get("transform_state")},
+                    {"label": "Freshness", "value": dataset_trust.get("stale_state")},
+                ],
+                items=list(dataset_trust.get("warnings") or []),
+                emptyText="No dataset trust warnings were provided.",
+            ),
+            DecisionOutputService._export_section(
+                section_id="goal",
+                title="Goal",
+                body="The goal is the primary outcome or decision question the rest of this asset is organized around.",
+                cards=[DecisionOutputService._export_frame_card(goal, fallback="Goal")] if goal else [],
+                emptyText="No goal is available in the current decision frame.",
+            ),
+            DecisionOutputService._export_section(
+                section_id="drivers",
+                title="Drivers",
+                body="Drivers are controllable or reviewable inputs connected to the framed goal.",
+                cards=[
+                    DecisionOutputService._export_frame_card(driver, fallback=f"Driver {index}")
+                    for index, driver in enumerate(drivers, start=1)
+                    if isinstance(driver, dict)
+                ],
+                emptyText="No drivers are available in the current decision frame.",
+            ),
+            DecisionOutputService._export_section(
+                section_id="limits",
+                title="Limits",
+                body="Limits are guardrails, constraints, or protected outcomes that should bound interpretation.",
+                cards=[
+                    DecisionOutputService._export_frame_card(limit, fallback=f"Limit {index}")
+                    for index, limit in enumerate(limits, start=1)
+                    if isinstance(limit, dict)
+                ],
+                emptyText="No limits are available in the current decision frame.",
+            ),
+            DecisionOutputService._export_section(
+                section_id="breakdowns",
+                title="Breakdowns",
+                body="Breakdowns are the segments or dimensions intended for comparing the goal and drivers.",
+                cards=[
+                    DecisionOutputService._export_frame_card(breakdown, fallback=f"Breakdown {index}")
+                    for index, breakdown in enumerate(breakdowns, start=1)
+                    if isinstance(breakdown, dict)
+                ],
+                emptyText="No breakdown dimensions are available in the current decision frame.",
+            ),
+            DecisionOutputService._export_section(
+                section_id="evidence_board",
+                title="Evidence Board",
+                body=evidence_board.get("summary"),
+                cards=[
+                    {
+                        "title": item.get("title"),
+                        "body": item.get("summary"),
+                        "meta": [
+                            {"label": "Rank", "value": item.get("rank")},
+                            {"label": "Strength", "value": item.get("strength")},
+                            {
+                                "label": "Data Sufficiency",
+                                "value": (item.get("data_sufficiency") or {}).get("status")
+                                if isinstance(item.get("data_sufficiency"), dict)
+                                else None,
+                            },
+                            {"label": "Source", "value": item.get("source_diagnostic_id")},
+                        ],
+                    }
+                    for item in evidence_items
+                    if isinstance(item, dict)
+                ],
+                items=DecisionOutputService._dedupe_strings([
+                    limitation
+                    for item in evidence_items
+                    if isinstance(item, dict)
+                    for limitation in (item.get("limitations") or [])
+                ]),
+                emptyText="No ranked evidence is available yet. Run observational analysis to populate the Evidence Board.",
+            ),
+            DecisionOutputService._export_section(
+                section_id="decision_map_summary",
+                title="Decision Map Summary",
+                body=decision_map.get("summary"),
+                keyValues=[
+                    {"label": "Map Status", "value": decision_map.get("status")},
+                    {"label": "Nodes", "value": len(decision_map.get("nodes") or [])},
+                    {"label": "Edges", "value": len(decision_map.get("edges") or [])},
+                    {"label": "Causal Status", "value": decision_map.get("causal_status") or "not_causal_claim"},
+                ],
+                items=[
+                    "Map edges show declared structure, evidence coverage, missing inputs, or gates only.",
+                    "Decision Map edges are not causal proof.",
+                ],
+            ),
+            DecisionOutputService._export_section(
+                section_id="scenario_compare",
+                title="Scenario Compare",
+                body=scenario_compare.get("summary"),
+                keyValues=[
+                    {"label": "Status", "value": scenario_compare.get("status")},
+                    {"label": "Method", "value": scenario_comparison.get("method")},
+                    {"label": "Projection Count", "value": len(scenario_projections)},
+                    {"label": "Group By", "value": ", ".join(scenario_comparison.get("group_by") or [])},
+                ],
+                cards=[
+                    DecisionOutputService._export_scenario_projection_card(projection, index)
+                    for index, projection in enumerate(scenario_projections, start=1)
+                    if isinstance(projection, dict)
+                ],
+                items=DecisionOutputService._dedupe_strings(
+                    list(scenario_compare.get("assumptions") or [])
+                    + list(scenario_compare.get("limitations") or [])
+                ),
+                emptyText="No scenario projection rows are available for this decision output.",
+            ),
+            DecisionOutputService._export_section(
+                section_id="assumptions_unknowns",
+                title="Assumptions and Unknowns",
+                body="These are the declared assumptions and unresolved information gaps that bound interpretation.",
+                cards=[
+                    *[
+                        DecisionOutputService._export_note_card(item, fallback=f"Assumption {index}", note_type="Assumption")
+                        for index, item in enumerate(assumptions, start=1)
+                    ],
+                    *[
+                        DecisionOutputService._export_note_card(item, fallback=f"Unknown {index}", note_type="Unknown")
+                        for index, item in enumerate(unknowns, start=1)
+                    ],
+                ],
+                emptyText="No assumptions or unknowns are available in the current decision frame.",
+            ),
+            DecisionOutputService._export_section(
+                section_id="truth_boundary",
+                title="Truth Boundary",
+                body=(
+                    "This asset is limited to observational decision support. It can organize data, frame "
+                    "evidence, and show bounded sensitivity comparisons, but it does not decide for the user."
+                ),
+                keyValues=[
+                    {"label": "Boundary", "value": readiness.get("truth_boundary") or DecisionOutputService.TRUTH_BOUNDARY},
+                    {"label": "Unsupported Capabilities", "value": ", ".join(unsupported)},
+                    {"label": "Ready For Final Recommendation", "value": DecisionOutputService._yes_no(not readiness.get("not_ready_for_recommendation", True))},
+                ],
+                items=[
                     "No final recommendation is produced.",
-                    "No simulation, optimization, causal proof, or autonomous decisioning is performed.",
+                    "No simulation, optimization, causal proof, prediction certainty, or autonomous decisioning is performed.",
+                    "Use this export for review and follow-up analysis, not as an autonomous decision record.",
                 ],
-            },
+            ),
         ]
+
+    @staticmethod
+    def _export_section(
+        section_id: str,
+        title: str,
+        body: Optional[Any] = None,
+        **extra: Any,
+    ) -> Dict[str, Any]:
+        body_text = str(body or "").strip()
+        section = {
+            "section_id": section_id,
+            "title": title,
+            "summary": body_text,
+            "body": body_text,
+        }
+        for key, value in extra.items():
+            if value is None:
+                continue
+            section[key] = value
+        return section
+
+    @staticmethod
+    def _export_frame_card(item: Dict[str, Any], *, fallback: str) -> Dict[str, Any]:
+        binding = item.get("binding") if isinstance(item.get("binding"), dict) else {}
+        metric_ref = binding.get("metric_ref") if isinstance(binding.get("metric_ref"), dict) else {}
+        dimension_ref = binding.get("dimension_ref") if isinstance(binding.get("dimension_ref"), dict) else {}
+        objective_metric = item.get("metric_ref") if isinstance(item.get("metric_ref"), dict) else {}
+        label = DecisionOutputService._label_from_ref(item, fallback=fallback)
+        body = (
+            item.get("statement")
+            or item.get("description")
+            or item.get("rationale")
+            or binding.get("binding_label")
+            or metric_ref.get("label")
+            or dimension_ref.get("label")
+            or objective_metric.get("label")
+            or label
+        )
+        return {
+            "title": label,
+            "body": body,
+            "meta": [
+                {"label": "Status", "value": item.get("resolution_status") or binding.get("status")},
+                {"label": "Metric", "value": metric_ref.get("label") or objective_metric.get("label")},
+                {"label": "Dimension", "value": dimension_ref.get("label")},
+                {"label": "Confidence", "value": item.get("semantic_binding_confidence") or binding.get("semantic_binding_confidence")},
+            ],
+        }
+
+    @staticmethod
+    def _export_note_card(item: Any, *, fallback: str, note_type: str) -> Dict[str, Any]:
+        if isinstance(item, dict):
+            title = str(item.get("label") or item.get("title") or item.get("name") or fallback)
+            body = str(item.get("description") or item.get("summary") or item.get("statement") or item.get("value") or title)
+            status = item.get("status") or item.get("resolution_status")
+        else:
+            title = fallback
+            body = str(item or fallback)
+            status = None
+        return {
+            "title": title,
+            "body": body,
+            "meta": [
+                {"label": "Type", "value": note_type},
+                {"label": "Status", "value": status},
+            ],
+        }
+
+    @staticmethod
+    def _export_scenario_projection_card(projection: Dict[str, Any], index: int) -> Dict[str, Any]:
+        metric_ref = projection.get("metric_ref") if isinstance(projection.get("metric_ref"), dict) else {}
+        adjustment = projection.get("adjustment") if isinstance(projection.get("adjustment"), dict) else {}
+        return {
+            "title": metric_ref.get("label") or metric_ref.get("name") or f"Projection {index}",
+            "body": DecisionOutputService._format_scenario_projection_body(projection),
+            "meta": [
+                {"label": "Adjustment", "value": DecisionOutputService._format_adjustment(adjustment)},
+                {"label": "Baseline", "value": projection.get("baseline_label") or projection.get("baseline_value")},
+                {"label": "Projected", "value": projection.get("projected_label") or projection.get("projected_value")},
+                {"label": "Delta", "value": projection.get("delta_value")},
+                {"label": "Delta Percent", "value": projection.get("delta_pct")},
+            ],
+        }
+
+    @staticmethod
+    def _format_scenario_projection_body(projection: Dict[str, Any]) -> str:
+        comparison_summary = projection.get("comparison_summary")
+        if isinstance(comparison_summary, str) and comparison_summary.strip():
+            return comparison_summary.strip()
+
+        parts = ["Direct adjustment sensitivity comparison."]
+        if isinstance(comparison_summary, dict):
+            direction = comparison_summary.get("direction")
+            delta_pct = comparison_summary.get("delta_pct")
+            if direction:
+                parts.append(f"Direction: {direction}.")
+            if delta_pct is not None:
+                parts.append(f"Delta percent: {delta_pct}.")
+        elif projection.get("delta_pct") is not None:
+            parts.append(f"Delta percent: {projection.get('delta_pct')}.")
+        return " ".join(parts)
+
+    @staticmethod
+    def _format_adjustment(adjustment: Dict[str, Any]) -> Optional[str]:
+        if not adjustment:
+            return None
+        adjustment_type = adjustment.get("type") or adjustment.get("adjustment_type")
+        value = adjustment.get("value") if "value" in adjustment else adjustment.get("adjustment_value")
+        if adjustment_type and value is not None:
+            return f"{adjustment_type}: {value}"
+        if value is not None:
+            return str(value)
+        return str(adjustment_type) if adjustment_type else None
+
+    @staticmethod
+    def _yes_no(value: Any) -> str:
+        return "Yes" if bool(value) else "No"
 
     @staticmethod
     def _build_source_refs(

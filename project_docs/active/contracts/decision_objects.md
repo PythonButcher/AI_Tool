@@ -108,9 +108,28 @@ Phase 3 of AI Chat Decision Output Unification adds a backend-owned `decision_ou
 | `decision_map` | `Decision Output Map` | Yes | Read-only map of dataset, frame, evidence, missing inputs, and advanced gates. Edges are explicitly non-causal. |
 | `scenario_compare` | `Decision Output Scenario Compare` | Yes | Bounded scenario preview when available, otherwise a `not_applicable` object with limitations. It is not a forecast, optimizer, simulation, causal model, autonomous decision, or final recommendation. |
 | `advanced_gates` | `object[]` | Yes | Unsupported or gated capabilities such as simulation, optimization, autonomous decisioning, and final recommendation with backend reasons. |
-| `export_sections` | `object[]` | Yes | Concise export-ready sections for Executive Brief, Dataset Trust, Decision Frame, Evidence Board, Decision Map, Scenario Compare, and Truth Boundary. |
+| `export_sections` | `object[]` | Yes | Backend-owned PDF-ready sections for Executive Brief, Dataset Trust, Goal, Drivers, Limits, Breakdowns, Evidence Board, Decision Map Summary, Scenario Compare, Assumptions and Unknowns, and Truth Boundary. |
 | `source_refs` | `object` | Yes | Trace refs back to workspace ID/status, analysis presence, ranked diagnostic IDs, correction status, and scenario status. |
 | `truth_boundary` | `string` | Yes | Current value is `observational_analysis_only`. |
+
+#### Decision Output Export Sections
+
+`decision_output.export_sections` is the backend-owned source for the AI Chat decision PDF. Frontend export code should render these sections directly instead of rebuilding the asset from raw workspace internals.
+
+Each export section includes:
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `section_id` | `string` | Yes | Stable section identifier. Current order is `executive_brief`, `dataset_trust`, `goal`, `drivers`, `limits`, `breakdowns`, `evidence_board`, `decision_map_summary`, `scenario_compare`, `assumptions_unknowns`, and `truth_boundary`. |
+| `title` | `string` | Yes | Human-readable section title. |
+| `summary` | `string` | Yes | Same content as `body`, kept for compatibility with older clients that used summary-style section data. |
+| `body` | `string` | Yes | Paragraph rendered by the current PDF exporter. This must be populated for every section. |
+| `keyValues` | `object[]` | No | Optional label/value rows for dataset metadata, readiness, map counts, scenario method, and truth boundary fields. |
+| `items` | `string[]` | No | Optional bullet text for warnings, limitations, assumptions, and boundary notes. |
+| `cards` | `object[]` | No | Optional titled detail cards for Goal, Drivers, Limits, Breakdowns, Evidence Board items, Scenario Compare projection rows, Assumptions, and Unknowns. |
+| `emptyText` | `string` | No | Fallback text when a section has no cards or items. |
+
+Export sections must read as a shareable AI Chat decision asset. They must not present final recommendations, optimization, causal proof, simulation, prediction certainty, or autonomous decisioning. The Truth Boundary section must explicitly state the observational-only limitation and unsupported capabilities.
 
 #### Decision Output Frame
 

@@ -26,32 +26,34 @@ The old standalone Phase 4 Canonical Active Dataset handoff is superseded. Datas
 
 Legacy Decision state routing is **fully purged**. The frontend paths that exposed or called old Decision-window behavior have been removed.
 
-Current gate is **conflicting-surface prune and language alignment**.
+Current gate is **final AI Chat decision export**.
 
 Status: **COMPLETE**.
 
-Codex audited backend-owned language and representative frontend source for unsupported final recommendations, optimization, autonomous decisions, prediction certainty, causal proof, and required Decisions-window continuation paths. Backend and contract copy now keep legacy recommendation field names only for API compatibility while describing current runtime output as observational follow-up checks. Gemini edited frontend files to align the visible copy.
+Backend `decision_output.export_sections` now contains PDF-ready sections for Executive Brief, Dataset Trust, Goal, Drivers, Limits, Breakdowns, Evidence Board, Decision Map Summary, Scenario Compare, Assumptions and Unknowns, and Truth Boundary. The existing frontend export source reads `content.export_sections`, and a production-build browser check generated a readable AI Chat decision PDF from the active `decision_output`.
 
 Use this status file as the single current source of truth. Use `project_docs/active/decision_intelligence/current/ai_chat_decision_output_unification_rollout.md` for implementation details only, and use `project_docs/active/contracts/decision_objects.md` when payload details are needed.
 
 ## Latest Verified Slice
 
-## Conflicting-Surface Backend And Contract Language Alignment
+## Final AI Chat Decision Export
 **Status:** COMPLETE
 
 **Verified facts:**
-1. `backend/routes/autopilot.py`, `backend/services/workflow_storage.py`, and existing workflow template JSON no longer present Autopilot or workflow insight nodes as business recommendations or recommended actions.
-2. `backend/services/recommendation_service.py` no longer emits `recommendation_type: "optimize"` for positive metric movement and rewrites outcome language as observed association or review result language.
-3. `backend/services/decision_pipeline_service.py` now describes scenario preview inputs as chart-compatible follow-up checks rather than top recommendations.
-4. `project_docs/active/contracts/decision_objects.md` documents `Recommendation` as a legacy API field name for observational follow-up checks and states that new runtime output should not emit `optimize`.
-5. Focused backend verification passed with `PYTHONPATH=C:\Users\18022\Desktop\AI_Tool\.codex_tmp_py\site-packages python -m unittest tests.test_decision_pipeline_service tests.test_decision_chat_service`.
-6. Gemini updated `decisionPdfExport.js`, `AutoMLPanel.jsx`, and `MachineLearningPanel.jsx` to remove implication of autonomous decisioning, certainty, final recommendations, and optimization. AI Chat boundary, Scenario Compare, and Decision Graph are aligned. The frontend build is successful.
+1. `backend/services/decision_output_service.py` builds PDF-renderable `body` content for every export section, not only non-rendered summaries.
+2. Export sections now cover Executive Brief, Dataset Trust, Goal, Drivers, Limits, Breakdowns, Evidence Board, Decision Map Summary, Scenario Compare, Assumptions and Unknowns, and Truth Boundary.
+3. Dataset Trust export includes source, dataset, row count, column count, semantic readiness, transform state, freshness, and warnings.
+4. Goal, Drivers, Limits, Breakdowns, Evidence Board, Scenario Compare, Assumptions, and Unknowns export as cards when detail is available.
+5. Truth Boundary export explicitly states observational-only limits and unsupported final recommendation, optimization, simulation, causal proof, prediction certainty, and autonomous decisioning.
+6. `project_docs/active/contracts/decision_objects.md` documents the current `export_sections` shape and section order.
+7. Focused backend verification passed with `PYTHONPATH=C:\Users\18022\Desktop\AI_Tool\.codex_tmp_py\site-packages python -m unittest tests.test_decision_chat_service`.
+8. Frontend production build passed with `npm --prefix frontend\frontend run build`; it completed with existing lint warnings only.
+9. Browser validation against the production build sent an AI Chat decision prompt, received backend-produced `workspace_preview` and `decision_output` artifacts, found three enabled PDF export buttons, clicked the active decision output export button, and downloaded `decision_ai_result_2026-06-17.pdf` with `%PDF-` header.
+10. PDF text extraction found 3 pages and verified all required export sections plus the final recommendation, simulation, optimization, causal proof, prediction certainty, and autonomous decisioning boundary text.
 
 ## Next Focus
 
-Next focus is **final AI Chat decision export**.
-
-Do not implement the final export work until the user explicitly starts that task. The next implementation goal should make the AI Chat `decision_output` PDF export feel like a complete shareable decision asset while preserving normal AI Chat answer, chart, exploration, artifact inspection, existing exports, optional Decision Graph tooling, and the observational-only truth boundary.
+Next focus is **select the next Decision Intelligence product slice**. The final AI Chat decision export gate is complete.
 
 ## Status File Discipline
 

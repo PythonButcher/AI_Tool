@@ -314,6 +314,54 @@ class DecisionChatApiTests(unittest.TestCase):
         self.assertEqual(decision_output["scenario_compare"]["status"], "not_applicable")
         self.assertEqual(decision_output["scenario_compare"]["projections"], [])
         self.assertTrue(decision_output["export_sections"])
+        export_sections = decision_output["export_sections"]
+        self.assertEqual(
+            [section["section_id"] for section in export_sections],
+            [
+                "executive_brief",
+                "dataset_trust",
+                "goal",
+                "drivers",
+                "limits",
+                "breakdowns",
+                "evidence_board",
+                "decision_map_summary",
+                "scenario_compare",
+                "assumptions_unknowns",
+                "truth_boundary",
+            ],
+        )
+        for section in export_sections:
+            self.assertTrue(section["title"])
+            self.assertTrue(section["body"])
+            self.assertEqual(section["summary"], section["body"])
+
+        export_by_id = {section["section_id"]: section for section in export_sections}
+        dataset_key_values = {row["label"]: row["value"] for row in export_by_id["dataset_trust"]["keyValues"]}
+        self.assertEqual(dataset_key_values["Dataset"], "Q1 Sales")
+        self.assertEqual(dataset_key_values["Rows"], len(DATASET))
+        self.assertEqual(dataset_key_values["Semantic Ready"], "Yes")
+        goal_card_text = f"{export_by_id['goal']['cards'][0]['title']} {export_by_id['goal']['cards'][0]['body']}".lower()
+        self.assertIn("revenue", goal_card_text)
+        driver_card_text = f"{export_by_id['drivers']['cards'][0]['title']} {export_by_id['drivers']['cards'][0]['body']}".lower()
+        limit_card_text = f"{export_by_id['limits']['cards'][0]['title']} {export_by_id['limits']['cards'][0]['body']}".lower()
+        breakdown_card_text = f"{export_by_id['breakdowns']['cards'][0]['title']} {export_by_id['breakdowns']['cards'][0]['body']}".lower()
+        self.assertIn("marketing spend", driver_card_text)
+        self.assertIn("gross margin", limit_card_text)
+        self.assertIn("channel", breakdown_card_text)
+        self.assertEqual(export_by_id["decision_map_summary"]["keyValues"][3]["value"], "not_causal_claim")
+        truth_export_text = " ".join(
+            [
+                export_by_id["truth_boundary"]["body"],
+                *export_by_id["truth_boundary"]["items"],
+                export_by_id["truth_boundary"]["keyValues"][1]["value"],
+            ]
+        ).lower()
+        self.assertIn("observational decision support", truth_export_text)
+        self.assertIn("no final recommendation", truth_export_text)
+        self.assertIn("optimization", truth_export_text)
+        self.assertIn("prediction certainty", truth_export_text)
+        self.assertIn("autonomous decisioning", truth_export_text)
         self.assertIn("final_recommendation", [gate["capability"] for gate in decision_output["advanced_gates"]])
         self.assertEqual(body["artifacts"][1]["source"], "decision_output")
         self.assertEqual(body["artifacts"][1]["dataset_trust"], body["dataset_trust"])
@@ -387,6 +435,16 @@ class DecisionChatApiTests(unittest.TestCase):
         self.assertEqual(scenario_compare["projections"][0]["projected_value"], 545.4)
         self.assertEqual(scenario_compare["source_scenario_ids"], ["scenario_revenue_sensitivity"])
         self.assertEqual(scenario_compare["truth_boundary"], "observational_analysis_only")
+        export_by_id = {
+            section["section_id"]: section
+            for section in body["decision_output"]["export_sections"]
+        }
+        scenario_export = export_by_id["scenario_compare"]
+        self.assertEqual(scenario_export["keyValues"][1]["value"], "direct_adjustment_sensitivity")
+        self.assertEqual(scenario_export["cards"][0]["title"], "Revenue")
+        self.assertIn("Direct adjustment", scenario_export["cards"][0]["body"])
+        self.assertIn("Direction: up", scenario_export["cards"][0]["body"])
+        self.assertIn("direct adjustment", " ".join(scenario_export["items"]).lower())
 
         boundary_text = " ".join(
             [
@@ -1019,6 +1077,13 @@ class DecisionChatApiTests(unittest.TestCase):
             "observational_analysis_only",
         )
         self.assertEqual(body["decision_output"]["dataset_trust"], body["dataset_trust"])
+        export_by_id = {
+            section["section_id"]: section
+            for section in body["decision_output"]["export_sections"]
+        }
+        evidence_export = export_by_id["evidence_board"]
+        self.assertTrue(evidence_export["cards"])
+        self.assertIn("observational", " ".join(evidence_export["items"]).lower())
 
     def test_decision_output_normalizes_sparse_ranked_diagnostics_for_evidence_board(self):
         workspace = {
