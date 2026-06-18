@@ -1,6 +1,8 @@
 # AI Chat Emergency Overhaul Action Plan
 
-This is the active implementation plan for the AI Chat emergency overhaul. It owns the current AI Chat-only cleanup gate until Codex verifies the work and moves the completed record out of the active path.
+> COMPLETED REFERENCE ONLY: This file records the AI Chat emergency overhaul plan. It is not an active implementation plan. Current truth lives in `project_docs/active/status/decision_intelligence_execution_status.md`.
+
+This was the implementation plan for the AI Chat emergency overhaul. The completed record now lives outside the active `current` path.
 
 ## Standalone Goal
 
@@ -8,9 +10,9 @@ Make AI Chat one coherent product surface for answers, charts, exploration, deci
 
 This work is scoped to AI Chat behavior and the backend/docs support needed for that behavior. Do not restart the old Decisions-window flow, do not make the Decisions window a required continuation path, and do not destroy existing useful renderers without a replacement.
 
-## Active Docs To Read
+## Historical Docs Read During This Work
 
-Read these before implementation:
+These were the implementation docs used while this plan was active. For current work, start from `project_docs/INDEX.md` and follow the active status file.
 
 1. `project_docs/INDEX.md`
 2. `project_docs/active/README.md`
@@ -18,7 +20,7 @@ Read these before implementation:
 4. `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md`
 5. `project_docs/active/contracts/decision_objects.md`
 6. `project_docs/active/decision_intelligence/current/ai_chat_decision_output_unification_rollout.md`
-7. `project_docs/active/decision_intelligence/current/ai_chat_emergency_overhaul_action_plan.md`
+7. `project_docs/active/decision_intelligence/completed/ai_chat_emergency_overhaul_action_plan.md`
 
 ## Target Files
 
@@ -60,7 +62,7 @@ The backend may keep the `open_workspace` action id for compatibility, but user-
 
 Acceptance checks:
 
-`project_docs/active/status/decision_intelligence_execution_status.md` identifies this emergency AI Chat overhaul as the current gate.
+At the time, `project_docs/active/status/decision_intelligence_execution_status.md` identified this emergency AI Chat overhaul as the current gate.
 
 Backend action metadata no longer presents the Decisions window as the continuation path from AI Chat.
 
@@ -122,10 +124,10 @@ Answer artifacts, chart artifacts, artifact inspection, and existing non-decisio
 
 ## Completion And Archive Rule
 
-When all chunks are implemented, verified, and approved by Codex, move this active plan to:
+This plan has already been moved to:
 
 `project_docs/active/decision_intelligence/completed/ai_chat_emergency_overhaul_action_plan.md`
 
-Then update `project_docs/active/status/decision_intelligence_execution_status.md` so it no longer points to this file as the active gate. Leave only a short completed-record pointer in active status. If additional detailed work notes are created during implementation, move those notes to `project_docs/archive/` unless they are useful completed references.
+`project_docs/active/status/decision_intelligence_execution_status.md` no longer points to this file as the active gate. If additional detailed work notes are created later, move those notes to `project_docs/archive/` unless they are useful completed references.
 
 Do not mark the emergency overhaul complete from a frontend build alone. Completion requires Codex source review against this plan and the active contract, plus build or browser verification when the specific acceptance check depends on visible behavior.
