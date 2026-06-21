@@ -20,6 +20,26 @@ DESTRUCTIVE_PATTERNS: tuple[tuple[str, str], ...] = (
     (r"\bRemove-Item\b(?=.*\b-Recurse\b)(?=.*\b-Force\b)", "recursive forced removal is blocked by the harness policy."),
 )
 
+# A command such as ``open(f, "w")`` truncates the target before any nested
+# read of that same file can occur. Dynamic-path writes are too easy to turn
+# into repository-wide data loss, so source edits must use apply_patch instead.
+DYNAMIC_PYTHON_WRITE_PATTERN = (
+    r"(?:\bopen\s*\(\s*[A-Za-z_]\w*\s*,\s*['\"](?:w|a|x)[+bt]*['\"]"
+    r"|\b[A-Za-z_]\w*\.open\s*\(\s*['\"](?:w|a|x)[+bt]*['\"]"
+    r"|\b[A-Za-z_]\w*\.write_(?:text|bytes)\s*\()"
+)
+
+PYTHON_WRITE_MODE_PATTERN = (
+    r"(?:\bopen\s*\([^)]*,\s*['\"](?:w|a|x)[+bt]*['\"]"
+    r"|\.open\s*\(['\"](?:w|a|x)[+bt]*['\"]"
+    r"|\.write_(?:text|bytes)\s*\()"
+)
+
+DIRECT_FRONTEND_WRITE_PATTERN = (
+    r"\b(?:Set-Content|Add-Content|Out-File)\b[\s\S]*"
+    r"frontend[\\/]+frontend[\\/]+src"
+)
+
 MUTATING_GEMINI_PATTERNS: tuple[str, ...] = (
     r"\bGEMINI\.md\b",
     r"\*\s*GEMINI\.md",
@@ -113,6 +133,27 @@ def main() -> int:
         if _matches(pattern, command):
             _deny("PreToolUse", reason)
             return 0
+
+    if _matches(DYNAMIC_PYTHON_WRITE_PATTERN, command):
+        _deny(
+            "PreToolUse",
+            "Dynamic-path Python writes are blocked: open(path, 'w') truncates files before reading. Use apply_patch for source edits.",
+        )
+        return 0
+
+    if _matches(FRONTEND_SOURCE_PATTERN, command) and _matches(PYTHON_WRITE_MODE_PATTERN, command):
+        _deny(
+            "PreToolUse",
+            "Python write-mode access to frontend source is blocked. Use apply_patch so the edit is reviewable and cannot truncate a component.",
+        )
+        return 0
+
+    if _matches(DIRECT_FRONTEND_WRITE_PATTERN, command):
+        _deny(
+            "PreToolUse",
+            "Direct shell writes to frontend source are blocked. Use apply_patch so the change is reviewable and cannot silently truncate a component.",
+        )
+        return 0
 
     # Frontend source is Gemini-owned for Decision Intelligence unless the user
     # explicitly authorizes Codex frontend edits in the current session.

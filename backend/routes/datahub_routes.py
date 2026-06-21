@@ -5,6 +5,13 @@ import sqlite3
 from flask import Blueprint, jsonify, request
 
 from backend.db.backend_db import get_db_connection
+from backend.services.data_catalog_lineage import (
+    GovernancePolicyError,
+    evaluate_dataset_readiness,
+    governance_error_payload,
+    is_blocked,
+    normalize_governance_policy,
+)
 from backend.services.dataset_context import read_dataset_file
 from backend.services.semantic_model import infer_semantic_model_from_dataframe
 
@@ -20,9 +27,15 @@ def _deserialize_dataset_record(row):
         record['preview'] = json.loads(record['preview_json'])
     if record.get('semantic_model_json'):
         record['semantic_model'] = json.loads(record['semantic_model_json'])
+    if record.get('governance_policy_json'):
+        record['governance_policy'] = json.loads(record['governance_policy_json'])
+    if record.get('governance_readiness_json'):
+        record['governance_readiness'] = json.loads(record['governance_readiness_json'])
     record.pop('schema_json', None)
     record.pop('preview_json', None)
     record.pop('semantic_model_json', None)
+    record.pop('governance_policy_json', None)
+    record.pop('governance_readiness_json', None)
     return record
 
 @datahub_bp.route('/list', methods=['GET'])
@@ -67,13 +80,21 @@ def register_dataset():
         schema = data.get('schema', [])
         preview = data.get('preview', [])
         semantic_model = data.get('semantic_model') or data.get('semanticModel')
+        policy = normalize_governance_policy(data.get('governance_policy') or data.get('governancePolicy'))
+        readiness = None
+        try:
+            readiness = evaluate_dataset_readiness(read_dataset_file(path), policy, operation='datahub_register')
+        except Exception:
+            # A catalogue registration can precede access to remote storage.
+            # In that case, retain the policy and evaluate before any use.
+            readiness = None
 
         conn = get_db_connection()
         conn.execute(
             '''
             INSERT INTO datahub_datasets
-            (id, name, path, uploadedAt, numRows, numCols, schema_json, preview_json, semantic_model_json)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (id, name, path, uploadedAt, numRows, numCols, schema_json, preview_json, semantic_model_json, governance_policy_json, governance_readiness_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(id) DO UPDATE SET
                 name = excluded.name,
                 path = excluded.path,
@@ -82,7 +103,9 @@ def register_dataset():
                 numCols = excluded.numCols,
                 schema_json = excluded.schema_json,
                 preview_json = excluded.preview_json,
-                semantic_model_json = COALESCE(excluded.semantic_model_json, datahub_datasets.semantic_model_json)
+                semantic_model_json = COALESCE(excluded.semantic_model_json, datahub_datasets.semantic_model_json),
+                governance_policy_json = excluded.governance_policy_json,
+                governance_readiness_json = excluded.governance_readiness_json
             ''',
             (
                 dataset_id,
@@ -94,13 +117,20 @@ def register_dataset():
                 json.dumps(schema),
                 json.dumps(preview),
                 json.dumps(semantic_model) if semantic_model else None,
+                json.dumps(policy),
+                json.dumps(readiness) if readiness else None,
             ),
         )
         conn.commit()
         conn.close()
 
-        return jsonify({'message': 'Dataset registered successfully'}), 201
+        response = {'message': 'Dataset registered successfully', 'governance_policy': policy}
+        if readiness:
+            response['governance_readiness'] = readiness
+        return jsonify(response), 201
 
+    except GovernancePolicyError as e:
+        return jsonify({'error': f'Invalid governance policy: {e}'}), 400
     except Exception as e:
         return jsonify({'error': f'Failed to register dataset: {str(e)}'}), 500
 
@@ -159,6 +189,35 @@ def get_dataset_semantic_model(dataset_id):
     return jsonify({'semantic_model': semantic_model}), 200
 
 
+@datahub_bp.route('/<dataset_id>/governance-readiness', methods=['GET'])
+def get_dataset_governance_readiness(dataset_id):
+    """Evaluate the stored dataset immediately before it is used downstream."""
+    conn = get_db_connection()
+    conn.row_factory = sqlite3.Row
+    row = conn.execute(
+        'SELECT id, name, path, governance_policy_json FROM datahub_datasets WHERE id = ?',
+        (dataset_id,),
+    ).fetchone()
+    conn.close()
+    if row is None:
+        return jsonify({'error': 'Dataset not found'}), 404
+
+    try:
+        policy = json.loads(row['governance_policy_json']) if row['governance_policy_json'] else None
+        readiness = evaluate_dataset_readiness(read_dataset_file(row['path']), policy, operation='datahub_read')
+    except (ValueError, OSError, GovernancePolicyError) as exc:
+        return jsonify({'error': f'Unable to evaluate dataset governance: {exc}'}), 400
+
+    conn = get_db_connection()
+    conn.execute('UPDATE datahub_datasets SET governance_readiness_json = ? WHERE id = ?', (json.dumps(readiness), dataset_id))
+    conn.commit()
+    conn.close()
+    status_code = 422 if is_blocked(readiness) else 200
+    if is_blocked(readiness):
+        return jsonify(governance_error_payload(readiness)), status_code
+    return jsonify({'governance_readiness': readiness}), status_code
+
+
 @datahub_bp.route('/<dataset_id>/semantic-model', methods=['PUT'])
 def update_dataset_semantic_model(dataset_id):
     payload = request.get_json(force=True) or {}
@@ -196,7 +255,7 @@ def fetch_dataset_rows():
         conn.row_factory = sqlite3.Row
         placeholders = ','.join('?' for _ in dataset_ids)
         query = (
-            'SELECT id, name, path, semantic_model_json '
+            'SELECT id, name, path, semantic_model_json, governance_policy_json '
             f'FROM datahub_datasets WHERE id IN ({placeholders})'
         )
         rows = conn.execute(query, dataset_ids).fetchall()
@@ -207,6 +266,7 @@ def fetch_dataset_rows():
                 'name': row['name'],
                 'path': row['path'],
                 'semantic_model': json.loads(row['semantic_model_json']) if row['semantic_model_json'] else None,
+                'governance_policy': json.loads(row['governance_policy_json']) if row['governance_policy_json'] else None,
             }
             for row in rows
         }
@@ -220,6 +280,10 @@ def fetch_dataset_rows():
 
             try:
                 dataframe = read_dataset_file(record['path'])
+                readiness = evaluate_dataset_readiness(dataframe, record['governance_policy'], operation='datahub_fetch_rows')
+                if is_blocked(readiness):
+                    results[dataset_id] = governance_error_payload(readiness)
+                    continue
                 semantic_model = record['semantic_model'] or infer_semantic_model_from_dataframe(
                     dataframe,
                     dataset_name=record['name'],
@@ -248,6 +312,7 @@ def fetch_dataset_rows():
                     'truncated': truncated,
                     'row_count': len(records),
                     'semantic_model': semantic_model,
+                    'governance_readiness': readiness,
                 }
             except Exception as e:
                 results[dataset_id] = {'error': f'Failed to read file: {str(e)}'}

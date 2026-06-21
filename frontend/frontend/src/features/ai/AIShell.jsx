@@ -59,8 +59,8 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenDecisio
   const [correctionTargetPath, setCorrectionTargetPath] = useState('decision_scope.time_horizon');
   // correctionReplacement: the new value the user wants to apply
   const [correctionReplacement, setCorrectionReplacement] = useState('');
-  // correctionReason: optional user-facing audit reason string
   const [correctionReason, setCorrectionReason] = useState('');
+  const [governanceWarning, setGovernanceWarning] = useState(null);
 
 
 
@@ -138,6 +138,7 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenDecisio
 
     setLoading(true);
     setError(null);
+    setGovernanceWarning(null);
 
     const payload = {
       action: actionId,
@@ -166,6 +167,18 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenDecisio
         setSessionState(data.session_state || {});
         if (data.mode) setActiveMode(data.mode);
 
+        if (data.governance_readiness?.status === 'warning') {
+          const readiness = data.governance_readiness;
+          setGovernanceWarning(
+            `Warning (${readiness.next_action}): ${readiness.reasons?.[0]?.message || 'Dataset quality needs review.'}`,
+          );
+        }
+
+        if (data.governance_readiness && data.governance_readiness.status === 'warning') {
+          const gr = data.governance_readiness;
+          setGovernanceWarning(`Warning (${gr.next_action}): ${gr.reasons?.[0]?.message || 'Dataset issues detected.'}`);
+        }
+
         if (data.artifacts && data.artifacts.length > 0) {
           const lastArt = data.artifacts[data.artifacts.length - 1];
           // Only auto-focus if it's a rich, inspectable artifact
@@ -185,7 +198,12 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenDecisio
         setError(data.error?.message || "Action execution failed.");
       }
     } catch (err) {
-      setError("Connectivity failure during action.");
+      if (err.response?.status === 422 && err.response?.data?.governance_readiness?.status === 'blocked') {
+        const gr = err.response.data.governance_readiness;
+        setError(`Blocked (${gr.next_action}): ${gr.reasons?.[0]?.message || 'Governance checks failed.'}`);
+      } else {
+        setError("Connectivity failure during action.");
+      }
     } finally {
       setLoading(false);
     }
@@ -222,6 +240,7 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenDecisio
 
     setLoading(true);
     setError(null);
+    setGovernanceWarning(null);
     setCorrectionPanelOpen(false); // Close the correction form immediately while loading
 
     let replacementValue = correctionPayload.replacement;
@@ -302,7 +321,14 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenDecisio
         setError(data.error?.message || 'Correction submission failed.');
       }
     } catch (err) {
-      setError('Connectivity failure during correction.');
+      const readiness = err.response?.data?.governance_readiness;
+      if (err.response?.status === 422 && readiness?.status === 'blocked') {
+        setError(
+          `Blocked (${readiness.next_action}): ${readiness.reasons?.[0]?.message || 'Governance checks failed.'}`,
+        );
+      } else {
+        setError('Connectivity failure during correction.');
+      }
     } finally {
       setLoading(false);
       // Reset correction form fields for next use
@@ -1510,6 +1536,7 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenDecisio
 
     setLoading(true);
     setError(null);
+    setGovernanceWarning(null);
 
     const dsContext = resolveDatasetForNlp();
     const msg = userInput;
@@ -1598,6 +1625,11 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenDecisio
         setSessionState(data.session_state || {});
         if (data.mode) setActiveMode(data.mode);
 
+        if (data.governance_readiness && data.governance_readiness.status === 'warning') {
+          const gr = data.governance_readiness;
+          setGovernanceWarning(`Warning (${gr.next_action}): ${gr.reasons?.[0]?.message || 'Dataset issues detected.'}`);
+        }
+
         if (data.artifacts && data.artifacts.length > 0) {
           const lastArt = data.artifacts[data.artifacts.length - 1];
           // Only auto-focus if it's a rich, inspectable artifact
@@ -1617,7 +1649,12 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenDecisio
         setError(data.error?.message || "Intelligence engine unavailable.");
       }
     } catch (err) {
-      setError("⚠ Connectivity error. Verify backend service status.");
+      if (err.response?.status === 422 && err.response?.data?.governance_readiness?.status === 'blocked') {
+        const gr = err.response.data.governance_readiness;
+        setError(`Blocked (${gr.next_action}): ${gr.reasons?.[0]?.message || 'Governance checks failed.'}`);
+      } else {
+        setError("⚠ Connectivity error. Verify backend service status.");
+      }
     } finally {
       setLoading(false);
     }
@@ -1757,6 +1794,7 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenDecisio
           ))}
 
           {loading && <div className="ai-shell__message-row is-assistant"><div className="ai-shell__message-card is-loading"><div className="ai-shell__typing"><span /><span /><span /></div></div></div>}
+          {governanceWarning && <div className="ai-shell__alert-bar" style={{ backgroundColor: '#fff3cd', color: '#856404' }}><FaExclamationTriangle /> {governanceWarning}</div>}
           {error && <div className="ai-shell__alert-bar"><FaInfoCircle /> {error}</div>}
         </div>
 

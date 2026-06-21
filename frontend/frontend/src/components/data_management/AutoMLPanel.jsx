@@ -90,7 +90,12 @@ function AutoMLPanel() {
       });
       setResults(response.data);
     } catch (err) {
-      setError(err.response?.data?.error || err.message || 'AutoML training failed.');
+      if (err.response?.status === 422 && err.response?.data?.governance_readiness?.status === 'blocked') {
+        const gr = err.response.data.governance_readiness;
+        setError(`AutoML Blocked (${gr.next_action}): ${gr.reasons?.[0]?.message || 'Governance checks failed.'}`);
+      } else {
+        setError(err.response?.data?.error || err.message || 'AutoML training failed.');
+      }
     } finally {
       setLoading(false);
     }
@@ -172,6 +177,11 @@ function AutoMLPanel() {
 
       {results && bestModel && (
         <div className="automl-results">
+          {results.governance_readiness?.status === 'warning' && (
+            <div className="automl-alert warning" style={{ backgroundColor: '#fff3cd', color: '#856404', padding: '10px', borderRadius: '4px', marginBottom: '15px' }}>
+              <FaExclamationTriangle /> Warning ({results.governance_readiness.next_action}): {results.governance_readiness.reasons?.[0]?.message || 'Governance warnings detected.'}
+            </div>
+          )}
           <div className="results-summary-banner">
             <div className="summary-item">
               <span className="label">Problem Type:</span>

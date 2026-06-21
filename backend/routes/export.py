@@ -2,7 +2,8 @@
 from flask import Blueprint, jsonify, make_response, request
 import io
 import pandas as pd
-from backend.utils.global_state import get_cleaned_data
+from backend.services.data_catalog_lineage import evaluate_dataset_readiness, governance_error_payload, is_blocked
+from backend.utils.global_state import get_cleaned_data, get_governance_policy
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
 
@@ -19,6 +20,10 @@ def export_cleaned_data():
             df = pd.DataFrame(cleaned_data)
         else:
             df = cleaned_data
+
+        readiness = evaluate_dataset_readiness(df, get_governance_policy(), operation='export')
+        if is_blocked(readiness):
+            return jsonify(governance_error_payload(readiness)), 422
 
         export_format = request.args.get('format', 'csv').lower()
 
@@ -74,6 +79,10 @@ def export_cleaned_data():
         else:
             return jsonify({"error": "Unsupported export format"}), 400
 
+        # Binary downloads cannot carry a JSON body, so expose the same
+        # explainable readiness signal in response headers for the caller.
+        response.headers['X-Dataset-Governance-Status'] = readiness['status']
+        response.headers['X-Dataset-Governance-Next-Action'] = readiness['next_action']
         return response
 
     except Exception as e:

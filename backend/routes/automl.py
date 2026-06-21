@@ -1,9 +1,14 @@
 from flask import Blueprint, jsonify, request
 import pandas as pd
 
+from backend.services.data_catalog_lineage import (
+    GovernancePolicyError,
+    evaluate_dataset_readiness,
+    governance_error_payload,
+    is_blocked,
+)
 from backend.utils.global_state import get_cleaned_data, get_uploaded_df
-from backend.services.automl_logic import AutoMLService
-from backend.services.model_training import ModelTrainingError
+from backend.utils.global_state import get_governance_policy
 
 
 automl_bp = Blueprint('automl_bp', __name__, url_prefix='/api/automl')
@@ -27,7 +32,7 @@ def _dataset_from_payload(payload: dict):
     if isinstance(payload_dataset, dict):
         return pd.DataFrame.from_dict(payload_dataset)
 
-    raise ModelTrainingError('dataset must be a list of row objects or a column mapping.')
+    raise ValueError('dataset must be a list of row objects or a column mapping.')
 
 
 def _resolve_column_name(df: pd.DataFrame, requested: str):
@@ -55,20 +60,35 @@ def train_automl():
 
     try:
         df = _dataset_from_payload(payload)
-    except ModelTrainingError as e:
+    except ValueError as e:
         return jsonify({"error": str(e)}), 400
 
     if df is None or not isinstance(df, pd.DataFrame) or df.empty:
         return jsonify({"error": "No dataset available. Please upload a dataset first."}), 400
+
+    try:
+        readiness = evaluate_dataset_readiness(
+            df,
+            payload.get('governance_policy') or payload.get('governancePolicy') or get_governance_policy(),
+            operation='automl',
+        )
+    except GovernancePolicyError as e:
+        return jsonify({"error": f"Invalid governance policy: {e}"}), 400
+    if is_blocked(readiness):
+        return jsonify(governance_error_payload(readiness)), 422
 
     resolved_target = _resolve_column_name(df, target_column)
     if resolved_target is None:
         return jsonify({"error": f"Target column '{target_column}' not found in dataset."}), 400
 
     try:
+        # Import only after the governance gate. Invalid data should never
+        # trigger model-library loading or a training attempt.
+        from backend.services.automl_logic import AutoMLService
         results = AutoMLService.train_automl(df, resolved_target, test_size=test_size)
+        results['governance_readiness'] = readiness
         return jsonify(results), 200
-    except ModelTrainingError as e:
+    except ValueError as e:
         return jsonify({"error": str(e)}), 400
     except Exception as e:
         return jsonify({"error": f"An unexpected error occurred: {str(e)}"}), 500

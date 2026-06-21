@@ -1,6 +1,13 @@
 from flask import Blueprint, jsonify, request
 
 from backend.decision_engine import DecisionChatService
+from backend.services.data_catalog_lineage import (
+    GovernancePolicyError,
+    evaluate_dataset_readiness,
+    governance_error_payload,
+    is_blocked,
+)
+from backend.services.dataset_context import resolve_dataset_bundle
 from backend.services.decision_brief_service import generate_decision_brief
 from backend.services.decision_graph_service import DecisionGraphService
 from backend.services.decision_pipeline_service import run_decision_pipeline
@@ -21,11 +28,44 @@ def _error_payload(code: str, message: str):
         },
     }
 
+
+def _governance_for_payload(payload, operation):
+    """Evaluate only when this decision request actually carries a dataset."""
+    if not isinstance(payload, dict) or (payload.get('dataset') is None and not (payload.get('dataset_ref') or payload.get('datasetRef'))):
+        return None, None
+    try:
+        bundle = resolve_dataset_bundle(
+            dataset=payload.get('dataset'),
+            dataset_ref=payload.get('dataset_ref') or payload.get('datasetRef'),
+            semantic_model=payload.get('semantic_model') or payload.get('semanticModel'),
+            source=f'decision_{operation}',
+            allow_active_fallback=False,
+        )
+        readiness = evaluate_dataset_readiness(
+            bundle['dataframe'],
+            payload.get('governance_policy') or payload.get('governancePolicy') or bundle.get('governance_policy'),
+            operation=f'decision_{operation}',
+        )
+    except (ValueError, GovernancePolicyError) as exc:
+        return None, (jsonify(_error_payload('INVALID_DATASET_GOVERNANCE_REQUEST', str(exc))), 400)
+    if is_blocked(readiness):
+        return readiness, (jsonify(governance_error_payload(readiness)), 422)
+    return readiness, None
+
+
+def _governed_response(result, readiness):
+    if readiness is not None:
+        result['governance_readiness'] = readiness
+    return jsonify(result), 200
+
 @decision_bp.route("/workspaces", methods=["POST"])
 def create_workspace_route():
     payload = request.get_json(silent=True) or {}
+    readiness, blocked = _governance_for_payload(payload, 'workspace')
+    if blocked:
+        return blocked
     try:
-        return jsonify(DecisionWorkspaceService.create_workspace(payload)), 200
+        return _governed_response(DecisionWorkspaceService.create_workspace(payload), readiness)
     except DecisionServiceError as exc:
         return jsonify(_error_payload("INVALID_DECISION_WORKSPACE_REQUEST", str(exc))), 400
     except Exception as exc:
@@ -34,8 +74,11 @@ def create_workspace_route():
 @decision_bp.route("/chat/turns", methods=["POST"])
 def decision_chat_turn_route():
     payload = request.get_json(silent=True) or {}
+    readiness, blocked = _governance_for_payload(payload, 'chat')
+    if blocked:
+        return blocked
     try:
-        return jsonify(DecisionChatService.handle_turn(payload)), 200
+        return _governed_response(DecisionChatService.handle_turn(payload), readiness)
     except DecisionServiceError as exc:
         error_response = _error_payload("INVALID_DECISION_CHAT_TURN_REQUEST", str(exc))
         error_response["dataset_trust"] = DecisionChatService.build_dataset_trust_for_payload(payload)
@@ -46,8 +89,11 @@ def decision_chat_turn_route():
 @decision_bp.route("/chat/actions", methods=["POST"])
 def decision_chat_action_route():
     payload = request.get_json(silent=True) or {}
+    readiness, blocked = _governance_for_payload(payload, 'chat_action')
+    if blocked:
+        return blocked
     try:
-        return jsonify(DecisionChatService.handle_action(payload)), 200
+        return _governed_response(DecisionChatService.handle_action(payload), readiness)
     except DecisionServiceError as exc:
         error_response = _error_payload("INVALID_DECISION_CHAT_ACTION_REQUEST", str(exc))
         error_response["dataset_trust"] = DecisionChatService.build_dataset_trust_for_payload(payload)
@@ -58,8 +104,11 @@ def decision_chat_action_route():
 @decision_bp.route("/workspaces/analyze", methods=["POST"])
 def analyze_workspace_route():
     payload = request.get_json(silent=True) or {}
+    readiness, blocked = _governance_for_payload(payload, 'workspace_analysis')
+    if blocked:
+        return blocked
     try:
-        return jsonify(DecisionWorkspaceService.analyze_workspace(payload)), 200
+        return _governed_response(DecisionWorkspaceService.analyze_workspace(payload), readiness)
     except DecisionServiceError as exc:
         return jsonify(_error_payload("INVALID_DECISION_WORKSPACE_ANALYSIS_REQUEST", str(exc))), 400
     except Exception as exc:
@@ -69,8 +118,11 @@ def analyze_workspace_route():
 @decision_bp.route("/graph/candidates", methods=["POST"])
 def decision_graph_candidates_route():
     payload = request.get_json(silent=True) or {}
+    readiness, blocked = _governance_for_payload(payload, 'graph_candidates')
+    if blocked:
+        return blocked
     try:
-        return jsonify(DecisionGraphService.discover_candidates(payload)), 200
+        return _governed_response(DecisionGraphService.discover_candidates(payload), readiness)
     except DecisionServiceError as exc:
         return jsonify(_error_payload("INVALID_DECISION_GRAPH_CANDIDATE_REQUEST", str(exc))), 400
     except Exception as exc:
@@ -80,8 +132,11 @@ def decision_graph_candidates_route():
 @decision_bp.route("/graph/build", methods=["POST"])
 def decision_graph_build_route():
     payload = request.get_json(silent=True) or {}
+    readiness, blocked = _governance_for_payload(payload, 'graph')
+    if blocked:
+        return blocked
     try:
-        return jsonify(DecisionGraphService.build_graph(payload)), 200
+        return _governed_response(DecisionGraphService.build_graph(payload), readiness)
     except DecisionServiceError as exc:
         return jsonify(_error_payload("INVALID_DECISION_GRAPH_BUILD_REQUEST", str(exc))), 400
     except Exception as exc:
@@ -91,8 +146,11 @@ def decision_graph_build_route():
 @decision_bp.route("/graph/actions", methods=["POST"])
 def decision_graph_action_route():
     payload = request.get_json(silent=True) or {}
+    readiness, blocked = _governance_for_payload(payload, 'graph_action')
+    if blocked:
+        return blocked
     try:
-        return jsonify(DecisionGraphService.plan_graph_action(payload)), 200
+        return _governed_response(DecisionGraphService.plan_graph_action(payload), readiness)
     except DecisionServiceError as exc:
         return jsonify(_error_payload("INVALID_DECISION_GRAPH_ACTION_REQUEST", str(exc))), 400
     except Exception as exc:
@@ -101,8 +159,11 @@ def decision_graph_action_route():
 @decision_bp.route("/signals/generate", methods=["POST"])
 def generate_signals_route():
     payload = request.get_json(silent=True) or {}
+    readiness, blocked = _governance_for_payload(payload, 'signals')
+    if blocked:
+        return blocked
     try:
-        return jsonify(generate_decision_signals(payload)), 200
+        return _governed_response(generate_decision_signals(payload), readiness)
     except DecisionServiceError as exc:
         return jsonify(_error_payload("INVALID_DECISION_REQUEST", str(exc))), 400
     except Exception as exc:
@@ -112,8 +173,11 @@ def generate_signals_route():
 @decision_bp.route("/brief/generate", methods=["POST"])
 def generate_brief_route():
     payload = request.get_json(silent=True) or {}
+    readiness, blocked = _governance_for_payload(payload, 'brief')
+    if blocked:
+        return blocked
     try:
-        return jsonify(generate_decision_brief(payload)), 200
+        return _governed_response(generate_decision_brief(payload), readiness)
     except DecisionServiceError as exc:
         return jsonify(_error_payload("INVALID_DECISION_REQUEST", str(exc))), 400
     except Exception as exc:
@@ -123,8 +187,11 @@ def generate_brief_route():
 @decision_bp.route("/run", methods=["POST"])
 def run_decision_pipeline_route():
     payload = request.get_json(silent=True) or {}
+    readiness, blocked = _governance_for_payload(payload, 'pipeline')
+    if blocked:
+        return blocked
     try:
-        return jsonify(run_decision_pipeline(payload)), 200
+        return _governed_response(run_decision_pipeline(payload), readiness)
     except DecisionServiceError as exc:
         return jsonify(_error_payload("INVALID_DECISION_REQUEST", str(exc))), 400
     except Exception as exc:
@@ -134,8 +201,11 @@ def run_decision_pipeline_route():
 @decision_bp.route("/recommendations/generate", methods=["POST"])
 def generate_recommendations_route():
     payload = request.get_json(silent=True) or {}
+    readiness, blocked = _governance_for_payload(payload, 'recommendations')
+    if blocked:
+        return blocked
     try:
-        return jsonify(generate_recommendations(payload)), 200
+        return _governed_response(generate_recommendations(payload), readiness)
     except DecisionServiceError as exc:
         return jsonify(_error_payload("INVALID_DECISION_REQUEST", str(exc))), 400
     except Exception as exc:
@@ -145,8 +215,11 @@ def generate_recommendations_route():
 @decision_bp.route("/scenarios/evaluate", methods=["POST"])
 def evaluate_scenario_route():
     payload = request.get_json(silent=True) or {}
+    readiness, blocked = _governance_for_payload(payload, 'scenario')
+    if blocked:
+        return blocked
     try:
-        return jsonify(evaluate_scenario(payload)), 200
+        return _governed_response(evaluate_scenario(payload), readiness)
     except DecisionServiceError as exc:
         return jsonify(_error_payload("INVALID_DECISION_REQUEST", str(exc))), 400
     except Exception as exc:

@@ -31,3 +31,11 @@ My professional and hobbyist endeavors are centered around programming with a st
 - **"Explanation only":** I only want an explanation of something, do not even consider editing code, only explanation.
 ### MARKDOWN PLANNING AUTHORITY:
 Only Codex is allowed to create, modify, or extend project plans in Markdown files. Gemini/Antigravity must not invent new chunks, phases, goals, roadmap items, implementation plans, acceptance gates, or next-session prompts in Markdown; if the active Markdown plan is missing, unclear, stale, or does not contain the requested next step, Gemini/Antigravity must stop and report the gap to the user or Codex instead of creating or extending the plan. Antigravity is allowed to make suggestions for consideration, but no write access to md implementation files is allowed.
+
+### Safety Gate: Catastrophic Change Protection
+Goal: Prevent source loss while making repository changes.
+Use apply_patch for every source-code edit. Never use Python open(path, "w"), Path.write_text, PowerShell Set-Content, Out-File, shell redirection, bulk-cleanup scripts, or formatter scripts to rewrite source files. This rule is strict when a path is stored in a variable because write mode truncates a file before any attempted read.
+Before editing a substantial file, inspect its current line count and targeted diff. Edit one source file at a time. After each source edit, confirm the file remains non-empty and that its default export, imports, and surrounding implementation are still present.
+Before reporting frontend work complete, run python .codex/hooks/agent_harness_check.py, git diff --check, and the relevant build command. Do not claim a build passed unless its command completed successfully in the current workspace.
+If any source file becomes unexpectedly empty or substantially smaller, stop immediately. Do not continue feature work, cleanup, formatting, or documentation updates. Report the incident, identify the affected files, restore only those files from the tracked baseline, verify their line counts, then reapply the intended change using apply_patch.
+All handoff, review, and implementation prompts must begin with Goal: and state target files, active docs to read, acceptance checks, verification commands, and ownership constraints.

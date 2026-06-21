@@ -24,17 +24,30 @@ The old standalone Phase 4 Canonical Active Dataset handoff is superseded. Datas
 
 ## Current Project Gate
 
-Legacy Decision state routing is **fully purged**. The frontend paths that exposed or called old Decision-window behavior have been removed.
+Current gate is **Governance and Quality Gates frontend presentation**.
 
-Current gate is **Decision Intelligence active rollout complete**.
-
-Status: **COMPLETE**.
+Status: **SOURCE AND BUILD VERIFIED; BROWSER VERIFICATION PENDING**
 
 All 11 active Decision Intelligence phases are complete end to end. Backend `decision_output.export_sections` now contains PDF-ready sections for Executive Brief, Dataset Trust, Goal, Drivers, Limits, Breakdowns, Evidence Board, Decision Map Summary, Scenario Compare, Assumptions and Unknowns, and Truth Boundary. The existing frontend export source reads `content.export_sections`, and a production-build browser check generated a readable AI Chat decision PDF from the active `decision_output`.
 
 Use this status file as the single current source of truth. Use `project_docs/active/decision_intelligence/current/ai_chat_decision_output_unification_rollout.md` for completed implementation details only, and use `project_docs/active/contracts/decision_objects.md` when payload details are needed.
 
 ## Latest Verified Slice
+
+## Governance and Quality Gates
+**Status:** SOURCE AND BUILD VERIFIED; BROWSER VERIFICATION PENDING
+
+**Verified facts:**
+1. `backend/services/data_catalog_lineage.py` defines one explainable readiness contract for required fields, null thresholds, duplicate keys, value ranges, freshness, PII handling, and retention expiry.
+2. Upload, basic and manual cleaning, NLP charts, Decision Intelligence routes, AutoML, Data Hub row fetches, legacy AI routes, and exports either return `governance_readiness` or block with HTTP 422 before producing downstream output.
+3. Data Hub persists governance policy and exposes `GET /api/datahub/<dataset_id>/governance-readiness` for immediate re-evaluation.
+4. Focused coverage in `tests/test_data_catalog_lineage.py` proves a deliberately bad dataset is blocked before chart generation, AI Chat/Decision Intelligence output, AutoML, and export. `tests.test_decision_chat_service` remains green.
+5. `project_docs/active/contracts/data_catalog_lineage.md` is the source contract for response shape and frontend handling.
+6. The upload gate no longer blocks an ordinary CSV merely because an inferred `id` field repeats or a default null threshold is crossed. Those heuristic checks return an explicit warning; declared duplicate-key and null policies still block as configured.
+7. `FileUpload.jsx` lets the browser set the multipart boundary, renders successful upload warnings, and renders backend-provided HTTP 422 block reasons and next actions.
+8. `AIShell.jsx` now handles warning and block readiness for action, correction, and message requests. `AutoMLPanel.jsx` and `FileExport.jsx` retain their focused governance handling.
+9. Focused backend and harness coverage passed with 38 tests. The current frontend production build passed with existing lint warnings only.
+
 
 ## Final AI Chat Decision Export
 **Status:** COMPLETE
@@ -53,9 +66,7 @@ Use this status file as the single current source of truth. Use `project_docs/ac
 
 ## Next Focus
 
-Next focus is **select the next standalone Decision Intelligence product slice**. There is no active Gemini handoff and no open implementation gate in the 11-phase AI Chat rollout.
-
-Recommended candidates should be selected from current product needs, not from the completed rollout history. Likely next-slice areas include Decisions-window secondary review/library behavior, real decision-asset persistence, advanced gated analysis readiness, or broader app cleanup from `project_docs/active/reviews/project_pruning_recommendations.md`.
+Next focus is **browser-verify the recovered upload and governance paths**. Validate an ordinary CSV upload, a blocked upload with an explicit policy, AI Chat correction handling, AutoML, and CSV, Excel, and PDF exports against `project_docs/active/contracts/data_catalog_lineage.md`.
 
 ## Status File Discipline
 

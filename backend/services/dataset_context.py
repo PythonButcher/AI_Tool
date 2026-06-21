@@ -315,7 +315,7 @@ def load_datahub_dataset(dataset_id: str) -> Dict[str, Any]:
 
     conn = get_db_connection()
     row = conn.execute(
-        "SELECT id, name, path, semantic_model_json FROM datahub_datasets WHERE id = ?",
+        "SELECT id, name, path, semantic_model_json, governance_policy_json FROM datahub_datasets WHERE id = ?",
         (dataset_id,),
     ).fetchone()
     conn.close()
@@ -329,6 +329,7 @@ def load_datahub_dataset(dataset_id: str) -> Dict[str, Any]:
     return {
         "dataframe": dataframe,
         "semantic_model": semantic_model,
+        "governance_policy": json.loads(row["governance_policy_json"]) if row["governance_policy_json"] else None,
         "dataset_ref": {
             "source": "datahub",
             "dataset_id": row["id"],
@@ -358,6 +359,7 @@ def resolve_dataset_bundle(
         return {
             "dataframe": dataframe,
             "semantic_model": resolved_model,
+            "governance_policy": None,
             "dataset_ref": {
                 "source": normalized_ref.get("source") or "inline",
                 "dataset_id": normalized_ref.get("dataset_id"),
@@ -400,6 +402,7 @@ def resolve_dataset_bundle(
     return {
         "dataframe": dataframe,
         "semantic_model": resolved_model,
+        "governance_policy": None,
         "dataset_ref": {
             "source": normalized_ref.get("source") or "active",
             "dataset_id": normalized_ref.get("dataset_id") or dataset_meta.get("id"),
