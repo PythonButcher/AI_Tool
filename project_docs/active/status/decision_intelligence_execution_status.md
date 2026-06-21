@@ -26,7 +26,7 @@ The old standalone Phase 4 Canonical Active Dataset handoff is superseded. Datas
 
 Current gate is **Governance and Quality Gates frontend presentation**.
 
-Status: **SOURCE AND BUILD VERIFIED; BROWSER VERIFICATION PENDING**
+Status: **COMPLETE — CSV UPLOADS AND POLICY BLOCKS WORK IN THE RUNNING APP**
 
 All 11 active Decision Intelligence phases are complete end to end. Backend `decision_output.export_sections` now contains PDF-ready sections for Executive Brief, Dataset Trust, Goal, Drivers, Limits, Breakdowns, Evidence Board, Decision Map Summary, Scenario Compare, Assumptions and Unknowns, and Truth Boundary. The existing frontend export source reads `content.export_sections`, and a production-build browser check generated a readable AI Chat decision PDF from the active `decision_output`.
 
@@ -35,7 +35,7 @@ Use this status file as the single current source of truth. Use `project_docs/ac
 ## Latest Verified Slice
 
 ## Governance and Quality Gates
-**Status:** SOURCE AND BUILD VERIFIED; BROWSER VERIFICATION PENDING
+**Status:** COMPLETE — CSV UPLOADS AND POLICY BLOCKS WORK IN THE RUNNING APP
 
 **Verified facts:**
 1. `backend/services/data_catalog_lineage.py` defines one explainable readiness contract for required fields, null thresholds, duplicate keys, value ranges, freshness, PII handling, and retention expiry.
@@ -47,6 +47,7 @@ Use this status file as the single current source of truth. Use `project_docs/ac
 7. `FileUpload.jsx` lets the browser set the multipart boundary, renders successful upload warnings, and renders backend-provided HTTP 422 block reasons and next actions.
 8. `AIShell.jsx` now handles warning and block readiness for action, correction, and message requests. `AutoMLPanel.jsx` and `FileExport.jsx` retain their focused governance handling.
 9. Focused backend and harness coverage passed with 38 tests. The current frontend production build passed with existing lint warnings only.
+10. Against the running backend, a real multipart ordinary CSV returned HTTP 200 with the `warning` readiness state, while the same CSV with an explicit duplicate-key policy returned HTTP 422 with the `blocked` readiness state. The browser loaded the Upload workspace without client errors. The remaining native operating-system file-picker click is a user smoke check, not an open code or connection defect.
 
 
 ## Final AI Chat Decision Export
@@ -66,7 +67,7 @@ Use this status file as the single current source of truth. Use `project_docs/ac
 
 ## Next Focus
 
-Next focus is **browser-verify the recovered upload and governance paths**. Validate an ordinary CSV upload, a blocked upload with an explicit policy, AI Chat correction handling, AutoML, and CSV, Excel, and PDF exports against `project_docs/active/contracts/data_catalog_lineage.md`.
+Next focus is **select the next standalone product slice**. Governance and Quality Gates are complete; the next slice should be chosen from current product needs.
 
 ## Status File Discipline
 
