@@ -24,11 +24,15 @@ The old standalone Phase 4 Canonical Active Dataset handoff is superseded. Datas
 
 ## Current Project Gate
 
-Current gate is **Governance and Quality Gates frontend presentation**.
+Current gate is **Persistent Decision Assets**.
 
-Status: **COMPLETE — CSV UPLOADS AND POLICY BLOCKS WORK IN THE RUNNING APP**
+Status: **READY FOR IMPLEMENTATION — BACKEND CONTRACT NOT YET IMPLEMENTED**
 
-All 11 active Decision Intelligence phases are complete end to end. Backend `decision_output.export_sections` now contains PDF-ready sections for Executive Brief, Dataset Trust, Goal, Drivers, Limits, Breakdowns, Evidence Board, Decision Map Summary, Scenario Compare, Assumptions and Unknowns, and Truth Boundary. The existing frontend export source reads `content.export_sections`, and a production-build browser check generated a readable AI Chat decision PDF from the active `decision_output`.
+The selected standalone outcome is to let a user save the current AI Chat Decision Review as an immutable snapshot and reopen it after a page reload. The scope is deliberately limited to asset create, list, and detail retrieval plus compact AI Chat save/reopen controls. It does not include a new Decisions destination, fullscreen review, historical comparison, edits, deletes, sharing, or live refresh.
+
+The implementation brief is `project_docs/active/decision_intelligence/current/persistent_decision_assets_execution_brief.md`. Codex owns the backend contract, persistence service, routes, tests, and verification. Gemini starts frontend work only after Codex records `backend_contract_ready` against that brief.
+
+All 11 active Decision Intelligence phases remain complete end to end. Backend `decision_output.export_sections` contains PDF-ready sections for Executive Brief, Dataset Trust, Goal, Drivers, Limits, Breakdowns, Evidence Board, Decision Map Summary, Scenario Compare, Assumptions and Unknowns, and Truth Boundary. The existing frontend export source reads `content.export_sections`, and a production-build browser check generated a readable AI Chat decision PDF from the active `decision_output`.
 
 Use this status file as the single current source of truth. Use `project_docs/active/decision_intelligence/current/ai_chat_decision_output_unification_rollout.md` for completed implementation details only, and use `project_docs/active/contracts/decision_objects.md` when payload details are needed.
 
@@ -67,7 +71,7 @@ Use this status file as the single current source of truth. Use `project_docs/ac
 
 ## Next Focus
 
-Next focus is **select the next standalone product slice**. Governance and Quality Gates are complete; the next slice should be chosen from current product needs.
+Next focus is **implement Persistent Decision Assets** using the active execution brief. Start with the backend contract and verification; Gemini frontend work follows only after that backend gate is recorded as ready.
 
 ## Status File Discipline
 
