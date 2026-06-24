@@ -1,12 +1,15 @@
 from flask import Blueprint, jsonify, request
 
+from backend.services.data_catalog_lineage import evaluate_dataset_readiness, governance_error_payload, is_blocked
 from backend.services.manual_cleaning_engine import apply_steps
 from backend.services.semantic_model import infer_semantic_model_from_dataframe
 from backend.utils.global_state import (
+    get_governance_policy,
     get_cleaned_data,
     get_semantic_model,
     get_uploaded_df,
     set_cleaned_data,
+    set_governance_state,
     set_semantic_model,
 )
 
@@ -35,6 +38,10 @@ def manual_cleaning():
             'row_count': 0,
         }), 400
 
+    readiness = evaluate_dataset_readiness(cleaned_df, get_governance_policy(), operation='manual_cleaning')
+    if is_blocked(readiness):
+        return jsonify(governance_error_payload(readiness)), 422
+
     preview_rows = cleaned_df.head(100).to_dict(orient='records')
     full_rows = cleaned_df.to_dict(orient='records')
     semantic_model = infer_semantic_model_from_dataframe(
@@ -46,6 +53,7 @@ def manual_cleaning():
 
     if not preview_only:
         set_cleaned_data(cleaned_df)
+        set_governance_state(readiness['policy'], readiness)
         set_semantic_model(semantic_model)
 
     return jsonify({
@@ -56,4 +64,5 @@ def manual_cleaning():
         'steps_applied': len(steps),
         'committed': not preview_only,
         'semantic_model': semantic_model,
+        'governance_readiness': readiness,
     })

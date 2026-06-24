@@ -1,6 +1,6 @@
-# Decisions Window Future Role
+# Phase 2 — Decision Review Fullscreen Viewer
 
-Status: approved architecture decision. Backend readiness has been verified for the first frontend slice. No frontend implementation has been made in this note.
+Status: active Phase 2 architecture and planning reference. Phase 1 persistent decision assets is complete. No Phase 2 implementation has been made in this note.
 
 ## Decision
 

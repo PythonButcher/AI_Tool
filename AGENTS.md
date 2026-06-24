@@ -12,7 +12,7 @@ This file is the first routing helper for AI_Tool. It should point agents to cur
 | Understand current truth and scan rules | `project_docs/active/README.md` |
 | Check current Decision Intelligence status | `project_docs/active/status/decision_intelligence_execution_status.md` |
 | Confirm Codex vs Gemini ownership | `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md` |
-| Review Decision Intelligence implementation details | `project_docs/active/decision_intelligence/current/ai_chat_decision_output_unification_rollout.md` |
+| Review completed AI Chat rollout history | `project_docs/archive/ai_chat_decision_output_unification_rollout_completed.md` only when historical context is needed |
 | Work on contracts | `project_docs/active/contracts/decision_objects.md` |
 | Review active Codex/Gemini handoffs | `project_docs/active/ai_hand_off/README.md` |
 | Run Codex efficiently on substantial work | `project_docs/active/codex_harness_engineering.md` |
@@ -63,6 +63,14 @@ Write rollout plans in plain project language. Use short phase names, one purpos
 
 When creating prompts for another agent, do not use code blocks and do not over-format with many bullets. Keep the prompt clean and paste-ready.
 
+## Prompt Goal Format
+
+All prompts generated for another agent or a future session must be written in goal format. This includes Gemini, Antigravity, Codex next-session, review, handoff, and implementation prompts. Start with `Goal:` followed by the standalone outcome, then state the target files, active documentation to read, exact contract or source fields to use, acceptance checks, verification command when relevant, and ownership constraints. Antigravity prompts must use the same goal format because Antigravity supports goals. Keep every prompt forward-looking, clean, and paste-ready without code blocks.
+
+## Catastrophic Change Protection
+
+Agents must use `apply_patch` for source edits. They must not use Python `open(path, "w")`, `Path.write_text`, PowerShell `Set-Content`, `Out-File`, redirection, or bulk-cleanup scripts to rewrite source files, especially when the target path is stored in a variable. Those patterns can truncate a file before its contents are read. Before claiming frontend work complete, run `python .codex/hooks/agent_harness_check.py`, `git diff --check`, and the relevant build. If a source file is unexpectedly empty or substantially smaller than its baseline, stop immediately, report the incident, and restore from the tracked baseline before any feature work continues.
+
 When Codex wraps up a project phase or clears a phase gate (or whenever the user requests a kick-off / next-session / new phase prompt), the final response must include a clean, paste-ready prompt for starting the next session. The user should not have to ask for this handoff prompt separately.
 CRITICAL: The generated kick-off/next-session prompt MUST NEVER mention or refer to ANY previous phase names or numbers (e.g., do not say "Phase 4", "Phase 5", "previous phase", or recap what was just completed). It MUST NOT recap prior accomplishments, review history, implementation history, or who approved earlier work. It must start directly and cleanly by naming only the next standalone goal, specifying the target file, and listing the active doc links for the current task. Keep the prompt completely forward-looking and decoupled from history. Do not include sentences like "Phase N is complete", "Gemini did X", "reviewed by", or detailed verification history inside the next-session prompt.
 
@@ -70,6 +78,8 @@ CRITICAL: The generated kick-off/next-session prompt MUST NEVER mention or refer
 ## Working Rules
 
 Always review current project Markdown before making project decisions. Start with `project_docs/INDEX.md`, then `project_docs/active/README.md`, then only the task-specific files named by those navigation docs.
+
+Before starting, handing off, or closing a numbered project phase, use the `project-doc-governance` skill and run `python .codex/hooks/agent_harness_check.py`. The check blocks a completed brief left in the current path, completed reference files left under `current/`, and a current gate without its declared phase number.
 
 Do not scan every Markdown file. Do not scan `project_docs/archive/` unless an active doc points there or the user asks for historical context. Do not bulk scan `project_docs/active/decision_intelligence/`; read its README first and select only the relevant file.
 

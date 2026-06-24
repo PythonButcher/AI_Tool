@@ -1,17 +1,49 @@
 import os
+import pandas as pd
 
 from flask import Blueprint, current_app, jsonify, request
 
 from backend.services.ai_command_executor import client, execute_ai_command
+from backend.services.data_catalog_lineage import (
+    GovernancePolicyError,
+    evaluate_dataset_readiness,
+    governance_error_payload,
+    is_blocked,
+)
 
 
 ai_bp = Blueprint("ai_bp", __name__)
+
+
+def _legacy_chat_readiness(dataset, policy, operation):
+    if dataset is None:
+        return {
+            'status': 'warning',
+            'operation': operation,
+            'severity': 'warning',
+            'reasons': [{
+                'code': 'dataset_governance_unavailable',
+                'severity': 'warning',
+                'message': 'This legacy AI route did not receive a structured dataset for quality evaluation.',
+                'next_action': 'Use /api/decision/chat/turns with a structured dataset for governed AI analysis.',
+            }],
+            'next_action': 'Use /api/decision/chat/turns with a structured dataset for governed AI analysis.',
+        }
+    return evaluate_dataset_readiness(pd.DataFrame(dataset), policy, operation=operation)
 
 
 @ai_bp.route("/ai", methods=["POST"])
 def ai_response():
     try:
         data = request.json or {}
+        try:
+            readiness = _legacy_chat_readiness(
+                data.get('dataset'), data.get('governance_policy') or data.get('governancePolicy'), 'legacy_ai_chat'
+            )
+        except GovernancePolicyError as exc:
+            return jsonify({'error': f'Invalid governance policy: {exc}'}), 400
+        if is_blocked(readiness):
+            return jsonify(governance_error_payload(readiness)), 422
         conversation_history = data.get("conversation_history")
 
         if not conversation_history or not isinstance(conversation_history, list):
@@ -37,7 +69,7 @@ def ai_response():
         reply = completion.choices[0].message.content
         conversation_history.append({"role": "assistant", "content": reply})
 
-        return jsonify({"reply": reply, "conversation_history": conversation_history})
+        return jsonify({"reply": reply, "conversation_history": conversation_history, "governance_readiness": readiness})
 
     except Exception as exc:
         current_app.logger.error(f"Error in /ai: {str(exc)}")
@@ -57,6 +89,15 @@ def ai_command():
         if not command:
             return jsonify({"error": "Missing command."}), 400
 
+        try:
+            readiness = _legacy_chat_readiness(
+                dataset_obj, data.get('governance_policy') or data.get('governancePolicy'), 'ai_command'
+            )
+        except GovernancePolicyError as exc:
+            return jsonify({'error': f'Invalid governance policy: {exc}'}), 400
+        if is_blocked(readiness):
+            return jsonify(governance_error_payload(readiness)), 422
+
         result = execute_ai_command(
             command,
             dataset_obj,
@@ -64,6 +105,8 @@ def ai_command():
             node_params=node_params,
             execution_context=execution_context,
         )
+        if isinstance(result, dict):
+            result['governance_readiness'] = readiness
         return jsonify(result)
 
     except ValueError as exc:

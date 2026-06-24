@@ -30,9 +30,10 @@ Dataset truth remains important, but the old standalone Phase 4 dataset handoff 
 | --- | --- | --- |
 | Status | `project_docs/active/status/` | Keep short; archive long history |
 | Current status | `project_docs/active/status/decision_intelligence_execution_status.md` | Single current source of truth |
-| Implementation reference | `project_docs/active/decision_intelligence/current/ai_chat_decision_output_unification_rollout.md` | Completed rollout details and acceptance guidance; status file wins on current gate |
+| Completed rollout history | `project_docs/archive/ai_chat_decision_output_unification_rollout_completed.md` | Historical reference only; do not use as the current plan |
 | Completed plans | `project_docs/active/decision_intelligence/completed/` | Reference only |
 | Contracts | `project_docs/active/contracts/` | Backend/frontend payload truth |
+| Dataset governance contract | `project_docs/active/contracts/data_catalog_lineage.md` | Readiness policy and enforcement truth |
 | Agent harness | `project_docs/active/agent_harness/` | Reusable agent backbone, hooks, and validation |
 | Handoffs | `project_docs/active/ai_hand_off/` | Active handoffs only |
 | Reviews | `project_docs/active/reviews/` | Focused review docs |
@@ -41,6 +42,10 @@ Dataset truth remains important, but the old standalone Phase 4 dataset handoff 
 ## Response Clarity Rule
 
 Rollout plans must be written in plain language. Use short phase names, one purpose at a time, and direct acceptance checks. If a plan mentions a technical concept such as CDD, Decision Map, Dataset Trust, gates, or dashboard state, define it immediately.
+
+## Prompt Goal Format
+
+Every prompt written for Gemini, Antigravity, Codex in a future session, or another agent must start with `Goal:` and state the standalone outcome. It must then name target files, active docs, exact source or contract fields, acceptance checks, verification commands where relevant, and ownership constraints. Antigravity prompts follow this same format because Antigravity supports goals. Prompts stay forward-looking, paste-ready, and free of code blocks.
 
 ## Orchestration Rule
 
@@ -55,6 +60,12 @@ When Codex determines Gemini needs work, Codex must give the user a clean paste-
 Gemini frontend reviews must stay lightweight unless the user asks for deeper verification. Codex should use the active handoff, targeted source review, focused diff, and contract evidence before running expensive tools. A source-level blocker is enough to call `Not complete`; do not keep spending tokens on builds, browser automation, or broad scans after the blocker is clear.
 
 Frontend builds are for inconclusive source review, missing or questionable Gemini build evidence, likely syntax/import failures, or explicit user requests. Browser/E2E checks are not the default review path; use them only when the gate depends on visible behavior and cheaper evidence is clean or insufficient.
+
+Before starting, handing off, or closing a numbered phase, run `python .codex/hooks/agent_harness_check.py`. Its documentation-governance gate rejects a complete brief still kept in the current path, completed reference files under `current/`, and a current gate without a phase number. Use the `project-doc-governance` skill to repair any reported issue before continuing.
+
+## Browser Acceptance Control
+
+The user exclusively controls browser-level acceptance. Codex must not launch, navigate, automate, upload through, export from, or claim browser verification unless the user explicitly requests that specific browser action. Codex provides implementation, backend/API verification, build results, static review, and a concise manual browser checklist; the user performs and accepts visible browser behavior.
 
 ## Status File Discipline
 

@@ -1,10 +1,13 @@
 from flask import Blueprint, jsonify, request
 
+from backend.services.data_catalog_lineage import evaluate_dataset_readiness, governance_error_payload, is_blocked
 from backend.services.semantic_model import infer_semantic_model_from_dataframe
 from backend.utils.global_state import (
+    get_governance_policy,
     get_semantic_model,
     get_uploaded_df,
     set_cleaned_data,
+    set_governance_state,
     set_semantic_model,
 )
 
@@ -31,7 +34,12 @@ def get_clean():
         else:
             return jsonify({'error': 'Invalid cleaning task'}), 400
 
+        readiness = evaluate_dataset_readiness(cleaned_df, get_governance_policy(), operation='cleaning')
+        if is_blocked(readiness):
+            return jsonify(governance_error_payload(readiness)), 422
+
         set_cleaned_data(cleaned_df)
+        set_governance_state(readiness['policy'], readiness)
         semantic_model = infer_semantic_model_from_dataframe(
             cleaned_df,
             source='basic_cleaning',
@@ -48,6 +56,7 @@ def get_clean():
             'cleaned_preview': cleaned_preview,
             'cleaned_data': cleaned_data,
             'semantic_model': semantic_model,
+            'governance_readiness': readiness,
         }), 200
 
     except Exception as e:
@@ -62,7 +71,12 @@ def bypass_cleaning():
 
     try:
         cleaned_df = uploaded_df
+        readiness = evaluate_dataset_readiness(cleaned_df, get_governance_policy(), operation='bypass_cleaning')
+        if is_blocked(readiness):
+            return jsonify(governance_error_payload(readiness)), 422
+
         set_cleaned_data(cleaned_df)
+        set_governance_state(readiness['policy'], readiness)
         semantic_model = infer_semantic_model_from_dataframe(
             cleaned_df,
             source='bypass_cleaning',
@@ -79,6 +93,7 @@ def bypass_cleaning():
             'cleaned_preview': cleaned_preview,
             'cleaned_data': cleaned_data,
             'semantic_model': semantic_model,
+            'governance_readiness': readiness,
         }), 200
 
     except Exception as e:

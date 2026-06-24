@@ -119,3 +119,51 @@ export const planDecisionGraphAction = async (payload) => {
     throw error?.response?.data || error;
   }
 };
+
+/**
+ * Saves a decision asset (POST /api/decision/assets).
+ *
+ * @param {Object} payload - The payload containing optional title, decision_output, and optional graph_state.
+ * @returns {Promise<Object>} The saved DecisionAsset.
+ */
+export const saveDecisionAsset = async (payload) => {
+  try {
+    const response = await axios.post(`${API_URL}/api/decision/assets`, payload);
+    return response.data;
+  } catch (error) {
+    console.error('Error saving decision asset:', error);
+    throw error?.response?.data || error;
+  }
+};
+
+/**
+ * Fetches all saved decision asset summaries (GET /api/decision/assets).
+ *
+ * @param {Object} [params] - Optional query params (e.g. limit).
+ * @returns {Promise<Object>} Object containing the list of asset summaries.
+ */
+export const getDecisionAssets = async (params = {}) => {
+  try {
+    const response = await axios.get(`${API_URL}/api/decision/assets`, { params });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching decision assets:', error);
+    throw error?.response?.data || error;
+  }
+};
+
+/**
+ * Fetches a single complete DecisionAsset by its ID (GET /api/decision/assets/<asset_id>).
+ *
+ * @param {string} assetId - The stable asset identifier.
+ * @returns {Promise<Object>} The complete DecisionAsset.
+ */
+export const getDecisionAssetById = async (assetId) => {
+  try {
+    const response = await axios.get(`${API_URL}/api/decision/assets/${assetId}`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching decision asset ${assetId}:`, error);
+    throw error?.response?.data || error;
+  }
+};
