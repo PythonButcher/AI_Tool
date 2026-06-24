@@ -19,6 +19,7 @@ function FileUpload({
   const { datasets = [], addDataset } = warehouseContext || {};
   const [file, setFile] = useState(null);
   const [error, setError] = useState(null);
+  const [governanceNotice, setGovernanceNotice] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
   const [activeTab, setActiveTab] = useState('upload');
   const [isPanelOpen, setIsPanelOpen] = useState(true);
@@ -47,6 +48,7 @@ function FileUpload({
       if (allowedExtensions.includes(fileExtension)) {
         setFile(selectedFile);
         setError(null);
+        setGovernanceNotice(null);
       } else {
         setFile(null);
         setError('Invalid file type. Allowed types: ' + allowedExtensions.join(', '));
@@ -84,16 +86,20 @@ function FileUpload({
 
     setIsUploading(true);
     setError(null);
+    setGovernanceNotice(null);
 
     const formData = new FormData();
     formData.append('file', file);
 
     try {
-      const response = await axios.post(`${API_URL}/api/upload`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
+      // Let the browser set the multipart boundary; manually setting the
+      // Content-Type can make otherwise valid CSV uploads unreadable.
+      const response = await axios.post(`${API_URL}/api/upload`, formData);
+
+      if (response.data.governance_readiness?.status === 'warning') {
+        const readiness = response.data.governance_readiness;
+        setGovernanceNotice(`Warning: ${readiness.reasons?.[0]?.message || 'Dataset quality needs review.'} ${readiness.next_action}`);
+      }
 
       setUploadedData(response.data);
       if (onFileUploadSuccess) {
@@ -111,7 +117,12 @@ function FileUpload({
         onUploadComplete();
       }
     } catch (err) {
-      setError('Failed to upload file');
+      const readiness = err.response?.data?.governance_readiness;
+      if (err.response?.status === 422 && readiness?.status === 'blocked') {
+        setError(`Upload blocked: ${readiness.reasons?.[0]?.message || 'Dataset governance checks failed.'} ${readiness.next_action}`);
+      } else {
+        setError(err.response?.data?.error || 'Failed to upload file');
+      }
       console.error('Upload error:', err);
     } finally {
       setIsUploading(false);
@@ -184,6 +195,7 @@ function FileUpload({
             </div>
 
             {error && <p className="error-message">{error}</p>}
+            {governanceNotice && <p className="upload-governance-notice">{governanceNotice}</p>}
 
             {file && !error && (
               <button

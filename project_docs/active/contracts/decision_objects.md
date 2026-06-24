@@ -195,6 +195,30 @@ Phase 8 folds the existing bounded scenario preview into `decision_output.scenar
 
 Unavailable scenario data is not fabricated. If no preview is attached, the preview is not ready, or projection rows are missing, `scenario_compare.status` is `not_applicable`, `projections` is empty, `baseline.status` and `comparison.status` are `not_available`, and `limitations` explain that no scenario projection data was available.
 
+### DecisionAsset
+
+A `DecisionAsset` is an immutable saved AI Chat Decision Review. It is an observational snapshot of the supplied `decision_output`, not a live dataset view, refresh, final recommendation, forecast, simulation, optimizer, causal result, or autonomous decision. Saving does not re-run governance because it does not load or process a dataset. The stored `dataset_trust` and `truth_boundary` remain the source-of-record snapshot; clients must not present them as current data freshness or a new governance evaluation.
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `asset_id` | `string` | Yes | Backend-generated stable identifier prefixed `decision_asset_`. |
+| `schema_version` | `string` | Yes | Current value is `di_decision_asset_v1`. |
+| `title` | `string` | Yes | Normalized display title. A missing or blank caller title falls back to `decision_output.title`. |
+| `created_at` | `string` | Yes | Backend-generated ISO-8601 UTC timestamp. |
+| `decision_output` | `AI Chat Decision Output` | Yes | Exact sanitized immutable snapshot of the current output. It preserves `dataset_trust`, `source_refs`, `export_sections`, and `truth_boundary`. |
+| `graph_state` | `Decision Graph State` | No | Optional contract-safe `decision_graph_build_state` carry-forward object. It is absent when no graph state was supplied. |
+| `snapshot_notice` | `string` | Yes | UI copy that the asset is a saved immutable observational snapshot and not a live refresh or final decision. |
+
+Routes:
+
+| Route | Request | Response |
+| --- | --- | --- |
+| `POST /api/decision/assets` | `title` optional, `decision_output` required, `graph_state` optional | HTTP 201 and complete `DecisionAsset`. |
+| `GET /api/decision/assets` | Optional `limit`, default `25`, minimum `1`, maximum `50` | HTTP 200 with newest-first `assets` summaries. |
+| `GET /api/decision/assets/<asset_id>` | Asset ID path parameter | HTTP 200 and complete `DecisionAsset`; HTTP 404 when absent. |
+
+List summaries contain only `asset_id`, `title`, `created_at`, `dataset_label`, `readiness_state`, and `truth_boundary`. The create service rejects payloads that are not current `decision_output` artifacts, do not use `truth_boundary: "observational_analysis_only"`, have invalid Dataset Trust or graph state, include raw dataset rows, chat transcripts, Data Hub/file paths, non-JSON values, or exceed the bounded snapshot size. Assets cannot be edited, deleted, shared, or refreshed in this slice.
+
 ### Decision Graph
 
 Phase 7.3 extends the backend-owned `decision_graph` contract for variable discovery, cold graph generation, user hypothesis edges, and safe graph-to-action planning. It is separate from `decision_output.decision_map`.

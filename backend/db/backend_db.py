@@ -20,7 +20,9 @@ def _ensure_schema(conn):
             numCols INTEGER DEFAULT 0,
             schema_json TEXT,
             preview_json TEXT,
-            semantic_model_json TEXT
+            semantic_model_json TEXT,
+            governance_policy_json TEXT,
+            governance_readiness_json TEXT
         )
         '''
     )
@@ -31,6 +33,32 @@ def _ensure_schema(conn):
     }
     if 'semantic_model_json' not in existing_columns:
         conn.execute('ALTER TABLE datahub_datasets ADD COLUMN semantic_model_json TEXT')
+    if 'governance_policy_json' not in existing_columns:
+        conn.execute('ALTER TABLE datahub_datasets ADD COLUMN governance_policy_json TEXT')
+    if 'governance_readiness_json' not in existing_columns:
+        conn.execute('ALTER TABLE datahub_datasets ADD COLUMN governance_readiness_json TEXT')
+
+    conn.execute(
+        '''
+        CREATE TABLE IF NOT EXISTS decision_assets (
+            asset_id TEXT PRIMARY KEY,
+            schema_version TEXT NOT NULL,
+            title TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            decision_output_json TEXT NOT NULL,
+            graph_state_json TEXT,
+            dataset_label TEXT NOT NULL,
+            readiness_state TEXT NOT NULL,
+            truth_boundary TEXT NOT NULL
+        )
+        '''
+    )
+    conn.execute(
+        '''
+        CREATE INDEX IF NOT EXISTS idx_decision_assets_created_at
+        ON decision_assets (created_at DESC)
+        '''
+    )
 
     conn.commit()
 

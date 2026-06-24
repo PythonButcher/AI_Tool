@@ -2,7 +2,7 @@
 
 ## Superseded Notice
 
-This handoff is historical and accepted as done. Do not use it as the current Gemini implementation prompt. Current Decision Intelligence truth is routed by `project_docs/active/status/decision_intelligence_execution_status.md`; completed rollout details live in `project_docs/active/decision_intelligence/current/ai_chat_decision_output_unification_rollout.md`.
+This handoff is historical and accepted as done. Do not use it as the current Gemini implementation prompt. Current Decision Intelligence truth is routed by `project_docs/active/status/decision_intelligence_execution_status.md`; completed rollout details live in `project_docs/archive/ai_chat_decision_output_unification_rollout_completed.md`.
 
 ## Purpose
 
@@ -116,7 +116,7 @@ Update `project_docs/active/status/decision_intelligence_execution_status.md` tr
 
 ## Short Gemini CLI Prompt
 
-Do not use this historical prompt for current work. Read `project_docs/INDEX.md`, `project_docs/active/README.md`, `project_docs/active/status/decision_intelligence_execution_status.md`, `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md`, and `project_docs/active/decision_intelligence/current/ai_chat_decision_output_unification_rollout.md` instead.
+Do not use this historical prompt for current work. Read `project_docs/INDEX.md`, `project_docs/active/README.md`, `project_docs/active/status/decision_intelligence_execution_status.md`, `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md`, and the active Phase 2 plan instead.
 
 Focus first on correctness and trust. In `frontend/frontend/src/features/ai/AIShell.jsx`, verify and fix older chat card actions so they execute against that card's own decision/session context, not the latest component-level `sessionState`. Support both top-level and nested `recommended_next_action` shapes without duplicate action buttons. Keep disabled actions non-executable and keep availability explanations visible.
 

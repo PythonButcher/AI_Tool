@@ -23,8 +23,27 @@ function FileExport() {
 
   const handleExport = async (format) => {
     if (format === 'pdf') {
-      handleExportPDF();
-      return;
+      try {
+        const response = await axios.get(`${API_URL}/api/export`, {
+          params: { format: 'csv' },
+          responseType: 'blob',
+        });
+        const govStatus = response.headers['x-dataset-governance-status'];
+        const govAction = response.headers['x-dataset-governance-next-action'];
+
+        if (govStatus === 'blocked') {
+          alert(`Export Blocked (${govAction}): The dataset failed governance checks.`);
+          return;
+        }
+        if (govStatus === 'warning') {
+          alert(`Export Warning (${govAction}): The dataset has governance warnings.`);
+        }
+        handleExportPDF();
+        return;
+      } catch (error) {
+        await handleExportError(error);
+        return;
+      }
     }
 
     try {
@@ -37,6 +56,17 @@ function FileExport() {
         throw new Error('No data received from export endpoint.');
       }
 
+      const govStatus = response.headers['x-dataset-governance-status'];
+      const govAction = response.headers['x-dataset-governance-next-action'];
+
+      if (govStatus === 'blocked') {
+        alert(`Export Blocked (${govAction}): The dataset failed governance checks.`);
+        return;
+      }
+      if (govStatus === 'warning') {
+        alert(`Export Warning (${govAction}): The dataset has governance warnings.`);
+      }
+
       const blob = new Blob([response.data], { type: response.headers['content-type'] });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -46,7 +76,29 @@ function FileExport() {
       link.click();
       link.remove();
     } catch (error) {
-      console.error('Export error:', error);
+      await handleExportError(error);
+    }
+  };
+
+  const handleExportError = async (error) => {
+    console.error('Export error:', error);
+    if (error.response?.status === 422 && error.response.data instanceof Blob) {
+      try {
+        const text = await error.response.data.text();
+        const data = JSON.parse(text);
+        if (data.governance_readiness && data.governance_readiness.status === 'blocked') {
+          const gr = data.governance_readiness;
+          alert(`Export Blocked (${gr.next_action}): ${gr.reasons?.[0]?.message || 'Governance check failed.'}`);
+          return;
+        }
+      } catch (e) {
+        // Fallback
+      }
+    }
+
+    if (error.response?.status === 422 && error.response?.headers?.['x-dataset-governance-status'] === 'blocked') {
+      alert(`Export Blocked (${error.response.headers['x-dataset-governance-next-action']}): The dataset failed governance checks.`);
+    } else {
       alert('Failed to export cleaned data. Please try again.');
     }
   };

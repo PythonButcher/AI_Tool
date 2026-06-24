@@ -1,7 +1,14 @@
 """Blueprint exposing deterministic NLP endpoints."""
 
 from flask import Blueprint, current_app, jsonify, request
+import pandas as pd
 
+from backend.services.data_catalog_lineage import (
+    GovernancePolicyError,
+    evaluate_dataset_readiness,
+    governance_error_payload,
+    is_blocked,
+)
 from backend.services.aichat_nlp import (
     NLP_QUERY_FORMAT,
     analyse_columns,
@@ -33,6 +40,17 @@ def generate_chart_from_nlp():
                 "error": "A valid dataset is required to build a chart.",
                 "usageFormat": NLP_QUERY_FORMAT,
             }), 400
+
+        try:
+            readiness = evaluate_dataset_readiness(
+                pd.DataFrame(dataset),
+                payload.get('governance_policy') or payload.get('governancePolicy'),
+                operation='chart',
+            )
+        except GovernancePolicyError as exc:
+            return jsonify({'error': f'Invalid governance policy: {exc}'}), 400
+        if is_blocked(readiness):
+            return jsonify(governance_error_payload(readiness)), 422
 
         current_app.logger.debug("Received dataset with %d rows for NLP chart request.", len(dataset))
 
@@ -95,6 +113,7 @@ def generate_chart_from_nlp():
             "fieldMatches": interpretation.get("matchDetails", []),
             "filtersApplied": interpretation.get("filters", []),
             "usageFormat": NLP_QUERY_FORMAT,
+            "governance_readiness": readiness,
         })
 
     except Exception as exc:

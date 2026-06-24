@@ -19,7 +19,7 @@ These were the implementation docs used while this plan was active. For current 
 3. `project_docs/active/status/decision_intelligence_execution_status.md`
 4. `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md`
 5. `project_docs/active/contracts/decision_objects.md`
-6. `project_docs/active/decision_intelligence/current/ai_chat_decision_output_unification_rollout.md`
+6. `project_docs/archive/ai_chat_decision_output_unification_rollout_completed.md`
 7. `project_docs/active/decision_intelligence/completed/ai_chat_emergency_overhaul_action_plan.md`
 
 ## Target Files
