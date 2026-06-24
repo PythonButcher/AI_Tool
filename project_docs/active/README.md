@@ -61,6 +61,10 @@ Gemini frontend reviews must stay lightweight unless the user asks for deeper ve
 
 Frontend builds are for inconclusive source review, missing or questionable Gemini build evidence, likely syntax/import failures, or explicit user requests. Browser/E2E checks are not the default review path; use them only when the gate depends on visible behavior and cheaper evidence is clean or insufficient.
 
+## Browser Acceptance Control
+
+The user exclusively controls browser-level acceptance. Codex must not launch, navigate, automate, upload through, export from, or claim browser verification unless the user explicitly requests that specific browser action. Codex provides implementation, backend/API verification, build results, static review, and a concise manual browser checklist; the user performs and accepts visible browser behavior.
+
 ## Status File Discipline
 
 The active status file is for current truth, the current gate, and the latest verified fact. It is not an implementation diary. When a phase is fully closed and verified, move detailed slice notes to `project_docs/archive/` and leave a short archive pointer in active status.

@@ -9,6 +9,7 @@ from backend.services.data_catalog_lineage import (
 )
 from backend.services.dataset_context import resolve_dataset_bundle
 from backend.services.decision_brief_service import generate_decision_brief
+from backend.services.decision_asset_service import DecisionAssetService
 from backend.services.decision_graph_service import DecisionGraphService
 from backend.services.decision_pipeline_service import run_decision_pipeline
 from backend.services.decision_signal_service import generate_decision_signals
@@ -113,6 +114,38 @@ def analyze_workspace_route():
         return jsonify(_error_payload("INVALID_DECISION_WORKSPACE_ANALYSIS_REQUEST", str(exc))), 400
     except Exception as exc:
         return jsonify(_error_payload("DECISION_WORKSPACE_ANALYSIS_FAILED", f"Failed to analyze decision workspace: {exc}")), 500
+
+
+@decision_bp.route("/assets", methods=["POST"])
+def create_decision_asset_route():
+    payload = request.get_json(silent=True) or {}
+    try:
+        return jsonify(DecisionAssetService.create_asset(payload)), 201
+    except DecisionServiceError as exc:
+        return jsonify(_error_payload("INVALID_DECISION_ASSET_REQUEST", str(exc))), 400
+    except Exception as exc:
+        return jsonify(_error_payload("DECISION_ASSET_CREATION_FAILED", f"Failed to save decision asset: {exc}")), 500
+
+
+@decision_bp.route("/assets", methods=["GET"])
+def list_decision_assets_route():
+    try:
+        return jsonify(DecisionAssetService.list_assets(request.args.get("limit"))), 200
+    except DecisionServiceError as exc:
+        return jsonify(_error_payload("INVALID_DECISION_ASSET_REQUEST", str(exc))), 400
+    except Exception as exc:
+        return jsonify(_error_payload("DECISION_ASSET_LIST_FAILED", f"Failed to list decision assets: {exc}")), 500
+
+
+@decision_bp.route("/assets/<asset_id>", methods=["GET"])
+def get_decision_asset_route(asset_id):
+    try:
+        asset = DecisionAssetService.get_asset(asset_id)
+    except Exception as exc:
+        return jsonify(_error_payload("DECISION_ASSET_FETCH_FAILED", f"Failed to fetch decision asset: {exc}")), 500
+    if asset is None:
+        return jsonify(_error_payload("DECISION_ASSET_NOT_FOUND", "Decision asset was not found.")), 404
+    return jsonify(asset), 200
 
 
 @decision_bp.route("/graph/candidates", methods=["POST"])

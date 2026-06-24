@@ -26,17 +26,33 @@ The old standalone Phase 4 Canonical Active Dataset handoff is superseded. Datas
 
 Current gate is **Persistent Decision Assets**.
 
-Status: **READY FOR IMPLEMENTATION — BACKEND CONTRACT NOT YET IMPLEMENTED**
+Status: **COMPLETE — USER BROWSER ACCEPTANCE APPROVED**
 
 The selected standalone outcome is to let a user save the current AI Chat Decision Review as an immutable snapshot and reopen it after a page reload. The scope is deliberately limited to asset create, list, and detail retrieval plus compact AI Chat save/reopen controls. It does not include a new Decisions destination, fullscreen review, historical comparison, edits, deletes, sharing, or live refresh.
 
-The implementation brief is `project_docs/active/decision_intelligence/current/persistent_decision_assets_execution_brief.md`. Codex owns the backend contract, persistence service, routes, tests, and verification. Gemini starts frontend work only after Codex records `backend_contract_ready` against that brief.
-
-All 11 active Decision Intelligence phases remain complete end to end. Backend `decision_output.export_sections` contains PDF-ready sections for Executive Brief, Dataset Trust, Goal, Drivers, Limits, Breakdowns, Evidence Board, Decision Map Summary, Scenario Compare, Assumptions and Unknowns, and Truth Boundary. The existing frontend export source reads `content.export_sections`, and a production-build browser check generated a readable AI Chat decision PDF from the active `decision_output`.
-
-Use this status file as the single current source of truth. Use `project_docs/active/decision_intelligence/current/ai_chat_decision_output_unification_rollout.md` for completed implementation details only, and use `project_docs/active/contracts/decision_objects.md` when payload details are needed.
+The implementation brief is `project_docs/active/decision_intelligence/current/persistent_decision_assets_execution_brief.md`. The backend contract, immutable asset service, endpoints, and frontend library controls/AIShell integration are complete. The user completed and approved browser-level acceptance; browser control remains user-owned.
 
 ## Latest Verified Slice
+
+## Persistent Decision Assets Frontend Integration
+**Status:** COMPLETE — USER ACCEPTED
+
+**Verified facts:**
+1. Created `DecisionAssetLibrary.jsx` and colocated stylesheet `DecisionAssetLibrary.css` rendering a compact list of saved decision snapshots displaying titles, timestamps, dataset labels, readiness, and the `observational_analysis_only` snapshot boundary.
+2. Implemented `saveDecisionAsset`, `getDecisionAssets`, and `getDecisionAssetById` API helpers in `decisionApi.js`.
+3. Integrated save control forms, snapshot metadata indicators, and reopening logic inside `AIShell.jsx`.
+4. The prior untracked browser screenshots and report were removed because they did not establish one continuous, reproducible run.
+5. A clean live check confirmed the library UI loads; the workspace backend created, listed, and retrieved a `Codex Clean Acceptance Snapshot` with the expected immutable notice and observational boundary.
+6. The user completed the required browser-level acceptance and approved this slice. Browser acceptance remains a user-controlled gate for future work.
+
+## Persistent Decision Assets Backend Contract
+**Status:** COMPLETE
+
+**Verified facts:**
+1. `decision_assets` SQLite table is created through the lazy schema check and successfully persists immutable snapshot records.
+2. `POST /api/decision/assets`, `GET /api/decision/assets`, and `GET /api/decision/assets/<asset_id>` match request/response payload specifications exactly.
+3. Rejects oversized payloads, raw rows, chat transcripts, and non-JSON data while correctly preserving Dataset Trust summaries.
+4. Backend test suites `tests.test_decision_asset_service` and `tests.test_decision_chat_service` pass cleanly with 35 tests.
 
 ## Governance and Quality Gates
 **Status:** COMPLETE — CSV UPLOADS AND POLICY BLOCKS WORK IN THE RUNNING APP
@@ -52,7 +68,6 @@ Use this status file as the single current source of truth. Use `project_docs/ac
 8. `AIShell.jsx` now handles warning and block readiness for action, correction, and message requests. `AutoMLPanel.jsx` and `FileExport.jsx` retain their focused governance handling.
 9. Focused backend and harness coverage passed with 38 tests. The current frontend production build passed with existing lint warnings only.
 10. Against the running backend, a real multipart ordinary CSV returned HTTP 200 with the `warning` readiness state, while the same CSV with an explicit duplicate-key policy returned HTTP 422 with the `blocked` readiness state. The browser loaded the Upload workspace without client errors. The remaining native operating-system file-picker click is a user smoke check, not an open code or connection defect.
-
 
 ## Final AI Chat Decision Export
 **Status:** COMPLETE
@@ -71,7 +86,7 @@ Use this status file as the single current source of truth. Use `project_docs/ac
 
 ## Next Focus
 
-Next focus is **implement Persistent Decision Assets** using the active execution brief. Start with the backend contract and verification; Gemini frontend work follows only after that backend gate is recorded as ready.
+Next focus is the Decision Review Fullscreen Viewer: define a focused, separately reviewable slice for opening immutable saved decision assets in a fullscreen historical-review surface without changing their observational boundary or persistence contract.
 
 ## Status File Discipline
 

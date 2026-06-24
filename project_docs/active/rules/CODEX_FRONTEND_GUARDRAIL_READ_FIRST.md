@@ -50,6 +50,12 @@ When active docs disagree, Codex must call out the conflict and treat source plu
 
 Every substantial Decision Intelligence wrap-up must state exactly whose turn is next: Codex, Gemini/Antigravity, user validation, or no one.
 
+## Handoff Sizing
+
+Codex is accountable for sending Gemini bounded frontend tasks. Each handoff must cover one independently reviewable behavior, identify a limited file set, state the exact backend contract it consumes, and use a short acceptance list. When work contains separate UI, persistence, export, or regression concerns, Codex must sequence them as separate handoffs rather than issue one broad implementation request.
+
+If Gemini reports that the requested scope is too large or ambiguous, Codex must reduce it into ordered slices before implementation continues. Do not use extra agents to conceal an oversized frontend handoff.
+
 ## Gemini Frontend Review Fast Path
 
 When the user asks Codex to review Gemini frontend work, Codex should do an acceptance review, not a fresh implementation audit.

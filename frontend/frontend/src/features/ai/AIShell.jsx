@@ -19,6 +19,8 @@ import AICharts from './AICharts';
 import SemanticRef from '../business/decision/SemanticRef';
 import ScenarioPreview from '../business/decision/ScenarioPreview';
 import { generateDecisionArtifactPdf } from '../../utils/decisionPdfExport';
+import { saveDecisionAsset } from '../business/decision/decisionApi';
+import DecisionAssetLibrary from '../business/decision/DecisionAssetLibrary';
 import './AIShell.css';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
@@ -44,11 +46,25 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenDecisio
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [awaitingCleanInstructions, setAwaitingCleanInstructions] = useState(false);
-  // Phase 4 Logic State
   const [sessionState, setSessionState] = useState({});
   const [activeMode, setActiveMode] = useState('ask');
   const [activeArtifact, setActiveArtifact] = useState(null);
   const [isResultsPaneOpen, setIsResultsPaneOpen] = useState(true);
+
+  // Saved Assets State
+  const [saveTitle, setSaveTitle] = useState('');
+  const [savingAsset, setSavingAsset] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [saveError, setSaveError] = useState(null);
+  const [libraryRefreshKey, setLibraryRefreshKey] = useState(0);
+
+  useEffect(() => {
+    if (activeArtifact) {
+      setSaveTitle(activeArtifact.title || activeArtifact.content?.title || '');
+      setSaveSuccess(false);
+      setSaveError(null);
+    }
+  }, [activeArtifact]);
 
   // Phase 5: Chat-native correction panel state
   // correctionPanelOpen tracks whether the inline correction form is visible in the inspector
@@ -418,6 +434,86 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenDecisio
       contextCapabilityState: messageCapabilityState || artifact.contextCapabilityState || sessionState?.capability_state,
       contextDecisionReadiness: messageDecisionReadiness || artifact.contextDecisionReadiness || sessionState?.decision_readiness,
     });
+  };
+
+  const handleSaveAsset = async () => {
+    if (!activeArtifact) return;
+    setSavingAsset(true);
+    setSaveSuccess(false);
+    setSaveError(null);
+    try {
+      const rawOutput = activeArtifact.content?.decision_output || activeArtifact.content || activeArtifact;
+
+      const decisionOutput = {
+        type: 'decision_output',
+        render_hint: 'decision_output',
+        inspectable: true,
+        default_view: 'inspector',
+        schema_version: rawOutput.schema_version || 'di_phase3_decision_output_v1',
+        title: rawOutput.title,
+        summary: rawOutput.summary,
+        dataset_trust: rawOutput.dataset_trust,
+        frame: rawOutput.frame,
+        readiness: rawOutput.readiness,
+        correction_state: rawOutput.correction_state,
+        evidence_board: rawOutput.evidence_board,
+        decision_map: rawOutput.decision_map,
+        scenario_compare: rawOutput.scenario_compare,
+        advanced_gates: rawOutput.advanced_gates,
+        export_sections: rawOutput.export_sections,
+        source_refs: rawOutput.source_refs,
+        truth_boundary: rawOutput.truth_boundary || 'observational_analysis_only'
+      };
+
+      const payload = {
+        title: saveTitle ? saveTitle.trim() : undefined,
+        decision_output: decisionOutput,
+      };
+
+      if (rawOutput.graph_state) {
+        payload.graph_state = rawOutput.graph_state;
+      } else if (activeArtifact.graph_state) {
+        payload.graph_state = activeArtifact.graph_state;
+      }
+
+      const savedAsset = await saveDecisionAsset(payload);
+
+      setActiveArtifact({
+        type: 'decision_output',
+        asset_id: savedAsset.asset_id,
+        created_at: savedAsset.created_at,
+        snapshot_notice: savedAsset.snapshot_notice,
+        title: savedAsset.title,
+        content: savedAsset.decision_output,
+        ...savedAsset.decision_output,
+        graph_state: savedAsset.graph_state
+      });
+
+      setSaveSuccess(true);
+      setLibraryRefreshKey(prev => prev + 1);
+    } catch (err) {
+      console.error(err);
+      setSaveError(err?.error?.message || err?.message || 'Failed to save decision asset.');
+    } finally {
+      setSavingAsset(false);
+    }
+  };
+
+  const handleReopenAsset = (asset) => {
+    if (!asset) return;
+    setActiveArtifact({
+      type: 'decision_output',
+      asset_id: asset.asset_id,
+      schema_version: asset.schema_version,
+      created_at: asset.created_at,
+      snapshot_notice: asset.snapshot_notice,
+      decision_output: asset.decision_output,
+      content: asset.decision_output,
+      ...asset.decision_output,
+      title: asset.title,
+      graph_state: asset.graph_state,
+    });
+    setIsResultsPaneOpen(true);
   };
 
   const renderArtifactExportButton = (artifact, messageSessionState = null, messageCapabilityState = null, messageDecisionReadiness = null, className = '') => {
@@ -1055,28 +1151,119 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenDecisio
               {isInspector && renderArtifactExportBar(artifact, lookupSessionState, lookupCapabilityState, lookupDecisionReadiness)}
 
               <div className="drl-header" style={{ marginBottom: '16px', borderBottom: '1px solid var(--border-color)', paddingBottom: '24px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '16px' }}>
-                  <FaShieldAlt style={{ fontSize: '2.5rem', color: 'var(--accent-blue)' }} />
-                  <Typography variant="h3" sx={{ fontWeight: 900, m: 0 }}>Decision Review</Typography>
-                </div>
-                <div style={{ 
-                  padding: '8px 12px', 
-                  background: 'rgba(245, 158, 11, 0.1)', 
-                  color: '#f59e0b', 
-                  borderRadius: '6px', 
-                  display: 'inline-flex', 
-                  alignItems: 'center', 
-                  gap: '8px', 
-                  fontWeight: 800, 
-                  fontSize: '0.85rem', 
-                  textTransform: 'uppercase', 
-                  letterSpacing: '0.05em' 
-                }}>
-                  <FaExclamationTriangle /> Current Session Only
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '20px' }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '16px' }}>
+                      <FaShieldAlt style={{ fontSize: '2.5rem', color: 'var(--accent-blue)' }} />
+                      <Typography variant="h3" sx={{ fontWeight: 900, m: 0 }}>Decision Review</Typography>
+                    </div>
+                    {artifact.asset_id ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <div style={{
+                          padding: '8px 12px',
+                          background: 'rgba(34, 197, 94, 0.1)',
+                          color: 'var(--accent-green)',
+                          borderRadius: '6px',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          fontWeight: 800,
+                          fontSize: '0.85rem',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.05em',
+                          alignSelf: 'flex-start'
+                        }}>
+                          <FaCheckCircle /> Saved Snapshot
+                        </div>
+                        {artifact.created_at && (
+                          <Typography variant="caption" sx={{ display: 'block', opacity: 0.8, fontWeight: 700, color: 'var(--text-primary)' }}>
+                            Saved: {new Date(artifact.created_at).toLocaleString()}
+                          </Typography>
+                        )}
+                        {artifact.snapshot_notice && (
+                          <Typography variant="caption" sx={{ display: 'block', opacity: 0.6, fontStyle: 'italic', color: 'var(--text-secondary)' }}>
+                            {artifact.snapshot_notice}
+                          </Typography>
+                        )}
+                        <Typography variant="caption" sx={{ display: 'block', opacity: 0.8, fontWeight: 700, color: 'var(--accent-blue)' }}>
+                          Observational Boundary: observational_analysis_only
+                        </Typography>
+                      </div>
+                    ) : (
+                      <div style={{
+                        padding: '8px 12px',
+                        background: 'rgba(245, 158, 11, 0.1)',
+                        color: '#f59e0b',
+                        borderRadius: '6px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        fontWeight: 800,
+                        fontSize: '0.85rem',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em'
+                      }}>
+                        <FaExclamationTriangle /> Current Session Only
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Save Control Form (only for live/unsaved assets) */}
+                  {!artifact.asset_id && (
+                    <div className="ai-shell__save-control" style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: '280px' }}>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <TextField
+                          size="small"
+                          placeholder="Custom display title..."
+                          variant="outlined"
+                          value={saveTitle}
+                          onChange={(e) => setSaveTitle(e.target.value)}
+                          disabled={savingAsset}
+                          sx={{
+                            flex: 1,
+                            '& .MuiOutlinedInput-root': {
+                              borderRadius: '8px',
+                              bgcolor: 'var(--bg-secondary)',
+                            }
+                          }}
+                        />
+                        <Button
+                          variant="contained"
+                          onClick={handleSaveAsset}
+                          disabled={savingAsset}
+                          sx={{
+                            borderRadius: '8px',
+                            textTransform: 'none',
+                            fontWeight: 800,
+                            bgcolor: 'var(--accent-blue)',
+                            color: '#fff',
+                            '&:hover': {
+                              bgcolor: 'var(--accent-blue)',
+                              filter: 'brightness(1.1)'
+                            }
+                          }}
+                        >
+                          {savingAsset ? 'Saving...' : 'Save'}
+                        </Button>
+                      </div>
+                      {saveSuccess && (
+                        <Typography variant="caption" sx={{ color: 'var(--accent-green)', fontWeight: 700 }}>
+                          ✓ Saved successfully!
+                        </Typography>
+                      )}
+                      {saveError && (
+                        <Typography variant="caption" sx={{ color: 'var(--accent-red)', fontWeight: 700 }}>
+                          ⚠ {saveError}
+                        </Typography>
+                      )}
+                    </div>
+                  )}
                 </div>
                 <Typography variant="body2" sx={{ mt: 2, opacity: 0.6, maxWidth: '800px' }}>
-                  This is a read-only review of the active decision output from AI Chat. 
-                  To edit or run new analysis, use the chat or actions below.
+                  {artifact.asset_id
+                    ? "This is an immutable snapshot of a saved Decision Review. Live editing and modifications are disabled."
+                    : "This is a read-only review of the active decision output from AI Chat. To edit or run new analysis, use the chat or actions below."
+                  }
                 </Typography>
               </div>
 
@@ -1330,7 +1517,7 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenDecisio
                         </div>
                       )}
                       <div className="ai-shell__do-readiness-actions" style={{ flexWrap: 'wrap' }}>
-                        {doReadiness.allowed_next_actions?.filter(actId => actId !== 'open_workspace').map((actId, idx) => {
+                        {!artifact.asset_id && doReadiness.allowed_next_actions?.filter(actId => actId !== 'open_workspace').map((actId, idx) => {
                           const actDetails = lookupActions.find(a => a.action_id === actId) || { label: actId.replace(/_/g, ' '), enabled: true };
                           const isPrimary = actDetails.priority === 'primary' || actId === 'analyze_workspace';
                           const isEnabled = doReadiness.allowed_next_actions.includes(actId) && actDetails.enabled !== false;
@@ -1430,7 +1617,7 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenDecisio
                   )}
 
                   {/* Inline Correction Panel (Phase 5) */}
-                  {isInspector && (
+                  {isInspector && !artifact.asset_id && (
                     <div className="ai-shell__correction-panel-zone" style={{ marginTop: '24px' }}>
                       {!correctionPanelOpen ? (
                         <button id="ai-shell-correction-trigger-btn" className="ai-shell__correction-trigger-btn" onClick={() => setCorrectionPanelOpen(true)} disabled={loading}>
@@ -1829,7 +2016,12 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenDecisio
           )}
         </div>
 
-
+        {/* Compact Saved Decisions control (Library) */}
+        <DecisionAssetLibrary
+          onReopenAsset={handleReopenAsset}
+          activeAssetId={activeArtifact?.asset_id}
+          refreshTrigger={libraryRefreshKey}
+        />
       </aside>
     </div>
   );

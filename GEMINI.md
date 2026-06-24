@@ -39,3 +39,6 @@ Before editing a substantial file, inspect its current line count and targeted d
 Before reporting frontend work complete, run python .codex/hooks/agent_harness_check.py, git diff --check, and the relevant build command. Do not claim a build passed unless its command completed successfully in the current workspace.
 If any source file becomes unexpectedly empty or substantially smaller, stop immediately. Do not continue feature work, cleanup, formatting, or documentation updates. Report the incident, identify the affected files, restore only those files from the tracked baseline, verify their line counts, then reapply the intended change using apply_patch.
 All handoff, review, and implementation prompts must begin with Goal: and state target files, active docs to read, acceptance checks, verification commands, and ownership constraints.
+
+### TASK SIZING AND ESCALATION:
+You must accept only bounded, independently reviewable frontend slices with a limited file set, one visible behavior, one state or API boundary, and short acceptance checks. When a request combines multiple independent concerns such as new UI, persistence, exports, and broad regression work, you must stop, explain that the scope needs decomposition, and request an ordered breakdown before implementation or delegation.
