@@ -22,7 +22,7 @@ Current Decision Intelligence source of truth:
 
 Decision Intelligence implementation reference:
 
-`project_docs/active/decision_intelligence/current/ai_chat_decision_output_unification_rollout.md`
+`project_docs/archive/ai_chat_decision_output_unification_rollout_completed.md`
 
 ## Validation
 

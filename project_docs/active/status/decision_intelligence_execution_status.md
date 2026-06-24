@@ -24,17 +24,17 @@ The old standalone Phase 4 Canonical Active Dataset handoff is superseded. Datas
 
 ## Current Project Gate
 
-Current gate is **Persistent Decision Assets**.
+Current gate is **Phase 2 — Decision Review Fullscreen Viewer**.
 
-Status: **COMPLETE — USER BROWSER ACCEPTANCE APPROVED**
+Status: **READY FOR PLANNING**
 
-The selected standalone outcome is to let a user save the current AI Chat Decision Review as an immutable snapshot and reopen it after a page reload. The scope is deliberately limited to asset create, list, and detail retrieval plus compact AI Chat save/reopen controls. It does not include a new Decisions destination, fullscreen review, historical comparison, edits, deletes, sharing, or live refresh.
+Phase 2 opens an existing immutable decision asset in a fullscreen historical-review surface. It must not add edits, deletes, sharing, live refresh, comparison, or a new persistence contract.
 
-The implementation brief is `project_docs/active/decision_intelligence/current/persistent_decision_assets_execution_brief.md`. The backend contract, immutable asset service, endpoints, and frontend library controls/AIShell integration are complete. The user completed and approved browser-level acceptance; browser control remains user-owned.
+Phase 1 is complete. Its implementation brief is retained at `project_docs/active/decision_intelligence/completed/phase_1_persistent_decision_assets_execution_brief.md`. The active Phase 2 architecture is `project_docs/active/decision_intelligence/current/decisions_window_future_role.md`. Browser control remains user-owned.
 
 ## Latest Verified Slice
 
-## Persistent Decision Assets Frontend Integration
+## Phase 1 — Persistent Decision Assets
 **Status:** COMPLETE — USER ACCEPTED
 
 **Verified facts:**
@@ -45,7 +45,7 @@ The implementation brief is `project_docs/active/decision_intelligence/current/p
 5. A clean live check confirmed the library UI loads; the workspace backend created, listed, and retrieved a `Codex Clean Acceptance Snapshot` with the expected immutable notice and observational boundary.
 6. The user completed the required browser-level acceptance and approved this slice. Browser acceptance remains a user-controlled gate for future work.
 
-## Persistent Decision Assets Backend Contract
+## Phase 1 Backend Contract
 **Status:** COMPLETE
 
 **Verified facts:**
@@ -86,7 +86,7 @@ The implementation brief is `project_docs/active/decision_intelligence/current/p
 
 ## Next Focus
 
-Next focus is the Decision Review Fullscreen Viewer: define a focused, separately reviewable slice for opening immutable saved decision assets in a fullscreen historical-review surface without changing their observational boundary or persistence contract.
+Next focus is Phase 2 implementation planning for the Decision Review Fullscreen Viewer.
 
 ## Status File Discipline
 

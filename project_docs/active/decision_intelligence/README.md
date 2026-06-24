@@ -15,7 +15,7 @@ The Decisions window is no longer the required continuation path. Its future rol
 | Need | Read |
 | --- | --- |
 | Short current status | `../status/decision_intelligence_execution_status.md` |
-| Completed AI Chat rollout details | `current/ai_chat_decision_output_unification_rollout.md` |
+| Completed AI Chat rollout details | `../../archive/ai_chat_decision_output_unification_rollout_completed.md` |
 | Contract reference | `../contracts/decision_objects.md` |
 | Frontend ownership rule | `../rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md` |
 | Completed AI Chat emergency overhaul | `completed/ai_chat_emergency_overhaul_action_plan.md` |
@@ -24,7 +24,7 @@ The Decisions window is no longer the required continuation path. Its future rol
 
 | File | Status |
 | --- | --- |
-| `current/ai_chat_decision_output_unification_rollout.md` | Completed implementation reference; status file wins on current gate |
+| `current/decisions_window_future_role.md` | Active Phase 2 architecture and planning reference |
 | `current/decisions_window_future_role.md` | Approved architecture note for a possible future secondary Decisions-window role |
 
 ## Completed Reference

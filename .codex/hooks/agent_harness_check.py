@@ -96,6 +96,31 @@ def _check_project_doc_links(errors: list[str]) -> None:
                 errors.append(f"{md_path.relative_to(ROOT)} references missing path: {match.group(1)}")
 
 
+def _check_active_doc_state(errors: list[str]) -> None:
+    """Reject stale completed plans and an unnumbered current phase."""
+    status_path = ROOT / "project_docs" / "active" / "status" / "decision_intelligence_execution_status.md"
+    current_dir = ROOT / "project_docs" / "active" / "decision_intelligence" / "current"
+    if not status_path.exists() or not current_dir.exists():
+        return
+
+    status_text = status_path.read_text(encoding="utf-8", errors="replace")
+    gate_match = re.search(r"## Current Project Gate\s+(.+?)(?=\n## |\Z)", status_text, re.DOTALL)
+    if gate_match and not re.search(r"\bPhase\s+\d+\b", gate_match.group(1), re.IGNORECASE):
+        errors.append("Current Project Gate must name the active phase number from the current plan.")
+
+    complete = bool(re.search(r"^Status:\s*\*\*COMPLETE", status_text, re.MULTILINE))
+    brief_match = re.search(r"`(project_docs/active/decision_intelligence/current/[^`]+\.md)`", status_text)
+    if complete and brief_match:
+        errors.append(
+            "A complete gate still points to a current execution brief; move the brief to completed or archive and update status."
+        )
+
+    for path in current_dir.glob("*.md"):
+        text = path.read_text(encoding="utf-8", errors="replace")
+        if text.startswith("> COMPLETED"):
+            errors.append(f"Completed plan remains in current path: {path.relative_to(ROOT)}")
+
+
 def _check_critical_source_sizes(errors: list[str]) -> None:
     """Catch accidental truncation before an agent reports work as complete."""
     for relative, minimum_lines in CRITICAL_SOURCE_MIN_LINES.items():
@@ -116,6 +141,7 @@ def main() -> int:
     _check_python_parse(errors)
     _check_gemini_not_modified(errors)
     _check_project_doc_links(errors)
+    _check_active_doc_state(errors)
     _check_critical_source_sizes(errors)
 
     if errors:
