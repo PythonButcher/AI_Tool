@@ -121,3 +121,26 @@ drive_export/
 
 # Local-only config
 .local/
+
+# =========================
+# Local development artifacts (never commit)
+# =========================
+# Codex user settings and temporary verification/export output
+/.codexrc
+/.codex_tmp_*/
+
+# One-off local diagnostics and rewrite utilities
+/dev-test.txt
+/logs.txt
+/backend_logs.txt
+/rewrite_css.py
+
+# Runtime caches, generated reports, and deployment placeholders
+/database.db
+/backend/database.db
+/backend/db/database.db
+/generated_docs/
+/python
+
+# Superseded local repository map; project_docs/INDEX.md is authoritative
+/ComponentAndModuleIndex_ProjectMap.txt
