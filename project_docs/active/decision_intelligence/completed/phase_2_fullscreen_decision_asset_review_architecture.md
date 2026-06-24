@@ -1,12 +1,14 @@
 # Phase 2 — Decision Review Fullscreen Viewer
 
-Status: active Phase 2 architecture and planning reference. Phase 1 persistent decision assets is complete. No Phase 2 implementation has been made in this note.
+> COMPLETED REFERENCE ONLY: This plan records the completed saved-asset review slice. It is not an active implementation plan. Current truth is `project_docs/active/status/decision_intelligence_execution_status.md`.
+
+Status: COMPLETE — USER ACCEPTED.
 
 ## Decision
 
 The standalone Decisions window should become a secondary **Decision Review Library**.
 
-Its first safe implementation role should be **fullscreen review of the current AI Chat decision output**, while preserving the existing Decisions-window renderers as compatibility assets. Its target product role should be a saved decision library after a real decision-asset persistence contract exists. Historical comparison and advanced gated review should remain future capabilities layered on top of saved assets, not the first implementation slice.
+Its first safe implementation role should be **an app-scoped full-viewport review overlay for an existing saved DecisionAsset**. It is not browser fullscreen, a new tab, a new route, or a window pop-out. The existing AI Chat Decision Review renderer remains the smallest viable surface; the removed legacy Decisions panel must not be revived. Historical comparison and advanced gated review remain future capabilities layered on top of saved assets, not part of the first implementation slice.
 
 AI Chat remains the primary work surface. A user should be able to frame, correct, analyze, inspect, graph, and export the current decision output from AI Chat without being forced into the Decisions destination.
 
@@ -36,15 +38,15 @@ The old Decisions destination also still contains behavior that conflicts with t
 
 `frontend/frontend/src/features/business/decision/decisionApi.js` still labels `/api/decision/run` as the legacy pipeline and separately calls `/api/decision/workspaces` and `/api/decision/workspaces/analyze`.
 
-There is no backend decision-asset persistence service yet. The current graph build state explicitly says persistence is `client_session_or_saved_decision_asset` and that the graph endpoint does not persist server-side state. Because of that, a real saved decision library should not be presented as durable until a storage contract and route exist.
+Saved DecisionAsset persistence is implemented and contract-ready. `decisionApi.js` provides `saveDecisionAsset`, `getDecisionAssets`, and `getDecisionAssetById`; `DecisionAssetLibrary.jsx` retrieves a complete asset before `AIShell.jsx` reopens it in the existing results pane. The asset contract preserves immutable `asset_id`, `schema_version`, `title`, `created_at`, `decision_output`, optional `graph_state`, and `snapshot_notice`. The graph endpoint itself still does not persist state server-side; only its contract-safe carry-forward state may be present inside a saved asset.
 
 ## Role Boundaries
 
 The current AI Chat output is the source of truth for active decision work. The Decisions window should not create a parallel required flow, should not be the default continuation after a chat decision, and should not be the only place where analysis, correction, graph launch, or export can happen.
 
-The Decisions window should act as a review and continuity surface. In the first frontend slice, it should open the current AI Chat `decision_output` in a larger review window when one exists. If no active decision output exists, it should direct the user to start in AI Chat, not run the legacy pipeline as the primary path.
+The review surface should act as continuity for a saved DecisionAsset. In the first frontend slice, the existing saved-asset selection flow in AI Chat opens the complete immutable asset in the current results pane, and an explicit `Open full review` control opens an app-scoped overlay around that same renderer. The overlay has a fixed closeable header and a scrollable review body. If there is no selected saved asset, the surface must direct the user to select or create one in AI Chat, not run the legacy pipeline as the primary path.
 
-The saved library role is the correct strategic direction, but it needs backend support before the UI claims durable saved decisions. Until then, any retained client-side history must be labeled as current-session only.
+The saved library contract is already available. This slice only reviews an existing immutable asset; it must not add persistence, change saved assets, refresh them against live data, or present the snapshot as current dataset state.
 
 Historical comparison depends on saved assets. It should compare previous `decision_output` artifacts only after the app has stable asset IDs, timestamps, source refs, dataset trust snapshots, and export sections.
 
@@ -52,7 +54,7 @@ Advanced review should remain gated. Monte Carlo, causal CDD, optimization, auto
 
 ## Implementation Guidance For Gemini After Approval
 
-Backend readiness level for the next frontend slice is `backend_contract_ready` for active AI Chat `decision_output` review, and `backend_not_ready` for durable saved decision library persistence.
+Backend readiness level for the next frontend slice is `backend_contract_ready` for immutable DecisionAsset retrieval and review. The slice must reuse `GET /api/decision/assets/<asset_id>` through the existing helper and must not add or change any backend route.
 
 Focused backend verification passed with the repo-local dependency path:
 
@@ -60,7 +62,7 @@ Focused backend verification passed with the repo-local dependency path:
 
 Result: 29 tests passed.
 
-Use the active decision artifact fields documented in `project_docs/active/contracts/decision_objects.md`: `title`, `summary`, `dataset_trust`, `frame`, `readiness`, `correction_state`, `evidence_board`, `decision_map`, `scenario_compare`, `advanced_gates`, `export_sections`, `source_refs`, and `truth_boundary`.
+Use the immutable asset fields documented in `project_docs/active/contracts/decision_objects.md`: `asset_id`, `schema_version`, `title`, `created_at`, `decision_output`, optional `graph_state`, and `snapshot_notice`. Preserve `decision_output.dataset_trust`, `source_refs`, `export_sections`, and `truth_boundary: observational_analysis_only` without synthesizing or refreshing them.
 
 Adjust navigation copy and actions so the Decisions destination is no longer a mandatory continuation path. The Decisions ribbon should not lead with legacy `Analyze`. Prefer review-oriented actions such as opening the current decision asset, opening AI Chat to create or refine a decision, and opening Decision Graph when context exists.
 
@@ -68,7 +70,7 @@ Preserve existing renderer code unless a replacement is already wired and verifi
 
 Demote or rewrite overpromising language in the old surface. Avoid prominent wording such as final recommendation, strategic recommendation, optimizer, forecast, potential outcome, simulation, or decision rule unless the text clearly says the capability is unsupported or observational-only.
 
-The first implementation can be frontend-only if it only changes navigation, copy, and review routing around the existing AI Chat artifact. Do not invent a persistence API. If a temporary current-session asset list is added, it must be explicitly session-scoped and should not be called a saved library.
+The first implementation is frontend-only. The smallest surface is a MUI full-screen dialog rendered inside the existing `AIShell.jsx` page context after `DecisionAssetLibrary.jsx` has already retrieved the complete asset. It must not call the browser Fullscreen API or use the existing AI Chat `WindowFrame` pop-out. Do not change the library, `decisionApi.js`, `CanvasContainer.jsx`, or the legacy Decisions navigation for this slice.
 
 ## Acceptance Checks
 
@@ -76,7 +78,7 @@ A user can complete the core decision flow in AI Chat without being required to 
 
 The Decisions destination no longer presents the legacy Analyze pipeline as the primary next step.
 
-Opening Decisions with an active AI Chat `decision_output` gives a larger review path or clearly points back to AI Chat if no active output exists.
+Selecting a saved DecisionAsset in AI Chat and choosing `Open full review` opens the fixed-header, scrollable-body overlay around the unchanged immutable renderer. Without a selected saved asset, no full-review control is shown.
 
 Existing useful renderers remain available or are wrapped behind a compatibility path.
 

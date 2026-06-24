@@ -8,7 +8,7 @@ import {
 } from "react-icons/fa";
 import {
   TextField, Button, Typography, Divider, Tooltip, Chip,
-  Avatar, IconButton
+  Avatar, IconButton, Dialog, DialogContent
 } from '@mui/material';
 import { DataContext } from '../../context/DataContext';
 import { WarehouseContext } from '../../context/WarehouseContext';
@@ -57,6 +57,7 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenDecisio
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveError, setSaveError] = useState(null);
   const [libraryRefreshKey, setLibraryRefreshKey] = useState(0);
+  const [fullscreenAsset, setFullscreenAsset] = useState(null);
 
   useEffect(() => {
     if (activeArtifact) {
@@ -1188,6 +1189,27 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenDecisio
                         <Typography variant="caption" sx={{ display: 'block', opacity: 0.8, fontWeight: 700, color: 'var(--accent-blue)' }}>
                           Observational Boundary: observational_analysis_only
                         </Typography>
+                        {!fullscreenAsset && (
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            onClick={() => setFullscreenAsset(artifact)}
+                            startIcon={<FaEye />}
+                            sx={{
+                              mt: 1,
+                              alignSelf: 'flex-start',
+                              fontWeight: 800,
+                              borderColor: 'var(--border-color)',
+                              color: 'var(--text-primary)',
+                              textTransform: 'none',
+                              '&:hover': {
+                                bgcolor: 'var(--bg-secondary)'
+                              }
+                            }}
+                          >
+                            Open full review
+                          </Button>
+                        )}
                       </div>
                     ) : (
                       <div style={{
@@ -2023,6 +2045,26 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenDecisio
           refreshTrigger={libraryRefreshKey}
         />
       </aside>
+
+      {/* Fullscreen Review Overlay */}
+      <Dialog
+        fullScreen
+        open={!!fullscreenAsset}
+        onClose={() => setFullscreenAsset(null)}
+        sx={{ zIndex: 1300 }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px', background: 'var(--bg-primary)', borderBottom: '1px solid var(--border-color)', position: 'sticky', top: 0, zIndex: 10 }}>
+          <Typography variant="h6" sx={{ fontWeight: 900 }}>Saved Decision Review</Typography>
+          <Button onClick={() => setFullscreenAsset(null)} sx={{ fontWeight: 800, color: 'var(--text-primary)' }}>
+            Close
+          </Button>
+        </div>
+        <DialogContent sx={{ p: 0, m: 0, background: 'var(--bg-secondary)', overflowY: 'auto' }}>
+          <div style={{ padding: '24px' }}>
+            {fullscreenAsset && renderArtifact(fullscreenAsset, true, fullscreenAsset.contextActions, fullscreenAsset.contextSessionState, fullscreenAsset.contextCapabilityState, fullscreenAsset.contextDecisionReadiness)}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -20,13 +20,6 @@ The Decisions window is no longer the required continuation path. Its future rol
 | Frontend ownership rule | `../rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md` |
 | Completed AI Chat emergency overhaul | `completed/ai_chat_emergency_overhaul_action_plan.md` |
 
-## Current Folder
-
-| File | Status |
-| --- | --- |
-| `current/decisions_window_future_role.md` | Active Phase 2 architecture and planning reference |
-| `current/decisions_window_future_role.md` | Approved architecture note for a possible future secondary Decisions-window role |
-
 ## Completed Reference
 
 Completed plans and handoffs are in `completed/`. Do not scan them by default.
@@ -39,6 +32,8 @@ Completed plans and handoffs are in `completed/`. Do not scan them by default.
 | `completed/phase_3_correction_and_observational_evidence_plan.md` | Completed backend/frontend plan |
 | `completed/phase_3_gemini_frontend_correction_and_ranked_evidence.md` | Completed frontend handoff |
 | `completed/phase_4_5_ai_chat_decision_intelligence_plan.md` | Completed AI Chat hardening plan |
+| `completed/phase_2_fullscreen_decision_asset_review_architecture.md` | Completed immutable DecisionAsset review architecture |
+| `completed/phase_2_fullscreen_decision_asset_review_gemini_handoff.md` | Completed fullscreen-review implementation handoff |
 | Other files in `completed/` | Historical or completed reference only |
 
 ## Superseded Reference

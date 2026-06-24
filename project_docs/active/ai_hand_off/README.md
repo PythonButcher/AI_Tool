@@ -12,6 +12,8 @@ Gemini owns frontend implementation, React/CSS, UI rendering, browser verificati
 
 None.
 
+Completed handoffs are retained under `project_docs/active/decision_intelligence/completed/` as reference only.
+
 Current truth: `project_docs/active/status/decision_intelligence_execution_status.md`
 
 ## Handoff Rule
