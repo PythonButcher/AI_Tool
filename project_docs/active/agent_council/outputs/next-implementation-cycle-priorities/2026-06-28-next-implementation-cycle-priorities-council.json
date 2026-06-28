@@ -1,0 +1,1712 @@
+{
+  "schema_version": "agent-council-output/v1",
+  "council_id": "next-implementation-cycle-priorities-2026-06-28",
+  "generated_at": "2026-06-28T00:00:00Z",
+  "project_context": {
+    "project_name": "AI_Tool",
+    "current_workstream": "Decision Intelligence V3 next implementation cycle planning",
+    "planning_topic": "Rank the next five Decision Intelligence implementation phases after the completed AI Chat decision-output rollout and saved DecisionAsset fullscreen review.",
+    "context_summary": "Decision Intelligence V3 is active. AI Chat is the primary surface for normal answers, charting, exploration, structured decision output, artifact inspection, and exports. Source review shows that decision_output, Dataset Trust, Evidence Board, Decision Map, Scenario Compare, decision graph actions, benchmark tests, and immutable saved DecisionAssets already exist. The council therefore prioritizes product composition, action loops, saved-asset utility, readiness trust, and truthfulness cleanup rather than rebuilding completed foundations.",
+    "active_constraints": [
+      "Codex owns backend truth, contracts, tests, architecture, review, documentation coordination, and project gate facilitation.",
+      "Gemini owns frontend implementation unless the user explicitly authorizes Codex frontend edits in the current session.",
+      "AI Chat remains the primary Decision Intelligence work surface; the Decisions window remains secondary unless a new approved slice changes its role.",
+      "Saved DecisionAssets are immutable historical snapshots and must not be presented as live data.",
+      "Runtime output must not imply fake simulation, optimization, causal proof, autonomous decisioning, unsupported forecasting, upload-aware reasoning, or final recommendations.",
+      "Council artifacts are planning outputs only and must not modify runtime application behavior."
+    ]
+  },
+  "sources_reviewed": [
+    {
+      "path": "project_docs/INDEX.md",
+      "source_type": "markdown",
+      "relevance": "Defines active project routing, current product truth, Agent Council location, and Codex/Gemini ownership.",
+      "reviewed_by": [
+        "architecture_guardian",
+        "implementation_planner"
+      ]
+    },
+    {
+      "path": "project_docs/active/README.md",
+      "source_type": "markdown",
+      "relevance": "States AI Chat is primary, Decision Intelligence is a structured output inside AI Chat, and browser acceptance is user-controlled.",
+      "reviewed_by": [
+        "architecture_guardian",
+        "product_ux_strategist",
+        "implementation_planner"
+      ]
+    },
+    {
+      "path": "project_docs/active/status/decision_intelligence_execution_status.md",
+      "source_type": "status",
+      "relevance": "Confirms no implementation phase is active and saved-asset fullscreen review is complete and user accepted.",
+      "reviewed_by": [
+        "architecture_guardian",
+        "product_ux_strategist",
+        "skeptic_qa_reviewer"
+      ]
+    },
+    {
+      "path": "project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md",
+      "source_type": "markdown",
+      "relevance": "Defines frontend ownership boundary and requires source-backed backend readiness before Gemini handoffs.",
+      "reviewed_by": [
+        "architecture_guardian",
+        "implementation_planner",
+        "skeptic_qa_reviewer"
+      ]
+    },
+    {
+      "path": "project_docs/active/agent_council/README.md",
+      "source_type": "markdown",
+      "relevance": "Defines the Agent Council workflow, four-round debate structure, topic-folder convention, and validation command.",
+      "reviewed_by": [
+        "implementation_planner"
+      ]
+    },
+    {
+      "path": "project_docs/active/agent_council/agent_roles.md",
+      "source_type": "markdown",
+      "relevance": "Defines standing council personas and their decision rights.",
+      "reviewed_by": [
+        "implementation_planner"
+      ]
+    },
+    {
+      "path": "project_docs/active/agent_council/master_council_prompt.md",
+      "source_type": "markdown",
+      "relevance": "Defines the required council process and output expectations.",
+      "reviewed_by": [
+        "implementation_planner"
+      ]
+    },
+    {
+      "path": "project_docs/active/agent_council/council_output_schema.json",
+      "source_type": "contract",
+      "relevance": "Defines the strict JSON structure used for this artifact.",
+      "reviewed_by": [
+        "architecture_guardian",
+        "implementation_planner"
+      ]
+    },
+    {
+      "path": "project_docs/active/contracts/decision_objects.md",
+      "source_type": "contract",
+      "relevance": "Documents Decision Readiness State, Dataset Trust, decision_output, Evidence Board, Decision Map, Scenario Compare, export sections, DecisionBrief, DecisionBundle, and Scenario contracts.",
+      "reviewed_by": [
+        "architecture_guardian",
+        "decision_intelligence_specialist",
+        "data_ml_readiness_specialist"
+      ]
+    },
+    {
+      "path": "project_docs/active/contracts/data_catalog_lineage.md",
+      "source_type": "contract",
+      "relevance": "Defines governance_readiness enforcement for decision routes, model runs, exports, and frontend warning or block rendering.",
+      "reviewed_by": [
+        "data_ml_readiness_specialist",
+        "skeptic_qa_reviewer"
+      ]
+    },
+    {
+      "path": "project_docs/archive/ai_chat_decision_output_unification_rollout_completed.md",
+      "source_type": "markdown",
+      "relevance": "Preserves completed rollout details for AI Chat decision output, Dataset Trust, Evidence Board, Decision Graph, Scenario Compare, and export.",
+      "reviewed_by": [
+        "product_ux_strategist",
+        "decision_intelligence_specialist",
+        "implementation_planner"
+      ]
+    },
+    {
+      "path": "project_docs/active/agent_council/outputs/application-next-focus-priorities/2026-05-01-council.json",
+      "source_type": "other",
+      "relevance": "Earlier priority council emphasized reliability foundation, semantic role strengthening, correction loop, evidence, dataset contract, and ML readiness.",
+      "reviewed_by": [
+        "decision_intelligence_specialist",
+        "skeptic_qa_reviewer"
+      ]
+    },
+    {
+      "path": "project_docs/active/agent_council/outputs/compounding-phase-results/2026-05-23-emergency-compounding-council.json",
+      "source_type": "other",
+      "relevance": "Prior council redirected work toward visible compounding outcomes rather than hidden contract fields.",
+      "reviewed_by": [
+        "product_ux_strategist",
+        "product_innovation_strategist",
+        "implementation_planner"
+      ]
+    },
+    {
+      "path": "project_docs/active/agent_council/outputs/application-structure-decision-dashboard/2026-05-23-application-structure-decision-dashboard-council.json",
+      "source_type": "other",
+      "relevance": "Prior council proposed a Decision Dashboard structure, DecisionDashboardState, controls, Decision Map, and product-surface pruning.",
+      "reviewed_by": [
+        "architecture_guardian",
+        "product_ux_strategist",
+        "product_innovation_strategist"
+      ]
+    },
+    {
+      "path": "project_docs/active/agent_council/outputs/application-structure-decision-dashboard/2026-05-23-application-structure-decision-dashboard-summary.md",
+      "source_type": "markdown",
+      "relevance": "Plain-language summary of the dashboard direction, product language shifts, and surfaces to demote.",
+      "reviewed_by": [
+        "product_ux_strategist",
+        "implementation_planner"
+      ]
+    },
+    {
+      "path": "project_docs/active/reviews/project_pruning_recommendations.md",
+      "source_type": "markdown",
+      "relevance": "Identifies tracked cleanup candidates and product surfaces that may overpromise recommendations, Autopilot, or AutoML.",
+      "reviewed_by": [
+        "skeptic_qa_reviewer",
+        "data_ml_readiness_specialist",
+        "product_ux_strategist"
+      ]
+    },
+    {
+      "path": "backend/routes/decision.py",
+      "source_type": "code",
+      "relevance": "Shows governed decision endpoints for chat turns, chat actions, workspaces, assets, graph candidates, graph build, graph actions, briefs, pipeline, recommendations, and scenarios.",
+      "reviewed_by": [
+        "architecture_guardian",
+        "implementation_planner"
+      ]
+    },
+    {
+      "path": "backend/decision_engine/chat_service.py",
+      "source_type": "code",
+      "relevance": "Central AI Chat service for decision actions, dataset trust attachment, decision_output creation, chart/answer preservation, and unsupported capability handling.",
+      "reviewed_by": [
+        "architecture_guardian",
+        "decision_intelligence_specialist"
+      ]
+    },
+    {
+      "path": "backend/services/decision_output_service.py",
+      "source_type": "code",
+      "relevance": "Composes decision_output with Evidence Board, Decision Map, Scenario Compare, advanced gates, export sections, and observational truth boundary.",
+      "reviewed_by": [
+        "decision_intelligence_specialist",
+        "product_innovation_strategist",
+        "implementation_planner"
+      ]
+    },
+    {
+      "path": "backend/services/decision_workspace_service.py",
+      "source_type": "code",
+      "relevance": "Owns prompt-first workspace drafting, corrections, readiness, scoped observational analysis, ranked diagnostics, semantic coverage, assumptions, and unknowns.",
+      "reviewed_by": [
+        "decision_intelligence_specialist",
+        "skeptic_qa_reviewer"
+      ]
+    },
+    {
+      "path": "backend/services/decision_graph_service.py",
+      "source_type": "code",
+      "relevance": "Provides graph candidates, graph build, observed associations, evidence coverage, user hypotheses, follow-up actions, and Scenario Compare action planning.",
+      "reviewed_by": [
+        "architecture_guardian",
+        "product_innovation_strategist",
+        "data_ml_readiness_specialist"
+      ]
+    },
+    {
+      "path": "backend/services/decision_asset_service.py",
+      "source_type": "code",
+      "relevance": "Persists immutable DecisionAsset snapshots and validates decision_output, Dataset Trust, truth boundary, export sections, and graph state.",
+      "reviewed_by": [
+        "architecture_guardian",
+        "product_ux_strategist",
+        "skeptic_qa_reviewer"
+      ]
+    },
+    {
+      "path": "backend/services/scenario_service.py",
+      "source_type": "code",
+      "relevance": "Implements bounded direct percent or absolute adjustments on observed baselines rather than forecasting or optimization.",
+      "reviewed_by": [
+        "data_ml_readiness_specialist",
+        "decision_intelligence_specialist"
+      ]
+    },
+    {
+      "path": "backend/services/decision_brief_service.py",
+      "source_type": "code",
+      "relevance": "Generates decision brief artifacts from signals, metrics, period context, themes, confidence, and dataset context.",
+      "reviewed_by": [
+        "decision_intelligence_specialist",
+        "product_innovation_strategist"
+      ]
+    },
+    {
+      "path": "frontend/frontend/src/features/ai/AIShell.jsx",
+      "source_type": "code",
+      "relevance": "AI Chat surface renders decision_output, Evidence Board, Decision Map, ScenarioPreview, saved assets, artifact export, and fullscreen review.",
+      "reviewed_by": [
+        "product_ux_strategist",
+        "implementation_planner"
+      ]
+    },
+    {
+      "path": "frontend/frontend/src/features/business/decision/decisionApi.js",
+      "source_type": "code",
+      "relevance": "Frontend API helper exposes decision graph endpoints and DecisionAsset save/list/get calls.",
+      "reviewed_by": [
+        "implementation_planner",
+        "product_ux_strategist"
+      ]
+    },
+    {
+      "path": "frontend/frontend/src/features/business/decision/DecisionAssetLibrary.jsx",
+      "source_type": "code",
+      "relevance": "Displays saved decision snapshots and reopens immutable assets.",
+      "reviewed_by": [
+        "product_ux_strategist",
+        "skeptic_qa_reviewer"
+      ]
+    },
+    {
+      "path": "frontend/frontend/src/features/business/decision/ScenarioPreview.jsx",
+      "source_type": "code",
+      "relevance": "Renders direct adjustment scenario comparison with assumptions, limitations, projections, and trace IDs.",
+      "reviewed_by": [
+        "product_ux_strategist",
+        "data_ml_readiness_specialist"
+      ]
+    },
+    {
+      "path": "frontend/frontend/src/features/business/decision/graph/DecisionGraphWorkspace.jsx",
+      "source_type": "code",
+      "relevance": "Provides an interactive graph workspace using candidates, selected variables, graph generation, and inspector workflow.",
+      "reviewed_by": [
+        "product_innovation_strategist",
+        "implementation_planner"
+      ]
+    },
+    {
+      "path": "frontend/frontend/src/utils/decisionPdfExport.js",
+      "source_type": "code",
+      "relevance": "Exports workspace previews and decision_output artifacts using backend export_sections when present.",
+      "reviewed_by": [
+        "product_ux_strategist",
+        "skeptic_qa_reviewer"
+      ]
+    },
+    {
+      "path": "tests/test_decision_chat_service.py",
+      "source_type": "test",
+      "relevance": "Covers Dataset Trust, decision_output, Scenario Compare, export sections, Evidence Board, correction state, and truthful unsupported actions.",
+      "reviewed_by": [
+        "skeptic_qa_reviewer",
+        "decision_intelligence_specialist"
+      ]
+    },
+    {
+      "path": "tests/test_decision_graph_service.py",
+      "source_type": "test",
+      "relevance": "Covers graph candidates, graph build, truth boundary, graph actions, user hypothesis limits, and scenario action blocking.",
+      "reviewed_by": [
+        "skeptic_qa_reviewer",
+        "architecture_guardian"
+      ]
+    },
+    {
+      "path": "tests/test_decision_asset_service.py",
+      "source_type": "test",
+      "relevance": "Covers immutable DecisionAsset save/list/get, snapshot validation, truth boundary, graph state, and unsafe content rejection.",
+      "reviewed_by": [
+        "skeptic_qa_reviewer",
+        "architecture_guardian"
+      ]
+    },
+    {
+      "path": "tests/test_decision_reliability_benchmark.py",
+      "source_type": "test",
+      "relevance": "Confirms at least 20 benchmark prompts grade extraction, readiness, actions, and unsupported capability truthfulness.",
+      "reviewed_by": [
+        "skeptic_qa_reviewer",
+        "decision_intelligence_specialist"
+      ]
+    }
+  ],
+  "participating_agents": [
+    {
+      "agent_id": "architecture_guardian",
+      "role_name": "Architecture Guardian",
+      "perspective": "Protect backend-owned state, contract stability, additive payload evolution, persistence boundaries, and truthful capability claims.",
+      "decision_rights": "Can block proposals that require frontend-only synthesis, live-state claims for saved snapshots, unsupported causal or predictive behavior, or broad contract churn."
+    },
+    {
+      "agent_id": "product_ux_strategist",
+      "role_name": "Product/UX Strategist",
+      "perspective": "Protect coherent user workflow, direct business language, AI Chat-first interaction, saved-asset clarity, and export usefulness.",
+      "decision_rights": "Can reject plans that produce another label-heavy artifact or force users into a secondary Decisions-window flow."
+    },
+    {
+      "agent_id": "decision_intelligence_specialist",
+      "role_name": "Decision Intelligence Specialist",
+      "perspective": "Protect decision framing, evidence grounding, assumptions, blockers, next checks, bounded scenarios, and traceable observational analysis.",
+      "decision_rights": "Can require every phase to improve the decision workflow rather than generic app polish."
+    },
+    {
+      "agent_id": "data_ml_readiness_specialist",
+      "role_name": "Data/ML Readiness Specialist",
+      "perspective": "Protect Dataset Trust, governance readiness, ML readiness, leakage and validation boundaries, and the line between descriptive analysis and unsupported prediction.",
+      "decision_rights": "Can defer ML, optimization, forecast, or causal claims until data prerequisites and validation are explicit."
+    },
+    {
+      "agent_id": "skeptic_qa_reviewer",
+      "role_name": "Skeptic/QA Reviewer",
+      "perspective": "Protect against regressions, stale state, hidden happy paths, overpromising copy, brittle exports, and missing acceptance checks.",
+      "decision_rights": "Can require focused backend tests, frontend build evidence, manual browser acceptance criteria, and negative unsupported-capability checks."
+    },
+    {
+      "agent_id": "implementation_planner",
+      "role_name": "Implementation Planner",
+      "perspective": "Sequence the strongest ideas into Codex and Gemini phases with scoped entry criteria, exit criteria, validation, and handoff timing.",
+      "decision_rights": "Can assign ownership and defer broad work until prerequisite contracts or replacements exist."
+    },
+    {
+      "agent_id": "product_innovation_strategist",
+      "role_name": "Product Innovation Strategist",
+      "perspective": "Push for impressive but realistic product capability that makes the existing Decision Intelligence foundation feel valuable without faking advanced intelligence.",
+      "decision_rights": "Can challenge incremental cleanup when the source evidence supports a bigger user-visible feature."
+    }
+  ],
+  "conversation_rounds": {
+    "round_1_independent_proposals": [
+      {
+        "agent_id": "architecture_guardian",
+        "stance": "The next cycle should compose existing contracts instead of inventing a parallel product surface.",
+        "claims": [
+          "decision_output already carries the core backend truth for frame, readiness, Dataset Trust, Evidence Board, Decision Map, Scenario Compare, advanced gates, and export sections.",
+          "A command-center state can be additive if it wraps or extends decision_output rather than replacing existing artifact contracts.",
+          "Saved DecisionAssets must remain immutable snapshots and should never imply live refresh."
+        ],
+        "challenged_assumptions": [
+          "A separate dashboard route is required to make Decision Intelligence feel powerful.",
+          "Frontend can safely infer command-center synthesis from raw artifact fields.",
+          "Saved assets can be treated as current state after reopening."
+        ],
+        "evidence": [
+          "backend/services/decision_output_service.py",
+          "backend/services/decision_asset_service.py",
+          "project_docs/active/contracts/decision_objects.md"
+        ],
+        "proposed_changes": [
+          "Define an AI Chat Decision Command Center contract or additive decision_output command-center section.",
+          "Add source refs, stale markers, and control semantics before Gemini implements a richer UI.",
+          "Upgrade saved asset metadata and comparison only through immutable snapshot semantics."
+        ],
+        "risks_flagged": [
+          "A frontend-only dashboard could drift from backend truth.",
+          "Saved asset comparison could be misread as live analysis if labels and contracts are weak."
+        ]
+      },
+      {
+        "agent_id": "product_ux_strategist",
+        "stance": "The product needs one coherent decision review experience inside the AI Chat workflow.",
+        "claims": [
+          "The current AI Chat renderer exposes many pieces, but users still need a clearer hierarchy that reads as a decision command center rather than artifact inspection.",
+          "The Decisions window should focus on saved historical review, not become the required main path.",
+          "Export quality and saved-asset reuse are visible proof that the workflow is coherent."
+        ],
+        "challenged_assumptions": [
+          "Rendering all sections is enough if the hierarchy remains dense.",
+          "A saved asset library is valuable without search, comparison, export, or provenance clarity.",
+          "Readiness and boundary text should dominate the result."
+        ],
+        "evidence": [
+          "frontend/frontend/src/features/ai/AIShell.jsx",
+          "frontend/frontend/src/features/business/decision/DecisionAssetLibrary.jsx",
+          "frontend/frontend/src/utils/decisionPdfExport.js"
+        ],
+        "proposed_changes": [
+          "Make AI Chat Decision Command Center the top-ranked phase.",
+          "Turn saved DecisionAssets into a practical review library with metadata, comparison, and export from snapshot.",
+          "Prune or demote product language that conflicts with observational decision support."
+        ],
+        "risks_flagged": [
+          "A dashboard-like UI can become another wall of labels if it does not lead with business evidence and next checks."
+        ]
+      },
+      {
+        "agent_id": "decision_intelligence_specialist",
+        "stance": "The next feature should turn evidence into action, not just improve presentation.",
+        "claims": [
+          "Evidence Board, Decision Map, graph actions, charting, and Scenario Compare already exist but need to feel like one loop.",
+          "The most valuable next intelligence behavior is selecting evidence or a map edge and turning it into a bounded next check.",
+          "Scenario Compare should remain direct-adjustment sensitivity and should be launched only when data and graph state support it."
+        ],
+        "challenged_assumptions": [
+          "The graph workspace is complete product value without tighter AI Chat and evidence integration.",
+          "Scenario actions should be available for every edge or hypothesis.",
+          "Ranked evidence is useful without traceable follow-up actions."
+        ],
+        "evidence": [
+          "backend/services/decision_graph_service.py",
+          "frontend/frontend/src/features/business/decision/graph/DecisionGraphWorkspace.jsx",
+          "frontend/frontend/src/features/business/decision/ScenarioPreview.jsx"
+        ],
+        "proposed_changes": [
+          "Create an Evidence-to-Action workflow phase for breakdowns, graph explanation, missing-data explanation, monitoring, and valid Scenario Compare handoff.",
+          "Keep action labels as Next Checks or Suggested Investigations.",
+          "Require action outputs to preserve source refs and observational limitations."
+        ],
+        "risks_flagged": [
+          "Follow-up actions can look like final recommendations if the wording is not constrained."
+        ]
+      },
+      {
+        "agent_id": "data_ml_readiness_specialist",
+        "stance": "Advanced gates should become useful readiness diagnostics before any stronger ML claims.",
+        "claims": [
+          "The repo already has governance_readiness, Dataset Trust, ML/AutoML surfaces, and advanced gates; the next ML-adjacent phase should unify readiness rather than train more models.",
+          "Prediction, optimization, causal CDD, and autonomous decisioning need explicit prerequisites, refusal states, leakage checks, sample-size checks, and validation strategy.",
+          "Dataset truth should remain compact in the main decision experience and detailed in readiness drilldowns."
+        ],
+        "challenged_assumptions": [
+          "ML readiness is a future-only concern because runtime advanced capabilities are unsupported.",
+          "AutoML can stay prominent without capability gates.",
+          "Governance readiness and Dataset Trust can remain separate user concepts forever."
+        ],
+        "evidence": [
+          "project_docs/active/contracts/data_catalog_lineage.md",
+          "backend/routes/decision.py",
+          "project_docs/active/reviews/project_pruning_recommendations.md"
+        ],
+        "proposed_changes": [
+          "Rank Advanced Readiness and ML Trust Gates as a backend-heavy phase.",
+          "Tie governance_readiness, Dataset Trust, capability_state, and ML readiness into one truthful advanced-readiness model.",
+          "Gate AutoML and prediction-heavy surfaces unless validation boundaries are visible."
+        ],
+        "risks_flagged": [
+          "Prediction-heavy surfaces can undermine the observational-only Decision Intelligence boundary."
+        ]
+      },
+      {
+        "agent_id": "skeptic_qa_reviewer",
+        "stance": "The next cycle needs negative tests and acceptance checks for the user-visible paths, not only schema presence.",
+        "claims": [
+          "Existing backend tests are strong, but new product phases need acceptance checks that prove stale state, unsupported requests, saved snapshot boundaries, and export quality.",
+          "Any Command Center or Evidence-to-Action phase should be tested with complete, blocked, and unsupported prompts.",
+          "Export acceptance should fail if output is mostly repeated prompts, readiness labels, or raw internal structures."
+        ],
+        "challenged_assumptions": [
+          "A frontend build alone proves a product phase.",
+          "A saved asset list proves useful historical review.",
+          "The existing benchmark suite automatically covers new UI action loops."
+        ],
+        "evidence": [
+          "tests/test_decision_chat_service.py",
+          "tests/test_decision_graph_service.py",
+          "tests/test_decision_asset_service.py",
+          "tests/test_decision_reliability_benchmark.py"
+        ],
+        "proposed_changes": [
+          "Require each ranked phase to include complete, blocked, and unsupported acceptance checks.",
+          "Add snapshot immutability and comparison tests before saved library expansion.",
+          "Add copy audits for recommendation, prediction, simulation, optimization, and autopilot claims."
+        ],
+        "risks_flagged": [
+          "Agents may call the phase complete from docs or screenshots without proving negative cases."
+        ]
+      },
+      {
+        "agent_id": "implementation_planner",
+        "stance": "Sequence as one product feature, two workflow expansions, one readiness phase, and one cleanup/export phase.",
+        "claims": [
+          "The top phase should be Codex contract planning followed by Gemini frontend work, because frontend cannot invent the command-center state.",
+          "Evidence-to-Action should follow because graph actions and Scenario Compare already exist and can compound quickly.",
+          "Saved asset upgrades should follow fullscreen review because the secondary Decisions role is now clear.",
+          "Readiness gates and pruning/export should be later in the cycle because they need the main product path to exist or remain stable."
+        ],
+        "challenged_assumptions": [
+          "The first phase should be broad pruning.",
+          "The first phase should be a standalone ML feature.",
+          "The first phase should be a separate Decisions dashboard."
+        ],
+        "evidence": [
+          "project_docs/active/status/decision_intelligence_execution_status.md",
+          "project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md",
+          "frontend/frontend/src/App.jsx"
+        ],
+        "proposed_changes": [
+          "Rank five phases: AI Chat Decision Command Center, Evidence-to-Action Workflow, Saved Decision Library Upgrade, Advanced Readiness and ML Trust Gates, Product Truth Pruning and Executive Export Pack.",
+          "Assign Codex first for backend contracts and Gemini only after source-backed frontend gaps are confirmed.",
+          "Keep browser acceptance under user control and provide manual browser checklists for frontend phases."
+        ],
+        "risks_flagged": [
+          "A broad first phase could exceed handoff size and stall implementation."
+        ]
+      },
+      {
+        "agent_id": "product_innovation_strategist",
+        "stance": "The app needs an impressive visible feature now, but it can be built from existing honest parts.",
+        "claims": [
+          "A Decision Command Center is product-magnitude work because it turns chat output, graph, evidence, scenarios, saved assets, and export into one recognizable decision product.",
+          "Evidence-to-Action can make the app feel intelligent without claiming autonomous decisions.",
+          "Saved asset comparison can create a useful historical review capability without needing live data refresh."
+        ],
+        "challenged_assumptions": [
+          "Innovation requires unsupported forecasting or optimization.",
+          "Cleanup must happen before the product gets a new visible capability.",
+          "The existing graph and scenario work is only technical infrastructure."
+        ],
+        "evidence": [
+          "backend/services/decision_output_service.py",
+          "backend/services/decision_graph_service.py",
+          "frontend/frontend/src/features/ai/AIShell.jsx",
+          "frontend/frontend/src/features/business/decision/graph/DecisionGraphWorkspace.jsx"
+        ],
+        "proposed_changes": [
+          "Prioritize the Command Center as the flagship next feature.",
+          "Make every advanced-looking capability explicitly trace to evidence, assumptions, source refs, and limitations.",
+          "Defer any fake optimization, but make bounded scenarios and next checks easy to use."
+        ],
+        "risks_flagged": [
+          "If the next cycle is only cleanup or docs, the product will still feel less valuable than the foundation deserves."
+        ]
+      }
+    ],
+    "round_2_critiques": [
+      {
+        "agent_id": "architecture_guardian",
+        "stance": "The Command Center is acceptable only if it is AI Chat-native and backend-owned.",
+        "claims": [
+          "The proposal must not create a separate required Decisions-window flow.",
+          "A new wrapper should be additive and preserve existing answer, chart, workspace_preview, workspace_analysis_summary, and decision_output behavior.",
+          "Control updates need explicit stale and rerun semantics before frontend implementation."
+        ],
+        "challenged_assumptions": [
+          "Dashboard-like means separate dashboard application.",
+          "Gemini can start layout work before contract readiness."
+        ],
+        "evidence": [
+          "project_docs/active/README.md",
+          "backend/decision_engine/chat_service.py",
+          "frontend/frontend/src/features/ai/AIShell.jsx"
+        ],
+        "proposed_changes": [
+          "Call the first phase AI Chat Decision Command Center.",
+          "Require Codex to define state and action contracts before Gemini work."
+        ],
+        "risks_flagged": [
+          "Parallel frontend state could cause stale or inconsistent decision results."
+        ]
+      },
+      {
+        "agent_id": "product_ux_strategist",
+        "stance": "Evidence-to-Action should be second because it gives the Command Center a reason to exist.",
+        "claims": [
+          "A command center that only displays sections is not enough.",
+          "Next checks should be visible as user choices with consequences, not hidden action IDs.",
+          "Saved assets are useful, but active decision work should improve before historical review expands."
+        ],
+        "challenged_assumptions": [
+          "Saved library improvements should outrank active decision workflow.",
+          "Graph actions are too technical for near-term UX."
+        ],
+        "evidence": [
+          "frontend/frontend/src/features/business/decision/graph/InspectorPanel.jsx",
+          "backend/services/decision_graph_service.py"
+        ],
+        "proposed_changes": [
+          "Rank Evidence-to-Action second.",
+          "Use business-facing action labels and keep trace details in inspectors."
+        ],
+        "risks_flagged": [
+          "Action grids can become confusing if every backend action is exposed at once."
+        ]
+      },
+      {
+        "agent_id": "decision_intelligence_specialist",
+        "stance": "Saved asset comparison is valuable, but it must not outrank active evidence loops.",
+        "claims": [
+          "The main intelligence loop is frame, evidence, map, scenario, and next check.",
+          "Saved asset comparison should compare historical decision snapshots and changes in assumptions or evidence, not recompute fresh results.",
+          "Command Center and Evidence-to-Action provide the source state that saved assets should preserve."
+        ],
+        "challenged_assumptions": [
+          "Historical review alone advances decision intelligence.",
+          "Snapshot comparison can imply live changes."
+        ],
+        "evidence": [
+          "backend/services/decision_asset_service.py",
+          "tests/test_decision_asset_service.py"
+        ],
+        "proposed_changes": [
+          "Rank saved library upgrade third.",
+          "Require immutable comparison semantics and snapshot notices."
+        ],
+        "risks_flagged": [
+          "Users may mistake two saved snapshots for a live trend if provenance is unclear."
+        ]
+      },
+      {
+        "agent_id": "data_ml_readiness_specialist",
+        "stance": "Advanced readiness belongs before broad pruning if ML and AutoML surfaces remain visible.",
+        "claims": [
+          "Readiness gates need backend substance before product-surface copy can be safely rewritten.",
+          "The pruning phase should consume readiness language instead of inventing it.",
+          "Governance readiness should be included because blocked datasets already prevent decision and model outputs."
+        ],
+        "challenged_assumptions": [
+          "Pruning can fully solve ML overclaiming through UI copy alone.",
+          "Advanced gates are only caveats rather than useful diagnostics."
+        ],
+        "evidence": [
+          "project_docs/active/contracts/data_catalog_lineage.md",
+          "backend/routes/automl.py",
+          "backend/routes/ml_prep.py"
+        ],
+        "proposed_changes": [
+          "Rank Advanced Readiness and ML Trust Gates fourth.",
+          "Feed its copy and contract into the later pruning/export phase."
+        ],
+        "risks_flagged": [
+          "Surface cleanup can become cosmetic without backend readiness definitions."
+        ]
+      },
+      {
+        "agent_id": "skeptic_qa_reviewer",
+        "stance": "The first three phases need explicit negative acceptance cases.",
+        "claims": [
+          "Command Center must prove blocked frames and unsupported requests do not produce overconfident action surfaces.",
+          "Evidence-to-Action must block Scenario Compare for unvalidated user hypotheses or insufficient data.",
+          "Saved library upgrade must reject unsafe snapshots and preserve immutable notices."
+        ],
+        "challenged_assumptions": [
+          "The existing test suite automatically catches new product regressions.",
+          "Manual browser acceptance can replace backend negative tests."
+        ],
+        "evidence": [
+          "tests/test_decision_chat_service.py",
+          "tests/test_decision_graph_service.py",
+          "tests/test_decision_asset_service.py"
+        ],
+        "proposed_changes": [
+          "Require negative tests and manual checklist entries for every phase.",
+          "Use existing focused test modules as the first verification ladder."
+        ],
+        "risks_flagged": [
+          "Unsupported capability regressions are high likelihood when new UI affordances are added."
+        ]
+      },
+      {
+        "agent_id": "implementation_planner",
+        "stance": "The final ranking must be implementable in owned slices.",
+        "claims": [
+          "Each mixed phase should start with Codex contract or backend verification and move to Gemini only after exact fields and acceptance are known.",
+          "The fifth phase can include pruning and export because both depend on the product language and output hierarchy established earlier.",
+          "No phase should require Codex to edit frontend files in this planning run."
+        ],
+        "challenged_assumptions": [
+          "A single Gemini prompt can implement all visible product changes.",
+          "Current council output should update active status or start implementation."
+        ],
+        "evidence": [
+          "project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md",
+          "project_docs/active/codex_harness_engineering.md"
+        ],
+        "proposed_changes": [
+          "Write phase owners as Codex first, then Gemini when frontend is needed.",
+          "Keep this council output as planning only."
+        ],
+        "risks_flagged": [
+          "Oversized handoffs will repeat earlier microscopic or sprawling phase failure modes."
+        ]
+      },
+      {
+        "agent_id": "product_innovation_strategist",
+        "stance": "The ranking should not bury the new product moment under cleanup.",
+        "claims": [
+          "The first phase must feel like a real product feature, not governance polish.",
+          "Evidence-to-Action and saved asset comparison are impressive because they use actual source-backed state.",
+          "Readiness gates and pruning are necessary but should support the flagship flow."
+        ],
+        "challenged_assumptions": [
+          "A cautious roadmap must be low-ambition.",
+          "User-visible innovation requires unsupported claims."
+        ],
+        "evidence": [
+          "project_docs/active/agent_council/outputs/compounding-phase-results/2026-05-23-emergency-compounding-council.json",
+          "project_docs/active/agent_council/outputs/application-structure-decision-dashboard/2026-05-23-application-structure-decision-dashboard-summary.md"
+        ],
+        "proposed_changes": [
+          "Keep AI Chat Decision Command Center as the top-ranked phase.",
+          "Frame later cleanup as product truth hardening after the flagship path exists."
+        ],
+        "risks_flagged": [
+          "A cleanup-first cycle may not visibly advance the product."
+        ]
+      }
+    ],
+    "round_3_reconciliation": [
+      {
+        "agent_id": "architecture_guardian",
+        "stance": "Resolved: build the new experience as an additive AI Chat command-center state.",
+        "claims": [
+          "The council agrees the top phase must not restart the old standalone Decisions-window direction.",
+          "The Command Center should reuse decision_output and add only contract fields needed for controls, stale state, and review hierarchy.",
+          "Saved asset work should store and compare snapshots, not live queries."
+        ],
+        "challenged_assumptions": [
+          "A new product experience requires replacing decision_output."
+        ],
+        "evidence": [
+          "project_docs/active/contracts/decision_objects.md",
+          "backend/services/decision_output_service.py",
+          "backend/services/decision_asset_service.py"
+        ],
+        "proposed_changes": [
+          "Proceed with Phase 1 as Codex contract first, Gemini frontend second.",
+          "Represent snapshot comparison as immutable historical review."
+        ],
+        "risks_flagged": [
+          "Contract expansion could become too broad without a one-path acceptance slice."
+        ]
+      },
+      {
+        "agent_id": "product_ux_strategist",
+        "stance": "Resolved: lead with the active decision experience, then expand historical review.",
+        "claims": [
+          "The Command Center should lead with business brief, evidence, dataset trust, and next checks.",
+          "Saved library upgrades should make completed decisions findable and comparable after the active workflow is clearer.",
+          "Export should become a recurring acceptance signal, but full export polish can be fifth."
+        ],
+        "challenged_assumptions": [
+          "Export should be the first implementation phase."
+        ],
+        "evidence": [
+          "frontend/frontend/src/features/ai/AIShell.jsx",
+          "frontend/frontend/src/utils/decisionPdfExport.js"
+        ],
+        "proposed_changes": [
+          "Use export acceptance in Phase 1 where practical and make the full executive export pack Phase 5."
+        ],
+        "risks_flagged": [
+          "The first UI could become too dense without strict hierarchy."
+        ]
+      },
+      {
+        "agent_id": "decision_intelligence_specialist",
+        "stance": "Resolved: next checks are the intelligence layer between evidence and scenarios.",
+        "claims": [
+          "Evidence-to-Action should use existing graph action planning and add AI Chat continuity where missing.",
+          "Scenario Compare is useful only when launched from valid evidence or graph context and labeled as direct-adjustment sensitivity.",
+          "Next checks should remain user-approved actions."
+        ],
+        "challenged_assumptions": [
+          "The system should automatically decide which action to run."
+        ],
+        "evidence": [
+          "backend/services/decision_graph_service.py",
+          "backend/services/scenario_service.py"
+        ],
+        "proposed_changes": [
+          "Rank Evidence-to-Action as Phase 2.",
+          "Keep autonomous decisioning unsupported."
+        ],
+        "risks_flagged": [
+          "Automated action language can imply agentic decisioning."
+        ]
+      },
+      {
+        "agent_id": "data_ml_readiness_specialist",
+        "stance": "Resolved: readiness gates become diagnostic product value, not only warnings.",
+        "claims": [
+          "Advanced readiness should explain exact prerequisites for prediction, causal analysis, optimization, and final recommendations.",
+          "Governance readiness should be integrated so blocked or warning datasets affect advanced capability availability.",
+          "This phase should explicitly avoid training new models or producing forecasts."
+        ],
+        "challenged_assumptions": [
+          "ML readiness is equivalent to AutoML UI changes."
+        ],
+        "evidence": [
+          "project_docs/active/contracts/data_catalog_lineage.md",
+          "project_docs/active/contracts/decision_objects.md"
+        ],
+        "proposed_changes": [
+          "Rank Advanced Readiness and ML Trust Gates as Phase 4.",
+          "Make it Codex-owned backend and contract work first."
+        ],
+        "risks_flagged": [
+          "Users may treat readiness gates as hidden blockers unless they explain next remedies."
+        ]
+      },
+      {
+        "agent_id": "skeptic_qa_reviewer",
+        "stance": "Resolved: every phase needs acceptance signals tied to user-visible and negative cases.",
+        "claims": [
+          "Phase validation should include existing focused backend tests and new tests only where contracts change.",
+          "Frontend phases should require Gemini build evidence and user browser acceptance where visible behavior matters.",
+          "Pruning should include copy audits for unsupported claims."
+        ],
+        "challenged_assumptions": [
+          "Documentation artifacts alone can clear an implementation phase."
+        ],
+        "evidence": [
+          "tests/test_decision_reliability_benchmark.py",
+          "project_docs/active/README.md"
+        ],
+        "proposed_changes": [
+          "Put acceptance signals in each linked recommendation.",
+          "Do not claim frontend completion without user-controlled visible acceptance."
+        ],
+        "risks_flagged": [
+          "A planning council can be mistaken for implementation approval."
+        ]
+      },
+      {
+        "agent_id": "implementation_planner",
+        "stance": "Resolved: five ranked phases are selected with owner sequencing.",
+        "claims": [
+          "Phase 1 is AI Chat Decision Command Center.",
+          "Phase 2 is Evidence-to-Action Workflow.",
+          "Phase 3 is Saved Decision Library Upgrade.",
+          "Phase 4 is Advanced Readiness and ML Trust Gates.",
+          "Phase 5 is Product Truth Pruning and Executive Export Pack."
+        ],
+        "challenged_assumptions": [
+          "The next cycle needs more than five phases."
+        ],
+        "evidence": [
+          "All reviewed active docs, source files, tests, and prior councils."
+        ],
+        "proposed_changes": [
+          "Use one resolved recommendation per phase so each recommendation carries frontend, backend, contract, testing, risks, and acceptance details.",
+          "Save the council artifact and summary in the requested topic folder."
+        ],
+        "risks_flagged": [
+          "If future agents skip the linked recommendations, they will miss phase-specific detail not allowed by the phase schema."
+        ]
+      },
+      {
+        "agent_id": "product_innovation_strategist",
+        "stance": "Resolved: ambition is concentrated in Phase 1 and Phase 2 without fake capabilities.",
+        "claims": [
+          "The top two phases create product magnitude by making existing evidence, graph, scenario, and export capabilities feel connected.",
+          "The plan remains honest because every advanced action is user-approved, source-backed, and limited.",
+          "Readiness and pruning still matter but should reinforce the stronger product experience."
+        ],
+        "challenged_assumptions": [
+          "An ambitious feature must include prediction or optimization."
+        ],
+        "evidence": [
+          "backend/services/decision_output_service.py",
+          "backend/services/decision_graph_service.py",
+          "frontend/frontend/src/features/business/decision/ScenarioPreview.jsx"
+        ],
+        "proposed_changes": [
+          "Name Phase 1 as the flagship phase.",
+          "Keep the plan ambitious but observational."
+        ],
+        "risks_flagged": [
+          "The Command Center name may overpromise unless truth boundaries stay visible."
+        ]
+      }
+    ],
+    "round_4_synthesis": [
+      {
+        "agent_id": "implementation_planner",
+        "stance": "Final synthesis ranks five phases and preserves ownership boundaries.",
+        "claims": [
+          "The next cycle should start with a Codex-owned contract plan for an AI Chat-native Decision Command Center.",
+          "Gemini should implement frontend only after Codex proves backend contract readiness and writes a bounded handoff.",
+          "The five phases balance product magnitude, implementation readiness, user value, and truthful capability boundaries."
+        ],
+        "challenged_assumptions": [
+          "This council itself starts implementation.",
+          "Frontend work can begin from speculative direction."
+        ],
+        "evidence": [
+          "project_docs/active/agent_council/council_output_schema.json",
+          "project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md"
+        ],
+        "proposed_changes": [
+          "Save the council JSON, summary, and README in the requested folder.",
+          "Validate the JSON with the existing validator.",
+          "Recommend Codex as the next owner for Phase 1 contract planning."
+        ],
+        "risks_flagged": [
+          "Future agents may treat the planning artifact as permission to edit frontend without a handoff."
+        ]
+      }
+    ]
+  },
+  "major_disagreements": [
+    {
+      "disagreement_id": "disagreement-command-center-surface",
+      "topic": "Whether the top product feature should be a separate Decision Dashboard or an AI Chat-native command center.",
+      "positions": [
+        {
+          "agent_id": "product_innovation_strategist",
+          "position": "A dashboard-like command center is the product-magnitude feature the next cycle needs.",
+          "rationale": "The existing pieces are strong but need a visible organizing surface."
+        },
+        {
+          "agent_id": "architecture_guardian",
+          "position": "The feature must stay AI Chat-native and backend-owned, not a separate frontend-inferred dashboard.",
+          "rationale": "Active docs make AI Chat primary and require backend truth for frontend handoffs."
+        }
+      ],
+      "status": "resolved",
+      "resolution": "Rank AI Chat Decision Command Center first. Codex defines an additive backend contract or decision_output extension before Gemini implements frontend."
+    },
+    {
+      "disagreement_id": "disagreement-saved-library-priority",
+      "topic": "Whether saved DecisionAsset library upgrades should outrank active Evidence-to-Action work.",
+      "positions": [
+        {
+          "agent_id": "product_ux_strategist",
+          "position": "Saved assets need improvement after fullscreen review because they are now the Decisions window's clear role.",
+          "rationale": "Historical review can become useful if assets are searchable, comparable, and exportable."
+        },
+        {
+          "agent_id": "decision_intelligence_specialist",
+          "position": "Active evidence loops should come first.",
+          "rationale": "The intelligence workflow improves when evidence, graph, scenario, and next checks connect before snapshot comparison expands."
+        }
+      ],
+      "status": "resolved",
+      "resolution": "Rank Evidence-to-Action second and Saved Decision Library Upgrade third."
+    },
+    {
+      "disagreement_id": "disagreement-readiness-versus-pruning",
+      "topic": "Whether truthfulness cleanup should happen before advanced readiness diagnostics.",
+      "positions": [
+        {
+          "agent_id": "skeptic_qa_reviewer",
+          "position": "Overpromising surfaces should be pruned soon because they conflict with observational boundaries.",
+          "rationale": "Recommendation, Autopilot, and AutoML language can mislead users."
+        },
+        {
+          "agent_id": "data_ml_readiness_specialist",
+          "position": "Readiness diagnostics should come before broad cleanup.",
+          "rationale": "Product copy needs backend-owned readiness truth for prediction, optimization, causal analysis, and final recommendations."
+        }
+      ],
+      "status": "resolved",
+      "resolution": "Rank Advanced Readiness and ML Trust Gates fourth, then Product Truth Pruning and Executive Export Pack fifth."
+    },
+    {
+      "disagreement_id": "disagreement-scenario-ambition",
+      "topic": "How far Scenario Compare should go in the next cycle.",
+      "positions": [
+        {
+          "agent_id": "product_innovation_strategist",
+          "position": "Scenario Compare should be easy to launch from evidence because it makes the app feel powerful.",
+          "rationale": "Direct adjustments are already implemented and can provide visible value."
+        },
+        {
+          "agent_id": "data_ml_readiness_specialist",
+          "position": "Scenario Compare must remain bounded direct-adjustment sensitivity and should not imply forecasts.",
+          "rationale": "The current scenario service does not support causal simulation, optimization, or forecasting."
+        }
+      ],
+      "status": "resolved",
+      "resolution": "Include Scenario Compare in Phase 2 only as a valid user-approved next check with assumptions, limitations, and direct-adjustment labels."
+    }
+  ],
+  "resolved_recommendations": [
+    {
+      "recommendation_id": "rec-ai-chat-decision-command-center",
+      "title": "AI Chat Decision Command Center",
+      "summary": "Create an AI Chat-native command-center view for the active decision_output so users can review the brief, Dataset Trust, evidence, Decision Map, Scenario Compare, advanced gates, allowed next checks, export state, and stale or rerun status in one coherent experience.",
+      "originating_agents": [
+        "architecture_guardian",
+        "product_ux_strategist",
+        "product_innovation_strategist",
+        "implementation_planner"
+      ],
+      "source_paths": [
+        "backend/services/decision_output_service.py",
+        "backend/decision_engine/chat_service.py",
+        "frontend/frontend/src/features/ai/AIShell.jsx",
+        "project_docs/active/contracts/decision_objects.md"
+      ],
+      "priority": "critical",
+      "confidence": 0.92,
+      "implementation_timing": "now",
+      "rationale": "This is the strongest next product feature because most backend pieces already exist, but the user experience still needs a coherent command surface that is more useful than artifact inspection.",
+      "impacted_areas": [
+        "Decision chat backend",
+        "Decision output composer",
+        "AI Chat result pane",
+        "Decision contract docs",
+        "Focused backend and frontend tests"
+      ],
+      "frontend_implications": [
+        "Gemini implements the command-center UI only after Codex defines the source-backed payload.",
+        "The UI should remain inside or launched from AI Chat and must not make the Decisions window the required continuation path.",
+        "The view should prioritize business brief, evidence, next checks, and export while keeping readiness and limitations visible but not dominant."
+      ],
+      "backend_implications": [
+        "Codex should define whether to extend decision_output or add an additive command_center section.",
+        "Backend should supply stale state, source refs, allowed next checks, and export-ready hierarchy rather than asking frontend to infer them.",
+        "Existing answer, chart, workspace_preview, workspace_analysis_summary, and decision_output contracts must remain compatible."
+      ],
+      "contract_considerations": [
+        "Use additive fields only.",
+        "Preserve truth_boundary as observational_analysis_only.",
+        "Represent unsupported capabilities through capability_state and advanced_gates.",
+        "Define control update and rerun semantics before frontend controls are exposed."
+      ],
+      "testing_considerations": [
+        "Add or update focused decision chat tests for command-center payload shape if a new field is introduced.",
+        "Verify complete, blocked, and unsupported prompts.",
+        "Run existing decision chat and reliability benchmark tests.",
+        "Gemini should run frontend build and provide a user-controlled browser checklist after implementation."
+      ],
+      "risks": [
+        "The feature can become a separate dashboard that conflicts with AI Chat-first truth.",
+        "Frontend can accidentally infer backend truth.",
+        "The view can become too dense and label-heavy."
+      ],
+      "dependencies": [
+        "Existing decision_output artifact",
+        "Existing Dataset Trust, Evidence Board, Decision Map, Scenario Compare, and export_sections",
+        "Codex frontend guardrail"
+      ],
+      "acceptance_signals": [
+        "A decision prompt produces a command-center-ready payload without breaking normal answers, charts, exploration, or existing artifacts.",
+        "The visible command-center view can show a complete frame and a blocked frame truthfully.",
+        "Unsupported simulation, optimization, final recommendation, and autonomous decisioning remain disabled or gated.",
+        "Export uses backend-owned sections and does not become a raw field dump."
+      ]
+    },
+    {
+      "recommendation_id": "rec-evidence-to-action-workflow",
+      "title": "Evidence-To-Action Workflow",
+      "summary": "Connect Evidence Board, Decision Map, graph actions, charting, AI Chat explanation, and bounded Scenario Compare into user-approved Next Checks.",
+      "originating_agents": [
+        "decision_intelligence_specialist",
+        "product_ux_strategist",
+        "product_innovation_strategist",
+        "skeptic_qa_reviewer"
+      ],
+      "source_paths": [
+        "backend/services/decision_graph_service.py",
+        "backend/services/scenario_service.py",
+        "frontend/frontend/src/features/business/decision/graph/DecisionGraphWorkspace.jsx",
+        "frontend/frontend/src/features/business/decision/ScenarioPreview.jsx",
+        "tests/test_decision_graph_service.py"
+      ],
+      "priority": "high",
+      "confidence": 0.88,
+      "implementation_timing": "next",
+      "rationale": "The system already has evidence, graph, action planning, charting, and direct-adjustment scenario pieces. The next value is making them operate as one decision investigation loop.",
+      "impacted_areas": [
+        "Decision graph service",
+        "AI Chat action handling",
+        "Scenario service",
+        "Graph workspace",
+        "AI Chat result pane"
+      ],
+      "frontend_implications": [
+        "Gemini should expose a small set of clearly labeled Next Checks rather than every raw action.",
+        "Actions should show why they are enabled, disabled, or limited.",
+        "Scenario Compare launch should visibly say direct adjustment or sensitivity comparison, not forecast or simulation."
+      ],
+      "backend_implications": [
+        "Codex should verify graph action payloads carry enough source refs, limitations, and enabled or disabled reasons.",
+        "If AI Chat action continuity is missing, Codex should add backend action handling before frontend work.",
+        "Scenario Compare should remain blocked for unvalidated user hypotheses or insufficient data."
+      ],
+      "contract_considerations": [
+        "Action IDs should stay stable and business-facing labels should be backend-provided where possible.",
+        "Graph edges must keep causal_status fields.",
+        "Scenario Compare requests should include assumptions, limitations, source IDs, and direct_adjustment_sensitivity method."
+      ],
+      "testing_considerations": [
+        "Extend graph service tests for each exposed Next Check if new behavior is added.",
+        "Test disabled states for insufficient data and unvalidated hypotheses.",
+        "Run decision graph tests and relevant decision chat tests.",
+        "Frontend verification should cover one evidence-to-breakdown path and one graph-to-scenario blocked path."
+      ],
+      "risks": [
+        "Next Checks may be misread as recommendations.",
+        "Scenario Compare may be misread as prediction.",
+        "Too many actions can overwhelm the user."
+      ],
+      "dependencies": [
+        "Phase 1 command-center hierarchy",
+        "Existing graph action backend",
+        "Existing Scenario Compare contract"
+      ],
+      "acceptance_signals": [
+        "A user can select evidence or a graph relationship and see available Next Checks.",
+        "Disabled actions explain the missing data or unsupported capability.",
+        "Scenario Compare launches only for valid direct-adjustment cases.",
+        "No action text implies autonomous decisioning or final recommendations."
+      ]
+    },
+    {
+      "recommendation_id": "rec-saved-decision-library-upgrade",
+      "title": "Saved Decision Library Upgrade",
+      "summary": "Expand immutable saved DecisionAssets into a more useful secondary review library with metadata, filtering, snapshot comparison, provenance, and export from saved snapshots.",
+      "originating_agents": [
+        "product_ux_strategist",
+        "architecture_guardian",
+        "decision_intelligence_specialist",
+        "skeptic_qa_reviewer"
+      ],
+      "source_paths": [
+        "backend/services/decision_asset_service.py",
+        "frontend/frontend/src/features/business/decision/DecisionAssetLibrary.jsx",
+        "frontend/frontend/src/features/ai/AIShell.jsx",
+        "tests/test_decision_asset_service.py",
+        "project_docs/active/status/decision_intelligence_execution_status.md"
+      ],
+      "priority": "high",
+      "confidence": 0.84,
+      "implementation_timing": "next",
+      "rationale": "Fullscreen saved-asset review is complete, so the Decisions window now has a credible secondary role. The next value is making saved decision snapshots easier to find, compare, and export without treating them as live data.",
+      "impacted_areas": [
+        "DecisionAsset persistence service",
+        "DecisionAsset API helpers",
+        "DecisionAssetLibrary UI",
+        "AI Chat fullscreen review",
+        "Export utilities"
+      ],
+      "frontend_implications": [
+        "Gemini can add filtering, sorting, comparison affordances, and saved snapshot export after Codex defines backend fields.",
+        "The UI must repeat the immutable snapshot boundary clearly.",
+        "Comparison should highlight differences in frame, evidence, dataset trust, assumptions, and created_at rather than claiming live movement."
+      ],
+      "backend_implications": [
+        "Codex should define asset metadata fields, comparison response shape, and any indexing or filtering behavior.",
+        "Backend should reject unsafe snapshot content and keep existing validation limits.",
+        "Saved assets should not refresh against current datasets."
+      ],
+      "contract_considerations": [
+        "Additive DecisionAsset metadata can include tags, dataset label, readiness state, truth boundary, created_at, source refs, and optional graph state summary.",
+        "Comparison contract should use snapshot A and snapshot B language.",
+        "No live refresh field should be introduced unless a future slice explicitly defines it."
+      ],
+      "testing_considerations": [
+        "Extend DecisionAsset tests for metadata, filtering, comparison, unsafe content rejection, and immutable notice.",
+        "Run tests/test_decision_asset_service.py.",
+        "Frontend build after Gemini implementation.",
+        "Manual browser checklist should reopen, compare, and export saved snapshots."
+      ],
+      "risks": [
+        "Comparison can imply live trend analysis.",
+        "Metadata can leak raw rows or sensitive fields if not bounded.",
+        "Saved library UI can become a separate product instead of secondary review."
+      ],
+      "dependencies": [
+        "Existing DecisionAsset save/list/get endpoints",
+        "Existing fullscreen saved-asset review overlay",
+        "Existing decisionPdfExport support for decision_output"
+      ],
+      "acceptance_signals": [
+        "Saved assets can be filtered or sorted by stable metadata.",
+        "Two snapshots can be compared without live-data claims.",
+        "Saved snapshot export uses the stored decision_output.",
+        "Unsafe content rejection and size limits still pass."
+      ]
+    },
+    {
+      "recommendation_id": "rec-advanced-readiness-ml-trust-gates",
+      "title": "Advanced Readiness And ML Trust Gates",
+      "summary": "Unify governance readiness, Dataset Trust, capability_state, and ML readiness into explicit gates for prediction, causal analysis, optimization, final recommendation, and autonomous decisioning without implementing those capabilities.",
+      "originating_agents": [
+        "data_ml_readiness_specialist",
+        "architecture_guardian",
+        "skeptic_qa_reviewer",
+        "implementation_planner"
+      ],
+      "source_paths": [
+        "project_docs/active/contracts/data_catalog_lineage.md",
+        "project_docs/active/contracts/decision_objects.md",
+        "backend/routes/decision.py",
+        "backend/routes/automl.py",
+        "backend/routes/ml_prep.py",
+        "frontend/frontend/src/components/data_management/AutoMLPanel.jsx",
+        "frontend/frontend/src/features/machine_learning/MachineLearningPanel.jsx"
+      ],
+      "priority": "high",
+      "confidence": 0.81,
+      "implementation_timing": "later",
+      "rationale": "The app has real ML and AutoML surfaces, but Decision Intelligence must keep advanced capabilities gated until data quality, target suitability, leakage, validation strategy, and explainability prerequisites are explicit.",
+      "impacted_areas": [
+        "Dataset governance",
+        "Decision readiness and advanced gates",
+        "ML prep and AutoML routes",
+        "Machine Learning and AutoML frontend surfaces",
+        "Decision contract docs"
+      ],
+      "frontend_implications": [
+        "Gemini should render advanced gates as concise unavailable or needs-fix states, not as dominant warnings.",
+        "Prediction-heavy surfaces should be gated or labeled with readiness requirements.",
+        "Frontend must render governance_readiness warnings and blocks from JSON responses and export headers."
+      ],
+      "backend_implications": [
+        "Codex should define a readiness diagnostic model for advanced analysis prerequisites.",
+        "Backend should connect governance_readiness and Dataset Trust to capability availability.",
+        "No predictive, causal, optimization, or final recommendation output should be generated in this phase."
+      ],
+      "contract_considerations": [
+        "Readiness fields should include target suitability, feature suitability, leakage risks, row count sufficiency, temporal split readiness, validation strategy, explainability needs, and refusal reasons.",
+        "Advanced gates should remain separate from current observational analysis readiness.",
+        "All fields should be additive and safe for UI rendering."
+      ],
+      "testing_considerations": [
+        "Test missing target, insufficient rows, leakage-prone features, blocked governance, stale dataset, unsupported objective, and absent validation strategy.",
+        "Run governance and decision readiness tests.",
+        "Add copy audit checks for prediction, forecast, optimization, causal, and final recommendation claims where feasible."
+      ],
+      "risks": [
+        "Readiness gates can become another label wall.",
+        "ML surfaces can continue to overpromise if not connected to gates.",
+        "Users may interpret readiness as a supported prediction feature."
+      ],
+      "dependencies": [
+        "Existing governance_readiness contract",
+        "Existing Dataset Trust contract",
+        "Existing advanced_gates in decision_output",
+        "Review of ML and AutoML routes"
+      ],
+      "acceptance_signals": [
+        "Advanced capabilities explain exactly why they are unavailable or what data requirements are missing.",
+        "Blocked governance prevents advanced outputs.",
+        "No forecast, optimization, causal proof, final recommendation, or autonomous decision is emitted.",
+        "ML and AutoML surfaces have truthful readiness labels or are ready for Gemini gating work."
+      ]
+    },
+    {
+      "recommendation_id": "rec-product-truth-pruning-export-pack",
+      "title": "Product Truth Pruning And Executive Export Pack",
+      "summary": "Rewrite or demote overpromising recommendation, Autopilot, AutoML, and strategic-advice surfaces, then make decision exports concise, executive-ready, source-backed, and consistent with the Command Center.",
+      "originating_agents": [
+        "skeptic_qa_reviewer",
+        "product_ux_strategist",
+        "data_ml_readiness_specialist",
+        "implementation_planner"
+      ],
+      "source_paths": [
+        "project_docs/active/reviews/project_pruning_recommendations.md",
+        "frontend/frontend/src/utils/decisionPdfExport.js",
+        "backend/services/recommendation_service.py",
+        "backend/routes/autopilot.py",
+        "frontend/frontend/src/features/ai/AiAutopilot.jsx",
+        "frontend/frontend/src/components/data_management/AutoMLPanel.jsx"
+      ],
+      "priority": "medium",
+      "confidence": 0.79,
+      "implementation_timing": "later",
+      "rationale": "After the main product path is clear, conflicting surfaces and low-value exports should be cleaned up so the app no longer competes with its own observational truth boundary.",
+      "impacted_areas": [
+        "Recommendation service and UI language",
+        "Autopilot route and UI",
+        "AutoML and Machine Learning surfaces",
+        "Decision export utilities",
+        "Active docs and handoffs"
+      ],
+      "frontend_implications": [
+        "Gemini should rename, demote, or gate overpromising surfaces only after Codex defines source-backed replacement language.",
+        "Export UI should use executive decision asset language and avoid raw contract dumps.",
+        "Visible copy should prefer Next Checks or Suggested Investigations over Strategic Recommendations."
+      ],
+      "backend_implications": [
+        "Codex should audit backend response titles and summaries that mention recommendations, optimization, forecasts, or autopilot behavior.",
+        "Backend export_sections should remain the source for decision PDF content.",
+        "Cleanup should not delete useful backend foundations without user approval."
+      ],
+      "contract_considerations": [
+        "Preserve legacy field names only for API compatibility where needed, but add safer display labels.",
+        "Export sections should include brief, dataset trust, evidence, map, scenario, assumptions, and truth boundary.",
+        "Pruning should update active documentation when a surface is superseded or gated."
+      ],
+      "testing_considerations": [
+        "Run copy searches for unsupported claims.",
+        "Run relevant backend tests when response text or contract fields change.",
+        "Gemini should run frontend build after UI copy or surface changes.",
+        "Manual export inspection should confirm concise, share-worthy output."
+      ],
+      "risks": [
+        "Cleanup could remove useful features before replacements exist.",
+        "Export polish could hide limitations.",
+        "Legacy API compatibility could be broken by renaming fields instead of adding display labels."
+      ],
+      "dependencies": [
+        "Phase 1 Command Center hierarchy",
+        "Phase 4 readiness language",
+        "User approval for any product-surface demotion or deletion"
+      ],
+      "acceptance_signals": [
+        "Prominent surfaces no longer imply final recommendations, optimization, autonomous action, unsupported prediction, or causal proof.",
+        "Exports read as concise decision assets with evidence and caveats.",
+        "Existing useful Decision Intelligence, charting, AI Chat, and saved-asset behavior still works.",
+        "Active docs truthfully point to the current product direction."
+      ]
+    }
+  ],
+  "unresolved_questions": [
+    {
+      "question_id": "question-command-center-contract-shape",
+      "question": "Should Phase 1 extend decision_output with a command_center section or define a separate command_center artifact that wraps decision_output?",
+      "owner": "Codex",
+      "needed_before": "Phase 1 backend contract implementation",
+      "impact": "Determines payload shape, migration risk, and frontend renderer scope."
+    },
+    {
+      "question_id": "question-command-center-entry",
+      "question": "Should the command center be the default decision_output inspector view, an explicit full review mode from AI Chat, or both?",
+      "owner": "User with Codex product architecture and Gemini frontend implementation",
+      "needed_before": "Phase 1 Gemini handoff",
+      "impact": "Determines how much frontend routing and layout work is needed."
+    },
+    {
+      "question_id": "question-saved-asset-comparison-depth",
+      "question": "Should saved asset comparison start with metadata and section diffs only, or include graph state and scenario projection comparison in the first slice?",
+      "owner": "Codex",
+      "needed_before": "Phase 3 implementation plan",
+      "impact": "Affects backend comparison scope and UI complexity."
+    },
+    {
+      "question_id": "question-product-surface-demotion-approval",
+      "question": "Which overpromising surfaces should be hidden, renamed, or gated once the replacement Decision Intelligence path exists?",
+      "owner": "User with Codex review",
+      "needed_before": "Phase 5 frontend handoff",
+      "impact": "Determines whether pruning is documentation-only, copy-only, or navigation-level product change."
+    }
+  ],
+  "risks": [
+    {
+      "risk_id": "risk-frontend-inferred-command-center",
+      "title": "Command Center UI invents state that backend did not provide.",
+      "severity": "high",
+      "likelihood": "medium",
+      "mitigation": "Codex defines source-backed command-center fields and Gemini renders only those fields or explicit fallback states.",
+      "owner": "Codex and Gemini"
+    },
+    {
+      "risk_id": "risk-ai-chat-primary-drift",
+      "title": "The next feature accidentally restores a required Decisions-window flow.",
+      "severity": "high",
+      "likelihood": "medium",
+      "mitigation": "Keep Phase 1 AI Chat-native and keep Decisions focused on saved historical review unless a future approved slice changes the role.",
+      "owner": "Architecture Guardian"
+    },
+    {
+      "risk_id": "risk-next-checks-overclaim",
+      "title": "Evidence-to-Action labels look like final recommendations or autonomous decisions.",
+      "severity": "high",
+      "likelihood": "medium",
+      "mitigation": "Use Next Checks or Suggested Investigations, require user approval, and keep final_recommendation and autonomous_decisioning unsupported.",
+      "owner": "Decision Intelligence Specialist"
+    },
+    {
+      "risk_id": "risk-snapshot-live-confusion",
+      "title": "Saved DecisionAsset comparison is mistaken for live trend or refreshed analysis.",
+      "severity": "high",
+      "likelihood": "medium",
+      "mitigation": "Use immutable snapshot language, created_at provenance, dataset labels, and no live refresh behavior.",
+      "owner": "Product/UX Strategist"
+    },
+    {
+      "risk_id": "risk-ml-readiness-overclaim",
+      "title": "Advanced readiness gates are interpreted as supported prediction, optimization, or causal analysis.",
+      "severity": "high",
+      "likelihood": "medium",
+      "mitigation": "Readiness output must explicitly state unavailable capabilities and missing prerequisites without emitting advanced outputs.",
+      "owner": "Data/ML Readiness Specialist"
+    },
+    {
+      "risk_id": "risk-export-low-value",
+      "title": "Exports remain raw internal reports instead of executive decision assets.",
+      "severity": "medium",
+      "likelihood": "medium",
+      "mitigation": "Use backend export_sections, inspect generated exports, and reject repeated prompt dumps or readiness-only content.",
+      "owner": "Skeptic/QA Reviewer"
+    }
+  ],
+  "impacted_codebase_areas": [
+    {
+      "area": "AI Chat decision backend",
+      "path_patterns": [
+        "backend/decision_engine/chat_service.py",
+        "backend/services/decision_output_service.py",
+        "backend/routes/decision.py"
+      ],
+      "why_it_matters": "The top phase needs source-backed command-center state and action semantics from the backend.",
+      "change_type": "backend"
+    },
+    {
+      "area": "AI Chat frontend result pane",
+      "path_patterns": [
+        "frontend/frontend/src/features/ai/AIShell.jsx",
+        "frontend/frontend/src/features/ai/AIShell.css"
+      ],
+      "why_it_matters": "Gemini will likely render the Command Center, Next Checks, and export affordances here.",
+      "change_type": "frontend"
+    },
+    {
+      "area": "Decision graph and evidence actions",
+      "path_patterns": [
+        "backend/services/decision_graph_service.py",
+        "frontend/frontend/src/features/business/decision/graph/*.jsx",
+        "tests/test_decision_graph_service.py"
+      ],
+      "why_it_matters": "Evidence-to-Action depends on graph action planning, user hypotheses, observed associations, and disabled action reasons.",
+      "change_type": "backend"
+    },
+    {
+      "area": "Saved DecisionAsset library",
+      "path_patterns": [
+        "backend/services/decision_asset_service.py",
+        "frontend/frontend/src/features/business/decision/DecisionAssetLibrary.jsx",
+        "tests/test_decision_asset_service.py"
+      ],
+      "why_it_matters": "Saved asset comparison and metadata must preserve immutable snapshot semantics.",
+      "change_type": "backend"
+    },
+    {
+      "area": "Advanced readiness and ML surfaces",
+      "path_patterns": [
+        "project_docs/active/contracts/data_catalog_lineage.md",
+        "backend/routes/ml_prep.py",
+        "backend/routes/automl.py",
+        "backend/services/model_training.py",
+        "frontend/frontend/src/components/data_management/AutoMLPanel.jsx",
+        "frontend/frontend/src/features/machine_learning/MachineLearningPanel.jsx"
+      ],
+      "why_it_matters": "Advanced gates and ML trust diagnostics must prevent prediction-heavy surfaces from overclaiming.",
+      "change_type": "contract"
+    },
+    {
+      "area": "Decision export and truthfulness cleanup",
+      "path_patterns": [
+        "frontend/frontend/src/utils/decisionPdfExport.js",
+        "backend/services/recommendation_service.py",
+        "backend/routes/autopilot.py",
+        "frontend/frontend/src/features/ai/AiAutopilot.jsx",
+        "project_docs/active/reviews/project_pruning_recommendations.md"
+      ],
+      "why_it_matters": "Exports and legacy product language should align with observational decision support.",
+      "change_type": "frontend"
+    },
+    {
+      "area": "Decision tests and benchmarks",
+      "path_patterns": [
+        "tests/test_decision_chat_service.py",
+        "tests/test_decision_graph_service.py",
+        "tests/test_decision_asset_service.py",
+        "tests/test_decision_reliability_benchmark.py",
+        "tests/decision_reliability_benchmark_cases.py"
+      ],
+      "why_it_matters": "The next phases need focused tests for payloads, negative cases, snapshots, graph actions, and truth boundaries.",
+      "change_type": "test"
+    },
+    {
+      "area": "Active documentation and handoffs",
+      "path_patterns": [
+        "project_docs/active/status/decision_intelligence_execution_status.md",
+        "project_docs/active/contracts/decision_objects.md",
+        "project_docs/active/ai_hand_off/*.md",
+        "project_docs/active/agent_council/outputs/next-implementation-cycle-priorities/*"
+      ],
+      "why_it_matters": "Future implementation must start from active truth and scoped owner handoffs.",
+      "change_type": "documentation"
+    }
+  ],
+  "frontend_implications": [
+    "Gemini should not begin frontend work for Phase 1 until Codex defines source-backed command-center fields and acceptance checks.",
+    "AI Chat remains the primary surface; frontend work should not force a required Decisions-window continuation.",
+    "Next Checks must be exposed as user-approved investigations, not recommendations or autonomous actions.",
+    "Saved DecisionAssets must be labeled as immutable historical snapshots when reopened, compared, or exported.",
+    "Advanced readiness gates should be concise and remedial, not another wall of capability labels.",
+    "Any frontend implementation should run the frontend build and leave browser acceptance to the user unless the user explicitly requests browser automation."
+  ],
+  "backend_implications": [
+    "Codex should start the next implementation cycle by defining the AI Chat Decision Command Center contract or additive decision_output extension.",
+    "Backend action semantics should provide source refs, stale state, disabled reasons, and truth boundaries for frontend rendering.",
+    "Saved asset upgrades require backend comparison and metadata shape before Gemini UI work.",
+    "Advanced readiness requires backend-owned diagnostics that connect governance_readiness, Dataset Trust, capability_state, and ML prerequisites.",
+    "Backend response text should be audited for recommendation, optimization, forecast, causal, and autonomous-decision claims before product truth cleanup."
+  ],
+  "contract_considerations": [
+    "All new fields should be additive and preserve existing AI Chat artifact compatibility.",
+    "decision_output remains the canonical structured decision artifact unless Phase 1 explicitly defines a wrapper.",
+    "Truth boundary remains observational_analysis_only across command-center, evidence action, saved asset, and readiness outputs.",
+    "Saved DecisionAsset comparison must compare immutable snapshots and must not imply live refresh.",
+    "Scenario Compare remains direct_adjustment_sensitivity and must include assumptions, limitations, and source_scenario_ids.",
+    "Advanced readiness fields must distinguish current observational analysis readiness from future prediction, optimization, causal, final recommendation, and autonomous decisioning prerequisites."
+  ],
+  "testing_considerations": [
+    "Use existing focused backend suites before broad verification: decision chat, graph, asset, reliability benchmark, governance, and ML readiness tests as relevant.",
+    "Each implementation phase should test complete, blocked, and unsupported prompts where Decision Intelligence behavior changes.",
+    "Evidence-to-Action tests should include disabled Scenario Compare states and unvalidated user hypotheses.",
+    "Saved asset tests should include unsafe content rejection, immutable notices, metadata, and comparison shape.",
+    "Frontend phases should include build verification and a concise manual browser checklist for user acceptance.",
+    "Copy audits should search for final recommendation, simulation, optimization, forecast, prediction, causal proof, autonomous decisioning, autopilot, and strategic recommendation overclaims."
+  ],
+  "implementation_priority": {
+    "top_priority_ids": [
+      "rec-ai-chat-decision-command-center",
+      "rec-evidence-to-action-workflow",
+      "rec-saved-decision-library-upgrade",
+      "rec-advanced-readiness-ml-trust-gates",
+      "rec-product-truth-pruning-export-pack"
+    ],
+    "deferred_ids": [],
+    "rationale": "The ranking starts with the most product-visible feature that can use existing backend truth, then connects evidence to user-approved actions, then upgrades the secondary saved-asset role, then adds honest advanced readiness, and finally cleans up conflicting product language and export quality once the replacement path is stronger."
+  },
+  "suggested_implementation_phases": [
+    {
+      "phase_id": "phase-1-ai-chat-decision-command-center",
+      "title": "AI Chat Decision Command Center",
+      "owner": "Codex backend and contract first, then Gemini frontend",
+      "objective": "Create an AI Chat-native command-center experience for the active decision_output with business brief, Dataset Trust, evidence, map, scenarios, next checks, export state, and stale or rerun semantics.",
+      "recommendation_ids": [
+        "rec-ai-chat-decision-command-center"
+      ],
+      "entry_criteria": [
+        "Read active docs, decision_objects contract, decision_output_service, chat_service, and AIShell source.",
+        "Confirm the existing decision_output fields that can be reused without contract churn.",
+        "Choose additive command_center section versus wrapper artifact before implementation.",
+        "Do not edit frontend files until a Gemini handoff exists."
+      ],
+      "exit_criteria": [
+        "Codex defines or implements a source-backed command-center payload shape.",
+        "Focused backend tests pass if backend behavior changes.",
+        "A bounded Gemini handoff exists if frontend implementation is needed.",
+        "Existing AI Chat answers, charts, exploration, artifact inspection, and exports remain compatible."
+      ],
+      "validation_plan": [
+        "Run focused decision chat tests and reliability benchmark when backend changes.",
+        "Validate unsupported capability prompts stay observational-only.",
+        "If Gemini implements frontend, run npm --prefix frontend\\frontend run build and provide a user browser acceptance checklist.",
+        "Inspect export path to confirm command-center content does not become a raw field dump."
+      ]
+    },
+    {
+      "phase_id": "phase-2-evidence-to-action-workflow",
+      "title": "Evidence-To-Action Workflow",
+      "owner": "Codex backend and contract first, then Gemini frontend",
+      "objective": "Turn Evidence Board and Decision Map items into user-approved Next Checks for breakdowns, graph explanation, missing-data explanation, monitoring, and valid bounded Scenario Compare.",
+      "recommendation_ids": [
+        "rec-evidence-to-action-workflow"
+      ],
+      "entry_criteria": [
+        "Phase 1 command-center hierarchy is defined or stable enough to host actions.",
+        "Decision graph action service and Scenario Compare contracts are reviewed.",
+        "Codex identifies which action semantics already exist and which need backend support."
+      ],
+      "exit_criteria": [
+        "Next Check actions expose enabled, disabled, and limitation states.",
+        "Scenario Compare is only available for valid direct-adjustment cases.",
+        "Actions preserve source refs and observational boundaries.",
+        "A Gemini handoff exists for frontend action controls if needed."
+      ],
+      "validation_plan": [
+        "Run tests/test_decision_graph_service.py.",
+        "Run relevant decision chat tests if AI Chat action handling changes.",
+        "Test disabled action states for insufficient data and unvalidated user hypotheses.",
+        "After frontend implementation, run build and ask the user to accept one evidence-to-action browser flow."
+      ]
+    },
+    {
+      "phase_id": "phase-3-saved-decision-library-upgrade",
+      "title": "Saved Decision Library Upgrade",
+      "owner": "Codex backend and contract first, then Gemini frontend",
+      "objective": "Improve immutable saved DecisionAsset review with metadata, filtering, snapshot comparison, provenance, and export from saved snapshots.",
+      "recommendation_ids": [
+        "rec-saved-decision-library-upgrade"
+      ],
+      "entry_criteria": [
+        "Fullscreen saved-asset review remains accepted and stable.",
+        "DecisionAssetService and DecisionAssetLibrary source are reviewed.",
+        "Codex defines immutable comparison and metadata scope before UI work."
+      ],
+      "exit_criteria": [
+        "Saved asset metadata and comparison contract are defined or implemented.",
+        "Snapshot comparison cannot be mistaken for live analysis.",
+        "Saved snapshot export uses stored decision_output.",
+        "Unsafe content and size validation remain enforced."
+      ],
+      "validation_plan": [
+        "Run tests/test_decision_asset_service.py.",
+        "Add comparison or metadata tests if backend behavior changes.",
+        "After frontend implementation, run build and use a manual browser checklist for list, reopen, compare, and export.",
+        "Verify immutable snapshot notices appear in saved review and comparison contexts."
+      ]
+    },
+    {
+      "phase_id": "phase-4-advanced-readiness-ml-trust-gates",
+      "title": "Advanced Readiness And ML Trust Gates",
+      "owner": "Codex backend, contract, tests, and review first; Gemini frontend only after gate contract is ready",
+      "objective": "Unify governance, Dataset Trust, capability_state, and ML prerequisites into explicit readiness diagnostics for advanced capabilities without implementing unsupported prediction, optimization, causal, final recommendation, or autonomous behavior.",
+      "recommendation_ids": [
+        "rec-advanced-readiness-ml-trust-gates"
+      ],
+      "entry_criteria": [
+        "Governance readiness, Dataset Trust, advanced gates, ML prep, AutoML, and machine learning surfaces are reviewed.",
+        "Codex defines readiness prerequisites and refusal states before frontend gating.",
+        "No runtime advanced capability implementation is in scope."
+      ],
+      "exit_criteria": [
+        "Advanced readiness contract covers target suitability, features, leakage, row sufficiency, validation, explainability, governance, and refusal reasons.",
+        "Unsupported capabilities remain unavailable.",
+        "ML and AutoML surfaces have a source-backed path for truthful gating or follow-up Gemini work."
+      ],
+      "validation_plan": [
+        "Run focused governance and decision readiness tests.",
+        "Add tests for missing target, insufficient rows, leakage risk, blocked governance, stale dataset, and absent validation strategy.",
+        "Search backend and frontend copy for unsupported prediction, optimization, causal, final recommendation, and autonomous decision claims.",
+        "If frontend gates are implemented, run build and provide a user browser checklist."
+      ]
+    },
+    {
+      "phase_id": "phase-5-product-truth-pruning-export-pack",
+      "title": "Product Truth Pruning And Executive Export Pack",
+      "owner": "Codex review and docs first, Gemini frontend implementation for UI pruning and export polish",
+      "objective": "Demote or rewrite overpromising recommendation, Autopilot, AutoML, and strategic-advice surfaces, then produce concise executive-ready decision exports consistent with the command-center hierarchy.",
+      "recommendation_ids": [
+        "rec-product-truth-pruning-export-pack"
+      ],
+      "entry_criteria": [
+        "Replacement command-center and readiness language are available.",
+        "User approves any navigation-level demotion, hiding, or deletion of product surfaces.",
+        "Codex audits source labels and backend response language before Gemini handoff."
+      ],
+      "exit_criteria": [
+        "Prominent product surfaces no longer imply unsupported recommendations, optimization, prediction, causal proof, or autonomous action.",
+        "Exports are concise, evidence-backed, and caveated.",
+        "Useful existing behavior is preserved unless the user explicitly approves removal.",
+        "Active docs reflect any accepted product-surface changes."
+      ],
+      "validation_plan": [
+        "Run copy searches for unsupported claims.",
+        "Run relevant backend tests if response text or export sections change.",
+        "After frontend work, run npm --prefix frontend\\frontend run build.",
+        "Manually inspect one generated export for brief, evidence, map or scenario summary, assumptions, and truth boundary."
+      ]
+    }
+  ],
+  "final_synthesis_summary": {
+    "executive_summary": "The council ranks the next cycle around visible Decision Intelligence product value. The project should first turn the existing AI Chat decision_output foundation into an AI Chat-native Decision Command Center. It should then connect evidence to user-approved next checks, upgrade saved immutable DecisionAssets, define advanced readiness and ML trust gates, and finally prune overpromising surfaces while improving executive-ready exports.",
+    "strongest_proposal": "AI Chat Decision Command Center is the strongest proposal because it is a meaningful new product capability that can reuse implemented Dataset Trust, Evidence Board, Decision Map, Scenario Compare, export sections, graph links, and saved-asset review without faking unsupported intelligence.",
+    "main_tradeoff": "The project needs a more impressive visible experience, but it must not revive a separate required Decisions flow or imply unsupported simulation, optimization, prediction, causal proof, autonomous decisions, or final recommendations.",
+    "decision_for_next_agent": "Codex should act next by turning Phase 1 into a scoped backend contract plan and only then writing a focused Gemini handoff if frontend implementation is required.",
+    "non_goals": [
+      "Do not start implementation from this council artifact.",
+      "Do not edit frontend files without explicit authorization or a Gemini handoff path.",
+      "Do not build a separate required Decisions-window dashboard.",
+      "Do not implement fake simulation, optimization, prediction, causal proof, final recommendation, or autonomous decisioning.",
+      "Do not treat saved DecisionAssets as live data."
+    ],
+    "handoff_notes": "The first future prompt should ask Codex to define the AI Chat Decision Command Center contract from decision_output, chat_service, decision_objects, and AIShell evidence. Gemini should wait for exact backend fields, endpoint or action semantics, acceptance checks, and build/browser instructions."
+  },
+  "metadata": {
+    "created_by": "Codex Agent Council live run",
+    "schema_path": "project_docs/active/agent_council/council_output_schema.json",
+    "validator_path": "project_docs/active/agent_council/validate_council_json.py"
+  }
+}
