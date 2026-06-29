@@ -6,13 +6,14 @@
   z-index: 40;
   display: flex;
   flex-direction: column;
-  background: color-mix(in srgb, var(--bg-primary) 82%, var(--glass-overlay-strong));
-  backdrop-filter: blur(20px);
-  border: 1px solid color-mix(in srgb, var(--border-color) 92%, transparent);
-  border-radius: 14px;
-  box-shadow: 0 8px 32px var(--shadow-color);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  padding: 8px 16px;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--bg-primary) 85%, transparent), color-mix(in srgb, var(--bg-secondary) 75%, transparent));
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid color-mix(in srgb, var(--border-color) 80%, rgba(255, 255, 255, 0.1));
+  border-radius: 16px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  padding: 12px 20px;
 }
 
 .dashboard-filter-bar.is-expanded {
@@ -38,15 +39,17 @@
 .dashboard-filter-bar__title-input {
   border: none;
   background: transparent;
-  font-size: 1.1rem;
-  font-weight: 700;
+  font-size: 1.25rem;
+  font-family: 'Inter', 'Outfit', sans-serif;
+  font-weight: 800;
   color: var(--text-primary);
-  padding: 4px 8px;
-  border-radius: 4px;
+  padding: 6px 12px;
+  border-radius: 8px;
   outline: none;
-  transition: background 0.2s;
+  transition: all 0.3s ease;
   width: auto;
   min-width: 150px;
+  letter-spacing: -0.02em;
 }
 
 .dashboard-filter-bar__title-input:hover,
@@ -73,15 +76,20 @@
 }
 
 .badge-filters {
-  font-size: 0.7rem;
-  font-weight: 600;
-  color: var(--text-on-accent);
-  background: color-mix(in srgb, var(--accent-blue) 68%, var(--accent-green));
-  padding: 2px 8px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #ffffff;
+  background: linear-gradient(135deg, hsl(230, 80%, 65%), hsl(280, 80%, 65%));
+  padding: 4px 10px;
   border-radius: 999px;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
+  box-shadow: 0 4px 12px rgba(138, 75, 255, 0.25);
+  transition: transform 0.2s;
+}
+.badge-filters:hover {
+  transform: translateY(-1px) scale(1.02);
 }
 
 .dashboard-filter-bar__actions {
@@ -108,8 +116,9 @@
 }
 
 .dashboard-filter-bar__btn:hover {
-  background: color-mix(in srgb, var(--accent-white-soft) 60%, transparent);
+  background: color-mix(in srgb, var(--accent-white-soft) 80%, rgba(255, 255, 255, 0.05));
   color: var(--text-primary);
+  transform: translateY(-1px);
 }
 
 .dashboard-filter-bar__btn.active {
@@ -119,13 +128,15 @@
 }
 
 .dashboard-filter-bar__btn--primary {
-  background: color-mix(in srgb, var(--accent-green) 72%, var(--accent-blue));
-  color: var(--text-on-accent);
+  background: linear-gradient(135deg, hsl(210, 90%, 55%), hsl(240, 90%, 65%));
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+  border: none;
 }
 
 .dashboard-filter-bar__btn--primary:hover {
-  background: color-mix(in srgb, var(--accent-green) 82%, var(--accent-blue));
-  color: var(--text-on-accent);
+  background: linear-gradient(135deg, hsl(210, 95%, 60%), hsl(240, 95%, 70%));
+  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
 }
 
 .dashboard-filter-bar__btn--close {

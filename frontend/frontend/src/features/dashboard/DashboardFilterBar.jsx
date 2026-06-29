@@ -19,6 +19,8 @@ function DashboardFilterBar() {
   const semanticModel = useSemanticModel();
   const [isExpanded, setIsExpanded] = useState(false);
   const [isSemanticEditorOpen, setIsSemanticEditorOpen] = useState(false);
+  const [draftFilters, setDraftFilters] = useState(null);
+  const [isDraftDirty, setIsDraftDirty] = useState(false);
   const previousFilterCountRef = useRef(0);
   const previousDateDimensionRef = useRef('');
   const {
@@ -43,6 +45,14 @@ function DashboardFilterBar() {
 
   const activeFilterCount = countActiveDashboardFilters(dashboardState.filters);
 
+  const currentDraft = draftFilters || dashboardState.filters;
+
+  useEffect(() => {
+    if (!isDraftDirty) {
+      setDraftFilters(dashboardState.filters);
+    }
+  }, [dashboardState.filters, isDraftDirty]);
+
   useEffect(() => {
     const currentFilterCount = dashboardState.filters.dimensionFilters.length;
     const previousFilterCount = previousFilterCountRef.current;
@@ -61,16 +71,17 @@ function DashboardFilterBar() {
   }, [dashboardState.filters.dateDimensionId, dashboardState.filters.dimensionFilters.length]);
 
   const updateDimensionFilter = (filterId, updates) => {
-    setDashboardFilters((prev) => ({
+    setDraftFilters((prev) => ({
       ...prev,
       dimensionFilters: prev.dimensionFilters.map((filter) => (
         filter.id === filterId ? { ...filter, ...updates } : filter
       )),
     }));
+    setIsDraftDirty(true);
   };
 
   const addDimensionFilter = () => {
-    setDashboardFilters((prev) => ({
+    setDraftFilters((prev) => ({
       ...prev,
       dimensionFilters: [
         ...prev.dimensionFilters,
@@ -81,13 +92,29 @@ function DashboardFilterBar() {
         },
       ],
     }));
+    setIsDraftDirty(true);
   };
 
   const removeDimensionFilter = (filterId) => {
-    setDashboardFilters((prev) => ({
-      ...prev,
-      dimensionFilters: prev.dimensionFilters.filter((filter) => filter.id !== filterId),
-    }));
+    const updated = {
+      ...currentDraft,
+      dimensionFilters: currentDraft.dimensionFilters.filter((filter) => filter.id !== filterId),
+    };
+    setDraftFilters(updated);
+    setDashboardFilters(updated);
+    setIsDraftDirty(false);
+  };
+
+  const handleApplyFilters = () => {
+    if (draftFilters) {
+      setDashboardFilters(draftFilters);
+      setIsDraftDirty(false);
+    }
+  };
+
+  const handleClearFilters = () => {
+    clearDashboardFilters();
+    setIsDraftDirty(false);
   };
 
   return (
@@ -138,8 +165,19 @@ function DashboardFilterBar() {
             <FaFilter /> Filters {isExpanded ? <FaChevronUp /> : <FaChevronDown />}
           </button>
 
-          <button type="button" className="dashboard-filter-bar__btn" onClick={clearDashboardFilters} title="Clear all filters">
+          <button type="button" className="dashboard-filter-bar__btn" onClick={handleClearFilters} title="Clear all filters">
             Clear
+          </button>
+          
+          <button 
+            type="button" 
+            className="dashboard-filter-bar__btn dashboard-filter-bar__btn--primary" 
+            onClick={handleApplyFilters} 
+            disabled={!isDraftDirty}
+            title="Apply Filters"
+            style={{ fontWeight: isDraftDirty ? 'bold' : 'normal' }}
+          >
+            Apply
           </button>
           
           <button type="button" className="dashboard-filter-bar__btn dashboard-filter-bar__btn--close" onClick={closeDashboard} title="Hide Dashboard">
@@ -155,11 +193,14 @@ function DashboardFilterBar() {
                     <label className="dashboard-filter-bar__field">
                     <span>Date Dimension</span>
                     <select
-                        value={dashboardState.filters.dateDimensionId}
-                        onChange={(event) => setDashboardFilters((prev) => ({
-                        ...prev,
-                        dateDimensionId: event.target.value,
-                        }))}
+                        value={currentDraft.dateDimensionId}
+                        onChange={(event) => {
+                            setDraftFilters((prev) => ({
+                                ...prev,
+                                dateDimensionId: event.target.value,
+                            }));
+                            setIsDraftDirty(true);
+                        }}
                     >
                         <option value="">No date filter</option>
                         {temporalDimensions.map((dimension) => (
@@ -175,12 +216,15 @@ function DashboardFilterBar() {
                         <span>Start</span>
                         <input
                             type="date"
-                            value={dashboardState.filters.startDate}
-                            onChange={(event) => setDashboardFilters((prev) => ({
-                            ...prev,
-                            startDate: event.target.value,
-                            }))}
-                            disabled={!dashboardState.filters.dateDimensionId}
+                            value={currentDraft.startDate}
+                            onChange={(event) => {
+                                setDraftFilters((prev) => ({
+                                    ...prev,
+                                    startDate: event.target.value,
+                                }));
+                                setIsDraftDirty(true);
+                            }}
+                            disabled={!currentDraft.dateDimensionId}
                         />
                         </label>
 
@@ -188,12 +232,15 @@ function DashboardFilterBar() {
                         <span>End</span>
                         <input
                             type="date"
-                            value={dashboardState.filters.endDate}
-                            onChange={(event) => setDashboardFilters((prev) => ({
-                            ...prev,
-                            endDate: event.target.value,
-                            }))}
-                            disabled={!dashboardState.filters.dateDimensionId}
+                            value={currentDraft.endDate}
+                            onChange={(event) => {
+                                setDraftFilters((prev) => ({
+                                    ...prev,
+                                    endDate: event.target.value,
+                                }));
+                                setIsDraftDirty(true);
+                            }}
+                            disabled={!currentDraft.dateDimensionId}
                         />
                         </label>
                     </div>
@@ -207,12 +254,12 @@ function DashboardFilterBar() {
                     </button>
                 </div>
 
-                {dashboardState.filters.dimensionFilters.length === 0 && (
+                {currentDraft.dimensionFilters.length === 0 && (
                     <div className="dashboard-filter-bar__empty">No dimension filters active.</div>
                 )}
 
                 <div className="dimension-filters-list">
-                    {dashboardState.filters.dimensionFilters.map((filter) => {
+                    {currentDraft.dimensionFilters.map((filter) => {
                         const availableValues = getDimensionValues(rows, semanticModel, filter.dimensionId);
 
                         return (

@@ -15,6 +15,7 @@ The Decisions window is no longer the required continuation path. Its future rol
 | Need | Read |
 | --- | --- |
 | Short current status | `../status/decision_intelligence_execution_status.md` |
+| Current charting and slicer execution plan | `current/phase_3_charting_slicer_backbone_plan.md` |
 | Completed AI Chat rollout details | `../../archive/ai_chat_decision_output_unification_rollout_completed.md` |
 | Contract reference | `../contracts/decision_objects.md` |
 | Frontend ownership rule | `../rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md` |

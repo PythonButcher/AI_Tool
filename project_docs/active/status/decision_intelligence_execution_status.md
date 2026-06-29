@@ -18,13 +18,17 @@ The Decisions window remains secondary. Saved DecisionAssets support immutable h
 
 ## Current Project Gate
 
-No Decision Intelligence implementation phase is active.
+Status: **Phase 3 - Charting And Slicer Backbone: UI IMPLEMENTED AND VERIFIED**
 
-Status: **Phase 2 — Decision Review Fullscreen Viewer: COMPLETE — USER ACCEPTED**
+Current plan:
 
-The saved-asset review overlay is implemented in `frontend/frontend/src/features/ai/AIShell.jsx`. It opens an existing immutable DecisionAsset in an app-scoped full-viewport dialog, reuses the existing Decision Review renderer, preserves the observational-only snapshot, and does not add persistence, editing, comparison, sharing, or live refresh. The user completed browser acceptance.
+`project_docs/active/decision_intelligence/current/phase_3_charting_slicer_backbone_plan.md`
 
-Completed references:
+Goal: make charting and dashboard slicing robust across standalone chart windows, dashboard charts/KPIs, and AI Chat chart artifacts without a full charting rewrite. Local-first dashboard persistence is the current default.
+
+Latest verified fact: Antigravity UI implementation for dashboard slicers, chart-local slicer conflict resolution, local-first dashboard migration (`chartStudioDashboard:v1`), and AI Chat chart pin/open actions has been successfully implemented and verified. The dashboard slicer experience now uses a draft state and an explicit Apply button. Slicer conflicts between dashboard filters and chart-local slicers trigger an appropriate empty state.
+
+Previous completed references:
 
 `project_docs/active/decision_intelligence/completed/phase_2_fullscreen_decision_asset_review_architecture.md`
 
@@ -32,7 +36,9 @@ Completed references:
 
 ## Next Focus
 
-Awaiting user direction.
+Antigravity Phase 3 work complete. Await next project phase instruction or codex architecture review.
+
+
 
 ## Canonical Resume Order
 

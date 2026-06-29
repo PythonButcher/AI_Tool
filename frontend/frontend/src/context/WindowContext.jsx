@@ -15,6 +15,7 @@ export const WindowContext = createContext();
 
 const WINDOW_STATES_STORAGE_KEY = 'windowStates';
 const DASHBOARD_STORAGE_KEY = 'businessMonitoringDashboard';
+const DASHBOARD_V1_STORAGE_KEY = 'chartStudioDashboard:v1';
 
 const createDefaultDashboardState = () => ({
   id: 'dashboard-primary',
@@ -51,7 +52,10 @@ const normalizeDashboardItem = (item) => {
 
 const loadDashboardStorage = () => {
   try {
-    const stored = localStorage.getItem(DASHBOARD_STORAGE_KEY);
+    let stored = localStorage.getItem(DASHBOARD_V1_STORAGE_KEY);
+    if (!stored) {
+      stored = localStorage.getItem(DASHBOARD_STORAGE_KEY);
+    }
     if (!stored) {
       return {
         state: createDefaultDashboardState(),
@@ -167,7 +171,7 @@ export const WindowProvider = ({ children }) => {
   }, [windowStates]);
 
   useEffect(() => {
-    localStorage.setItem(DASHBOARD_STORAGE_KEY, JSON.stringify({
+    localStorage.setItem(DASHBOARD_V1_STORAGE_KEY, JSON.stringify({
       state: dashboardState,
       items: dashboardItems,
     }));

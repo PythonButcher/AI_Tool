@@ -12,6 +12,7 @@ import {
 } from '@mui/material';
 import { DataContext } from '../../context/DataContext';
 import { WarehouseContext } from '../../context/WarehouseContext';
+import { useWindowContext } from '../../context/WindowContext';
 import MentionDropdown from '../../components/data_management/MentionDropdown';
 import { detectToken, extractTokens } from '../../utils/mentionUtils';
 import { AICommands } from '../workflow/AiCommandBlock';
@@ -39,6 +40,7 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenDecisio
     refreshSemanticModelFromDataset,
   } = useContext(DataContext);
   const { datasets } = useContext(WarehouseContext);
+  const { addDashboardChart, addChart } = useWindowContext();
 
   // Shell State
   const [userMessages, setUserMessages] = useState([]);
@@ -661,6 +663,36 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenDecisio
             {isInspector && (
               <div className="ai-shell__artifact-content" style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
                 {renderArtifactExportBar(artifact, lookupSessionState, lookupCapabilityState, lookupDecisionReadiness)}
+                
+                {content?.chartSpec?.schemaVersion === 'chart_spec_v1' && (
+                  <div className="ai-shell__chart-actions" style={{ padding: '8px', display: 'flex', gap: '8px', borderBottom: '1px solid var(--border-color)' }}>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={() => addChart({
+                        type: content.chartType || 'Bar',
+                        mapping: content.chartData?.mapping || {},
+                        dataSourceMode: 'semantic',
+                        chartSpec: content.chartSpec
+                      })}
+                    >
+                      Open Chart Window
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={() => addDashboardChart({
+                        type: content.chartType || 'Bar',
+                        mapping: content.chartData?.mapping || {},
+                        dataSourceMode: 'semantic',
+                        chartSpec: content.chartSpec
+                      })}
+                    >
+                      Pin to Dashboard
+                    </Button>
+                  </div>
+                )}
+                
                 <AICharts aiChartType={content?.chartType || 'Bar'} aiChartData={content?.chartData} />
                 {content?.explanation && (
                   <Typography variant="caption" sx={{ mt: 2, display: 'block', opacity: 0.6 }}>{content.explanation}</Typography>

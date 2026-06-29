@@ -8,6 +8,7 @@ import {
   applyDashboardFiltersToRows,
   buildResolverFilters,
   countActiveDashboardFilters,
+  getSlicerConflict,
 } from '../../utils/dashboardFilterUtils';
 import { TbChartBar, TbChartDots, TbChartLine, TbChartPie, TbChartDonut } from 'react-icons/tb';
 import { AiOutlineFundProjectionScreen, AiOutlineTag, AiOutlineFileSearch, AiOutlineLineChart } from 'react-icons/ai';
@@ -27,6 +28,7 @@ const SmartChartWindow = ({
   dataSourceMode = 'raw',
   semanticConfig = {},
   externalFilters = null,
+  chartSpec = null,
 }) => {
   const [activeDragPayload, setActiveDragPayload] = useState(null);
   const [semanticResolution, setSemanticResolution] = useState(null);
@@ -116,6 +118,10 @@ const SmartChartWindow = ({
       dataFields: [mapping['Y-Axis']],
     });
   }, [filteredDatasetRows, mapping]);
+
+  const slicerConflictDimensionId = useMemo(() => {
+    return getSlicerConflict(externalFilters, chartSpec?.slicers);
+  }, [externalFilters, chartSpec?.slicers]);
 
   useEffect(() => {
     if (dataSourceMode !== 'semantic') {
@@ -260,6 +266,23 @@ const SmartChartWindow = ({
       <div className="semantic-status-mini">
         {semanticStatusCopy}
       </div>
+      
+      {chartSpec?.schemaVersion === 'chart_spec_v1' && (
+        <div className="chart-actions-mini">
+          <button className="mode-btn" onClick={() => {
+            updateDashboardItem(`dashboard-chart-${Date.now()}`, {
+              chartType: type,
+              mapping,
+              dataSourceMode,
+              semanticConfig,
+              chartSpec,
+            });
+          }}>Pin to Dashboard</button>
+          <button className="mode-btn" onClick={() => {
+             // duplicate logic could go here
+          }}>Duplicate</button>
+        </div>
+      )}
     </div>
   );
 
@@ -380,9 +403,17 @@ const SmartChartWindow = ({
       )}
 
       <div className="chart-content-area">
-        {!isEmpty && <ChartComponent chartType={type} chartData={chartData} />}
+        {slicerConflictDimensionId && (
+          <div className="chart-empty-state">
+             <AiOutlineFileSearch className="empty-icon" />
+             <h4>Slicer Conflict</h4>
+             <p>Dashboard filter and chart-local slicer conflict on <strong>{slicerConflictDimensionId}</strong>. No data overlap.</p>
+          </div>
+        )}
+      
+        {!isEmpty && !slicerConflictDimensionId && <ChartComponent chartType={type} chartData={chartData} />}
 
-        {isEmpty && !isDraggingAny && (
+        {isEmpty && !isDraggingAny && !slicerConflictDimensionId && (
           <div className="chart-placeholder">
             <AiOutlineFileSearch size={40} />
             <p>
