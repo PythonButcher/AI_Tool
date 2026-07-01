@@ -10,9 +10,9 @@ Gemini or Antigravity owns frontend implementation, React/CSS, UI rendering, bro
 
 ## Active Handoffs
 
-`phase_3_antigravity_charting_slicer_ui.md` - Antigravity owns the Phase 3 dashboard/chart slicer UI repair against the backend `content.chartSpec` contract.
+None.
 
-Completed handoffs are retained under `project_docs/active/decision_intelligence/completed/` as reference only.
+Completed handoffs are retained under `project_docs/active/decision_intelligence/completed/` as reference only. The completed charting slicer handoff is now `project_docs/active/decision_intelligence/completed/phase_3_antigravity_charting_slicer_ui_handoff.md`.
 
 Current truth: `project_docs/active/status/decision_intelligence_execution_status.md`
 

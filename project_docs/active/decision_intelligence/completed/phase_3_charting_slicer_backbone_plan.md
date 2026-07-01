@@ -1,4 +1,6 @@
-# Phase 3 - Charting And Slicer Backbone Plan
+# Completed Reference - Phase 3 Charting And Slicer Backbone Plan
+
+This plan is complete as of user acceptance on 2026-06-30. It is retained as a completed reference, not an active implementation gate.
 
 ## Summary
 
@@ -8,13 +10,13 @@ The dashboard becomes the durable chart workspace, tentatively named Chart Studi
 
 ## Current Gate
 
-Status: backend contract ready; frontend implementation is not complete and is assigned to Antigravity/UI implementation.
+Status: complete by user acceptance.
 
 Backend readiness target: backend contract ready for deterministic `content.chartSpec` on AI Chat chart artifacts, with tests proving the additive contract does not break existing chart payloads.
 
 Frontend readiness target: Antigravity implements the React/CSS dashboard and charting UI. Codex must not edit frontend files unless the user explicitly authorizes Codex frontend edits in a future session.
 
-Completion target: backend tests, Antigravity frontend build/browser verification, `git diff --check`, and `python .codex/hooks/agent_harness_check.py` pass. Browser acceptance remains user-controlled.
+Completion result: backend contract work was completed by Codex, frontend charting and slicer work was completed by Antigravity, and the user accepted the charting improvements.
 
 ## Key Changes
 

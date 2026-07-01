@@ -15,7 +15,6 @@ The Decisions window is no longer the required continuation path. Its future rol
 | Need | Read |
 | --- | --- |
 | Short current status | `../status/decision_intelligence_execution_status.md` |
-| Current charting and slicer execution plan | `current/phase_3_charting_slicer_backbone_plan.md` |
 | Future dashboard canvas and sharing skeleton plan | `future/dashboard_canvas_layout_and_sharing_skeleton_plan.md` |
 | Completed AI Chat rollout details | `../../archive/ai_chat_decision_output_unification_rollout_completed.md` |
 | Contract reference | `../contracts/decision_objects.md` |
@@ -36,6 +35,8 @@ Completed plans and handoffs are in `completed/`. Do not scan them by default.
 | `completed/phase_4_5_ai_chat_decision_intelligence_plan.md` | Completed AI Chat hardening plan |
 | `completed/phase_2_fullscreen_decision_asset_review_architecture.md` | Completed immutable DecisionAsset review architecture |
 | `completed/phase_2_fullscreen_decision_asset_review_gemini_handoff.md` | Completed fullscreen-review implementation handoff |
+| `completed/phase_3_charting_slicer_backbone_plan.md` | Completed charting and slicer backbone plan |
+| `completed/phase_3_antigravity_charting_slicer_ui_handoff.md` | Completed charting slicer frontend handoff |
 | Other files in `completed/` | Historical or completed reference only |
 
 ## Superseded Reference

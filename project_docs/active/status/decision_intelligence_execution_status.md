@@ -18,17 +18,17 @@ The Decisions window remains secondary. Saved DecisionAssets support immutable h
 
 ## Current Project Gate
 
-Status: **Phase 3 - Charting And Slicer Backbone: FRONTEND REPAIR NOT COMPLETE — ANTIGRAVITY FOLLOW-UP NEEDED**
+No Decision Intelligence implementation phase is active.
 
-Current plan:
+Status: **Phase 3 - Charting And Slicer Backbone: COMPLETE — USER ACCEPTED**
 
-`project_docs/active/decision_intelligence/current/phase_3_charting_slicer_backbone_plan.md`
-
-Goal: make charting and dashboard slicing robust across standalone chart windows, dashboard charts/KPIs, and AI Chat chart artifacts without a full charting rewrite. Local-first dashboard persistence is the current default.
-
-Latest verified fact: Codex source review found the Antigravity repair is directionally improved but not complete. The build passes, but `git diff --check` fails on trailing whitespace in `frontend/frontend/src/features/charts/SmartChartWindow.jsx`. `DashboardCommandBar` and `DashboardSlicerPanel` are still absolute-positioned overlays that can overlap each other and dashboard content instead of reserving dashboard workspace space. The repair also introduced unused imports/state in touched files and still relies on inline styles for chart and AI pin actions. Antigravity must address the active handoff review findings before user browser acceptance can close Phase 3.
+Latest verified fact: the user accepted the charting improvements on 2026-06-30. The completed slice covered dashboard-first charting, dashboard slicers, chart-local slicer conflict behavior, local-first dashboard persistence, and AI Chat/chart-window pin-to-dashboard actions.
 
 Previous completed references:
+
+`project_docs/active/decision_intelligence/completed/phase_3_charting_slicer_backbone_plan.md`
+
+`project_docs/active/decision_intelligence/completed/phase_3_antigravity_charting_slicer_ui_handoff.md`
 
 `project_docs/active/decision_intelligence/completed/phase_2_fullscreen_decision_asset_review_architecture.md`
 
@@ -36,9 +36,9 @@ Previous completed references:
 
 ## Next Focus
 
-Antigravity must complete the charting/dashboard slicer UI repair against the active handoff before this phase can be accepted. Active handoff:
+Awaiting the next project phase instruction. Future dashboard canvas and sharing skeleton planning exists at:
 
-`project_docs/active/ai_hand_off/phase_3_antigravity_charting_slicer_ui.md`
+`project_docs/active/decision_intelligence/future/dashboard_canvas_layout_and_sharing_skeleton_plan.md`
 
 ## Canonical Resume Order
 
