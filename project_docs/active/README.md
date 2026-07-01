@@ -33,6 +33,7 @@ Dataset truth remains important, but the old standalone Phase 4 dataset handoff 
 | Completed rollout history | `project_docs/archive/ai_chat_decision_output_unification_rollout_completed.md` | Historical reference only; do not use as the current plan |
 | Completed plans | `project_docs/active/decision_intelligence/completed/` | Reference only |
 | Contracts | `project_docs/active/contracts/` | Backend/frontend payload truth |
+| Dashboard canvas state contract | `project_docs/active/contracts/dashboard_canvas_state.md` | Local-first dashboard canvas, layout, and sharing skeleton state |
 | Dataset governance contract | `project_docs/active/contracts/data_catalog_lineage.md` | Readiness policy and enforcement truth |
 | Agent harness | `project_docs/active/agent_harness/` | Reusable agent backbone, hooks, and validation |
 | Handoffs | `project_docs/active/ai_hand_off/` | Active handoffs only |

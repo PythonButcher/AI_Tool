@@ -1,10 +1,22 @@
-# Dashboard Canvas Layout And Sharing Skeleton Plan
+# Phase 4 - Dashboard Canvas Layout And Sharing Skeleton Plan
 
 ## Purpose
 
 Create a future dashboard workspace that feels more flexible than a traditional business intelligence dashboard without becoming a full collaboration platform yet. Users should be able to place charts and KPI cards on a canvas, resize them, pin them in place, keep slicers available for live exploration, and prepare dashboards for later sharing with people or teams.
 
-This is a future implementation plan. It must not interrupt the active Phase 3 charting and slicer repair gate.
+This is the active implementation plan for the next dashboard slice. It builds on the completed charting and slicer work.
+
+## Current Gate
+
+Status: active; Antigravity frontend implementation handoff is needed.
+
+Backend readiness target: no backend route or authentication work is required for the first slice. The implementation should use local-first dashboard state and preserve the existing `chartStudioDashboard:v1` persistence model.
+
+Contract target: `project_docs/active/contracts/dashboard_canvas_state.md` defines the local dashboard canvas state, item layout metadata, sharing skeleton metadata, migration rules, and invariants for this slice.
+
+Frontend readiness target: Antigravity implements the dashboard canvas, edit/view modes, layout persistence, item lock behavior, slicer access in view mode, and sharing skeleton metadata/UI placeholders. Codex must not edit frontend files unless the user explicitly authorizes Codex frontend edits in a future session.
+
+Completion target: `npm --prefix frontend\frontend run build`, `git diff --check`, `python .codex/hooks/agent_harness_check.py`, and user browser acceptance pass. Browser acceptance remains user-controlled.
 
 ## Product Direction
 
@@ -25,6 +37,8 @@ The first version can use local-first persistence. A later backend phase can syn
 ## Suggested State Shape
 
 Extend the versioned dashboard state with layout and sharing-ready metadata while keeping the current local-first model.
+
+The authoritative local state contract is `project_docs/active/contracts/dashboard_canvas_state.md`. Use that contract when implementing normalization, migration, persistence, and acceptance checks.
 
 Dashboard state should include a dashboard id, name, description, mode, canvas settings, dashboard slicers, item ids, layout version, and sharing metadata placeholders. Each dashboard item should include its id, item type, chart spec or KPI config, source metadata, local slicers, layout rectangle, locked state, title, display options, and timestamps.
 

@@ -18,11 +18,15 @@ The Decisions window remains secondary. Saved DecisionAssets support immutable h
 
 ## Current Project Gate
 
-No Decision Intelligence implementation phase is active.
+Status: **Phase 4 - Dashboard Canvas Layout And Sharing Skeleton: ANTIGRAVITY HANDOFF READY**
 
-Status: **Phase 3 - Charting And Slicer Backbone: COMPLETE — USER ACCEPTED**
+Current plan:
 
-Latest verified fact: the user accepted the charting improvements on 2026-06-30. The completed slice covered dashboard-first charting, dashboard slicers, chart-local slicer conflict behavior, local-first dashboard persistence, and AI Chat/chart-window pin-to-dashboard actions.
+`project_docs/active/decision_intelligence/current/phase_4_dashboard_canvas_layout_and_sharing_skeleton_plan.md`
+
+Goal: turn the dashboard into a canvas-style workspace where pinned charts and KPI cards can be moved, resized, locked, persisted locally, sliced in view mode, and prepared for future sharing without real authentication or backend sharing APIs.
+
+Latest verified fact: Codex activated the dashboard canvas and sharing skeleton plan, created a detailed Antigravity handoff, and added the local-first dashboard canvas state contract at `project_docs/active/contracts/dashboard_canvas_state.md`. Codex is not authorized to implement frontend/UI code in this session, so Antigravity owns the React/CSS implementation and browser verification.
 
 Previous completed references:
 
@@ -36,9 +40,9 @@ Previous completed references:
 
 ## Next Focus
 
-Awaiting the next project phase instruction. Future dashboard canvas and sharing skeleton planning exists at:
+Antigravity implementation for Phase 4 dashboard canvas layout and sharing skeleton. Active handoff:
 
-`project_docs/active/decision_intelligence/future/dashboard_canvas_layout_and_sharing_skeleton_plan.md`
+`project_docs/active/ai_hand_off/phase_4_antigravity_dashboard_canvas_layout_and_sharing_skeleton.md`
 
 ## Canonical Resume Order
 

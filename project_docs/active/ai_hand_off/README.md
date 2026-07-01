@@ -10,9 +10,9 @@ Gemini or Antigravity owns frontend implementation, React/CSS, UI rendering, bro
 
 ## Active Handoffs
 
-None.
+`phase_4_antigravity_dashboard_canvas_layout_and_sharing_skeleton.md` - Antigravity owns the Phase 4 dashboard canvas layout and sharing skeleton implementation.
 
-Completed handoffs are retained under `project_docs/active/decision_intelligence/completed/` as reference only. The completed charting slicer handoff is now `project_docs/active/decision_intelligence/completed/phase_3_antigravity_charting_slicer_ui_handoff.md`.
+Completed handoffs are retained under `project_docs/active/decision_intelligence/completed/` as reference only. The completed charting slicer handoff is `project_docs/active/decision_intelligence/completed/phase_3_antigravity_charting_slicer_ui_handoff.md`.
 
 Current truth: `project_docs/active/status/decision_intelligence_execution_status.md`
 
