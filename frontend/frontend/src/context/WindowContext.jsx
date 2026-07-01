@@ -10,6 +10,13 @@ import {
   createDefaultDashboardFilters,
   normalizeDashboardFilters,
 } from '../utils/dashboardFilterUtils';
+import {
+  createDefaultDashboardCanvasSettings,
+  createDefaultDashboardSharingSkeleton,
+  normalizeDashboardItemLayout,
+  normalizeDashboardItemDisplay,
+  normalizeDashboardItemSourceMetadata
+} from '../utils/dashboardCanvasUtils';
 
 export const WindowContext = createContext();
 
@@ -21,7 +28,11 @@ const createDefaultDashboardState = () => ({
   id: 'dashboard-primary',
   name: 'Business Dashboard',
   isVisible: false,
+  mode: 'edit',
   filters: createDefaultDashboardFilters(),
+  canvas: createDefaultDashboardCanvasSettings(),
+  sharing: createDefaultDashboardSharingSkeleton(),
+  layoutVersion: 1,
 });
 
 const normalizeSemanticConfig = (semanticConfig) => ({
@@ -29,7 +40,14 @@ const normalizeSemanticConfig = (semanticConfig) => ({
   groupBy: semanticConfig?.groupBy || '',
 });
 
-const normalizeDashboardItem = (item) => {
+const normalizeDashboardItem = (item, index = 0) => {
+  const baseItem = {
+    layout: normalizeDashboardItemLayout(item?.layout, index, item?.itemType || 'chart'),
+    locked: item?.locked || false,
+    display: normalizeDashboardItemDisplay(item?.display),
+    sourceMetadata: normalizeDashboardItemSourceMetadata(item?.sourceMetadata),
+  };
+
   if (item?.itemType === 'kpi') {
     return {
       id: item.id,
@@ -37,16 +55,21 @@ const normalizeDashboardItem = (item) => {
       title: item.title || 'KPI Card',
       semanticConfig: normalizeSemanticConfig(item.semanticConfig),
       comparisonEnabled: item.comparisonEnabled !== false,
+      ...baseItem,
     };
   }
 
   return {
     id: item.id,
     itemType: 'chart',
+    title: item?.title || 'Chart',
     chartType: item?.chartType || item?.type || 'Bar',
     mapping: item?.mapping || {},
     dataSourceMode: item?.dataSourceMode || 'raw',
     semanticConfig: normalizeSemanticConfig(item?.semanticConfig),
+    chartSpec: item?.chartSpec || null,
+    localSlicers: item?.localSlicers || [],
+    ...baseItem,
   };
 };
 
@@ -68,11 +91,14 @@ const loadDashboardStorage = () => {
       ...createDefaultDashboardState(),
       ...parsed?.state,
       filters: normalizeDashboardFilters(parsed?.state?.filters),
+      canvas: parsed?.state?.canvas || createDefaultDashboardCanvasSettings(),
+      sharing: parsed?.state?.sharing || createDefaultDashboardSharingSkeleton(),
+      mode: parsed?.state?.mode || 'edit',
     };
 
     return {
       state: dashboardState,
-      items: Array.isArray(parsed?.items) ? parsed.items.map(normalizeDashboardItem) : [],
+      items: Array.isArray(parsed?.items) ? parsed.items.map((item, index) => normalizeDashboardItem(item, index)) : [],
     };
   } catch (error) {
     console.error('Failed to parse dashboard storage', error);
@@ -232,36 +258,38 @@ export const WindowProvider = ({ children }) => {
   }, []);
 
   const addDashboardChart = useCallback((chartConfig = {}) => {
-    const newId = `dashboard-chart-${Date.now()}`;
-    const item = normalizeDashboardItem({
-      id: newId,
-      itemType: 'chart',
-      chartType: 'Bar',
-      mapping: {},
-      dataSourceMode: 'raw',
-      semanticConfig: { metricId: '', groupBy: '' },
-      ...chartConfig,
+    setDashboardItems((prev) => {
+      const newId = `dashboard-chart-${Date.now()}`;
+      const item = normalizeDashboardItem({
+        id: newId,
+        itemType: 'chart',
+        chartType: 'Bar',
+        mapping: {},
+        dataSourceMode: 'raw',
+        semanticConfig: { metricId: '', groupBy: '' },
+        ...chartConfig,
+      }, prev.length);
+      return [...prev, item];
     });
-
-    setDashboardItems((prev) => [...prev, item]);
     setDashboardState((prev) => ({ ...prev, isVisible: true }));
-    return newId;
+    return `dashboard-chart-${Date.now()}`;
   }, []);
 
   const addDashboardKpi = useCallback((kpiConfig = {}) => {
-    const newId = `dashboard-kpi-${Date.now()}`;
-    const item = normalizeDashboardItem({
-      id: newId,
-      itemType: 'kpi',
-      title: 'KPI Card',
-      semanticConfig: { metricId: '', groupBy: '' },
-      comparisonEnabled: true,
-      ...kpiConfig,
+    setDashboardItems((prev) => {
+      const newId = `dashboard-kpi-${Date.now()}`;
+      const item = normalizeDashboardItem({
+        id: newId,
+        itemType: 'kpi',
+        title: 'KPI Card',
+        semanticConfig: { metricId: '', groupBy: '' },
+        comparisonEnabled: true,
+        ...kpiConfig,
+      }, prev.length);
+      return [...prev, item];
     });
-
-    setDashboardItems((prev) => [...prev, item]);
     setDashboardState((prev) => ({ ...prev, isVisible: true }));
-    return newId;
+    return `dashboard-kpi-${Date.now()}`;
   }, []);
 
   const updateDashboardItem = useCallback((id, updates) => {
@@ -293,6 +321,32 @@ export const WindowProvider = ({ children }) => {
 
   const toggleSlicerPanel = useCallback(() => {
     setIsSlicerPanelOpen((prev) => !prev);
+  }, []);
+
+  const setDashboardMode = useCallback((mode) => {
+    setDashboardState((prev) => ({ ...prev, mode }));
+  }, []);
+
+  const updateDashboardCanvas = useCallback((canvasUpdates) => {
+    setDashboardState((prev) => ({ ...prev, canvas: { ...prev.canvas, ...canvasUpdates } }));
+  }, []);
+
+  const updateDashboardSharing = useCallback((sharingUpdates) => {
+    setDashboardState((prev) => ({ ...prev, sharing: { ...prev.sharing, ...sharingUpdates } }));
+  }, []);
+
+  const toggleDashboardItemLock = useCallback((id) => {
+    setDashboardItems((prev) => prev.map((item) => {
+      if (item.id !== id) return item;
+      return { ...item, locked: !item.locked };
+    }));
+  }, []);
+
+  const updateDashboardItemLayout = useCallback((id, layoutUpdates) => {
+    setDashboardItems((prev) => prev.map((item) => {
+      if (item.id !== id) return item;
+      return { ...item, layout: { ...item.layout, ...layoutUpdates } };
+    }));
   }, []);
 
   const value = useMemo(
@@ -328,6 +382,11 @@ export const WindowProvider = ({ children }) => {
       addDashboardKpi,
       updateDashboardItem,
       removeDashboardItem,
+      setDashboardMode,
+      updateDashboardCanvas,
+      updateDashboardSharing,
+      toggleDashboardItemLock,
+      updateDashboardItemLayout,
     }),
     [
       openWindows,
@@ -361,6 +420,11 @@ export const WindowProvider = ({ children }) => {
       addDashboardKpi,
       updateDashboardItem,
       removeDashboardItem,
+      setDashboardMode,
+      updateDashboardCanvas,
+      updateDashboardSharing,
+      toggleDashboardItemLock,
+      updateDashboardItemLayout,
     ]
   );
 

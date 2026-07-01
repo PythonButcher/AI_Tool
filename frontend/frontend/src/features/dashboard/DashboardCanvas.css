@@ -1,0 +1,43 @@
+.dashboard-canvas-container {
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: var(--bg-primary);
+  position: relative;
+}
+
+.dashboard-canvas__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-tertiary);
+  text-align: center;
+  padding: 32px;
+}
+
+.dashboard-canvas__empty p {
+  font-size: 1.1rem;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+.dashboard-canvas__empty .dashboard-canvas__empty-sub {
+  font-size: 0.9rem;
+  max-width: 400px;
+}
+
+/* React-Grid-Layout overrides for Edit Mode */
+.dashboard-canvas-container.is-edit-mode .react-grid-item.react-grid-placeholder {
+  background: var(--accent-blue);
+  opacity: 0.15;
+  border-radius: 8px;
+  border: 2px dashed var(--accent-blue);
+}
+
+/* React-Grid-Layout overrides for View Mode */
+.dashboard-canvas-container.is-view-mode .react-resizable-handle {
+  display: none !important;
+}

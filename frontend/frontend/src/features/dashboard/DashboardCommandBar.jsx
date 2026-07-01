@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useWindowContext } from '../../context/WindowContext';
-import { FaChartBar, FaCalculator, FaBook, FaTimes, FaFilter } from 'react-icons/fa';
+import { FaChartBar, FaCalculator, FaBook, FaFilter, FaEdit, FaEye, FaShareAlt } from 'react-icons/fa';
 import SemanticMetricEditor from '../semantic/SemanticMetricEditor';
+import DashboardShareSkeleton from './DashboardShareSkeleton';
 import './DashboardCommandBar.css';
 
 function DashboardCommandBar() {
@@ -11,9 +12,12 @@ function DashboardCommandBar() {
     addDashboardChart,
     addDashboardKpi,
     toggleSlicerPanel,
+    setDashboardMode,
   } = useWindowContext();
 
   const [isSemanticEditorOpen, setIsSemanticEditorOpen] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const isEditMode = dashboardState.mode === 'edit';
 
   // Compute active filters to show as chips
   const activeFilters = dashboardState.filters?.dimensionFilters?.filter(f => f.dimensionId && f.values.length > 0) || [];
@@ -49,6 +53,34 @@ function DashboardCommandBar() {
       </div>
 
       <div className="command-bar__right">
+        <div className="command-bar__mode-toggle">
+          <button
+            className={`command-bar__btn command-bar__btn--toggle ${isEditMode ? 'is-active' : ''}`}
+            onClick={() => setDashboardMode('edit')}
+            title="Edit Layout"
+          >
+            <FaEdit /> Edit
+          </button>
+          <button
+            className={`command-bar__btn command-bar__btn--toggle ${!isEditMode ? 'is-active' : ''}`}
+            onClick={() => setDashboardMode('view')}
+            title="View Dashboard"
+          >
+            <FaEye /> View
+          </button>
+        </div>
+
+        <div className="command-bar__divider" />
+
+        <button
+          type="button"
+          className="command-bar__btn"
+          onClick={() => setIsShareModalOpen(true)}
+          title="Share Dashboard Draft"
+        >
+          <FaShareAlt /> Share
+        </button>
+
         <button 
           type="button" 
           className="command-bar__btn command-bar__btn--primary"
@@ -63,6 +95,7 @@ function DashboardCommandBar() {
           className="command-bar__btn" 
           onClick={() => addDashboardKpi()}
           title="Add Semantic KPI"
+          disabled={!isEditMode}
         >
           <FaCalculator /> KPI
         </button>
@@ -71,6 +104,7 @@ function DashboardCommandBar() {
           className="command-bar__btn"
           onClick={() => addDashboardChart({ dataSourceMode: 'semantic' })}
           title="Add Semantic Chart"
+          disabled={!isEditMode}
         >
           <FaChartBar /> Chart
         </button>
@@ -87,6 +121,10 @@ function DashboardCommandBar() {
       <SemanticMetricEditor
         isOpen={isSemanticEditorOpen}
         onClose={() => setIsSemanticEditorOpen(false)}
+      />
+      <DashboardShareSkeleton
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
       />
     </div>
   );
