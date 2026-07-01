@@ -18,7 +18,7 @@ The Decisions window remains secondary. Saved DecisionAssets support immutable h
 
 ## Current Project Gate
 
-Status: **Phase 3 - Charting And Slicer Backbone: UI IMPLEMENTED AND VERIFIED**
+Status: **Phase 3 - Charting And Slicer Backbone: FRONTEND REPAIR NOT COMPLETE — ANTIGRAVITY FOLLOW-UP NEEDED**
 
 Current plan:
 
@@ -26,7 +26,7 @@ Current plan:
 
 Goal: make charting and dashboard slicing robust across standalone chart windows, dashboard charts/KPIs, and AI Chat chart artifacts without a full charting rewrite. Local-first dashboard persistence is the current default.
 
-Latest verified fact: Antigravity UI implementation for dashboard slicers, chart-local slicer conflict resolution, local-first dashboard migration (`chartStudioDashboard:v1`), and AI Chat chart pin/open actions has been successfully implemented and verified. The dashboard slicer experience now uses a draft state and an explicit Apply button. Slicer conflicts between dashboard filters and chart-local slicers trigger an appropriate empty state.
+Latest verified fact: Codex source review found the Antigravity repair is directionally improved but not complete. The build passes, but `git diff --check` fails on trailing whitespace in `frontend/frontend/src/features/charts/SmartChartWindow.jsx`. `DashboardCommandBar` and `DashboardSlicerPanel` are still absolute-positioned overlays that can overlap each other and dashboard content instead of reserving dashboard workspace space. The repair also introduced unused imports/state in touched files and still relies on inline styles for chart and AI pin actions. Antigravity must address the active handoff review findings before user browser acceptance can close Phase 3.
 
 Previous completed references:
 
@@ -36,9 +36,9 @@ Previous completed references:
 
 ## Next Focus
 
-Antigravity Phase 3 work complete. Await next project phase instruction or codex architecture review.
+Antigravity must complete the charting/dashboard slicer UI repair against the active handoff before this phase can be accepted. Active handoff:
 
-
+`project_docs/active/ai_hand_off/phase_3_antigravity_charting_slicer_ui.md`
 
 ## Canonical Resume Order
 

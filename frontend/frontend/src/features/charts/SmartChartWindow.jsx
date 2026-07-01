@@ -12,6 +12,7 @@ import {
 } from '../../utils/dashboardFilterUtils';
 import { TbChartBar, TbChartDots, TbChartLine, TbChartPie, TbChartDonut } from 'react-icons/tb';
 import { AiOutlineFundProjectionScreen, AiOutlineTag, AiOutlineFileSearch, AiOutlineLineChart } from 'react-icons/ai';
+import { FaThumbtack } from 'react-icons/fa';
 import { useWindowContext } from '../../context/WindowContext';
 import { normalizeDatasetRows, useActiveDataset, useSemanticModel } from '../../context/DataContext';
 import DropZone from '../../utils/DropZone';
@@ -65,6 +66,7 @@ const SmartChartWindow = ({
 
   const selectedMetricId = semanticConfig?.metricId || '';
   const selectedGroupBy = semanticConfig?.groupBy || '';
+  const [pinFeedback, setPinFeedback] = useState(false);
   const selectedMetric = semanticMetrics.find((metric) => metric.id === selectedMetricId) || null;
   const selectedDimension = semanticDimensions.find((dimension) => dimension.id === selectedGroupBy) || null;
 
@@ -119,7 +121,7 @@ const SmartChartWindow = ({
     });
   }, [filteredDatasetRows, mapping]);
 
-  const slicerConflictDimensionId = useMemo(() => {
+  const slicerConflict = useMemo(() => {
     return getSlicerConflict(externalFilters, chartSpec?.slicers);
   }, [externalFilters, chartSpec?.slicers]);
 
@@ -269,18 +271,23 @@ const SmartChartWindow = ({
       
       {chartSpec?.schemaVersion === 'chart_spec_v1' && (
         <div className="chart-actions-mini">
-          <button className="mode-btn" onClick={() => {
-            updateDashboardItem(`dashboard-chart-${Date.now()}`, {
-              chartType: type,
-              mapping,
-              dataSourceMode,
-              semanticConfig,
-              chartSpec,
-            });
-          }}>Pin to Dashboard</button>
-          <button className="mode-btn" onClick={() => {
-             // duplicate logic could go here
-          }}>Duplicate</button>
+          <button
+            className="mode-btn pin-btn"
+            onClick={() => {
+              updateDashboardItem(`dashboard-chart-${Date.now()}`, {
+                chartType: type,
+                mapping,
+                dataSourceMode,
+                semanticConfig,
+                chartSpec,
+              });
+              setPinFeedback(true);
+              setTimeout(() => setPinFeedback(false), 2000);
+            }}
+          >
+            <FaThumbtack />
+            {pinFeedback ? 'Pinned!' : 'Pin to Dashboard'}
+          </button>
         </div>
       )}
     </div>
@@ -403,17 +410,21 @@ const SmartChartWindow = ({
       )}
 
       <div className="chart-content-area">
-        {slicerConflictDimensionId && (
+        {slicerConflict && (
           <div className="chart-empty-state">
              <AiOutlineFileSearch className="empty-icon" />
              <h4>Slicer Conflict</h4>
-             <p>Dashboard filter and chart-local slicer conflict on <strong>{slicerConflictDimensionId}</strong>. No data overlap.</p>
+             <p>Dashboard filter and chart-local slicer conflict on <strong>{slicerConflict.dimensionId}</strong>. No data overlap.</p>
+             <p className="slicer-conflict-details">
+               Dashboard says: {slicerConflict.dashboardValues.join(', ')}<br/>
+               Chart says: {slicerConflict.chartValues.join(', ')}
+             </p>
           </div>
         )}
       
-        {!isEmpty && !slicerConflictDimensionId && <ChartComponent chartType={type} chartData={chartData} />}
+        {!isEmpty && !slicerConflict && <ChartComponent chartType={type} chartData={chartData} />}
 
-        {isEmpty && !isDraggingAny && !slicerConflictDimensionId && (
+        {isEmpty && !isDraggingAny && !slicerConflict && (
           <div className="chart-placeholder">
             <AiOutlineFileSearch size={40} />
             <p>

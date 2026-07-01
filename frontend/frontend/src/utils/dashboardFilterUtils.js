@@ -224,7 +224,11 @@ export const getSlicerConflict = (dashboardFilters, chartSlicers) => {
       
       const intersection = chartVals.filter(v => dashVals.includes(v));
       if (intersection.length === 0) {
-        return chartSlicer.dimensionId; // Conflict found on this dimension
+        return {
+          dimensionId: chartSlicer.dimensionId,
+          dashboardValues: dashFilter.values,
+          chartValues: chartSlicer.values
+        }; // Conflict found on this dimension
       }
     }
   }

@@ -4,7 +4,8 @@ import {
   FaRobot, FaTools, FaDatabase, FaPlus, FaLayerGroup,
   FaChartBar, FaShieldAlt, FaCircle, FaInfoCircle, FaPaperPlane,
   FaCheckCircle, FaExclamationTriangle, FaExternalLinkAlt, FaFileAlt,
-  FaEye, FaChevronRight, FaTerminal, FaSearch, FaCloud, FaFilePdf
+  FaEye, FaChevronRight, FaTerminal, FaSearch, FaCloud, FaFilePdf,
+  FaThumbtack, FaTimes, FaMagic
 } from "react-icons/fa";
 import {
   TextField, Button, Typography, Divider, Tooltip, Chip,
@@ -48,6 +49,8 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenDecisio
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [awaitingCleanInstructions, setAwaitingCleanInstructions] = useState(false);
+  const [sessionReadiness, setSessionReadiness] = useState(null);
+  const [pinFeedbackIds, setPinFeedbackIds] = useState({});
   const [sessionState, setSessionState] = useState({});
   const [activeMode, setActiveMode] = useState('ask');
   const [activeArtifact, setActiveArtifact] = useState(null);
@@ -665,10 +668,30 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenDecisio
                 {renderArtifactExportBar(artifact, lookupSessionState, lookupCapabilityState, lookupDecisionReadiness)}
                 
                 {content?.chartSpec?.schemaVersion === 'chart_spec_v1' && (
-                  <div className="ai-shell__chart-actions" style={{ padding: '8px', display: 'flex', gap: '8px', borderBottom: '1px solid var(--border-color)' }}>
+                  <div className="ai-shell__chart-actions">
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      size="medium"
+                      startIcon={<FaThumbtack />}
+                      onClick={() => {
+                        addDashboardChart({
+                          type: content.chartType || 'Bar',
+                          mapping: content.chartData?.mapping || {},
+                          dataSourceMode: 'semantic',
+                          chartSpec: content.chartSpec
+                        });
+                        const feedId = artifact.id || `temp-${Date.now()}`;
+                        setPinFeedbackIds(prev => ({ ...prev, [feedId]: true }));
+                        setTimeout(() => setPinFeedbackIds(prev => ({ ...prev, [feedId]: false })), 2000);
+                      }}
+                    >
+                      {pinFeedbackIds[artifact.id || ''] ? 'Pinned!' : 'Pin to Dashboard'}
+                    </Button>
                     <Button
                       variant="outlined"
-                      size="small"
+                      size="medium"
+                      startIcon={<FaChartBar />}
                       onClick={() => addChart({
                         type: content.chartType || 'Bar',
                         mapping: content.chartData?.mapping || {},
@@ -677,18 +700,6 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenDecisio
                       })}
                     >
                       Open Chart Window
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      onClick={() => addDashboardChart({
-                        type: content.chartType || 'Bar',
-                        mapping: content.chartData?.mapping || {},
-                        dataSourceMode: 'semantic',
-                        chartSpec: content.chartSpec
-                      })}
-                    >
-                      Pin to Dashboard
                     </Button>
                   </div>
                 )}

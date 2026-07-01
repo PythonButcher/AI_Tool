@@ -341,3 +341,7 @@
     grid-template-columns: 1fr;
   }
 }
+
+.chart-actions-mini { display: flex; gap: 8px; }
+.mode-btn.pin-btn { display: flex; align-items: center; gap: 6px; font-weight: bold; color: var(--accent-blue); }
+.slicer-conflict-details { opacity: 0.7; font-size: 0.9em; margin-top: 4px; }

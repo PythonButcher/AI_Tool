@@ -92,6 +92,7 @@ export const WindowProvider = ({ children }) => {
   const [windowContentStates, setWindowContentStates] = useState({});
   const [dashboardState, setDashboardState] = useState(createDefaultDashboardState);
   const [dashboardItems, setDashboardItems] = useState([]);
+  const [isSlicerPanelOpen, setIsSlicerPanelOpen] = useState(false);
 
   const openWindow = useCallback((id) => {
     setOpenWindows((prev) => (prev.includes(id) ? prev : [...prev, id]));
@@ -279,15 +280,19 @@ export const WindowProvider = ({ children }) => {
   const removeDashboardItem = useCallback((id) => {
     setDashboardItems((prev) => prev.filter((item) => item.id !== id));
     setMinimizedWindows((prev) => {
-      const copy = { ...prev };
-      delete copy[id];
-      return copy;
+      const next = { ...prev };
+      delete next[id];
+      return next;
     });
     setLockedWindows((prev) => {
-      const copy = { ...prev };
-      delete copy[id];
-      return copy;
+      const next = { ...prev };
+      delete next[id];
+      return next;
     });
+  }, []);
+
+  const toggleSlicerPanel = useCallback(() => {
+    setIsSlicerPanelOpen((prev) => !prev);
   }, []);
 
   const value = useMemo(
@@ -313,6 +318,9 @@ export const WindowProvider = ({ children }) => {
       dashboardItems,
       openDashboard,
       closeDashboard,
+      isSlicerPanelOpen,
+      setIsSlicerPanelOpen,
+      toggleSlicerPanel,
       updateDashboard,
       setDashboardFilters,
       clearDashboardFilters,
@@ -343,6 +351,9 @@ export const WindowProvider = ({ children }) => {
       dashboardItems,
       openDashboard,
       closeDashboard,
+      isSlicerPanelOpen,
+      setIsSlicerPanelOpen,
+      toggleSlicerPanel,
       updateDashboard,
       setDashboardFilters,
       clearDashboardFilters,

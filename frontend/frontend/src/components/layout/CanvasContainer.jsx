@@ -20,12 +20,26 @@ import { useWindowContext } from '../../context/WindowContext';
 import { DataContext } from '../../context/DataContext';
 import RawDataViewer from '../../features/viewing/RawDataViewer';
 import MachineLearningPanel from '../../features/machine_learning/MachineLearningPanel';
-import DashboardFilterBar from '../../features/dashboard/DashboardFilterBar';
+import DashboardSlicerPanel from '../../features/dashboard/DashboardSlicerPanel';
+import DashboardCommandBar from '../../features/dashboard/DashboardCommandBar';
 import KpiCardWindow from '../../features/dashboard/KpiCardWindow';
 import { WINDOW_SIZING } from '../../utils/windowSizing';
 import DecisionGraphWorkspace from '../../features/business/decision/graph/DecisionGraphWorkspace';
 import DestinationHome from './DestinationHome';
-import { FaCompress, FaExternalLinkAlt } from 'react-icons/fa';
+import {
+  FaSave,
+  FaUndo,
+  FaRedo,
+  FaShare,
+  FaTrash,
+  FaFileExport,
+  FaProjectDiagram,
+  FaCogs,
+  FaBookOpen,
+  FaRobot,
+  FaCompress,
+  FaExternalLinkAlt
+} from 'react-icons/fa';
 
 const DESTINATIONS = {
   WORKSPACE: 'workspace',
@@ -93,11 +107,14 @@ function CanvasContainer({
     getWindowContentState,
     charts,
     removeChart,
-    dashboardState,
     dashboardItems,
+    dashboardState,
+    updateDashboardItem,
     removeDashboardItem,
     addDashboardKpi,
     addDashboardChart,
+    isAiChatOpen,
+    toggleAiChat,
     restoreWindow,
   } = useWindowContext();
 
@@ -995,13 +1012,14 @@ function CanvasContainer({
   ]);
 
   return (
-    <div className="canvas-dnd-wrapper" style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden' }}>
+    <div className="canvas-dnd-wrapper" style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+      {isDashboardDest && <DashboardCommandBar />}
       <div
         ref={containerRef}
         className="canvas-container desktop-surface"
-        style={{ width: '100%', height: '100%', position: 'relative' }}
+        style={{ width: '100%', flex: 1, position: 'relative' }}
       >
-        {isDashboardDest && <DashboardFilterBar />}
+        {isDashboardDest && <DashboardSlicerPanel />}
         {shouldShowHome && (
           <DestinationHome
             activeDestination={activeDestination}
