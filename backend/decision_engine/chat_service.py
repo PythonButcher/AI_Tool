@@ -1218,6 +1218,8 @@ class DecisionChatService:
         chart_response = build_chart_response(dataset, interpretation)
         fields_used = {key: value for key, value in (interpretation.get("fields") or {}).items() if value}
         chart_type = chart_response.get("chartType") or interpretation.get("chart_type") or "Bar"
+        filters_applied = interpretation.get("filters") or []
+        meta = chart_response.get("meta") or {}
         explanation = chart_response.get("explanation") or f"Generated a {chart_type.lower()} chart from the grounded dataset."
 
         return {
@@ -1227,8 +1229,15 @@ class DecisionChatService:
                 "chartType": chart_type,
                 "chartData": chart_response.get("chartData"),
                 "fieldsUsed": fields_used,
-                "filtersApplied": interpretation.get("filters") or [],
-                "meta": chart_response.get("meta") or {},
+                "filtersApplied": filters_applied,
+                "meta": meta,
+                "chartSpec": DecisionChatService._build_raw_chart_spec(
+                    title=f"{chart_type} chart",
+                    chart_type=chart_type,
+                    fields=fields_used,
+                    filters=filters_applied,
+                    meta=meta,
+                ),
             },
         }, explanation
 
@@ -1366,15 +1375,25 @@ class DecisionChatService:
             chart_data = chart_response.get("chartData") or {}
             if chart_data.get("datasets"):
                 chart_type = chart_response.get("chartType") or interpretation.get("chart_type") or "Bar"
+                fields_used = {key: value for key, value in merged_fields.items() if value}
+                filters_applied = interpretation.get("filters") or []
+                meta = chart_response.get("meta") or {}
                 artifact = {
                     "type": "chart",
                     "title": f"{chart_type} chart",
                     "content": {
                         "chartType": chart_type,
                         "chartData": chart_data,
-                        "fieldsUsed": {key: value for key, value in merged_fields.items() if value},
-                        "filtersApplied": interpretation.get("filters") or [],
-                        "meta": chart_response.get("meta") or {},
+                        "fieldsUsed": fields_used,
+                        "filtersApplied": filters_applied,
+                        "meta": meta,
+                        "chartSpec": DecisionChatService._build_raw_chart_spec(
+                            title=f"{chart_type} chart",
+                            chart_type=chart_type,
+                            fields=fields_used,
+                            filters=filters_applied,
+                            meta=meta,
+                        ),
                     },
                 }
                 return {
@@ -1484,9 +1503,12 @@ class DecisionChatService:
         values = list(chart_ready.get("values") or [])
         labels = list(chart_ready.get("labels") or [])
         chart_type = "Line" if any("date" in str(label).lower() or "-" in str(label) for label in labels[:3]) else "Bar"
+        group_by = list(metric_result.get("group_by") or [])
+        filters_applied = metric_result.get("filters") or []
+        title = f"{metric_meta.get('label') or metric_meta.get('name') or 'Metric'} chart"
         return {
             "type": "chart",
-            "title": f"{metric_meta.get('label') or metric_meta.get('name') or 'Metric'} chart",
+            "title": title,
             "content": {
                 "chartType": chart_type,
                 "chartData": {
@@ -1498,15 +1520,147 @@ class DecisionChatService:
                 },
                 "fieldsUsed": {
                     "value": metric_meta.get("field") or metric_meta.get("label"),
-                    "category": ((metric_result.get("group_by") or [{}])[0]).get("field") if metric_result.get("group_by") else None,
+                    "category": (group_by or [{}])[0].get("field") if group_by else None,
                 },
-                "filtersApplied": metric_result.get("filters") or [],
+                "filtersApplied": filters_applied,
                 "meta": {
                     "type": chart_type,
                     "source": "semantic_metric",
                 },
+                "chartSpec": DecisionChatService._build_semantic_chart_spec(
+                    title=title,
+                    chart_type=chart_type,
+                    metric=metric_meta,
+                    group_by=group_by,
+                    filters=filters_applied,
+                    dataset=metric_result.get("dataset") or {},
+                ),
             },
         }
+
+    @staticmethod
+    def _build_raw_chart_spec(
+        *,
+        title: str,
+        chart_type: str,
+        fields: Dict[str, Any],
+        filters: List[Dict[str, Any]],
+        meta: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """Build a deterministic pin-ready chart spec for raw NLP charts."""
+        normalized_filters = DecisionChatService._filters_to_slicers(filters, scope="local")
+        return {
+            "schemaVersion": "chart_spec_v1",
+            "title": title,
+            "chartType": chart_type,
+            "sourceMode": "raw",
+            "source": str(meta.get("source") or "chart_engine"),
+            "rawMapping": {
+                "x": fields.get("category") or fields.get("time"),
+                "y": fields.get("value"),
+                "time": fields.get("time"),
+                "secondaryValue": fields.get("secondary_value"),
+            },
+            "semanticConfig": {
+                "metricId": "",
+                "groupBy": "",
+            },
+            "aggregation": "sum",
+            "sortLimit": {
+                "sort": "value_desc",
+                "limit": meta.get("topN") if isinstance(meta.get("topN"), int) else None,
+            },
+            "slicers": normalized_filters,
+            "inheritedSlicers": [],
+            "pin": {
+                "pinned": False,
+                "sourceArtifact": "ai_chat",
+            },
+        }
+
+    @staticmethod
+    def _build_semantic_chart_spec(
+        *,
+        title: str,
+        chart_type: str,
+        metric: Dict[str, Any],
+        group_by: List[Dict[str, Any]],
+        filters: List[Dict[str, Any]],
+        dataset: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """Build a deterministic pin-ready chart spec for semantic metric charts."""
+        primary_group = group_by[0] if group_by else {}
+        return {
+            "schemaVersion": "chart_spec_v1",
+            "title": title,
+            "chartType": chart_type,
+            "sourceMode": "semantic",
+            "source": "semantic_metric",
+            "rawMapping": {
+                "x": primary_group.get("field"),
+                "y": metric.get("field"),
+                "time": primary_group.get("field") if primary_group.get("semantic_kind") == "temporal" else None,
+                "secondaryValue": None,
+            },
+            "semanticConfig": {
+                "metricId": metric.get("id") or "",
+                "metricName": metric.get("name") or metric.get("label") or "",
+                "groupBy": primary_group.get("id") or primary_group.get("field") or "",
+                "groupByField": primary_group.get("field") or "",
+            },
+            "aggregation": metric.get("default_aggregation") or (metric.get("expression") or {}).get("aggregation") or "sum",
+            "sortLimit": {
+                "sort": "value_desc" if group_by else None,
+                "limit": None,
+            },
+            "slicers": DecisionChatService._filters_to_slicers(filters, scope="local"),
+            "inheritedSlicers": [],
+            "pin": {
+                "pinned": False,
+                "sourceArtifact": "ai_chat",
+            },
+            "dataset": {
+                "datasetId": dataset.get("dataset_id"),
+                "datasetName": dataset.get("dataset_name") or dataset.get("name"),
+                "rowCount": dataset.get("row_count"),
+                "sourceRowCount": dataset.get("source_row_count"),
+            },
+        }
+
+    @staticmethod
+    def _filters_to_slicers(filters: List[Dict[str, Any]], scope: str) -> List[Dict[str, Any]]:
+        """Convert resolver filters into frontend slicer specs without guessing UI-only fields."""
+        slicers: List[Dict[str, Any]] = []
+        for index, filter_def in enumerate(filters or []):
+            if not isinstance(filter_def, dict):
+                continue
+            field = filter_def.get("field") or filter_def.get("dimension_id") or filter_def.get("dimension")
+            if not field:
+                continue
+            operator_name = str(filter_def.get("operator") or "eq").lower()
+            values = filter_def.get("values")
+            if values is None and filter_def.get("value") is not None:
+                values = [filter_def.get("value")]
+            slicers.append({
+                "id": f"{scope}-slicer-{index + 1}-{field}",
+                "scope": scope,
+                "field": field,
+                "dimensionId": filter_def.get("dimension_id") or "",
+                "kind": DecisionChatService._slicer_kind_for_operator(operator_name),
+                "operator": operator_name,
+                "value": filter_def.get("value"),
+                "values": values if isinstance(values, list) else ([] if values is None else [values]),
+                "applied": True,
+            })
+        return slicers
+
+    @staticmethod
+    def _slicer_kind_for_operator(operator_name: str) -> str:
+        if operator_name in {"gte", "lte", "gt", "lt"}:
+            return "range"
+        if operator_name in {"contains", "starts_with", "ends_with"}:
+            return "text"
+        return "category"
 
     @staticmethod
     def _build_metric_answer_artifact(metric_result: Dict[str, Any]) -> Dict[str, Any]:

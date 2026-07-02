@@ -1,0 +1,114 @@
+.dashboard-canvas-item {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-surface);
+  border-radius: 8px;
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  height: 100%;
+  width: 100%;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.dashboard-canvas-item.is-edit-mode {
+  border: 1px solid var(--border-color);
+}
+
+.dashboard-canvas-item.is-edit-mode:hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--accent-blue);
+}
+
+.dashboard-canvas-item.is-view-mode {
+  border: 1px solid transparent;
+}
+
+.dashboard-canvas-item.is-locked {
+  border-color: var(--border-color-soft);
+}
+
+.dashboard-canvas-item__chrome {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 8px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color-soft);
+  height: 28px;
+  flex-shrink: 0;
+}
+
+.dashboard-canvas-item__drag-handle {
+  flex: 1;
+  cursor: grab;
+  display: flex;
+  align-items: center;
+  height: 100%;
+  overflow: hidden;
+}
+
+.dashboard-canvas-item__drag-handle:active {
+  cursor: grabbing;
+}
+
+.dashboard-canvas-item.is-locked .dashboard-canvas-item__drag-handle {
+  cursor: default;
+}
+
+.dashboard-canvas-item__title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  user-select: none;
+}
+
+.dashboard-canvas-item__actions {
+  display: flex;
+  gap: 4px;
+}
+
+.dashboard-canvas-item__btn {
+  background: transparent;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.dashboard-canvas-item__btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.dashboard-canvas-item__btn--danger:hover {
+  color: var(--status-error);
+  background: rgba(220, 38, 38, 0.1);
+}
+
+.is-locked-btn {
+  color: var(--accent-blue);
+}
+
+.dashboard-canvas-item__content {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Specific overrides for SmartChartWindow/KpiCardWindow inside dashboard canvas */
+.dashboard-canvas-item__content .smart-chart-window,
+.dashboard-canvas-item__content .kpi-card-window {
+  border: none;
+  box-shadow: none;
+  border-radius: 0;
+  height: 100%;
+}
