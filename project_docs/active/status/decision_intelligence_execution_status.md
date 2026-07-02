@@ -18,15 +18,15 @@ The Decisions window remains secondary. Saved DecisionAssets support immutable h
 
 ## Current Project Gate
 
-Status: **Phase 4 - Dashboard Canvas Layout And Sharing Skeleton: ANTIGRAVITY HANDOFF READY**
+Status: **Phase 4 - Antigravity Chart Color Picker Polish Slice: DOCUMENTATION COMPLETE; FRONTEND IMPLEMENTATION AWAITING BROWSER REVIEW**
 
 Current plan:
 
-`project_docs/active/decision_intelligence/current/phase_4_dashboard_canvas_layout_and_sharing_skeleton_plan.md`
+`project_docs/active/ai_hand_off/antigravity_chart_color_picker_handoff.md`
 
-Goal: turn the dashboard into a canvas-style workspace where pinned charts and KPI cards can be moved, resized, locked, persisted locally, sliced in view mode, and prepared for future sharing without real authentication or backend sharing APIs.
+Goal: Implement a robust, subtle, clean, modern chart color picker for chart windows and dashboard chart items, using local frontend state only, while preserving existing chart rendering, dashboard persistence, slicer behavior, and export behavior.
 
-Latest verified fact: Codex activated the dashboard canvas and sharing skeleton plan, created a detailed Antigravity handoff, and added the local-first dashboard canvas state contract at `project_docs/active/contracts/dashboard_canvas_state.md`. Codex is not authorized to implement frontend/UI code in this session, so Antigravity owns the React/CSS implementation and browser verification.
+Latest verified fact: The chart color picker documentation and handoff are complete. Antigravity has implemented the ChartColorPicker component, integrated it into SmartChartWindow and ChartComponent, updated dashboardCanvasUtils for persistence, and verified that build and harness checks pass. Awaiting user browser acceptance before calling this polish slice fully complete.
 
 Previous completed references:
 
@@ -40,9 +40,9 @@ Previous completed references:
 
 ## Next Focus
 
-Antigravity implementation for Phase 4 dashboard canvas layout and sharing skeleton. Active handoff:
+User browser acceptance of the Antigravity Chart Color Picker implementation. No additional Codex documentation planning is required for this slice unless browser review finds a gap.
 
-`project_docs/active/ai_hand_off/phase_4_antigravity_dashboard_canvas_layout_and_sharing_skeleton.md`
+`project_docs/active/ai_hand_off/antigravity_chart_color_picker_handoff.md`
 
 ## Canonical Resume Order
 

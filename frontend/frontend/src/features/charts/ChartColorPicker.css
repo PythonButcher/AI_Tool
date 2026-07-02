@@ -1,0 +1,126 @@
+.chart-color-picker {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.chart-color-picker__trigger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.chart-color-picker__trigger:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.chart-color-picker__trigger.active {
+  background: var(--bg-secondary);
+  color: var(--accent-blue);
+  border-color: var(--border-color);
+}
+
+.chart-color-picker__popover {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 8px;
+  width: 220px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.chart-color-picker__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-color-soft);
+  background: var(--bg-secondary-soft);
+}
+
+.chart-color-picker__header strong {
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.chart-color-picker__reset {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.chart-color-picker__reset:hover {
+  color: var(--accent-blue);
+  background: var(--bg-hover);
+}
+
+.chart-color-picker__palettes {
+  display: flex;
+  flex-direction: column;
+  padding: 8px;
+  gap: 4px;
+}
+
+.chart-color-picker__palette-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.chart-color-picker__palette-item:hover {
+  background: var(--bg-hover);
+}
+
+.chart-color-picker__palette-item.selected {
+  background: var(--bg-secondary-soft);
+  border-color: var(--border-color);
+}
+
+.palette-preview {
+  display: flex;
+  gap: 2px;
+}
+
+.palette-swatch {
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.palette-label {
+  font-size: 0.8rem;
+  color: var(--text-primary);
+}
+
+[data-theme='dark'] .palette-swatch {
+  border-color: rgba(255, 255, 255, 0.1);
+}
