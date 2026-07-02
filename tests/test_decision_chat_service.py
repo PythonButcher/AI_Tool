@@ -213,6 +213,12 @@ class DecisionChatApiTests(unittest.TestCase):
         self.assertEqual(body["artifacts"][0]["default_view"], "inspector")
         self.assertEqual(body["artifacts"][0]["source"], "semantic_metric")
         self.assertEqual(body["artifacts"][0]["content"]["meta"]["source"], "semantic_metric")
+        chart_spec = body["artifacts"][0]["content"]["chartSpec"]
+        self.assertEqual(chart_spec["schemaVersion"], "chart_spec_v1")
+        self.assertEqual(chart_spec["sourceMode"], "semantic")
+        self.assertEqual(chart_spec["semanticConfig"]["metricId"], "metric_revenue_sum")
+        self.assertIn(chart_spec["semanticConfig"]["groupByField"], {"region", "Region"})
+        self.assertEqual(chart_spec["pin"]["sourceArtifact"], "ai_chat")
         self.assertIsNone(body["draft_workspace_preview"])
         self.assertEqual(body["action_state"]["available_action_ids"], [])
 
@@ -916,6 +922,7 @@ class DecisionChatApiTests(unittest.TestCase):
         self.assertEqual(body["session_state"]["last_analytic_context"]["output_preference"], "chart")
         self.assertEqual(body["mode_context"]["reason_code"], "visualization_request")
         self.assertEqual(body["artifacts"][0]["default_view"], "inspector")
+        self.assertEqual(body["artifacts"][0]["content"]["chartSpec"]["sourceMode"], "semantic")
 
     def test_follow_up_turn_can_change_grouping_from_prior_semantic_context(self):
         first_response = self.client.post(

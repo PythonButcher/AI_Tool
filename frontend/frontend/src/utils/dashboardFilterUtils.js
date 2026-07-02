@@ -206,3 +206,32 @@ export const countActiveDashboardFilters = (dashboardFilters) => {
   count += filters.dimensionFilters.filter((filter) => filter.dimensionId && filter.values.length > 0).length;
   return count;
 };
+
+export const getSlicerConflict = (dashboardFilters, chartSlicers) => {
+  if (!dashboardFilters || !chartSlicers || chartSlicers.length === 0) return null;
+
+  const filters = normalizeDashboardFilters(dashboardFilters);
+  
+  for (const chartSlicer of chartSlicers) {
+    if (!chartSlicer.dimensionId || !chartSlicer.values || chartSlicer.values.length === 0) continue;
+    
+    // Find matching dashboard filter for this dimension
+    const dashFilter = filters.dimensionFilters.find(f => f.dimensionId === chartSlicer.dimensionId);
+    if (dashFilter && dashFilter.values.length > 0) {
+      // Check intersection
+      const chartVals = chartSlicer.values.map(normalizeComparableValue);
+      const dashVals = dashFilter.values.map(normalizeComparableValue);
+      
+      const intersection = chartVals.filter(v => dashVals.includes(v));
+      if (intersection.length === 0) {
+        return {
+          dimensionId: chartSlicer.dimensionId,
+          dashboardValues: dashFilter.values,
+          chartValues: chartSlicer.values
+        }; // Conflict found on this dimension
+      }
+    }
+  }
+  
+  return null;
+};

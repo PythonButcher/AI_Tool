@@ -85,6 +85,31 @@ Decision Chat artifacts keep a compact `source` label that describes the backend
 
 Frontend code should render by `artifact.type` and `render_hint` first. It may use `source` for lineage, badges, diagnostics, or source-specific affordances, but should not require `source === "chart_engine"` to render a chart.
 
+### AI Chat Chart Spec
+
+Phase 3 adds optional `content.chartSpec` to chart artifacts. This is an additive, deterministic, pin-ready chart definition for Explore, Dashboard, and AI Chat surfaces. Existing chart artifact fields remain compatible and required for rendering: `content.chartType`, `content.chartData`, `content.fieldsUsed`, `content.filtersApplied`, and `content.meta`.
+
+The backend builds `content.chartSpec` from interpreted raw fields or semantic metric resolver output. It must not rely on unconstrained LLM output. If a future LLM-assisted chart planner is added, its output must be schema-validated before it reaches the frontend; invalid chart specs should be omitted rather than passed through.
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `schemaVersion` | `string` | Yes | Current value is `chart_spec_v1`. |
+| `title` | `string` | Yes | Display title used when pinning or opening a chart window. |
+| `chartType` | `string` | Yes | Current supported values follow existing Chart.js wrappers: `Bar`, `Line`, `Pie`, `Doughnut`, `Scatter`, and `Histogram` where supported. |
+| `sourceMode` | `string` | Yes | `raw` or `semantic`. |
+| `source` | `string` | Yes | Backend source label such as `chart_engine` or `semantic_metric`. |
+| `rawMapping` | `object` | Yes | Raw field bindings with keys `x`, `y`, `time`, and `secondaryValue`; values may be `null`. |
+| `semanticConfig` | `object` | Yes | Semantic bindings with `metricId`, optional `metricName`, `groupBy`, and optional `groupByField`. Empty strings are allowed for raw charts. |
+| `aggregation` | `string` | Yes | Aggregation used or intended for the chart. |
+| `sortLimit` | `object` | Yes | Optional `sort` and `limit` metadata for ranked charts. |
+| `slicers` | `object[]` | Yes | Chart-local slicers derived from current filters; empty when no filters are applied. |
+| `inheritedSlicers` | `object[]` | Yes | Dashboard-level slicers inherited at render time; AI Chat artifacts return an empty array. |
+| `pin` | `object` | Yes | Pin metadata. AI Chat returns `pinned: false` and `sourceArtifact: "ai_chat"`. |
+
+Slicer conflict behavior is intersection-based. Dashboard slicers and chart-local slicers are combined with `AND` semantics. If two slicers constrain the same field and no rows can satisfy both, the frontend should render a clear empty state that names the conflicting field instead of dropping either slicer.
+
+`SlicerSpec` maps to existing resolver filters. Date and numeric ranges use `gte` and `lte`, categorical selection uses `eq` or `in`, and supported text matching uses `contains`, `starts_with`, or `ends_with`.
+
 ### AI Chat Decision Output
 
 Phase 3 of AI Chat Decision Output Unification adds a backend-owned `decision_output` artifact. It is additive and does not replace existing `workspace_preview` or `workspace_analysis_summary` artifacts during the transition. AI Chat decision prompt responses keep `workspace_preview` first for compatibility and append `decision_output`. `analyze_workspace` action responses keep `workspace_analysis_summary` first and append `decision_output`. Correction responses through the existing `draft_workspace` action keep `workspace_preview` first and append an updated `decision_output`. Phase 6 normalizes ranked diagnostics into a display-ready Evidence Board inside this artifact.

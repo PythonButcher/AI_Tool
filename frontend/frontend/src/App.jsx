@@ -8,7 +8,7 @@ import { DndContext, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import DataVisualizations from './features/charts/DataVisualization';
 import { transformToChartData } from './utils/chartDataUtils';
 import AIChat from './features/ai/AIChat';
-import { DataContext, normalizeDatasetRows } from './context/DataContext';
+import { DataContext } from './context/DataContext';
 import { ThemeContext, ThemeProvider } from './context/ThemeContext';
 import { WarehouseProvider } from './context/WarehouseContext';
 import { HelpOverlayProvider } from './context/HelpOverlayContext';
@@ -80,7 +80,6 @@ function AppContent() {
   const [chartData, setChartData] = useState(null);
   const [chartMapping, setChartMapping] = useState({});
   const [isSnowing, setIsSnowing] = useState(false);
-  const [aiChatOpenRequestKey, setAiChatOpenRequestKey] = useState(0);
   const [menuBarHeight, setMenuBarHeight] = useState(64);
   const [isDataPaneOpen, setIsDataPaneOpen] = useState(false);
   const [activeDataPaneTab, setActiveDataPaneTab] = useState('catalog');
@@ -100,7 +99,7 @@ function AppContent() {
   const [showCanvasMinimized, setShowCanvasMinimized] = useState(false);
   const [previewMode, setPreviewMode] = useState('table');
   const [storyData, setStoryData] = useState(undefined);
-  const [storyModel, setStoryModel] = useState('openai');
+  const [storyModel] = useState('openai');
   const [showStoryPanel, setShowStoryPanel] = useState(false);
   const [rawUploadFile, setRawUploadFile] = useState(null);
   const [showMachineLearning, setShowMachineLearning] = useState(false);
@@ -123,7 +122,6 @@ function AppContent() {
   const handleOpenAiChat = useCallback(() => {
     setShowAiChat(true);
     restoreWindow('aiChat');
-    setAiChatOpenRequestKey((prev) => prev + 1);
   }, [restoreWindow]);
 
   const handleOpenDecisionGraph = useCallback((context = null) => {
@@ -151,16 +149,8 @@ function AppContent() {
       setActiveWorkflow(null);
       closeDashboard();
     }
-  }, [openDashboard, closeDashboard, handleOpenAiChat, restoreWindow]);
+  }, [openDashboard, closeDashboard, handleOpenAiChat]);
 
-  const handleDataCleaned = useCallback((newData) => {
-    if (!newData || newData.length === 0) {
-      setCleanedData(null);
-      setChartData(null);
-      return;
-    }
-    setCleanedData(newData);
-  }, [setCleanedData]);
 
   const handleFileUpload = useCallback((raw, file = null) => {
     const previewRows = parseRecords(raw?.data_preview);
@@ -245,19 +235,6 @@ function AppContent() {
 
 
 
-  const handleDecisionAction = useCallback((action) => {
-    if (action.action_type === 'break_down_metric') {
-      const { metric_id, group_by } = action.payload;
-      addChart({
-        type: 'Bar',
-        dataSourceMode: 'semantic',
-        semanticConfig: {
-          metricId: metric_id,
-          groupBy: Array.isArray(group_by) ? group_by[0] : group_by,
-        },
-      });
-    }
-  }, [addChart]);
 
   // Legacy decision workspace functions removed in Phase 10
 

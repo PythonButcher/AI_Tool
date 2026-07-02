@@ -4,14 +4,16 @@ import {
   FaRobot, FaTools, FaDatabase, FaPlus, FaLayerGroup,
   FaChartBar, FaShieldAlt, FaCircle, FaInfoCircle, FaPaperPlane,
   FaCheckCircle, FaExclamationTriangle, FaExternalLinkAlt, FaFileAlt,
-  FaEye, FaChevronRight, FaTerminal, FaSearch, FaCloud, FaFilePdf
+  FaEye, FaChevronRight, FaTerminal, FaSearch, FaCloud, FaFilePdf,
+  FaThumbtack, FaTimes, FaMagic
 } from "react-icons/fa";
 import {
   TextField, Button, Typography, Divider, Tooltip, Chip,
-  Avatar, IconButton
+  Avatar, IconButton, Dialog, DialogContent
 } from '@mui/material';
 import { DataContext } from '../../context/DataContext';
 import { WarehouseContext } from '../../context/WarehouseContext';
+import { useWindowContext } from '../../context/WindowContext';
 import MentionDropdown from '../../components/data_management/MentionDropdown';
 import { detectToken, extractTokens } from '../../utils/mentionUtils';
 import { AICommands } from '../workflow/AiCommandBlock';
@@ -39,6 +41,7 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenDecisio
     refreshSemanticModelFromDataset,
   } = useContext(DataContext);
   const { datasets } = useContext(WarehouseContext);
+  const { addDashboardChart, addChart } = useWindowContext();
 
   // Shell State
   const [userMessages, setUserMessages] = useState([]);
@@ -46,6 +49,8 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenDecisio
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [awaitingCleanInstructions, setAwaitingCleanInstructions] = useState(false);
+  const [sessionReadiness, setSessionReadiness] = useState(null);
+  const [pinFeedbackIds, setPinFeedbackIds] = useState({});
   const [sessionState, setSessionState] = useState({});
   const [activeMode, setActiveMode] = useState('ask');
   const [activeArtifact, setActiveArtifact] = useState(null);
@@ -57,6 +62,7 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenDecisio
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveError, setSaveError] = useState(null);
   const [libraryRefreshKey, setLibraryRefreshKey] = useState(0);
+  const [fullscreenAsset, setFullscreenAsset] = useState(null);
 
   useEffect(() => {
     if (activeArtifact) {
@@ -660,6 +666,44 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenDecisio
             {isInspector && (
               <div className="ai-shell__artifact-content" style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
                 {renderArtifactExportBar(artifact, lookupSessionState, lookupCapabilityState, lookupDecisionReadiness)}
+                
+                {content?.chartSpec?.schemaVersion === 'chart_spec_v1' && (
+                  <div className="ai-shell__chart-actions">
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      size="medium"
+                      startIcon={<FaThumbtack />}
+                      onClick={() => {
+                        addDashboardChart({
+                          type: content.chartType || 'Bar',
+                          mapping: content.chartData?.mapping || {},
+                          dataSourceMode: 'semantic',
+                          chartSpec: content.chartSpec
+                        });
+                        const feedId = artifact.id || `temp-${Date.now()}`;
+                        setPinFeedbackIds(prev => ({ ...prev, [feedId]: true }));
+                        setTimeout(() => setPinFeedbackIds(prev => ({ ...prev, [feedId]: false })), 2000);
+                      }}
+                    >
+                      {pinFeedbackIds[artifact.id || ''] ? 'Pinned!' : 'Pin to Dashboard'}
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      size="medium"
+                      startIcon={<FaChartBar />}
+                      onClick={() => addChart({
+                        type: content.chartType || 'Bar',
+                        mapping: content.chartData?.mapping || {},
+                        dataSourceMode: 'semantic',
+                        chartSpec: content.chartSpec
+                      })}
+                    >
+                      Open Chart Window
+                    </Button>
+                  </div>
+                )}
+                
                 <AICharts aiChartType={content?.chartType || 'Bar'} aiChartData={content?.chartData} />
                 {content?.explanation && (
                   <Typography variant="caption" sx={{ mt: 2, display: 'block', opacity: 0.6 }}>{content.explanation}</Typography>
@@ -1188,6 +1232,27 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenDecisio
                         <Typography variant="caption" sx={{ display: 'block', opacity: 0.8, fontWeight: 700, color: 'var(--accent-blue)' }}>
                           Observational Boundary: observational_analysis_only
                         </Typography>
+                        {!fullscreenAsset && (
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            onClick={() => setFullscreenAsset(artifact)}
+                            startIcon={<FaEye />}
+                            sx={{
+                              mt: 1,
+                              alignSelf: 'flex-start',
+                              fontWeight: 800,
+                              borderColor: 'var(--border-color)',
+                              color: 'var(--text-primary)',
+                              textTransform: 'none',
+                              '&:hover': {
+                                bgcolor: 'var(--bg-secondary)'
+                              }
+                            }}
+                          >
+                            Open full review
+                          </Button>
+                        )}
                       </div>
                     ) : (
                       <div style={{
@@ -2023,6 +2088,26 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenDecisio
           refreshTrigger={libraryRefreshKey}
         />
       </aside>
+
+      {/* Fullscreen Review Overlay */}
+      <Dialog
+        fullScreen
+        open={!!fullscreenAsset}
+        onClose={() => setFullscreenAsset(null)}
+        sx={{ zIndex: 1300 }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px', background: 'var(--bg-primary)', borderBottom: '1px solid var(--border-color)', position: 'sticky', top: 0, zIndex: 10 }}>
+          <Typography variant="h6" sx={{ fontWeight: 900 }}>Saved Decision Review</Typography>
+          <Button onClick={() => setFullscreenAsset(null)} sx={{ fontWeight: 800, color: 'var(--text-primary)' }}>
+            Close
+          </Button>
+        </div>
+        <DialogContent sx={{ p: 0, m: 0, background: 'var(--bg-secondary)', overflowY: 'auto' }}>
+          <div style={{ padding: '24px' }}>
+            {fullscreenAsset && renderArtifact(fullscreenAsset, true, fullscreenAsset.contextActions, fullscreenAsset.contextSessionState, fullscreenAsset.contextCapabilityState, fullscreenAsset.contextDecisionReadiness)}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

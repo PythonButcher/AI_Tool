@@ -20,12 +20,27 @@ import { useWindowContext } from '../../context/WindowContext';
 import { DataContext } from '../../context/DataContext';
 import RawDataViewer from '../../features/viewing/RawDataViewer';
 import MachineLearningPanel from '../../features/machine_learning/MachineLearningPanel';
-import DashboardFilterBar from '../../features/dashboard/DashboardFilterBar';
+import DashboardSlicerPanel from '../../features/dashboard/DashboardSlicerPanel';
+import DashboardCommandBar from '../../features/dashboard/DashboardCommandBar';
+import DashboardCanvas from '../../features/dashboard/DashboardCanvas';
 import KpiCardWindow from '../../features/dashboard/KpiCardWindow';
 import { WINDOW_SIZING } from '../../utils/windowSizing';
 import DecisionGraphWorkspace from '../../features/business/decision/graph/DecisionGraphWorkspace';
 import DestinationHome from './DestinationHome';
-import { FaCompress, FaExternalLinkAlt } from 'react-icons/fa';
+import {
+  FaSave,
+  FaUndo,
+  FaRedo,
+  FaShare,
+  FaTrash,
+  FaFileExport,
+  FaProjectDiagram,
+  FaCogs,
+  FaBookOpen,
+  FaRobot,
+  FaCompress,
+  FaExternalLinkAlt
+} from 'react-icons/fa';
 
 const DESTINATIONS = {
   WORKSPACE: 'workspace',
@@ -93,11 +108,14 @@ function CanvasContainer({
     getWindowContentState,
     charts,
     removeChart,
-    dashboardState,
     dashboardItems,
+    dashboardState,
+    updateDashboardItem,
     removeDashboardItem,
     addDashboardKpi,
     addDashboardChart,
+    isAiChatOpen,
+    toggleAiChat,
     restoreWindow,
   } = useWindowContext();
 
@@ -689,56 +707,7 @@ function CanvasContainer({
       );
     });
 
-  const dashboardElements = dashboardItems
-    .filter((item) => !minimizedWindows[item.id])
-    .map((item) => {
-      if (item.itemType === 'kpi') {
-        const isPopulated = !!item.semanticConfig?.metricId;
-        const sizing = isPopulated ? WINDOW_SIZING.KPI.POPULATED : WINDOW_SIZING.KPI.BLANK;
 
-        return (
-          <WindowFrame
-            {...getWindowProps(item.id, `📌 ${item.title || 'KPI Card'}`, () => removeDashboardItem(item.id), () => minimizeWindow(item.id, item.title || 'KPI Card'))}
-            initialState={getInitialState(item.id, 4, 8, sizing.defW, sizing.defH, sizing.minW, sizing.minH)}
-            minWidth={sizing.minW}
-            minHeight={sizing.minH}
-          >
-            <KpiCardWindow
-              id={item.id}
-              item={item}
-              dashboardFilters={dashboardState.filters}
-              isLocked={isLocked(item.id)}
-            />
-          </WindowFrame>
-        );
-      }
-
-      const isPopulated = item.mapping && (item.mapping['X-Axis'] || item.mapping['Y-Axis'] || item.mapping.values || item.semanticConfig?.metricId);
-      const sizing = isPopulated ? WINDOW_SIZING.CHART.POPULATED : WINDOW_SIZING.CHART.BLANK;
-      const initialState = getInitialState(item.id, 7, 18, sizing.defW, sizing.defH, sizing.minW, sizing.minH);
-
-      return (
-        <WindowFrame
-          {...getWindowProps(item.id, `📊 Dashboard ${item.chartType} Chart`, () => removeDashboardItem(item.id), () => minimizeWindow(item.id, `Dashboard ${item.chartType} Chart`))}
-          initialState={initialState}
-          minWidth={sizing.minW}
-          minHeight={sizing.minH}
-        >
-          <div style={{ width: '100%', height: '100%', position: 'relative' }}>
-            <SmartChartWindow
-              id={item.id}
-              data={cleanedData || uploadedData}
-              type={item.chartType}
-              mapping={item.mapping}
-              isLocked={isLocked(item.id)}
-              dataSourceMode={item.dataSourceMode}
-              semanticConfig={item.semanticConfig}
-              externalFilters={dashboardState.filters}
-            />
-          </div>
-        </WindowFrame>
-      );
-    });
 
   const storyPanelElement = (showStoryPanel && !minimizedWindows.storyPanel) ? (
     <WindowFrame
@@ -995,13 +964,14 @@ function CanvasContainer({
   ]);
 
   return (
-    <div className="canvas-dnd-wrapper" style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden' }}>
+    <div className="canvas-dnd-wrapper" style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+      {isDashboardDest && <DashboardCommandBar />}
       <div
         ref={containerRef}
         className="canvas-container desktop-surface"
-        style={{ width: '100%', height: '100%', position: 'relative' }}
+        style={{ width: '100%', flex: 1, position: 'relative' }}
       >
-        {isDashboardDest && <DashboardFilterBar />}
+        {isDashboardDest && <DashboardSlicerPanel />}
         {shouldShowHome && (
           <DestinationHome
             activeDestination={activeDestination}
@@ -1020,7 +990,11 @@ function CanvasContainer({
         {isAiDest && whiteBoardElement}
         {isAiDest && storyPanelElement}
         {isExploreDest && chartElements}
-        {isDashboardDest && dashboardElements}
+        {isDashboardDest && (dashboardItems.length > 0 || dashboardState.isVisible) && (
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1 }}>
+            <DashboardCanvas />
+          </div>
+        )}
         {isAiDest && decisionGraphElement}
       </div>
       {aiChatPortal}
