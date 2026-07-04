@@ -45,6 +45,58 @@ def decision_output_fixture():
         "decision_map": {"nodes": [], "edges": [], "causal_status": "not_causal_claim"},
         "scenario_compare": {"status": "not_applicable", "projections": []},
         "advanced_gates": [],
+        "command_center": {
+            "schema_version": "di_command_center_v1",
+            "surface": "ai_chat_decision_command_center",
+            "status": "limited",
+            "section_order": ["executive_brief"],
+            "stale_state": "current",
+            "rerun_state": {
+                "status": "analysis_not_run",
+                "action_id": "analyze_workspace",
+                "reason": "Run observational analysis to populate the Evidence Board.",
+            },
+            "allowed_next_checks": [
+                {
+                    "check_id": "run_observational_analysis",
+                    "label": "Run observational analysis",
+                    "description": "Populate or refresh the Evidence Board from the current decision frame.",
+                    "enabled": True,
+                    "status": "ready",
+                    "source": "readiness",
+                    "action_id": "analyze_workspace",
+                }
+            ],
+            "disabled_next_checks": [
+                {
+                    "check_id": "unsupported_final_recommendation",
+                    "label": "Final Recommendation",
+                    "enabled": False,
+                    "status": "disabled",
+                    "source": "advanced_gates",
+                    "reason": "Final recommendations are unsupported.",
+                }
+            ],
+            "export_readiness": {
+                "ready": True,
+                "status": "ready",
+                "section_count": 1,
+                "section_order": ["executive_brief"],
+                "reason": "Backend export_sections are ready for the AI Chat decision PDF.",
+            },
+            "limitations": [
+                "The command center is observational decision support only; it does not make a final recommendation.",
+                "Saved DecisionAssets remain immutable historical snapshots and do not refresh live data.",
+            ],
+            "source_refs": {
+                "workspace_id": "workspace_sales_q1",
+                "workspace_status": "analysis_ready",
+                "workspace_analysis_present": False,
+                "ranked_diagnostic_ids": [],
+                "scenario_status": None,
+            },
+            "truth_boundary": "observational_analysis_only",
+        },
         "export_sections": [
             {
                 "section_id": "executive_brief",

@@ -18,15 +18,21 @@ The Decisions window remains secondary. Saved DecisionAssets support immutable h
 
 ## Current Project Gate
 
-Status: **Phase 4 - Antigravity Chart Color Picker Polish Slice: DOCUMENTATION COMPLETE; FRONTEND IMPLEMENTATION AWAITING BROWSER REVIEW**
+Status: **Phase 6 - Evidence-To-Action Workflow: CODEX GOAL PROMPT READY**
 
 Current plan:
 
-`project_docs/active/ai_hand_off/antigravity_chart_color_picker_handoff.md`
+`project_docs/active/decision_intelligence/current/phase_6_evidence_to_action_workflow_plan.md`
 
-Goal: Implement a robust, subtle, clean, modern chart color picker for chart windows and dashboard chart items, using local frontend state only, while preserving existing chart rendering, dashboard persistence, slicer behavior, and export behavior.
+Next-session goal prompt:
 
-Latest verified fact: The chart color picker documentation and handoff are complete. Antigravity has implemented the ChartColorPicker component, integrated it into SmartChartWindow and ChartComponent, updated dashboardCanvasUtils for persistence, and verified that build and harness checks pass. Awaiting user browser acceptance before calling this polish slice fully complete.
+`project_docs/active/ai_hand_off/codex_evidence_to_action_workflow_goal.md`
+
+Goal: Build the Evidence-To-Action Workflow backend contract so evidence, map items, and graph items expose user-approved next checks with exact enabled states, disabled reasons, source refs, and observational truth boundaries.
+
+Latest verified fact: Phase 5 - AI Chat Decision Command Center is complete end to end by user acceptance. Backend contract, frontend implementation, source review, build evidence, harness checks, command-center save/export wiring, and user browser acceptance are complete.
+
+Separate pending user acceptance: the Antigravity chart color picker polish slice remains awaiting user browser acceptance and is not changed by this backend contract slice.
 
 Previous completed references:
 
@@ -38,11 +44,13 @@ Previous completed references:
 
 `project_docs/active/decision_intelligence/completed/phase_2_fullscreen_decision_asset_review_gemini_handoff.md`
 
+`project_docs/active/decision_intelligence/completed/phase_5_ai_chat_decision_command_center_backend_plan.md`
+
+`project_docs/active/decision_intelligence/completed/phase_5_gemini_ai_chat_decision_command_center.md`
+
 ## Next Focus
 
-User browser acceptance of the Antigravity Chart Color Picker implementation. No additional Codex documentation planning is required for this slice unless browser review finds a gap.
-
-`project_docs/active/ai_hand_off/antigravity_chart_color_picker_handoff.md`
+Codex owns the next backend contract slice. Start from `project_docs/active/ai_hand_off/codex_evidence_to_action_workflow_goal.md`. Gemini or Antigravity should wait until Codex verifies backend contract readiness and creates a focused frontend handoff if needed.
 
 ## Canonical Resume Order
 

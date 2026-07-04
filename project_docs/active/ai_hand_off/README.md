@@ -8,13 +8,15 @@ Codex owns backend truth, contracts, tests, architecture decisions, status docum
 
 Gemini or Antigravity owns frontend implementation, React/CSS, UI rendering, browser verification, and frontend build work unless the user explicitly authorizes Codex frontend edits in the current session.
 
-## Active Handoffs
+## Active Handoffs And Goal Prompts
 
 `phase_4_antigravity_dashboard_canvas_layout_and_sharing_skeleton.md` - Antigravity owns the Phase 4 dashboard canvas layout and sharing skeleton implementation.
 
 `antigravity_chart_color_picker_handoff.md` - Documentation complete; Antigravity owns the frontend-only chart color picker browser acceptance path.
 
-Completed handoffs are retained under `project_docs/active/decision_intelligence/completed/` as reference only. The completed charting slicer handoff is `project_docs/active/decision_intelligence/completed/phase_3_antigravity_charting_slicer_ui_handoff.md`.
+`codex_evidence_to_action_workflow_goal.md` - Codex owns the Evidence-To-Action Workflow backend contract and tests first.
+
+Completed handoffs are retained under `project_docs/active/decision_intelligence/completed/` as reference only. Completed examples include `project_docs/active/decision_intelligence/completed/phase_3_antigravity_charting_slicer_ui_handoff.md` and `project_docs/active/decision_intelligence/completed/phase_5_gemini_ai_chat_decision_command_center.md`.
 
 Current truth: `project_docs/active/status/decision_intelligence_execution_status.md`
 

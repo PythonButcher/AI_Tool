@@ -319,6 +319,28 @@ class DecisionChatApiTests(unittest.TestCase):
         self.assertTrue(decision_output["decision_map"]["nodes"])
         self.assertEqual(decision_output["scenario_compare"]["status"], "not_applicable")
         self.assertEqual(decision_output["scenario_compare"]["projections"], [])
+        command_center = decision_output["command_center"]
+        self.assertEqual(command_center["schema_version"], "di_command_center_v1")
+        self.assertEqual(command_center["surface"], "ai_chat_decision_command_center")
+        self.assertEqual(command_center["status"], "limited")
+        self.assertEqual(command_center["stale_state"], "not_applicable")
+        self.assertEqual(command_center["rerun_state"]["status"], "analysis_not_run")
+        self.assertEqual(command_center["rerun_state"]["action_id"], "analyze_workspace")
+        self.assertIn("executive_brief", command_center["section_order"])
+        self.assertTrue(command_center["export_readiness"]["ready"])
+        self.assertIn(
+            "run_observational_analysis",
+            [check["check_id"] for check in command_center["allowed_next_checks"]],
+        )
+        self.assertIn(
+            "export_decision_output",
+            [check["check_id"] for check in command_center["allowed_next_checks"]],
+        )
+        disabled_check_ids = [check["check_id"] for check in command_center["disabled_next_checks"]]
+        self.assertIn("review_evidence_board", disabled_check_ids)
+        self.assertIn("unsupported_final_recommendation", disabled_check_ids)
+        self.assertIn("live_saved_asset_refresh", disabled_check_ids)
+        self.assertEqual(command_center["truth_boundary"], "observational_analysis_only")
         self.assertTrue(decision_output["export_sections"])
         export_sections = decision_output["export_sections"]
         self.assertEqual(
@@ -369,6 +391,7 @@ class DecisionChatApiTests(unittest.TestCase):
         self.assertIn("prediction certainty", truth_export_text)
         self.assertIn("autonomous decisioning", truth_export_text)
         self.assertIn("final_recommendation", [gate["capability"] for gate in decision_output["advanced_gates"]])
+        self.assertNotIn("command_center", [section["section_id"] for section in export_sections])
         self.assertEqual(body["artifacts"][1]["source"], "decision_output")
         self.assertEqual(body["artifacts"][1]["dataset_trust"], body["dataset_trust"])
 
@@ -432,6 +455,7 @@ class DecisionChatApiTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         body = response.get_json()
         scenario_compare = body["decision_output"]["scenario_compare"]
+        command_center = body["decision_output"]["command_center"]
 
         self.assertEqual(scenario_compare["status"], "ready")
         self.assertEqual(scenario_compare["inputs"]["metric_targets"][0]["metric_id"], "metric_revenue_sum")
@@ -441,6 +465,10 @@ class DecisionChatApiTests(unittest.TestCase):
         self.assertEqual(scenario_compare["projections"][0]["projected_value"], 545.4)
         self.assertEqual(scenario_compare["source_scenario_ids"], ["scenario_revenue_sensitivity"])
         self.assertEqual(scenario_compare["truth_boundary"], "observational_analysis_only")
+        self.assertIn(
+            "review_scenario_compare",
+            [check["check_id"] for check in command_center["allowed_next_checks"]],
+        )
         export_by_id = {
             section["section_id"]: section
             for section in body["decision_output"]["export_sections"]
@@ -485,6 +513,14 @@ class DecisionChatApiTests(unittest.TestCase):
         decision_output = body["decision_output"]
         self.assertEqual(decision_output["readiness"]["readiness_state"], "blocked")
         self.assertIn("objective.metric_id_or_metric_name", decision_output["readiness"]["missing_inputs"])
+        self.assertEqual(decision_output["command_center"]["status"], "blocked")
+        self.assertEqual(decision_output["command_center"]["rerun_state"]["status"], "blocked")
+        run_analysis_check = next(
+            check
+            for check in decision_output["command_center"]["disabled_next_checks"]
+            if check["check_id"] == "run_observational_analysis"
+        )
+        self.assertIn("objective.metric_id_or_metric_name", run_analysis_check["reason"])
         self.assertEqual(decision_output["evidence_board"]["status"], "not_analyzed")
         unknown_nodes = [
             node for node in decision_output["decision_map"]["nodes"]
@@ -1131,7 +1167,7 @@ class DecisionChatApiTests(unittest.TestCase):
             "column_count": 2,
             "semantic_ready": True,
             "transform_state": "raw",
-            "stale_state": "not_applicable",
+            "stale_state": "unknown",
             "warnings": [],
         }
         workspace_analysis = {
@@ -1172,8 +1208,15 @@ class DecisionChatApiTests(unittest.TestCase):
         )
 
         evidence_board = output["evidence_board"]
+        command_center = output["command_center"]
         self.assertEqual(evidence_board["status"], "analyzed")
         self.assertEqual(len(evidence_board["items"]), 2)
+        self.assertEqual(command_center["status"], "limited")
+        self.assertEqual(command_center["rerun_state"]["status"], "possibly_stale_analysis_available")
+        self.assertIn(
+            "review_evidence_board",
+            [check["check_id"] for check in command_center["allowed_next_checks"]],
+        )
 
         limited_item = evidence_board["items"][0]
         self.assertEqual(limited_item["rank"], 1)
