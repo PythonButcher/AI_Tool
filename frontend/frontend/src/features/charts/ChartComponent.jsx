@@ -1,11 +1,12 @@
 // ChartComponent.jsx (new, standard component)
 import React, { useRef, useMemo, useContext } from 'react';
-import { Bar, Line, Pie, Doughnut, Scatter } from 'react-chartjs-2';
+import { Bar, Line, Pie, Doughnut, Scatter, Radar } from 'react-chartjs-2';
 import ChartToolbar from './ChartToolbar';
 import {
   Chart as ChartJS,
   CategoryScale,
   LinearScale,
+  RadialLinearScale,
   BarElement,
   BarController,
   LineElement,
@@ -16,10 +17,12 @@ import {
   Filler
 } from 'chart.js';
 import { ThemeContext } from '../../context/ThemeContext';
+import { PALETTES } from './ChartColorPicker';
 
 ChartJS.register(
   CategoryScale,
   LinearScale,
+  RadialLinearScale,
   BarElement,
   BarController,
   LineElement,
@@ -30,7 +33,7 @@ ChartJS.register(
   Filler
 );
 
-function ChartComponent({ chartType = 'Bar', chartData, mapping }) {
+function ChartComponent({ chartType = 'Bar', chartData, mapping, display = {} }) {
   const chartRef = useRef(null);
   const { theme } = useContext(ThemeContext);
   const isDark = theme === 'dark';
@@ -38,20 +41,41 @@ function ChartComponent({ chartType = 'Bar', chartData, mapping }) {
   const processedData = useMemo(() => {
     if (!chartData || !chartData.datasets) return chartData;
 
+    const activePalette = PALETTES[display?.paletteId] || PALETTES.default;
+    const isPie = chartType === 'Pie' || chartType === 'Doughnut';
+
     return {
       ...chartData,
-      datasets: chartData.datasets.map((ds) => ({
-        ...ds,
-        borderRadius: chartType === 'Bar' ? 6 : 0,
-        tension: chartType === 'Line' ? 0.35 : 0,
-        pointRadius: chartType === 'Line' || chartType === 'Scatter' ? 4 : 0,
-        pointHoverRadius: 6,
-        borderWidth: chartType === 'Line' ? 2.5 : 1,
-        fill: chartType === 'Line' ? 'origin' : false,
-        backgroundColor: ds.backgroundColor || (isDark ? 'rgba(59, 130, 246, 0.5)' : 'rgba(37, 99, 235, 0.6)'),
-      })),
+      datasets: chartData.datasets.map((ds, index) => {
+        let backgroundColor, borderColor;
+
+        if (isPie) {
+          const dataLength = ds.data?.length || chartData.labels?.length || 1;
+          backgroundColor = display?.customColors?.length
+            ? display.customColors
+            : Array.from({ length: dataLength }).map((_, i) => activePalette.colors[i % activePalette.colors.length]);
+          borderColor = isDark ? '#1e293b' : '#ffffff';
+        } else {
+          const defaultColor = activePalette.colors[index % activePalette.colors.length];
+          const seriesOverride = display?.seriesColors?.[ds.label];
+          backgroundColor = seriesOverride || defaultColor;
+          borderColor = backgroundColor;
+        }
+
+        return {
+          ...ds,
+          borderRadius: chartType === 'Bar' ? 6 : 0,
+          tension: chartType === 'Line' || chartType === 'Radar' ? 0.35 : 0,
+          pointRadius: chartType === 'Line' || chartType === 'Scatter' || chartType === 'Radar' ? 4 : 0,
+          pointHoverRadius: 6,
+          borderWidth: chartType === 'Line' || chartType === 'Radar' ? 2.5 : 1,
+          fill: chartType === 'Line' || chartType === 'Radar' ? 'origin' : false,
+          backgroundColor: chartType === 'Radar' ? `${backgroundColor}33` : backgroundColor,
+          borderColor: borderColor || ds.borderColor,
+        };
+      }),
     };
-  }, [chartData, chartType, isDark]);
+  }, [chartData, chartType, isDark, display]);
 
   const options = useMemo(() => ({
     responsive: true,
@@ -66,7 +90,7 @@ function ChartComponent({ chartType = 'Bar', chartData, mapping }) {
     },
     scales: {
       x: {
-        display: chartType !== 'Pie' && chartType !== 'Doughnut',
+        display: chartType !== 'Pie' && chartType !== 'Doughnut' && chartType !== 'Radar',
         grid: {
           display: false,
         },
@@ -82,7 +106,7 @@ function ChartComponent({ chartType = 'Bar', chartData, mapping }) {
         },
       },
       y: {
-        display: chartType !== 'Pie' && chartType !== 'Doughnut',
+        display: chartType !== 'Pie' && chartType !== 'Doughnut' && chartType !== 'Radar',
         grid: {
           color: isDark ? 'rgba(51, 65, 85, 0.5)' : 'rgba(226, 232, 240, 0.6)',
           drawBorder: false,
@@ -101,6 +125,21 @@ function ChartComponent({ chartType = 'Bar', chartData, mapping }) {
           padding: 8,
         },
       },
+      ...(chartType === 'Radar' && {
+        r: {
+          ticks: {
+            color: isDark ? '#94a3b8' : '#64748b',
+            backdropColor: 'transparent',
+            font: { family: "'Inter', sans-serif", size: 10 }
+          },
+          grid: { color: isDark ? 'rgba(51, 65, 85, 0.5)' : 'rgba(226, 232, 240, 0.6)' },
+          angleLines: { color: isDark ? 'rgba(51, 65, 85, 0.5)' : 'rgba(226, 232, 240, 0.6)' },
+          pointLabels: { 
+            color: isDark ? '#94a3b8' : '#64748b',
+            font: { family: "'Inter', sans-serif", size: 11 }
+          }
+        }
+      }),
     },
     plugins: {
       legend: {
@@ -164,6 +203,7 @@ function ChartComponent({ chartType = 'Bar', chartData, mapping }) {
         {chartType === "Pie" && <Pie ref={chartRef} data={processedData} options={options} />}
         {chartType === "Doughnut" && <Doughnut ref={chartRef} data={processedData} options={options} />}
         {chartType === "Scatter" && <Scatter ref={chartRef} data={processedData} options={options} />}
+        {chartType === "Radar" && <Radar ref={chartRef} data={processedData} options={options} />}
       </div>
     </div>
   );

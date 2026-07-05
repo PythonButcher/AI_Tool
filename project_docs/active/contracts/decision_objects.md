@@ -133,6 +133,7 @@ Phase 3 of AI Chat Decision Output Unification adds a backend-owned `decision_ou
 | `decision_map` | `Decision Output Map` | Yes | Read-only map of dataset, frame, evidence, missing inputs, and advanced gates. Edges are explicitly non-causal. |
 | `scenario_compare` | `Decision Output Scenario Compare` | Yes | Bounded scenario preview when available, otherwise a `not_applicable` object with limitations. It is not a forecast, optimizer, simulation, causal model, autonomous decision, or final recommendation. |
 | `advanced_gates` | `object[]` | Yes | Unsupported or gated capabilities such as simulation, optimization, autonomous decisioning, and final recommendation with backend reasons. |
+| `command_center` | `Decision Output Command Center` | Yes | AI Chat-native command surface composed from existing `decision_output` truth. It supplies display order, stale or rerun state, allowed next checks, disabled next checks with reasons, export readiness, limitations, and source refs without changing artifact type or export semantics. |
 | `export_sections` | `object[]` | Yes | Backend-owned PDF-ready sections for Executive Brief, Dataset Trust, Goal, Drivers, Limits, Breakdowns, Evidence Board, Decision Map Summary, Scenario Compare, Assumptions and Unknowns, and Truth Boundary. |
 | `source_refs` | `object` | Yes | Trace refs back to workspace ID/status, analysis presence, ranked diagnostic IDs, correction status, and scenario status. |
 | `truth_boundary` | `string` | Yes | Current value is `observational_analysis_only`. |
@@ -220,6 +221,31 @@ Phase 8 folds the existing bounded scenario preview into `decision_output.scenar
 
 Unavailable scenario data is not fabricated. If no preview is attached, the preview is not ready, or projection rows are missing, `scenario_compare.status` is `not_applicable`, `projections` is empty, `baseline.status` and `comparison.status` are `not_available`, and `limitations` explain that no scenario projection data was available.
 
+#### Decision Output Command Center
+
+The command center belongs inside the existing `decision_output` artifact as `decision_output.command_center`. Codex chose this additive section instead of a wrapper artifact because current AI Chat rendering, artifact inspection, export, and saved-asset paths already recognize `type: "decision_output"`. A wrapper would force frontend artifact routing to unwrap another object before existing behavior could work. The existing `decision_output` remains canonical; `command_center` is a compact control state derived from `frame`, `dataset_trust`, `readiness`, `evidence_board`, `decision_map`, `scenario_compare`, `advanced_gates`, `export_sections`, `source_refs`, and `truth_boundary`.
+
+The command center must not become a raw field dump. Frontend code should use it for the command-center header, section order, next-check buttons, disabled states, export readiness, and limitations, then render section bodies from the existing `decision_output` fields named by the contract.
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `schema_version` | `string` | Yes | Current value is `di_command_center_v1`. |
+| `surface` | `string` | Yes | Current value is `ai_chat_decision_command_center`. |
+| `status` | `string` | Yes | `ready`, `limited`, or `blocked`. `limited` covers unknown or possibly stale data and outputs where analysis has not populated the Evidence Board. |
+| `section_order` | `string[]` | Yes | Ordered section IDs for the command-center view. Current values mirror `export_sections.section_id` order and should be rendered with existing section content, not copied as raw JSON. |
+| `stale_state` | `string` | Yes | Copied from `dataset_trust.stale_state`: `current`, `possibly_stale`, `unknown`, or `not_applicable`. |
+| `rerun_state` | `object` | Yes | Includes `status`, optional `action_id`, and `reason`. Current statuses include `analysis_not_run`, `current_analysis_available`, `possibly_stale_analysis_available`, and `blocked`. |
+| `allowed_next_checks` | `object[]` | Yes | Enabled check controls. Each item includes `check_id`, `label`, `description`, `enabled: true`, `status: "ready"`, `source`, and optional backend `action_id` such as `analyze_workspace`. |
+| `disabled_next_checks` | `object[]` | Yes | Disabled controls with explicit reasons. Each item includes `check_id`, `label`, `enabled: false`, `status: "disabled"`, `source`, `reason`, and optional `action_id`. Unsupported capabilities and live saved-asset refresh belong here. |
+| `export_readiness` | `object` | Yes | Includes `ready`, `status`, `section_count`, `section_order`, and `reason`. This describes whether existing `export_sections` are usable; it does not add a new export payload. |
+| `limitations` | `string[]` | Yes | Conservative limitations for observational-only support, Dataset Trust warnings, unavailable Evidence Board or Scenario Compare state, unsupported advanced gates, and immutable saved snapshots. |
+| `source_refs` | `object` | Yes | Compact refs for `workspace_id`, `workspace_status`, `workspace_analysis_present`, `ranked_diagnostic_ids`, and `scenario_status`. |
+| `truth_boundary` | `string` | Yes | Current value is `observational_analysis_only`. |
+
+Allowed next checks are user-approved investigations or review actions, not recommendations or autonomous actions. Current check IDs may include `review_decision_frame`, `run_observational_analysis`, `review_evidence_board`, `review_decision_map`, `review_scenario_compare`, `export_decision_output`, and `save_decision_snapshot`. Disabled check IDs may include `unsupported_simulation`, `unsupported_optimization`, `unsupported_autonomous_decisioning`, `unsupported_final_recommendation`, and `live_saved_asset_refresh`.
+
+Reliability boundary: The command center does not introduce final recommendations, predictions, simulations, optimizers, causal proof, autonomous decisions, live saved-asset refresh, or unsupported ML behavior. Scenario Compare remains bounded direct adjustment only. Saved DecisionAssets remain immutable historical snapshots; when `command_center` is present in a saved asset, it is part of the snapshot and must not be presented as live state.
+
 ### DecisionAsset
 
 A `DecisionAsset` is an immutable saved AI Chat Decision Review. It is an observational snapshot of the supplied `decision_output`, not a live dataset view, refresh, final recommendation, forecast, simulation, optimizer, causal result, or autonomous decision. Saving does not re-run governance because it does not load or process a dataset. The stored `dataset_trust` and `truth_boundary` remain the source-of-record snapshot; clients must not present them as current data freshness or a new governance evaluation.
@@ -230,7 +256,7 @@ A `DecisionAsset` is an immutable saved AI Chat Decision Review. It is an observ
 | `schema_version` | `string` | Yes | Current value is `di_decision_asset_v1`. |
 | `title` | `string` | Yes | Normalized display title. A missing or blank caller title falls back to `decision_output.title`. |
 | `created_at` | `string` | Yes | Backend-generated ISO-8601 UTC timestamp. |
-| `decision_output` | `AI Chat Decision Output` | Yes | Exact sanitized immutable snapshot of the current output. It preserves `dataset_trust`, `source_refs`, `export_sections`, and `truth_boundary`. |
+| `decision_output` | `AI Chat Decision Output` | Yes | Exact sanitized immutable snapshot of the current output. It preserves `dataset_trust`, `command_center`, `source_refs`, `export_sections`, and `truth_boundary`. |
 | `graph_state` | `Decision Graph State` | No | Optional contract-safe `decision_graph_build_state` carry-forward object. It is absent when no graph state was supplied. |
 | `snapshot_notice` | `string` | Yes | UI copy that the asset is a saved immutable observational snapshot and not a live refresh or final decision. |
 
