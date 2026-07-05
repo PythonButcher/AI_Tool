@@ -72,9 +72,6 @@ export const normalizeDashboardItemDisplay = (display) => ({
   compact: display?.compact === true,
   showLegend: display?.showLegend ?? null,
   accent: display?.accent || null,
-  paletteId: display?.paletteId || 'default',
-  seriesColors: display?.seriesColors || {},
-  customColors: display?.customColors || [],
 });
 
 export const normalizeDashboardItemSourceMetadata = (metadata) => ({

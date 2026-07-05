@@ -12,10 +12,6 @@ Plain-language summary:
 
 `project_docs/active/agent_council/outputs/next-implementation-cycle-priorities/2026-06-28-next-implementation-cycle-priorities-summary.md`
 
-Codex next-session kickoff prompt:
-
-`project_docs/active/agent_council/outputs/next-implementation-cycle-priorities/codex_next_session_ai_chat_decision_command_center_kickoff.md`
-
 ## Validation
 
 Run from the repository root:

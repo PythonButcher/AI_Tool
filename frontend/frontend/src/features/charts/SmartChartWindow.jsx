@@ -10,13 +10,12 @@ import {
   countActiveDashboardFilters,
   getSlicerConflict,
 } from '../../utils/dashboardFilterUtils';
-import { TbChartBar, TbChartDots, TbChartLine, TbChartPie, TbChartDonut, TbChartRadar } from 'react-icons/tb';
+import { TbChartBar, TbChartDots, TbChartLine, TbChartPie, TbChartDonut } from 'react-icons/tb';
 import { AiOutlineFundProjectionScreen, AiOutlineTag, AiOutlineFileSearch, AiOutlineLineChart } from 'react-icons/ai';
 import { FaThumbtack } from 'react-icons/fa';
 import { useWindowContext } from '../../context/WindowContext';
 import { normalizeDatasetRows, useActiveDataset, useSemanticModel } from '../../context/DataContext';
 import DropZone from '../../utils/DropZone';
-import ChartColorPicker from './ChartColorPicker';
 import './SmartChartWindow.css';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
@@ -31,7 +30,6 @@ const SmartChartWindow = ({
   semanticConfig = {},
   externalFilters = null,
   chartSpec = null,
-  display = {},
 }) => {
   const [activeDragPayload, setActiveDragPayload] = useState(null);
   const [semanticResolution, setSemanticResolution] = useState(null);
@@ -236,7 +234,6 @@ const SmartChartWindow = ({
           { type: 'Pie', icon: <TbChartPie /> },
           { type: 'Scatter', icon: <TbChartDots /> },
           { type: 'Doughnut', icon: <TbChartDonut /> },
-          { type: 'Radar', icon: <TbChartRadar /> },
         ].map((option) => (
           <button
             key={option.type}
@@ -271,20 +268,7 @@ const SmartChartWindow = ({
       <div className="semantic-status-mini">
         {semanticStatusCopy}
       </div>
-
-      <div className="chart-actions-mini">
-        <ChartColorPicker
-          display={display}
-          onChange={(newDisplay) => {
-            if (isDashboardItem) {
-              updateDashboardItem(id, { display: newDisplay });
-            } else {
-              updateChart(id, { display: newDisplay });
-            }
-          }}
-        />
-      </div>
-
+      
       {chartSpec?.schemaVersion === 'chart_spec_v1' && (
         <div className="chart-actions-mini">
           <button
@@ -438,7 +422,7 @@ const SmartChartWindow = ({
           </div>
         )}
       
-        {!isEmpty && !slicerConflict && <ChartComponent chartType={type} chartData={chartData} display={display} />}
+        {!isEmpty && !slicerConflict && <ChartComponent chartType={type} chartData={chartData} />}
 
         {isEmpty && !isDraggingAny && !slicerConflict && (
           <div className="chart-placeholder">

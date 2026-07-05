@@ -103,11 +103,6 @@ Default positions must be deterministic and should not stack all migrated items 
 | `compact` | `boolean` | Yes | Compact card chrome. Suggested default: `false`. |
 | `showLegend` | `boolean \| null` | No | Chart preference when supported. `null` means use chart default. |
 | `accent` | `string \| null` | No | Optional future visual accent token. |
-| `paletteId` | `string \| null` | No | Optional local palette choice for chart rendering. `null` means use the app default palette. |
-| `seriesColors` | `object` | No | Optional local chart color overrides keyed by stable dataset label or series id. Values should be valid CSS colors. |
-| `customColors` | `string[]` | No | Optional ordered local palette colors for charts that need category or slice colors. Values should be valid CSS colors. |
-
-Chart appearance fields are local presentation preferences. They must not change backend chart, metric, slicer, or decision contracts. If unsupported or invalid colors are found during migration, normalize to the default palette instead of blocking chart rendering.
 
 ## DashboardItemSourceMetadata
 

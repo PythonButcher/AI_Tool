@@ -15,14 +15,12 @@ The Decisions window is no longer the required continuation path. Its future rol
 | Need | Read |
 | --- | --- |
 | Short current status | `../status/decision_intelligence_execution_status.md` |
-| Current Evidence-To-Action Workflow plan | `current/phase_6_evidence_to_action_workflow_plan.md` |
+| Current dashboard canvas and sharing skeleton plan | `current/phase_4_dashboard_canvas_layout_and_sharing_skeleton_plan.md` |
 | Completed AI Chat rollout details | `../../archive/ai_chat_decision_output_unification_rollout_completed.md` |
 | Contract reference | `../contracts/decision_objects.md` |
 | Dashboard canvas state contract | `../contracts/dashboard_canvas_state.md` |
 | Frontend ownership rule | `../rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md` |
 | Completed AI Chat emergency overhaul | `completed/ai_chat_emergency_overhaul_action_plan.md` |
-
-The older dashboard canvas layout and sharing skeleton plan remains in `current/` as a stale reference until a cleanup pass moves it to the appropriate historical location. The current status file is authoritative for the active gate.
 
 ## Completed Reference
 
@@ -38,8 +36,6 @@ Completed plans and handoffs are in `completed/`. Do not scan them by default.
 | `completed/phase_4_5_ai_chat_decision_intelligence_plan.md` | Completed AI Chat hardening plan |
 | `completed/phase_2_fullscreen_decision_asset_review_architecture.md` | Completed immutable DecisionAsset review architecture |
 | `completed/phase_2_fullscreen_decision_asset_review_gemini_handoff.md` | Completed fullscreen-review implementation handoff |
-| `completed/phase_5_ai_chat_decision_command_center_backend_plan.md` | Completed AI Chat Decision Command Center backend plan |
-| `completed/phase_5_gemini_ai_chat_decision_command_center.md` | Completed AI Chat Decision Command Center frontend handoff |
 | `completed/phase_3_charting_slicer_backbone_plan.md` | Completed charting and slicer backbone plan |
 | `completed/phase_3_antigravity_charting_slicer_ui_handoff.md` | Completed charting slicer frontend handoff |
 | Other files in `completed/` | Historical or completed reference only |

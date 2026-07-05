@@ -44,7 +44,6 @@ const DashboardCanvasItem = React.forwardRef(({
         dataSourceMode={item.dataSourceMode}
         semanticConfig={item.semanticConfig}
         externalFilters={dashboardFilters}
-        display={item.display}
       />
     );
   };

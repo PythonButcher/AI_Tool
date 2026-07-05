@@ -18,21 +18,15 @@ The Decisions window remains secondary. Saved DecisionAssets support immutable h
 
 ## Current Project Gate
 
-Status: **Phase 6 - Evidence-To-Action Workflow: CODEX GOAL PROMPT READY**
+Status: **Phase 4 - Dashboard Canvas Layout And Sharing Skeleton: ANTIGRAVITY HANDOFF READY**
 
 Current plan:
 
-`project_docs/active/decision_intelligence/current/phase_6_evidence_to_action_workflow_plan.md`
+`project_docs/active/decision_intelligence/current/phase_4_dashboard_canvas_layout_and_sharing_skeleton_plan.md`
 
-Next-session goal prompt:
+Goal: turn the dashboard into a canvas-style workspace where pinned charts and KPI cards can be moved, resized, locked, persisted locally, sliced in view mode, and prepared for future sharing without real authentication or backend sharing APIs.
 
-`project_docs/active/ai_hand_off/codex_evidence_to_action_workflow_goal.md`
-
-Goal: Build the Evidence-To-Action Workflow backend contract so evidence, map items, and graph items expose user-approved next checks with exact enabled states, disabled reasons, source refs, and observational truth boundaries.
-
-Latest verified fact: Phase 5 - AI Chat Decision Command Center is complete end to end by user acceptance. Backend contract, frontend implementation, source review, build evidence, harness checks, command-center save/export wiring, and user browser acceptance are complete.
-
-Separate pending user acceptance: the Antigravity chart color picker polish slice remains awaiting user browser acceptance and is not changed by this backend contract slice.
+Latest verified fact: Codex activated the dashboard canvas and sharing skeleton plan, created a detailed Antigravity handoff, and added the local-first dashboard canvas state contract at `project_docs/active/contracts/dashboard_canvas_state.md`. Codex is not authorized to implement frontend/UI code in this session, so Antigravity owns the React/CSS implementation and browser verification.
 
 Previous completed references:
 
@@ -44,13 +38,11 @@ Previous completed references:
 
 `project_docs/active/decision_intelligence/completed/phase_2_fullscreen_decision_asset_review_gemini_handoff.md`
 
-`project_docs/active/decision_intelligence/completed/phase_5_ai_chat_decision_command_center_backend_plan.md`
-
-`project_docs/active/decision_intelligence/completed/phase_5_gemini_ai_chat_decision_command_center.md`
-
 ## Next Focus
 
-Codex owns the next backend contract slice. Start from `project_docs/active/ai_hand_off/codex_evidence_to_action_workflow_goal.md`. Gemini or Antigravity should wait until Codex verifies backend contract readiness and creates a focused frontend handoff if needed.
+Antigravity implementation for Phase 4 dashboard canvas layout and sharing skeleton. Active handoff:
+
+`project_docs/active/ai_hand_off/phase_4_antigravity_dashboard_canvas_layout_and_sharing_skeleton.md`
 
 ## Canonical Resume Order
 
