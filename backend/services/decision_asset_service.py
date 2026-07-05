@@ -60,6 +60,7 @@ class DecisionAssetService:
         "decision_map",
         "scenario_compare",
         "advanced_gates",
+        "command_center",
         "export_sections",
         "source_refs",
         "truth_boundary",

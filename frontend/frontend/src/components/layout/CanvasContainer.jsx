@@ -701,6 +701,7 @@ function CanvasContainer({
               isLocked={isLocked(chart.id)}
               dataSourceMode={chart.dataSourceMode}
               semanticConfig={chart.semanticConfig}
+              display={chart.display || {}}
             />
           </div>
         </WindowFrame>
