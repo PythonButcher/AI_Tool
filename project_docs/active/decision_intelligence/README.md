@@ -42,6 +42,7 @@ Completed plans and handoffs are in `completed/`. Do not scan them by default.
 | `completed/phase_5_gemini_ai_chat_decision_command_center.md` | Completed AI Chat Decision Command Center frontend handoff |
 | `completed/phase_3_charting_slicer_backbone_plan.md` | Completed charting and slicer backbone plan |
 | `completed/phase_3_antigravity_charting_slicer_ui_handoff.md` | Completed charting slicer frontend handoff |
+| `completed/antigravity_chart_color_picker_handoff.md` | Completed chart color picker frontend handoff |
 | Other files in `completed/` | Historical or completed reference only |
 
 ## Superseded Reference

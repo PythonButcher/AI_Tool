@@ -212,6 +212,14 @@ class DecisionGraphServiceTests(unittest.TestCase):
             self.assertIn(edge["reliability_label"], {"observed_supported", "observed_limited", "observed_insufficient"})
             self.assertIn("data_sufficiency", edge)
             self.assertIn("followup_actions", edge)
+            for action in edge["followup_actions"]:
+                self.assertIn("label", action)
+                self.assertIn("enabled", action)
+                self.assertIn("source_refs", action)
+                self.assertEqual(action["source_refs"]["edge_id"], edge["edge_id"])
+                self.assertEqual(action["truth_boundary"], "observational_analysis_only")
+                if not action["enabled"]:
+                    self.assertIn("disabled_reason", action)
 
     def test_user_hypothesis_edges_are_directional_and_explicitly_not_validated(self):
         payload = build_graph_payload()
@@ -238,6 +246,10 @@ class DecisionGraphServiceTests(unittest.TestCase):
         self.assertTrue(
             any(action["action_id"] == "send_to_scenario_compare" and not action["enabled"] for action in edge["followup_actions"])
         )
+        scenario_action = next(action for action in edge["followup_actions"] if action["action_id"] == "send_to_scenario_compare")
+        self.assertEqual(scenario_action["status"], "needs_observed_metric_edge")
+        self.assertIn("user hypothesis", scenario_action["disabled_reason"].lower())
+        self.assertEqual(scenario_action["source_refs"]["relationship_type"], "user_hypothesis")
         self.assertIn("user_hypothesis", result["reliability_labels"])
         self.assertEqual(result["graph_state"]["state_kind"], "decision_graph_build_state")
         self.assertEqual(
@@ -421,6 +433,9 @@ class DecisionGraphServiceTests(unittest.TestCase):
         })
 
         self.assertEqual(result["action_status"], "needs_observed_metric_edge")
+        self.assertFalse(result["enabled"])
+        self.assertIn("user hypothesis", result["disabled_reason"].lower())
+        self.assertEqual(result["source_refs"]["relationship_type"], "user_hypothesis")
         self.assertEqual(result["response_semantics"]["scenario_semantics"], "direct_adjustment_only")
         self.assertFalse(result["response_semantics"]["causal_claim"])
 

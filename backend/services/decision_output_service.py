@@ -244,6 +244,19 @@ class DecisionOutputService:
             "data_sufficiency": data_sufficiency,
             "limitations": limitations,
             "source_diagnostic_id": source_id,
+            "source_refs": DecisionOutputService._evidence_source_refs(
+                diagnostic=diagnostic,
+                rank=rank,
+                source_id=source_id,
+            ),
+            "next_checks": DecisionOutputService._build_evidence_next_checks(
+                diagnostic=diagnostic,
+                rank=rank,
+                source_id=source_id,
+                covers=covers,
+                data_sufficiency=data_sufficiency,
+                limitations=limitations,
+            ),
             "observational_boundary": diagnostic.get("observational_boundary") or DecisionOutputService.TRUTH_BOUNDARY,
         }
 
@@ -357,6 +370,128 @@ class DecisionOutputService:
         )
         source_id = diagnostic.get("source_diagnostic_id") or diagnostic.get("diagnostic_id") or source_diagnostic.get("diagnostic_id")
         return str(source_id) if source_id else None
+
+    @staticmethod
+    def _evidence_source_refs(
+        *,
+        diagnostic: Dict[str, Any],
+        rank: int,
+        source_id: Optional[str],
+    ) -> Dict[str, Any]:
+        metric_ref = diagnostic.get("metric_ref") if isinstance(diagnostic.get("metric_ref"), dict) else {}
+        dimension_ref = diagnostic.get("dimension_ref") if isinstance(diagnostic.get("dimension_ref"), dict) else {}
+        source_diagnostic = diagnostic.get("source_diagnostic") if isinstance(diagnostic.get("source_diagnostic"), dict) else {}
+        return {
+            "source": "evidence_board",
+            "source_path": f"evidence_board.items[{rank - 1}]",
+            "source_diagnostic_id": source_id,
+            "metric_id": metric_ref.get("metric_id") or metric_ref.get("id") or source_diagnostic.get("metric_id"),
+            "dimension_id": dimension_ref.get("dimension_id") or dimension_ref.get("id") or source_diagnostic.get("dimension_id"),
+            "field": dimension_ref.get("field") or source_diagnostic.get("field"),
+        }
+
+    @staticmethod
+    def _build_evidence_next_checks(
+        *,
+        diagnostic: Dict[str, Any],
+        rank: int,
+        source_id: Optional[str],
+        covers: Dict[str, Any],
+        data_sufficiency: Dict[str, Any],
+        limitations: List[str],
+    ) -> List[Dict[str, Any]]:
+        source_refs = DecisionOutputService._evidence_source_refs(
+            diagnostic=diagnostic,
+            rank=rank,
+            source_id=source_id,
+        )
+        metric_id = source_refs.get("metric_id")
+        dimension_id = source_refs.get("dimension_id") or source_refs.get("field")
+        sufficiency_status = str(data_sufficiency.get("status") or "").strip().lower()
+        has_breakdown_context = bool(dimension_id or covers.get("breakdowns"))
+        has_observed_metric = bool(metric_id)
+        scenario_ready = has_observed_metric and sufficiency_status not in {"limited", "insufficient"}
+
+        checks = [
+            DecisionOutputService._next_check(
+                check_id="explain_evidence",
+                label="Explain evidence",
+                description="Explain this ranked evidence item, its source diagnostic, and its observational limits.",
+                source="evidence_board",
+                action_id="explain_evidence",
+                source_refs=source_refs,
+                limitations=limitations,
+            )
+        ]
+        if has_observed_metric and has_breakdown_context:
+            checks.append(DecisionOutputService._next_check(
+                check_id="breakdown",
+                label="Break down evidence",
+                description="Prepare a metric-by-breakdown follow-up check for this evidence item.",
+                source="evidence_board",
+                action_id="breakdown",
+                source_refs=source_refs,
+                limitations=limitations,
+            ))
+        else:
+            checks.append(DecisionOutputService._disabled_next_check(
+                check_id="breakdown",
+                label="Break down evidence",
+                source="evidence_board",
+                reason="Breakdown needs both an observed metric target and a breakdown dimension from the evidence source.",
+                action_id="breakdown",
+                source_refs=source_refs,
+                limitations=limitations,
+            ))
+
+        if has_observed_metric:
+            checks.append(DecisionOutputService._next_check(
+                check_id="monitor",
+                label="Monitor evidence",
+                description="Prepare an observational monitoring specification for this metric evidence.",
+                source="evidence_board",
+                action_id="monitor",
+                source_refs=source_refs,
+                limitations=limitations,
+            ))
+        else:
+            checks.append(DecisionOutputService._disabled_next_check(
+                check_id="monitor",
+                label="Monitor evidence",
+                source="evidence_board",
+                reason="Monitoring needs an observed metric target from the evidence source.",
+                action_id="monitor",
+                source_refs=source_refs,
+                limitations=limitations,
+            ))
+
+        if scenario_ready:
+            checks.append(DecisionOutputService._next_check(
+                check_id="send_to_scenario_compare",
+                label="Send to Scenario Compare",
+                description="Prepare a bounded direct-adjustment Scenario Compare check from this observed metric target.",
+                source="evidence_board",
+                action_id="send_to_scenario_compare",
+                source_refs=source_refs,
+                limitations=limitations,
+            ))
+        else:
+            reason = (
+                "Scenario Compare needs an observed metric target with sufficient evidence."
+                if has_observed_metric
+                else "Scenario Compare needs an observed metric target; no metric target was found on this evidence item."
+            )
+            checks.append(DecisionOutputService._disabled_next_check(
+                check_id="send_to_scenario_compare",
+                label="Send to Scenario Compare",
+                source="evidence_board",
+                reason=reason,
+                action_id="send_to_scenario_compare",
+                source_refs=source_refs,
+                limitations=limitations,
+            ))
+
+        return checks
 
     @staticmethod
     def _coerce_positive_int(value: Any, fallback: int) -> int:
@@ -554,12 +689,27 @@ class DecisionOutputService:
             "source_path": source_path,
             "confidence": confidence,
             "warnings": list(warnings or []),
+            "source_refs": {
+                "source": "decision_map",
+                "node_id": node_id,
+                "node_type": node_type,
+                "source_path": source_path,
+            },
+            "next_checks": DecisionOutputService._build_map_item_next_checks(
+                item_kind="node",
+                item_id=node_id,
+                item_type=node_type,
+                source_path=source_path,
+                status=status or "draft",
+                warnings=list(warnings or []),
+            ),
         }
 
     @staticmethod
     def _map_edge(source_node_id: str, target_node_id: str, relationship_type: str, label: str) -> Dict[str, Any]:
+        edge_id = f"edge_{source_node_id}_to_{target_node_id}_{relationship_type}"
         return {
-            "edge_id": f"edge_{source_node_id}_to_{target_node_id}_{relationship_type}",
+            "edge_id": edge_id,
             "source_node_id": source_node_id,
             "target_node_id": target_node_id,
             "relationship_type": relationship_type,
@@ -567,7 +717,102 @@ class DecisionOutputService:
             "evidence_refs": [],
             "limitations": ["This edge is not a causal claim."],
             "causal_status": "not_causal_claim",
+            "source_refs": {
+                "source": "decision_map",
+                "edge_id": edge_id,
+                "relationship_type": relationship_type,
+                "source_node_id": source_node_id,
+                "target_node_id": target_node_id,
+            },
+            "next_checks": DecisionOutputService._build_map_item_next_checks(
+                item_kind="edge",
+                item_id=edge_id,
+                item_type=relationship_type,
+                source_path="decision_map.edges",
+                status="available",
+                warnings=[],
+            ),
         }
+
+    @staticmethod
+    def _build_map_item_next_checks(
+        *,
+        item_kind: str,
+        item_id: str,
+        item_type: str,
+        source_path: str,
+        status: str,
+        warnings: List[str],
+    ) -> List[Dict[str, Any]]:
+        source_refs = {
+            "source": "decision_map",
+            "item_kind": item_kind,
+            "item_id": item_id,
+            "item_type": item_type,
+            "source_path": source_path,
+        }
+        limitations = ["Decision Map items are observational and non-causal."]
+        if warnings:
+            limitations.extend(warnings)
+        checks = [
+            DecisionOutputService._next_check(
+                check_id="explain_evidence",
+                label="Explain map item",
+                description="Explain the selected map item, its source path, and the observational boundary.",
+                source="decision_map",
+                action_id="explain_evidence",
+                source_refs=source_refs,
+                limitations=limitations,
+            )
+        ]
+        missing_or_limited = status in {"missing", "blocked", "unsupported", "insufficient"}
+        if missing_or_limited or warnings:
+            checks.append(DecisionOutputService._next_check(
+                check_id="explain_missing_data",
+                label="Explain missing data",
+                description="Explain missing inputs, warnings, or unsupported capability gates for this map item.",
+                source="decision_map",
+                action_id="explain_missing_data",
+                source_refs=source_refs,
+                limitations=limitations,
+            ))
+        else:
+            checks.append(DecisionOutputService._disabled_next_check(
+                check_id="explain_missing_data",
+                label="Explain missing data",
+                source="decision_map",
+                reason="This map item is not currently marked as missing, blocked, unsupported, or warning-bearing.",
+                action_id="explain_missing_data",
+                source_refs=source_refs,
+                limitations=limitations,
+            ))
+        for check_id, label, reason in (
+            (
+                "breakdown",
+                "Break down",
+                "Decision Map items do not carry a complete metric and dimension target; use Evidence Board or Decision Graph items for breakdown checks.",
+            ),
+            (
+                "monitor",
+                "Monitor",
+                "Decision Map items do not carry a metric target for monitoring; use Evidence Board or Decision Graph metric items.",
+            ),
+            (
+                "send_to_scenario_compare",
+                "Send to Scenario Compare",
+                "Decision Map items cannot start Scenario Compare without an observed metric target and direct-adjustment input.",
+            ),
+        ):
+            checks.append(DecisionOutputService._disabled_next_check(
+                check_id=check_id,
+                label=label,
+                source="decision_map",
+                reason=reason,
+                action_id=check_id,
+                source_refs=source_refs,
+                limitations=limitations,
+            ))
+        return checks
 
     @staticmethod
     def _build_scenario_compare(scenario_preview: Optional[Dict[str, Any]]) -> Dict[str, Any]:
@@ -865,6 +1110,7 @@ class DecisionOutputService:
                 label="Review decision frame",
                 description="Inspect the goal, drivers, limits, breakdowns, assumptions, and unknowns.",
                 source="frame",
+                source_refs={"source": "frame", "source_path": "decision_output.frame"},
             )
         ]
         disabled: List[Dict[str, Any]] = []
@@ -876,6 +1122,7 @@ class DecisionOutputService:
                 description="Populate or refresh the Evidence Board from the current decision frame.",
                 source="readiness",
                 action_id="analyze_workspace",
+                source_refs={"source": "readiness", "source_path": "decision_output.readiness"},
             ))
         else:
             disabled.append(DecisionOutputService._disabled_next_check(
@@ -884,6 +1131,7 @@ class DecisionOutputService:
                 source="readiness",
                 reason=DecisionOutputService._missing_inputs_reason(readiness),
                 action_id="analyze_workspace",
+                source_refs={"source": "readiness", "source_path": "decision_output.readiness"},
             ))
 
         if evidence_board.get("status") == "analyzed":
@@ -892,6 +1140,11 @@ class DecisionOutputService:
                 label="Review Evidence Board",
                 description="Inspect ranked observational evidence and its data sufficiency limits.",
                 source="evidence_board",
+                source_refs={
+                    "source": "evidence_board",
+                    "source_path": "decision_output.evidence_board",
+                    "item_count": len(evidence_board.get("items") or []),
+                },
             ))
         else:
             disabled.append(DecisionOutputService._disabled_next_check(
@@ -899,6 +1152,7 @@ class DecisionOutputService:
                 label="Review Evidence Board",
                 source="evidence_board",
                 reason="Run observational analysis before reviewing ranked evidence.",
+                source_refs={"source": "evidence_board", "source_path": "decision_output.evidence_board"},
             ))
 
         if decision_map.get("nodes"):
@@ -907,6 +1161,12 @@ class DecisionOutputService:
                 label="Review Decision Map",
                 description="Inspect declared relationships, evidence coverage, missing inputs, and gates.",
                 source="decision_map",
+                source_refs={
+                    "source": "decision_map",
+                    "source_path": "decision_output.decision_map",
+                    "node_count": len(decision_map.get("nodes") or []),
+                    "edge_count": len(decision_map.get("edges") or []),
+                },
             ))
 
         if scenario_compare.get("status") == "ready":
@@ -915,13 +1175,21 @@ class DecisionOutputService:
                 label="Review Scenario Compare",
                 description="Inspect bounded direct-adjustment sensitivity rows and limitations.",
                 source="scenario_compare",
+                source_refs={
+                    "source": "scenario_compare",
+                    "source_path": "decision_output.scenario_compare",
+                    "source_scenario_ids": list(scenario_compare.get("source_scenario_ids") or []),
+                },
+                limitations=DecisionOutputService._list_of_strings(scenario_compare.get("limitations")),
             ))
         else:
             disabled.append(DecisionOutputService._disabled_next_check(
                 check_id="review_scenario_compare",
                 label="Review Scenario Compare",
                 source="scenario_compare",
-                reason="No ready direct-adjustment scenario projection is attached to this decision output.",
+                reason=DecisionOutputService._scenario_compare_disabled_reason(scenario_compare),
+                source_refs={"source": "scenario_compare", "source_path": "decision_output.scenario_compare"},
+                limitations=DecisionOutputService._list_of_strings(scenario_compare.get("limitations")),
             ))
 
         if export_ready:
@@ -930,6 +1198,10 @@ class DecisionOutputService:
                 label="Export decision output",
                 description="Export the backend-owned decision sections without rebuilding from raw fields.",
                 source="export_sections",
+                source_refs={
+                    "source": "export_sections",
+                    "source_path": "decision_output.export_sections",
+                },
             ))
         else:
             disabled.append(DecisionOutputService._disabled_next_check(
@@ -937,6 +1209,7 @@ class DecisionOutputService:
                 label="Export decision output",
                 source="export_sections",
                 reason="Export sections are missing or incomplete.",
+                source_refs={"source": "export_sections", "source_path": "decision_output.export_sections"},
             ))
 
         allowed.append(DecisionOutputService._next_check(
@@ -944,6 +1217,7 @@ class DecisionOutputService:
             label="Save immutable snapshot",
             description="Save the current decision output as an immutable observational DecisionAsset.",
             source="decision_asset",
+            source_refs={"source": "decision_asset", "source_path": "decision_output"},
         ))
 
         for gate in advanced_gates:
@@ -955,12 +1229,18 @@ class DecisionOutputService:
                 label=capability.replace("_", " ").title(),
                 source="advanced_gates",
                 reason=gate.get("reason") or f"{capability} is unsupported by the current runtime.",
+                source_refs={
+                    "source": "advanced_gates",
+                    "capability": capability,
+                    "source_path": "decision_output.advanced_gates",
+                },
             ))
         disabled.append(DecisionOutputService._disabled_next_check(
             check_id="live_saved_asset_refresh",
             label="Refresh saved DecisionAsset",
             source="decision_asset",
             reason="Saved DecisionAssets are immutable historical snapshots and do not refresh live data.",
+            source_refs={"source": "decision_asset", "source_path": "decision_output"},
         ))
         return allowed, disabled
 
@@ -972,6 +1252,8 @@ class DecisionOutputService:
         description: str,
         source: str,
         action_id: Optional[str] = None,
+        source_refs: Optional[Dict[str, Any]] = None,
+        limitations: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
         item = {
             "check_id": check_id,
@@ -980,6 +1262,13 @@ class DecisionOutputService:
             "enabled": True,
             "status": "ready",
             "source": source,
+            "action_type": "backend_action" if action_id else "informational_review",
+            "source_refs": deepcopy(source_refs) if isinstance(source_refs, dict) else {"source": source},
+            "limitations": DecisionOutputService._dedupe_strings(
+                DecisionOutputService._list_of_strings(limitations)
+                + [DecisionOutputService.OBSERVATIONAL_LIMITATION]
+            ),
+            "truth_boundary": DecisionOutputService.TRUTH_BOUNDARY,
         }
         if action_id:
             item["action_id"] = action_id
@@ -993,18 +1282,37 @@ class DecisionOutputService:
         source: str,
         reason: Any,
         action_id: Optional[str] = None,
+        source_refs: Optional[Dict[str, Any]] = None,
+        limitations: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
+        disabled_reason = str(reason or "This check is not available for the current decision output.")
         item = {
             "check_id": check_id,
             "label": label,
             "enabled": False,
             "status": "disabled",
             "source": source,
-            "reason": str(reason or "This check is not available for the current decision output."),
+            "reason": disabled_reason,
+            "disabled_reason": disabled_reason,
+            "action_type": "backend_action" if action_id else "informational_review",
+            "source_refs": deepcopy(source_refs) if isinstance(source_refs, dict) else {"source": source},
+            "limitations": DecisionOutputService._dedupe_strings(
+                DecisionOutputService._list_of_strings(limitations)
+                + [DecisionOutputService.OBSERVATIONAL_LIMITATION]
+            ),
+            "truth_boundary": DecisionOutputService.TRUTH_BOUNDARY,
         }
         if action_id:
             item["action_id"] = action_id
         return item
+
+    @staticmethod
+    def _scenario_compare_disabled_reason(scenario_compare: Dict[str, Any]) -> str:
+        inputs = scenario_compare.get("inputs") if isinstance(scenario_compare.get("inputs"), dict) else {}
+        targets = inputs.get("metric_targets") if isinstance(inputs.get("metric_targets"), list) else []
+        if not targets:
+            return "Scenario Compare is disabled because no observed metric target is available for direct adjustment."
+        return "No ready direct-adjustment scenario projection is attached to this decision output."
 
     @staticmethod
     def _observational_analysis_ready(readiness: Dict[str, Any]) -> bool:

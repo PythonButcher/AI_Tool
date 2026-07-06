@@ -427,6 +427,31 @@ export default function DecisionOutputReview({
                         )}
                       </div>
                     </div>
+                    {rd.next_checks && rd.next_checks.length > 0 && (
+                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '16px', paddingTop: '16px', borderTop: '1px dashed var(--border-color)' }}>
+                        {rd.next_checks.map((check, cIdx) => (
+                          <Tooltip key={`check-${cIdx}`} title={check.enabled ? (check.description || '') : (check.disabled_reason || check.reason || 'Disabled')} arrow>
+                            <span>
+                              <Button
+                                variant="outlined"
+                                size="small"
+                                disabled={!check.enabled}
+                                sx={{
+                                  fontSize: '0.75rem',
+                                  padding: '2px 8px',
+                                  textTransform: 'none',
+                                  opacity: check.enabled ? 1 : 0.6,
+                                  borderColor: check.enabled ? 'var(--accent-blue)' : 'var(--border-color)',
+                                  color: check.enabled ? 'var(--accent-blue)' : 'var(--text-secondary)'
+                                }}
+                              >
+                                {check.label || check.check_id?.replace(/_/g, ' ')}
+                              </Button>
+                            </span>
+                          </Tooltip>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -451,6 +476,25 @@ export default function DecisionOutputReview({
                       <div key={i} className={`ai-shell__do-map-node is-${node.node_type || 'unknown'}`}>
                         <span className="ai-shell__do-map-node-lbl">{node.label}</span>
                         <span className="ai-shell__do-map-node-type">{node.node_type}</span>
+                        {node.next_checks && node.next_checks.length > 0 && (
+                          <div style={{ display: 'flex', gap: '4px', marginTop: '4px', flexWrap: 'wrap' }}>
+                            {node.next_checks.map((check, cIdx) => (
+                              <Tooltip key={`node-check-${cIdx}`} title={check.enabled ? (check.description || '') : (check.disabled_reason || check.reason || 'Disabled')} arrow>
+                                <span style={{
+                                  fontSize: '0.65rem',
+                                  padding: '2px 6px',
+                                  borderRadius: '4px',
+                                  background: check.enabled ? 'rgba(0, 102, 255, 0.1)' : 'rgba(0,0,0,0.05)',
+                                  color: check.enabled ? 'var(--accent-blue)' : 'var(--text-secondary)',
+                                  border: check.enabled ? '1px solid rgba(0, 102, 255, 0.2)' : '1px solid transparent',
+                                  cursor: 'help'
+                                }}>
+                                  {check.label || check.check_id?.replace(/_/g, ' ')}
+                                </span>
+                              </Tooltip>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -460,8 +504,27 @@ export default function DecisionOutputReview({
                         const srcNode = doMap.nodes.find(n => n.node_id === edge.source_node_id);
                         const tgtNode = doMap.nodes.find(n => n.node_id === edge.target_node_id);
                         return (
-                          <div key={i} className="ai-shell__do-map-edge">
-                            {srcNode?.label || edge.source_node_id} ‹ {edge.relationship_type?.replace(/_/g, ' ')} › {tgtNode?.label || edge.target_node_id}
+                          <div key={i} className="ai-shell__do-map-edge" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                            <span>{srcNode?.label || edge.source_node_id} ‹ {edge.relationship_type?.replace(/_/g, ' ')} › {tgtNode?.label || edge.target_node_id}</span>
+                            {edge.next_checks && edge.next_checks.length > 0 && (
+                              <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                                {edge.next_checks.map((check, cIdx) => (
+                                  <Tooltip key={`edge-check-${cIdx}`} title={check.enabled ? (check.description || '') : (check.disabled_reason || check.reason || 'Disabled')} arrow>
+                                    <span style={{
+                                      fontSize: '0.65rem',
+                                      padding: '2px 6px',
+                                      borderRadius: '4px',
+                                      background: check.enabled ? 'rgba(0, 102, 255, 0.1)' : 'rgba(0,0,0,0.05)',
+                                      color: check.enabled ? 'var(--accent-blue)' : 'var(--text-secondary)',
+                                      border: check.enabled ? '1px solid rgba(0, 102, 255, 0.2)' : '1px solid transparent',
+                                      cursor: 'help'
+                                    }}>
+                                      {check.label || check.check_id?.replace(/_/g, ' ')}
+                                    </span>
+                                  </Tooltip>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         );
                       })}

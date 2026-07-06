@@ -10,6 +10,18 @@ Full older preserved status history:
 
 `project_docs/archive/superseded_active_2026_05_24/decision_intelligence_execution_status_full_2026_05_24.md`
 
+# Decision Intelligence Execution Status
+
+This is the short active status file. Implementation history belongs in completed records or archive, not in this active gate document.
+
+Detailed history:
+
+`project_docs/archive/decision_intelligence_status_history_2026_06_01.md`
+
+Full older preserved status history:
+
+`project_docs/archive/superseded_active_2026_05_24/decision_intelligence_execution_status_full_2026_05_24.md`
+
 ## Current Truth
 
 Decision Intelligence V3 is active. AI Chat remains the primary work surface for normal answers, charting, exploration, decision output, artifact inspection, and exports.
@@ -18,21 +30,25 @@ The Decisions window remains secondary. Saved DecisionAssets support immutable h
 
 ## Current Project Gate
 
-Status: **Phase 6 - Evidence-To-Action Workflow: CODEX GOAL PROMPT READY**
+Status: **Phase 6 - Evidence-To-Action Workflow: FRONTEND IMPLEMENTED; AWAITING BROWSER ACCEPTANCE**
 
 Current plan:
 
 `project_docs/active/decision_intelligence/current/phase_6_evidence_to_action_workflow_plan.md`
 
-Next-session goal prompt:
+Codex backend goal prompt:
 
 `project_docs/active/ai_hand_off/codex_evidence_to_action_workflow_goal.md`
 
+Frontend handoff:
+
+`project_docs/active/ai_hand_off/antigravity_evidence_to_action_workflow_handoff.md`
+
 Goal: Build the Evidence-To-Action Workflow backend contract so evidence, map items, and graph items expose user-approved next checks with exact enabled states, disabled reasons, source refs, and observational truth boundaries.
 
-Latest verified fact: Phase 5 - AI Chat Decision Command Center is complete end to end by user acceptance. Backend contract, frontend implementation, source review, build evidence, harness checks, command-center save/export wiring, and user browser acceptance are complete.
+Latest verified fact: Antigravity has completed the frontend implementation of the Evidence-To-Action Workflow. `DecisionCommandCenter.jsx`, `DecisionOutputReview.jsx`, and `InspectorPanel.jsx` now correctly render backend-owned `next_checks` metadata, including disabled reasons, source refs, and visually distinct blocked states. The frontend build and agent harness check have passed.
 
-Separate pending user acceptance: the Antigravity chart color picker polish slice remains awaiting user browser acceptance and is not changed by this backend contract slice.
+Separate completed frontend polish: the Antigravity chart color picker slice is complete by user acceptance and retained as a completed reference.
 
 Previous completed references:
 
@@ -48,9 +64,11 @@ Previous completed references:
 
 `project_docs/active/decision_intelligence/completed/phase_5_gemini_ai_chat_decision_command_center.md`
 
+`project_docs/active/decision_intelligence/completed/antigravity_chart_color_picker_handoff.md`
+
 ## Next Focus
 
-Codex owns the next backend contract slice. Start from `project_docs/active/ai_hand_off/codex_evidence_to_action_workflow_goal.md`. Gemini or Antigravity should wait until Codex verifies backend contract readiness and creates a focused frontend handoff if needed.
+The project phase frontend implementation is complete. Awaiting user browser acceptance to verify that Evidence Board, Decision Map items, and Decision Graph follow-up actions accurately render their `next_checks` metadata and disabled reasons. Once verified, Codex or the user can mark the phase end-to-end complete.
 
 ## Canonical Resume Order
 

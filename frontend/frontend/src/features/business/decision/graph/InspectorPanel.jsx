@@ -326,7 +326,7 @@ const GraphActions = ({ targetType, rawTarget, onAction, loading, response }) =>
               className="graph-action-btn"
               disabled={isBlocked || loading}
               onClick={() => onAction(action.action_id, targetType, rawTarget)}
-              title={isBlockedByHypothesis ? 'Needs observed metric edge' : ''}
+              title={isBlockedByHypothesis ? 'Needs observed metric edge' : (!action.enabled ? (action.disabled_reason || action.reason || 'Disabled') : (action.description || ''))}
               style={{
                 display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px',
                 border: '1px solid #d8e0ea', borderRadius: '8px', background: '#fff',
@@ -336,7 +336,7 @@ const GraphActions = ({ targetType, rawTarget, onAction, loading, response }) =>
               }}
             >
               {actionIcons[action.action_id] || <FiActivity aria-hidden="true" />}
-              {actionLabels[action.action_id] || formatLabel(action.action_id)}
+              {action.label || actionLabels[action.action_id] || formatLabel(action.action_id)}
             </button>
           );
         })}
@@ -345,12 +345,19 @@ const GraphActions = ({ targetType, rawTarget, onAction, loading, response }) =>
       {loading && <p className="inspector-muted">Planning action...</p>}
 
       {response && !response.error && (
-        <div className="action-response" style={{ marginTop: '12px', padding: '12px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', fontWeight: 700, color: '#0f766e' }}>
-            <FiCheckCircle aria-hidden="true" />
-            Planned: {formatLabel(response.action_id)}
+        <div className="action-response" style={{ marginTop: '12px', padding: '12px', background: response.enabled !== false ? '#f8fafc' : '#fffbeb', borderRadius: '8px', border: response.enabled !== false ? '1px solid #e2e8f0' : '1px solid #fef3c7' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', fontWeight: 700, color: response.enabled !== false ? '#0f766e' : '#b45309' }}>
+            {response.enabled !== false ? <FiCheckCircle aria-hidden="true" /> : <FiAlertTriangle aria-hidden="true" />}
+            {response.enabled !== false ? 'Planned:' : 'Blocked:'} {formatLabel(response.action_id)}
           </div>
-          <p style={{ margin: '0 0 8px', fontSize: '12px', color: '#475467' }}>{response.summary}</p>
+          <p style={{ margin: '0 0 8px', fontSize: '12px', color: '#475467' }}>
+            {response.enabled !== false ? response.summary : (response.disabled_reason || response.summary)}
+          </p>
+          {response.enabled === false && response.source_refs && Object.keys(response.source_refs).length > 0 && (
+            <div style={{ fontSize: '10px', color: '#64748b', marginBottom: '8px' }}>
+              <strong>Source Refs:</strong> {Object.entries(response.source_refs).filter(([_, v]) => v).map(([k, v]) => `${k}: ${v}`).join(' | ')}
+            </div>
+          )}
           {response.explanation && response.explanation.length > 0 && (
             <ul style={{ margin: 0, paddingLeft: '16px', fontSize: '11px', color: '#667085' }}>
               {response.explanation.map((exp, i) => <li key={i}>{exp}</li>)}

@@ -190,7 +190,25 @@ Evidence Board item fields:
 | `data_sufficiency` | `object` | Yes | Normalized sufficiency object. Current keys include `status`, `row_count`, `has_period_comparison`, and `summary`. `status` is `sufficient`, `limited`, or `insufficient` when the backend can determine it. |
 | `limitations` | `string[]` | Yes | Always includes an observational-only caveat. Weak, insufficient, or limited items include an additional caution that the item is for review, not a decision rule. |
 | `source_diagnostic_id` | `string \| null` | Yes | Trace back to `workspace_analysis.ranked_diagnostics` or its nested `source_diagnostic`. Present as `null` only when no diagnostic ID exists. |
+| `source_refs` | `object` | Yes | Exact refs for this evidence item: `source`, `source_path`, `source_diagnostic_id`, optional `metric_id`, optional `dimension_id`, and optional backing `field`. |
+| `next_checks` | `object[]` | Yes | Backend-owned Evidence-To-Action checks for this evidence item. Current check IDs are `explain_evidence`, `breakdown`, `monitor`, and `send_to_scenario_compare`. |
 | `observational_boundary` | `string` | Yes | Current value is `observational_analysis_only`. |
+
+Evidence next-check item fields:
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `check_id` | `string` | Yes | Stable check ID such as `explain_evidence`, `breakdown`, `monitor`, or `send_to_scenario_compare`. |
+| `label` | `string` | Yes | Backend-owned display label. |
+| `description` | `string` | Enabled only | Short explanation of the enabled follow-up check. |
+| `enabled` | `boolean` | Yes | Whether the user can approve this check for the current evidence source. |
+| `status` | `string` | Yes | `ready` for enabled checks, `disabled` for unavailable checks. |
+| `disabled_reason` | `string` | Disabled only | Exact backend reason the check is unavailable. |
+| `action_id` | `string` | No | Backend action ID when the check maps to an action request. Informational review checks may omit it. |
+| `action_type` | `string` | Yes | `backend_action` when `action_id` is present, otherwise `informational_review`. |
+| `source_refs` | `object` | Yes | Source path and diagnostic/metric/dimension refs needed to run or explain the check without frontend inference. |
+| `limitations` | `string[]` | Yes | Observational-only and source-specific limitations. |
+| `truth_boundary` | `string` | Yes | Current value is `observational_analysis_only`. |
 
 Reliability boundary: Evidence Board items are not recommendations, optimized actions, causal proof, simulations, forecasts, or autonomous decisions. Titles and summaries should describe observed diagnostic evidence only. Limitations may mention unsupported capabilities only to explicitly deny them.
 
@@ -199,6 +217,8 @@ Reliability boundary: Evidence Board items are not recommendations, optimized ac
 `decision_map` is a presentation contract, not a causal diagram. It can contain node types `dataset`, `goal`, `driver`, `limit`, `breakdown`, `evidence`, `unknown`, and `advanced_gate`. Edge types include `declared_relationship`, `observed_association`, `constraint`, `breakdown`, and `missing_evidence`. Every edge includes `causal_status: "not_causal_claim"`.
 
 Phase 7 shifts graph work from this compact read-only `decision_output.decision_map` toward a separate user-guided `decision_graph` builder contract. `decision_map` remains the current compact display object inside `decision_output`; `decision_graph` is the backend data foundation for the future interactive builder.
+
+Every map node and map edge includes `source_refs` and `next_checks`. Map item checks use the same enabled and disabled shape as Evidence Board checks. `explain_evidence` is available for map items because the backend can explain source path and boundary. `explain_missing_data` is enabled only for missing, blocked, unsupported, insufficient, or warning-bearing items. `breakdown`, `monitor`, and `send_to_scenario_compare` are disabled on compact Decision Map items unless a future backend payload supplies a complete observed metric target and, where needed, a breakdown dimension. Disabled states must include `disabled_reason`; clients must not infer availability from node or edge type alone.
 
 #### Decision Output Scenario Compare
 
@@ -235,8 +255,8 @@ The command center must not become a raw field dump. Frontend code should use it
 | `section_order` | `string[]` | Yes | Ordered section IDs for the command-center view. Current values mirror `export_sections.section_id` order and should be rendered with existing section content, not copied as raw JSON. |
 | `stale_state` | `string` | Yes | Copied from `dataset_trust.stale_state`: `current`, `possibly_stale`, `unknown`, or `not_applicable`. |
 | `rerun_state` | `object` | Yes | Includes `status`, optional `action_id`, and `reason`. Current statuses include `analysis_not_run`, `current_analysis_available`, `possibly_stale_analysis_available`, and `blocked`. |
-| `allowed_next_checks` | `object[]` | Yes | Enabled check controls. Each item includes `check_id`, `label`, `description`, `enabled: true`, `status: "ready"`, `source`, and optional backend `action_id` such as `analyze_workspace`. |
-| `disabled_next_checks` | `object[]` | Yes | Disabled controls with explicit reasons. Each item includes `check_id`, `label`, `enabled: false`, `status: "disabled"`, `source`, `reason`, and optional `action_id`. Unsupported capabilities and live saved-asset refresh belong here. |
+| `allowed_next_checks` | `object[]` | Yes | Enabled check controls. Each item includes `check_id`, `label`, `description`, `enabled: true`, `status: "ready"`, `source`, `action_type`, `source_refs`, `limitations`, `truth_boundary`, and optional backend `action_id` such as `analyze_workspace`. |
+| `disabled_next_checks` | `object[]` | Yes | Disabled controls with explicit reasons. Each item includes `check_id`, `label`, `enabled: false`, `status: "disabled"`, `source`, `reason`, `disabled_reason`, `action_type`, `source_refs`, `limitations`, `truth_boundary`, and optional `action_id`. Unsupported capabilities and live saved-asset refresh belong here. |
 | `export_readiness` | `object` | Yes | Includes `ready`, `status`, `section_count`, `section_order`, and `reason`. This describes whether existing `export_sections` are usable; it does not add a new export payload. |
 | `limitations` | `string[]` | Yes | Conservative limitations for observational-only support, Dataset Trust warnings, unavailable Evidence Board or Scenario Compare state, unsupported advanced gates, and immutable saved snapshots. |
 | `source_refs` | `object` | Yes | Compact refs for `workspace_id`, `workspace_status`, `workspace_analysis_present`, `ranked_diagnostic_ids`, and `scenario_status`. |
@@ -323,7 +343,7 @@ Graph response fields:
 | `data_sufficiency` | `object` | Yes | Graph-level sufficiency including row count, selected variable count, and edge count. |
 | `limitations` | `string[]` | Yes | Graph-level limitations. |
 | `reliability_labels` | `object` | Yes | Legend for evidence coverage, observed association, and user hypothesis edge reliability labels. |
-| `available_graph_actions` | `object[]` | Yes | Backend-known follow-up action types: `breakdown`, `monitor`, `explain_evidence`, `explain_missing_data`, and `send_to_scenario_compare`. |
+| `available_graph_actions` | `object[]` | Yes | Backend-known follow-up action types: `breakdown`, `monitor`, `explain_evidence`, `explain_missing_data`, and `send_to_scenario_compare`. Each item includes the observational `truth_boundary`. |
 | `truth_boundary` | `string` | Yes | Current value is `observational_analysis_only`. |
 
 Decision Graph Variable fields:
@@ -357,7 +377,7 @@ Decision Graph Edge fields:
 | `metrics` | `object` | Yes | Edge metrics. Observed associations include `method`, `strength`, `direction`, endpoint variable IDs, sample size, and method-specific values such as `correlation`, `top_groups`, `trend_correlation`, or `cramers_v`. Coverage edges include `evidence_strength` and source diagnostic trace. User hypotheses include `method: "user_stated_hypothesis"`, `direction: "user_proposed_directional"`, `validation_status: "not_validated"`, endpoint variable IDs, and optional rationale. |
 | `data_sufficiency` | `object` | Yes | `status`, row/sample counts where available, and summary. |
 | `limitations` | `string[]` | Yes | Edge-level limitations. |
-| `followup_actions` | `object[]` | Yes | Per-edge action availability. Each item includes `action_id`, `enabled`, and `status`. Scenario Compare is not enabled for `user_hypothesis` edges until observational evidence is selected. |
+| `followup_actions` | `object[]` | Yes | Per-edge action availability. Each item includes `action_id`, `label`, `description`, `enabled`, `status`, `source_refs`, `limitations`, and `truth_boundary`; disabled items also include `disabled_reason`. Scenario Compare is not enabled for `user_hypothesis` edges until observational evidence is selected. |
 
 User hypothesis edge semantics:
 
@@ -399,7 +419,10 @@ Graph action response fields:
 | `schema_version` / `contract_version` | `string` | Yes | Current value is `di_phase7_3_decision_graph_v1`. |
 | `action_id` | `string` | Yes | Normalized action ID. |
 | `action_status` | `string` | Yes | `ready`, `needs_input`, `needs_metric`, or `needs_observed_metric_edge`. |
+| `enabled` | `boolean` | Yes | Whether the planned graph action is ready for user approval. |
+| `disabled_reason` | `string \| null` | Yes | Backend-owned blocked reason when `enabled` is false. User hypothesis Scenario Compare responses must state that user hypotheses are not observationally validated metric evidence. |
 | `target` | `object` | Yes | Resolved target node or edge summary, including relationship type and causal status when an edge is selected. |
+| `source_refs` | `object` | Yes | Exact source refs for the selected graph node or edge, including edge ID, relationship type, evidence basis, node IDs, and variable IDs when available. |
 | `summary` | `string` | Yes | Backend-owned summary of what the follow-up can safely do. |
 | `request_payload` | `object` | Yes | Prepared request semantics for a future UI or AI Chat handoff. It may include a route hint, but this route does not execute the follow-up. |
 | `response_semantics` | `object` | Yes | Declares `executes_analysis: false` and `causal_claim: false`; Scenario Compare responses also declare `scenario_semantics: "direct_adjustment_only"`. |
