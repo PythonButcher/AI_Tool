@@ -214,7 +214,7 @@ export default function DecisionCommandCenter({
                 {rd.next_checks && rd.next_checks.length > 0 && (
                   <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '16px', paddingTop: '16px', borderTop: '1px dashed var(--border-color)' }}>
                     {rd.next_checks.map((check, cIdx) => (
-                      <Tooltip key={`check-${cIdx}`} title={check.enabled ? (check.description || '') : (check.disabled_reason || check.reason || 'Disabled')} arrow>
+                      <Tooltip key={`check-${cIdx}`} title={`${check.enabled ? (check.description || '') : (check.disabled_reason || check.reason || 'Disabled')}${check.source_refs?.length ? ` (Refs: ${check.source_refs.join(', ')})` : ''}${check.truth_boundary ? ` [Boundary: ${check.truth_boundary}]` : ''}`} arrow>
                         <span>
                           <Button
                             variant="outlined"
@@ -258,7 +258,7 @@ export default function DecisionCommandCenter({
                 {node.next_checks && node.next_checks.length > 0 && (
                   <div style={{ display: 'flex', gap: '4px', marginTop: '4px', flexWrap: 'wrap' }}>
                     {node.next_checks.map((check, cIdx) => (
-                      <Tooltip key={`node-check-${cIdx}`} title={check.enabled ? (check.description || '') : (check.disabled_reason || check.reason || 'Disabled')} arrow>
+                      <Tooltip key={`node-check-${cIdx}`} title={`${check.enabled ? (check.description || '') : (check.disabled_reason || check.reason || 'Disabled')}${check.source_refs?.length ? ` (Refs: ${check.source_refs.join(', ')})` : ''}${check.truth_boundary ? ` [Boundary: ${check.truth_boundary}]` : ''}`} arrow>
                         <span style={{
                           fontSize: '0.65rem',
                           padding: '2px 6px',
@@ -288,7 +288,7 @@ export default function DecisionCommandCenter({
                     {edge.next_checks && edge.next_checks.length > 0 && (
                       <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
                         {edge.next_checks.map((check, cIdx) => (
-                          <Tooltip key={`edge-check-${cIdx}`} title={check.enabled ? (check.description || '') : (check.disabled_reason || check.reason || 'Disabled')} arrow>
+                          <Tooltip key={`edge-check-${cIdx}`} title={`${check.enabled ? (check.description || '') : (check.disabled_reason || check.reason || 'Disabled')}${check.source_refs?.length ? ` (Refs: ${check.source_refs.join(', ')})` : ''}${check.truth_boundary ? ` [Boundary: ${check.truth_boundary}]` : ''}`} arrow>
                             <span style={{
                               fontSize: '0.65rem',
                               padding: '2px 6px',
@@ -599,11 +599,11 @@ export default function DecisionCommandCenter({
                   const isSupported = clickHandler !== null;
 
                   return (
-                    <Tooltip key={idx} title={!isSupported ? `${check.description || 'Action'} (Unsupported Frontend Action)` : (check.description || '')} arrow>
+                    <Tooltip key={idx} title={!isSupported && !check.enabled ? `${check.description || 'Action'} (Unsupported Frontend Action)` : (`${check.enabled ? (check.description || '') : (check.disabled_reason || check.reason || 'Disabled')}${check.source_refs?.length ? ` (Refs: ${check.source_refs.join(', ')})` : ''}${check.truth_boundary ? ` [Boundary: ${check.truth_boundary}]` : ''}`)} arrow>
                       <span>
                         <Button
                           variant={isPrimary ? "contained" : "outlined"}
-                          disabled={loading || !check.enabled || !isSupported}
+                          disabled={loading || (!check.enabled)}
                           startIcon={isPrimary ? <FaSearch /> : <FaTools />}
                           size="large"
                           sx={{

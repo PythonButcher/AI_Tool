@@ -430,7 +430,7 @@ export default function DecisionOutputReview({
                     {rd.next_checks && rd.next_checks.length > 0 && (
                       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '16px', paddingTop: '16px', borderTop: '1px dashed var(--border-color)' }}>
                         {rd.next_checks.map((check, cIdx) => (
-                          <Tooltip key={`check-${cIdx}`} title={check.enabled ? (check.description || '') : (check.disabled_reason || check.reason || 'Disabled')} arrow>
+                          <Tooltip key={`check-${cIdx}`} title={`${check.enabled ? (check.description || '') : (check.disabled_reason || check.reason || 'Disabled')}${check.source_refs?.length ? ` (Refs: ${check.source_refs.join(', ')})` : ''}${check.truth_boundary ? ` [Boundary: ${check.truth_boundary}]` : ''}`} arrow>
                             <span>
                               <Button
                                 variant="outlined"
@@ -479,7 +479,7 @@ export default function DecisionOutputReview({
                         {node.next_checks && node.next_checks.length > 0 && (
                           <div style={{ display: 'flex', gap: '4px', marginTop: '4px', flexWrap: 'wrap' }}>
                             {node.next_checks.map((check, cIdx) => (
-                              <Tooltip key={`node-check-${cIdx}`} title={check.enabled ? (check.description || '') : (check.disabled_reason || check.reason || 'Disabled')} arrow>
+                              <Tooltip key={`node-check-${cIdx}`} title={`${check.enabled ? (check.description || '') : (check.disabled_reason || check.reason || 'Disabled')}${check.source_refs?.length ? ` (Refs: ${check.source_refs.join(', ')})` : ''}${check.truth_boundary ? ` [Boundary: ${check.truth_boundary}]` : ''}`} arrow>
                                 <span style={{
                                   fontSize: '0.65rem',
                                   padding: '2px 6px',
@@ -509,7 +509,7 @@ export default function DecisionOutputReview({
                             {edge.next_checks && edge.next_checks.length > 0 && (
                               <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
                                 {edge.next_checks.map((check, cIdx) => (
-                                  <Tooltip key={`edge-check-${cIdx}`} title={check.enabled ? (check.description || '') : (check.disabled_reason || check.reason || 'Disabled')} arrow>
+                                  <Tooltip key={`edge-check-${cIdx}`} title={`${check.enabled ? (check.description || '') : (check.disabled_reason || check.reason || 'Disabled')}${check.source_refs?.length ? ` (Refs: ${check.source_refs.join(', ')})` : ''}${check.truth_boundary ? ` [Boundary: ${check.truth_boundary}]` : ''}`} arrow>
                                     <span style={{
                                       fontSize: '0.65rem',
                                       padding: '2px 6px',
