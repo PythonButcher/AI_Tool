@@ -21,8 +21,13 @@ The Decisions window is no longer the required continuation path. Its future rol
 | Dashboard canvas state contract | `../contracts/dashboard_canvas_state.md` |
 | Frontend ownership rule | `../rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md` |
 | Completed AI Chat emergency overhaul | `completed/ai_chat_emergency_overhaul_action_plan.md` |
+| Future login and context-engineering idea | `future/context_engineering_and_login_memory_plan.md` |
 
 The older dashboard canvas layout and sharing skeleton plan remains in `current/` as a stale reference until a cleanup pass moves it to the appropriate historical location. The current status file is authoritative for the active gate.
+
+## Future Ideas
+
+Future planning notes live in `future/`. These files preserve ideas that are not current gates and should not be implemented until the active status file or user direction promotes them into an approved slice.
 
 ## Completed Reference
 
