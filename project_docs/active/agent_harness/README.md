@@ -31,6 +31,14 @@ What is the narrowest verification ladder for this task type?
 
 How should future projects copy this repo's agent setup without copying Decision Intelligence history?
 
+## Future Plans
+
+Future harness planning notes live in `future/`. They preserve ideas that are not current gates and should not be implemented until the active status file or user direction promotes them into an approved slice.
+
+Current future plan:
+
+`future/codex_antigravity_handoff_orchestration_plan.md` - planned orchestration layer for Codex and Antigravity phase handoffs, review loops, and user acceptance gates.
+
 ## Validation
 
 Run the repo-local harness check before calling harness work complete:
