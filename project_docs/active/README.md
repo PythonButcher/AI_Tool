@@ -50,6 +50,10 @@ Every prompt written for Gemini, Antigravity, Codex in a future session, or anot
 
 By default, `Goal:` prompts belong in handoff files under `project_docs/active/ai_hand_off/`, not in the chat final response. The final response should link or name the handoff file so the receiving agent can read it through the auto-handoff flow. Paste the full prompt in chat only when the user explicitly asks for that output.
 
+## Repair Handoff Clarity
+
+When Codex finds a frontend-agent implementation is not complete, the active handoff must make the repair obvious. Put `REPAIR REQUIRED` near the top, name the exact source-level blocker in a short `Repair Blocker` section, and state the exact target files and acceptance checks. Do not bury the issue inside general goal text. The receiving agent should be able to open the handoff and immediately see what is wrong, where to fix it, and how to prove the repair.
+
 ## Orchestration Rule
 
 Codex must facilitate the project, not only complete isolated implementation slices. Every wrap-up for Decision Intelligence work must say the current gate in plain language: complete end to end, backend-only complete, frontend verification needed, frontend-agent handoff needed, blocked, or ready for the next phase.

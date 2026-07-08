@@ -18,7 +18,7 @@ The Decisions window remains secondary. Saved DecisionAssets support immutable h
 
 ## Current Project Gate
 
-Status: **Phase 6 - Evidence-To-Action Workflow: FRONTEND REPAIR COMPLETE**
+Status: **Phase 6 - Evidence-To-Action Workflow: FRONTEND REPAIR REQUIRED**
 
 Current plan:
 
@@ -34,7 +34,7 @@ Frontend handoff:
 
 Goal: Build the Evidence-To-Action Workflow backend contract so evidence, map items, and graph items expose user-approved next checks with exact enabled states, disabled reasons, source refs, and observational truth boundaries.
 
-Latest verified fact: Antigravity repaired the frontend integration. `DecisionCommandCenter.jsx` now preserves exact backend enabled states (even without click handlers), and `DecisionCommandCenter.jsx` and `DecisionOutputReview.jsx` properly expose the backend `source_refs` and `truth_boundary` for Evidence Board and Decision Map checks. The harness, git diff --check, and frontend build all passed cleanly.
+Latest verified fact: Codex source review found the frontend repair is still incomplete. `DecisionCommandCenter.jsx` now preserves backend enabled states, and both AI Chat renderers include `truth_boundary` in check tooltips, but `DecisionCommandCenter.jsx` and `DecisionOutputReview.jsx` still treat `source_refs` as an array with `.length` and `.join()`. Backend `source_refs` are objects, so source refs will not render for command-center, Evidence Board, or Decision Map checks.
 
 Separate completed frontend polish: the Antigravity chart color picker slice is complete by user acceptance and retained as a completed reference.
 
@@ -56,7 +56,7 @@ Previous completed references:
 
 ## Next Focus
 
-Frontend repairs are complete and verified via build and checks. The user should now perform the final browser acceptance of the UI. Once user acceptance is given, the Evidence-To-Action workflow phase is fully complete.
+Antigravity should repair `source_refs` rendering in `DecisionCommandCenter.jsx` and `DecisionOutputReview.jsx`. The phase is not ready for browser acceptance until source refs from backend check objects visibly render from object-shaped `source_refs`.
 
 ## Canonical Resume Order
 
