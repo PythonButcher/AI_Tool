@@ -10,7 +10,11 @@ Gemini or Antigravity owns frontend implementation, React/CSS, UI rendering, bro
 
 ## Active Handoffs And Goal Prompts
 
-No active frontend-agent handoff is currently open for Decision Intelligence.
+Active frontend-agent handoff:
+
+`project_docs/active/ai_hand_off/antigravity_saved_decision_library_metadata_filters_handoff.md`
+
+Goal: rework Saved Decision Library into a compact AI Chat utility that stays out of the main conversation flow, supports archive and delete lifecycle actions, and still lets users reopen saved immutable snapshots when needed.
 
 Codex-owned current goals live in `project_docs/active/decision_intelligence/active_gate/`, not in this handoff folder. Current active gate: `project_docs/active/decision_intelligence/active_gate/README.md`.
 

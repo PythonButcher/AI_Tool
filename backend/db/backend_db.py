@@ -49,10 +49,17 @@ def _ensure_schema(conn):
             graph_state_json TEXT,
             dataset_label TEXT NOT NULL,
             readiness_state TEXT NOT NULL,
-            truth_boundary TEXT NOT NULL
+            truth_boundary TEXT NOT NULL,
+            archived_at TEXT
         )
         '''
     )
+    decision_asset_columns = {
+        row[1]
+        for row in conn.execute('PRAGMA table_info(decision_assets)').fetchall()
+    }
+    if 'archived_at' not in decision_asset_columns:
+        conn.execute('ALTER TABLE decision_assets ADD COLUMN archived_at TEXT')
     conn.execute(
         '''
         CREATE INDEX IF NOT EXISTS idx_decision_assets_created_at

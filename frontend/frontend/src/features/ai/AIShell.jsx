@@ -5,7 +5,7 @@ import {
   FaChartBar, FaShieldAlt, FaCircle, FaInfoCircle, FaPaperPlane,
   FaCheckCircle, FaExclamationTriangle, FaExternalLinkAlt, FaFileAlt,
   FaEye, FaChevronRight, FaTerminal, FaSearch, FaCloud, FaFilePdf,
-  FaThumbtack, FaTimes, FaMagic
+  FaThumbtack, FaTimes, FaMagic, FaHistory
 } from "react-icons/fa";
 import {
   TextField, Button, Typography, Divider, Tooltip, Chip,
@@ -56,6 +56,7 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenDecisio
   const [activeMode, setActiveMode] = useState('ask');
   const [activeArtifact, setActiveArtifact] = useState(null);
   const [isResultsPaneOpen, setIsResultsPaneOpen] = useState(true);
+  const [isLibraryOpen, setIsLibraryOpen] = useState(false);
 
   // Saved Assets State
   const [saveTitle, setSaveTitle] = useState('');
@@ -1420,6 +1421,9 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenDecisio
            <Tooltip title="AI Chat" placement="right">
              <div className="ai-shell__rail-item is-active"><FaRobot /></div>
            </Tooltip>
+           <Tooltip title="Saved Decisions" placement="right">
+             <div className="ai-shell__rail-item" onClick={() => setIsLibraryOpen(true)}><FaHistory /></div>
+           </Tooltip>
            <Tooltip title="Data Connections (Future)" placement="right">
              <div className="ai-shell__rail-item"><FaDatabase /></div>
            </Tooltip>
@@ -1454,7 +1458,22 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenDecisio
           </div>
         </header>
 
-
+        <div
+          className={`ai-shell__workspace-overlay ${isLibraryOpen ? 'is-open' : ''}`}
+          onClick={() => setIsLibraryOpen(false)}
+        />
+        <div className={`ai-shell__workspace-drawer ${isLibraryOpen ? 'is-open' : ''}`}>
+          <DecisionAssetLibrary
+            onReopenAsset={(asset) => {
+              handleReopenAsset(asset);
+              setIsLibraryOpen(false);
+            }}
+            activeAssetId={activeArtifact?.asset_id}
+            refreshTrigger={libraryRefreshKey}
+            onAssetDeleted={() => setActiveArtifact(null)}
+            onClose={() => setIsLibraryOpen(false)}
+          />
+        </div>
 
         <div className="ai-shell__conversation" ref={chatBodyRef}>
           {userMessages.length === 0 && (
@@ -1545,7 +1564,6 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenDecisio
           <IconButton onClick={() => setIsResultsPaneOpen(false)} size="small" aria-label="Close Results Pane"><FaChevronRight /></IconButton>
         </div>
 
-        {/* Primary Viewer: Dominates above the fold */}
         <div className="ai-shell__result-viewer">
           <div className="ai-shell__viewer-label"><FaEye /> Active Result Viewer</div>
           {activeArtifact ? (
@@ -1557,13 +1575,6 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenDecisio
             </div>
           )}
         </div>
-
-        {/* Compact Saved Decisions control (Library) */}
-        <DecisionAssetLibrary
-          onReopenAsset={handleReopenAsset}
-          activeAssetId={activeArtifact?.asset_id}
-          refreshTrigger={libraryRefreshKey}
-        />
       </aside>
 
       {/* Fullscreen Review Overlay */}

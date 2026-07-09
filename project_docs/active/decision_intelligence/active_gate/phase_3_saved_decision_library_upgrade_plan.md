@@ -20,7 +20,7 @@ Completion target: documented contract decision, focused backend tests for saved
 
 Saved assets are historical snapshots. They must not be refreshed against live data, edited into new truth, presented as current dataset state, or framed as final recommendations, predictions, simulations, optimizers, causal proof, or autonomous decisions.
 
-The saved library may support metadata, filtering, comparison, collections or tags, provenance, and export. Any comparison must read as historical snapshot comparison, not live A/B analysis or causal explanation.
+The saved library may support metadata, filtering, comparison, collections or tags, provenance, export, archive, restore, and user-confirmed delete. Archive and restore change library visibility only; they do not mutate saved snapshot contents. Delete removes the saved asset record. Any comparison must read as historical snapshot comparison, not live A/B analysis or causal explanation.
 
 ## Acceptance Checks
 

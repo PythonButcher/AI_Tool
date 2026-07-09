@@ -163,6 +163,8 @@ class DecisionAssetApiTests(unittest.TestCase):
         self.assertTrue(saved["asset_id"].startswith("decision_asset_"))
         self.assertEqual(saved["schema_version"], "di_decision_asset_v1")
         self.assertEqual(saved["title"], "Q1 Revenue Review")
+        self.assertIsNone(saved["archived_at"])
+        self.assertEqual(saved["lifecycle_state"], "active")
         self.assertIn("immutable observational snapshot", saved["snapshot_notice"])
         self.assertEqual(saved["decision_output"], decision_output)
         self.assertNotIn("graph_state", saved)
@@ -186,15 +188,30 @@ class DecisionAssetApiTests(unittest.TestCase):
         self.assertEqual(listed.status_code, 200)
         summaries = listed.get_json()["assets"]
         self.assertEqual(len(summaries), 1)
+        self.assertEqual(summaries[0]["asset_id"], saved["asset_id"])
+        self.assertEqual(summaries[0]["title"], "Q1 Revenue Review")
+        self.assertEqual(summaries[0]["created_at"], saved["created_at"])
+        self.assertEqual(summaries[0]["dataset_label"], "Q1 Sales")
+        self.assertEqual(summaries[0]["readiness_state"], "analysis_ready")
+        self.assertEqual(summaries[0]["truth_boundary"], "observational_analysis_only")
+        self.assertIsNone(summaries[0]["archived_at"])
+        self.assertEqual(summaries[0]["lifecycle_state"], "active")
+        self.assertIn("immutable observational snapshot", summaries[0]["snapshot_notice"])
+        self.assertEqual(summaries[0]["review_metadata"]["dataset_label"], "Q1 Sales")
+        self.assertEqual(summaries[0]["review_metadata"]["evidence_item_count"], 0)
+        self.assertEqual(summaries[0]["review_metadata"]["graph_state_summary"], {"available": False})
         self.assertEqual(
-            summaries[0],
+            summaries[0]["provenance"]["source_refs"],
+            decision_output["source_refs"],
+        )
+        self.assertEqual(
+            summaries[0]["snapshot_export"],
             {
-                "asset_id": saved["asset_id"],
-                "title": "Q1 Revenue Review",
-                "created_at": saved["created_at"],
-                "dataset_label": "Q1 Sales",
-                "readiness_state": "analysis_ready",
-                "truth_boundary": "observational_analysis_only",
+                "ready": True,
+                "source": "saved_decision_asset_snapshot",
+                "section_count": 1,
+                "section_order": ["executive_brief"],
+                "endpoint": "GET /api/decision/assets/<asset_id>/export",
             },
         )
 
@@ -232,9 +249,117 @@ class DecisionAssetApiTests(unittest.TestCase):
         self.assertEqual(response.status_code, 201)
         saved = response.get_json()
         self.assertEqual(saved["graph_state"], graph_state)
+        self.assertEqual(saved["review_metadata"]["graph_state_summary"]["available"], True)
+        self.assertEqual(saved["review_metadata"]["graph_state_summary"]["selected_metric_count"], 1)
         detail = self.client.get(f"/api/decision/assets/{saved['asset_id']}")
         self.assertEqual(detail.status_code, 200)
         self.assertEqual(detail.get_json()["graph_state"], graph_state)
+
+    def test_archive_restore_and_delete_asset_lifecycle(self):
+        saved = self.client.post(
+            "/api/decision/assets",
+            json={"title": "Archive candidate", "decision_output": decision_output_fixture()},
+        ).get_json()
+
+        archive_response = self.client.post(f"/api/decision/assets/{saved['asset_id']}/archive")
+        self.assertEqual(archive_response.status_code, 200)
+        archived = archive_response.get_json()
+        self.assertEqual(archived["asset_id"], saved["asset_id"])
+        self.assertEqual(archived["lifecycle_state"], "archived")
+        self.assertIsInstance(archived["archived_at"], str)
+        self.assertEqual(archived["decision_output"], saved["decision_output"])
+
+        default_list = self.client.get("/api/decision/assets")
+        self.assertEqual(default_list.status_code, 200)
+        self.assertEqual(default_list.get_json()["assets"], [])
+
+        archived_list = self.client.get("/api/decision/assets?archived_state=archived")
+        self.assertEqual(archived_list.status_code, 200)
+        self.assertEqual([asset["asset_id"] for asset in archived_list.get_json()["assets"]], [saved["asset_id"]])
+        self.assertEqual(archived_list.get_json()["assets"][0]["lifecycle_state"], "archived")
+
+        all_list = self.client.get("/api/decision/assets?include_archived=true")
+        self.assertEqual(all_list.status_code, 200)
+        self.assertEqual([asset["asset_id"] for asset in all_list.get_json()["assets"]], [saved["asset_id"]])
+
+        restore_response = self.client.post(f"/api/decision/assets/{saved['asset_id']}/restore")
+        self.assertEqual(restore_response.status_code, 200)
+        restored = restore_response.get_json()
+        self.assertEqual(restored["lifecycle_state"], "active")
+        self.assertIsNone(restored["archived_at"])
+
+        delete_response = self.client.delete(f"/api/decision/assets/{saved['asset_id']}")
+        self.assertEqual(delete_response.status_code, 200)
+        self.assertEqual(delete_response.get_json(), {"status": "deleted", "asset_id": saved["asset_id"]})
+        missing_response = self.client.get(f"/api/decision/assets/{saved['asset_id']}")
+        self.assertEqual(missing_response.status_code, 404)
+
+        missing_delete = self.client.delete("/api/decision/assets/decision_asset_missing")
+        self.assertEqual(missing_delete.status_code, 404)
+
+    def test_list_filters_export_and_comparison_use_saved_snapshots(self):
+        first = self.client.post(
+            "/api/decision/assets",
+            json={"title": "Revenue review", "decision_output": decision_output_fixture()},
+        ).get_json()
+        second_output = decision_output_fixture()
+        second_output["title"] = "Decision output: Margin risk"
+        second_output["dataset_trust"]["dataset"]["dataset_name"] = "Margin Workbook"
+        second_output["dataset_trust"]["source_label"] = "Uploaded data"
+        second_output["readiness"]["readiness_state"] = "limited"
+        second_output["evidence_board"] = {
+            "status": "analyzed",
+            "items": [{"source_diagnostic_id": "diagnostic_margin"}],
+        }
+        second_output["export_sections"].append(
+            {
+                "section_id": "evidence_board",
+                "title": "Evidence Board",
+                "summary": "One saved diagnostic is available.",
+                "body": "One saved diagnostic is available.",
+            }
+        )
+        second = self.client.post(
+            "/api/decision/assets",
+            json={
+                "title": "Margin risk",
+                "decision_output": second_output,
+                "graph_state": graph_state_fixture(),
+            },
+        ).get_json()
+
+        filtered = self.client.get("/api/decision/assets?dataset_label=margin&readiness_state=limited&has_graph_state=true")
+        self.assertEqual(filtered.status_code, 200)
+        self.assertEqual([asset["asset_id"] for asset in filtered.get_json()["assets"]], [second["asset_id"]])
+        self.assertEqual(filtered.get_json()["assets"][0]["review_metadata"]["evidence_item_count"], 1)
+
+        exported = self.client.get(f"/api/decision/assets/{second['asset_id']}/export")
+        self.assertEqual(exported.status_code, 200)
+        export_payload = exported.get_json()
+        self.assertEqual(export_payload["schema_version"], "di_decision_asset_export_v1")
+        self.assertEqual(export_payload["export_source"], "saved_decision_asset_snapshot")
+        self.assertEqual(export_payload["export_sections"], second_output["export_sections"])
+        self.assertEqual(export_payload["dataset_trust"]["dataset"]["dataset_name"], "Margin Workbook")
+        self.assertIn("immutable observational snapshot", export_payload["snapshot_notice"])
+
+        comparison = self.client.post(
+            "/api/decision/assets/compare",
+            json={"asset_ids": [first["asset_id"], second["asset_id"]]},
+        )
+        self.assertEqual(comparison.status_code, 200)
+        body = comparison.get_json()
+        self.assertEqual(body["schema_version"], "di_decision_asset_comparison_v1")
+        self.assertEqual(body["comparison_kind"], "historical_snapshot_comparison")
+        self.assertEqual(body["asset_ids"], [first["asset_id"], second["asset_id"]])
+        self.assertIn("does not refresh live data", body["snapshot_notice"])
+        self.assertEqual(body["items"][0]["dataset_label"], "Q1 Sales")
+        self.assertEqual(body["items"][1]["dataset_label"], "Margin Workbook")
+        self.assertEqual(body["items"][1]["evidence_item_count"], 1)
+        self.assertIn("live_saved_asset_refresh", body["unsupported_capabilities"])
+        self.assertEqual(
+            body["differences"]["export_section_counts"],
+            {first["asset_id"]: 1, second["asset_id"]: 2},
+        )
 
     def test_missing_asset_returns_404(self):
         response = self.client.get("/api/decision/assets/decision_asset_missing")

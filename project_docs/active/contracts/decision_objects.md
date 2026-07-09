@@ -276,19 +276,35 @@ A `DecisionAsset` is an immutable saved AI Chat Decision Review. It is an observ
 | `schema_version` | `string` | Yes | Current value is `di_decision_asset_v1`. |
 | `title` | `string` | Yes | Normalized display title. A missing or blank caller title falls back to `decision_output.title`. |
 | `created_at` | `string` | Yes | Backend-generated ISO-8601 UTC timestamp. |
+| `archived_at` | `string \| null` | Yes | Backend-generated ISO-8601 UTC timestamp when archived, otherwise `null`. Archiving changes library visibility only; it does not mutate the saved `decision_output`. |
+| `lifecycle_state` | `string` | Yes | `active` or `archived`. Deleted assets are removed and return 404. |
 | `decision_output` | `AI Chat Decision Output` | Yes | Exact sanitized immutable snapshot of the current output. It preserves `dataset_trust`, `command_center`, `source_refs`, `export_sections`, and `truth_boundary`. |
 | `graph_state` | `Decision Graph State` | No | Optional contract-safe `decision_graph_build_state` carry-forward object. It is absent when no graph state was supplied. |
 | `snapshot_notice` | `string` | Yes | UI copy that the asset is a saved immutable observational snapshot and not a live refresh or final decision. |
+| `review_metadata` | `object` | Yes | Stable review summary derived only from the saved snapshot. Includes `snapshot_kind`, `dataset_label`, `source_label`, `row_count`, `column_count`, `readiness_state`, `truth_boundary`, `evidence_status`, `evidence_item_count`, `scenario_status`, `export_section_count`, `export_section_ids`, `command_center_status`, and `graph_state_summary`. |
+| `provenance` | `object` | Yes | Saved-snapshot provenance with `source: "saved_decision_output_snapshot"`, saved `source_refs`, saved Dataset Trust dataset summary when present, dataset source label, and truth boundary. |
+| `snapshot_export` | `object` | Yes | Export readiness for the stored snapshot. Includes `ready`, `source: "saved_decision_asset_snapshot"`, `section_count`, `section_order`, and the export endpoint template. |
 
 Routes:
 
 | Route | Request | Response |
 | --- | --- | --- |
 | `POST /api/decision/assets` | `title` optional, `decision_output` required, `graph_state` optional | HTTP 201 and complete `DecisionAsset`. |
-| `GET /api/decision/assets` | Optional `limit`, default `25`, minimum `1`, maximum `50` | HTTP 200 with newest-first `assets` summaries. |
+| `GET /api/decision/assets` | Optional `limit`, default `25`, minimum `1`, maximum `50`; optional filters `readiness_state`, `truth_boundary`, `dataset_label`, `query`, `has_graph_state`, `created_from`, `created_to`, `archived_state`, and `include_archived` | HTTP 200 with newest-first `assets` summaries. Defaults to active assets only. |
+| `POST /api/decision/assets/compare` | `asset_ids` array with 2 to 4 saved asset IDs | HTTP 200 with historical snapshot comparison. |
 | `GET /api/decision/assets/<asset_id>` | Asset ID path parameter | HTTP 200 and complete `DecisionAsset`; HTTP 404 when absent. |
+| `GET /api/decision/assets/<asset_id>/export` | Asset ID path parameter | HTTP 200 with saved export payload; HTTP 404 when absent. |
+| `POST /api/decision/assets/<asset_id>/archive` | Asset ID path parameter | HTTP 200 with archived `DecisionAsset`; HTTP 404 when absent. |
+| `POST /api/decision/assets/<asset_id>/restore` | Asset ID path parameter | HTTP 200 with restored active `DecisionAsset`; HTTP 404 when absent. |
+| `DELETE /api/decision/assets/<asset_id>` | Asset ID path parameter | HTTP 200 with `{ "status": "deleted", "asset_id": string }`; HTTP 404 when absent. |
 
-List summaries contain only `asset_id`, `title`, `created_at`, `dataset_label`, `readiness_state`, and `truth_boundary`. The create service rejects payloads that are not current `decision_output` artifacts, do not use `truth_boundary: "observational_analysis_only"`, have invalid Dataset Trust or graph state, include raw dataset rows, chat transcripts, Data Hub/file paths, non-JSON values, or exceed the bounded snapshot size. Assets cannot be edited, deleted, shared, or refreshed in this slice.
+List summaries contain `asset_id`, `title`, `created_at`, `dataset_label`, `readiness_state`, `truth_boundary`, `archived_at`, `lifecycle_state`, `snapshot_notice`, `review_metadata`, `provenance`, and `snapshot_export`. The list endpoint may filter by stored columns, graph-state presence, and lifecycle state, but it must not load current datasets or refresh saved artifacts. `query` searches stored title and dataset label only. `archived_state` accepts `active`, `archived`, or `all`; `include_archived=true` is an alias for all lifecycle states.
+
+Saved export payloads use schema version `di_decision_asset_export_v1` and return saved `export_sections`, saved `dataset_trust`, saved `source_refs`, saved `truth_boundary`, `review_metadata`, `provenance`, `created_at`, title, and snapshot notice. Export source is `saved_decision_asset_snapshot`; export must not rebuild from the current workspace, current active dataset, or current Data Hub state.
+
+Saved comparison payloads use schema version `di_decision_asset_comparison_v1` and `comparison_kind: "historical_snapshot_comparison"`. Each comparison item exposes the saved asset ID, title, created time, dataset label, readiness state, truth boundary, saved Dataset Trust, saved source refs, evidence status and item count, scenario status, export snapshot summary, graph state summary, and snapshot notice. `differences` are descriptive stored-artifact differences such as dataset labels, readiness states, truth boundaries, evidence item counts, export section counts, and created-at range. Comparison must not be presented as live A/B analysis, causal proof, simulation, optimization, or a final recommendation.
+
+The create service rejects payloads that are not current `decision_output` artifacts, do not use `truth_boundary: "observational_analysis_only"`, have invalid Dataset Trust or graph state, include raw dataset rows, chat transcripts, Data Hub/file paths, non-JSON values, or exceed the bounded snapshot size. Assets cannot be edited, shared, or refreshed in this slice. Archive and restore affect library visibility only and preserve the immutable saved snapshot. Delete is user-directed removal of the saved asset record and must use a confirmation UI.
 
 ### Decision Graph
 

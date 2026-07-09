@@ -18,7 +18,7 @@ The Decisions window remains secondary. Saved DecisionAssets support immutable h
 
 ## Current Project Gate
 
-Status: **Phase 3 - Saved Decision Library Upgrade: READY FOR CODEX**
+Status: **Phase 3 - Saved Decision Library Upgrade: FRONTEND COMPLETE**
 
 Active gate:
 
@@ -42,7 +42,11 @@ Completed Evidence-To-Action references:
 
 Goal: Build the Saved Decision Library Upgrade backend contract and implementation plan so immutable saved DecisionAssets expose stronger review metadata, provenance, optional filtering or comparison support, and export-from-snapshot behavior without treating saved assets as live data.
 
-Latest verified fact: Codex reviewed Antigravity's Evidence-To-Action repair in source. `DecisionCommandCenter.jsx` and `DecisionOutputReview.jsx` now format object-shaped `source_refs` with `renderSourceRefs`, command-center checks no longer disable backend-enabled checks only because no frontend handler exists, and `InspectorPanel.jsx` relies on backend `enabled` plus `disabled_reason` for graph follow-up actions. Evidence-To-Action is complete end to end and retained as completed references. The deferred dashboard canvas handoff was not a valid next Decision Intelligence gate; the ranked roadmap places Saved Decision Library Upgrade next.
+Latest verified fact: Codex added backend Saved DecisionAsset lifecycle support for archive, restore, and delete. Default listing shows active snapshots only; archived snapshots can be requested explicitly; delete removes the saved asset record. Focused verification passed with `PYTHONPATH=.codex_tmp_py\site-packages python -m unittest tests.test_decision_asset_service`. The backend still preserves immutable saved snapshots and does not recompute Dataset Trust, evidence, scenario state, command-center state, or export sections from current data.
+
+Active frontend handoff:
+
+`project_docs/active/ai_hand_off/antigravity_saved_decision_library_metadata_filters_handoff.md`
 
 Separate completed frontend polish: the Antigravity chart color picker slice is complete by user acceptance and retained as a completed reference.
 
@@ -64,7 +68,7 @@ Previous completed references:
 
 ## Next Focus
 
-Codex is next to execute the Saved Decision Library Upgrade goal. Gemini or Antigravity should wait until Codex verifies backend contract readiness and creates a focused frontend handoff if one is needed.
+Antigravity implemented the compact library rehaul. The persistent bottom panel has been replaced by a `Drawer` triggered from a new left-rail icon in the AI Chat. Archive, restore, and delete functionalities have been added with proper UI indicators and confirmation dialogs for destructive actions. Codex is next to verify the phase and define the next project gate or handoff.
 
 ## Canonical Resume Order
 
