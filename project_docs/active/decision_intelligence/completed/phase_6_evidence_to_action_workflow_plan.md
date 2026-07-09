@@ -1,4 +1,8 @@
-# Phase 6 - Evidence-To-Action Workflow Plan
+# Completed Reference - Phase 6 Evidence-To-Action Workflow Plan
+
+This file is retained as a completed reference. It is not the current active gate.
+
+Original title: Phase 6 - Evidence-To-Action Workflow Plan
 
 ## Purpose
 
@@ -8,7 +12,7 @@ This phase should make evidence useful without turning it into final recommendat
 
 ## Current Gate
 
-Status: active; Codex backend contract and source review should happen first.
+Status: complete; backend contract, frontend integration repair, and Codex source review are complete.
 
 Backend readiness target: identify which action semantics already exist in `decision_output.command_center`, `decision_graph`, AI Chat actions, and Scenario Compare. Add only the minimum backend contract or service changes needed to expose next-check state, enabled or disabled reasons, source refs, and truth boundaries.
 

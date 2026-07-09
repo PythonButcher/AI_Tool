@@ -15,7 +15,8 @@ The Decisions window is no longer the required continuation path. Its future rol
 | Need | Read |
 | --- | --- |
 | Short current status | `../status/decision_intelligence_execution_status.md` |
-| Current Evidence-To-Action Workflow plan | `current/phase_6_evidence_to_action_workflow_plan.md` |
+| Active gate folder | `active_gate/README.md` |
+| Current saved library upgrade plan | `active_gate/phase_3_saved_decision_library_upgrade_plan.md` |
 | Completed AI Chat rollout details | `../../archive/ai_chat_decision_output_unification_rollout_completed.md` |
 | Contract reference | `../contracts/decision_objects.md` |
 | Dashboard canvas state contract | `../contracts/dashboard_canvas_state.md` |
@@ -23,7 +24,7 @@ The Decisions window is no longer the required continuation path. Its future rol
 | Completed AI Chat emergency overhaul | `completed/ai_chat_emergency_overhaul_action_plan.md` |
 | Future login and context-engineering idea | `future/context_engineering_and_login_memory_plan.md` |
 
-The older dashboard canvas layout and sharing skeleton plan remains in `current/` as a stale reference until a cleanup pass moves it to the appropriate historical location. The current status file is authoritative for the active gate.
+The Evidence-To-Action Workflow plan and handoffs are complete and retained under `completed/`. The dashboard canvas layout and sharing skeleton plan is deferred under `future/` and is not the current active gate. The Saved Decision Library Upgrade is now the current active implementation gate. The active phase files live only under `active_gate/`. The current status file plus `active_gate/README.md` are authoritative for the active gate.
 
 ## Future Ideas
 
@@ -48,6 +49,9 @@ Completed plans and handoffs are in `completed/`. Do not scan them by default.
 | `completed/phase_3_charting_slicer_backbone_plan.md` | Completed charting and slicer backbone plan |
 | `completed/phase_3_antigravity_charting_slicer_ui_handoff.md` | Completed charting slicer frontend handoff |
 | `completed/antigravity_chart_color_picker_handoff.md` | Completed chart color picker frontend handoff |
+| `completed/phase_6_evidence_to_action_workflow_plan.md` | Completed Evidence-To-Action workflow plan |
+| `completed/codex_evidence_to_action_workflow_goal.md` | Completed Evidence-To-Action backend goal |
+| `completed/antigravity_evidence_to_action_workflow_handoff.md` | Completed Evidence-To-Action frontend handoff |
 | Other files in `completed/` | Historical or completed reference only |
 
 ## Superseded Reference

@@ -1,4 +1,6 @@
-# Phase 4 Antigravity Dashboard Canvas Layout And Sharing Skeleton Handoff
+# Future Reference - Antigravity Dashboard Canvas Layout And Sharing Skeleton Handoff
+
+This file is retained as a deferred dashboard handoff. It is not an active Antigravity prompt.
 
 Automation note: this file is intended for Antigravity's `auto-handoff-execution` skill. The `Goal:` line below is the execution prompt.
 
@@ -16,7 +18,7 @@ Read these files before editing source:
 
 `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md`
 
-`project_docs/active/decision_intelligence/current/phase_4_dashboard_canvas_layout_and_sharing_skeleton_plan.md`
+`project_docs/active/decision_intelligence/future/phase_4_dashboard_canvas_layout_and_sharing_skeleton_plan.md`
 
 `project_docs/active/contracts/dashboard_canvas_state.md`
 

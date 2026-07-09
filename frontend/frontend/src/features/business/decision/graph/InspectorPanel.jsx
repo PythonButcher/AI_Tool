@@ -315,10 +315,7 @@ const GraphActions = ({ targetType, rawTarget, onAction, loading, response }) =>
       <h4>Follow-up Actions</h4>
       <div className="graph-actions-grid" style={{ display: 'grid', gap: '8px', marginBottom: '12px' }}>
         {actions.map(action => {
-          const isScenarioCompare = action.action_id === 'send_to_scenario_compare';
-          const isHypothesis = rawTarget?.relationship_type === 'user_hypothesis';
-          const isBlockedByHypothesis = isScenarioCompare && isHypothesis && action.status === 'needs_observed_metric_edge';
-          const isBlocked = !action.enabled || isBlockedByHypothesis;
+          const isBlocked = !action.enabled;
 
           return (
             <button
@@ -326,7 +323,7 @@ const GraphActions = ({ targetType, rawTarget, onAction, loading, response }) =>
               className="graph-action-btn"
               disabled={isBlocked || loading}
               onClick={() => onAction(action.action_id, targetType, rawTarget)}
-              title={isBlockedByHypothesis ? 'Needs observed metric edge' : (!action.enabled ? (action.disabled_reason || action.reason || 'Disabled') : (action.description || ''))}
+              title={!action.enabled ? (action.disabled_reason || action.reason || 'Disabled') : (action.description || '')}
               style={{
                 display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px',
                 border: '1px solid #d8e0ea', borderRadius: '8px', background: '#fff',

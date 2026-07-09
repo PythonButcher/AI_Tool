@@ -10,13 +10,13 @@ Gemini or Antigravity owns frontend implementation, React/CSS, UI rendering, bro
 
 ## Active Handoffs And Goal Prompts
 
-`phase_4_antigravity_dashboard_canvas_layout_and_sharing_skeleton.md` - Antigravity owns the Phase 4 dashboard canvas layout and sharing skeleton implementation.
+No active frontend-agent handoff is currently open for Decision Intelligence.
 
-`codex_evidence_to_action_workflow_goal.md` - Codex owns the Evidence-To-Action Workflow backend contract and tests first.
+Codex-owned current goals live in `project_docs/active/decision_intelligence/active_gate/`, not in this handoff folder. Current active gate: `project_docs/active/decision_intelligence/active_gate/README.md`.
 
-`antigravity_evidence_to_action_workflow_handoff.md` - Antigravity owns frontend integration of backend-owned Evidence-To-Action next checks after Codex backend contract verification.
+Deferred dashboard handoffs are retained under `project_docs/active/decision_intelligence/future/` and must not be executed until the active status file and `project_docs/active/decision_intelligence/active_gate/README.md` promote them.
 
-Completed handoffs are retained under `project_docs/active/decision_intelligence/completed/` as reference only. Completed examples include `project_docs/active/decision_intelligence/completed/phase_3_antigravity_charting_slicer_ui_handoff.md`, `project_docs/active/decision_intelligence/completed/phase_5_gemini_ai_chat_decision_command_center.md`, and `project_docs/active/decision_intelligence/completed/antigravity_chart_color_picker_handoff.md`.
+Completed handoffs are retained under `project_docs/active/decision_intelligence/completed/` as reference only. Completed examples include `project_docs/active/decision_intelligence/completed/phase_3_antigravity_charting_slicer_ui_handoff.md`, `project_docs/active/decision_intelligence/completed/phase_5_gemini_ai_chat_decision_command_center.md`, `project_docs/active/decision_intelligence/completed/antigravity_chart_color_picker_handoff.md`, `project_docs/active/decision_intelligence/completed/codex_evidence_to_action_workflow_goal.md`, and `project_docs/active/decision_intelligence/completed/antigravity_evidence_to_action_workflow_handoff.md`.
 
 Current truth: `project_docs/active/status/decision_intelligence_execution_status.md`
 

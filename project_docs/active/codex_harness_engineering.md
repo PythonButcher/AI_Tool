@@ -16,9 +16,15 @@ Past expensive branches may be useful examples, but they are not global template
 
 Codex still starts with `AGENTS.md`.
 
-After `AGENTS.md`, use `project_docs/INDEX.md` and `project_docs/active/README.md` as routing maps. Read only the active status file, frontend guardrail when relevant, this harness file for substantial repo work, and the task-specific active plan named by the routing docs.
+After `AGENTS.md`, use `project_docs/INDEX.md` and `project_docs/active/README.md` as routing maps. For Decision Intelligence work, read `project_docs/active/status/decision_intelligence_execution_status.md` and then `project_docs/active/decision_intelligence/active_gate/README.md`. Read only the active status file, active-gate files, frontend guardrail when relevant, this harness file for substantial repo work, and the task-specific active plan named by the routing docs.
 
-Do not scan every Markdown file. Do not scan archive or completed folders unless the current task explicitly needs historical evidence.
+Do not scan every Markdown file. Do not scan archive, completed, future, or old handoff folders unless the current task explicitly needs historical evidence.
+
+## Active-Gate Context Pattern
+
+Decision Intelligence uses an active-gate pattern so context selection is explicit. The status file names the gate; `project_docs/active/decision_intelligence/active_gate/README.md` names the plan, goal, ranking source, and active owner. A file in `ai_hand_off/`, `future/`, `completed/`, or `archive/` is not active unless the active-gate README points to it.
+
+This follows the context-engineering rule of selecting only the context needed for the current step and isolating stale or future context away from the working set. If active status, active-gate README, and council ranking disagree, stop and repair docs before implementation.
 
 ## Default Run Budget
 

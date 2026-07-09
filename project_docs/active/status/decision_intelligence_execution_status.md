@@ -18,23 +18,31 @@ The Decisions window remains secondary. Saved DecisionAssets support immutable h
 
 ## Current Project Gate
 
-Status: **Phase 6 - Evidence-To-Action Workflow: FRONTEND REPAIR REQUIRED**
+Status: **Phase 3 - Saved Decision Library Upgrade: READY FOR CODEX**
+
+Active gate:
+
+`project_docs/active/decision_intelligence/active_gate/README.md`
 
 Current plan:
 
-`project_docs/active/decision_intelligence/current/phase_6_evidence_to_action_workflow_plan.md`
+`project_docs/active/decision_intelligence/active_gate/phase_3_saved_decision_library_upgrade_plan.md`
 
-Codex backend goal prompt:
+Codex goal prompt:
 
-`project_docs/active/ai_hand_off/codex_evidence_to_action_workflow_goal.md`
+`project_docs/active/decision_intelligence/active_gate/codex_saved_decision_library_upgrade_goal.md`
 
-Frontend handoff:
+Completed Evidence-To-Action references:
 
-`project_docs/active/ai_hand_off/antigravity_evidence_to_action_workflow_handoff.md`
+`project_docs/active/decision_intelligence/completed/phase_6_evidence_to_action_workflow_plan.md`
 
-Goal: Build the Evidence-To-Action Workflow backend contract so evidence, map items, and graph items expose user-approved next checks with exact enabled states, disabled reasons, source refs, and observational truth boundaries.
+`project_docs/active/decision_intelligence/completed/codex_evidence_to_action_workflow_goal.md`
 
-Latest verified fact: Codex source review found the frontend repair is still incomplete. `DecisionCommandCenter.jsx` now preserves backend enabled states, and both AI Chat renderers include `truth_boundary` in check tooltips, but `DecisionCommandCenter.jsx` and `DecisionOutputReview.jsx` still treat `source_refs` as an array with `.length` and `.join()`. Backend `source_refs` are objects, so source refs will not render for command-center, Evidence Board, or Decision Map checks.
+`project_docs/active/decision_intelligence/completed/antigravity_evidence_to_action_workflow_handoff.md`
+
+Goal: Build the Saved Decision Library Upgrade backend contract and implementation plan so immutable saved DecisionAssets expose stronger review metadata, provenance, optional filtering or comparison support, and export-from-snapshot behavior without treating saved assets as live data.
+
+Latest verified fact: Codex reviewed Antigravity's Evidence-To-Action repair in source. `DecisionCommandCenter.jsx` and `DecisionOutputReview.jsx` now format object-shaped `source_refs` with `renderSourceRefs`, command-center checks no longer disable backend-enabled checks only because no frontend handler exists, and `InspectorPanel.jsx` relies on backend `enabled` plus `disabled_reason` for graph follow-up actions. Evidence-To-Action is complete end to end and retained as completed references. The deferred dashboard canvas handoff was not a valid next Decision Intelligence gate; the ranked roadmap places Saved Decision Library Upgrade next.
 
 Separate completed frontend polish: the Antigravity chart color picker slice is complete by user acceptance and retained as a completed reference.
 
@@ -56,7 +64,7 @@ Previous completed references:
 
 ## Next Focus
 
-Antigravity should repair `source_refs` rendering in `DecisionCommandCenter.jsx` and `DecisionOutputReview.jsx`. The phase is not ready for browser acceptance until source refs from backend check objects visibly render from object-shaped `source_refs`.
+Codex is next to execute the Saved Decision Library Upgrade goal. Gemini or Antigravity should wait until Codex verifies backend contract readiness and creates a focused frontend handoff if one is needed.
 
 ## Canonical Resume Order
 

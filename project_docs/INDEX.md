@@ -17,6 +17,7 @@ This is the top-level routing file. Use it to find the smallest current document
 | Need | Read |
 | --- | --- |
 | Check concise current status | `project_docs/active/status/decision_intelligence_execution_status.md` |
+| Work on the current Decision Intelligence gate | `project_docs/active/decision_intelligence/active_gate/README.md` |
 | Review completed AI Chat rollout history | `project_docs/archive/ai_chat_decision_output_unification_rollout_completed.md` only when historical context is needed |
 | Work on backend/frontend contracts | `project_docs/active/contracts/decision_objects.md` |
 | Work on dashboard canvas local state | `project_docs/active/contracts/dashboard_canvas_state.md` |

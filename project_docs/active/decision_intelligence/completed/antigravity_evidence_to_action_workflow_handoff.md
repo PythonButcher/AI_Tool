@@ -1,16 +1,16 @@
-# Antigravity Evidence-To-Action Workflow Handoff
+# Completed Reference - Antigravity Evidence-To-Action Workflow Handoff
 
-REPAIR REQUIRED
+This file is retained as a completed reference. It is not an active repair prompt.
 
 Automation note: this file is intended for Antigravity's `auto-handoff-execution` skill. The `Goal:` line below is the execution prompt.
 
-Goal: Repair the Evidence-To-Action frontend integration so command-center checks preserve backend enabled states and AI Chat Evidence Board checks and Decision Map checks visibly expose backend `source_refs` and `truth_boundary` in addition to exact disabled reasons and backend labels.
+Goal: Completed. The Evidence-To-Action frontend integration preserves backend enabled states and AI Chat Evidence Board checks and Decision Map checks visibly expose backend `source_refs` and `truth_boundary` in addition to exact disabled reasons and backend labels.
 
-## Repair Blocker
+## Completed Repair
 
-`frontend/frontend/src/features/ai/DecisionCommandCenter.jsx` and `frontend/frontend/src/features/ai/DecisionOutputReview.jsx` currently treat `check.source_refs` as an array by using `.length` and `.join()`. Backend `source_refs` are objects. Because of that shape mismatch, source refs will not render for command-center checks, Evidence Board checks, or Decision Map node and edge checks.
+`frontend/frontend/src/features/ai/DecisionCommandCenter.jsx` and `frontend/frontend/src/features/ai/DecisionOutputReview.jsx` now format object-shaped `check.source_refs` safely with `renderSourceRefs`. Source refs render for command-center checks, Evidence Board checks, and Decision Map node and edge checks.
 
-Repair this by formatting object-shaped `source_refs` safely, for example with `Object.entries(check.source_refs).filter(([_, value]) => value != null && value !== "").map(([key, value]) => `${key}: ${value}`).join(" | ")`, or an equivalent helper. The fix must work for command-center checks, Evidence Board checks, Decision Map node checks, and Decision Map edge checks.
+`frontend/frontend/src/features/business/decision/graph/InspectorPanel.jsx` now respects backend `enabled` and `disabled_reason` for graph follow-up actions.
 
 Read `project_docs/INDEX.md`, `project_docs/active/README.md`, `project_docs/active/status/decision_intelligence_execution_status.md`, `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md`, `project_docs/active/contracts/decision_objects.md`, and this handoff before editing source.
 
