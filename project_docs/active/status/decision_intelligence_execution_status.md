@@ -74,6 +74,10 @@ Previous completed references:
 
 Start the Codex kickoff goal at `project_docs/active/decision_intelligence/active_gate/codex_advanced_readiness_ml_trust_gates_goal.md`. The first slice is source-backed contract planning for advanced readiness diagnostics across prediction, optimization, causal analysis, and automated decisioning. Do not start frontend work until Codex verifies backend contract readiness and creates a focused handoff.
 
+## Future Cycle Memory
+
+After the current Decision Intelligence phases, the next product cycle should be direct feature implementation, not another AI Council by default. Preserve this order: multiple data sources, data source relationships, better cleaning tool, improved basic ML, improved automation tool, and AI Chat-linked automations. The future-cycle plan is `project_docs/active/decision_intelligence/future/data_foundation_cycle_after_current_phases_plan.md`.
+
 ## Canonical Resume Order
 
 | Step | Read |

@@ -36,6 +36,7 @@ Dataset truth remains important, but the old standalone Phase 4 dataset handoff 
 | Dashboard canvas state contract | `project_docs/active/contracts/dashboard_canvas_state.md` | Local-first dashboard canvas, layout, and sharing skeleton state |
 | Dataset governance contract | `project_docs/active/contracts/data_catalog_lineage.md` | Readiness policy and enforcement truth |
 | Decision Intelligence active gate | `project_docs/active/decision_intelligence/active_gate/README.md` | The only active phase workspace |
+| Future product-cycle memory | `project_docs/active/decision_intelligence/future/data_foundation_cycle_after_current_phases_plan.md` | Deferred data foundation and automation cycle; not active until promoted |
 | Agent harness | `project_docs/active/agent_harness/` | Reusable agent backbone, hooks, and validation |
 | Handoffs | `project_docs/active/ai_hand_off/` | Active handoffs only |
 | Reviews | `project_docs/active/reviews/` | Focused review docs |
