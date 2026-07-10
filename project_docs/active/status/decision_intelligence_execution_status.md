@@ -18,7 +18,7 @@ The Decisions window remains secondary. Saved DecisionAssets support immutable h
 
 ## Current Project Gate
 
-Status: **Phase 3 - Saved Decision Library Upgrade: CODEX SOURCE/BUILD REVIEW COMPLETE; USER BROWSER ACCEPTANCE REQUIRED**
+Status: **Phase 4 - Advanced Readiness And ML Trust Gates: ACTIVE CODEX CONTRACT/BACKEND PLANNING**
 
 Active gate:
 
@@ -26,11 +26,11 @@ Active gate:
 
 Current plan:
 
-`project_docs/active/decision_intelligence/active_gate/phase_3_saved_decision_library_upgrade_plan.md`
+`project_docs/active/decision_intelligence/active_gate/phase_4_advanced_readiness_ml_trust_gates_plan.md`
 
 Codex goal prompt:
 
-`project_docs/active/decision_intelligence/active_gate/codex_saved_decision_library_upgrade_goal.md`
+`project_docs/active/decision_intelligence/active_gate/codex_advanced_readiness_ml_trust_gates_goal.md`
 
 Completed Evidence-To-Action references:
 
@@ -40,13 +40,17 @@ Completed Evidence-To-Action references:
 
 `project_docs/active/decision_intelligence/completed/antigravity_evidence_to_action_workflow_handoff.md`
 
-Goal: Build the Saved Decision Library Upgrade backend contract and implementation plan so immutable saved DecisionAssets expose stronger review metadata, provenance, optional filtering or comparison support, and export-from-snapshot behavior without treating saved assets as live data.
+Goal: Build an advanced readiness and ML trust gate contract so AI Chat can explain whether prediction, optimization, causal analysis, and automated decisioning are supported, limited, blocked, or not evaluated without claiming unsupported advanced capabilities.
 
-Latest verified fact: Codex added backend Saved DecisionAsset lifecycle support for archive, restore, and delete. Default listing shows active snapshots only; archived snapshots can be requested explicitly; delete removes the saved asset record. Focused verification passed with `PYTHONPATH=.codex_tmp_py\site-packages python -m unittest tests.test_decision_asset_service`. The backend still preserves immutable saved snapshots and does not recompute Dataset Trust, evidence, scenario state, command-center state, or export sections from current data.
+Latest verified fact: The Saved Decision Library Upgrade is complete by user acceptance. Codex source/build review passed, backend lifecycle tests passed, and the completed plan, goal, and frontend handoff are retained under `project_docs/active/decision_intelligence/completed/`. The active gate is now Codex-owned readiness contract and backend planning.
 
-Completed frontend handoff reference:
+Completed Saved Decision Library references:
 
 `project_docs/active/decision_intelligence/completed/antigravity_saved_decision_library_metadata_filters_handoff.md`
+
+`project_docs/active/decision_intelligence/completed/phase_3_saved_decision_library_upgrade_plan.md`
+
+`project_docs/active/decision_intelligence/completed/codex_saved_decision_library_upgrade_goal.md`
 
 Separate completed frontend polish: the Antigravity chart color picker slice is complete by user acceptance and retained as a completed reference.
 
@@ -68,7 +72,7 @@ Previous completed references:
 
 ## Next Focus
 
-Codex reviewed the repaired frontend source. The `archivedFilter` in `DecisionAssetLibrary.jsx` now explicitly passes `active`, `archived`, or `all` to the backend. Rendering and actions are gated by `asset.lifecycle_state === 'archived'` or `asset.archived_at`. The source review found no acceptance blocker, `git diff --check` passed, `PYTHONPATH=.codex_tmp_py\site-packages python -m unittest tests.test_decision_asset_service` passed, and `npm --prefix frontend\frontend run build` completed with existing warnings. The next gate is user browser acceptance of the visible AI Chat library behavior.
+Start the Codex kickoff goal at `project_docs/active/decision_intelligence/active_gate/codex_advanced_readiness_ml_trust_gates_goal.md`. The first slice is source-backed contract planning for advanced readiness diagnostics across prediction, optimization, causal analysis, and automated decisioning. Do not start frontend work until Codex verifies backend contract readiness and creates a focused handoff.
 
 ## Canonical Resume Order
 

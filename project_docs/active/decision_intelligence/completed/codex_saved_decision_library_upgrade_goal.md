@@ -1,4 +1,6 @@
-# Codex Saved Decision Library Upgrade Goal
+# Completed Reference - Codex Saved Decision Library Upgrade Goal
+
+This completed reference is retained for historical context only. It is not the active Codex goal.
 
 Goal: Build the Saved Decision Library Upgrade backend contract and implementation plan so immutable saved DecisionAssets expose stronger review metadata, provenance, optional filtering or comparison support, and export-from-snapshot behavior without treating saved assets as live data.
 

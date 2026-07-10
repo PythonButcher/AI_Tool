@@ -1,4 +1,6 @@
-# Phase 3 - Saved Decision Library Upgrade Plan
+# Completed Reference - Phase 3 Saved Decision Library Upgrade Plan
+
+This completed reference is retained for historical context only. It is not the active Decision Intelligence gate.
 
 ## Purpose
 
