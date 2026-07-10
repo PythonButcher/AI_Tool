@@ -10,17 +10,15 @@ Gemini or Antigravity owns frontend implementation, React/CSS, UI rendering, bro
 
 ## Active Handoffs And Goal Prompts
 
-Active frontend-agent handoff:
+Active frontend-agent handoff: none.
 
-`project_docs/active/ai_hand_off/antigravity_saved_decision_library_metadata_filters_handoff.md`
-
-Goal: rework Saved Decision Library into a compact AI Chat utility that stays out of the main conversation flow, supports archive and delete lifecycle actions, and still lets users reopen saved immutable snapshots when needed.
+The completed Saved Decision Library compact rehaul handoff is retained at `project_docs/active/decision_intelligence/completed/antigravity_saved_decision_library_metadata_filters_handoff.md` as a reference only.
 
 Codex-owned current goals live in `project_docs/active/decision_intelligence/active_gate/`, not in this handoff folder. Current active gate: `project_docs/active/decision_intelligence/active_gate/README.md`.
 
 Deferred dashboard handoffs are retained under `project_docs/active/decision_intelligence/future/` and must not be executed until the active status file and `project_docs/active/decision_intelligence/active_gate/README.md` promote them.
 
-Completed handoffs are retained under `project_docs/active/decision_intelligence/completed/` as reference only. Completed examples include `project_docs/active/decision_intelligence/completed/phase_3_antigravity_charting_slicer_ui_handoff.md`, `project_docs/active/decision_intelligence/completed/phase_5_gemini_ai_chat_decision_command_center.md`, `project_docs/active/decision_intelligence/completed/antigravity_chart_color_picker_handoff.md`, `project_docs/active/decision_intelligence/completed/codex_evidence_to_action_workflow_goal.md`, and `project_docs/active/decision_intelligence/completed/antigravity_evidence_to_action_workflow_handoff.md`.
+Completed handoffs are retained under `project_docs/active/decision_intelligence/completed/` as reference only. Completed examples include `project_docs/active/decision_intelligence/completed/antigravity_saved_decision_library_metadata_filters_handoff.md`, `project_docs/active/decision_intelligence/completed/phase_3_antigravity_charting_slicer_ui_handoff.md`, `project_docs/active/decision_intelligence/completed/phase_5_gemini_ai_chat_decision_command_center.md`, `project_docs/active/decision_intelligence/completed/antigravity_chart_color_picker_handoff.md`, `project_docs/active/decision_intelligence/completed/codex_evidence_to_action_workflow_goal.md`, and `project_docs/active/decision_intelligence/completed/antigravity_evidence_to_action_workflow_handoff.md`.
 
 Current truth: `project_docs/active/status/decision_intelligence_execution_status.md`
 

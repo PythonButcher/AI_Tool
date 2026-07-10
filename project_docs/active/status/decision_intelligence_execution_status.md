@@ -18,7 +18,7 @@ The Decisions window remains secondary. Saved DecisionAssets support immutable h
 
 ## Current Project Gate
 
-Status: **Phase 3 - Saved Decision Library Upgrade: FRONTEND COMPLETE**
+Status: **Phase 3 - Saved Decision Library Upgrade: CODEX SOURCE/BUILD REVIEW COMPLETE; USER BROWSER ACCEPTANCE REQUIRED**
 
 Active gate:
 
@@ -44,9 +44,9 @@ Goal: Build the Saved Decision Library Upgrade backend contract and implementati
 
 Latest verified fact: Codex added backend Saved DecisionAsset lifecycle support for archive, restore, and delete. Default listing shows active snapshots only; archived snapshots can be requested explicitly; delete removes the saved asset record. Focused verification passed with `PYTHONPATH=.codex_tmp_py\site-packages python -m unittest tests.test_decision_asset_service`. The backend still preserves immutable saved snapshots and does not recompute Dataset Trust, evidence, scenario state, command-center state, or export sections from current data.
 
-Active frontend handoff:
+Completed frontend handoff reference:
 
-`project_docs/active/ai_hand_off/antigravity_saved_decision_library_metadata_filters_handoff.md`
+`project_docs/active/decision_intelligence/completed/antigravity_saved_decision_library_metadata_filters_handoff.md`
 
 Separate completed frontend polish: the Antigravity chart color picker slice is complete by user acceptance and retained as a completed reference.
 
@@ -68,7 +68,7 @@ Previous completed references:
 
 ## Next Focus
 
-Antigravity implemented the compact library rehaul. The persistent bottom panel has been replaced by a `Drawer` triggered from a new left-rail icon in the AI Chat. Archive, restore, and delete functionalities have been added with proper UI indicators and confirmation dialogs for destructive actions. Codex is next to verify the phase and define the next project gate or handoff.
+Codex reviewed the repaired frontend source. The `archivedFilter` in `DecisionAssetLibrary.jsx` now explicitly passes `active`, `archived`, or `all` to the backend. Rendering and actions are gated by `asset.lifecycle_state === 'archived'` or `asset.archived_at`. The source review found no acceptance blocker, `git diff --check` passed, `PYTHONPATH=.codex_tmp_py\site-packages python -m unittest tests.test_decision_asset_service` passed, and `npm --prefix frontend\frontend run build` completed with existing warnings. The next gate is user browser acceptance of the visible AI Chat library behavior.
 
 ## Canonical Resume Order
 

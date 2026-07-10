@@ -29,11 +29,11 @@ export default function DecisionAssetLibrary({ onReopenAsset, activeAssetId, ref
       if (graphStateFilter) params.has_graph_state = graphStateFilter;
 
       if (archivedFilter === 'archived') {
-        params.archived_state = true;
+        params.archived_state = 'archived';
       } else if (archivedFilter === 'all') {
-        params.include_archived = true;
+        params.archived_state = 'all';
       } else {
-        params.archived_state = false;
+        params.archived_state = 'active';
       }
 
       const data = await getDecisionAssets(params);
@@ -243,7 +243,7 @@ export default function DecisionAssetLibrary({ onReopenAsset, activeAssetId, ref
           {assets.map((asset) => (
             <div
               key={asset.asset_id}
-              className={`decision-asset-library__item-compact ${activeAssetId === asset.asset_id ? 'is-active' : ''} ${asset.is_archived || asset.archived ? 'is-archived' : ''}`}
+              className={`decision-asset-library__item-compact ${activeAssetId === asset.asset_id ? 'is-active' : ''} ${asset.lifecycle_state === 'archived' || asset.archived_at ? 'is-archived' : ''}`}
               onClick={() => handleSelectAsset(asset.asset_id)}
             >
               <div className="decision-asset-library__item-compact-main">
@@ -269,7 +269,7 @@ export default function DecisionAssetLibrary({ onReopenAsset, activeAssetId, ref
                     <FaInfoCircle fontSize="inherit" />
                   </IconButton>
                 </Tooltip>
-                {!(asset.is_archived || asset.archived) ? (
+                {!(asset.lifecycle_state === 'archived' || asset.archived_at) ? (
                   <Tooltip title="Archive" arrow PopperProps={{ style: { zIndex: 99999 } }}>
                     <IconButton size="small" className="library-action-btn" onClick={(e) => handleArchive(e, asset.asset_id)} disabled={actionLoading}>
                       <FaArchive fontSize="inherit" />

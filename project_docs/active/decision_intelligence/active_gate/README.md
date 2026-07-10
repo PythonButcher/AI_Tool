@@ -6,7 +6,7 @@ Read this folder after `project_docs/active/status/decision_intelligence_executi
 
 ## Current Gate
 
-Status: Phase 3 - Saved Decision Library Upgrade compact rehaul is ready for Antigravity.
+Status: Phase 3 - Saved Decision Library Upgrade compact rehaul has passed Codex source/build review and is waiting for user browser acceptance.
 
 Planning source: `project_docs/active/agent_council/outputs/next-implementation-cycle-priorities/2026-06-28-next-implementation-cycle-priorities-summary.md`.
 
@@ -14,7 +14,9 @@ Current plan: `phase_3_saved_decision_library_upgrade_plan.md`.
 
 Current Codex goal: `codex_saved_decision_library_upgrade_goal.md`.
 
-Active frontend handoff: `project_docs/active/ai_hand_off/antigravity_saved_decision_library_metadata_filters_handoff.md`.
+Active frontend handoff: none.
+
+Completed frontend handoff reference: `project_docs/active/decision_intelligence/completed/antigravity_saved_decision_library_metadata_filters_handoff.md`.
 
 ## Active-Gate Rule
 
