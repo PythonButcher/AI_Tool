@@ -13,7 +13,6 @@ class AdvancedReadinessServiceTests(unittest.TestCase):
         semantic_ready=True,
         include_dataset=True,
         governance_status="ready",
-        model_evaluation=None,
     ):
         dataset = (
             {
@@ -64,7 +63,6 @@ class AdvancedReadinessServiceTests(unittest.TestCase):
                 if governance_status is not None
                 else None
             ),
-            model_evaluation=model_evaluation,
         )
 
     @staticmethod
@@ -76,6 +74,8 @@ class AdvancedReadinessServiceTests(unittest.TestCase):
         capabilities = self._capabilities(result)
 
         self.assertEqual(result["overall_state"], "limited")
+        self.assertEqual(result["state_counts"]["supported"], 0)
+        self.assertNotIn("supported", {item["state"] for item in result["capabilities"]})
         self.assertEqual(capabilities["prediction"]["state"], "limited")
         self.assertEqual(
             capabilities["prediction"]["reasons"][0]["code"],
@@ -118,42 +118,12 @@ class AdvancedReadinessServiceTests(unittest.TestCase):
             [item["action_id"] for item in prediction["allowed_next_actions"]],
         )
 
-    def test_prediction_is_supported_only_with_target_matched_validated_model_evidence(self):
-        result = self._evaluate(
-            model_evaluation={
-                "status": "validated",
-                "run_id": "automl_run_123",
-                "problem_type": "regression",
-                "target_column": "Revenue",
-                "metrics": {"r2": 0.61, "mae": 8.2},
-            }
-        )
-        prediction = self._capabilities(result)["prediction"]
-
-        self.assertEqual(prediction["state"], "supported")
-        self.assertEqual(prediction["missing_requirements"], [])
-        self.assertIn(
-            "validated_model_run",
-            [item["code"] for item in prediction["evidence"]],
-        )
-        # Other advanced capabilities remain blocked; a predictive model does
-        # not imply optimization, causality, or autonomous decision authority.
-        self.assertEqual(result["overall_state"], "limited")
-
-    def test_prediction_cannot_be_supported_without_verified_governance_evidence(self):
-        result = self._evaluate(
-            governance_status=None,
-            model_evaluation={
-                "status": "validated",
-                "run_id": "automl_run_123",
-                "problem_type": "regression",
-                "target_column": "Revenue",
-                "metrics": {"r2": 0.61},
-            },
-        )
+    def test_prediction_remains_limited_without_route_verified_governance(self):
+        result = self._evaluate(governance_status=None)
         prediction = self._capabilities(result)["prediction"]
 
         self.assertEqual(prediction["state"], "limited")
+        self.assertEqual(result["state_counts"]["supported"], 0)
         self.assertIn(
             "governance_evaluation",
             [item["requirement_id"] for item in prediction["missing_requirements"]],

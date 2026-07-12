@@ -12,13 +12,13 @@ Gemini or Antigravity owns frontend implementation, React/CSS, UI rendering, bro
 
 Active frontend-agent handoff: none.
 
-The completed Advanced Readiness implementation handoff is retained at `project_docs/active/decision_intelligence/completed/antigravity_advanced_readiness_ml_trust_gates_handoff.md`. The current gate is Codex-owned Phase 4.5 cleanup, so no frontend prompt should be executed unless a new bounded handoff is created from verified source evidence.
+The current gate is Codex-owned source audit and backend truth work. A frontend handoff may be created only after source review or browser evidence proves a bounded frontend gap.
 
 Codex-owned current goals live in `project_docs/active/decision_intelligence/active_gate/`, not in this handoff folder. Current active gate: `project_docs/active/decision_intelligence/active_gate/README.md`.
 
 Deferred dashboard handoffs are retained under `project_docs/active/decision_intelligence/future/` and must not be executed until the active status file and `project_docs/active/decision_intelligence/active_gate/README.md` promote them.
 
-Completed handoffs are retained under `project_docs/active/decision_intelligence/completed/` as reference only. Completed examples include `project_docs/active/decision_intelligence/completed/antigravity_saved_decision_library_metadata_filters_handoff.md`, `project_docs/active/decision_intelligence/completed/phase_3_antigravity_charting_slicer_ui_handoff.md`, `project_docs/active/decision_intelligence/completed/phase_5_gemini_ai_chat_decision_command_center.md`, `project_docs/active/decision_intelligence/completed/antigravity_chart_color_picker_handoff.md`, `project_docs/active/decision_intelligence/completed/codex_evidence_to_action_workflow_goal.md`, and `project_docs/active/decision_intelligence/completed/antigravity_evidence_to_action_workflow_handoff.md`.
+Completed handoffs are retained under `project_docs/active/decision_intelligence/completed/` as reference only. Completed examples include `project_docs/active/decision_intelligence/completed/antigravity_decision_pdf_renderer_repair.md`, `project_docs/active/decision_intelligence/completed/antigravity_saved_decision_library_metadata_filters_handoff.md`, `project_docs/active/decision_intelligence/completed/phase_3_antigravity_charting_slicer_ui_handoff.md`, `project_docs/active/decision_intelligence/completed/phase_5_gemini_ai_chat_decision_command_center.md`, and `project_docs/active/decision_intelligence/completed/antigravity_chart_color_picker_handoff.md`.
 
 Current truth: `project_docs/active/status/decision_intelligence_execution_status.md`
 

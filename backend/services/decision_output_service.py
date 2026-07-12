@@ -12,6 +12,20 @@ class DecisionOutputService:
     """Compose an additive AI Chat artifact from existing decision workspace data."""
 
     TRUTH_BOUNDARY = "observational_analysis_only"
+    REQUIRED_EXPORT_SECTION_IDS = (
+        "executive_brief",
+        "dataset_trust",
+        "goal",
+        "drivers",
+        "limits",
+        "breakdowns",
+        "evidence_board",
+        "decision_map_summary",
+        "scenario_compare",
+        "advanced_readiness",
+        "assumptions_unknowns",
+        "truth_boundary",
+    )
     EVIDENCE_STRENGTHS = {"strong", "moderate", "weak", "insufficient"}
     OBSERVATIONAL_LIMITATION = (
         "This evidence is observational only; it is not advice, a causal claim, "
@@ -27,7 +41,6 @@ class DecisionOutputService:
         correction_result: Optional[Dict[str, Any]] = None,
         scenario_preview: Optional[Dict[str, Any]] = None,
         governance_readiness: Optional[Dict[str, Any]] = None,
-        model_evaluation: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         workspace = workspace if isinstance(workspace, dict) else {}
         dataset_trust = dataset_trust if isinstance(dataset_trust, dict) else {}
@@ -37,7 +50,6 @@ class DecisionOutputService:
         governance_readiness = (
             governance_readiness if isinstance(governance_readiness, dict) else None
         )
-        model_evaluation = model_evaluation if isinstance(model_evaluation, dict) else None
 
         frame = DecisionOutputService._build_frame(workspace)
         readiness = DecisionOutputService._build_readiness(workspace)
@@ -52,7 +64,6 @@ class DecisionOutputService:
             decision_readiness=readiness,
             evidence_board=evidence_board,
             governance_readiness=governance_readiness,
-            model_evaluation=model_evaluation,
         )
         advanced_gates = DecisionOutputService._build_advanced_gates(readiness)
         decision_map = DecisionOutputService._build_decision_map(
@@ -76,6 +87,7 @@ class DecisionOutputService:
             decision_map=decision_map,
             scenario_compare=scenario_compare,
             readiness=readiness,
+            advanced_readiness=advanced_readiness,
         )
         source_refs = DecisionOutputService._build_source_refs(
             workspace=workspace,
@@ -1052,7 +1064,7 @@ class DecisionOutputService:
         evidence_status = str(evidence_board.get("status") or "not_analyzed")
         scenario_status = str(scenario_compare.get("status") or "not_applicable")
         missing_inputs = DecisionOutputService._list_of_strings(readiness.get("missing_inputs"))
-        export_ready = DecisionOutputService._export_ready(export_sections)
+        export_ready = DecisionOutputService.export_sections_ready(export_sections)
         is_analysis_ready = DecisionOutputService._observational_analysis_ready(readiness)
         allowed_next_checks, disabled_next_checks = DecisionOutputService._build_command_center_checks(
             readiness=readiness,
@@ -1394,9 +1406,18 @@ class DecisionOutputService:
             return "limited"
         return "ready"
 
-    @staticmethod
-    def _export_ready(export_sections: List[Dict[str, Any]]) -> bool:
-        return bool(export_sections) and all(
+    @classmethod
+    def export_sections_ready(cls, export_sections: List[Dict[str, Any]]) -> bool:
+        """Require every canonical backend section before claiming PDF readiness."""
+        if not isinstance(export_sections, list) or not export_sections:
+            return False
+        section_ids = [
+            str(section.get("section_id") or "").strip()
+            for section in export_sections
+            if isinstance(section, dict)
+        ]
+        required_present = set(cls.REQUIRED_EXPORT_SECTION_IDS).issubset(section_ids)
+        return required_present and len(section_ids) == len(set(section_ids)) and all(
             isinstance(section, dict)
             and bool(str(section.get("section_id") or "").strip())
             and bool(str(section.get("title") or "").strip())
@@ -1444,6 +1465,7 @@ class DecisionOutputService:
         decision_map: Dict[str, Any],
         scenario_compare: Dict[str, Any],
         readiness: Dict[str, Any],
+        advanced_readiness: Dict[str, Any],
     ) -> List[Dict[str, Any]]:
         # Keep these sections self-contained because the PDF export path renders
         # this backend-owned payload directly instead of re-reading workspace internals.
@@ -1611,6 +1633,26 @@ class DecisionOutputService:
                 emptyText="No scenario projection rows are available for this decision output.",
             ),
             DecisionOutputService._export_section(
+                section_id="advanced_readiness",
+                title="Advanced Readiness",
+                body=advanced_readiness.get("summary"),
+                keyValues=[
+                    {"label": "Overall State", "value": advanced_readiness.get("overall_state")},
+                    {"label": "Supported", "value": (advanced_readiness.get("state_counts") or {}).get("supported")},
+                    {"label": "Limited", "value": (advanced_readiness.get("state_counts") or {}).get("limited")},
+                    {"label": "Blocked", "value": (advanced_readiness.get("state_counts") or {}).get("blocked")},
+                    {"label": "Not Evaluated", "value": (advanced_readiness.get("state_counts") or {}).get("not_evaluated")},
+                    {"label": "Truth Boundary", "value": advanced_readiness.get("truth_boundary") or DecisionOutputService.TRUTH_BOUNDARY},
+                ],
+                cards=[
+                    DecisionOutputService._export_advanced_readiness_card(capability)
+                    for capability in (advanced_readiness.get("capabilities") or [])
+                    if isinstance(capability, dict)
+                ],
+                items=DecisionOutputService._dedupe_strings(advanced_readiness.get("limitations") or []),
+                emptyText="No advanced readiness capability diagnostics are available.",
+            ),
+            DecisionOutputService._export_section(
                 section_id="assumptions_unknowns",
                 title="Assumptions and Unknowns",
                 body="These are the declared assumptions and unresolved information gaps that bound interpretation.",
@@ -1710,6 +1752,38 @@ class DecisionOutputService:
             "meta": [
                 {"label": "Type", "value": note_type},
                 {"label": "Status", "value": status},
+            ],
+        }
+
+    @staticmethod
+    def _export_advanced_readiness_card(capability: Dict[str, Any]) -> Dict[str, Any]:
+        capability_name = str(capability.get("capability") or "advanced capability").strip()
+        reasons = [
+            str(item.get("message") or "").strip()
+            for item in (capability.get("reasons") or [])
+            if isinstance(item, dict) and str(item.get("message") or "").strip()
+        ]
+        evidence = [
+            f"{item.get('label')}: {item.get('value')}"
+            for item in (capability.get("evidence") or [])
+            if isinstance(item, dict) and item.get("label") and item.get("value") is not None
+        ]
+        missing = [
+            str(item.get("description") or "").strip().rstrip(" .;")
+            for item in (capability.get("missing_requirements") or [])
+            if isinstance(item, dict) and str(item.get("description") or "").strip()
+        ]
+        body_parts = reasons
+        if evidence:
+            body_parts.append(f"Evidence: {'; '.join(evidence)}.")
+        if missing:
+            body_parts.append(f"Missing requirements: {'; '.join(missing)}.")
+        return {
+            "title": capability_name.replace("_", " ").title(),
+            "body": " ".join(body_parts) or "No readiness explanation was provided.",
+            "meta": [
+                {"label": "State", "value": capability.get("state")},
+                {"label": "Truth Boundary", "value": capability.get("truth_boundary") or DecisionOutputService.TRUTH_BOUNDARY},
             ],
         }
 

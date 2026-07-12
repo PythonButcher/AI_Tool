@@ -15,7 +15,7 @@ class AdvancedReadinessService:
 
     SCHEMA_VERSION = "di_advanced_readiness_v1"
     TRUTH_BOUNDARY = "observational_analysis_only"
-    VALID_STATES = {"supported", "limited", "blocked", "not_evaluated"}
+    VALID_STATES = {"limited", "blocked", "not_evaluated"}
     MINIMUM_MODEL_ROWS = 10
 
     @classmethod
@@ -27,14 +27,8 @@ class AdvancedReadinessService:
         decision_readiness: Dict[str, Any],
         evidence_board: Dict[str, Any],
         governance_readiness: Optional[Dict[str, Any]] = None,
-        model_evaluation: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
-        """Classify advanced capabilities using only supplied backend evidence.
-
-        ``model_evaluation`` is intentionally an internal, optional input. A
-        future trusted backend caller may supply a validated model-run result;
-        arbitrary chat payload fields are not promoted to supported evidence.
-        """
+        """Classify advanced capabilities using only live Decision Chat evidence."""
 
         frame = frame if isinstance(frame, dict) else {}
         dataset_trust = dataset_trust if isinstance(dataset_trust, dict) else {}
@@ -43,19 +37,20 @@ class AdvancedReadinessService:
         governance_readiness = (
             governance_readiness if isinstance(governance_readiness, dict) else None
         )
-        model_evaluation = model_evaluation if isinstance(model_evaluation, dict) else None
 
         capabilities = [
             cls._prediction_readiness(
                 frame=frame,
                 dataset_trust=dataset_trust,
                 governance_readiness=governance_readiness,
-                model_evaluation=model_evaluation,
             ),
             cls._optimization_readiness(decision_readiness),
             cls._causal_readiness(evidence_board),
             cls._automated_decisioning_readiness(decision_readiness),
         ]
+        # Keep the reserved ``supported`` counter for additive payload
+        # compatibility, but do not emit that state until a live backend path
+        # can bind a model evaluation to this exact governed dataset.
         counts = {
             state: sum(item["state"] == state for item in capabilities)
             for state in ("supported", "limited", "blocked", "not_evaluated")
@@ -70,7 +65,7 @@ class AdvancedReadinessService:
             "state_counts": counts,
             "limitations": [
                 "These diagnostics assess readiness only; they do not produce predictions, simulations, optimized actions, causal proof, or autonomous decisions.",
-                "A supported readiness state means prerequisites were evidenced, not that future model performance or business outcomes are guaranteed.",
+                "No readiness state authorizes model execution or guarantees future performance or business outcomes.",
             ],
             "truth_boundary": cls.TRUTH_BOUNDARY,
         }
@@ -82,7 +77,6 @@ class AdvancedReadinessService:
         frame: Dict[str, Any],
         dataset_trust: Dict[str, Any],
         governance_readiness: Optional[Dict[str, Any]],
-        model_evaluation: Optional[Dict[str, Any]],
     ) -> Dict[str, Any]:
         dataset = dataset_trust.get("dataset") if isinstance(dataset_trust.get("dataset"), dict) else None
         row_count = cls._non_negative_int(dataset_trust.get("row_count"))
@@ -190,20 +184,6 @@ class AdvancedReadinessService:
                 ],
                 allowed_next_actions=[
                     cls._action("add_training_history", "Add training history", "Provide more target-bearing observations, then rerun ML preparation checks."),
-                ],
-            )
-
-        if governance_verified and cls._validated_model_matches(model_evaluation, target_label):
-            evidence.extend(cls._model_evidence(model_evaluation or {}))
-            return cls._capability(
-                capability="prediction",
-                state="supported",
-                reason_code="validated_model_evidence_available",
-                reason="Prediction prerequisites are supported by a target-matched backend model evaluation and governed dataset evidence.",
-                evidence=evidence,
-                missing_requirements=[],
-                allowed_next_actions=[
-                    cls._action("review_model_evaluation", "Review model evaluation", "Inspect holdout metrics, baseline comparison, warnings, and intended-use limits before any prediction use."),
                 ],
             )
 
@@ -358,34 +338,8 @@ class AdvancedReadinessService:
             return 0
 
     @staticmethod
-    def _validated_model_matches(model_evaluation: Optional[Dict[str, Any]], target_label: str) -> bool:
-        if not isinstance(model_evaluation, dict):
-            return False
-        status = str(model_evaluation.get("status") or "").strip().lower()
-        run_id = str(model_evaluation.get("run_id") or "").strip()
-        target = str(model_evaluation.get("target_column") or "").strip().lower()
-        metrics = model_evaluation.get("metrics")
-        return (
-            status == "validated"
-            and bool(run_id)
-            and target == target_label.strip().lower()
-            and isinstance(metrics, dict)
-            and bool(metrics)
-        )
-
-    @classmethod
-    def _model_evidence(cls, model_evaluation: Dict[str, Any]) -> List[Dict[str, Any]]:
-        return [
-            cls._evidence("validated_model_run", "Validated model run", model_evaluation.get("run_id"), "model_evaluation.run_id"),
-            cls._evidence("model_problem_type", "Problem type", model_evaluation.get("problem_type") or "unknown", "model_evaluation.problem_type"),
-            cls._evidence("model_metrics_available", "Holdout metrics available", True, "model_evaluation.metrics"),
-        ]
-
-    @staticmethod
     def _overall_state(counts: Dict[str, int]) -> str:
-        if counts.get("supported") == sum(counts.values()):
-            return "supported"
-        if counts.get("limited") or counts.get("supported"):
+        if counts.get("limited"):
             return "limited"
         if counts.get("blocked"):
             return "blocked"

@@ -24,7 +24,7 @@ Every governed JSON response includes `governance_readiness`. It has `status` (`
 
 `blocked` always returns HTTP 422 with `error` and `governance_readiness`; no chart, AI result, decision artifact, model, rows, or export body is produced. `warning` permits the requested operation while exposing the remedy. Binary exports place the same signal in `X-Dataset-Governance-Status` and `X-Dataset-Governance-Next-Action` headers.
 
-For Decision Chat requests that pass this gate, the route passes the verified readiness object internally to `decision_output.advanced_readiness`. Prediction diagnostics may cite `governance_readiness.status` and its remedies as source-backed evidence. Caller-supplied internal readiness fields are discarded. A blocked governance result still returns HTTP 422 before any Decision Output or advanced readiness diagnostic is composed.
+For Decision Chat requests that pass this gate, the route passes the verified readiness object internally to `decision_output.advanced_readiness`. Prediction diagnostics may cite `governance_readiness.status` and its remedies as source-backed evidence. This governance result can support preparation but cannot produce a `supported` prediction state because Decision Chat has no trusted dataset-lineage join to a model evaluation. Caller-supplied internal readiness fields are discarded. A blocked governance result still returns HTTP 422 before any Decision Output or advanced readiness diagnostic is composed.
 
 ## Enforcement Points
 

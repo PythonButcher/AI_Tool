@@ -6,15 +6,17 @@ Read this folder after `project_docs/active/status/decision_intelligence_executi
 
 ## Current Gate
 
-Status: Phase 4.5 - Clean Up Codex Mistakes is active for Codex-owned cleanup and verification.
+Status: Phase 5 - Product Truth Pruning And Executive Export Pack is active for Codex source audit, backend truth, contracts, tests, and documentation.
 
-Planning source: explicit user direction on 2026-07-11.
+Planning source: ranked item 5 in `project_docs/active/agent_council/outputs/next-implementation-cycle-priorities/2026-06-28-next-implementation-cycle-priorities-summary.md`.
 
-Current plan: `phase_4_5_clean_up_codex_mistakes_plan.md`.
+Current plan: `phase_5_product_truth_pruning_and_executive_export_pack_plan.md`.
 
-Current Codex goal: `codex_phase_4_5_clean_up_codex_mistakes_goal.md`.
+Current Codex goal: `codex_product_truth_pruning_and_executive_export_pack_goal.md`.
 
-Active frontend handoff: none.
+Active frontend handoff: none. Frontend work requires a proven, bounded gap and a new handoff.
+
+Completed Phase 4.5 references: `project_docs/active/decision_intelligence/completed/phase_4_5_clean_up_codex_mistakes_plan.md`, `project_docs/active/decision_intelligence/completed/codex_phase_4_5_clean_up_codex_mistakes_goal.md`, `project_docs/active/decision_intelligence/completed/antigravity_decision_pdf_renderer_repair.md`, and `project_docs/active/decision_intelligence/completed/manual_export_checklist.md`.
 
 Completed Phase 4 references: `project_docs/active/decision_intelligence/completed/phase_4_advanced_readiness_ml_trust_gates_plan.md`, `project_docs/active/decision_intelligence/completed/codex_advanced_readiness_ml_trust_gates_goal.md`, and `project_docs/active/decision_intelligence/completed/antigravity_advanced_readiness_ml_trust_gates_handoff.md`.
 

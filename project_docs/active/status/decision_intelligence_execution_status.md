@@ -18,7 +18,7 @@ The Decisions window remains secondary. Saved DecisionAssets support immutable h
 
 ## Current Project Gate
 
-Status: **Phase 4.5 - Clean Up Codex Mistakes: ACTIVE CODEX CLEANUP**
+Status: **Phase 5 - Product Truth Pruning And Executive Export Pack: ACTIVE CODEX BACKEND GATE**
 
 Active gate:
 
@@ -26,13 +26,23 @@ Active gate:
 
 Current plan:
 
-`project_docs/active/decision_intelligence/active_gate/phase_4_5_clean_up_codex_mistakes_plan.md`
+`project_docs/active/decision_intelligence/active_gate/phase_5_product_truth_pruning_and_executive_export_pack_plan.md`
 
 Current Codex goal:
 
-`project_docs/active/decision_intelligence/active_gate/codex_phase_4_5_clean_up_codex_mistakes_goal.md`
+`project_docs/active/decision_intelligence/active_gate/codex_product_truth_pruning_and_executive_export_pack_goal.md`
 
 Active frontend handoff: none.
+
+Completed Phase 4.5 references:
+
+`project_docs/active/decision_intelligence/completed/phase_4_5_clean_up_codex_mistakes_plan.md`
+
+`project_docs/active/decision_intelligence/completed/codex_phase_4_5_clean_up_codex_mistakes_goal.md`
+
+`project_docs/active/decision_intelligence/completed/antigravity_decision_pdf_renderer_repair.md`
+
+`project_docs/active/decision_intelligence/completed/manual_export_checklist.md`
 
 Completed Phase 4 references:
 
@@ -50,9 +60,9 @@ Completed Evidence-To-Action references:
 
 `project_docs/active/decision_intelligence/completed/antigravity_evidence_to_action_workflow_handoff.md`
 
-Goal: Clean up Codex-authored documentation, contract, and backend-truth mistakes before the next product phase begins.
+Goal: Make product language and existing Decision Output exports precise, source-backed, observationally bounded, and useful to an executive reader without adding new analytical capabilities.
 
-Latest verified fact: the user explicitly wrapped Phase 4 and promoted Phase 4.5 - Clean Up Codex Mistakes. Phase 4 records are completed references, rejected audit material is archived, and PDF/export work remains outside this cleanup gate.
+Latest verified fact: the user explicitly accepted and closed Phase 4.5 on 2026-07-11. The council-ranked Product Truth Pruning And Executive Export Pack is now the single active gate. No Phase 5 implementation is claimed yet.
 
 Completed Saved Decision Library references:
 
@@ -82,7 +92,7 @@ Previous completed references:
 
 ## Next Focus
 
-Codex should execute `project_docs/active/decision_intelligence/active_gate/codex_phase_4_5_clean_up_codex_mistakes_goal.md`. No frontend agent acts until Codex proves a bounded frontend gap within this cleanup scope.
+Codex should execute `project_docs/active/decision_intelligence/active_gate/codex_product_truth_pruning_and_executive_export_pack_goal.md`. Do not assign frontend work unless the source audit or browser evidence proves a bounded frontend gap.
 
 ## Future Cycle Memory
 
