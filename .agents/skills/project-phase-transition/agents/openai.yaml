@@ -1,0 +1,4 @@
+interface:
+  display_name: "Project Phase Transition"
+  short_description: "Close phases and prepare kickoff goals"
+  default_prompt: "Use $project-phase-transition to close the current phase, clean active docs, and prepare the next kickoff goal."

@@ -164,7 +164,10 @@ class DecisionGraphService:
             "schema_version": DecisionGraphService.CONTRACT_VERSION,
             "action_id": action_id,
             "action_status": action["action_status"],
+            "enabled": action.get("enabled", action.get("action_status") == "ready"),
+            "disabled_reason": action.get("disabled_reason"),
             "target": target,
+            "source_refs": DecisionGraphService._graph_action_source_refs(edge=edge, node=node, target=target),
             "summary": action["summary"],
             "request_payload": action["request_payload"],
             "response_semantics": action["response_semantics"],
@@ -685,26 +688,31 @@ class DecisionGraphService:
                 "action_id": "breakdown",
                 "label": "Break down",
                 "description": "Prepare a metric-by-dimension follow-up request when the selected graph target has both roles.",
+                "truth_boundary": DecisionGraphService.TRUTH_BOUNDARY,
             },
             {
                 "action_id": "monitor",
                 "label": "Monitor",
                 "description": "Prepare a monitoring specification for selected metrics or relationships.",
+                "truth_boundary": DecisionGraphService.TRUTH_BOUNDARY,
             },
             {
                 "action_id": "explain_evidence",
                 "label": "Explain evidence",
                 "description": "Explain the observed evidence and reliability boundary for the selected graph item.",
+                "truth_boundary": DecisionGraphService.TRUTH_BOUNDARY,
             },
             {
                 "action_id": "explain_missing_data",
                 "label": "Explain missing data",
                 "description": "Explain missing fields, low sample size, and other inspection blockers.",
+                "truth_boundary": DecisionGraphService.TRUTH_BOUNDARY,
             },
             {
                 "action_id": "send_to_scenario_compare",
                 "label": "Send to Scenario Compare",
                 "description": "Prepare a bounded direct-adjustment Scenario Compare request only when a metric target is available.",
+                "truth_boundary": DecisionGraphService.TRUTH_BOUNDARY,
             },
         ]
 
@@ -712,33 +720,102 @@ class DecisionGraphService:
     def _followup_actions_for_edge(edge: Dict[str, Any]) -> List[Dict[str, Any]]:
         relationship_type = edge.get("relationship_type")
         has_metric = bool(DecisionGraphService._edge_metric_ids(edge))
+        source_refs = DecisionGraphService._edge_source_refs(edge)
+        limitations = DecisionGraphService._dedupe(
+            list(edge.get("limitations") or [])
+            + ["Graph follow-up actions prepare user-approved next checks; they do not execute autonomous decisions."]
+        )
         return [
-            {
-                "action_id": "breakdown",
-                "enabled": has_metric,
-                "status": "ready" if has_metric else "needs_metric",
-            },
-            {
-                "action_id": "monitor",
-                "enabled": has_metric,
-                "status": "ready" if has_metric else "needs_metric",
-            },
-            {
-                "action_id": "explain_evidence",
-                "enabled": True,
-                "status": "ready",
-            },
-            {
-                "action_id": "explain_missing_data",
-                "enabled": True,
-                "status": "ready",
-            },
-            {
-                "action_id": "send_to_scenario_compare",
-                "enabled": has_metric and relationship_type != "user_hypothesis",
-                "status": "ready" if has_metric and relationship_type != "user_hypothesis" else "needs_observed_metric_edge",
-            },
+            DecisionGraphService._graph_followup_action(
+                action_id="breakdown",
+                enabled=has_metric,
+                status="ready" if has_metric else "needs_metric",
+                source_refs=source_refs,
+                limitations=limitations,
+                disabled_reason=None if has_metric else "Breakdown needs an observed metric target on the selected graph edge.",
+            ),
+            DecisionGraphService._graph_followup_action(
+                action_id="monitor",
+                enabled=has_metric,
+                status="ready" if has_metric else "needs_metric",
+                source_refs=source_refs,
+                limitations=limitations,
+                disabled_reason=None if has_metric else "Monitoring needs an observed metric target on the selected graph edge.",
+            ),
+            DecisionGraphService._graph_followup_action(
+                action_id="explain_evidence",
+                enabled=True,
+                status="ready",
+                source_refs=source_refs,
+                limitations=limitations,
+            ),
+            DecisionGraphService._graph_followup_action(
+                action_id="explain_missing_data",
+                enabled=True,
+                status="ready",
+                source_refs=source_refs,
+                limitations=limitations,
+            ),
+            DecisionGraphService._graph_followup_action(
+                action_id="send_to_scenario_compare",
+                enabled=has_metric and relationship_type != "user_hypothesis",
+                status="ready" if has_metric and relationship_type != "user_hypothesis" else "needs_observed_metric_edge",
+                source_refs=source_refs,
+                limitations=limitations,
+                disabled_reason=DecisionGraphService._scenario_followup_disabled_reason(
+                    has_metric=has_metric,
+                    relationship_type=relationship_type,
+                ),
+            ),
         ]
+
+    @staticmethod
+    def _graph_followup_action(
+        *,
+        action_id: str,
+        enabled: bool,
+        status: str,
+        source_refs: Dict[str, Any],
+        limitations: List[str],
+        disabled_reason: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        labels = {action["action_id"]: action for action in DecisionGraphService._available_graph_actions()}
+        action = labels.get(action_id, {})
+        item = {
+            "action_id": action_id,
+            "label": action.get("label") or action_id.replace("_", " ").title(),
+            "description": action.get("description") or "Prepare a graph follow-up check.",
+            "enabled": bool(enabled),
+            "status": status,
+            "source_refs": deepcopy(source_refs),
+            "limitations": list(limitations or []),
+            "truth_boundary": DecisionGraphService.TRUTH_BOUNDARY,
+        }
+        if not enabled:
+            item["disabled_reason"] = disabled_reason or "This graph follow-up action is not available for the selected item."
+        return item
+
+    @staticmethod
+    def _edge_source_refs(edge: Dict[str, Any]) -> Dict[str, Any]:
+        metrics = edge.get("metrics") if isinstance(edge.get("metrics"), dict) else {}
+        return {
+            "source": "decision_graph.edges",
+            "edge_id": edge.get("edge_id"),
+            "relationship_type": edge.get("relationship_type"),
+            "evidence_basis": edge.get("evidence_basis"),
+            "source_node_id": edge.get("source_node_id"),
+            "target_node_id": edge.get("target_node_id"),
+            "source_variable_id": metrics.get("source_variable_id"),
+            "target_variable_id": metrics.get("target_variable_id"),
+        }
+
+    @staticmethod
+    def _scenario_followup_disabled_reason(*, has_metric: bool, relationship_type: Any) -> Optional[str]:
+        if has_metric and relationship_type == "user_hypothesis":
+            return "Scenario Compare is disabled because user hypothesis edges are not observationally validated metric evidence."
+        if not has_metric:
+            return "Scenario Compare needs an observed metric target on the selected graph edge."
+        return None
 
     @staticmethod
     def _normalize_graph_action(value: Any) -> str:
@@ -807,6 +884,25 @@ class DecisionGraphService:
             "node_type": node.get("node_type") or node.get("variable_type"),
             "variable_id": node.get("variable_id"),
             "label": node.get("label"),
+        }
+
+    @staticmethod
+    def _graph_action_source_refs(
+        *,
+        edge: Optional[Dict[str, Any]],
+        node: Optional[Dict[str, Any]],
+        target: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        if isinstance(edge, dict):
+            refs = DecisionGraphService._edge_source_refs(edge)
+            refs["target_type"] = "edge"
+            return refs
+        return {
+            "source": "decision_graph.nodes",
+            "target_type": "node",
+            "node_id": node.get("node_id") if isinstance(node, dict) else target.get("node_id"),
+            "node_type": (node.get("node_type") or node.get("variable_type")) if isinstance(node, dict) else target.get("node_type"),
+            "variable_id": node.get("variable_id") if isinstance(node, dict) else target.get("variable_id"),
         }
 
     @staticmethod
@@ -998,6 +1094,8 @@ class DecisionGraphService:
         ready = bool(metric_ids and dimension_fields)
         return {
             "action_status": "ready" if ready else "needs_input",
+            "enabled": ready,
+            "disabled_reason": None if ready else "Breakdown needs one metric target and one breakdown dimension.",
             "summary": (
                 "A metric breakdown request can be prepared from the selected graph target."
                 if ready
@@ -1036,6 +1134,8 @@ class DecisionGraphService:
         ready = bool(metric_ids)
         return {
             "action_status": "ready" if ready else "needs_metric",
+            "enabled": ready,
+            "disabled_reason": None if ready else "Monitoring needs at least one metric variable.",
             "summary": (
                 "A monitoring specification can be prepared for the metric target."
                 if ready
@@ -1072,12 +1172,18 @@ class DecisionGraphService:
     ) -> Dict[str, Any]:
         ready = bool(metric_ids) and relationship_type != "user_hypothesis"
         status = "ready" if ready else ("needs_observed_metric_edge" if metric_ids else "needs_metric")
+        disabled_reason = DecisionGraphService._scenario_followup_disabled_reason(
+            has_metric=bool(metric_ids),
+            relationship_type=relationship_type,
+        )
         return {
             "action_status": status,
+            "enabled": ready,
+            "disabled_reason": None if ready else disabled_reason,
             "summary": (
                 "A bounded Scenario Compare request can be prepared as a direct metric adjustment scaffold."
                 if ready
-                else "Scenario Compare is blocked until an observed metric target is selected."
+                else disabled_reason or "Scenario Compare is blocked until an observed metric target is selected."
             ),
             "request_payload": {
                 "route_hint": "/api/decision/scenarios/evaluate",

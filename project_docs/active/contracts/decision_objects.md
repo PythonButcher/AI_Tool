@@ -132,6 +132,7 @@ Phase 3 of AI Chat Decision Output Unification adds a backend-owned `decision_ou
 | `evidence_board` | `Decision Output Evidence Board` | Yes | Normalized view of `workspace_analysis.ranked_diagnostics`, or `not_analyzed` when analysis has not run. |
 | `decision_map` | `Decision Output Map` | Yes | Read-only map of dataset, frame, evidence, missing inputs, and advanced gates. Edges are explicitly non-causal. |
 | `scenario_compare` | `Decision Output Scenario Compare` | Yes | Bounded scenario preview when available, otherwise a `not_applicable` object with limitations. It is not a forecast, optimizer, simulation, causal model, autonomous decision, or final recommendation. |
+| `advanced_readiness` | `Advanced Readiness` | Yes | Source-backed readiness diagnostics for prediction, optimization, causal analysis, and automated decisioning. This evaluates prerequisites only and does not run or enable an advanced capability. |
 | `advanced_gates` | `object[]` | Yes | Unsupported or gated capabilities such as simulation, optimization, autonomous decisioning, and final recommendation with backend reasons. |
 | `command_center` | `Decision Output Command Center` | Yes | AI Chat-native command surface composed from existing `decision_output` truth. It supplies display order, stale or rerun state, allowed next checks, disabled next checks with reasons, export readiness, limitations, and source refs without changing artifact type or export semantics. |
 | `export_sections` | `object[]` | Yes | Backend-owned PDF-ready sections for Executive Brief, Dataset Trust, Goal, Drivers, Limits, Breakdowns, Evidence Board, Decision Map Summary, Scenario Compare, Assumptions and Unknowns, and Truth Boundary. |
@@ -190,7 +191,25 @@ Evidence Board item fields:
 | `data_sufficiency` | `object` | Yes | Normalized sufficiency object. Current keys include `status`, `row_count`, `has_period_comparison`, and `summary`. `status` is `sufficient`, `limited`, or `insufficient` when the backend can determine it. |
 | `limitations` | `string[]` | Yes | Always includes an observational-only caveat. Weak, insufficient, or limited items include an additional caution that the item is for review, not a decision rule. |
 | `source_diagnostic_id` | `string \| null` | Yes | Trace back to `workspace_analysis.ranked_diagnostics` or its nested `source_diagnostic`. Present as `null` only when no diagnostic ID exists. |
+| `source_refs` | `object` | Yes | Exact refs for this evidence item: `source`, `source_path`, `source_diagnostic_id`, optional `metric_id`, optional `dimension_id`, and optional backing `field`. |
+| `next_checks` | `object[]` | Yes | Backend-owned Evidence-To-Action checks for this evidence item. Current check IDs are `explain_evidence`, `breakdown`, `monitor`, and `send_to_scenario_compare`. |
 | `observational_boundary` | `string` | Yes | Current value is `observational_analysis_only`. |
+
+Evidence next-check item fields:
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `check_id` | `string` | Yes | Stable check ID such as `explain_evidence`, `breakdown`, `monitor`, or `send_to_scenario_compare`. |
+| `label` | `string` | Yes | Backend-owned display label. |
+| `description` | `string` | Enabled only | Short explanation of the enabled follow-up check. |
+| `enabled` | `boolean` | Yes | Whether the user can approve this check for the current evidence source. |
+| `status` | `string` | Yes | `ready` for enabled checks, `disabled` for unavailable checks. |
+| `disabled_reason` | `string` | Disabled only | Exact backend reason the check is unavailable. |
+| `action_id` | `string` | No | Backend action ID when the check maps to an action request. Informational review checks may omit it. |
+| `action_type` | `string` | Yes | `backend_action` when `action_id` is present, otherwise `informational_review`. |
+| `source_refs` | `object` | Yes | Source path and diagnostic/metric/dimension refs needed to run or explain the check without frontend inference. |
+| `limitations` | `string[]` | Yes | Observational-only and source-specific limitations. |
+| `truth_boundary` | `string` | Yes | Current value is `observational_analysis_only`. |
 
 Reliability boundary: Evidence Board items are not recommendations, optimized actions, causal proof, simulations, forecasts, or autonomous decisions. Titles and summaries should describe observed diagnostic evidence only. Limitations may mention unsupported capabilities only to explicitly deny them.
 
@@ -199,6 +218,8 @@ Reliability boundary: Evidence Board items are not recommendations, optimized ac
 `decision_map` is a presentation contract, not a causal diagram. It can contain node types `dataset`, `goal`, `driver`, `limit`, `breakdown`, `evidence`, `unknown`, and `advanced_gate`. Edge types include `declared_relationship`, `observed_association`, `constraint`, `breakdown`, and `missing_evidence`. Every edge includes `causal_status: "not_causal_claim"`.
 
 Phase 7 shifts graph work from this compact read-only `decision_output.decision_map` toward a separate user-guided `decision_graph` builder contract. `decision_map` remains the current compact display object inside `decision_output`; `decision_graph` is the backend data foundation for the future interactive builder.
+
+Every map node and map edge includes `source_refs` and `next_checks`. Map item checks use the same enabled and disabled shape as Evidence Board checks. `explain_evidence` is available for map items because the backend can explain source path and boundary. `explain_missing_data` is enabled only for missing, blocked, unsupported, insufficient, or warning-bearing items. `breakdown`, `monitor`, and `send_to_scenario_compare` are disabled on compact Decision Map items unless a future backend payload supplies a complete observed metric target and, where needed, a breakdown dimension. Disabled states must include `disabled_reason`; clients must not infer availability from node or edge type alone.
 
 #### Decision Output Scenario Compare
 
@@ -221,6 +242,40 @@ Phase 8 folds the existing bounded scenario preview into `decision_output.scenar
 
 Unavailable scenario data is not fabricated. If no preview is attached, the preview is not ready, or projection rows are missing, `scenario_compare.status` is `not_applicable`, `projections` is empty, `baseline.status` and `comparison.status` are `not_available`, and `limitations` explain that no scenario projection data was available.
 
+#### Advanced Readiness
+
+`decision_output.advanced_readiness` is the backend-owned ML trust-gate contract. It explains whether the current data, semantics, governance result, observational evidence, and trusted model evaluation are sufficient to attempt an advanced workflow. It does not perform prediction, optimization, causal effect estimation, simulation, or automated decisioning.
+
+The current schema version is `di_advanced_readiness_v1`. Valid readiness states are `supported`, `limited`, `blocked`, and `not_evaluated`. `supported` means the named prerequisites have source-backed evidence; it is not a performance or outcome guarantee. `limited` means preparation may continue but a required validation step is absent. `blocked` means a prerequisite or runtime capability is missing. `not_evaluated` means the backend lacks enough context to assess readiness honestly.
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `schema_version` | `string` | Yes | Current value is `di_advanced_readiness_v1`. |
+| `overall_state` | `string` | Yes | Conservative rollup. Mixed supported or limited and blocked capabilities roll up to `limited`. |
+| `summary` | `string` | Yes | Plain-language count and review instruction. |
+| `capabilities` | `Advanced Readiness Capability[]` | Yes | Exactly one item each for `prediction`, `optimization`, `causal_analysis`, and `automated_decisioning`. |
+| `state_counts` | `object` | Yes | Counts for `supported`, `limited`, `blocked`, and `not_evaluated`. |
+| `limitations` | `string[]` | Yes | Global reminders that readiness is not execution or an outcome guarantee. |
+| `truth_boundary` | `string` | Yes | Current value is `observational_analysis_only`. |
+
+Advanced Readiness Capability fields:
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `capability` | `string` | Yes | `prediction`, `optimization`, `causal_analysis`, or `automated_decisioning`. |
+| `state` | `string` | Yes | `supported`, `limited`, `blocked`, or `not_evaluated`. |
+| `reasons` | `object[]` | Yes | Stable `code` and plain-language `message` entries explaining the classification. |
+| `evidence` | `object[]` | Yes | Safe evidence entries with `code`, `label`, `value`, and exact backend `source_path`. No raw dataset values are included. |
+| `missing_requirements` | `object[]` | Yes | `requirement_id` and plain-language `description` entries. Empty only when the capability is supported. |
+| `allowed_next_actions` | `object[]` | Yes | Safe preparation or review actions with `action_id`, `label`, and `description`. These identifiers do not authorize unsupported execution. |
+| `truth_boundary` | `string` | Yes | Current value is `observational_analysis_only`. |
+
+Prediction readiness reuses Dataset Trust row count and semantic readiness, the decision goal metric binding, route-verified `governance_readiness`, the ML runtime minimum of ten non-null target rows, and an optional trusted backend model evaluation. It is `limited` when data and target preparation can proceed but governance or model validation evidence is absent. It is `supported` only when governance has a verified `ready` or `warning` result and trusted model evidence has `status: validated`, a run ID, a matching target column, and non-empty holdout metrics.
+
+Optimization remains `blocked` while `readiness.capability_state.optimization` is unsupported. Causal analysis remains `blocked` while Evidence Board output is observational and there is no validated causal identification method. Automated decisioning remains `blocked` while `readiness.capability_state.autonomous_decisioning` is unsupported and human approval is required.
+
+`advanced_gates` remains unchanged for compatibility. New clients should use `advanced_readiness` for detailed prerequisites while continuing to respect every legacy unsupported gate.
+
 #### Decision Output Command Center
 
 The command center belongs inside the existing `decision_output` artifact as `decision_output.command_center`. Codex chose this additive section instead of a wrapper artifact because current AI Chat rendering, artifact inspection, export, and saved-asset paths already recognize `type: "decision_output"`. A wrapper would force frontend artifact routing to unwrap another object before existing behavior could work. The existing `decision_output` remains canonical; `command_center` is a compact control state derived from `frame`, `dataset_trust`, `readiness`, `evidence_board`, `decision_map`, `scenario_compare`, `advanced_gates`, `export_sections`, `source_refs`, and `truth_boundary`.
@@ -235,8 +290,8 @@ The command center must not become a raw field dump. Frontend code should use it
 | `section_order` | `string[]` | Yes | Ordered section IDs for the command-center view. Current values mirror `export_sections.section_id` order and should be rendered with existing section content, not copied as raw JSON. |
 | `stale_state` | `string` | Yes | Copied from `dataset_trust.stale_state`: `current`, `possibly_stale`, `unknown`, or `not_applicable`. |
 | `rerun_state` | `object` | Yes | Includes `status`, optional `action_id`, and `reason`. Current statuses include `analysis_not_run`, `current_analysis_available`, `possibly_stale_analysis_available`, and `blocked`. |
-| `allowed_next_checks` | `object[]` | Yes | Enabled check controls. Each item includes `check_id`, `label`, `description`, `enabled: true`, `status: "ready"`, `source`, and optional backend `action_id` such as `analyze_workspace`. |
-| `disabled_next_checks` | `object[]` | Yes | Disabled controls with explicit reasons. Each item includes `check_id`, `label`, `enabled: false`, `status: "disabled"`, `source`, `reason`, and optional `action_id`. Unsupported capabilities and live saved-asset refresh belong here. |
+| `allowed_next_checks` | `object[]` | Yes | Enabled check controls. Each item includes `check_id`, `label`, `description`, `enabled: true`, `status: "ready"`, `source`, `action_type`, `source_refs`, `limitations`, `truth_boundary`, and optional backend `action_id` such as `analyze_workspace`. |
+| `disabled_next_checks` | `object[]` | Yes | Disabled controls with explicit reasons. Each item includes `check_id`, `label`, `enabled: false`, `status: "disabled"`, `source`, `reason`, `disabled_reason`, `action_type`, `source_refs`, `limitations`, `truth_boundary`, and optional `action_id`. Unsupported capabilities and live saved-asset refresh belong here. |
 | `export_readiness` | `object` | Yes | Includes `ready`, `status`, `section_count`, `section_order`, and `reason`. This describes whether existing `export_sections` are usable; it does not add a new export payload. |
 | `limitations` | `string[]` | Yes | Conservative limitations for observational-only support, Dataset Trust warnings, unavailable Evidence Board or Scenario Compare state, unsupported advanced gates, and immutable saved snapshots. |
 | `source_refs` | `object` | Yes | Compact refs for `workspace_id`, `workspace_status`, `workspace_analysis_present`, `ranked_diagnostic_ids`, and `scenario_status`. |
@@ -256,19 +311,35 @@ A `DecisionAsset` is an immutable saved AI Chat Decision Review. It is an observ
 | `schema_version` | `string` | Yes | Current value is `di_decision_asset_v1`. |
 | `title` | `string` | Yes | Normalized display title. A missing or blank caller title falls back to `decision_output.title`. |
 | `created_at` | `string` | Yes | Backend-generated ISO-8601 UTC timestamp. |
-| `decision_output` | `AI Chat Decision Output` | Yes | Exact sanitized immutable snapshot of the current output. It preserves `dataset_trust`, `command_center`, `source_refs`, `export_sections`, and `truth_boundary`. |
+| `archived_at` | `string \| null` | Yes | Backend-generated ISO-8601 UTC timestamp when archived, otherwise `null`. Archiving changes library visibility only; it does not mutate the saved `decision_output`. |
+| `lifecycle_state` | `string` | Yes | `active` or `archived`. Deleted assets are removed and return 404. |
+| `decision_output` | `AI Chat Decision Output` | Yes | Exact sanitized immutable snapshot of the current output. It preserves `dataset_trust`, `advanced_readiness`, `command_center`, `source_refs`, `export_sections`, and `truth_boundary`. |
 | `graph_state` | `Decision Graph State` | No | Optional contract-safe `decision_graph_build_state` carry-forward object. It is absent when no graph state was supplied. |
 | `snapshot_notice` | `string` | Yes | UI copy that the asset is a saved immutable observational snapshot and not a live refresh or final decision. |
+| `review_metadata` | `object` | Yes | Stable review summary derived only from the saved snapshot. Includes `snapshot_kind`, `dataset_label`, `source_label`, `row_count`, `column_count`, `readiness_state`, `truth_boundary`, `evidence_status`, `evidence_item_count`, `scenario_status`, `export_section_count`, `export_section_ids`, `command_center_status`, and `graph_state_summary`. |
+| `provenance` | `object` | Yes | Saved-snapshot provenance with `source: "saved_decision_output_snapshot"`, saved `source_refs`, saved Dataset Trust dataset summary when present, dataset source label, and truth boundary. |
+| `snapshot_export` | `object` | Yes | Export readiness for the stored snapshot. Includes `ready`, `source: "saved_decision_asset_snapshot"`, `section_count`, `section_order`, and the export endpoint template. |
 
 Routes:
 
 | Route | Request | Response |
 | --- | --- | --- |
 | `POST /api/decision/assets` | `title` optional, `decision_output` required, `graph_state` optional | HTTP 201 and complete `DecisionAsset`. |
-| `GET /api/decision/assets` | Optional `limit`, default `25`, minimum `1`, maximum `50` | HTTP 200 with newest-first `assets` summaries. |
+| `GET /api/decision/assets` | Optional `limit`, default `25`, minimum `1`, maximum `50`; optional filters `readiness_state`, `truth_boundary`, `dataset_label`, `query`, `has_graph_state`, `created_from`, `created_to`, `archived_state`, and `include_archived` | HTTP 200 with newest-first `assets` summaries. Defaults to active assets only. |
+| `POST /api/decision/assets/compare` | `asset_ids` array with 2 to 4 saved asset IDs | HTTP 200 with historical snapshot comparison. |
 | `GET /api/decision/assets/<asset_id>` | Asset ID path parameter | HTTP 200 and complete `DecisionAsset`; HTTP 404 when absent. |
+| `GET /api/decision/assets/<asset_id>/export` | Asset ID path parameter | HTTP 200 with saved export payload; HTTP 404 when absent. |
+| `POST /api/decision/assets/<asset_id>/archive` | Asset ID path parameter | HTTP 200 with archived `DecisionAsset`; HTTP 404 when absent. |
+| `POST /api/decision/assets/<asset_id>/restore` | Asset ID path parameter | HTTP 200 with restored active `DecisionAsset`; HTTP 404 when absent. |
+| `DELETE /api/decision/assets/<asset_id>` | Asset ID path parameter | HTTP 200 with `{ "status": "deleted", "asset_id": string }`; HTTP 404 when absent. |
 
-List summaries contain only `asset_id`, `title`, `created_at`, `dataset_label`, `readiness_state`, and `truth_boundary`. The create service rejects payloads that are not current `decision_output` artifacts, do not use `truth_boundary: "observational_analysis_only"`, have invalid Dataset Trust or graph state, include raw dataset rows, chat transcripts, Data Hub/file paths, non-JSON values, or exceed the bounded snapshot size. Assets cannot be edited, deleted, shared, or refreshed in this slice.
+List summaries contain `asset_id`, `title`, `created_at`, `dataset_label`, `readiness_state`, `truth_boundary`, `archived_at`, `lifecycle_state`, `snapshot_notice`, `review_metadata`, `provenance`, and `snapshot_export`. The list endpoint may filter by stored columns, graph-state presence, and lifecycle state, but it must not load current datasets or refresh saved artifacts. `query` searches stored title and dataset label only. `archived_state` accepts `active`, `archived`, or `all`; `include_archived=true` is an alias for all lifecycle states.
+
+Saved export payloads use schema version `di_decision_asset_export_v1` and return saved `export_sections`, saved `dataset_trust`, saved `source_refs`, saved `truth_boundary`, `review_metadata`, `provenance`, `created_at`, title, and snapshot notice. Export source is `saved_decision_asset_snapshot`; export must not rebuild from the current workspace, current active dataset, or current Data Hub state.
+
+Saved comparison payloads use schema version `di_decision_asset_comparison_v1` and `comparison_kind: "historical_snapshot_comparison"`. Each comparison item exposes the saved asset ID, title, created time, dataset label, readiness state, truth boundary, saved Dataset Trust, saved source refs, evidence status and item count, scenario status, export snapshot summary, graph state summary, and snapshot notice. `differences` are descriptive stored-artifact differences such as dataset labels, readiness states, truth boundaries, evidence item counts, export section counts, and created-at range. Comparison must not be presented as live A/B analysis, causal proof, simulation, optimization, or a final recommendation.
+
+The create service rejects payloads that are not current `decision_output` artifacts, do not use `truth_boundary: "observational_analysis_only"`, have invalid Dataset Trust or graph state, include raw dataset rows, chat transcripts, Data Hub/file paths, non-JSON values, or exceed the bounded snapshot size. Assets cannot be edited, shared, or refreshed in this slice. Archive and restore affect library visibility only and preserve the immutable saved snapshot. Delete is user-directed removal of the saved asset record and must use a confirmation UI.
 
 ### Decision Graph
 
@@ -323,7 +394,7 @@ Graph response fields:
 | `data_sufficiency` | `object` | Yes | Graph-level sufficiency including row count, selected variable count, and edge count. |
 | `limitations` | `string[]` | Yes | Graph-level limitations. |
 | `reliability_labels` | `object` | Yes | Legend for evidence coverage, observed association, and user hypothesis edge reliability labels. |
-| `available_graph_actions` | `object[]` | Yes | Backend-known follow-up action types: `breakdown`, `monitor`, `explain_evidence`, `explain_missing_data`, and `send_to_scenario_compare`. |
+| `available_graph_actions` | `object[]` | Yes | Backend-known follow-up action types: `breakdown`, `monitor`, `explain_evidence`, `explain_missing_data`, and `send_to_scenario_compare`. Each item includes the observational `truth_boundary`. |
 | `truth_boundary` | `string` | Yes | Current value is `observational_analysis_only`. |
 
 Decision Graph Variable fields:
@@ -357,7 +428,7 @@ Decision Graph Edge fields:
 | `metrics` | `object` | Yes | Edge metrics. Observed associations include `method`, `strength`, `direction`, endpoint variable IDs, sample size, and method-specific values such as `correlation`, `top_groups`, `trend_correlation`, or `cramers_v`. Coverage edges include `evidence_strength` and source diagnostic trace. User hypotheses include `method: "user_stated_hypothesis"`, `direction: "user_proposed_directional"`, `validation_status: "not_validated"`, endpoint variable IDs, and optional rationale. |
 | `data_sufficiency` | `object` | Yes | `status`, row/sample counts where available, and summary. |
 | `limitations` | `string[]` | Yes | Edge-level limitations. |
-| `followup_actions` | `object[]` | Yes | Per-edge action availability. Each item includes `action_id`, `enabled`, and `status`. Scenario Compare is not enabled for `user_hypothesis` edges until observational evidence is selected. |
+| `followup_actions` | `object[]` | Yes | Per-edge action availability. Each item includes `action_id`, `label`, `description`, `enabled`, `status`, `source_refs`, `limitations`, and `truth_boundary`; disabled items also include `disabled_reason`. Scenario Compare is not enabled for `user_hypothesis` edges until observational evidence is selected. |
 
 User hypothesis edge semantics:
 
@@ -399,7 +470,10 @@ Graph action response fields:
 | `schema_version` / `contract_version` | `string` | Yes | Current value is `di_phase7_3_decision_graph_v1`. |
 | `action_id` | `string` | Yes | Normalized action ID. |
 | `action_status` | `string` | Yes | `ready`, `needs_input`, `needs_metric`, or `needs_observed_metric_edge`. |
+| `enabled` | `boolean` | Yes | Whether the planned graph action is ready for user approval. |
+| `disabled_reason` | `string \| null` | Yes | Backend-owned blocked reason when `enabled` is false. User hypothesis Scenario Compare responses must state that user hypotheses are not observationally validated metric evidence. |
 | `target` | `object` | Yes | Resolved target node or edge summary, including relationship type and causal status when an edge is selected. |
+| `source_refs` | `object` | Yes | Exact source refs for the selected graph node or edge, including edge ID, relationship type, evidence basis, node IDs, and variable IDs when available. |
 | `summary` | `string` | Yes | Backend-owned summary of what the follow-up can safely do. |
 | `request_payload` | `object` | Yes | Prepared request semantics for a future UI or AI Chat handoff. It may include a route hint, but this route does not execute the follow-up. |
 | `response_semantics` | `object` | Yes | Declares `executes_analysis: false` and `causal_claim: false`; Scenario Compare responses also declare `scenario_semantics: "direct_adjustment_only"`. |

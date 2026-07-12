@@ -1,4 +1,8 @@
-# Phase 4 - Dashboard Canvas Layout And Sharing Skeleton Plan
+# Future Reference - Dashboard Canvas Layout And Sharing Skeleton Plan
+
+This file is retained as a deferred dashboard idea. It is not the current Decision Intelligence implementation gate.
+
+Original title: Phase 4 - Dashboard Canvas Layout And Sharing Skeleton Plan
 
 ## Purpose
 
@@ -8,7 +12,7 @@ This is the active implementation plan for the next dashboard slice. It builds o
 
 ## Current Gate
 
-Status: active; Antigravity frontend implementation handoff is needed.
+Status: deferred; do not execute until the active status file or user direction promotes dashboard canvas work into an approved current gate.
 
 Backend readiness target: no backend route or authentication work is required for the first slice. The implementation should use local-first dashboard state and preserve the existing `chartStudioDashboard:v1` persistence model.
 

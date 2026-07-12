@@ -10,13 +10,15 @@ Gemini or Antigravity owns frontend implementation, React/CSS, UI rendering, bro
 
 ## Active Handoffs And Goal Prompts
 
-`phase_4_antigravity_dashboard_canvas_layout_and_sharing_skeleton.md` - Antigravity owns the Phase 4 dashboard canvas layout and sharing skeleton implementation.
+Active frontend-agent handoff: none.
 
-`antigravity_chart_color_picker_handoff.md` - Documentation complete; Antigravity owns the frontend-only chart color picker browser acceptance path.
+The completed Advanced Readiness implementation handoff is retained at `project_docs/active/decision_intelligence/completed/antigravity_advanced_readiness_ml_trust_gates_handoff.md`. The current gate is Codex-owned Phase 4.5 cleanup, so no frontend prompt should be executed unless a new bounded handoff is created from verified source evidence.
 
-`codex_evidence_to_action_workflow_goal.md` - Codex owns the Evidence-To-Action Workflow backend contract and tests first.
+Codex-owned current goals live in `project_docs/active/decision_intelligence/active_gate/`, not in this handoff folder. Current active gate: `project_docs/active/decision_intelligence/active_gate/README.md`.
 
-Completed handoffs are retained under `project_docs/active/decision_intelligence/completed/` as reference only. Completed examples include `project_docs/active/decision_intelligence/completed/phase_3_antigravity_charting_slicer_ui_handoff.md` and `project_docs/active/decision_intelligence/completed/phase_5_gemini_ai_chat_decision_command_center.md`.
+Deferred dashboard handoffs are retained under `project_docs/active/decision_intelligence/future/` and must not be executed until the active status file and `project_docs/active/decision_intelligence/active_gate/README.md` promote them.
+
+Completed handoffs are retained under `project_docs/active/decision_intelligence/completed/` as reference only. Completed examples include `project_docs/active/decision_intelligence/completed/antigravity_saved_decision_library_metadata_filters_handoff.md`, `project_docs/active/decision_intelligence/completed/phase_3_antigravity_charting_slicer_ui_handoff.md`, `project_docs/active/decision_intelligence/completed/phase_5_gemini_ai_chat_decision_command_center.md`, `project_docs/active/decision_intelligence/completed/antigravity_chart_color_picker_handoff.md`, `project_docs/active/decision_intelligence/completed/codex_evidence_to_action_workflow_goal.md`, and `project_docs/active/decision_intelligence/completed/antigravity_evidence_to_action_workflow_handoff.md`.
 
 Current truth: `project_docs/active/status/decision_intelligence_execution_status.md`
 
@@ -25,6 +27,8 @@ Current truth: `project_docs/active/status/decision_intelligence_execution_statu
 When frontend work is needed, Codex must write a focused frontend-agent handoff that names the files to inspect, the backend truth, the acceptance behavior, the constraints, and the status-doc requirement.
 
 The handoff file is the automation surface. Each active handoff must contain one clear `Goal:` prompt near the top so Antigravity's `auto-handoff-execution` skill can read the file and execute the task without the user copying a prompt from chat.
+
+If the handoff is for a failed or incomplete frontend-agent implementation, it must be visibly labeled `REPAIR REQUIRED` near the top. Add a short `Repair Blocker` section that names the exact source file, broken assumption, expected contract behavior, and verification command. Keep the repair label and blocker separate from background context so Antigravity does not miss it.
 
 When Codex opens or updates an active frontend handoff, the final response should name or link the handoff file and tell the user which agent owns the next step. Do not paste the full `Goal:` prompt in chat unless the user explicitly asks for it.
 

@@ -179,6 +179,7 @@ function CanvasContainer({
   const aiChatPopupWindowRef = useRef(null);
   const isClosingAiChatPopupRef = useRef(false);
   const windowRegistry = useRef(new Map());
+  const initializedWindows = useRef(new Set());
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -466,7 +467,8 @@ function CanvasContainer({
       }
     });
 
-    if (largestWindowId) {
+    if (largestWindowId && !initializedWindows.current.has(id)) {
+      initializedWindows.current.add(id);
       const targetEntry = windowRegistry.current.get(largestWindowId);
       const targetState = targetEntry.stateRef.current;
       const canSplitHorizontally = targetState.w >= minW * 2;
@@ -478,7 +480,9 @@ function CanvasContainer({
         const updatedExisting = { ...targetState, w: newWidth };
         targetEntry.stateRef.current = updatedExisting;
         targetEntry.node.style.width = `${newWidth}px`;
-        saveWindowState(largestWindowId, { ...updatedExisting, isPixel: true });
+        setTimeout(() => {
+          saveWindowState(largestWindowId, { ...updatedExisting, isPixel: true });
+        }, 0);
 
         return {
           x: targetState.x + newWidth,
@@ -494,7 +498,9 @@ function CanvasContainer({
         const updatedExisting = { ...targetState, h: newHeight };
         targetEntry.stateRef.current = updatedExisting;
         targetEntry.node.style.height = `${newHeight}px`;
-        saveWindowState(largestWindowId, { ...updatedExisting, isPixel: true });
+        setTimeout(() => {
+          saveWindowState(largestWindowId, { ...updatedExisting, isPixel: true });
+        }, 0);
 
         return {
           x: targetState.x,

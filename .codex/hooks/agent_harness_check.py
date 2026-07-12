@@ -20,6 +20,8 @@ REQUIRED_PATHS = (
     "GEMINI.md",
     "project_docs/INDEX.md",
     "project_docs/active/README.md",
+    "project_docs/active/status/decision_intelligence_execution_status.md",
+    "project_docs/active/decision_intelligence/active_gate/README.md",
     "project_docs/active/codex_harness_engineering.md",
     "project_docs/active/agent_harness/README.md",
     "project_docs/active/agent_harness/harness_blueprint.md",
@@ -82,8 +84,12 @@ def _check_project_doc_links(errors: list[str]) -> None:
         ROOT / "README.md",
         ROOT / "project_docs" / "INDEX.md",
         ROOT / "project_docs" / "active" / "README.md",
+        ROOT / "project_docs" / "active" / "status" / "decision_intelligence_execution_status.md",
+        ROOT / "project_docs" / "active" / "decision_intelligence" / "README.md",
+        ROOT / "project_docs" / "active" / "ai_hand_off" / "README.md",
         ROOT / "project_docs" / "active" / "codex_harness_engineering.md",
     ]
+    markdown_files.extend((ROOT / "project_docs" / "active" / "decision_intelligence" / "active_gate").rglob("*.md"))
     markdown_files.extend((ROOT / "project_docs" / "active" / "agent_harness").rglob("*.md"))
     pattern = re.compile(r"`(project_docs/[^`]+?\.md)`")
     for md_path in markdown_files:
@@ -99,8 +105,9 @@ def _check_project_doc_links(errors: list[str]) -> None:
 def _check_active_doc_state(errors: list[str]) -> None:
     """Reject stale completed plans and an unnumbered current phase."""
     status_path = ROOT / "project_docs" / "active" / "status" / "decision_intelligence_execution_status.md"
-    current_dir = ROOT / "project_docs" / "active" / "decision_intelligence" / "current"
-    if not status_path.exists() or not current_dir.exists():
+    active_gate_dir = ROOT / "project_docs" / "active" / "decision_intelligence" / "active_gate"
+    legacy_current_dir = ROOT / "project_docs" / "active" / "decision_intelligence" / "current"
+    if not status_path.exists() or not active_gate_dir.exists():
         return
 
     status_text = status_path.read_text(encoding="utf-8", errors="replace")
@@ -109,16 +116,35 @@ def _check_active_doc_state(errors: list[str]) -> None:
         errors.append("Current Project Gate must name the active phase number from the current plan.")
 
     complete = bool(re.search(r"^Status:\s*\*\*COMPLETE", status_text, re.MULTILINE))
-    brief_match = re.search(r"`(project_docs/active/decision_intelligence/current/[^`]+\.md)`", status_text)
+    brief_match = re.search(r"`(project_docs/active/decision_intelligence/active_gate/[^`]+\.md)`", status_text)
     if complete and brief_match:
         errors.append(
-            "A complete gate still points to a current execution brief; move the brief to completed or archive and update status."
+            "A complete gate still points to an active-gate execution brief; move the brief to completed or archive and update status."
         )
 
-    for path in current_dir.glob("*.md"):
+    for path in active_gate_dir.glob("*.md"):
         text = path.read_text(encoding="utf-8", errors="replace")
-        if text.startswith("> COMPLETED"):
-            errors.append(f"Completed plan remains in current path: {path.relative_to(ROOT)}")
+        if text.startswith("> COMPLETED") or text.startswith("# Completed Reference"):
+            errors.append(f"Completed reference remains in active gate: {path.relative_to(ROOT)}")
+
+    active_plans = sorted(path for path in active_gate_dir.glob("phase_*.md") if path.is_file())
+    if len(active_plans) != 1:
+        errors.append(
+            "Decision Intelligence active_gate must contain exactly one phase plan; "
+            f"found {len(active_plans)}."
+        )
+
+    active_gate_reference = "project_docs/active/decision_intelligence/active_gate/README.md"
+    if active_gate_reference not in status_text:
+        errors.append("Current status must point to the Decision Intelligence active_gate README.")
+
+    if re.search(r"`project_docs/active/ai_hand_off/codex_[^`]+_goal\.md`", status_text):
+        errors.append("Codex-owned current goals must live in active_gate, not ai_hand_off.")
+
+    if legacy_current_dir.exists():
+        legacy_md = sorted(legacy_current_dir.glob("*.md"))
+        if legacy_md:
+            errors.append("Legacy decision_intelligence/current contains markdown files; use active_gate, completed, or future.")
 
 
 def _check_critical_source_sizes(errors: list[str]) -> None:

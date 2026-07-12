@@ -295,6 +295,9 @@ class DecisionChatApiTests(unittest.TestCase):
             json={
                 "dataset": DATASET,
                 "semantic_model": SEMANTIC_MODEL,
+                # Internal governance evidence must come from the route, not
+                # from a caller-controlled field with the same name.
+                "_governance_readiness": {"status": "blocked"},
                 "user_message": "How should we grow revenue next quarter using marketing spend by channel while protecting gross margin?",
                 "conversation_history": [],
                 "session_state": {},
@@ -319,6 +322,26 @@ class DecisionChatApiTests(unittest.TestCase):
         self.assertTrue(decision_output["decision_map"]["nodes"])
         self.assertEqual(decision_output["scenario_compare"]["status"], "not_applicable")
         self.assertEqual(decision_output["scenario_compare"]["projections"], [])
+        advanced_readiness = decision_output["advanced_readiness"]
+        self.assertEqual(advanced_readiness["schema_version"], "di_advanced_readiness_v1")
+        self.assertEqual(advanced_readiness["truth_boundary"], "observational_analysis_only")
+        advanced_by_capability = {
+            item["capability"]: item for item in advanced_readiness["capabilities"]
+        }
+        self.assertEqual(advanced_by_capability["prediction"]["state"], "blocked")
+        self.assertEqual(
+            advanced_by_capability["prediction"]["reasons"][0]["code"],
+            "insufficient_training_rows",
+        )
+        self.assertEqual(advanced_by_capability["optimization"]["state"], "blocked")
+        self.assertEqual(advanced_by_capability["causal_analysis"]["state"], "blocked")
+        self.assertEqual(advanced_by_capability["automated_decisioning"]["state"], "blocked")
+        governance_evidence = next(
+            item
+            for item in advanced_by_capability["prediction"]["evidence"]
+            if item["code"] == "governance_status"
+        )
+        self.assertEqual(governance_evidence["value"], "ready")
         command_center = decision_output["command_center"]
         self.assertEqual(command_center["schema_version"], "di_command_center_v1")
         self.assertEqual(command_center["surface"], "ai_chat_decision_command_center")
@@ -332,6 +355,14 @@ class DecisionChatApiTests(unittest.TestCase):
             "run_observational_analysis",
             [check["check_id"] for check in command_center["allowed_next_checks"]],
         )
+        run_check = next(
+            check for check in command_center["allowed_next_checks"]
+            if check["check_id"] == "run_observational_analysis"
+        )
+        self.assertTrue(run_check["enabled"])
+        self.assertEqual(run_check["action_id"], "analyze_workspace")
+        self.assertEqual(run_check["source_refs"]["source_path"], "decision_output.readiness")
+        self.assertEqual(run_check["truth_boundary"], "observational_analysis_only")
         self.assertIn(
             "export_decision_output",
             [check["check_id"] for check in command_center["allowed_next_checks"]],
@@ -340,6 +371,14 @@ class DecisionChatApiTests(unittest.TestCase):
         self.assertIn("review_evidence_board", disabled_check_ids)
         self.assertIn("unsupported_final_recommendation", disabled_check_ids)
         self.assertIn("live_saved_asset_refresh", disabled_check_ids)
+        disabled_evidence = next(
+            check for check in command_center["disabled_next_checks"]
+            if check["check_id"] == "review_evidence_board"
+        )
+        self.assertFalse(disabled_evidence["enabled"])
+        self.assertEqual(disabled_evidence["disabled_reason"], disabled_evidence["reason"])
+        self.assertEqual(disabled_evidence["source_refs"]["source"], "evidence_board")
+        self.assertEqual(disabled_evidence["truth_boundary"], "observational_analysis_only")
         self.assertEqual(command_center["truth_boundary"], "observational_analysis_only")
         self.assertTrue(decision_output["export_sections"])
         export_sections = decision_output["export_sections"]
@@ -1098,6 +1137,8 @@ class DecisionChatApiTests(unittest.TestCase):
             "data_sufficiency",
             "limitations",
             "source_diagnostic_id",
+            "source_refs",
+            "next_checks",
         ):
             self.assertIn(field, evidence_item)
         self.assertEqual(evidence_item["rank"], 1)
@@ -1109,6 +1150,15 @@ class DecisionChatApiTests(unittest.TestCase):
         self.assertIn("limits", evidence_item["covers"])
         self.assertIn("breakdowns", evidence_item["covers"])
         self.assertIn("context_roles", evidence_item["covers"])
+        self.assertEqual(evidence_item["source_refs"]["source"], "evidence_board")
+        self.assertEqual(evidence_item["source_refs"]["source_diagnostic_id"], evidence_item["source_diagnostic_id"])
+        for check in evidence_item["next_checks"]:
+            self.assertIn("enabled", check)
+            self.assertIn("source_refs", check)
+            self.assertIn("truth_boundary", check)
+            self.assertEqual(check["truth_boundary"], "observational_analysis_only")
+            if not check["enabled"]:
+                self.assertIn("disabled_reason", check)
         reliability_text = " ".join(evidence_item["limitations"]).lower()
         self.assertIn("observational", reliability_text)
         self.assertIn("not advice", reliability_text)
@@ -1224,6 +1274,15 @@ class DecisionChatApiTests(unittest.TestCase):
         self.assertEqual(limited_item["data_sufficiency"]["status"], "limited")
         self.assertEqual(limited_item["source_diagnostic_id"], "diagnostic_limited_discount")
         self.assertEqual(limited_item["covers"]["drivers"][0]["label"], "Discount Rate")
+        limited_checks = {check["check_id"]: check for check in limited_item["next_checks"]}
+        self.assertTrue(limited_checks["explain_evidence"]["enabled"])
+        self.assertFalse(limited_checks["breakdown"]["enabled"])
+        self.assertIn("metric target", limited_checks["breakdown"]["disabled_reason"])
+        self.assertFalse(limited_checks["send_to_scenario_compare"]["enabled"])
+        self.assertEqual(
+            limited_checks["send_to_scenario_compare"]["source_refs"]["source_diagnostic_id"],
+            "diagnostic_limited_discount",
+        )
 
         insufficient_item = evidence_board["items"][1]
         self.assertEqual(insufficient_item["rank"], 2)
@@ -1231,6 +1290,9 @@ class DecisionChatApiTests(unittest.TestCase):
         self.assertEqual(insufficient_item["data_sufficiency"]["status"], "insufficient")
         self.assertEqual(insufficient_item["source_diagnostic_id"], "diagnostic_missing_history")
         self.assertIn("Revenue lacks enough history", insufficient_item["summary"])
+        insufficient_checks = {check["check_id"]: check for check in insufficient_item["next_checks"]}
+        self.assertFalse(insufficient_checks["monitor"]["enabled"])
+        self.assertIn("metric target", insufficient_checks["monitor"]["disabled_reason"])
 
         for item in evidence_board["items"]:
             reliability_text = " ".join(item["limitations"]).lower()
