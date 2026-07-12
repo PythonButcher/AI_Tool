@@ -235,6 +235,7 @@ class DecisionChatService:
             workspace_analysis=workspace_analysis,
             correction_result=output_correction_result,
             scenario_preview=scenario_preview,
+            governance_readiness=payload.get("_governance_readiness"),
         )
         if decision_output is not None:
             artifacts.append(decision_output)
@@ -339,6 +340,7 @@ class DecisionChatService:
             workspace_analysis=workspace_analysis,
             correction_result=correction_result,
             scenario_preview=scenario_preview,
+            governance_readiness=payload.get("_governance_readiness"),
         )
         if decision_output is not None:
             artifacts.append(decision_output)
@@ -930,6 +932,7 @@ class DecisionChatService:
         workspace_analysis: Dict[str, Any] | None = None,
         correction_result: Dict[str, Any] | None = None,
         scenario_preview: Dict[str, Any] | None = None,
+        governance_readiness: Dict[str, Any] | None = None,
     ) -> Dict[str, Any] | None:
         """Compose the display artifact while keeping Evidence Board normalization centralized."""
         if not isinstance(workspace, dict) or not workspace:
@@ -940,6 +943,7 @@ class DecisionChatService:
             workspace_analysis=workspace_analysis,
             correction_result=correction_result,
             scenario_preview=scenario_preview,
+            governance_readiness=governance_readiness,
         )
 
     @staticmethod

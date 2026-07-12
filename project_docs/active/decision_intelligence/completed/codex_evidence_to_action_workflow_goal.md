@@ -1,8 +1,12 @@
-# Codex Evidence-To-Action Workflow Goal
+# Completed Reference - Codex Evidence-To-Action Workflow Goal
+
+This file is retained as a completed reference. It is not an active goal prompt.
+
+Original title: Codex Evidence-To-Action Workflow Goal
 
 Goal: Build the Evidence-To-Action Workflow backend contract for AI Chat Decision Intelligence so evidence, map items, and graph items expose user-approved next checks with exact enabled states, disabled reasons, source refs, and observational truth boundaries.
 
-Read `project_docs/INDEX.md`, `project_docs/active/README.md`, `project_docs/active/status/decision_intelligence_execution_status.md`, `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md`, `project_docs/active/contracts/decision_objects.md`, `project_docs/active/decision_intelligence/current/phase_6_evidence_to_action_workflow_plan.md`, and `project_docs/active/agent_council/outputs/next-implementation-cycle-priorities/2026-06-28-next-implementation-cycle-priorities-summary.md`.
+Original active prompt read `project_docs/INDEX.md`, `project_docs/active/README.md`, `project_docs/active/status/decision_intelligence_execution_status.md`, `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md`, `project_docs/active/contracts/decision_objects.md`, the Evidence-To-Action plan now retained at `project_docs/active/decision_intelligence/completed/phase_6_evidence_to_action_workflow_plan.md`, and `project_docs/active/agent_council/outputs/next-implementation-cycle-priorities/2026-06-28-next-implementation-cycle-priorities-summary.md`.
 
 Inspect `backend/services/decision_output_service.py`, `backend/decision_engine/chat_service.py`, `backend/services/decision_graph_service.py`, `backend/services/scenario_service.py`, `tests/test_decision_chat_service.py`, `tests/test_decision_graph_service.py`, and `tests/test_decision_reliability_benchmark.py` before planning edits. Inspect frontend files only enough to confirm whether a real frontend gap exists; do not edit frontend implementation files unless explicitly authorized in the session.
 

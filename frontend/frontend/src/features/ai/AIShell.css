@@ -64,7 +64,50 @@
   background-color: var(--bg-primary);
   position: relative;
   border-right: 1px solid var(--border-color);
+  overflow: hidden; /* Prevent native sliding drawer from overflowing */
 }
+
+/* Native In-Chat Sliding Drawer */
+.ai-shell__workspace-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.4);
+  z-index: 20;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  backdrop-filter: blur(2px);
+}
+
+.ai-shell__workspace-overlay.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.ai-shell__workspace-drawer {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 400px;
+  max-width: 90%;
+  background-color: var(--bg-secondary);
+  border-right: 1px solid var(--border-color);
+  box-shadow: 12px 0 32px rgba(0, 0, 0, 0.15);
+  z-index: 21;
+  transform: translateX(-100%);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+}
+
+.ai-shell__workspace-drawer.is-open {
+  transform: translateX(0);
+}
+
 
 /* Header & Top-Row Tabs */
 .ai-shell__header {

@@ -59,6 +59,17 @@ def _governed_response(result, readiness):
         result['governance_readiness'] = readiness
     return jsonify(result), 200
 
+
+def _payload_with_governance_readiness(payload, readiness):
+    """Pass route-verified governance evidence to backend composers only."""
+    service_payload = dict(payload)
+    service_payload.pop('_governance_readiness', None)
+    if readiness is not None:
+        # The underscore keeps this as internal route-to-service evidence. A
+        # caller cannot bypass governance by declaring its own readiness.
+        service_payload['_governance_readiness'] = readiness
+    return service_payload
+
 @decision_bp.route("/workspaces", methods=["POST"])
 def create_workspace_route():
     payload = request.get_json(silent=True) or {}
@@ -79,7 +90,8 @@ def decision_chat_turn_route():
     if blocked:
         return blocked
     try:
-        return _governed_response(DecisionChatService.handle_turn(payload), readiness)
+        service_payload = _payload_with_governance_readiness(payload, readiness)
+        return _governed_response(DecisionChatService.handle_turn(service_payload), readiness)
     except DecisionServiceError as exc:
         error_response = _error_payload("INVALID_DECISION_CHAT_TURN_REQUEST", str(exc))
         error_response["dataset_trust"] = DecisionChatService.build_dataset_trust_for_payload(payload)
@@ -94,7 +106,8 @@ def decision_chat_action_route():
     if blocked:
         return blocked
     try:
-        return _governed_response(DecisionChatService.handle_action(payload), readiness)
+        service_payload = _payload_with_governance_readiness(payload, readiness)
+        return _governed_response(DecisionChatService.handle_action(service_payload), readiness)
     except DecisionServiceError as exc:
         error_response = _error_payload("INVALID_DECISION_CHAT_ACTION_REQUEST", str(exc))
         error_response["dataset_trust"] = DecisionChatService.build_dataset_trust_for_payload(payload)
@@ -130,11 +143,33 @@ def create_decision_asset_route():
 @decision_bp.route("/assets", methods=["GET"])
 def list_decision_assets_route():
     try:
-        return jsonify(DecisionAssetService.list_assets(request.args.get("limit"))), 200
+        filters = {
+            "readiness_state": request.args.get("readiness_state"),
+            "truth_boundary": request.args.get("truth_boundary"),
+            "dataset_label": request.args.get("dataset_label"),
+            "query": request.args.get("query"),
+            "has_graph_state": request.args.get("has_graph_state"),
+            "created_from": request.args.get("created_from"),
+            "created_to": request.args.get("created_to"),
+            "archived_state": request.args.get("archived_state"),
+            "include_archived": request.args.get("include_archived"),
+        }
+        return jsonify(DecisionAssetService.list_assets(request.args.get("limit"), filters)), 200
     except DecisionServiceError as exc:
         return jsonify(_error_payload("INVALID_DECISION_ASSET_REQUEST", str(exc))), 400
     except Exception as exc:
         return jsonify(_error_payload("DECISION_ASSET_LIST_FAILED", f"Failed to list decision assets: {exc}")), 500
+
+
+@decision_bp.route("/assets/compare", methods=["POST"])
+def compare_decision_assets_route():
+    payload = request.get_json(silent=True) or {}
+    try:
+        return jsonify(DecisionAssetService.compare_assets(payload)), 200
+    except DecisionServiceError as exc:
+        return jsonify(_error_payload("INVALID_DECISION_ASSET_COMPARISON_REQUEST", str(exc))), 400
+    except Exception as exc:
+        return jsonify(_error_payload("DECISION_ASSET_COMPARISON_FAILED", f"Failed to compare decision assets: {exc}")), 500
 
 
 @decision_bp.route("/assets/<asset_id>", methods=["GET"])
@@ -146,6 +181,50 @@ def get_decision_asset_route(asset_id):
     if asset is None:
         return jsonify(_error_payload("DECISION_ASSET_NOT_FOUND", "Decision asset was not found.")), 404
     return jsonify(asset), 200
+
+
+@decision_bp.route("/assets/<asset_id>/archive", methods=["POST"])
+def archive_decision_asset_route(asset_id):
+    try:
+        asset = DecisionAssetService.archive_asset(asset_id)
+    except Exception as exc:
+        return jsonify(_error_payload("DECISION_ASSET_ARCHIVE_FAILED", f"Failed to archive decision asset: {exc}")), 500
+    if asset is None:
+        return jsonify(_error_payload("DECISION_ASSET_NOT_FOUND", "Decision asset was not found.")), 404
+    return jsonify(asset), 200
+
+
+@decision_bp.route("/assets/<asset_id>/restore", methods=["POST"])
+def restore_decision_asset_route(asset_id):
+    try:
+        asset = DecisionAssetService.restore_asset(asset_id)
+    except Exception as exc:
+        return jsonify(_error_payload("DECISION_ASSET_RESTORE_FAILED", f"Failed to restore decision asset: {exc}")), 500
+    if asset is None:
+        return jsonify(_error_payload("DECISION_ASSET_NOT_FOUND", "Decision asset was not found.")), 404
+    return jsonify(asset), 200
+
+
+@decision_bp.route("/assets/<asset_id>", methods=["DELETE"])
+def delete_decision_asset_route(asset_id):
+    try:
+        deleted = DecisionAssetService.delete_asset(asset_id)
+    except Exception as exc:
+        return jsonify(_error_payload("DECISION_ASSET_DELETE_FAILED", f"Failed to delete decision asset: {exc}")), 500
+    if not deleted:
+        return jsonify(_error_payload("DECISION_ASSET_NOT_FOUND", "Decision asset was not found.")), 404
+    return jsonify({"status": "deleted", "asset_id": asset_id}), 200
+
+
+@decision_bp.route("/assets/<asset_id>/export", methods=["GET"])
+def export_decision_asset_route(asset_id):
+    try:
+        export_payload = DecisionAssetService.export_asset(asset_id)
+    except Exception as exc:
+        return jsonify(_error_payload("DECISION_ASSET_EXPORT_FAILED", f"Failed to export decision asset: {exc}")), 500
+    if export_payload is None:
+        return jsonify(_error_payload("DECISION_ASSET_NOT_FOUND", "Decision asset was not found.")), 404
+    return jsonify(export_payload), 200
 
 
 @decision_bp.route("/graph/candidates", methods=["POST"])

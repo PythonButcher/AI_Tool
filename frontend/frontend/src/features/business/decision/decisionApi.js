@@ -167,3 +167,51 @@ export const getDecisionAssetById = async (assetId) => {
     throw error?.response?.data || error;
   }
 };
+
+/**
+ * Archives a saved decision asset (POST /api/decision/assets/<asset_id>/archive).
+ *
+ * @param {string} assetId - The stable asset identifier.
+ * @returns {Promise<Object>} The archived DecisionAsset.
+ */
+export const archiveDecisionAsset = async (assetId) => {
+  try {
+    const response = await axios.post(`${API_URL}/api/decision/assets/${assetId}/archive`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error archiving decision asset ${assetId}:`, error);
+    throw error?.response?.data || error;
+  }
+};
+
+/**
+ * Restores an archived decision asset (POST /api/decision/assets/<asset_id>/restore).
+ *
+ * @param {string} assetId - The stable asset identifier.
+ * @returns {Promise<Object>} The restored DecisionAsset.
+ */
+export const restoreDecisionAsset = async (assetId) => {
+  try {
+    const response = await axios.post(`${API_URL}/api/decision/assets/${assetId}/restore`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error restoring decision asset ${assetId}:`, error);
+    throw error?.response?.data || error;
+  }
+};
+
+/**
+ * Deletes a saved decision asset (DELETE /api/decision/assets/<asset_id>).
+ *
+ * @param {string} assetId - The stable asset identifier.
+ * @returns {Promise<Object>} Success status.
+ */
+export const deleteDecisionAsset = async (assetId) => {
+  try {
+    const response = await axios.delete(`${API_URL}/api/decision/assets/${assetId}`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error deleting decision asset ${assetId}:`, error);
+    throw error?.response?.data || error;
+  }
+};

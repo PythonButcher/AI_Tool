@@ -11,6 +11,7 @@ This file is the first routing helper for AI_Tool. It should point agents to cur
 | Start any project task | `project_docs/INDEX.md` |
 | Understand current truth and scan rules | `project_docs/active/README.md` |
 | Check current Decision Intelligence status | `project_docs/active/status/decision_intelligence_execution_status.md` |
+| Work on current Decision Intelligence phase | `project_docs/active/decision_intelligence/active_gate/README.md` |
 | Confirm Codex vs Gemini ownership | `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md` |
 | Review completed AI Chat rollout history | `project_docs/archive/ai_chat_decision_output_unification_rollout_completed.md` only when historical context is needed |
 | Work on contracts | `project_docs/active/contracts/decision_objects.md` |
@@ -31,7 +32,7 @@ Codex owns backend truth, contracts, tests, architecture, documentation, cleanup
 
 Gemini or Antigravity owns frontend implementation unless the user explicitly authorizes Codex frontend edits in the current session.
 
-When frontend work is needed, Codex writes the backend truth and a focused handoff file under `project_docs/active/ai_hand_off/`. The handoff file must contain the `Goal:` prompt that the frontend agent can execute through the auto-handoff flow. Gemini or Antigravity implements React/CSS/UI behavior, verifies it, and updates status truthfully.
+When Codex owns the next Decision Intelligence step, the active goal belongs in `project_docs/active/decision_intelligence/active_gate/`. When frontend work is needed, Codex writes the backend truth and a focused handoff file under `project_docs/active/ai_hand_off/`. The handoff file must contain the `Goal:` prompt that the frontend agent can execute through the auto-handoff flow. Gemini or Antigravity implements React/CSS/UI behavior, verifies it, and updates status truthfully.
 
 Codex must never create, edit, restore, delete, move, rename, patch, or otherwise modify any `GEMINI.md` file. If a `GEMINI.md` file is missing, stale, damaged, or needs new instructions, Codex must report the issue and leave the file untouched for the user or another agent.
 
@@ -71,7 +72,7 @@ All prompts generated for another agent or a future session must be written in g
 
 Agents must use `apply_patch` for source edits. They must not use Python `open(path, "w")`, `Path.write_text`, PowerShell `Set-Content`, `Out-File`, redirection, or bulk-cleanup scripts to rewrite source files, especially when the target path is stored in a variable. Those patterns can truncate a file before its contents are read. Before claiming frontend work complete, run `python .codex/hooks/agent_harness_check.py`, `git diff --check`, and the relevant build. If a source file is unexpectedly empty or substantially smaller than its baseline, stop immediately, report the incident, and restore from the tracked baseline before any feature work continues.
 
-When Codex wraps up a project phase or clears a phase gate (or whenever the user requests a kick-off / next-session / new phase prompt), Codex must create or update a handoff file containing the `Goal:` prompt for the next session and reference that file in the final response. The user should not have to copy a prompt from chat into another agent.
+When Codex wraps up a project phase or clears a phase gate (or whenever the user requests a kick-off / next-session / new phase prompt), Codex must create or update the active-gate goal for Codex-owned work or a handoff file for Gemini/Antigravity-owned work, then reference that file in the final response. The user should not have to copy a prompt from chat into another agent.
 CRITICAL: The generated kick-off/next-session handoff prompt MUST NEVER mention or refer to ANY previous phase names or numbers (e.g., do not say "Phase 4", "Phase 5", "previous phase", or recap what was just completed). It MUST NOT recap prior accomplishments, review history, implementation history, or who approved earlier work. It must start directly and cleanly by naming only the next standalone goal, specifying the target file, and listing the active doc links for the current task. Keep the prompt completely forward-looking and decoupled from history. Do not include sentences like "Phase N is complete", "Gemini did X", "reviewed by", or detailed verification history inside the next-session handoff prompt.
 
 
@@ -79,7 +80,7 @@ CRITICAL: The generated kick-off/next-session handoff prompt MUST NEVER mention 
 
 Always review current project Markdown before making project decisions. Start with `project_docs/INDEX.md`, then `project_docs/active/README.md`, then only the task-specific files named by those navigation docs.
 
-Before starting, handing off, or closing a numbered project phase, use the `project-doc-governance` skill and run `python .codex/hooks/agent_harness_check.py`. The check blocks a completed brief left in the current path, completed reference files left under `current/`, and a current gate without its declared phase number.
+Before starting, handing off, or closing a numbered project phase, use the `project-doc-governance` skill and run `python .codex/hooks/agent_harness_check.py`. The check blocks a completed brief left in the active gate, completed reference files left under `active_gate/`, and a current gate without its declared phase number.
 
 Do not scan every Markdown file. Do not scan `project_docs/archive/` unless an active doc points there or the user asks for historical context. Do not bulk scan `project_docs/active/decision_intelligence/`; read its README first and select only the relevant file.
 

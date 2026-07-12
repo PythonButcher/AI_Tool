@@ -35,6 +35,8 @@ Dataset truth remains important, but the old standalone Phase 4 dataset handoff 
 | Contracts | `project_docs/active/contracts/` | Backend/frontend payload truth |
 | Dashboard canvas state contract | `project_docs/active/contracts/dashboard_canvas_state.md` | Local-first dashboard canvas, layout, and sharing skeleton state |
 | Dataset governance contract | `project_docs/active/contracts/data_catalog_lineage.md` | Readiness policy and enforcement truth |
+| Decision Intelligence active gate | `project_docs/active/decision_intelligence/active_gate/README.md` | The only active phase workspace |
+| Future product-cycle memory | `project_docs/active/decision_intelligence/future/data_foundation_cycle_after_current_phases_plan.md` | Deferred data foundation and automation cycle; not active until promoted |
 | Agent harness | `project_docs/active/agent_harness/` | Reusable agent backbone, hooks, and validation |
 | Handoffs | `project_docs/active/ai_hand_off/` | Active handoffs only |
 | Reviews | `project_docs/active/reviews/` | Focused review docs |
@@ -49,6 +51,16 @@ Rollout plans must be written in plain language. Use short phase names, one purp
 Every prompt written for Gemini, Antigravity, Codex in a future session, or another agent must start with `Goal:` and state the standalone outcome. It must then name target files, active docs, exact source or contract fields, acceptance checks, verification commands where relevant, and ownership constraints. Antigravity prompts follow this same format because Antigravity supports goals. Prompts stay forward-looking, directly executable, and free of code blocks.
 
 By default, `Goal:` prompts belong in handoff files under `project_docs/active/ai_hand_off/`, not in the chat final response. The final response should link or name the handoff file so the receiving agent can read it through the auto-handoff flow. Paste the full prompt in chat only when the user explicitly asks for that output.
+
+Decision Intelligence exception: Codex-owned current goals belong in `project_docs/active/decision_intelligence/active_gate/`. Use `project_docs/active/ai_hand_off/` only for active Gemini or Antigravity handoffs.
+
+## Active-Gate Rule
+
+Decision Intelligence has one true active workspace: `project_docs/active/decision_intelligence/active_gate/`. Agents must not infer the next phase from `current/`, `completed/`, `future/`, archive files, or the mere existence of an old handoff. The active gate is the status file plus the active-gate README, and the ranking source must be named there when the gate comes from a council recommendation.
+
+## Repair Handoff Clarity
+
+When Codex finds a frontend-agent implementation is not complete, the active handoff must make the repair obvious. Put `REPAIR REQUIRED` near the top, name the exact source-level blocker in a short `Repair Blocker` section, and state the exact target files and acceptance checks. Do not bury the issue inside general goal text. The receiving agent should be able to open the handoff and immediately see what is wrong, where to fix it, and how to prove the repair.
 
 ## Orchestration Rule
 

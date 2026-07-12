@@ -80,4 +80,4 @@ Treat the remaining work as cleanup and product hardening, not another redesign.
 
 The build passed with warnings, but build success alone is not enough. The final repair must pass `git diff --check`, `npm --prefix frontend\frontend run build`, and user-visible browser acceptance for the dashboard command surface, slicer panel, pin actions, conflict state, and reload persistence.
 
-Do not implement the dashboard canvas/share skeleton in this repair pass. That idea became a later slice documented at `project_docs/active/decision_intelligence/current/phase_4_dashboard_canvas_layout_and_sharing_skeleton_plan.md` after the charting/slicer repair was accepted.
+Do not implement the dashboard canvas/share skeleton in this repair pass. That idea became a later deferred slice now retained at `project_docs/active/decision_intelligence/future/phase_4_dashboard_canvas_layout_and_sharing_skeleton_plan.md` after the charting/slicer repair was accepted.

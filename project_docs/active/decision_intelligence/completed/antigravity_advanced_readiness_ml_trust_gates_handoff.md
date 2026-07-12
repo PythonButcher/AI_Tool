@@ -1,0 +1,21 @@
+> COMPLETED REFERENCE: This frontend handoff belongs to the wrapped Phase 4 work and must not be executed as an active handoff.
+
+# Antigravity Advanced Readiness And ML Trust Gates Handoff
+
+Goal: Render the backend-owned Advanced Readiness contract inside the existing AI Chat Decision Command Center so users can understand prediction, optimization, causal analysis, and automated decisioning readiness without mistaking diagnostics for executed advanced capabilities.
+
+Read `project_docs/INDEX.md`, `project_docs/active/README.md`, `project_docs/active/status/decision_intelligence_execution_status.md`, `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md`, `project_docs/active/contracts/decision_objects.md`, and this handoff before editing.
+
+Target `frontend/frontend/src/features/ai/AIShell.jsx`, `frontend/frontend/src/features/ai/DecisionOutputReview.jsx`, and `frontend/frontend/src/features/ai/DecisionCommandCenter.jsx`. Keep the slice limited to transporting, preserving, and rendering `decision_output.advanced_readiness` in the existing Decision Output Review and Command Center. Do not create a new route, API, artifact type, export section, model workflow, or standalone page.
+
+Use the backend fields exactly. `advanced_readiness` contains `schema_version`, `overall_state`, `summary`, `state_counts`, `limitations`, `truth_boundary`, and `capabilities`. Each capability contains `capability`, `state`, `reasons[]` with `code` and `message`, `evidence[]` with `code`, `label`, `value`, and `source_path`, `missing_requirements[]` with `requirement_id` and `description`, and `allowed_next_actions[]` with `action_id`, `label`, and `description`.
+
+In `AIShell.jsx`, preserve `rawOutput.advanced_readiness` when constructing the DecisionAsset save payload. In `DecisionOutputReview.jsx`, resolve the field from the artifact or artifact content and pass it to `DecisionCommandCenter`. In `DecisionCommandCenter.jsx`, add a compact Advanced Readiness section outside `export_sections` ordering, near the existing advanced runtime gates. Show the overall state and summary, then one readable card per capability. Make supported, limited, blocked, and not-evaluated states visually distinct without using color alone. Render reason text, source-backed evidence, missing requirements, and safe next-action guidance. Treat `allowed_next_actions` as explanatory guidance, not as executable buttons, because these identifiers do not map to Decision Chat actions.
+
+Preserve the observational boundary everywhere. Do not describe limited as supported, do not convert blocked to unsupported unless the backend says so, and do not claim a prediction, simulation, optimized action, causal effect, autonomous decision, model guarantee, or final recommendation. Keep existing `advanced_gates`, Dataset Trust, Evidence Board, Scenario Compare, command-center controls, PDF export ordering, artifact inspection, and saved-asset review behavior working.
+
+Acceptance checks: an active Decision Output with `advanced_readiness` shows all four capabilities and their backend states; blocked and limited cards explain reasons and missing requirements in plain language; evidence displays its backend source path; safe next actions are informational and do not call an API; a DecisionAsset save request includes the unchanged `advanced_readiness` object; payloads without `advanced_readiness` still render without error; existing advanced runtime gates remain visible; no export section or backend contract is invented.
+
+Run `python .codex/hooks/agent_harness_check.py`, `git diff --check`, and `npm --prefix frontend\frontend run build`. Report the exact files changed and build result. Leave a concise manual browser checklist for the user covering an active Decision Output, supported or limited prediction state, blocked optimization/causal/automated states, missing-field compatibility, and save/reopen preservation. Do not claim browser acceptance; the user performs the browser check.
+
+Frontend implementation belongs to Antigravity. Do not edit backend services, backend tests, active contracts, status docs, or any `GEMINI.md` file. If the backend payload differs from this handoff, stop and report the exact field mismatch instead of inventing fallback semantics.
