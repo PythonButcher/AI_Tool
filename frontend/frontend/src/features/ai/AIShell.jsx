@@ -467,6 +467,7 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenDecisio
         evidence_board: rawOutput.evidence_board,
         decision_map: rawOutput.decision_map,
         scenario_compare: rawOutput.scenario_compare,
+        advanced_readiness: rawOutput.advanced_readiness,
         advanced_gates: rawOutput.advanced_gates,
         export_sections: rawOutput.export_sections,
         source_refs: rawOutput.source_refs,

@@ -5,6 +5,8 @@ from __future__ import annotations
 from copy import deepcopy
 from typing import Any, Dict, List, Optional
 
+from backend.services.advanced_readiness_service import AdvancedReadinessService
+
 
 class DecisionOutputService:
     """Compose an additive AI Chat artifact from existing decision workspace data."""
@@ -24,17 +26,34 @@ class DecisionOutputService:
         workspace_analysis: Optional[Dict[str, Any]] = None,
         correction_result: Optional[Dict[str, Any]] = None,
         scenario_preview: Optional[Dict[str, Any]] = None,
+        governance_readiness: Optional[Dict[str, Any]] = None,
+        model_evaluation: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         workspace = workspace if isinstance(workspace, dict) else {}
         dataset_trust = dataset_trust if isinstance(dataset_trust, dict) else {}
         workspace_analysis = workspace_analysis if isinstance(workspace_analysis, dict) else None
         correction_result = correction_result if isinstance(correction_result, dict) else None
         scenario_preview = scenario_preview if isinstance(scenario_preview, dict) else None
+        governance_readiness = (
+            governance_readiness if isinstance(governance_readiness, dict) else None
+        )
+        model_evaluation = model_evaluation if isinstance(model_evaluation, dict) else None
 
         frame = DecisionOutputService._build_frame(workspace)
         readiness = DecisionOutputService._build_readiness(workspace)
         evidence_board = DecisionOutputService._build_evidence_board(workspace_analysis)
         correction_state = DecisionOutputService._build_correction_state(workspace, correction_result)
+        scenario_compare = DecisionOutputService._build_scenario_compare(scenario_preview)
+        # Advanced readiness is an additive diagnostic over existing backend
+        # truth. It must not change legacy gates or enable an advanced action.
+        advanced_readiness = AdvancedReadinessService.evaluate(
+            frame=frame,
+            dataset_trust=dataset_trust,
+            decision_readiness=readiness,
+            evidence_board=evidence_board,
+            governance_readiness=governance_readiness,
+            model_evaluation=model_evaluation,
+        )
         advanced_gates = DecisionOutputService._build_advanced_gates(readiness)
         decision_map = DecisionOutputService._build_decision_map(
             workspace=workspace,
@@ -43,7 +62,6 @@ class DecisionOutputService:
             evidence_board=evidence_board,
             advanced_gates=advanced_gates,
         )
-        scenario_compare = DecisionOutputService._build_scenario_compare(scenario_preview)
         summary = DecisionOutputService._build_summary(
             workspace=workspace,
             readiness=readiness,
@@ -92,6 +110,7 @@ class DecisionOutputService:
             "evidence_board": evidence_board,
             "decision_map": decision_map,
             "scenario_compare": scenario_compare,
+            "advanced_readiness": advanced_readiness,
             "advanced_gates": advanced_gates,
             "command_center": command_center,
             "export_sections": export_sections,

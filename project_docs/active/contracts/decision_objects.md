@@ -132,6 +132,7 @@ Phase 3 of AI Chat Decision Output Unification adds a backend-owned `decision_ou
 | `evidence_board` | `Decision Output Evidence Board` | Yes | Normalized view of `workspace_analysis.ranked_diagnostics`, or `not_analyzed` when analysis has not run. |
 | `decision_map` | `Decision Output Map` | Yes | Read-only map of dataset, frame, evidence, missing inputs, and advanced gates. Edges are explicitly non-causal. |
 | `scenario_compare` | `Decision Output Scenario Compare` | Yes | Bounded scenario preview when available, otherwise a `not_applicable` object with limitations. It is not a forecast, optimizer, simulation, causal model, autonomous decision, or final recommendation. |
+| `advanced_readiness` | `Advanced Readiness` | Yes | Source-backed readiness diagnostics for prediction, optimization, causal analysis, and automated decisioning. This evaluates prerequisites only and does not run or enable an advanced capability. |
 | `advanced_gates` | `object[]` | Yes | Unsupported or gated capabilities such as simulation, optimization, autonomous decisioning, and final recommendation with backend reasons. |
 | `command_center` | `Decision Output Command Center` | Yes | AI Chat-native command surface composed from existing `decision_output` truth. It supplies display order, stale or rerun state, allowed next checks, disabled next checks with reasons, export readiness, limitations, and source refs without changing artifact type or export semantics. |
 | `export_sections` | `object[]` | Yes | Backend-owned PDF-ready sections for Executive Brief, Dataset Trust, Goal, Drivers, Limits, Breakdowns, Evidence Board, Decision Map Summary, Scenario Compare, Assumptions and Unknowns, and Truth Boundary. |
@@ -241,6 +242,40 @@ Phase 8 folds the existing bounded scenario preview into `decision_output.scenar
 
 Unavailable scenario data is not fabricated. If no preview is attached, the preview is not ready, or projection rows are missing, `scenario_compare.status` is `not_applicable`, `projections` is empty, `baseline.status` and `comparison.status` are `not_available`, and `limitations` explain that no scenario projection data was available.
 
+#### Advanced Readiness
+
+`decision_output.advanced_readiness` is the backend-owned ML trust-gate contract. It explains whether the current data, semantics, governance result, observational evidence, and trusted model evaluation are sufficient to attempt an advanced workflow. It does not perform prediction, optimization, causal effect estimation, simulation, or automated decisioning.
+
+The current schema version is `di_advanced_readiness_v1`. Valid readiness states are `supported`, `limited`, `blocked`, and `not_evaluated`. `supported` means the named prerequisites have source-backed evidence; it is not a performance or outcome guarantee. `limited` means preparation may continue but a required validation step is absent. `blocked` means a prerequisite or runtime capability is missing. `not_evaluated` means the backend lacks enough context to assess readiness honestly.
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `schema_version` | `string` | Yes | Current value is `di_advanced_readiness_v1`. |
+| `overall_state` | `string` | Yes | Conservative rollup. Mixed supported or limited and blocked capabilities roll up to `limited`. |
+| `summary` | `string` | Yes | Plain-language count and review instruction. |
+| `capabilities` | `Advanced Readiness Capability[]` | Yes | Exactly one item each for `prediction`, `optimization`, `causal_analysis`, and `automated_decisioning`. |
+| `state_counts` | `object` | Yes | Counts for `supported`, `limited`, `blocked`, and `not_evaluated`. |
+| `limitations` | `string[]` | Yes | Global reminders that readiness is not execution or an outcome guarantee. |
+| `truth_boundary` | `string` | Yes | Current value is `observational_analysis_only`. |
+
+Advanced Readiness Capability fields:
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `capability` | `string` | Yes | `prediction`, `optimization`, `causal_analysis`, or `automated_decisioning`. |
+| `state` | `string` | Yes | `supported`, `limited`, `blocked`, or `not_evaluated`. |
+| `reasons` | `object[]` | Yes | Stable `code` and plain-language `message` entries explaining the classification. |
+| `evidence` | `object[]` | Yes | Safe evidence entries with `code`, `label`, `value`, and exact backend `source_path`. No raw dataset values are included. |
+| `missing_requirements` | `object[]` | Yes | `requirement_id` and plain-language `description` entries. Empty only when the capability is supported. |
+| `allowed_next_actions` | `object[]` | Yes | Safe preparation or review actions with `action_id`, `label`, and `description`. These identifiers do not authorize unsupported execution. |
+| `truth_boundary` | `string` | Yes | Current value is `observational_analysis_only`. |
+
+Prediction readiness reuses Dataset Trust row count and semantic readiness, the decision goal metric binding, route-verified `governance_readiness`, the ML runtime minimum of ten non-null target rows, and an optional trusted backend model evaluation. It is `limited` when data and target preparation can proceed but governance or model validation evidence is absent. It is `supported` only when governance has a verified `ready` or `warning` result and trusted model evidence has `status: validated`, a run ID, a matching target column, and non-empty holdout metrics.
+
+Optimization remains `blocked` while `readiness.capability_state.optimization` is unsupported. Causal analysis remains `blocked` while Evidence Board output is observational and there is no validated causal identification method. Automated decisioning remains `blocked` while `readiness.capability_state.autonomous_decisioning` is unsupported and human approval is required.
+
+`advanced_gates` remains unchanged for compatibility. New clients should use `advanced_readiness` for detailed prerequisites while continuing to respect every legacy unsupported gate.
+
 #### Decision Output Command Center
 
 The command center belongs inside the existing `decision_output` artifact as `decision_output.command_center`. Codex chose this additive section instead of a wrapper artifact because current AI Chat rendering, artifact inspection, export, and saved-asset paths already recognize `type: "decision_output"`. A wrapper would force frontend artifact routing to unwrap another object before existing behavior could work. The existing `decision_output` remains canonical; `command_center` is a compact control state derived from `frame`, `dataset_trust`, `readiness`, `evidence_board`, `decision_map`, `scenario_compare`, `advanced_gates`, `export_sections`, `source_refs`, and `truth_boundary`.
@@ -278,7 +313,7 @@ A `DecisionAsset` is an immutable saved AI Chat Decision Review. It is an observ
 | `created_at` | `string` | Yes | Backend-generated ISO-8601 UTC timestamp. |
 | `archived_at` | `string \| null` | Yes | Backend-generated ISO-8601 UTC timestamp when archived, otherwise `null`. Archiving changes library visibility only; it does not mutate the saved `decision_output`. |
 | `lifecycle_state` | `string` | Yes | `active` or `archived`. Deleted assets are removed and return 404. |
-| `decision_output` | `AI Chat Decision Output` | Yes | Exact sanitized immutable snapshot of the current output. It preserves `dataset_trust`, `command_center`, `source_refs`, `export_sections`, and `truth_boundary`. |
+| `decision_output` | `AI Chat Decision Output` | Yes | Exact sanitized immutable snapshot of the current output. It preserves `dataset_trust`, `advanced_readiness`, `command_center`, `source_refs`, `export_sections`, and `truth_boundary`. |
 | `graph_state` | `Decision Graph State` | No | Optional contract-safe `decision_graph_build_state` carry-forward object. It is absent when no graph state was supplied. |
 | `snapshot_notice` | `string` | Yes | UI copy that the asset is a saved immutable observational snapshot and not a live refresh or final decision. |
 | `review_metadata` | `object` | Yes | Stable review summary derived only from the saved snapshot. Includes `snapshot_kind`, `dataset_label`, `source_label`, `row_count`, `column_count`, `readiness_state`, `truth_boundary`, `evidence_status`, `evidence_item_count`, `scenario_status`, `export_section_count`, `export_section_ids`, `command_center_status`, and `graph_state_summary`. |

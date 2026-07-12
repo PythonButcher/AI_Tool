@@ -2,7 +2,7 @@ import React from 'react';
 import { Typography, Button, Tooltip, Chip, TextField } from '@mui/material';
 import {
   FaShieldAlt, FaCheckCircle, FaExclamationTriangle, FaEye, FaDatabase,
-  FaInfoCircle, FaTools, FaSearch, FaLayerGroup, FaCircle
+  FaInfoCircle, FaTools, FaSearch, FaLayerGroup, FaCircle, FaTimes
 } from 'react-icons/fa';
 import SemanticRef from '../business/decision/SemanticRef';
 import ScenarioPreview from '../business/decision/ScenarioPreview';
@@ -31,6 +31,7 @@ export default function DecisionCommandCenter({
   doEvidence,
   doMap,
   doScenario,
+  doAdvancedReadiness,
   doGates,
   doTruthBoundary,
   renderSemanticList,
@@ -330,6 +331,54 @@ export default function DecisionCommandCenter({
         </div>
       </details>
     ) : null,
+    advanced_readiness: () => doAdvancedReadiness ? (
+      <details key="advanced_readiness" style={{ background: 'var(--bg-secondary)', padding: '16px', borderRadius: '12px', border: '1px solid var(--border-color)', marginTop: '16px' }}>
+        <summary style={{ fontWeight: 800, cursor: 'pointer', outline: 'none' }}>Advanced Readiness: {doAdvancedReadiness.overall_state?.replace(/_/g, ' ').toUpperCase()}</summary>
+        <div style={{ marginTop: '16px' }}>
+          <Typography variant="body2" sx={{ opacity: 0.8, mb: 2 }}>{doAdvancedReadiness.summary}</Typography>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' }}>
+            {doAdvancedReadiness.capabilities?.map((cap, i) => (
+              <div key={i} style={{ padding: '16px', background: 'var(--bg-primary)', borderRadius: '8px', border: `1px solid ${cap.state === 'supported' ? 'var(--accent-green)' : cap.state === 'limited' ? '#f59e0b' : cap.state === 'blocked' ? '#ef4444' : 'var(--border-color)'}` }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 800, textTransform: 'capitalize', mb: 1 }}>{cap.capability?.replace(/_/g, ' ')}</Typography>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', fontSize: '0.8rem', fontWeight: 700, opacity: 0.8 }}>
+                   {cap.state === 'supported' ? <FaCheckCircle color="var(--accent-green)" /> : cap.state === 'limited' ? <FaExclamationTriangle color="#f59e0b" /> : cap.state === 'blocked' ? <FaTimes color="#ef4444" /> : <FaInfoCircle color="var(--text-secondary)" />}
+                   <span>{cap.state?.replace(/_/g, ' ').toUpperCase()}</span>
+                </div>
+                {cap.reasons?.map((r, idx) => (
+                  <Typography key={idx} variant="body2" sx={{ fontSize: '0.8rem', mb: 1 }}>{r.message}</Typography>
+                ))}
+                {cap.missing_requirements?.length > 0 && (
+                  <div style={{ marginTop: '8px', padding: '8px', background: 'rgba(239, 68, 68, 0.05)', borderRadius: '4px' }}>
+                    <Typography variant="caption" sx={{ fontWeight: 800, display: 'block', color: '#ef4444' }}>Missing Requirements:</Typography>
+                    {cap.missing_requirements.map((req, idx) => (
+                      <Typography key={`req-${idx}`} variant="caption" sx={{ display: 'block', fontSize: '0.75rem' }}>• {req.description}</Typography>
+                    ))}
+                  </div>
+                )}
+                {cap.evidence?.length > 0 && (
+                  <div style={{ marginTop: '8px' }}>
+                    <Typography variant="caption" sx={{ fontWeight: 800, display: 'block', opacity: 0.6 }}>Evidence:</Typography>
+                    {cap.evidence.map((ev, idx) => (
+                      <Tooltip key={`ev-${idx}`} title={`Source: ${ev.source_path}`} arrow>
+                         <Typography variant="caption" sx={{ display: 'block', fontSize: '0.75rem', cursor: 'help', textDecoration: 'underline dashed', opacity: 0.8 }}>• {ev.label}: {String(ev.value)}</Typography>
+                      </Tooltip>
+                    ))}
+                  </div>
+                )}
+                {cap.allowed_next_actions?.length > 0 && (
+                  <div style={{ marginTop: '8px' }}>
+                    <Typography variant="caption" sx={{ fontWeight: 800, display: 'block', opacity: 0.6 }}>Next Steps:</Typography>
+                    {cap.allowed_next_actions.map((act, idx) => (
+                      <Typography key={`act-${idx}`} variant="caption" sx={{ display: 'block', fontSize: '0.75rem', opacity: 0.8 }}>• {act.label || act.description}</Typography>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </details>
+    ) : null,
     truth_boundary: () => (
       <section className="drl-section" key="truth_boundary" style={{ marginTop: '16px' }}>
         <div style={{ padding: '20px', background: 'rgba(0, 102, 255, 0.05)', border: '1px solid var(--accent-blue)', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '16px', color: 'var(--accent-blue)' }}>
@@ -380,6 +429,7 @@ export default function DecisionCommandCenter({
     renderedSections.push(sectionRenderers.truth_boundary());
   }
   // Advanced gates are outside of standard export_sections order but usually part of the UI
+  renderedSections.push(sectionRenderers.advanced_readiness?.());
   renderedSections.push(sectionRenderers.advanced_gates?.());
   renderedSections.push(sectionRenderers.assumptions_unknowns?.());
 

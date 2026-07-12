@@ -59,6 +59,17 @@ def _governed_response(result, readiness):
         result['governance_readiness'] = readiness
     return jsonify(result), 200
 
+
+def _payload_with_governance_readiness(payload, readiness):
+    """Pass route-verified governance evidence to backend composers only."""
+    service_payload = dict(payload)
+    service_payload.pop('_governance_readiness', None)
+    if readiness is not None:
+        # The underscore keeps this as internal route-to-service evidence. A
+        # caller cannot bypass governance by declaring its own readiness.
+        service_payload['_governance_readiness'] = readiness
+    return service_payload
+
 @decision_bp.route("/workspaces", methods=["POST"])
 def create_workspace_route():
     payload = request.get_json(silent=True) or {}
@@ -79,7 +90,8 @@ def decision_chat_turn_route():
     if blocked:
         return blocked
     try:
-        return _governed_response(DecisionChatService.handle_turn(payload), readiness)
+        service_payload = _payload_with_governance_readiness(payload, readiness)
+        return _governed_response(DecisionChatService.handle_turn(service_payload), readiness)
     except DecisionServiceError as exc:
         error_response = _error_payload("INVALID_DECISION_CHAT_TURN_REQUEST", str(exc))
         error_response["dataset_trust"] = DecisionChatService.build_dataset_trust_for_payload(payload)
@@ -94,7 +106,8 @@ def decision_chat_action_route():
     if blocked:
         return blocked
     try:
-        return _governed_response(DecisionChatService.handle_action(payload), readiness)
+        service_payload = _payload_with_governance_readiness(payload, readiness)
+        return _governed_response(DecisionChatService.handle_action(service_payload), readiness)
     except DecisionServiceError as exc:
         error_response = _error_payload("INVALID_DECISION_CHAT_ACTION_REQUEST", str(exc))
         error_response["dataset_trust"] = DecisionChatService.build_dataset_trust_for_payload(payload)

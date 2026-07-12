@@ -44,6 +44,20 @@ def decision_output_fixture():
         "evidence_board": {"status": "not_analyzed", "items": []},
         "decision_map": {"nodes": [], "edges": [], "causal_status": "not_causal_claim"},
         "scenario_compare": {"status": "not_applicable", "projections": []},
+        "advanced_readiness": {
+            "schema_version": "di_advanced_readiness_v1",
+            "overall_state": "blocked",
+            "summary": "Advanced capabilities remain blocked for this saved snapshot.",
+            "capabilities": [],
+            "state_counts": {
+                "supported": 0,
+                "limited": 0,
+                "blocked": 4,
+                "not_evaluated": 0,
+            },
+            "limitations": ["Readiness diagnostics do not perform advanced analysis."],
+            "truth_boundary": "observational_analysis_only",
+        },
         "advanced_gates": [],
         "command_center": {
             "schema_version": "di_command_center_v1",

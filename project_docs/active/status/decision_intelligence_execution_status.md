@@ -18,7 +18,7 @@ The Decisions window remains secondary. Saved DecisionAssets support immutable h
 
 ## Current Project Gate
 
-Status: **Phase 4 - Advanced Readiness And ML Trust Gates: ACTIVE CODEX CONTRACT/BACKEND PLANNING**
+Status: **Phase 4.5 - Clean Up Codex Mistakes: ACTIVE CODEX CLEANUP**
 
 Active gate:
 
@@ -26,11 +26,21 @@ Active gate:
 
 Current plan:
 
-`project_docs/active/decision_intelligence/active_gate/phase_4_advanced_readiness_ml_trust_gates_plan.md`
+`project_docs/active/decision_intelligence/active_gate/phase_4_5_clean_up_codex_mistakes_plan.md`
 
-Codex goal prompt:
+Current Codex goal:
 
-`project_docs/active/decision_intelligence/active_gate/codex_advanced_readiness_ml_trust_gates_goal.md`
+`project_docs/active/decision_intelligence/active_gate/codex_phase_4_5_clean_up_codex_mistakes_goal.md`
+
+Active frontend handoff: none.
+
+Completed Phase 4 references:
+
+`project_docs/active/decision_intelligence/completed/phase_4_advanced_readiness_ml_trust_gates_plan.md`
+
+`project_docs/active/decision_intelligence/completed/codex_advanced_readiness_ml_trust_gates_goal.md`
+
+`project_docs/active/decision_intelligence/completed/antigravity_advanced_readiness_ml_trust_gates_handoff.md`
 
 Completed Evidence-To-Action references:
 
@@ -40,9 +50,9 @@ Completed Evidence-To-Action references:
 
 `project_docs/active/decision_intelligence/completed/antigravity_evidence_to_action_workflow_handoff.md`
 
-Goal: Build an advanced readiness and ML trust gate contract so AI Chat can explain whether prediction, optimization, causal analysis, and automated decisioning are supported, limited, blocked, or not evaluated without claiming unsupported advanced capabilities.
+Goal: Clean up Codex-authored documentation, contract, and backend-truth mistakes before the next product phase begins.
 
-Latest verified fact: The Saved Decision Library Upgrade is complete by user acceptance. Codex source/build review passed, backend lifecycle tests passed, and the completed plan, goal, and frontend handoff are retained under `project_docs/active/decision_intelligence/completed/`. The active gate is now Codex-owned readiness contract and backend planning.
+Latest verified fact: the user explicitly wrapped Phase 4 and promoted Phase 4.5 - Clean Up Codex Mistakes. Phase 4 records are completed references, rejected audit material is archived, and PDF/export work remains outside this cleanup gate.
 
 Completed Saved Decision Library references:
 
@@ -72,7 +82,7 @@ Previous completed references:
 
 ## Next Focus
 
-Start the Codex kickoff goal at `project_docs/active/decision_intelligence/active_gate/codex_advanced_readiness_ml_trust_gates_goal.md`. The first slice is source-backed contract planning for advanced readiness diagnostics across prediction, optimization, causal analysis, and automated decisioning. Do not start frontend work until Codex verifies backend contract readiness and creates a focused handoff.
+Codex should execute `project_docs/active/decision_intelligence/active_gate/codex_phase_4_5_clean_up_codex_mistakes_goal.md`. No frontend agent acts until Codex proves a bounded frontend gap within this cleanup scope.
 
 ## Future Cycle Memory
 

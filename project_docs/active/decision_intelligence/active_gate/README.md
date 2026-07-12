@@ -6,15 +6,17 @@ Read this folder after `project_docs/active/status/decision_intelligence_executi
 
 ## Current Gate
 
-Status: Phase 4 - Advanced Readiness And ML Trust Gates is active for Codex contract and backend planning.
+Status: Phase 4.5 - Clean Up Codex Mistakes is active for Codex-owned cleanup and verification.
 
-Planning source: `project_docs/active/agent_council/outputs/next-implementation-cycle-priorities/2026-06-28-next-implementation-cycle-priorities-summary.md`.
+Planning source: explicit user direction on 2026-07-11.
 
-Current plan: `phase_4_advanced_readiness_ml_trust_gates_plan.md`.
+Current plan: `phase_4_5_clean_up_codex_mistakes_plan.md`.
 
-Current Codex goal: `codex_advanced_readiness_ml_trust_gates_goal.md`.
+Current Codex goal: `codex_phase_4_5_clean_up_codex_mistakes_goal.md`.
 
 Active frontend handoff: none.
+
+Completed Phase 4 references: `project_docs/active/decision_intelligence/completed/phase_4_advanced_readiness_ml_trust_gates_plan.md`, `project_docs/active/decision_intelligence/completed/codex_advanced_readiness_ml_trust_gates_goal.md`, and `project_docs/active/decision_intelligence/completed/antigravity_advanced_readiness_ml_trust_gates_handoff.md`.
 
 Completed Saved Decision Library references: `project_docs/active/decision_intelligence/completed/phase_3_saved_decision_library_upgrade_plan.md`, `project_docs/active/decision_intelligence/completed/codex_saved_decision_library_upgrade_goal.md`, and `project_docs/active/decision_intelligence/completed/antigravity_saved_decision_library_metadata_filters_handoff.md`.
 

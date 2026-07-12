@@ -63,6 +63,7 @@ class DecisionAssetService:
         "evidence_board",
         "decision_map",
         "scenario_compare",
+        "advanced_readiness",
         "advanced_gates",
         "command_center",
         "export_sections",

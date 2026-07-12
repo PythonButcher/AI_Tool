@@ -295,6 +295,9 @@ class DecisionChatApiTests(unittest.TestCase):
             json={
                 "dataset": DATASET,
                 "semantic_model": SEMANTIC_MODEL,
+                # Internal governance evidence must come from the route, not
+                # from a caller-controlled field with the same name.
+                "_governance_readiness": {"status": "blocked"},
                 "user_message": "How should we grow revenue next quarter using marketing spend by channel while protecting gross margin?",
                 "conversation_history": [],
                 "session_state": {},
@@ -319,6 +322,26 @@ class DecisionChatApiTests(unittest.TestCase):
         self.assertTrue(decision_output["decision_map"]["nodes"])
         self.assertEqual(decision_output["scenario_compare"]["status"], "not_applicable")
         self.assertEqual(decision_output["scenario_compare"]["projections"], [])
+        advanced_readiness = decision_output["advanced_readiness"]
+        self.assertEqual(advanced_readiness["schema_version"], "di_advanced_readiness_v1")
+        self.assertEqual(advanced_readiness["truth_boundary"], "observational_analysis_only")
+        advanced_by_capability = {
+            item["capability"]: item for item in advanced_readiness["capabilities"]
+        }
+        self.assertEqual(advanced_by_capability["prediction"]["state"], "blocked")
+        self.assertEqual(
+            advanced_by_capability["prediction"]["reasons"][0]["code"],
+            "insufficient_training_rows",
+        )
+        self.assertEqual(advanced_by_capability["optimization"]["state"], "blocked")
+        self.assertEqual(advanced_by_capability["causal_analysis"]["state"], "blocked")
+        self.assertEqual(advanced_by_capability["automated_decisioning"]["state"], "blocked")
+        governance_evidence = next(
+            item
+            for item in advanced_by_capability["prediction"]["evidence"]
+            if item["code"] == "governance_status"
+        )
+        self.assertEqual(governance_evidence["value"], "ready")
         command_center = decision_output["command_center"]
         self.assertEqual(command_center["schema_version"], "di_command_center_v1")
         self.assertEqual(command_center["surface"], "ai_chat_decision_command_center")

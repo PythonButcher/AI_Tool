@@ -69,6 +69,7 @@ export default function DecisionOutputReview({
   const doEvidence = artifact.evidence_board || artifact.content?.evidence_board;
   const doMap = artifact.decision_map || artifact.content?.decision_map;
   const doScenario = artifact.scenario_compare || artifact.content?.scenario_compare;
+  const doAdvancedReadiness = artifact.advanced_readiness || artifact.content?.advanced_readiness;
   const doGates = artifact.advanced_gates || artifact.content?.advanced_gates || [];
   const doTruthBoundary = artifact.truth_boundary || artifact.content?.truth_boundary || 'observational_analysis_only';
   const doCommandCenter = artifact.command_center || artifact.content?.command_center;
@@ -119,6 +120,7 @@ export default function DecisionOutputReview({
         doEvidence={doEvidence}
         doMap={doMap}
         doScenario={doScenario}
+        doAdvancedReadiness={doAdvancedReadiness}
         doGates={doGates}
         doTruthBoundary={doTruthBoundary}
         renderSemanticList={renderSemanticList}

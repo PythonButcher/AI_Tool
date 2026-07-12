@@ -1,3 +1,5 @@
+> COMPLETED REFERENCE: Phase 4 was wrapped by explicit user direction on 2026-07-11. This file is historical and is not the active gate.
+
 # Phase 4 - Advanced Readiness And ML Trust Gates Plan
 
 ## Purpose
@@ -6,13 +8,17 @@ Make the app honest and useful about advanced Decision Intelligence capabilities
 
 ## Current Gate
 
-Status: active; Codex contract and backend source review happen first.
+Status: completed by explicit user direction on 2026-07-11.
 
 Planning source: `project_docs/active/agent_council/outputs/next-implementation-cycle-priorities/2026-06-28-next-implementation-cycle-priorities-summary.md` ranks Advanced Readiness And ML Trust Gates after the completed product-experience and saved-library slices.
 
 Backend readiness target: inspect current Dataset Trust, semantic role, ML, AutoML, forecasting, governance readiness, and unsupported capability gates. Define the smallest additive contract that can report readiness for prediction, optimization, causal analysis, and automated decisioning without enabling unsupported claims.
 
 Frontend readiness target: no frontend implementation starts until Codex verifies source-backed contract readiness and creates a focused frontend-agent handoff if a UI change is needed.
+
+Verified backend contract: `decision_output.advanced_readiness` now reports `supported`, `limited`, `blocked`, or `not_evaluated` across prediction, optimization, causal analysis, and automated decisioning. It cites Dataset Trust, route-verified governance, semantic goal binding, Evidence Board state, runtime gates, and trusted model evaluation without enabling an advanced capability.
+
+Completed frontend handoff: `project_docs/active/decision_intelligence/completed/antigravity_advanced_readiness_ml_trust_gates_handoff.md`.
 
 Completion target: documented readiness contract, focused backend implementation or source-backed plan, tests for supported and blocked readiness states, preserved observational-only boundaries, and a bounded frontend handoff only if the backend contract is ready.
 

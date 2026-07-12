@@ -12,7 +12,7 @@ Gemini or Antigravity owns frontend implementation, React/CSS, UI rendering, bro
 
 Active frontend-agent handoff: none.
 
-The completed Saved Decision Library compact rehaul handoff is retained at `project_docs/active/decision_intelligence/completed/antigravity_saved_decision_library_metadata_filters_handoff.md` as a reference only. The active Decision Intelligence gate is Codex-owned and does not have a frontend-agent handoff yet.
+The completed Advanced Readiness implementation handoff is retained at `project_docs/active/decision_intelligence/completed/antigravity_advanced_readiness_ml_trust_gates_handoff.md`. The current gate is Codex-owned Phase 4.5 cleanup, so no frontend prompt should be executed unless a new bounded handoff is created from verified source evidence.
 
 Codex-owned current goals live in `project_docs/active/decision_intelligence/active_gate/`, not in this handoff folder. Current active gate: `project_docs/active/decision_intelligence/active_gate/README.md`.
 
