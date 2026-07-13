@@ -2,7 +2,7 @@
 
 Created: 2026-07-07
 
-This is a future-phase planning note, not an active implementation gate. It captures the idea that AI_Tool should eventually add login-based memory and context engineering for AI Chat and Decision Intelligence. The current active gate remains in `project_docs/active/status/decision_intelligence_execution_status.md`.
+This is a deferred planning note, not an active implementation gate. It captures the idea that AI_Tool should eventually add login-based memory and context engineering for AI Chat and Decision Intelligence. The current active gate remains in `project_docs/active/status/decision_intelligence_execution_status.md`.
 
 ## Idea To Preserve
 

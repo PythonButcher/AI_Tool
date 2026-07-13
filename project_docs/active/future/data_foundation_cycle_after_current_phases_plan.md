@@ -1,6 +1,6 @@
 # Future Cycle - Data Foundation And Automation Plan
 
-This is a future-cycle memory, not the active Decision Intelligence gate. Do not execute it until the active status file promotes it.
+This is a deferred planning record, not the active Decision Intelligence gate. Do not execute it until the active status file promotes it.
 
 ## Purpose
 

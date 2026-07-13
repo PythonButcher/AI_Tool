@@ -16,7 +16,7 @@ The current gate is Codex-owned source audit and backend truth work. A frontend 
 
 Codex-owned current goals live in `project_docs/active/decision_intelligence/active_gate/`, not in this handoff folder. Current active gate: `project_docs/active/decision_intelligence/active_gate/README.md`.
 
-Deferred dashboard handoffs are retained under `project_docs/active/decision_intelligence/future/` and must not be executed until the active status file and `project_docs/active/decision_intelligence/active_gate/README.md` promote them.
+The dashboard canvas handoff is completed and retained under `project_docs/active/decision_intelligence/completed/`. Deferred plans are retained only under `project_docs/active/future/` and must not be executed until the active status file and `project_docs/active/decision_intelligence/active_gate/README.md` promote them.
 
 Completed handoffs are retained under `project_docs/active/decision_intelligence/completed/` as reference only. Completed examples include `project_docs/active/decision_intelligence/completed/antigravity_decision_pdf_renderer_repair.md`, `project_docs/active/decision_intelligence/completed/antigravity_saved_decision_library_metadata_filters_handoff.md`, `project_docs/active/decision_intelligence/completed/phase_3_antigravity_charting_slicer_ui_handoff.md`, `project_docs/active/decision_intelligence/completed/phase_5_gemini_ai_chat_decision_command_center.md`, and `project_docs/active/decision_intelligence/completed/antigravity_chart_color_picker_handoff.md`.
 
