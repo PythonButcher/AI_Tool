@@ -34,7 +34,7 @@ For Decision Chat requests that pass this gate, the route passes the verified re
 | Cleaning and manual cleaning | Reject candidate output before committing it as cleaned data. |
 | `POST /api/nlp/chart` | Rejects an inline dataset before chart construction. |
 | `/api/decision/*` | Rejects inline or Data Hub datasets before workspace, chat, graph, pipeline, recommendation, and scenario processing. |
-| `POST /api/automl/train` | Runs the governance gate before loading model training code. |
+| `POST /api/automl/train` | Runs the governance gate before loading model training code. A passing gate does not establish model readiness, future performance, or Decision Chat Advanced Readiness. The route reports a bounded single-holdout evaluation separately. |
 | `GET /api/export` | Rejects blocked datasets before building a download. |
 | Data Hub | Stores the policy, exposes `GET /api/datahub/<dataset_id>/governance-readiness`, and prevents blocked row fetches. |
 | Legacy `/ai` and `/ai_cmd` | Returns a warning when no structured dataset is supplied; blocks a structured dataset that fails readiness. |

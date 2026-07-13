@@ -204,21 +204,21 @@ class AutoMLService:
         if problem_type == "regression":
             r2 = float(metrics.get("r2") or 0.0)
             if r2 >= 0.85:
-                return "Strong fit: model explains most variance in the target."
+                return "High fit on this held-out split; it is not a deployment-readiness or future-performance guarantee."
             if r2 >= 0.6:
-                return "Moderate fit: model captures useful signal, but can improve."
+                return "Moderate fit on this held-out split; additional validation is needed before relying on the model."
             if r2 >= 0.3:
-                return "Weak-to-moderate fit: use predictions with caution."
-            return "Weak fit: current features have limited predictive signal."
+                return "Weak-to-moderate fit on this held-out split; do not treat the output as a reliable forecast."
+            return "Weak fit on this held-out split; the evaluated features show limited predictive signal."
 
         f1 = float(metrics.get("f1") or 0.0)
         if f1 >= 0.85:
-            return "Strong classification performance."
+            return "High classification performance on this held-out split; external validation is still required."
         if f1 >= 0.7:
-            return "Moderate classification performance."
+            return "Moderate classification performance on this held-out split; performance may not generalize."
         if f1 >= 0.5:
-            return "Usable but weak classification performance."
-        return "Weak classification performance; improve data/features."
+            return "Weak classification performance on this held-out split; do not use it as a decision rule."
+        return "Low classification performance on this held-out split; more suitable data or features are needed."
 
     @staticmethod
     def _target_overview(problem_type: str, target: pd.Series) -> Dict[str, Any]:
@@ -261,7 +261,10 @@ class AutoMLService:
         corr_rows.sort(key=lambda item: abs(item[1]), reverse=True)
         for col, corr in corr_rows[:max_items]:
             direction = "positive" if corr >= 0 else "negative"
-            findings.append(f"{col} has a {direction} relationship with the target (corr={corr:.3f}).")
+            findings.append(
+                f"Observed {direction} linear association with the target in the training data "
+                f"(corr={corr:.3f}); this is not causal evidence."
+            )
 
         return findings
 
@@ -290,7 +293,9 @@ class AutoMLService:
             model_rmse = best_metrics.get("rmse")
             if baseline_rmse and model_rmse:
                 improvement = ((baseline_rmse - model_rmse) / baseline_rmse) * 100
-                findings.append(f"RMSE improved by {improvement:.1f}% vs mean-value baseline.")
+                findings.append(
+                    f"On the held-out split, RMSE was {improvement:.1f}% lower than the mean-value baseline."
+                )
             findings.extend(AutoMLService._correlation_findings(features, target))
         else:
             base_f1 = baseline_metrics.get("f1")
@@ -300,10 +305,16 @@ class AutoMLService:
 
         if feature_importance:
             top = feature_importance[0]
-            findings.append(f"Top driver: {top['feature']} (importance={top['importance']:.4f}).")
+            findings.append(
+                f"Highest model feature-importance signal (not causal): {top['feature']} "
+                f"(importance={top['importance']:.4f})."
+            )
 
         return {
-            "overview": f"Target '{target_column}' modeled as {problem_type} using {best_model_name}.",
+            "overview": (
+                f"Target '{target_column}' was evaluated as a {problem_type} task using "
+                f"{best_model_name} on one held-out split."
+            ),
             "quality_assessment": AutoMLService._quality_statement(problem_type, best_metrics),
             "target_overview": AutoMLService._target_overview(problem_type, target),
             "baseline_metrics": baseline_metrics,
@@ -365,7 +376,7 @@ class AutoMLService:
             raise ModelTrainingError("Dataset is too small for reliable training (min 10 non-null target rows).")
         if len(X) < 50:
             warnings.append(
-                f"Only {len(X)} rows available. Metrics may be unstable; more rows are recommended for reliable insights."
+                f"Only {len(X)} rows are available. Holdout metrics may be unstable; collect more data before relying on the estimates."
             )
 
         stratify = None
@@ -458,6 +469,19 @@ class AutoMLService:
             },
         )
 
+        # This context makes the existing response's test-set scope explicit without
+        # changing the legacy model, metrics, or prediction_preview response fields.
+        evaluation_context = {
+            "evaluation_method": "single_holdout_split",
+            "random_state": 42,
+            "prediction_preview_scope": "held_out_test_rows",
+            "truth_boundary": "automl_holdout_evaluation_only",
+            "limitations": [
+                "Metrics and preview rows come from one held-out split of the submitted dataset.",
+                "This run is not a forecast, deployment-readiness assessment, causal finding, optimization result, or autonomous decision.",
+            ],
+        }
+
         return {
             "run_id": run_id,
             "problem_type": problem_type,
@@ -467,6 +491,7 @@ class AutoMLService:
             "feature_importance": feature_importance,
             "insights": insights,
             "prediction_preview": AutoMLService._prediction_preview(y_test, best_predictions),
+            "evaluation_context": evaluation_context,
             "training_summary": {
                 "rows_used": int(len(X)),
                 "feature_columns": int(len(feature_columns)),
@@ -474,6 +499,11 @@ class AutoMLService:
                 "test_rows": int(len(X_test)),
                 "test_split": test_size,
                 "warnings": warnings,
+                "evaluation_method": evaluation_context["evaluation_method"],
+                "random_state": evaluation_context["random_state"],
             },
-            "summary": f"AutoML trained {len(results)} models for a {problem_type} task.",
+            "summary": (
+                f"AutoML trained and compared {len(results)} models for a {problem_type} task "
+                "on one held-out split; the result is an evaluation, not a deployment decision."
+            ),
         }

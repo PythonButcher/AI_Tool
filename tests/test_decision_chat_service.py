@@ -426,6 +426,20 @@ class DecisionChatApiTests(unittest.TestCase):
             self.assertTrue(section["title"])
             self.assertTrue(section["body"])
             self.assertEqual(section["summary"], section["body"])
+            self.assertEqual(section["truth_boundary"], "observational_analysis_only")
+            self.assertEqual(section["source_refs"]["source"], "decision_output")
+            self.assertEqual(section["source_refs"]["section_id"], section["section_id"])
+            self.assertTrue(section["source_refs"]["source_path"].startswith("decision_output."))
+
+        self.assertEqual(export_sections[0]["title"], "Executive Brief (Observational)")
+        self.assertEqual(
+            next(section for section in export_sections if section["section_id"] == "decision_map_summary")["title"],
+            "Decision Map Summary (Non-Causal)",
+        )
+        self.assertEqual(
+            next(section for section in export_sections if section["section_id"] == "scenario_compare")["title"],
+            "Scenario Compare (Sensitivity Only)",
+        )
 
         export_by_id = {section["section_id"]: section for section in export_sections}
         advanced_export = export_by_id["advanced_readiness"]
@@ -841,7 +855,7 @@ class DecisionChatApiTests(unittest.TestCase):
         self.assertEqual(body["action_state"]["primary_action_id"], "analyze_workspace")
         self.assertIn("Ready means", kickoff["readiness_meaning"])
         self.assertIn("not a recommendation", kickoff["truthfulness_note"])
-        self.assertIn("Recommended next action: Analyze workspace", body["assistant_message"])
+        self.assertIn("Available next check: Analyze workspace", body["assistant_message"])
         self.assertNotIn("Inputs Needed: 0", body["assistant_message"])
 
     def test_turn_route_preview_keeps_discount_marketing_region_prompt_readable(self):

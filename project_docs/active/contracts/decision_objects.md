@@ -155,12 +155,16 @@ Each export section includes:
 | `items` | `string[]` | No | Optional bullet text for warnings, limitations, assumptions, and boundary notes. |
 | `cards` | `object[]` | No | Optional titled detail cards for Goal, Drivers, Limits, Breakdowns, Evidence Board items, Scenario Compare projection rows, Assumptions, and Unknowns. |
 | `emptyText` | `string` | No | Fallback text when a section has no cards or items. |
+| `source_refs` | `object` | Yes for current live sections | Immutable trace to the decision-output source path, workspace context, and applicable evidence or scenario IDs. Saved assets preserve this trace as part of their snapshot. |
+| `truth_boundary` | `string` | Yes for current live sections | Current value is `observational_analysis_only`. |
 
 The `advanced_readiness` export section is built from `decision_output.advanced_readiness`. It carries the overall state and state counts, capability states, backend reasons, safe evidence summaries, missing requirements, limitations, and the observational truth boundary. The frontend must render this section rather than reconstructing readiness from unrelated fields.
 
 Live and saved export readiness is true only when every canonical backend section is present once and every section has a non-empty ID, title, and body. A non-empty partial section list is not export-ready.
 
 Export sections must read as a shareable AI Chat decision asset. They must not present final recommendations, optimization, causal proof, simulation, prediction certainty, or autonomous decisioning. The Truth Boundary section must explicitly state the observational-only limitation and unsupported capabilities.
+
+Current live section labels preserve their stable `section_id`s while qualifying important boundaries for executive readers: the Executive Brief is observational, the Decision Map is non-causal, Scenario Compare is sensitivity-only, and Advanced Readiness is preparation-only. Clients must retain the backend-provided title and must not remove those qualifiers.
 
 #### Decision Output Frame
 
@@ -856,7 +860,7 @@ Represents a high-level summary of what matters in a dataset or resolved slice.
 
 ## Recommendation
 
-Represents a suggested follow-up check derived from one or more decision signals. The legacy field name remains `Recommendation` for API compatibility, but current payloads are observational review aids, not final recommendations, optimized actions, or autonomous decisions.
+Represents a suggested follow-up check derived from one or more decision signals. The legacy field name remains `Recommendation` for API compatibility, but current payloads are observational review aids, not final recommendations, optimized actions, causal findings, or autonomous decisions.
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -873,6 +877,10 @@ Represents a suggested follow-up check derived from one or more decision signals
 | `actions` | `object[]` | Yes | Structured next-check hints |
 | `expected_outcome` | `string` | Yes | High-level review result to look for; this is not a promised business outcome |
 | `confidence` | `number` | Yes | `0.0` to `1.0` |
+| `confidence_scope` | `string` | Yes for current runtime output | Explains that `confidence` reflects supporting signal evidence, not an outcome probability or action confidence. |
+| `source_refs` | `object` | Yes for current runtime output | Trace to the supporting DecisionSignal source and its stable signal ID. |
+| `limitations` | `string[]` | Yes for current runtime output | Explicit follow-up-check boundary, including that the object is not a final recommendation or causal finding. |
+| `truth_boundary` | `string` | Yes for current runtime output | Current value is `observational_analysis_only`. |
 | `created_at` | `string` | Yes | ISO timestamp |
 
 ### `actions` item schema

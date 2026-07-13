@@ -2015,7 +2015,7 @@ class DecisionChatService:
                 f"{clarification}"
             )
         next_label = next_action.get("label") or "Analyze workspace"
-        return f"{summary} {readiness_meaning} {truthfulness_note} Recommended next action: {next_label}."
+        return f"{summary} {readiness_meaning} {truthfulness_note} Available next check: {next_label}."
 
     @staticmethod
     def _build_preview_lever_items(levers: List[Dict[str, Any]]) -> List[Dict[str, Any]]:

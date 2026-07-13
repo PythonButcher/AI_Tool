@@ -144,6 +144,11 @@ class DecisionPipelineServiceTests(unittest.TestCase):
         self.assertGreaterEqual(len(result["decision_bundle"]["recommendations"]), 1)
         for item in result["decision_bundle"]["recommendations"]:
             self.assertNotEqual(item.get("recommendation_type"), "optimize")
+            self.assertEqual(item["truth_boundary"], "observational_analysis_only")
+            self.assertEqual(item["source_refs"]["source"], "decision_signal")
+            self.assertEqual(item["source_refs"]["source_signal_ids"], item["based_on_signal_ids"])
+            self.assertIn("not a final recommendation", item["limitations"][0])
+            self.assertIn("not an outcome probability", item["confidence_scope"])
         self.assertEqual(result["decision_bundle"]["scenario_preview"]["status"], "not_requested")
         self.assertEqual(result["decision_bundle"]["scenario_preview"]["source_scenario_ids"], [])
         self.assertEqual(result["meta"]["scenario_preview_status"], "not_requested")
