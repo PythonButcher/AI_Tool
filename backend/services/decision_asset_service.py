@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Optional, Sequence
 from uuid import uuid4
 
 from backend.db.backend_db import get_db_connection
+from backend.services.decision_output_service import DecisionOutputService
 from backend.services.decision_support import DecisionServiceError
 
 
@@ -695,7 +696,7 @@ class DecisionAssetService:
             if isinstance(section, dict) and section.get("section_id")
         ]
         return {
-            "ready": bool(export_sections),
+            "ready": DecisionOutputService.export_sections_ready(export_sections),
             "source": "saved_decision_asset_snapshot",
             "section_count": len(export_sections),
             "section_order": section_order,

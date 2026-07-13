@@ -378,7 +378,10 @@ export const generateDecisionArtifactPdf = async ({
 
   const content = artifact.content || artifact;
   const typeLabel = readablePdfLabel(artifact.type || 'Decision Result');
-  const title = content?.title || content?.summary?.headline || content?.metric?.label || typeLabel;
+  const baseTitle = content?.title || content?.summary?.headline || content?.metric?.label || typeLabel;
+  let cleanTitle = baseTitle.replace(/^(Decision Intelligence|Decision Output|Decision Result)[:\-\s]*/i, '').trim();
+  const rawTitle = cleanTitle || baseTitle;
+  const title = rawTitle.split(/[\r\n]+/)[0].trim();
 
   const sections = [
     {

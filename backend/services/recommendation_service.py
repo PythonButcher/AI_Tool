@@ -23,6 +23,12 @@ PRIORITY_RANK = {
     "high": 3,
 }
 
+TRUTH_BOUNDARY = "observational_analysis_only"
+FOLLOW_UP_CHECK_LIMITATION = (
+    "This legacy recommendation is an observational follow-up check, not a final "
+    "recommendation, causal finding, optimized action, or autonomous decision."
+)
+
 
 def _priority_from_signal(signal: Dict[str, Any]) -> str:
     severity = signal.get("severity")
@@ -89,7 +95,10 @@ def _build_time_action(metric_ref: Dict[str, Any] | None, time_dimension: Dict[s
     return _chart_action(
         action_type="compare_metric_over_time",
         label=f"Review {metric_ref['label']} over time",
-        description="Use the existing metric + group by chart flow to confirm whether the pattern is persistent or recent.",
+        description=(
+            "Use the existing metric + group by chart flow to inspect whether the observed "
+            "pattern appears across the available periods."
+        ),
         metric_ref=metric_ref,
         group_by=[time_dimension["field"]],
     )
@@ -118,9 +127,9 @@ def _recommendation_from_signal(context: Dict[str, Any], signal: Dict[str, Any],
         direction = signal.get("direction")
         recommendation_type = "investigate"
         title = (
-            f"Break down the {metric_ref['label']} increase"
+            f"Review the {metric_ref['label']} increase by segment"
             if direction == "up"
-            else f"Break down the {metric_ref['label']} decline"
+            else f"Review the {metric_ref['label']} decline by segment"
         )
         actions = []
         if resolved_dimension_ref:
@@ -128,7 +137,10 @@ def _recommendation_from_signal(context: Dict[str, Any], signal: Dict[str, Any],
                 _chart_action(
                     action_type="break_down_metric",
                     label=f"Break {metric_ref['label']} down by {resolved_dimension_ref['label']}",
-                    description="Use the current chart workflow to isolate which segment drove the shift.",
+                    description=(
+                        "Use the current chart workflow to inspect how the observed shift is "
+                        "distributed across the selected segment."
+                    ),
                     metric_ref=metric_ref,
                     group_by=[resolved_dimension_ref["field"]],
                     extra_payload=signal_payload,
@@ -143,24 +155,27 @@ def _recommendation_from_signal(context: Dict[str, Any], signal: Dict[str, Any],
                 _chart_action(
                     action_type="compare_segments",
                     label=f"Compare {metric_ref['label']} by {secondary_dimension['label']}",
-                    description="Use a second simple breakdown if the first segmentation does not isolate the driver cleanly.",
+                    description=(
+                        "Use a second simple breakdown if the first segmentation does not make "
+                        "the observed distribution clear."
+                    ),
                     metric_ref=metric_ref,
                     group_by=[secondary_dimension["field"]],
                     extra_payload=signal_payload,
                 )
             )
         expected_outcome = (
-            "Identify which business segment appears associated with the observed increase."
+            "Review which business segments show the observed increase; the comparison does not identify a cause."
             if direction == "up"
-            else "Identify which business segment appears associated with the observed decline."
+            else "Review which business segments show the observed decline; the comparison does not identify a cause."
         )
         breakdown_suffix = f" by {resolved_dimension_ref['label']}" if resolved_dimension_ref else ""
         summary = (
             f"{signal.get('summary')} Start with a simple breakdown"
-            f"{breakdown_suffix} to find where the observed movement is concentrated."
+            f"{breakdown_suffix} to inspect where the observed movement is concentrated."
         )
     elif signal_type == "anomaly_rate":
-        title = "Isolate where anomalous behavior is clustering"
+        title = "Review where flagged patterns are concentrated"
         recommendation_type = "investigate"
         actions = []
         if resolved_dimension_ref and metric_ref:
@@ -168,7 +183,10 @@ def _recommendation_from_signal(context: Dict[str, Any], signal: Dict[str, Any],
                 _chart_action(
                     action_type="break_down_metric",
                     label=f"Break {metric_ref['label']} down by {resolved_dimension_ref['label']}",
-                    description="Use a simple metric + group by view to see whether anomalies cluster in one segment.",
+                    description=(
+                        "Use a simple metric + group by view to inspect whether flagged patterns "
+                        "are concentrated in one segment."
+                    ),
                     metric_ref=metric_ref,
                     group_by=[resolved_dimension_ref["field"]],
                     extra_payload=signal_payload,
@@ -178,13 +196,17 @@ def _recommendation_from_signal(context: Dict[str, Any], signal: Dict[str, Any],
         if time_action:
             time_action["payload"].update(signal_payload)
             actions.append(time_action)
-        expected_outcome = "Separate possible data quality issues from observed operational changes."
+        expected_outcome = (
+            "Review whether data-quality flags and observed patterns are concentrated in the same "
+            "segments; this does not establish an operational cause."
+        )
         summary = (
-            f"{signal.get('summary')} Use one segmentation view and one time view before treating this as noise or a real business shift."
+            f"{signal.get('summary')} Use one segmentation view and one time view before interpreting "
+            "the pattern as a business change."
         )
     elif signal_type == "dimension_concentration":
         target_dimension_ref = dimension_ref or resolved_dimension_ref or {"label": "the dominant segment", "field": None}
-        title = f"Quantify concentration in {target_dimension_ref['label']}"
+        title = f"Review observed concentration in {target_dimension_ref['label']}"
         recommendation_type = "monitor"
         actions = []
         if metric_ref and target_dimension_ref.get("field"):
@@ -192,7 +214,10 @@ def _recommendation_from_signal(context: Dict[str, Any], signal: Dict[str, Any],
                 _chart_action(
                     action_type="break_down_metric",
                     label=f"Break {metric_ref['label']} down by {target_dimension_ref['label']}",
-                    description="Use the simplest segmentation view to size the dependence on the dominant segment.",
+                    description=(
+                        "Use the simplest segmentation view to quantify the observed share held by "
+                        "the dominant segment."
+                    ),
                     metric_ref=metric_ref,
                     group_by=[target_dimension_ref["field"]],
                     extra_payload=signal_payload,
@@ -202,9 +227,13 @@ def _recommendation_from_signal(context: Dict[str, Any], signal: Dict[str, Any],
         if time_action:
             time_action["payload"].update(signal_payload)
             actions.append(time_action)
-        expected_outcome = "Understand whether concentration appears structural, temporary, or data-limited."
+        expected_outcome = (
+            "Review whether concentration persists across the available slice; this does not prove "
+            "that the pattern is structural or temporary."
+        )
         summary = (
-            f"{signal.get('summary')} Measure how much of {metric_ref['label'] if metric_ref else 'performance'} is concentrated in this segment before choosing any response."
+            f"{signal.get('summary')} Measure how much of {metric_ref['label'] if metric_ref else 'performance'} "
+            "is concentrated in this segment before planning further review."
         )
     else:
         title = "Validate the affected field before relying on it"
@@ -257,6 +286,14 @@ def _recommendation_from_signal(context: Dict[str, Any], signal: Dict[str, Any],
         "actions": actions,
         "expected_outcome": expected_outcome,
         "confidence": rounded(signal.get("confidence") or 0.6),
+        "confidence_scope": "Supporting signal confidence, not an outcome probability or action confidence.",
+        "source_refs": {
+            "source": "decision_signal",
+            "source_path": f"decision_signals[{signal['signal_id']}]",
+            "source_signal_ids": [signal["signal_id"]],
+        },
+        "limitations": [FOLLOW_UP_CHECK_LIMITATION],
+        "truth_boundary": TRUTH_BOUNDARY,
         "created_at": created_at,
     }
 
@@ -320,6 +357,11 @@ def _dedupe_recommendations(recommendations: list[Dict[str, Any]]) -> list[Dict[
         winning = recommendation if _recommendation_rank(recommendation) > _recommendation_rank(existing) else existing
         merged = dict(winning)
         merged["based_on_signal_ids"] = merged_signal_ids
+        source_refs = dict(merged.get("source_refs") or {})
+        source_refs["source"] = "decision_signal"
+        source_refs["source_path"] = "decision_signals"
+        source_refs["source_signal_ids"] = merged_signal_ids
+        merged["source_refs"] = source_refs
         deduped[signature] = merged
 
     return sorted(deduped.values(), key=_recommendation_rank, reverse=True)

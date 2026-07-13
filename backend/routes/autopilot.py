@@ -5,6 +5,7 @@ from flask import Blueprint, jsonify, request, current_app
 
 
 autopilot_bp = Blueprint("autopilot_bp", __name__)
+TRUTH_BOUNDARY = "observational_analysis_only"
 
 
 def _normalize_dataset(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -35,6 +36,8 @@ def _build_node(run_id: str, order: int, node_type: str, label: str, command: st
         "description": description,
         "params": {},
         "position": {"x": 140 + 260 * order, "y": 210},
+        "execution_state": "not_executed",
+        "truth_boundary": TRUTH_BOUNDARY,
     }
 
 
@@ -45,7 +48,7 @@ def generate_autopilot_workflow():
 
     if not dataset_sample:
         current_app.logger.warning("Autopilot requested without a valid dataset payload.")
-        return jsonify({"error": "A dataset is required to run Autopilot."}), 400
+        return jsonify({"error": "A dataset is required to generate an Autopilot workflow template."}), 400
 
     num_rows = len(dataset_sample)
     num_cols = len(dataset_sample[0]) if dataset_sample and isinstance(dataset_sample[0], dict) else 0
@@ -57,33 +60,33 @@ def generate_autopilot_workflow():
             run_id,
             0,
             "SUMMARY",
-            "Executive Summary",
+            "Dataset Overview Step",
             "/summary",
-            f"Generate an overview for {num_rows} rows across {num_cols} fields.",
+            f"Template step for reviewing an overview of the submitted {num_rows}-row, {num_cols}-field dataset preview.",
         ),
         _build_node(
             run_id,
             1,
             "OUTLIERS",
-            "Risk Signals",
+            "Data Quality Review Step",
             "/outliers",
-            "Detect unusual values, rare categories, or missing data patterns.",
+            "Template step for reviewing unusual values, rare categories, or missing-data patterns; no scan has run yet.",
         ),
         _build_node(
             run_id,
             2,
             "CHARTS",
-            "Visual Story",
+            "Visualization Review Step",
             "/charts",
-            "Recommend the most revealing visualization for the dataset sample.",
+            "Template step for selecting an appropriate visualization after reviewing the dataset and analysis question.",
         ),
         _build_node(
             run_id,
             3,
             "INSIGHTS",
-            "Evidence Takeaways",
+            "Evidence Review Step",
             "/insights",
-            "Summarize key findings, review needs, and bounded follow-up checks.",
+            "Template step for reviewing produced findings, limitations, and bounded follow-up checks.",
         ),
     ]
 
@@ -105,10 +108,26 @@ def generate_autopilot_workflow():
     return jsonify(
         {
             "id": f"autopilot-{run_id}",
-            "name": "Autopilot Insight Workflow",
-            "description": "Auto-generated analysis pipeline for summary, anomalies, visuals, and bounded follow-up checks.",
+            "name": "Autopilot Review Workflow Template",
+            "description": (
+                "Generated review-workflow template for summary, data-quality, visualization, and "
+                "evidence-review steps. It does not execute analysis, detect risks, select a chart, "
+                "or make a recommendation."
+            ),
             "category": "Autopilot",
             "nodes": nodes,
             "edges": edges,
+            "workflow_kind": "review_template",
+            "execution_state": "not_executed",
+            "source_refs": {
+                "source": "autopilot_request_dataset_preview",
+                "row_count": num_rows,
+                "column_count": num_cols,
+            },
+            "limitations": [
+                "This endpoint returns a workflow template only; no node has run against the dataset.",
+                "The template does not produce predictions, optimization, causal proof, autonomous decisions, or final recommendations.",
+            ],
+            "truth_boundary": TRUTH_BOUNDARY,
         }
     )

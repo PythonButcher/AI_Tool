@@ -144,3 +144,7 @@ drive_export/
 
 # Superseded local repository map; project_docs/INDEX.md is authoritative
 /ComponentAndModuleIndex_ProjectMap.txt
+
+# Temporary directories
+tmp/
+

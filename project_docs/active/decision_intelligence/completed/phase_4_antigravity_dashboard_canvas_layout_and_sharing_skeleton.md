@@ -1,8 +1,6 @@
-# Future Reference - Antigravity Dashboard Canvas Layout And Sharing Skeleton Handoff
+# Antigravity Dashboard Canvas Layout And Sharing Skeleton Handoff
 
-This file is retained as a deferred dashboard handoff. It is not an active Antigravity prompt.
-
-Automation note: this file is intended for Antigravity's `auto-handoff-execution` skill. The `Goal:` line below is the execution prompt.
+> COMPLETED REFERENCE ONLY: This handoff is not executable and is not part of the default active scan path. It records the completed dashboard canvas and local sharing-skeleton slice; current status and active-gate files override any historical wording below.
 
 Goal: Implement the dashboard canvas layout and sharing skeleton so pinned charts and KPI cards can be arranged, resized, locked, persisted locally, sliced in view mode, and prepared for future sharing without adding real authentication or backend sharing APIs.
 
@@ -18,7 +16,7 @@ Read these files before editing source:
 
 `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md`
 
-`project_docs/active/decision_intelligence/future/phase_4_dashboard_canvas_layout_and_sharing_skeleton_plan.md`
+`project_docs/active/decision_intelligence/completed/phase_4_dashboard_canvas_layout_and_sharing_skeleton_plan.md`
 
 `project_docs/active/contracts/dashboard_canvas_state.md`
 

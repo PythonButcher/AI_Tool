@@ -12,6 +12,20 @@ class DecisionOutputService:
     """Compose an additive AI Chat artifact from existing decision workspace data."""
 
     TRUTH_BOUNDARY = "observational_analysis_only"
+    REQUIRED_EXPORT_SECTION_IDS = (
+        "executive_brief",
+        "dataset_trust",
+        "goal",
+        "drivers",
+        "limits",
+        "breakdowns",
+        "evidence_board",
+        "decision_map_summary",
+        "scenario_compare",
+        "advanced_readiness",
+        "assumptions_unknowns",
+        "truth_boundary",
+    )
     EVIDENCE_STRENGTHS = {"strong", "moderate", "weak", "insufficient"}
     OBSERVATIONAL_LIMITATION = (
         "This evidence is observational only; it is not advice, a causal claim, "
@@ -27,7 +41,6 @@ class DecisionOutputService:
         correction_result: Optional[Dict[str, Any]] = None,
         scenario_preview: Optional[Dict[str, Any]] = None,
         governance_readiness: Optional[Dict[str, Any]] = None,
-        model_evaluation: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         workspace = workspace if isinstance(workspace, dict) else {}
         dataset_trust = dataset_trust if isinstance(dataset_trust, dict) else {}
@@ -37,7 +50,6 @@ class DecisionOutputService:
         governance_readiness = (
             governance_readiness if isinstance(governance_readiness, dict) else None
         )
-        model_evaluation = model_evaluation if isinstance(model_evaluation, dict) else None
 
         frame = DecisionOutputService._build_frame(workspace)
         readiness = DecisionOutputService._build_readiness(workspace)
@@ -52,7 +64,6 @@ class DecisionOutputService:
             decision_readiness=readiness,
             evidence_board=evidence_board,
             governance_readiness=governance_readiness,
-            model_evaluation=model_evaluation,
         )
         advanced_gates = DecisionOutputService._build_advanced_gates(readiness)
         decision_map = DecisionOutputService._build_decision_map(
@@ -68,6 +79,12 @@ class DecisionOutputService:
             workspace_analysis=workspace_analysis,
             evidence_board=evidence_board,
         )
+        source_refs = DecisionOutputService._build_source_refs(
+            workspace=workspace,
+            workspace_analysis=workspace_analysis,
+            correction_result=correction_result,
+            scenario_preview=scenario_preview,
+        )
         export_sections = DecisionOutputService._build_export_sections(
             summary=summary,
             dataset_trust=dataset_trust,
@@ -76,12 +93,8 @@ class DecisionOutputService:
             decision_map=decision_map,
             scenario_compare=scenario_compare,
             readiness=readiness,
-        )
-        source_refs = DecisionOutputService._build_source_refs(
-            workspace=workspace,
-            workspace_analysis=workspace_analysis,
-            correction_result=correction_result,
-            scenario_preview=scenario_preview,
+            advanced_readiness=advanced_readiness,
+            source_refs=source_refs,
         )
         command_center = DecisionOutputService._build_command_center(
             dataset_trust=dataset_trust,
@@ -1052,7 +1065,7 @@ class DecisionOutputService:
         evidence_status = str(evidence_board.get("status") or "not_analyzed")
         scenario_status = str(scenario_compare.get("status") or "not_applicable")
         missing_inputs = DecisionOutputService._list_of_strings(readiness.get("missing_inputs"))
-        export_ready = DecisionOutputService._export_ready(export_sections)
+        export_ready = DecisionOutputService.export_sections_ready(export_sections)
         is_analysis_ready = DecisionOutputService._observational_analysis_ready(readiness)
         allowed_next_checks, disabled_next_checks = DecisionOutputService._build_command_center_checks(
             readiness=readiness,
@@ -1394,9 +1407,18 @@ class DecisionOutputService:
             return "limited"
         return "ready"
 
-    @staticmethod
-    def _export_ready(export_sections: List[Dict[str, Any]]) -> bool:
-        return bool(export_sections) and all(
+    @classmethod
+    def export_sections_ready(cls, export_sections: List[Dict[str, Any]]) -> bool:
+        """Require every canonical backend section before claiming PDF readiness."""
+        if not isinstance(export_sections, list) or not export_sections:
+            return False
+        section_ids = [
+            str(section.get("section_id") or "").strip()
+            for section in export_sections
+            if isinstance(section, dict)
+        ]
+        required_present = set(cls.REQUIRED_EXPORT_SECTION_IDS).issubset(section_ids)
+        return required_present and len(section_ids) == len(set(section_ids)) and all(
             isinstance(section, dict)
             and bool(str(section.get("section_id") or "").strip())
             and bool(str(section.get("title") or "").strip())
@@ -1444,6 +1466,8 @@ class DecisionOutputService:
         decision_map: Dict[str, Any],
         scenario_compare: Dict[str, Any],
         readiness: Dict[str, Any],
+        advanced_readiness: Dict[str, Any],
+        source_refs: Dict[str, Any],
     ) -> List[Dict[str, Any]]:
         # Keep these sections self-contained because the PDF export path renders
         # this backend-owned payload directly instead of re-reading workspace internals.
@@ -1469,10 +1493,31 @@ class DecisionOutputService:
             list(readiness.get("unsupported_capabilities") or [])
             + ["simulation", "optimization", "autonomous_decisioning", "final_recommendation"]
         )
+
+        def export_section(
+            *,
+            section_id: str,
+            title: str,
+            source_path: str,
+            **extra: Any,
+        ) -> Dict[str, Any]:
+            return DecisionOutputService._export_section(
+                section_id=section_id,
+                title=title,
+                source_refs=DecisionOutputService._export_section_source_refs(
+                    section_id=section_id,
+                    source_path=source_path,
+                    source_refs=source_refs,
+                ),
+                truth_boundary=DecisionOutputService.TRUTH_BOUNDARY,
+                **extra,
+            )
+
         return [
-            DecisionOutputService._export_section(
+            export_section(
                 section_id="executive_brief",
-                title="Executive Brief",
+                title="Executive Brief (Observational)",
+                source_path="decision_output.summary",
                 body=summary,
                 keyValues=[
                     {"label": "Readiness", "value": readiness.get("readiness_state")},
@@ -1480,12 +1525,13 @@ class DecisionOutputService:
                 ],
                 items=[
                     "This is a decision-support export from AI Chat, not a final recommendation.",
-                    "The output preserves the current observational-only reliability boundary.",
+                    "The source trace identifies the saved workspace and analysis context behind this brief.",
                 ],
             ),
-            DecisionOutputService._export_section(
+            export_section(
                 section_id="dataset_trust",
                 title="Dataset Trust",
+                source_path="decision_output.dataset_trust",
                 body=(
                     "Dataset Trust summarizes what data powered this AI Chat decision output and where "
                     "the backend could not prove source, freshness, or preparation state."
@@ -1503,17 +1549,22 @@ class DecisionOutputService:
                 items=list(dataset_trust.get("warnings") or []),
                 emptyText="No dataset trust warnings were provided.",
             ),
-            DecisionOutputService._export_section(
+            export_section(
                 section_id="goal",
                 title="Goal",
+                source_path="decision_output.frame.goal",
                 body="The goal is the primary outcome or decision question the rest of this asset is organized around.",
                 cards=[DecisionOutputService._export_frame_card(goal, fallback="Goal")] if goal else [],
                 emptyText="No goal is available in the current decision frame.",
             ),
-            DecisionOutputService._export_section(
+            export_section(
                 section_id="drivers",
                 title="Drivers",
-                body="Drivers are controllable or reviewable inputs connected to the framed goal.",
+                source_path="decision_output.frame.drivers",
+                body=(
+                    "Drivers are declared controllable or reviewable inputs in the decision frame; "
+                    "their relationship to the goal is not established as causal."
+                ),
                 cards=[
                     DecisionOutputService._export_frame_card(driver, fallback=f"Driver {index}")
                     for index, driver in enumerate(drivers, start=1)
@@ -1521,9 +1572,10 @@ class DecisionOutputService:
                 ],
                 emptyText="No drivers are available in the current decision frame.",
             ),
-            DecisionOutputService._export_section(
+            export_section(
                 section_id="limits",
                 title="Limits",
+                source_path="decision_output.frame.limits",
                 body="Limits are guardrails, constraints, or protected outcomes that should bound interpretation.",
                 cards=[
                     DecisionOutputService._export_frame_card(limit, fallback=f"Limit {index}")
@@ -1532,9 +1584,10 @@ class DecisionOutputService:
                 ],
                 emptyText="No limits are available in the current decision frame.",
             ),
-            DecisionOutputService._export_section(
+            export_section(
                 section_id="breakdowns",
                 title="Breakdowns",
+                source_path="decision_output.frame.breakdowns",
                 body="Breakdowns are the segments or dimensions intended for comparing the goal and drivers.",
                 cards=[
                     DecisionOutputService._export_frame_card(breakdown, fallback=f"Breakdown {index}")
@@ -1543,9 +1596,10 @@ class DecisionOutputService:
                 ],
                 emptyText="No breakdown dimensions are available in the current decision frame.",
             ),
-            DecisionOutputService._export_section(
+            export_section(
                 section_id="evidence_board",
                 title="Evidence Board",
+                source_path="decision_output.evidence_board",
                 body=evidence_board.get("summary"),
                 cards=[
                     {
@@ -1574,9 +1628,10 @@ class DecisionOutputService:
                 ]),
                 emptyText="No ranked evidence is available yet. Run observational analysis to populate the Evidence Board.",
             ),
-            DecisionOutputService._export_section(
+            export_section(
                 section_id="decision_map_summary",
-                title="Decision Map Summary",
+                title="Decision Map Summary (Non-Causal)",
+                source_path="decision_output.decision_map",
                 body=decision_map.get("summary"),
                 keyValues=[
                     {"label": "Map Status", "value": decision_map.get("status")},
@@ -1589,9 +1644,10 @@ class DecisionOutputService:
                     "Decision Map edges are not causal proof.",
                 ],
             ),
-            DecisionOutputService._export_section(
+            export_section(
                 section_id="scenario_compare",
-                title="Scenario Compare",
+                title="Scenario Compare (Sensitivity Only)",
+                source_path="decision_output.scenario_compare",
                 body=scenario_compare.get("summary"),
                 keyValues=[
                     {"label": "Status", "value": scenario_compare.get("status")},
@@ -1610,9 +1666,31 @@ class DecisionOutputService:
                 ),
                 emptyText="No scenario projection rows are available for this decision output.",
             ),
-            DecisionOutputService._export_section(
+            export_section(
+                section_id="advanced_readiness",
+                title="Advanced Readiness (Preparation Only)",
+                source_path="decision_output.advanced_readiness",
+                body=advanced_readiness.get("summary"),
+                keyValues=[
+                    {"label": "Overall State", "value": advanced_readiness.get("overall_state")},
+                    {"label": "Supported", "value": (advanced_readiness.get("state_counts") or {}).get("supported")},
+                    {"label": "Limited", "value": (advanced_readiness.get("state_counts") or {}).get("limited")},
+                    {"label": "Blocked", "value": (advanced_readiness.get("state_counts") or {}).get("blocked")},
+                    {"label": "Not Evaluated", "value": (advanced_readiness.get("state_counts") or {}).get("not_evaluated")},
+                    {"label": "Truth Boundary", "value": advanced_readiness.get("truth_boundary") or DecisionOutputService.TRUTH_BOUNDARY},
+                ],
+                cards=[
+                    DecisionOutputService._export_advanced_readiness_card(capability)
+                    for capability in (advanced_readiness.get("capabilities") or [])
+                    if isinstance(capability, dict)
+                ],
+                items=DecisionOutputService._dedupe_strings(advanced_readiness.get("limitations") or []),
+                emptyText="No advanced readiness capability diagnostics are available.",
+            ),
+            export_section(
                 section_id="assumptions_unknowns",
                 title="Assumptions and Unknowns",
+                source_path="decision_output.frame",
                 body="These are the declared assumptions and unresolved information gaps that bound interpretation.",
                 cards=[
                     *[
@@ -1626,9 +1704,10 @@ class DecisionOutputService:
                 ],
                 emptyText="No assumptions or unknowns are available in the current decision frame.",
             ),
-            DecisionOutputService._export_section(
+            export_section(
                 section_id="truth_boundary",
                 title="Truth Boundary",
+                source_path="decision_output.truth_boundary",
                 body=(
                     "This asset is limited to observational decision support. It can organize data, frame "
                     "evidence, and show bounded sensitivity comparisons, but it does not decide for the user."
@@ -1665,6 +1744,35 @@ class DecisionOutputService:
                 continue
             section[key] = value
         return section
+
+    @staticmethod
+    def _export_section_source_refs(
+        *,
+        section_id: str,
+        source_path: str,
+        source_refs: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """Attach immutable source traces without re-reading current datasets."""
+        refs = {
+            "source": "decision_output",
+            "source_path": source_path,
+            "section_id": section_id,
+            "workspace_id": source_refs.get("workspace_id"),
+            "workspace_status": source_refs.get("workspace_status"),
+            "workspace_analysis_present": bool(source_refs.get("workspace_analysis_present")),
+            "truth_boundary": DecisionOutputService.TRUTH_BOUNDARY,
+        }
+        if section_id == "evidence_board":
+            refs["ranked_diagnostic_ids"] = list(source_refs.get("ranked_diagnostic_ids") or [])
+        if section_id == "scenario_compare":
+            refs["scenario_status"] = source_refs.get("scenario_status")
+        if section_id == "executive_brief":
+            refs["summary_source"] = (
+                "workspace_analysis.summary"
+                if source_refs.get("workspace_analysis_present")
+                else "decision_output.readiness"
+            )
+        return refs
 
     @staticmethod
     def _export_frame_card(item: Dict[str, Any], *, fallback: str) -> Dict[str, Any]:
@@ -1710,6 +1818,38 @@ class DecisionOutputService:
             "meta": [
                 {"label": "Type", "value": note_type},
                 {"label": "Status", "value": status},
+            ],
+        }
+
+    @staticmethod
+    def _export_advanced_readiness_card(capability: Dict[str, Any]) -> Dict[str, Any]:
+        capability_name = str(capability.get("capability") or "advanced capability").strip()
+        reasons = [
+            str(item.get("message") or "").strip()
+            for item in (capability.get("reasons") or [])
+            if isinstance(item, dict) and str(item.get("message") or "").strip()
+        ]
+        evidence = [
+            f"{item.get('label')}: {item.get('value')}"
+            for item in (capability.get("evidence") or [])
+            if isinstance(item, dict) and item.get("label") and item.get("value") is not None
+        ]
+        missing = [
+            str(item.get("description") or "").strip().rstrip(" .;")
+            for item in (capability.get("missing_requirements") or [])
+            if isinstance(item, dict) and str(item.get("description") or "").strip()
+        ]
+        body_parts = reasons
+        if evidence:
+            body_parts.append(f"Evidence: {'; '.join(evidence)}.")
+        if missing:
+            body_parts.append(f"Missing requirements: {'; '.join(missing)}.")
+        return {
+            "title": capability_name.replace("_", " ").title(),
+            "body": " ".join(body_parts) or "No readiness explanation was provided.",
+            "meta": [
+                {"label": "State", "value": capability.get("state")},
+                {"label": "Truth Boundary", "value": capability.get("truth_boundary") or DecisionOutputService.TRUTH_BOUNDARY},
             ],
         }
 

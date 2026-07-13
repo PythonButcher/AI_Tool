@@ -51,32 +51,39 @@ export const readablePdfLabel = (key) => sanitizePdfText(key)
 
 export const createAppPdf = ({ title, subtitle }) => {
   const pdf = new jsPDF({ unit: 'pt', format: 'letter', orientation: 'portrait' });
+
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(17);
+  const rawTitle = sanitizePdfText(title || 'Export');
+  const titleLines = pdf.splitTextToSize(rawTitle, PAGE.contentWidth);
+  const logicalTitle = titleLines[0] || 'Export';
+
   pdf.setProperties({
-    title: sanitizePdfText(title),
+    title: logicalTitle,
     subject: 'AI Tool export',
     creator: 'AI Tool',
   });
 
-  pdf.setFillColor(...COLORS.panel);
-  pdf.rect(0, 0, PAGE.width, 82, 'F');
-  pdf.setDrawColor(...COLORS.border);
-  pdf.line(0, 82, PAGE.width, 82);
+  const titleHeight = titleLines.length * 20;
+  const metaY = 38 + titleHeight;
+  const headerHeight = metaY + 24;
 
-  pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(17);
+  pdf.setFillColor(...COLORS.panel);
+  pdf.rect(0, 0, PAGE.width, headerHeight, 'F');
+  pdf.setDrawColor(...COLORS.border);
+  pdf.line(0, headerHeight, PAGE.width, headerHeight);
+
   pdf.setTextColor(...COLORS.ink);
-  pdf.text(sanitizePdfText(title || 'Export'), PAGE.marginX, 38, {
-    maxWidth: PAGE.contentWidth,
-  });
+  pdf.text(titleLines, PAGE.marginX, 38, { lineHeightFactor: 1.15 });
 
   pdf.setFont('helvetica', 'normal');
   pdf.setFontSize(9);
   pdf.setTextColor(...COLORS.muted);
   const meta = `Generated ${formatPdfTimestamp()}${subtitle ? ` | ${sanitizePdfText(subtitle)}` : ''}`;
-  pdf.text(meta, PAGE.marginX, 58, { maxWidth: PAGE.contentWidth });
+  pdf.text(meta, PAGE.marginX, metaY, { maxWidth: PAGE.contentWidth });
   pdf.setTextColor(...COLORS.ink);
 
-  return { pdf, y: 108 };
+  return { pdf, y: headerHeight + 26 };
 };
 
 const addContentPage = (pdf) => {
@@ -84,13 +91,19 @@ const addContentPage = (pdf) => {
   return PAGE.marginY;
 };
 
-export const ensurePdfRoom = (pdf, y, spaceNeeded = 18) => {
+export const ensurePdfRoom = (pdf, y, spaceNeeded = 18, onPageAdd = null) => {
   if (y + spaceNeeded <= PAGE.footerY - 18) return y;
-  return addContentPage(pdf);
+  let nextY = addContentPage(pdf);
+  if (typeof onPageAdd === 'function') {
+    nextY = onPageAdd(pdf, nextY);
+  }
+  return nextY;
 };
 
-export const writePdfHeading = (pdf, text, y) => {
-  let nextY = ensurePdfRoom(pdf, y, 28);
+export const measurePdfHeading = () => 24;
+
+export const writePdfHeading = (pdf, text, y, onPageAdd = null) => {
+  let nextY = ensurePdfRoom(pdf, y, 28, onPageAdd);
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(12.5);
   pdf.setTextColor(...COLORS.ink);
@@ -98,6 +111,18 @@ export const writePdfHeading = (pdf, text, y) => {
   pdf.setDrawColor(...COLORS.border);
   pdf.line(PAGE.marginX, nextY + 7, PAGE.width - PAGE.marginX, nextY + 7);
   return nextY + 24;
+};
+
+export const measurePdfParagraph = (pdf, text, options = {}) => {
+  const safeText = sanitizePdfText(text);
+  if (!safeText) return 0;
+  const indent = options.indent || 0;
+  const fontSize = options.fontSize || 9.5;
+  const lineHeight = options.lineHeight || 13;
+  pdf.setFont('helvetica', options.bold ? 'bold' : 'normal');
+  pdf.setFontSize(fontSize);
+  const lines = pdf.splitTextToSize(safeText, PAGE.contentWidth - indent);
+  return lines.length * lineHeight;
 };
 
 export const writePdfParagraph = (pdf, text, y, options = {}) => {
@@ -114,7 +139,7 @@ export const writePdfParagraph = (pdf, text, y, options = {}) => {
   const lines = pdf.splitTextToSize(safeText, PAGE.contentWidth - indent);
   let nextY = y;
   lines.forEach((line) => {
-    nextY = ensurePdfRoom(pdf, nextY, lineHeight);
+    nextY = ensurePdfRoom(pdf, nextY, lineHeight, options.onPageAdd);
     pdf.text(line, PAGE.marginX + indent, nextY);
     nextY += lineHeight;
   });
@@ -123,42 +148,115 @@ export const writePdfParagraph = (pdf, text, y, options = {}) => {
   return nextY;
 };
 
-export const writePdfKeyValues = (pdf, rows, y) => {
+export const measurePdfKeyValues = (pdf, rows) => {
+  let height = 0;
+  rows
+    .filter((row) => row && sanitizePdfText(row.value))
+    .forEach(({ label, value }) => {
+      const safeLabel = sanitizePdfText(label).toUpperCase();
+      const safeValue = sanitizePdfText(value);
+
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(8.2);
+      const labelLines = pdf.splitTextToSize(safeLabel, 116);
+
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(9.5);
+      const valueLines = pdf.splitTextToSize(safeValue, PAGE.contentWidth - 126);
+
+      const labelHeight = labelLines.length * 11;
+      const valueHeight = valueLines.length * 12;
+      const rowHeight = Math.max(labelHeight, valueHeight);
+
+      height += Math.max(15, rowHeight + 4);
+    });
+  return height > 0 ? height + 2 : 0;
+};
+
+export const writePdfKeyValues = (pdf, rows, y, options = {}) => {
   let nextY = y;
   rows
     .filter((row) => row && sanitizePdfText(row.value))
     .forEach(({ label, value }) => {
-      const valueLines = pdf.splitTextToSize(sanitizePdfText(value), PAGE.contentWidth - 126);
-      nextY = ensurePdfRoom(pdf, nextY, Math.max(18, valueLines.length * 12));
+      const safeLabel = sanitizePdfText(label).toUpperCase();
+      const safeValue = sanitizePdfText(value);
+
+      const labelLines = pdf.splitTextToSize(safeLabel, 116);
+      const valueLines = pdf.splitTextToSize(safeValue, PAGE.contentWidth - 126);
+
+      const labelHeight = labelLines.length * 11;
+      const valueHeight = valueLines.length * 12;
+      const rowHeight = Math.max(labelHeight, valueHeight);
+
+      nextY = ensurePdfRoom(pdf, nextY, Math.max(18, rowHeight + 4), options.onPageAdd);
+
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(8.2);
       pdf.setTextColor(...COLORS.muted);
-      pdf.text(sanitizePdfText(label).toUpperCase(), PAGE.marginX, nextY);
+      pdf.text(labelLines, PAGE.marginX, nextY, { lineHeightFactor: 1.2 });
 
       pdf.setFont('helvetica', 'normal');
       pdf.setFontSize(9.5);
       pdf.setTextColor(...COLORS.ink);
       pdf.text(valueLines, PAGE.marginX + 126, nextY, { lineHeightFactor: 1.25 });
-      nextY += Math.max(15, valueLines.length * 12);
+
+      nextY += Math.max(15, rowHeight + 4);
     });
   pdf.setTextColor(...COLORS.ink);
   return nextY + 2;
 };
 
-export const writePdfList = (pdf, items, y, emptyText = 'None shown.') => {
+export const measurePdfList = (pdf, items, emptyText = 'None shown.') => {
   const visibleItems = Array.isArray(items) ? items.filter((item) => sanitizePdfText(item)) : [];
-  if (!visibleItems.length) return writePdfParagraph(pdf, emptyText, y, { muted: true });
+  if (!visibleItems.length) return measurePdfParagraph(pdf, emptyText, { muted: true });
+
+  let height = 0;
+  visibleItems.forEach((item) => {
+    height += measurePdfParagraph(pdf, `- ${sanitizePdfText(item)}`, { indent: 8 });
+  });
+  return height;
+};
+
+export const writePdfList = (pdf, items, y, emptyText = 'None shown.', options = {}) => {
+  const visibleItems = Array.isArray(items) ? items.filter((item) => sanitizePdfText(item)) : [];
+  if (!visibleItems.length) return writePdfParagraph(pdf, emptyText, y, { muted: true, onPageAdd: options.onPageAdd });
 
   let nextY = y;
   visibleItems.forEach((item) => {
-    nextY = writePdfParagraph(pdf, `- ${sanitizePdfText(item)}`, nextY, { indent: 8 });
+    nextY = writePdfParagraph(pdf, `- ${sanitizePdfText(item)}`, nextY, { indent: 8, onPageAdd: options.onPageAdd });
   });
   return nextY;
 };
 
-export const writePdfCard = (pdf, { title, body, meta = [] }, y) => {
+export const measurePdfCard = (pdf, { title, body, meta = [] }) => {
   const safeTitle = sanitizePdfText(title);
-  const safeBody = sanitizePdfText(body);
+  const rawBody = sanitizePdfText(body);
+  const safeBody = (safeTitle && safeTitle.toLowerCase() === rawBody.toLowerCase()) ? '' : rawBody;
+
+  if (!safeTitle && !safeBody && !meta.length) return 0;
+
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(10);
+  const titleLines = safeTitle ? pdf.splitTextToSize(safeTitle, PAGE.contentWidth - 24) : [];
+
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(9);
+  const bodyLines = safeBody ? pdf.splitTextToSize(safeBody, PAGE.contentWidth - 24) : [];
+
+  pdf.setFontSize(8.5);
+  const metaLines = meta
+    .filter(({ value }) => sanitizePdfText(value))
+    .flatMap(({ label, value }) => pdf.splitTextToSize(`${label}: ${sanitizePdfText(value)}`, PAGE.contentWidth - 24));
+
+  const cardHeight = Math.max(42, 20 + (titleLines.length * 12) + (bodyLines.length * 12) + (metaLines.length * 11));
+  return cardHeight + 8;
+};
+
+export const writePdfCard = (pdf, { title, body, meta = [] }, y, options = {}) => {
+  const safeTitle = sanitizePdfText(title);
+  const rawBody = sanitizePdfText(body);
+  const safeBody = (safeTitle && safeTitle.toLowerCase() === rawBody.toLowerCase()) ? '' : rawBody;
+
   if (!safeTitle && !safeBody && !meta.length) return y;
 
   const titleLines = safeTitle ? pdf.splitTextToSize(safeTitle, PAGE.contentWidth - 24) : [];
@@ -168,17 +266,20 @@ export const writePdfCard = (pdf, { title, body, meta = [] }, y) => {
     .flatMap(({ label, value }) => pdf.splitTextToSize(`${label}: ${sanitizePdfText(value)}`, PAGE.contentWidth - 24));
   const cardHeight = Math.max(42, 20 + (titleLines.length * 12) + (bodyLines.length * 12) + (metaLines.length * 11));
 
-  let nextY = ensurePdfRoom(pdf, y, cardHeight + 8);
+  let nextY = ensurePdfRoom(pdf, y, cardHeight + 8, options.onPageAdd);
   const cardStartY = nextY;
+
   pdf.setFillColor(...COLORS.panel);
   pdf.setDrawColor(...COLORS.border);
-  pdf.roundedRect(PAGE.marginX, nextY - 12, PAGE.contentWidth, cardHeight, 5, 5, 'FD');
+  pdf.roundedRect(PAGE.marginX, cardStartY, PAGE.contentWidth, cardHeight, 5, 5, 'FD');
+
+  nextY = cardStartY + 14;
 
   if (titleLines.length) {
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(10);
     pdf.setTextColor(...COLORS.ink);
-    pdf.text(titleLines, PAGE.marginX + 12, nextY + 2, { lineHeightFactor: 1.2 });
+    pdf.text(titleLines, PAGE.marginX + 12, nextY, { lineHeightFactor: 1.2 });
     nextY += titleLines.length * 12;
   }
 
@@ -186,26 +287,46 @@ export const writePdfCard = (pdf, { title, body, meta = [] }, y) => {
     pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(9);
     pdf.setTextColor(...COLORS.muted);
-    pdf.text(bodyLines, PAGE.marginX + 12, nextY + 4, { lineHeightFactor: 1.25 });
-    nextY += 4 + bodyLines.length * 12;
+    const bodyPadding = titleLines.length ? 2 : 0;
+    pdf.text(bodyLines, PAGE.marginX + 12, nextY + bodyPadding, { lineHeightFactor: 1.25 });
+    nextY += bodyPadding + bodyLines.length * 12;
   }
 
   if (metaLines.length) {
     pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(8.5);
     pdf.setTextColor(...COLORS.ink);
-    pdf.text(metaLines, PAGE.marginX + 12, nextY + 3, { lineHeightFactor: 1.2 });
+    const metaPadding = (titleLines.length || bodyLines.length) ? 2 : 0;
+    pdf.text(metaLines, PAGE.marginX + 12, nextY + metaPadding, { lineHeightFactor: 1.2 });
   }
 
   pdf.setTextColor(...COLORS.ink);
-  return cardStartY + cardHeight + 2;
+  return cardStartY + cardHeight + 8;
 };
 
-export const addPdfImage = (pdf, image, y, { maxHeight = 320, label } = {}) => {
+export const measurePdfImage = (pdf, image, { maxHeight = 320, label } = {}) => {
+  if (!image) return 0;
+  let height = 0;
+  if (label) {
+    height += measurePdfParagraph(pdf, label, { bold: true });
+  }
+
+  const imageWidth = image.width || PAGE.contentWidth;
+  const imageHeight = image.height || maxHeight;
+  const ratio = Math.min(PAGE.contentWidth / imageWidth, maxHeight / imageHeight);
+  const targetHeight = Math.max(1, imageHeight * ratio);
+
+  return height + targetHeight + 18;
+};
+
+export const addPdfImage = (pdf, image, y, options = {}) => {
+  const maxHeight = options.maxHeight || 320;
+  const label = options.label;
   if (!image) return y;
+
   let nextY = y;
   if (label) {
-    nextY = writePdfParagraph(pdf, label, nextY, { bold: true });
+    nextY = writePdfParagraph(pdf, label, nextY, { bold: true, onPageAdd: options.onPageAdd });
   }
 
   const imageWidth = image.width || PAGE.contentWidth;
@@ -216,6 +337,9 @@ export const addPdfImage = (pdf, image, y, { maxHeight = 320, label } = {}) => {
 
   if (nextY + targetHeight > PAGE.footerY - 24) {
     nextY = addContentPage(pdf);
+    if (typeof options.onPageAdd === 'function') {
+      nextY = options.onPageAdd(pdf, nextY);
+    }
   }
 
   const x = PAGE.marginX + (PAGE.contentWidth - targetWidth) / 2;
@@ -348,33 +472,97 @@ export const exportStructuredPdf = ({
 
   sections.forEach((section) => {
     if (!section) return;
-    y = writePdfHeading(pdf, section.title, y);
+
+    const hasItems = Array.isArray(section.items) && section.items.some(i => sanitizePdfText(i));
+    const hasCards = Array.isArray(section.cards) && section.cards.length > 0;
+
+    // 1. Measure total section height
+    let sectionHeight = measurePdfHeading(pdf, section.title);
+    if (section.body) sectionHeight += measurePdfParagraph(pdf, section.body);
+    if (section.keyValues) sectionHeight += measurePdfKeyValues(pdf, section.keyValues);
+    if (hasItems) sectionHeight += measurePdfList(pdf, section.items, null);
+    if (hasCards) {
+      section.cards.forEach((card) => {
+        sectionHeight += measurePdfCard(pdf, card);
+      });
+    }
+    if (!hasItems && !hasCards && section.emptyText && (section.items || section.cards)) {
+      sectionHeight += measurePdfParagraph(pdf, section.emptyText);
+    }
+    if (section.images) {
+      section.images.forEach((image) => {
+        sectionHeight += measurePdfImage(pdf, image, { label: image.label, maxHeight: image.maxHeight });
+      });
+    }
+    sectionHeight += 8;
+
+    const usablePageHeight = PAGE.footerY - PAGE.marginY - 18;
+    const remainingSpace = PAGE.footerY - y - 18;
+
+    // 2. Section Pagination
+    if (sectionHeight <= usablePageHeight && sectionHeight > remainingSpace) {
+      // The section fits cleanly on one page, but not here.
+      pdf.addPage();
+      y = PAGE.marginY;
+    } else if (sectionHeight > usablePageHeight) {
+      // The section will span multiple pages. Ensure at least the heading + first block fit.
+      let firstBlockHeight = measurePdfHeading(pdf, section.title);
+      if (section.body) {
+        firstBlockHeight += measurePdfParagraph(pdf, section.body);
+      } else if (section.keyValues && section.keyValues.length > 0) {
+        firstBlockHeight += measurePdfKeyValues(pdf, section.keyValues);
+      } else if (hasCards) {
+        firstBlockHeight += measurePdfCard(pdf, section.cards[0]);
+      } else if (hasItems) {
+        firstBlockHeight += measurePdfParagraph(pdf, `- ${sanitizePdfText(section.items[0])}`);
+      } else if (!hasItems && !hasCards && section.emptyText) {
+        firstBlockHeight += measurePdfParagraph(pdf, section.emptyText);
+      }
+
+      if (firstBlockHeight > remainingSpace && firstBlockHeight <= usablePageHeight) {
+        pdf.addPage();
+        y = PAGE.marginY;
+      }
+    }
+
+    // 3. Render section with continuation hooks
+    y = writePdfHeading(pdf, section.title, y); // Heading itself does not use onPageAdd
+
+    const onPageAdd = (pdfObj, currentY) => {
+      pdfObj.setFont('helvetica', 'bold');
+      pdfObj.setFontSize(12.5);
+      pdfObj.setTextColor(...COLORS.ink);
+      pdfObj.text(`${sanitizePdfText(section.title)} (continued)`, PAGE.marginX, currentY);
+      pdfObj.setDrawColor(...COLORS.border);
+      pdfObj.line(PAGE.marginX, currentY + 7, PAGE.width - PAGE.marginX, currentY + 7);
+      return currentY + 24;
+    };
 
     if (section.body) {
-      y = writePdfParagraph(pdf, section.body, y);
+      y = writePdfParagraph(pdf, section.body, y, { onPageAdd });
     }
 
     if (section.keyValues) {
-      y = writePdfKeyValues(pdf, section.keyValues, y);
+      y = writePdfKeyValues(pdf, section.keyValues, y, { onPageAdd });
     }
 
-    if (section.items) {
-      y = writePdfList(pdf, section.items, y, section.emptyText);
+    if (hasItems) {
+      y = writePdfList(pdf, section.items, y, null, { onPageAdd });
     }
 
-    if (section.cards) {
-      if (section.cards.length) {
-        section.cards.forEach((card) => {
-          y = writePdfCard(pdf, card, y);
-        });
-      } else if (section.emptyText) {
-        y = writePdfParagraph(pdf, section.emptyText, y, { muted: true });
-      }
+    if (hasCards) {
+      section.cards.forEach((card) => {
+        y = writePdfCard(pdf, card, y, { onPageAdd });
+      });
+    }
+
+    if (!hasItems && !hasCards && section.emptyText && (section.items || section.cards)) {
+      y = writePdfParagraph(pdf, section.emptyText, y, { muted: true, onPageAdd });
     }
 
     if (section.images) {
       section.images.forEach((image) => {
-        y = addPdfImage(pdf, image, y, { label: image.label, maxHeight: image.maxHeight });
+        y = addPdfImage(pdf, image, y, { label: image.label, maxHeight: image.maxHeight, onPageAdd });
       });
     }
 

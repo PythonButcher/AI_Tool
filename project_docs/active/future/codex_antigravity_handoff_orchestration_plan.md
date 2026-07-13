@@ -2,7 +2,7 @@
 
 Created: 2026-07-07
 
-This is a future harness plan, not an active implementation gate. It captures the idea that Codex and Antigravity should be able to carry a phase from backend start through frontend completion and Codex review with minimal user coordination. The user should normally return only when the phase is ready for final acceptance, especially visible browser acceptance that the current project rules reserve for the user.
+This is a deferred harness plan, not an active implementation gate. It captures the idea that Codex and Antigravity should be able to carry a phase from backend start through frontend completion and Codex review with minimal user coordination. The user should normally return only when the phase is ready for final acceptance, especially visible browser acceptance that the current project rules reserve for the user.
 
 ## Idea To Preserve
 

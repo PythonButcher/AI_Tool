@@ -1,6 +1,6 @@
 # Dashboard Canvas State Contract
 
-This document defines the local-first dashboard canvas state for Phase 4 dashboard layout and sharing skeleton work. It is a frontend contract for `chartStudioDashboard:v1`; it does not define a backend API.
+This document defines the existing local-first dashboard canvas state. It is a frontend contract for `chartStudioDashboard:v1`; it does not define a backend API.
 
 The contract is additive. Existing dashboard state and pinned chart/KPI items must continue loading. Missing fields should be normalized in memory and then persisted back to the versioned local storage key without deleting the old `businessMonitoringDashboard` fallback key.
 
