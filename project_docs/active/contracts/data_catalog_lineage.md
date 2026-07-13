@@ -24,7 +24,7 @@ Every governed JSON response includes `governance_readiness`. It has `status` (`
 
 `blocked` always returns HTTP 422 with `error` and `governance_readiness`; no chart, AI result, decision artifact, model, rows, or export body is produced. `warning` permits the requested operation while exposing the remedy. Binary exports place the same signal in `X-Dataset-Governance-Status` and `X-Dataset-Governance-Next-Action` headers.
 
-For Decision Chat requests that pass this gate, the route passes the verified readiness object internally to `decision_output.advanced_readiness`. Prediction diagnostics may cite `governance_readiness.status` and its remedies as source-backed evidence. Caller-supplied internal readiness fields are discarded. A blocked governance result still returns HTTP 422 before any Decision Output or advanced readiness diagnostic is composed.
+For Decision Chat requests that pass this gate, the route passes the verified readiness object internally to `decision_output.advanced_readiness`. Prediction diagnostics may cite `governance_readiness.status` and its remedies as source-backed evidence. This governance result can support preparation but cannot produce a `supported` prediction state because Decision Chat has no trusted dataset-lineage join to a model evaluation. Caller-supplied internal readiness fields are discarded. A blocked governance result still returns HTTP 422 before any Decision Output or advanced readiness diagnostic is composed.
 
 ## Enforcement Points
 
@@ -34,7 +34,7 @@ For Decision Chat requests that pass this gate, the route passes the verified re
 | Cleaning and manual cleaning | Reject candidate output before committing it as cleaned data. |
 | `POST /api/nlp/chart` | Rejects an inline dataset before chart construction. |
 | `/api/decision/*` | Rejects inline or Data Hub datasets before workspace, chat, graph, pipeline, recommendation, and scenario processing. |
-| `POST /api/automl/train` | Runs the governance gate before loading model training code. |
+| `POST /api/automl/train` | Runs the governance gate before loading model training code. A passing gate does not establish model readiness, future performance, or Decision Chat Advanced Readiness. The route reports a bounded single-holdout evaluation separately. |
 | `GET /api/export` | Rejects blocked datasets before building a download. |
 | Data Hub | Stores the policy, exposes `GET /api/datahub/<dataset_id>/governance-readiness`, and prevents blocked row fetches. |
 | Legacy `/ai` and `/ai_cmd` | Returns a warning when no structured dataset is supplied; blocks a structured dataset that fails readiness. |

@@ -23,7 +23,7 @@ This is the top-level routing file. Use it to find the smallest current document
 | Work on dashboard canvas local state | `project_docs/active/contracts/dashboard_canvas_state.md` |
 | Work on dataset governance and lineage | `project_docs/active/contracts/data_catalog_lineage.md` |
 | Prepare or review frontend-agent handoffs | `project_docs/active/ai_hand_off/README.md` |
-| Review future product-cycle memory | `project_docs/active/decision_intelligence/future/data_foundation_cycle_after_current_phases_plan.md` |
+| Review deferred planning | `project_docs/active/future/README.md` |
 | Keep Codex runs efficient | `project_docs/active/codex_harness_engineering.md` |
 | Improve or reuse the agent harness | `project_docs/active/agent_harness/README.md` |
 | Review cleanup/pruning candidates | `project_docs/active/reviews/project_pruning_recommendations.md` |

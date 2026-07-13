@@ -22,13 +22,13 @@ The Decisions window is no longer the required continuation path. Its future rol
 | Dashboard canvas state contract | `../contracts/dashboard_canvas_state.md` |
 | Frontend ownership rule | `../rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md` |
 | Completed AI Chat emergency overhaul | `completed/ai_chat_emergency_overhaul_action_plan.md` |
-| Future login and context-engineering idea | `future/context_engineering_and_login_memory_plan.md` |
+| Deferred planning hub | `../future/README.md` |
 
-The Evidence-To-Action Workflow plan and handoffs are complete and retained under `completed/`. The dashboard canvas layout and sharing skeleton plan is deferred under `future/` and is not the current active gate. The Saved Decision Library Upgrade is now the current active implementation gate. The active phase files live only under `active_gate/`. The current status file plus `active_gate/README.md` are authoritative for the active gate.
+The Evidence-To-Action Workflow and dashboard canvas records are complete and retained under `completed/`. Product Truth Pruning And Executive Export Pack is the current active implementation gate. The active phase files live only under `active_gate/`. The current status file plus `active_gate/README.md` are authoritative for the active gate.
 
 ## Future Ideas
 
-Future planning notes live in `future/`. These files preserve ideas that are not current gates and should not be implemented until the active status file or user direction promotes them into an approved slice.
+Future planning notes live in `../future/`. These files preserve ideas that are not current gates and should not be implemented until the active status file or user direction promotes them into an approved slice.
 
 ## Completed Reference
 
@@ -48,6 +48,8 @@ Completed plans and handoffs are in `completed/`. Do not scan them by default.
 | `completed/phase_5_gemini_ai_chat_decision_command_center.md` | Completed AI Chat Decision Command Center frontend handoff |
 | `completed/phase_3_charting_slicer_backbone_plan.md` | Completed charting and slicer backbone plan |
 | `completed/phase_3_antigravity_charting_slicer_ui_handoff.md` | Completed charting slicer frontend handoff |
+| `completed/phase_4_dashboard_canvas_layout_and_sharing_skeleton_plan.md` | Completed dashboard canvas plan |
+| `completed/phase_4_antigravity_dashboard_canvas_layout_and_sharing_skeleton.md` | Completed dashboard canvas frontend handoff |
 | `completed/antigravity_chart_color_picker_handoff.md` | Completed chart color picker frontend handoff |
 | `completed/phase_6_evidence_to_action_workflow_plan.md` | Completed Evidence-To-Action workflow plan |
 | `completed/codex_evidence_to_action_workflow_goal.md` | Completed Evidence-To-Action backend goal |

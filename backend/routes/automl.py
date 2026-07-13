@@ -47,7 +47,7 @@ def train_automl():
     """
     Endpoint to trigger AutoML training.
     Expects JSON payload with:
-    - target_column: The column to predict.
+    - target_column: The column used as the target for a local train/test evaluation.
     - test_size: (Optional) Ratio for test split.
     - dataset: (Optional) dataset payload from frontend state.
     """

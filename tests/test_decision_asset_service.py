@@ -8,11 +8,12 @@ from flask import Flask
 from backend.db import backend_db
 from backend.routes.decision import decision_bp
 from backend.services.decision_asset_service import DecisionAssetService
+from backend.services.decision_output_service import DecisionOutputService
 
 
 def decision_output_fixture():
     """Return a contract-shaped decision output without dataset rows or chat text."""
-    return {
+    output = {
         "type": "decision_output",
         "render_hint": "decision_output",
         "inspectable": True,
@@ -63,7 +64,7 @@ def decision_output_fixture():
             "schema_version": "di_command_center_v1",
             "surface": "ai_chat_decision_command_center",
             "status": "limited",
-            "section_order": ["executive_brief"],
+            "section_order": list(DecisionOutputService.REQUIRED_EXPORT_SECTION_IDS),
             "stale_state": "current",
             "rerun_state": {
                 "status": "analysis_not_run",
@@ -94,8 +95,8 @@ def decision_output_fixture():
             "export_readiness": {
                 "ready": True,
                 "status": "ready",
-                "section_count": 1,
-                "section_order": ["executive_brief"],
+                "section_count": len(DecisionOutputService.REQUIRED_EXPORT_SECTION_IDS),
+                "section_order": list(DecisionOutputService.REQUIRED_EXPORT_SECTION_IDS),
                 "reason": "Backend export_sections are ready for the AI Chat decision PDF.",
             },
             "limitations": [
@@ -127,6 +128,25 @@ def decision_output_fixture():
         },
         "truth_boundary": "observational_analysis_only",
     }
+    advanced = output["advanced_readiness"]
+    output["export_sections"] = [
+        {
+            "section_id": section_id,
+            "title": section_id.replace("_", " ").title(),
+            "summary": (
+                advanced["summary"]
+                if section_id == "advanced_readiness"
+                else f"Saved {section_id.replace('_', ' ')} section."
+            ),
+            "body": (
+                advanced["summary"]
+                if section_id == "advanced_readiness"
+                else f"Saved {section_id.replace('_', ' ')} section."
+            ),
+        }
+        for section_id in DecisionOutputService.REQUIRED_EXPORT_SECTION_IDS
+    ]
+    return output
 
 
 def graph_state_fixture():
@@ -181,6 +201,10 @@ class DecisionAssetApiTests(unittest.TestCase):
         self.assertEqual(saved["lifecycle_state"], "active")
         self.assertIn("immutable observational snapshot", saved["snapshot_notice"])
         self.assertEqual(saved["decision_output"], decision_output)
+        self.assertEqual(
+            saved["decision_output"]["advanced_readiness"],
+            decision_output["advanced_readiness"],
+        )
         self.assertNotIn("graph_state", saved)
 
         conn = backend_db.get_db_connection()
@@ -223,8 +247,8 @@ class DecisionAssetApiTests(unittest.TestCase):
             {
                 "ready": True,
                 "source": "saved_decision_asset_snapshot",
-                "section_count": 1,
-                "section_order": ["executive_brief"],
+                "section_count": len(DecisionOutputService.REQUIRED_EXPORT_SECTION_IDS),
+                "section_order": list(DecisionOutputService.REQUIRED_EXPORT_SECTION_IDS),
                 "endpoint": "GET /api/decision/assets/<asset_id>/export",
             },
         )
@@ -232,6 +256,22 @@ class DecisionAssetApiTests(unittest.TestCase):
         detail = self.client.get(f"/api/decision/assets/{saved['asset_id']}")
         self.assertEqual(detail.status_code, 200)
         self.assertEqual(detail.get_json(), saved)
+
+    def test_saved_export_readiness_requires_all_canonical_sections(self):
+        incomplete_output = decision_output_fixture()
+        incomplete_output["export_sections"] = [
+            section
+            for section in incomplete_output["export_sections"]
+            if section["section_id"] != "advanced_readiness"
+        ]
+
+        response = self.client.post(
+            "/api/decision/assets",
+            json={"decision_output": incomplete_output},
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertFalse(response.get_json()["snapshot_export"]["ready"])
 
     def test_list_is_newest_first_and_title_falls_back_to_decision_output(self):
         first = self.client.post(
@@ -325,14 +365,14 @@ class DecisionAssetApiTests(unittest.TestCase):
             "status": "analyzed",
             "items": [{"source_diagnostic_id": "diagnostic_margin"}],
         }
-        second_output["export_sections"].append(
-            {
-                "section_id": "evidence_board",
-                "title": "Evidence Board",
-                "summary": "One saved diagnostic is available.",
-                "body": "One saved diagnostic is available.",
-            }
+        evidence_section = next(
+            section for section in second_output["export_sections"]
+            if section["section_id"] == "evidence_board"
         )
+        evidence_section.update({
+            "summary": "One saved diagnostic is available.",
+            "body": "One saved diagnostic is available.",
+        })
         second = self.client.post(
             "/api/decision/assets",
             json={
@@ -353,6 +393,11 @@ class DecisionAssetApiTests(unittest.TestCase):
         self.assertEqual(export_payload["schema_version"], "di_decision_asset_export_v1")
         self.assertEqual(export_payload["export_source"], "saved_decision_asset_snapshot")
         self.assertEqual(export_payload["export_sections"], second_output["export_sections"])
+        saved_advanced = next(
+            section for section in export_payload["export_sections"]
+            if section["section_id"] == "advanced_readiness"
+        )
+        self.assertEqual(saved_advanced["body"], second_output["advanced_readiness"]["summary"])
         self.assertEqual(export_payload["dataset_trust"]["dataset"]["dataset_name"], "Margin Workbook")
         self.assertIn("immutable observational snapshot", export_payload["snapshot_notice"])
 
@@ -372,7 +417,10 @@ class DecisionAssetApiTests(unittest.TestCase):
         self.assertIn("live_saved_asset_refresh", body["unsupported_capabilities"])
         self.assertEqual(
             body["differences"]["export_section_counts"],
-            {first["asset_id"]: 1, second["asset_id"]: 2},
+            {
+                first["asset_id"]: len(DecisionOutputService.REQUIRED_EXPORT_SECTION_IDS),
+                second["asset_id"]: len(DecisionOutputService.REQUIRED_EXPORT_SECTION_IDS),
+            },
         )
 
     def test_missing_asset_returns_404(self):

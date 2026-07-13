@@ -135,7 +135,7 @@ Phase 3 of AI Chat Decision Output Unification adds a backend-owned `decision_ou
 | `advanced_readiness` | `Advanced Readiness` | Yes | Source-backed readiness diagnostics for prediction, optimization, causal analysis, and automated decisioning. This evaluates prerequisites only and does not run or enable an advanced capability. |
 | `advanced_gates` | `object[]` | Yes | Unsupported or gated capabilities such as simulation, optimization, autonomous decisioning, and final recommendation with backend reasons. |
 | `command_center` | `Decision Output Command Center` | Yes | AI Chat-native command surface composed from existing `decision_output` truth. It supplies display order, stale or rerun state, allowed next checks, disabled next checks with reasons, export readiness, limitations, and source refs without changing artifact type or export semantics. |
-| `export_sections` | `object[]` | Yes | Backend-owned PDF-ready sections for Executive Brief, Dataset Trust, Goal, Drivers, Limits, Breakdowns, Evidence Board, Decision Map Summary, Scenario Compare, Assumptions and Unknowns, and Truth Boundary. |
+| `export_sections` | `object[]` | Yes | Backend-owned PDF-ready sections for Executive Brief, Dataset Trust, Goal, Drivers, Limits, Breakdowns, Evidence Board, Decision Map Summary, Scenario Compare, Advanced Readiness, Assumptions and Unknowns, and Truth Boundary. |
 | `source_refs` | `object` | Yes | Trace refs back to workspace ID/status, analysis presence, ranked diagnostic IDs, correction status, and scenario status. |
 | `truth_boundary` | `string` | Yes | Current value is `observational_analysis_only`. |
 
@@ -147,7 +147,7 @@ Each export section includes:
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
-| `section_id` | `string` | Yes | Stable section identifier. Current order is `executive_brief`, `dataset_trust`, `goal`, `drivers`, `limits`, `breakdowns`, `evidence_board`, `decision_map_summary`, `scenario_compare`, `assumptions_unknowns`, and `truth_boundary`. |
+| `section_id` | `string` | Yes | Stable section identifier. Current order is `executive_brief`, `dataset_trust`, `goal`, `drivers`, `limits`, `breakdowns`, `evidence_board`, `decision_map_summary`, `scenario_compare`, `advanced_readiness`, `assumptions_unknowns`, and `truth_boundary`. |
 | `title` | `string` | Yes | Human-readable section title. |
 | `summary` | `string` | Yes | Same content as `body`, kept for compatibility with older clients that used summary-style section data. |
 | `body` | `string` | Yes | Paragraph rendered by the current PDF exporter. This must be populated for every section. |
@@ -155,8 +155,16 @@ Each export section includes:
 | `items` | `string[]` | No | Optional bullet text for warnings, limitations, assumptions, and boundary notes. |
 | `cards` | `object[]` | No | Optional titled detail cards for Goal, Drivers, Limits, Breakdowns, Evidence Board items, Scenario Compare projection rows, Assumptions, and Unknowns. |
 | `emptyText` | `string` | No | Fallback text when a section has no cards or items. |
+| `source_refs` | `object` | Yes for current live sections | Immutable trace to the decision-output source path, workspace context, and applicable evidence or scenario IDs. Saved assets preserve this trace as part of their snapshot. |
+| `truth_boundary` | `string` | Yes for current live sections | Current value is `observational_analysis_only`. |
+
+The `advanced_readiness` export section is built from `decision_output.advanced_readiness`. It carries the overall state and state counts, capability states, backend reasons, safe evidence summaries, missing requirements, limitations, and the observational truth boundary. The frontend must render this section rather than reconstructing readiness from unrelated fields.
+
+Live and saved export readiness is true only when every canonical backend section is present once and every section has a non-empty ID, title, and body. A non-empty partial section list is not export-ready.
 
 Export sections must read as a shareable AI Chat decision asset. They must not present final recommendations, optimization, causal proof, simulation, prediction certainty, or autonomous decisioning. The Truth Boundary section must explicitly state the observational-only limitation and unsupported capabilities.
+
+Current live section labels preserve their stable `section_id`s while qualifying important boundaries for executive readers: the Executive Brief is observational, the Decision Map is non-causal, Scenario Compare is sensitivity-only, and Advanced Readiness is preparation-only. Clients must retain the backend-provided title and must not remove those qualifiers.
 
 #### Decision Output Frame
 
@@ -244,17 +252,17 @@ Unavailable scenario data is not fabricated. If no preview is attached, the prev
 
 #### Advanced Readiness
 
-`decision_output.advanced_readiness` is the backend-owned ML trust-gate contract. It explains whether the current data, semantics, governance result, observational evidence, and trusted model evaluation are sufficient to attempt an advanced workflow. It does not perform prediction, optimization, causal effect estimation, simulation, or automated decisioning.
+`decision_output.advanced_readiness` is the backend-owned ML trust-gate contract. It explains whether the current data, semantics, route-verified governance result, and observational evidence are sufficient to prepare for a separately approved advanced workflow. It does not perform prediction, optimization, causal effect estimation, simulation, or automated decisioning.
 
-The current schema version is `di_advanced_readiness_v1`. Valid readiness states are `supported`, `limited`, `blocked`, and `not_evaluated`. `supported` means the named prerequisites have source-backed evidence; it is not a performance or outcome guarantee. `limited` means preparation may continue but a required validation step is absent. `blocked` means a prerequisite or runtime capability is missing. `not_evaluated` means the backend lacks enough context to assess readiness honestly.
+The current schema version is `di_advanced_readiness_v1`. Live Decision Chat emits `limited`, `blocked`, or `not_evaluated`. `limited` means preparation may continue but a required validation step is absent. `blocked` means a prerequisite or runtime capability is missing. `not_evaluated` means the backend lacks enough context to assess readiness honestly. `supported` is reserved for compatibility in `state_counts` and remains zero; the live product does not yet bind a trusted model evaluation to the exact governed dataset used by a Decision Output.
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
 | `schema_version` | `string` | Yes | Current value is `di_advanced_readiness_v1`. |
-| `overall_state` | `string` | Yes | Conservative rollup. Mixed supported or limited and blocked capabilities roll up to `limited`. |
+| `overall_state` | `string` | Yes | Conservative rollup: `limited`, `blocked`, or `not_evaluated`. Mixed limited and blocked capabilities roll up to `limited`. |
 | `summary` | `string` | Yes | Plain-language count and review instruction. |
 | `capabilities` | `Advanced Readiness Capability[]` | Yes | Exactly one item each for `prediction`, `optimization`, `causal_analysis`, and `automated_decisioning`. |
-| `state_counts` | `object` | Yes | Counts for `supported`, `limited`, `blocked`, and `not_evaluated`. |
+| `state_counts` | `object` | Yes | Counts for `supported`, `limited`, `blocked`, and `not_evaluated`. `supported` is retained as a compatibility counter and is currently always `0`. |
 | `limitations` | `string[]` | Yes | Global reminders that readiness is not execution or an outcome guarantee. |
 | `truth_boundary` | `string` | Yes | Current value is `observational_analysis_only`. |
 
@@ -263,14 +271,14 @@ Advanced Readiness Capability fields:
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
 | `capability` | `string` | Yes | `prediction`, `optimization`, `causal_analysis`, or `automated_decisioning`. |
-| `state` | `string` | Yes | `supported`, `limited`, `blocked`, or `not_evaluated`. |
+| `state` | `string` | Yes | Live values are `limited`, `blocked`, or `not_evaluated`. |
 | `reasons` | `object[]` | Yes | Stable `code` and plain-language `message` entries explaining the classification. |
 | `evidence` | `object[]` | Yes | Safe evidence entries with `code`, `label`, `value`, and exact backend `source_path`. No raw dataset values are included. |
-| `missing_requirements` | `object[]` | Yes | `requirement_id` and plain-language `description` entries. Empty only when the capability is supported. |
+| `missing_requirements` | `object[]` | Yes | `requirement_id` and plain-language `description` entries describing what prevents stronger readiness. |
 | `allowed_next_actions` | `object[]` | Yes | Safe preparation or review actions with `action_id`, `label`, and `description`. These identifiers do not authorize unsupported execution. |
 | `truth_boundary` | `string` | Yes | Current value is `observational_analysis_only`. |
 
-Prediction readiness reuses Dataset Trust row count and semantic readiness, the decision goal metric binding, route-verified `governance_readiness`, the ML runtime minimum of ten non-null target rows, and an optional trusted backend model evaluation. It is `limited` when data and target preparation can proceed but governance or model validation evidence is absent. It is `supported` only when governance has a verified `ready` or `warning` result and trusted model evidence has `status: validated`, a run ID, a matching target column, and non-empty holdout metrics.
+Prediction readiness reuses Dataset Trust row count and semantic readiness, the decision goal metric binding, route-verified `governance_readiness`, and the ML runtime minimum of ten dataset rows. It is `limited` when data and target preparation can proceed but governance or target-matched model validation evidence is absent. Existing AutoML responses are not consumed as Advanced Readiness evidence because Decision Chat has no trusted dataset-lineage join to prove that a model run belongs to the exact dataset snapshot in the Decision Output.
 
 Optimization remains `blocked` while `readiness.capability_state.optimization` is unsupported. Causal analysis remains `blocked` while Evidence Board output is observational and there is no validated causal identification method. Automated decisioning remains `blocked` while `readiness.capability_state.autonomous_decisioning` is unsupported and human approval is required.
 
@@ -852,7 +860,7 @@ Represents a high-level summary of what matters in a dataset or resolved slice.
 
 ## Recommendation
 
-Represents a suggested follow-up check derived from one or more decision signals. The legacy field name remains `Recommendation` for API compatibility, but current payloads are observational review aids, not final recommendations, optimized actions, or autonomous decisions.
+Represents a suggested follow-up check derived from one or more decision signals. The legacy field name remains `Recommendation` for API compatibility, but current payloads are observational review aids, not final recommendations, optimized actions, causal findings, or autonomous decisions.
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -869,6 +877,10 @@ Represents a suggested follow-up check derived from one or more decision signals
 | `actions` | `object[]` | Yes | Structured next-check hints |
 | `expected_outcome` | `string` | Yes | High-level review result to look for; this is not a promised business outcome |
 | `confidence` | `number` | Yes | `0.0` to `1.0` |
+| `confidence_scope` | `string` | Yes for current runtime output | Explains that `confidence` reflects supporting signal evidence, not an outcome probability or action confidence. |
+| `source_refs` | `object` | Yes for current runtime output | Trace to the supporting DecisionSignal source and its stable signal ID. |
+| `limitations` | `string[]` | Yes for current runtime output | Explicit follow-up-check boundary, including that the object is not a final recommendation or causal finding. |
+| `truth_boundary` | `string` | Yes for current runtime output | Current value is `observational_analysis_only`. |
 | `created_at` | `string` | Yes | ISO timestamp |
 
 ### `actions` item schema

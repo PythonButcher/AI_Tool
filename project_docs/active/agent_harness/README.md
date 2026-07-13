@@ -20,7 +20,7 @@ Use this folder when the task is about making agents safer, faster, easier to re
 
 Harness changes must make existing rules easier to follow. They must not weaken ownership boundaries, skip active Markdown review, edit any `GEMINI.md` file, or add broad automation that silently changes source files.
 
-For Decision Intelligence, harness changes must preserve the active-gate model: one active phase folder, completed work under `completed/`, deferred ideas under `future/`, old history under `archive/`, and frontend-agent prompts under `ai_hand_off/` only when a frontend agent is truly next.
+For Decision Intelligence, harness changes must preserve the active-gate model: one active phase folder, completed work under `completed/`, deferred ideas in the shared `project_docs/active/future/` hub, old history under `archive/`, and frontend-agent prompts under `ai_hand_off/` only when a frontend agent is truly next.
 
 ## When To Use This Folder
 
@@ -36,11 +36,11 @@ How should future projects copy this repo's agent setup without copying Decision
 
 ## Future Plans
 
-Future harness planning notes live in `future/`. They preserve ideas that are not current gates and should not be implemented until the active status file or user direction promotes them into an approved slice.
+Future harness planning notes live in `../future/`. They preserve ideas that are not current gates and should not be implemented until the active status file or user direction promotes them into an approved slice.
 
 Current future plan:
 
-`future/codex_antigravity_handoff_orchestration_plan.md` - planned orchestration layer for Codex and Antigravity phase handoffs, review loops, and user acceptance gates.
+`../future/codex_antigravity_handoff_orchestration_plan.md` - planned orchestration layer for Codex and Antigravity phase handoffs, review loops, and user acceptance gates.
 
 ## Validation
 

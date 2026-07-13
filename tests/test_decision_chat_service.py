@@ -4,6 +4,7 @@ from flask import Flask
 
 from backend.routes.decision import decision_bp
 from backend.services.decision_output_service import DecisionOutputService
+from backend.utils.global_state import set_trained_model
 
 
 DATASET = [
@@ -185,6 +186,26 @@ class DecisionChatApiTests(unittest.TestCase):
         app.register_blueprint(decision_bp)
         self.client = app.test_client()
 
+    @staticmethod
+    def _expanded_dataset():
+        """Return enough distinct rows to clear the preparation row gate."""
+        rows = []
+        for cycle in range(3):
+            for source_row in DATASET:
+                row = dict(source_row)
+                row["Revenue"] += cycle
+                row["Marketing Spend"] += cycle
+                rows.append(row)
+        return rows
+
+    @staticmethod
+    def _prediction_from_response(response):
+        advanced = response.get_json()["decision_output"]["advanced_readiness"]
+        return advanced, next(
+            item for item in advanced["capabilities"]
+            if item["capability"] == "prediction"
+        )
+
     def test_turn_route_builds_chart_artifact_for_visual_query(self):
         response = self.client.post(
             "/api/decision/chat/turns",
@@ -325,6 +346,7 @@ class DecisionChatApiTests(unittest.TestCase):
         advanced_readiness = decision_output["advanced_readiness"]
         self.assertEqual(advanced_readiness["schema_version"], "di_advanced_readiness_v1")
         self.assertEqual(advanced_readiness["truth_boundary"], "observational_analysis_only")
+        self.assertEqual(advanced_readiness["state_counts"]["supported"], 0)
         advanced_by_capability = {
             item["capability"]: item for item in advanced_readiness["capabilities"]
         }
@@ -378,6 +400,7 @@ class DecisionChatApiTests(unittest.TestCase):
         self.assertFalse(disabled_evidence["enabled"])
         self.assertEqual(disabled_evidence["disabled_reason"], disabled_evidence["reason"])
         self.assertEqual(disabled_evidence["source_refs"]["source"], "evidence_board")
+
         self.assertEqual(disabled_evidence["truth_boundary"], "observational_analysis_only")
         self.assertEqual(command_center["truth_boundary"], "observational_analysis_only")
         self.assertTrue(decision_output["export_sections"])
@@ -394,6 +417,7 @@ class DecisionChatApiTests(unittest.TestCase):
                 "evidence_board",
                 "decision_map_summary",
                 "scenario_compare",
+                "advanced_readiness",
                 "assumptions_unknowns",
                 "truth_boundary",
             ],
@@ -402,8 +426,51 @@ class DecisionChatApiTests(unittest.TestCase):
             self.assertTrue(section["title"])
             self.assertTrue(section["body"])
             self.assertEqual(section["summary"], section["body"])
+            self.assertEqual(section["truth_boundary"], "observational_analysis_only")
+            self.assertEqual(section["source_refs"]["source"], "decision_output")
+            self.assertEqual(section["source_refs"]["section_id"], section["section_id"])
+            self.assertTrue(section["source_refs"]["source_path"].startswith("decision_output."))
+
+        self.assertEqual(export_sections[0]["title"], "Executive Brief (Observational)")
+        self.assertEqual(
+            next(section for section in export_sections if section["section_id"] == "decision_map_summary")["title"],
+            "Decision Map Summary (Non-Causal)",
+        )
+        self.assertEqual(
+            next(section for section in export_sections if section["section_id"] == "scenario_compare")["title"],
+            "Scenario Compare (Sensitivity Only)",
+        )
 
         export_by_id = {section["section_id"]: section for section in export_sections}
+        advanced_export = export_by_id["advanced_readiness"]
+        self.assertEqual(advanced_export["body"], advanced_readiness["summary"])
+        advanced_values = {row["label"]: row["value"] for row in advanced_export["keyValues"]}
+        self.assertEqual(advanced_values["Overall State"], advanced_readiness["overall_state"])
+        self.assertEqual(advanced_values["Blocked"], advanced_readiness["state_counts"]["blocked"])
+        self.assertEqual(len(advanced_export["cards"]), len(advanced_readiness["capabilities"]))
+        prediction_card = next(
+            card for card in advanced_export["cards"]
+            if card["title"] == "Prediction"
+        )
+        prediction_source = advanced_by_capability["prediction"]
+        self.assertIn(prediction_source["reasons"][0]["message"], prediction_card["body"])
+        self.assertIn("Dataset rows: 4", prediction_card["body"])
+        self.assertIn(
+            prediction_source["missing_requirements"][0]["description"].rstrip(" .;"),
+            prediction_card["body"],
+        )
+        self.assertNotIn("..", prediction_card["body"])
+        self.assertNotIn(".;", prediction_card["body"])
+        self.assertEqual(
+            prediction_card["meta"][1]["value"],
+            prediction_source["truth_boundary"],
+        )
+        self.assertTrue(DecisionOutputService.export_sections_ready(export_sections))
+        self.assertFalse(
+            DecisionOutputService.export_sections_ready(
+                [section for section in export_sections if section["section_id"] != "advanced_readiness"]
+            )
+        )
         dataset_key_values = {row["label"]: row["value"] for row in export_by_id["dataset_trust"]["keyValues"]}
         self.assertEqual(dataset_key_values["Dataset"], "Q1 Sales")
         self.assertEqual(dataset_key_values["Rows"], len(DATASET))
@@ -433,6 +500,140 @@ class DecisionChatApiTests(unittest.TestCase):
         self.assertNotIn("command_center", [section["section_id"] for section in export_sections])
         self.assertEqual(body["artifacts"][1]["source"], "decision_output")
         self.assertEqual(body["artifacts"][1]["dataset_trust"], body["dataset_trust"])
+
+    def test_live_decision_turn_reports_prediction_limited_without_model_lineage(self):
+        response = self.client.post(
+            "/api/decision/chat/turns",
+            json={
+                "dataset": self._expanded_dataset(),
+                "semantic_model": SEMANTIC_MODEL,
+                "user_message": "How should we grow revenue next quarter using marketing spend by channel while protecting gross margin?",
+                "conversation_history": [],
+                "session_state": {},
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        advanced_readiness, prediction = self._prediction_from_response(response)
+        self.assertEqual(prediction["state"], "limited")
+        self.assertEqual(prediction["reasons"][0]["code"], "model_validation_not_available")
+        self.assertEqual(advanced_readiness["state_counts"]["supported"], 0)
+
+    def test_live_decision_turn_reports_prediction_not_evaluated_without_dataset(self):
+        initial_response = self.client.post(
+            "/api/decision/chat/turns",
+            json={
+                "dataset": DATASET,
+                "semantic_model": SEMANTIC_MODEL,
+                "user_message": "How should we grow revenue next quarter using marketing spend by channel while protecting gross margin?",
+                "conversation_history": [],
+                "session_state": {},
+            },
+        )
+        self.assertEqual(initial_response.status_code, 200)
+
+        # A later action can resume a valid draft after its dataset context is
+        # no longer available. The backend must display not-evaluated rather
+        # than treating stale workspace metadata as usable model evidence.
+        workspace = dict(initial_response.get_json()["session_state"]["draft_workspace"])
+        workspace.pop("dataset", None)
+        response = self.client.post(
+            "/api/decision/chat/actions",
+            json={
+                "action": "show_blockers",
+                "semantic_model": SEMANTIC_MODEL,
+                "session_state": {"draft_workspace": workspace},
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        advanced_readiness = response.get_json()["decision_output"]["advanced_readiness"]
+        prediction = next(
+            item for item in advanced_readiness["capabilities"]
+            if item["capability"] == "prediction"
+        )
+        self.assertEqual(prediction["state"], "not_evaluated")
+        self.assertEqual(prediction["reasons"][0]["code"], "dataset_not_available")
+        self.assertEqual(advanced_readiness["state_counts"]["supported"], 0)
+
+    def test_backend_model_for_different_dataset_does_not_support_prediction(self):
+        set_trained_model(object(), {
+            "run_id": "run_other_dataset",
+            "dataset_id": "other_dataset",
+            "target_column": "Revenue",
+            "metrics": {"r2": 0.8},
+        })
+        try:
+            response = self.client.post(
+                "/api/decision/chat/turns",
+                json={
+                    "dataset": self._expanded_dataset(),
+                    "dataset_ref": {"source": "active", "dataset_id": "sales_q1"},
+                    "semantic_model": SEMANTIC_MODEL,
+                    "user_message": "How should we grow revenue next quarter using marketing spend by channel while protecting gross margin?",
+                    "conversation_history": [],
+                    "session_state": {},
+                },
+            )
+        finally:
+            set_trained_model(None, None)
+
+        self.assertEqual(response.status_code, 200)
+        advanced, prediction = self._prediction_from_response(response)
+        self.assertEqual(prediction["state"], "limited")
+        self.assertEqual(advanced["state_counts"]["supported"], 0)
+
+    def test_backend_model_for_different_target_does_not_support_prediction(self):
+        set_trained_model(object(), {
+            "run_id": "run_other_target",
+            "dataset_id": "sales_q1",
+            "target_column": "Gross Margin %",
+            "metrics": {"r2": 0.8},
+        })
+        try:
+            response = self.client.post(
+                "/api/decision/chat/turns",
+                json={
+                    "dataset": self._expanded_dataset(),
+                    "dataset_ref": {"source": "active", "dataset_id": "sales_q1"},
+                    "semantic_model": SEMANTIC_MODEL,
+                    "user_message": "How should we grow revenue next quarter using marketing spend by channel while protecting gross margin?",
+                    "conversation_history": [],
+                    "session_state": {},
+                },
+            )
+        finally:
+            set_trained_model(None, None)
+
+        self.assertEqual(response.status_code, 200)
+        advanced, prediction = self._prediction_from_response(response)
+        self.assertEqual(prediction["state"], "limited")
+        self.assertEqual(advanced["state_counts"]["supported"], 0)
+
+    def test_caller_supplied_model_evidence_does_not_support_prediction(self):
+        fake_evaluation = {
+            "status": "validated",
+            "run_id": "caller_fake_run",
+            "target_column": "Revenue",
+            "metrics": {"r2": 0.99},
+        }
+        response = self.client.post(
+            "/api/decision/chat/turns",
+            json={
+                "dataset": self._expanded_dataset(),
+                "semantic_model": SEMANTIC_MODEL,
+                "model_evaluation": fake_evaluation,
+                "_model_evaluation": fake_evaluation,
+                "user_message": "How should we grow revenue next quarter using marketing spend by channel while protecting gross margin?",
+                "conversation_history": [],
+                "session_state": {},
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        advanced, prediction = self._prediction_from_response(response)
+        self.assertEqual(prediction["state"], "limited")
+        self.assertEqual(advanced["state_counts"]["supported"], 0)
 
     def test_decision_output_includes_supported_scenario_compare(self):
         scenario_preview = {
@@ -551,6 +752,12 @@ class DecisionChatApiTests(unittest.TestCase):
 
         decision_output = body["decision_output"]
         self.assertEqual(decision_output["readiness"]["readiness_state"], "blocked")
+        advanced_prediction = next(
+            item for item in decision_output["advanced_readiness"]["capabilities"]
+            if item["capability"] == "prediction"
+        )
+        self.assertEqual(advanced_prediction["state"], "blocked")
+        self.assertEqual(advanced_prediction["reasons"][0]["code"], "target_or_semantics_missing")
         self.assertIn("objective.metric_id_or_metric_name", decision_output["readiness"]["missing_inputs"])
         self.assertEqual(decision_output["command_center"]["status"], "blocked")
         self.assertEqual(decision_output["command_center"]["rerun_state"]["status"], "blocked")
@@ -648,7 +855,7 @@ class DecisionChatApiTests(unittest.TestCase):
         self.assertEqual(body["action_state"]["primary_action_id"], "analyze_workspace")
         self.assertIn("Ready means", kickoff["readiness_meaning"])
         self.assertIn("not a recommendation", kickoff["truthfulness_note"])
-        self.assertIn("Recommended next action: Analyze workspace", body["assistant_message"])
+        self.assertIn("Available next check: Analyze workspace", body["assistant_message"])
         self.assertNotIn("Inputs Needed: 0", body["assistant_message"])
 
     def test_turn_route_preview_keeps_discount_marketing_region_prompt_readable(self):
