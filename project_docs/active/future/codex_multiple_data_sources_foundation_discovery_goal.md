@@ -1,3 +1,5 @@
+> DEFERRED: This goal is retained for future reference only. Do not execute it unless the active status file promotes the accompanying discovery plan.
+
 Goal: Define a source-backed, bounded backend implementation plan for multiple data sources in one analytical workspace.
 
 Read `project_docs/INDEX.md`, `project_docs/active/README.md`, `project_docs/active/status/decision_intelligence_execution_status.md`, `project_docs/active/decision_intelligence/active_gate/README.md`, `project_docs/active/decision_intelligence/active_gate/phase_1_multiple_data_sources_foundation_discovery_plan.md`, `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md`, and `project_docs/active/contracts/data_catalog_lineage.md`.

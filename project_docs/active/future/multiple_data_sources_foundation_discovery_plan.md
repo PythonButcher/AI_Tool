@@ -1,12 +1,14 @@
-# Phase 1 - Multiple Data Sources Foundation Discovery Plan
+# Deferred Multiple Data Sources Foundation Discovery Plan
+
+> DEFERRED: This discovery work did not begin. It is not the current gate and must not be implemented until promoted by the active status file.
 
 ## Purpose
 
 Define a source-backed, bounded implementation plan for working with multiple data sources in one analytical workspace.
 
-## Current Gate
+## Deferred Gate
 
-Status: active; Codex owns source discovery, backend contract planning, migration-risk analysis, tests, and documentation.
+Status: deferred; Codex owns source discovery, backend contract planning, migration-risk analysis, tests, and documentation when this work is promoted.
 
 Planning source: `project_docs/active/future/data_foundation_cycle_after_current_phases_plan.md`.
 

@@ -1,386 +1,358 @@
-# AI Chat & Decision Intelligence — Audit and Repair Plan
+# AI Chat & Decision Intelligence — Deep Audit: What Is Actually Broken vs. What Is Just Confusing
 
 **Written:** 2026-07-13  
-**Author:** Antigravity (full codebase audit)  
-**Scope:** Everything visible through AI Chat related to Decision Intelligence, charting, and the Command Center. Backend-only hidden contracts are out of scope here. This plan is about making what exists actually usable.
+**Author:** Antigravity — full source audit including backend routes, frontend wiring, and component-level data flow  
+**Scope:** Everything touching AI Chat and Decision Intelligence. This audit goes past the UI surface into actual functional gaps: routes that have no frontend caller, backend capabilities with no UI hook, components that receive no data, and placeholder sections the user sees that cannot do anything.
 
 ---
 
-## What Was Reviewed
+## What Was Audited (With Line Counts)
 
-| File | Size | Role |
+| File | Lines | Role |
 |---|---|---|
-| `frontend/frontend/src/features/ai/AIShell.jsx` | 1,605 lines | Master chat shell — conversation, routing, artifact rendering, results pane |
-| `frontend/frontend/src/features/ai/AIShell.css` | 1,871 lines | All shell styles |
-| `frontend/frontend/src/features/ai/DecisionCommandCenter.jsx` | 846 lines | Renders decision_output with Command Center layout |
-| `frontend/frontend/src/features/ai/DecisionOutputReview.jsx` | 778 lines | Bridges artifact to DecisionCommandCenter |
-| `backend/decision_engine/chat_service.py` | 2,234 lines | Core chat routing, mode detection, artifact assembly |
-| `backend/decision_engine/mode_detection.py` | 126 lines | Keyword-based mode router (ask / explore / decide) |
-| `backend/routes/decision.py` | 339 lines | Flask blueprint for all /api/decision/* routes |
-| `backend/routes/nlp_routes.py` | 125 lines | /api/nlp/chart route |
-| Project docs: README, status, active gate | — | Codex phase context |
+| `AIShell.jsx` | 1,605 | Core shell — conversation, routing, artifact renderer, results pane |
+| `AIShell.css` | 1,871 | All shell styles |
+| `DecisionCommandCenter.jsx` | 846 | Command Center renderer driven by `doCommandCenter` prop |
+| `DecisionOutputReview.jsx` | 778 | Maps artifact fields to Command Center props |
+| `ScenarioPreview.jsx` | 140 | Scenario compare UI component |
+| `DecisionGraphWorkspace.jsx` | 257 | Decision Graph canvas — uses XFlow |
+| `decisionApi.js` | 218 | Frontend API client with all decision routes |
+| `AiAutopilot.jsx` | 160 | Autopilot button wiring |
+| `chat_service.py` | 2,234 | Full decision chat engine — mode detection, workspace, actions |
+| `mode_detection.py` | 126 | Keyword-based mode router (ask / explore / decide) |
+| `decision.py` (routes) | 339 | Flask blueprint — all /api/decision/* endpoints |
+| `nlp_routes.py` | 125 | /api/nlp/chart endpoint |
+| `scenario_service.py` | 231 | Scenario comparison backend service |
 
 ---
 
-## Executive Summary
+## Executive Finding
 
-The system has real backend power. The decision engine is structurally complete: mode detection, workspace drafting, observational analysis, correction state, evidence boards, scenario compare, Command Center, and PDF export are all working. The backend is doing its job. The problems are entirely on the usability and frontend surface:
+The system has two distinct categories of problems:
 
-1. Users have no idea how to trigger Decision Intelligence. The prompt input gives no guidance. The welcome chips are wrong. There are no examples.
-2. The mode routing is fragile and invisible. A prompt must hit narrow keywords to enter `decide` mode. Users writing natural business questions miss it constantly.
-3. The results pane (Inspection Workspace) is uncommunicative. It appears with zero context about what it shows or why.
-4. "Blocked", "Limitation", and "Unsupported Capabilities Detected" appear constantly with no actionable path forward.
-5. The welcome screen chips are misleading — they trigger data cleaning and dataset mentions, not Decision Intelligence.
-6. The suggested action buttons in chat are opaque. Labels like "Analyze workspace", "Show blockers", "Draft workspace" have no context.
-7. Charting prompts succeed inconsistently due to narrow keyword matching.
-8. The Command Center is buried and unnamed to the user. When it renders, it has dense internal labels like "OBSERVATIONAL BOUNDARY", "TRUTH BOUNDARY", "STALE STATE" with no explanation.
-9. No persistent state or session memory across page refreshes.
-10. The correction panel uses raw API contract field names (lever_controllability, objective_metric, etc.) as UI labels.
-11. "Current Session Only" warning appears for every live result and sounds alarming when it just means "you haven't saved yet."
-12. Decision Intelligence prompts are not documented anywhere user-facing.
+**Category A — Functional gaps.** Backend capabilities that are fully built but have zero frontend caller. Routes that exist but are never called. Components that are wired but receive no data. These are features the user cannot access even if they wanted to, because the frontend connection is simply missing.
+
+**Category B — UX/clarity gaps.** Things that work but are presented in a way that makes them impossible for a user to navigate: confusing labels, missing guidance, narrow keyword matching, opaque error states.
+
+The previous audit focused entirely on Category B. This document covers both, with Category A first because those are actual missing functionality, not just polish.
 
 ---
 
-## Detailed Problem Inventory
+## CATEGORY A: Real Functional Gaps (What Cannot Be Done Yet)
 
-### Problem 1 — Mode detection is too narrow
+### Gap A1 — Scenario Compare has no user-triggerable action
 
-**Location:** `backend/decision_engine/mode_detection.py` lines 23-46
+**Status: Backend complete, frontend read-only, no user trigger**
 
-The decision keyword list has 17 phrases. Standard business language ("How can we grow revenue?", "What should our pricing strategy be?", "Where are we losing customers?") does not match because it lacks the exact trigger words. The user gets `ask` mode → a dead grounded-reply response → no workspace, no actions, no Command Center. Most natural Decision Intelligence questions silently fail.
+The scenario compare backend (`/api/decision/scenarios/evaluate`) is fully implemented in `scenario_service.py`. The `ScenarioPreview.jsx` component exists and renders correctly. `DecisionCommandCenter.jsx` passes `doScenario` to `ScenarioPreview` at line 330. `DecisionOutputReview.jsx` maps `artifact.scenario_compare` at line 71.
 
-### Problem 2 — Welcome screen gives no Decision Intelligence guidance
+**The gap:** There is zero frontend code that calls `/api/decision/scenarios/evaluate`. The frontend API client (`decisionApi.js`) has no `evaluateScenario` function. The Command Center and chat actions have no button or action that triggers a scenario. The `doScenario` prop only ever renders if the backend already embedded a pre-computed scenario preview inside a decision_output artifact — which it currently does not do automatically for most questions.
 
-**Location:** `AIShell.jsx` lines 1480-1494
+**User experience:** The user sees an empty "Scenario Compare" section in every decision output they generate. There is no way to trigger it. The section appears with `ScenarioPreview.jsx`'s locked state ("Scenario Compare Unavailable") because `doScenario` is always `null`.
 
-Three chips are shown:
-- "Dataset Bridge" → types `@` (opens dataset mention dropdown)
-- "Quick Visual" → types `Visualize ` (charting starter)
-- "Grounded Observational Analysis" → sends `/clean` (data cleaning command, not DI)
-
-None of these tell the user how to start a decision question.
-
-### Problem 3 — Input placeholder gives no DI-specific guidance
-
-**Location:** `AIShell.jsx` line 1554
-
-Current placeholder: `"Ask a question, type @ for data..."`
-
-No indication that the user can type decision questions here. No example phrasing. Users who want Decision Intelligence don't know what the right prompt looks like.
-
-### Problem 4 — Suggested action buttons have no context
-
-**Location:** `AIShell.jsx` lines 1512-1540
-
-After a decision workspace is drafted, action buttons appear: "Analyze workspace", "Show blockers", "Show assumptions", "Draft workspace". These appear inline with zero explanation of what they produce. Users see them and either don't click them, or click and are confused by the result pane.
-
-### Problem 5 — "Blocked" and "Limitation" labels are user-hostile
-
-**Locations:**
-- `DecisionCommandCenter.jsx` lines 392-403 (advanced_gates section)
-- `DecisionCommandCenter.jsx` lines 341-380 (advanced_readiness capabilities with state=blocked)
-- `AIShell.jsx` lines 957-967 (Unsupported Capabilities Detected banner)
-- `AIShell.jsx` lines 637-641 (Missing Inputs blockers)
-
-Users see "BLOCKED", "Unsupported Capabilities Detected", "Data Limited", "X Caveats" everywhere. None of these link to a next step. The system communicates what it cannot do but not what the user should do.
-
-### Problem 6 — Results pane is uncommunicative
-
-**Location:** `AIShell.jsx` lines 1561-1578
-
-Labeled "Inspection Workspace" with an eye icon. When empty: terminal icon + "Query the agent on the left to generate active visualizations, path previews, or structured analysis results." When populated: shows the artifact but with no label connecting it to what the user asked.
-
-### Problem 7 — "Current Session Only" warning sounds alarming
-
-**Location:** `DecisionCommandCenter.jsx` lines 532-547
-
-Every live (unsaved) decision output shows a yellow warning badge "Current Session Only" with an exclamation icon. This reads as a system error to most users. It is just a save reminder.
-
-### Problem 8 — Correction panel uses raw API field names
-
-**Location:** `AIShell.jsx` lines 77-88, correction form in `DecisionOutputReview.jsx`
-
-Correction types shown in UI: `time_horizon`, `objective_direction`, `lever_controllability`, `objective_metric`. These are backend contract paths exposed to users with no translation.
-
-### Problem 9 — Chart prompts fail inconsistently
-
-**Location:** `backend/decision_engine/mode_detection.py` lines 8-21
-
-The chart keyword list works for simple phrases. Compound or domain-specific phrases may fail field matching. When it fails, the user gets a generic `ask` mode reply with no chart and no guidance on how to rephrase.
-
-### Problem 10 — No onboarding inside Command Center
-
-**Location:** `DecisionCommandCenter.jsx` lines 441-619
-
-The Command Center renders immediately with a dense layout. There is no "what is this?" text, no step-by-step progress indicator, no summary at the top saying "Your decision framework is being analyzed."
-
-### Problem 11 — No persistent session across page refreshes
-
-**Location:** `AIShell.jsx` lines 47-66
-
-All state (`userMessages`, `sessionState`, `activeArtifact`) is in-memory React state. A page refresh destroys everything. Decision Intelligence sessions built up over minutes are gone.
-
-### Problem 12 — Decision Intelligence prompts are not documented anywhere user-facing
-
-There is no help panel, example gallery, or tooltip explaining what kinds of questions trigger Decision Intelligence. Users writing "What should we do about declining sales?" get a workspace draft. Users writing "Thoughts on our declining sales?" get an `ask` mode dead-end. No user would know this distinction exists.
+**What is needed:** A frontend action that calls `/api/decision/scenarios/evaluate` with `metric_targets` from the current workspace. Either a chat action button ("Compare Scenarios"), a Command Center button that opens a mini-form to specify adjustments, or an automatic call when the workspace is analyzed.
 
 ---
 
-## Proposed Repairs — Prioritized
+### Gap A2 — Decision Signals has no frontend caller
 
-### TIER 1 — Make DI discoverable and mode-reliable (highest impact, do first)
+**Status: Backend complete, no frontend use**
 
-#### T1-A: Rewrite the welcome screen with real DI prompt examples
+`/api/decision/signals/generate` exists in `decision.py` at line 271. `decision_signal_service.py` is 18,753 bytes. There is no `generateDecisionSignals` function in `decisionApi.js`. No component in the frontend ever calls this route. The data it would return (signals, early warnings, metric movements) never reaches the user.
 
-**Target file:** `AIShell.jsx` lines 1480-1494
+**What is needed:** Either a chat action that calls this and renders the result in the chat, or a section in the Command Center that shows auto-generated signals when a workspace exists.
 
-Replace the three current chips with chips that represent real entry points:
+---
 
-| Chip label | Injected text |
-|---|---|
-| How should we grow revenue? | `How should we grow revenue while protecting margin?` |
-| Plot sales by region | `Plot sales by region as a bar chart` |
-| Where are we losing customers? | `Where are we losing customers and what are the key drivers?` |
-| Top performing product? | `What is our top performing product by revenue?` |
-| Reference a dataset | `@` (dataset bridge, kept) |
+### Gap A3 — Decision Brief has no frontend caller
 
-Update the hero subtitle to explain DI: "Ask a business question to start a Decision Intelligence analysis, or ask for a chart. Questions about improving, growing, reducing, or choosing between options will trigger the full Decision Framework."
+**Status: Backend complete, no frontend use**
 
-#### T1-B: Expand the mode detection keyword set
+`/api/decision/brief/generate` exists at line 285. `decision_brief_service.py` is 8,779 bytes. There is no `generateDecisionBrief` in `decisionApi.js` and no component that calls it. The brief is a structured executive summary that could dramatically improve the Command Center's "Executive Brief" section.
 
-**Target file:** `backend/decision_engine/mode_detection.py` lines 23-46
+**Current state:** The "executive_brief" section in the Command Center renders `doTitle` and `doSummary` directly from the artifact — which are generated by the workspace builder, not the brief service. The brief service (which could produce a much richer, AI-generated summary) is never invoked.
 
-Add common business-language patterns:
+**What is needed:** Call this route when a workspace is analyzed or when the user requests a summary. Render the output in the `executive_brief` section of the Command Center.
 
+---
+
+### Gap A4 — Recommendations route has no frontend caller
+
+**Status: Backend complete, no frontend use**
+
+`/api/decision/recommendations/generate` exists at line 313. `recommendation_service.py` is 19,235 bytes. There is no frontend call. The `decision_map` section in the Command Center is populated from the artifact's `doMap` field, which comes from `DecisionOutputService.compose()`. But the dedicated recommendations route — which could generate richer, more structured recommendations tied to specific levers — is never called.
+
+**What is needed:** A chat action or Command Center trigger that calls this route and renders the output in the `decision_map` section.
+
+---
+
+### Gap A5 — Scenario Compare cannot be user-configured from chat
+
+**Status: There is no input surface for `metric_targets`**
+
+Even if the frontend called `/api/decision/scenarios/evaluate`, the route requires `metric_targets` (which metrics to adjust and by how much). There is no UI for the user to specify these adjustments. The user cannot say "show me what happens if revenue increases by 10%" and have the system create the right `metric_targets` payload.
+
+**What is needed:** Either (a) NLP parsing of phrases like "what if revenue increases 10%" in the chat handler to build `metric_targets`, or (b) a simple scenario form in the Command Center where the user picks a metric and adjustment value.
+
+---
+
+### Gap A6 — Decision Graph receives no data from Decision Output
+
+**Status: Graph exists and works independently, but receives no context from Command Center**
+
+The Decision Graph (`DecisionGraphWorkspace.jsx`) is fully implemented. It calls `/api/decision/graph/candidates` and `/api/decision/graph/build`. The "Launch Decision Graph" button in the Command Center passes `evidence_board` and `frame` from the current artifact.
+
+**The gap:** When the graph launches with `initialContext.evidence_board` and `initialContext.frame`, the workspace calls `getDecisionGraphCandidates` using only `dataset` and `semantic_model`. The `evidence_board` and `frame` context is passed to `handleBuildGraph` only when building the graph, but `getDecisionGraphCandidates` does not receive it. This means the candidate list is generic and not pre-filtered to the decision's evidence context.
+
+More critically: the graph node `InspectorPanel.jsx` has an action `send_to_scenario_compare` — the `planDecisionGraphAction` route at `/api/decision/graph/actions` exists — but clicking a graph node does not trigger scenario compare either (no state flows back from graph to chat).
+
+**What is needed:** Pass `evidence_board` and `frame` into `getDecisionGraphCandidates` so candidates are contextually ranked. Create a callback from `DecisionGraphWorkspace` back to AI Chat that fires when the user clicks "send_to_scenario_compare" from a graph node.
+
+---
+
+### Gap A7 — `open_workspace` action routes to a local state read, not a fresh backend call
+
+**Status: Works but silently degrades when no prior artifact exists**
+
+In `AIShell.jsx` at lines 127-137, `handleActionClick('open_workspace')` does a local scan of `userMessages` to find the last `decision_output` artifact and calls `handleInspect` on it. It does not call `/api/decision/chat/actions` with `action: "open_workspace"`.
+
+**The gap:** If the user clears their chat, switches datasets, or if the artifact is old, `open_workspace` shows whatever was last in memory rather than the current workspace state. The backend `open_workspace` action in `_execute_decision_action` (lines 1176-1195) always refreshes the workspace from `session_state.draft_workspace` — but that path is bypassed.
+
+---
+
+### Gap A8 — ScenarioPreview import in AIShell is unused
+
+`AIShell.jsx` imports `ScenarioPreview` at line 22 but never renders it directly. `ScenarioPreview` is only used in `DecisionCommandCenter.jsx` and `DecisionOutputReview.jsx`. The import in AIShell is dead code (minor, but confirms scenario compare has no direct chat-level render path).
+
+---
+
+### Gap A9 — Chart rendering in inline view is silently suppressed
+
+**Status: Charts only appear in the inspector pane, never inline**
+
+In `renderArtifact` at lines 667-718, the `chart` case only renders content when `isInspector === true`. When `isInspector` is false (the inline chat thread view), the chart case returns an empty div. Charts are promoted to the results pane via the `inspectable + render_hint !== 'inline'` block at lines 611-638 which renders a clickable preview link. But the clickable preview link for charts does not include a thumbnail or sparkline — it just shows a `FaChartBar` icon and "Visualization". The user has no idea what the chart looks like until they open the results pane.
+
+**What is needed:** A small chart thumbnail (mini-render using the same `AICharts` component at reduced height) inside the preview link card, or at minimum a visible first row of values.
+
+---
+
+### Gap A10 — Decision Output "Export Sections" are assembled but not rendered
+
+**Status: Backend sends `export_sections`, frontend ignores them**
+
+`DecisionOutputService.compose()` assembles `export_sections` in the artifact. `handleSaveAsset` at line 472 includes `export_sections` in the save payload. But `DecisionCommandCenter.jsx` and `DecisionOutputReview.jsx` never render `export_sections` in the UI. The data exists in the artifact but the user never sees it structured as exportable sections.
+
+---
+
+### Gap A11 — `resolveDatasetForNlp` is not passed to DecisionOutputReview
+
+**Status: Causes undefined behavior in the correction panel**
+
+`DecisionOutputReview` receives a `resolveDatasetForNlp` prop at line 55 in its signature. In `AIShell.jsx` at lines 1200-1222, `DecisionOutputReview` is rendered but `resolveDatasetForNlp` is passed directly at line 1221. However, `DecisionCommandCenter.jsx` receives `datasetContext` as a pre-resolved value (not the function), so the correction form can submit an outdated dataset snapshot. If the user changes datasets mid-session, the correction will submit against the old dataset.
+
+---
+
+## CATEGORY B: UX and Clarity Gaps (What Works But Confuses Users)
+
+These are the 12 problems documented in the previous audit, summarized here for completeness:
+
+1. **Mode detection misses natural business language** — 17 keywords too narrow, most business questions fail to trigger decide mode
+2. **Welcome chips trigger wrong things** — `/clean` (data cleaning) and `@` (dataset mention), not DI
+3. **Input placeholder gives no DI guidance** — no example prompts
+4. **Action buttons are opaque** — no sub-labels or explanations
+5. **"Blocked", "Limitation", "Unsupported Capabilities Detected"** everywhere with no next step
+6. **Results pane is uncommunicative** — no connection to what was asked
+7. **"Current Session Only" warning sounds alarming** — it is just a save reminder
+8. **Correction panel shows raw API field names** — `lever_controllability`, `objective_metric`
+9. **Chart prompts fail with no helpful fallback** — no guidance on how to rephrase
+10. **Command Center has no onboarding** — dense layout with no "what is this"
+11. **No session persistence** — page refresh wipes everything
+12. **No help documentation anywhere user-facing** — no examples, no glossary
+
+---
+
+## Full Priority Matrix: Functional Gaps First, Then UX
+
+| Priority | Item | Type | Effort | Impact |
+|---|---|---|---|---|
+| 1 | A1: Wire Scenario Compare to frontend | Functional Gap | Large | High |
+| 2 | A5: Add scenario input surface (chat NLP or form) | Functional Gap | Medium | High |
+| 3 | A2: Wire Decision Signals to frontend | Functional Gap | Medium | High |
+| 4 | A3: Wire Decision Brief to Command Center | Functional Gap | Small | High |
+| 5 | A4: Wire Recommendations to Command Center | Functional Gap | Medium | Medium |
+| 6 | A6: Pass evidence context into graph candidates | Functional Gap | Small | Medium |
+| 7 | A7: Fix `open_workspace` to use backend state | Functional Gap | Small | Medium |
+| 8 | B1: Expand mode detection keywords | UX | Small | High |
+| 9 | B2: Rewrite welcome chips | UX | Small | High |
+| 10 | B4: Action button sub-labels | UX | Small | High |
+| 11 | B5: Translate blocked/limitation labels | UX | Small | High |
+| 12 | A9: Chart inline thumbnail | Functional Gap | Medium | Medium |
+| 13 | B10: Command Center onboarding card | UX | Small | Medium |
+| 14 | B3: Input placeholder update | UX | Trivial | Medium |
+| 15 | B6: Results pane type label | UX | Trivial | Medium |
+| 16 | B7: Save nudge instead of warning | UX | Trivial | Medium |
+| 17 | B8: Correction panel field names | UX | Small | Medium |
+| 18 | B9: Chart fail with reformat guidance | UX | Small | Medium |
+| 19 | B11: Session storage persistence | UX | Medium | Medium |
+| 20 | A10: Render export_sections in UI | Functional Gap | Medium | Low |
+| 21 | B12: Help panel | UX | Large | Low |
+
+---
+
+## Detailed Implementation Notes for Category A
+
+### A1 + A5 — Scenario Compare: What Needs to Be Built
+
+**Backend:** Route exists and is complete at `/api/decision/scenarios/evaluate`.
+
+**Frontend additions needed:**
+
+1. Add `evaluateScenario` to `decisionApi.js`
+2. Add a `compare_scenarios` action to `DECISION_ACTION_CONTRACTS` in `chat_service.py` so it appears as a suggested action after workspace analysis
+3. Add handling in `handleActionClick` in AIShell for `compare_scenarios`:
+   - Extract `metric_targets` from `session_state.draft_workspace.levers` (use lever metric_refs as targets)
+   - Or parse user's chat message for percentage phrases ("10% increase", "reduce by 20%")
+   - Call `/api/decision/scenarios/evaluate`
+   - Return result as a `scenario_preview` and include it in the next decision_output render
+4. Alternatively: Add a "Scenario" input row in the Command Center with metric picker and adjustment slider
+
+The `ScenarioPreview` component is complete and just needs `preview` to be non-null.
+
+---
+
+### A2 — Decision Signals: What Needs to Be Built
+
+**Backend:** Route exists at `/api/decision/signals/generate`.
+
+**Frontend additions needed:**
+
+1. Add `generateDecisionSignals` to `decisionApi.js`
+2. Add a `generate_signals` suggested action in `chat_service.py` for decide mode
+3. In `handleActionClick`, call this route when `actionId === 'generate_signals'`
+4. Render the signal list inline in the chat as an `answer` artifact or in the Command Center as a new section
+
+Signal data is rich: it includes metric movements, direction, strength, and business interpretation. It would make the Command Center significantly more valuable.
+
+---
+
+### A3 — Decision Brief: What Needs to Be Built
+
+The `executive_brief` section currently renders `doTitle` + `doSummary` from the workspace builder. The brief service can generate a structured multi-part summary (context, key levers, data evidence, recommended focus). 
+
+Call `/api/decision/brief/generate` when `analyze_workspace` completes and inject the brief output into the `executive_brief` section of the Command Center. No new backend work needed — just call it.
+
+---
+
+### A6 — Graph Context Passing
+
+In `DecisionGraphWorkspace.jsx` at line 93, `getDecisionGraphCandidates({ dataset, semantic_model: semanticModel })` needs to also include `evidence_board` and `frame` from `initialContext` so candidates are ranked by decision relevance, not just by data type.
+
+```js
+// Current
+const response = await getDecisionGraphCandidates({ dataset, semantic_model: semanticModel });
+
+// Needs to be
+const response = await getDecisionGraphCandidates({
+  dataset,
+  semantic_model: semanticModel,
+  evidence_board: initialContext?.evidence_board,
+  frame: initialContext?.frame,
+});
 ```
-"how do we", "how can we", "what would happen if",
-"best way to", "strategy for", "plan to", "focus on",
-"increase", "decrease", "maximize", "minimize",
-"priority", "what's driving", "root cause", "why is",
-"where are we losing", "where are we winning",
-"what should", "what can we", "when should we",
-"which market", "which segment", "which product",
-"scenario", "what if", "if we", "option", "alternative",
-"objective", "goal", "target", "measure"
+
+The backend `DecisionGraphService.discover_candidates` already accepts these fields — it just never receives them from the frontend.
+
+---
+
+### A7 — Fix `open_workspace` to use backend state
+
+In `handleActionClick` (AIShell.jsx line 127), replace the local `userMessages` scan with a backend call:
+
+```js
+// Instead of scanning userMessages, call the backend which will reconstruct
+// from session_state.draft_workspace — which is always current
+if (actionId === 'open_workspace') {
+  // fall through to the normal setLoading + POST /api/decision/chat/actions
+  // and let the backend return a fresh workspace_preview with the current state
+}
 ```
 
-Also add a length fallback: if the message is longer than 12 words and does not match explore or ask keywords, treat it as a `decide` candidate rather than dropping to `ask`.
-
-#### T1-C: Update the input placeholder to signal DI
-
-**Target file:** `AIShell.jsx` line 1554
-
-Change to: `"Ask a question, frame a decision (e.g. 'How should we grow revenue?'), or type @ for data..."`
-
-#### T1-D: Make suggested actions self-explanatory
-
-**Target file:** `AIShell.jsx` lines 1526-1538
-
-Add a one-line description below each action button. Rename the actions:
-
-| Current label | New label | Sub-label |
-|---|---|---|
-| Analyze workspace | Run Analysis | See evidence and observational insights |
-| Show blockers | What's Missing | Find gaps blocking deeper analysis |
-| Show assumptions | View Assumptions | Review what the system is assuming |
-| Draft workspace | Refresh Framework | Rebuild the decision framework |
-| Review decision output | Open Decision Review | Full structured output with evidence |
+Remove the special-case early return for `open_workspace` and let it flow through the normal `handleActionClick` POST path. The backend `_execute_decision_action` with `action="open_workspace"` already returns a correct preview from `session_state.draft_workspace`.
 
 ---
 
-### TIER 2 — Fix the confusion inside Command Center and results pane
+## Files Affected Summary
 
-#### T2-A: Replace "Current Session Only" warning with a save nudge
+### Functional Gap Fixes
 
-**Target file:** `DecisionCommandCenter.jsx` lines 532-547
-
-Change the yellow warning badge to a neutral blue "Save to library" banner: "This result is in memory. Save it to keep it after closing." Remove the exclamation triangle icon.
-
-#### T2-B: Add an onboarding header to Command Center on first appearance
-
-**Target file:** `DecisionCommandCenter.jsx` lines 441-450
-
-When `!artifact.asset_id` (live session, not saved), show a collapsible info card at the top:
-"Your Decision Framework — AI Chat analyzed your question and built a structured decision output below. Review the Evidence Board for data-backed insights, use the action buttons to run deeper analysis, and save this output when you're done."
-
-This card should be dismissible and remembered in localStorage.
-
-#### T2-C: Translate "Blocked" and "Limitation" labels into action guidance
-
-**Target files:** `DecisionCommandCenter.jsx` lines 341-403, `AIShell.jsx` lines 957-967
-
-For blocked capabilities, replace the raw state badge with a human label:
-- `blocked` → "Not available yet — requires more data or a different question format."
-- `limited` → "Partial — available with some caveats."
-- `unsupported` → "Not in scope — this analysis type is not supported."
-
-For the "Unsupported Capabilities Detected" banner, replace with: "Some things you asked for aren't available yet. The analysis below covers what is supported."
-
-#### T2-D: Add a "What is this?" label to the results pane header
-
-**Target file:** `AIShell.jsx` lines 1563-1566
-
-When an artifact is active, show its type next to "Inspection Workspace":
-`"Inspection Workspace  ·  Decision Framework"` or `"Inspection Workspace  ·  Chart"`
-
-When empty, replace the terminal icon with: "No active result. Ask a question in the chat to see data, charts, or a Decision Framework here."
-
-#### T2-E: Translate correction panel field names
-
-**Target:** Correction form dropdown in `DecisionOutputReview.jsx`
-
-Human-readable map:
-
-| Contract value | User-facing label |
+| File | Change |
 |---|---|
-| `time_horizon` | Time Period |
-| `objective_direction` | Goal Direction (maximize / minimize) |
-| `lever_controllability` | Can we control this? (yes / no) |
-| `objective_metric` | Target Metric |
-| `remove_mapping` | Remove a mapping |
+| `decisionApi.js` | Add `evaluateScenario`, `generateDecisionSignals`, `generateDecisionBrief`, `generateRecommendations` |
+| `AIShell.jsx` | Add handlers for `compare_scenarios`, `generate_signals`; fix `open_workspace`; add chart thumbnail to inline preview |
+| `DecisionGraphWorkspace.jsx` | Pass `evidence_board` + `frame` into `getDecisionGraphCandidates` |
+| `chat_service.py` | Add `compare_scenarios` and `generate_signals` to `DECISION_ACTION_CONTRACTS` and `_build_decision_actions` |
+| `DecisionCommandCenter.jsx` | Add rendering for `export_sections`, signals, brief output |
 
-#### T2-F: Make the "grounded" tag less alarming
+### UX/Clarity Fixes
 
-**Target file:** `AIShell.jsx` line 1502
-
-The shield icon + "Grounded" badge on every assistant message looks like a security warning. Rename to `Data-backed` or remove from non-DI messages.
-
----
-
-### TIER 3 — Session persistence
-
-#### T3-A: Persist chat history in sessionStorage
-
-**Target file:** `AIShell.jsx`
-
-On each `setUserMessages` call, write to sessionStorage keyed by a session ID. On mount, read from sessionStorage to restore the last conversation. This covers accidental page refresh during an active session. Cap at last 20 messages. Do not persist full dataset payloads — only message content, artifact metadata, and session_state.
-
-#### T3-B: Persist active artifact across tab switches
-
-**Target file:** `AIShell.jsx`
-
-When the user switches away from AI Chat and back, the `activeArtifact` state is lost because the component unmounts. Store `activeArtifact` in sessionStorage and restore it on mount.
-
----
-
-### TIER 4 — Chart quality improvements
-
-#### T4-A: Add a "Chart not generated" fallback with suggestions
-
-**Target file:** `AIShell.jsx` (explore mode chart fallback path)
-
-When explore mode produces an `answer` artifact instead of a `chart` artifact, render a specific "Chart not built" message. Include:
-- What was understood from the prompt
-- A suggested rephrasing: "Try: 'Plot [field] by [category] as a bar chart'"
-- A list of chart-friendly columns from the current dataset
-
-#### T4-B: Add chart type selector to the chart artifact inspector
-
-**Target file:** `AIShell.jsx` lines 667-717 (chart case in renderArtifact)
-
-Add a small toggle above the rendered chart: "Bar | Line | Pie | Scatter". Clicking a different type re-renders with the same data. Entirely frontend — no new API call needed.
-
----
-
-### TIER 5 — Decision Intelligence help panel
-
-#### T5-A: Add a collapsible "How to use Decision Intelligence" panel
-
-**Target:** New component `AIHelp.jsx`, accessible via a "?" button on the left rail or footer
-
-Contents:
-1. How to start a decision question — example prompts with explanations
-2. What the Decision Framework shows — brief description of Evidence Board, Frame, Readiness
-3. How charting works — example chart prompts
-4. What "Observational Analysis" means — plain English explanation
-5. How to save results — step-by-step
-
-No backend changes needed.
-
----
-
-## Files Affected
-
-### Frontend
-| File | Changes |
+| File | Change |
 |---|---|
-| `AIShell.jsx` | Welcome chips (T1-A), placeholder (T1-C), action labels (T1-D), results pane (T2-D), grounded tag (T2-F), session storage (T3-A, T3-B), chart fallback (T4-A), chart type toggle (T4-B) |
-| `AIShell.css` | New styling for chips, action sub-labels, info banners |
-| `DecisionCommandCenter.jsx` | Save badge → nudge (T2-A), onboarding header (T2-B), blocked labels (T2-C) |
-| `DecisionOutputReview.jsx` | Correction panel field translations (T2-E) |
-| New: `AIHelp.jsx` + `AIHelp.css` | DI prompt guide panel (T5-A) |
-
-### Backend
-| File | Changes |
-|---|---|
-| `backend/decision_engine/mode_detection.py` | Expanded keyword list (T1-B) |
+| `AIShell.jsx` | Welcome chips, placeholder, action labels, results pane label, grounded tag, session storage |
+| `AIShell.css` | Styling for new chips, sub-labels, info banners |
+| `DecisionCommandCenter.jsx` | Save nudge, onboarding card, blocked label translations |
+| `DecisionOutputReview.jsx` | Correction panel field names |
+| `mode_detection.py` | Expanded keyword list + length fallback |
+| New: `AIHelp.jsx` + `AIHelp.css` | DI prompt guide help panel |
 
 ---
 
-## Acceptance Checks
+## Acceptance Checks for Category A
 
-**Tier 1 — Discoverability**
-- Clicking a welcome chip injects a valid DI or chart prompt
-- Typing "How should we grow revenue while protecting margin?" enters decide mode and produces a Decision Framework
-- Typing "Plot sales by region" enters explore mode and produces a chart artifact
-- The input placeholder communicates DI entry points
+**Scenario Compare**
+- Typing "compare scenarios" or "what if revenue increases 10%" generates a scenario payload
+- The Scenario Compare section in the Command Center shows real projection data
+- `ScenarioPreview.jsx` renders with `status: "ready"`, not locked state
 
-**Tier 2 — Command Center clarity**
-- No yellow "Current Session Only" warning visible on first render
-- Command Center shows a brief onboarding card on first render
-- Blocked capabilities say what to do, not just that they are blocked
-- Results pane header reflects the active artifact type
-- Correction panel shows human-readable field labels
+**Decision Signals**
+- After workspace analysis, a "Generate Signals" action appears in suggested actions
+- Clicking it calls the backend and renders a signal list in chat or Command Center
 
-**Tier 3 — Persistence**
-- Page refresh restores the last conversation
-- Active artifact is visible in results pane after refresh
-- Chat history does not grow without bound (cap at last 20 messages)
+**Decision Brief**
+- After workspace analysis, the Executive Brief section shows multi-part structured output from the brief service rather than the workspace builder's `summary` field
 
-**Tier 4 — Charts**
-- When chart fails, user sees a "Chart not built" message with reformat guidance
-- Chart type toggle works without a new API call
+**Graph Context**
+- "Launch Decision Graph" passes `evidence_board` and `frame` to candidate discovery
+- Candidate list is ordered by decision relevance, not random data type order
 
-**Tier 5 — Help panel**
-- Help panel opens from left rail
-- Shows example DI prompts and chart prompts
-- Explains observational analysis in plain English
+**open_workspace**
+- After chat reset or dataset change, clicking "Open Workspace" shows current draft state, not a stale message-history artifact
 
 ---
 
-## Implementation Order Recommendation
+## What Codex Must Do First
 
-1. T1-B — Expand mode detection keywords (backend, ~30 min)
-2. T1-A — Rewrite welcome chips (frontend, ~1 hour)
-3. T1-C — Update input placeholder (frontend, ~15 min)
-4. T1-D — Action button labels and sub-labels (frontend, ~1 hour)
-5. T2-A — Save badge to nudge (frontend, ~30 min)
-6. T2-B — Onboarding header in Command Center (frontend, ~1 hour)
-7. T2-C — Translate blocked labels (frontend, ~1 hour)
-8. T2-D — Results pane header (frontend, ~30 min)
-9. T2-E — Correction panel field names (frontend, ~30 min)
-10. T2-F — Grounded tag rename (frontend, ~15 min)
-11. T3-A + T3-B — Session storage persistence (frontend, ~2-3 hours)
-12. T4-A + T4-B — Chart fallback and chart type toggle (frontend, ~2 hours)
-13. T5-A — Help panel (frontend, ~3-4 hours)
+Before any of the functional gap fixes can be implemented cleanly, the following backend additions are needed:
 
-**Total estimate:** ~15-18 hours of focused frontend work plus ~30 min backend keyword expansion.
+1. `compare_scenarios` must be added to `DECISION_ACTION_CONTRACTS` in `chat_service.py` and to `_build_decision_actions` so it appears as a suggested action
+2. `generate_signals` must be similarly added
+3. `_execute_decision_action` must handle both new action IDs
+
+These are backend changes. Once in place, Antigravity implements the frontend API calls, action handlers, and rendering.
 
 ---
 
-## What Is Out of Scope Here
+## What Antigravity Can Do Without Backend Changes
 
-- Multi-data-source support (Codex active gate — separate)
-- New decision pipeline phases (Codex future gate — separate)
-- Full LLM-powered charting (requires new backend route, not a repair)
-- Saved decisions window redesign (separate future slice)
-- Decision Graph (already connected, low priority)
-- Any new Markdown plan creation in active gate folders
+The following are frontend-only and can start immediately:
+
+- Fix `open_workspace` to flow through the normal POST path (A7)
+- Pass graph context into candidates (A6 — frontend-only change)
+- All Category B UX fixes (B1-B12)
+- Chart inline thumbnail using the existing `AICharts` component
+- Add `evaluateScenario`, `generateDecisionSignals`, `generateDecisionBrief` to `decisionApi.js` (routes already exist)
 
 ---
 
 ## Summary
 
-The backend for Decision Intelligence is substantially built. The user experience problem is that the frontend does not meet users where they are. It does not explain what to type, why mode detection worked or failed, what the Command Center is showing, or what to do when things are blocked. The fix is not more backend phases — it is translating the existing backend capability into language and affordances that real users can navigate.
-
-All Tier 1 and Tier 2 repairs can be implemented without touching any backend contract, saved decision schema, or active phase gate.
+The previous audit treated this as a UX problem. It is partially that, but the deeper issue is that several complete backend capabilities — Scenario Compare, Decision Signals, Decision Brief, Recommendations — have never been wired to the frontend. The user sees placeholders (empty Scenario Compare section, no signals, sparse Executive Brief) not because the backend cannot do it, but because the frontend never asks. These are the highest-impact fixes because they turn existing backend work into visible product value without requiring new backend development.
