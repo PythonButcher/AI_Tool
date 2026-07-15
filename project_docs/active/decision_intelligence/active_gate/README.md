@@ -6,13 +6,13 @@ Read this folder after `project_docs/active/status/decision_intelligence_executi
 
 ## Current Gate
 
-Status: Phase 1 - Multiple Data Sources Foundation Discovery is active for Codex source discovery, backend contract planning, migration-risk analysis, tests, and documentation.
+Status: Phase 1 - AI Chat Trustworthy Interaction is active for Codex source review, backend and contract repair, focused tests, and frontend handoff preparation when a bounded UI gap is proven.
 
-Planning source: `project_docs/active/future/codex/data_foundation_cycle_after_current_phases_plan.md`.
+Planning source: Release 1 in `project_docs/active/future/codex/ai_chat_decision_intelligence_user_outcome_audit_and_repair_plan.md`.
 
-Current plan: `phase_1_multiple_data_sources_foundation_discovery_plan.md`.
+Current plan: `phase_1_ai_chat_trustworthy_interaction_plan.md`.
 
-Current Codex goal: `codex_multiple_data_sources_foundation_discovery_goal.md`.
+Current Codex goal: `codex_ai_chat_trustworthy_interaction_goal.md`.
 
 Active frontend handoff: none. Frontend work requires a verified backend contract and a proven, bounded frontend gap.
 

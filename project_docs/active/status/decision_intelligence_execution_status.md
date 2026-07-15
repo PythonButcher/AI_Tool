@@ -10,7 +10,7 @@ The Decisions window remains secondary. Saved DecisionAssets support immutable h
 
 ## Current Project Gate
 
-Status: **Phase 1 - Multiple Data Sources Foundation Discovery: ACTIVE CODEX DISCOVERY GATE**
+Status: **Phase 1 - AI Chat Trustworthy Interaction: ACTIVE CODEX GATE**
 
 Active gate:
 
@@ -18,19 +18,19 @@ Active gate:
 
 Current plan:
 
-`project_docs/active/decision_intelligence/active_gate/phase_1_multiple_data_sources_foundation_discovery_plan.md`
+`project_docs/active/decision_intelligence/active_gate/phase_1_ai_chat_trustworthy_interaction_plan.md`
 
 Current Codex goal:
 
-`project_docs/active/decision_intelligence/active_gate/codex_multiple_data_sources_foundation_discovery_goal.md`
+`project_docs/active/decision_intelligence/active_gate/codex_ai_chat_trustworthy_interaction_goal.md`
 
 Active frontend handoff: none.
 
-Latest verified fact: Product-truth and executive-export work is complete. Backend source review, focused regressions, and the existing direct export renderer found no frontend implementation gap.
+Latest verified fact: The user approved Release 1 from the Codex AI Chat and Decision Intelligence audit. This gate covers trustworthy dataset identity, routing, action execution, and session recovery before broader decision features are added.
 
 ## Next Focus
 
-Codex should execute `project_docs/active/decision_intelligence/active_gate/codex_multiple_data_sources_foundation_discovery_goal.md`. Do not assign frontend work until a source-backed backend contract exists and review proves a bounded frontend gap.
+Codex should execute `project_docs/active/decision_intelligence/active_gate/codex_ai_chat_trustworthy_interaction_goal.md`. Codex owns source truth, backend work, contracts, and tests. Do not assign frontend work until source review proves a bounded gap and classifies backend readiness.
 
 ## Future Cycle Memory
 

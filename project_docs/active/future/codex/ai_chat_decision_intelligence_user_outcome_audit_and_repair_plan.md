@@ -2,11 +2,11 @@
 
 Written: 2026-07-14  
 Author: Codex  
-Status: Deferred proposal awaiting user approval.
+Status: Approved planning source. Release 1 is promoted through the active Decision Intelligence gate; later releases remain deferred.
 
 ## Purpose
 
-This audit combines the UI-focused plan at `project_docs/active/decision_intelligence/active_gate/phase_1_ai_chat_di_audit_and_repair_plan.md` with the functional audit at `project_docs/active/future/ai_chat_di_functional_gap_audit.md`.
+This audit combines the UI-focused plan at `project_docs/active/future/ai_chat_di_ui_audit_and_repair_plan.md` with the functional audit at `project_docs/active/future/ai_chat_di_functional_gap_audit.md`.
 
 The goal is practical: make AI Chat help a user ask a business question, understand the result, compare choices, record a decision, and return later to review what happened.
 
@@ -98,10 +98,6 @@ Release 4 is accepted when a saved decision can be reopened, understood as histo
 | Saved decision lifecycle | DecisionAsset service/routes plus the saved decision UI |
 
 Frontend ownership remains Gemini or Antigravity unless Codex is explicitly authorized to edit frontend files in the implementation session. Codex owns backend truth, tests, architecture, documentation, and review.
-
-## Current Gate Issue
-
-The active status names Multiple Data Sources Foundation Discovery, but its declared plan and goal are missing from `active_gate/`. The AI Chat repair plan in that folder also labels itself active. Before implementation, the user must choose one active direction and the gate documentation must name one existing plan, one existing goal, and one owner.
 
 ## Recommendation
 
