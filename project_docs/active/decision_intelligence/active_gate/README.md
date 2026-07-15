@@ -8,7 +8,7 @@ Read this folder after `project_docs/active/status/decision_intelligence_executi
 
 Status: Phase 1 - Multiple Data Sources Foundation Discovery is active for Codex source discovery, backend contract planning, migration-risk analysis, tests, and documentation.
 
-Planning source: `project_docs/active/future/data_foundation_cycle_after_current_phases_plan.md`.
+Planning source: `project_docs/active/future/codex/data_foundation_cycle_after_current_phases_plan.md`.
 
 Current plan: `phase_1_multiple_data_sources_foundation_discovery_plan.md`.
 

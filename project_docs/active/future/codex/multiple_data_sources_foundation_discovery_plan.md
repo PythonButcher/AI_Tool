@@ -10,9 +10,9 @@ Define a source-backed, bounded implementation plan for working with multiple da
 
 Status: deferred; Codex owns source discovery, backend contract planning, migration-risk analysis, tests, and documentation when this work is promoted.
 
-Planning source: `project_docs/active/future/data_foundation_cycle_after_current_phases_plan.md`.
+Planning source: `project_docs/active/future/codex/data_foundation_cycle_after_current_phases_plan.md`.
 
-Current goal: `codex_multiple_data_sources_foundation_discovery_goal.md`.
+Current goal: `project_docs/active/future/codex/codex_multiple_data_sources_foundation_discovery_goal.md`.
 
 Active frontend handoff: none. Frontend work remains out of scope until the backend contract and migration plan are verified from source.
 
