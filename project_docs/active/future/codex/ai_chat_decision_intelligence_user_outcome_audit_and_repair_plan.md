@@ -2,7 +2,7 @@
 
 Written: 2026-07-14  
 Author: Codex  
-Status: Approved planning source. Release 1 is promoted through the active Decision Intelligence gate; later releases remain deferred.
+Status: Approved planning source. Release 2 is active through the Decision Intelligence gate. Release 3 has a deferred preparation package; later work remains deferred until promoted.
 
 ## Purpose
 

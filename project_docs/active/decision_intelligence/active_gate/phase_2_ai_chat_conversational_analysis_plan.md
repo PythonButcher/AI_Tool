@@ -1,6 +1,6 @@
 # Phase 2 - AI Chat Conversational Analysis Plan
 
-Status: Active
+Status: Acceptance pending
 
 Owner: Codex for source truth, backend behavior, contracts, tests, and coordination; Gemini or Antigravity for frontend implementation after a focused handoff.
 
@@ -12,7 +12,7 @@ Make AI Chat support a grounded conversation instead of treating each message as
 
 ## Current Gate
 
-Codex begins with source tracing and backend contract work. Frontend work is not assigned until conversation history, refinement state, and clarification response behavior are verified and classified as `backend_not_ready`, `backend_contract_ready`, or `frontend_repair_only`.
+Backend continuity, contract work, focused tests, frontend implementation, and Codex source review are complete. The remaining gate is user browser acceptance of the focused metric clarification flow. This plan stays active until that visible behavior is accepted.
 
 ## Release Scope
 

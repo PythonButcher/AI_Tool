@@ -291,6 +291,42 @@
   white-space: pre-wrap;
 }
 
+/* Clarification Box */
+.ai-shell__clarification-box {
+  margin-top: 16px;
+  padding: 16px;
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+}
+
+.ai-shell__clarification-prompt {
+  font-weight: 700 !important;
+  color: var(--text-primary);
+  margin-bottom: 12px !important;
+  display: block;
+}
+
+.ai-shell__clarification-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ai-shell__clarification-choice-btn {
+  border-radius: 20px !important;
+  text-transform: none !important;
+  font-weight: 600 !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-color) !important;
+  background-color: var(--bg-secondary) !important;
+}
+
+.ai-shell__clarification-choice-btn:hover:not(:disabled) {
+  background-color: var(--text-primary) !important;
+  color: var(--bg-primary) !important;
+}
+
 /* Footer / Input */
 .ai-shell__footer {
   padding: 0 10% 40px 10%;

@@ -185,7 +185,8 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenDecisio
           mode: data.mode,
           session_state: data.session_state || {}, // Scoped state for this turn
           capability_state: data.capability_state,
-          decision_readiness: data.decision_readiness
+          decision_readiness: data.decision_readiness,
+          clarification_state: data.clarification_state || null
         };
         setUserMessages(prev => [...prev, newAssistantMsg]);
         setSessionState(data.session_state || {});
@@ -318,6 +319,7 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenDecisio
           session_state: data.session_state || {}, // Scoped state carries correction context forward
           capability_state: data.capability_state,
           decision_readiness: data.decision_readiness,
+          clarification_state: data.clarification_state || null
         };
         setUserMessages(prev => [...prev, newAssistantMsg]);
         // Always update global session state with the corrected session state
@@ -1259,6 +1261,122 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenDecisio
     }
   };
 
+  const resolveRequestContext = (targetSessionState, explicitTokens = []) => {
+    const resolvedDatasets = datasets.filter(ds => explicitTokens.includes(ds.name));
+    let payloadDataset = resolveDatasetForNlp();
+    let payloadSemanticModel = semanticModel;
+    let datasetRef = undefined;
+
+    if (resolvedDatasets.length === 1) {
+      const selectedDs = resolvedDatasets[0];
+      const isActiveInline = payloadSemanticModel && payloadSemanticModel.dataset && (payloadSemanticModel.dataset.id === selectedDs.id || payloadSemanticModel.dataset.name === selectedDs.name);
+
+      if (isActiveInline) {
+        datasetRef = { source: 'active', dataset_id: selectedDs.id, dataset_name: selectedDs.name };
+      } else {
+        datasetRef = { source: 'datahub', dataset_id: selectedDs.id, dataset_name: selectedDs.name };
+        payloadDataset = undefined;
+        payloadSemanticModel = undefined;
+      }
+    } else if (resolvedDatasets.length > 1) {
+      payloadDataset = undefined;
+      payloadSemanticModel = undefined;
+    } else {
+      const ctx = targetSessionState?.dataset_context;
+      if (ctx?.dataset?.source === 'datahub') {
+        payloadDataset = undefined;
+        payloadSemanticModel = undefined;
+        datasetRef = ctx.dataset;
+      } else if (ctx?.dataset) {
+        datasetRef = ctx.dataset;
+      }
+    }
+
+    return { payloadDataset, payloadSemanticModel, datasetRef, resolvedDatasets };
+  };
+
+  const handleClarificationChoiceSubmit = async (choiceId, choiceLabel, scopedSessionState = null) => {
+    setLoading(true);
+    setError(null);
+    setGovernanceWarning(null);
+
+    setUserMessages(prev => [...prev, { role: "user", content: choiceLabel, grounded: false }]);
+
+    const targetSessionState = scopedSessionState || sessionState;
+    const { payloadDataset, payloadSemanticModel, datasetRef } = resolveRequestContext(targetSessionState, []);
+
+    const payload = {
+      user_message: choiceLabel,
+      dataset: payloadDataset,
+      semantic_model: payloadSemanticModel,
+      dataset_ref: datasetRef,
+      conversation_history: userMessages.map(m => ({ role: m.role, content: m.content })).slice(-10),
+      session_state: { ...targetSessionState, active_mode: activeMode },
+      clarification_response: { choice_id: choiceId }
+    };
+
+    try {
+      const response = await axios.post(`${API_URL}/api/decision/chat/turns`, payload);
+      const data = response.data;
+
+      if (data.status === 'success') {
+        const newMsg = {
+          role: "assistant",
+          content: data.assistant_message,
+          artifacts: data.artifacts,
+          suggested_actions: data.suggested_actions || [],
+          mode: data.mode,
+          session_state: data.session_state || {},
+          capability_state: data.capability_state,
+          decision_readiness: data.decision_readiness,
+          clarification_state: data.clarification_state || null
+        };
+        setUserMessages(prev => {
+          const updated = prev.map(m => {
+            if (m.role === 'assistant' && m.clarification_state?.status === 'pending') {
+              return { ...m, clarification_state: { ...m.clarification_state, status: 'resolved' } };
+            }
+            return m;
+          });
+          return [...updated, newMsg];
+        });
+        setSessionState(data.session_state || {});
+        if (data.mode) setActiveMode(data.mode);
+
+        if (data.governance_readiness && data.governance_readiness.status === 'warning') {
+          const gr = data.governance_readiness;
+          setGovernanceWarning(`Warning (${gr.next_action}): ${gr.reasons?.[0]?.message || 'Dataset issues detected.'}`);
+        }
+
+        if (data.artifacts && data.artifacts.length > 0) {
+          const lastArt = data.artifacts[data.artifacts.length - 1];
+          const richTypes = ['chart', 'workspace_preview', 'workspace_analysis_summary', 'decision_output'];
+          if (richTypes.includes(lastArt.type)) {
+            setActiveArtifact({
+              ...lastArt,
+              contextActions: newMsg.suggested_actions,
+              contextSessionState: newMsg.session_state,
+              contextCapabilityState: newMsg.capability_state,
+              contextDecisionReadiness: newMsg.decision_readiness
+            });
+            setIsResultsPaneOpen(true);
+          }
+        }
+      } else {
+        setError(data.error?.message || "Intelligence engine unavailable.");
+      }
+    } catch (err) {
+      if (err.response?.status === 422 && err.response?.data?.governance_readiness?.status === 'blocked') {
+        const gr = err.response.data.governance_readiness;
+        setError(`Blocked (${gr.next_action}): ${gr.reasons?.[0]?.message || 'Governance checks failed.'}`);
+      } else {
+        setError("⚠ Connectivity error. Verify backend service status.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSendMessage = async () => {
     if (!userInput.trim()) return;
 
@@ -1328,37 +1446,7 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenDecisio
     }
 
     // --- Phase 4 Decision Chat Path (Primary for analytics & decisions) ---
-    let payloadDataset = dsContext;
-    let payloadSemanticModel = semanticModel;
-    let datasetRef = undefined;
-
-    if (resolvedDatasets.length === 1) {
-      const selectedDs = resolvedDatasets[0];
-      // Check if the selected dataset is the currently loaded inline dataset
-      const isActiveInline = payloadSemanticModel && payloadSemanticModel.dataset && (payloadSemanticModel.dataset.id === selectedDs.id || payloadSemanticModel.dataset.name === selectedDs.name);
-
-      if (isActiveInline) {
-        datasetRef = {
-          source: 'active', // Truthful non-Data-Hub reference for the loaded rows
-          dataset_id: selectedDs.id,
-          dataset_name: selectedDs.name
-        };
-      } else {
-        datasetRef = {
-          source: 'datahub',
-          dataset_id: selectedDs.id,
-          dataset_name: selectedDs.name
-        };
-        // Do not send unrelated global dataset or semantic_model
-        payloadDataset = undefined;
-        payloadSemanticModel = undefined;
-      }
-    } else if (resolvedDatasets.length > 1) {
-      // The backend will return a 400 error for multiple mentions; we supply them all.
-      // We will clear out the dataset to let the backend validation handle it cleanly.
-      payloadDataset = undefined;
-      payloadSemanticModel = undefined;
-    }
+    const { payloadDataset, payloadSemanticModel, datasetRef } = resolveRequestContext(sessionState, tokens);
 
     const payload = {
       user_message: msg,
@@ -1383,7 +1471,8 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenDecisio
           mode: data.mode,
           session_state: data.session_state || {}, // Scoped state
           capability_state: data.capability_state,
-          decision_readiness: data.decision_readiness
+          decision_readiness: data.decision_readiness,
+          clarification_state: data.clarification_state || null
         };
         setUserMessages(prev => [...prev, newMsg]);
         setSessionState(data.session_state || {});
@@ -1535,6 +1624,28 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenDecisio
                   {(msg.grounded || msg.role === 'assistant') && <span className="ai-shell__grounded-tag"><FaShieldAlt /> Grounded</span>}
                 </div>
                 <div className="ai-shell__message-content">{msg.content}</div>
+
+                {msg.clarification_state?.status === 'pending' && msg.clarification_state?.choices?.length > 0 && (
+                  <div className="ai-shell__clarification-box">
+                    <Typography variant="body2" className="ai-shell__clarification-prompt">
+                      {msg.clarification_state.prompt || 'Please clarify:'}
+                    </Typography>
+                    <div className="ai-shell__clarification-choices">
+                      {msg.clarification_state.choices.map((choice) => (
+                        <Button
+                          key={choice.choice_id}
+                          variant="outlined"
+                          size="small"
+                          disabled={loading}
+                          onClick={() => handleClarificationChoiceSubmit(choice.choice_id, choice.label, msg.session_state)}
+                          className="ai-shell__clarification-choice-btn"
+                        >
+                          {choice.label}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {msg.artifacts && msg.artifacts.length > 0 && (
                   <div className="ai-shell__artifact-container">

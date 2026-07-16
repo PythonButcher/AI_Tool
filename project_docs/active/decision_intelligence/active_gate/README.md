@@ -6,7 +6,7 @@ Read this folder after `project_docs/active/status/decision_intelligence_executi
 
 ## Current Gate
 
-Status: Phase 2 - AI Chat Conversational Analysis is active for Codex source review, backend continuity behavior, contract work, and focused tests.
+Status: Phase 2 - AI Chat Conversational Analysis is implementation-complete and awaiting user browser acceptance.
 
 Planning source: Release 2 in `project_docs/active/future/codex/ai_chat_decision_intelligence_user_outcome_audit_and_repair_plan.md`.
 
@@ -14,9 +14,11 @@ Current plan: `phase_2_ai_chat_conversational_analysis_plan.md`.
 
 Current Codex goal: `codex_ai_chat_conversational_analysis_goal.md`.
 
-Active frontend handoff: none. Frontend work requires a verified conversational backend contract and a proven, bounded integration gap.
+Active frontend handoff: `project_docs/active/ai_hand_off/antigravity_ai_chat_focused_clarification_choices.md`.
 
-Current owner: Codex. Backend readiness classification is pending source review.
+Current owner: User for browser-level acceptance. Codex has completed the final source review, and Gemini or Antigravity has no open repair item. Readiness classification: `user_browser_acceptance`.
+
+Prepared next work: `project_docs/active/future/codex/decision_comparison_preparation_plan.md`. This remains deferred until the current browser-acceptance gate is cleared.
 
 ## Active-Gate Rule
 

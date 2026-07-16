@@ -92,8 +92,9 @@ Turn request fields:
 | `dataset_ref` / `datasetRef` | `object` | Conditional | Canonical identity metadata. Public fields include `source`, `dataset_id`, `dataset_name`, transform state, and stale state. Local file paths are not copied into Decision Chat session state. |
 | `resolved_datasets` / `resolvedDatasets` | `string[] \| object[]` | No | Dataset mention resolution hints. Release 1 permits one unique dataset. It must match `dataset_ref.dataset_name` or `dataset_ref.dataset_id`. |
 | `requested_mode` / `requestedMode` | `string` | No | User-controlled `auto`, `ask`/`ask_data`, `explore`, or `decide`. An explicit non-Auto selection has precedence over keyword routing. |
-| `conversation_history` | `object[]` | No | Accepted for compatibility but not interpreted in this release. Conversational refinement remains a later approved release and must not be implied by the backend. |
-| `session_state` | `object` | No | Current structured state. `active_mode` is backend carry-forward; it is not treated as a fresh explicit selection unless the request also supplies `requested_mode`. |
+| `conversation_history` | `object[]` | No | Bounded continuity corroboration. The backend accepts at most the latest 10 entries with `role: "user" | "assistant"` and non-empty `content`, truncates accepted content to 2,000 characters per entry for request-time comparison, and never returns or persists raw history. History cannot restore or override metric, filter, workspace, Dataset Trust, or dataset identity state. |
+| `clarification_response` / `clarificationResponse` | `object` | No | Focused answer with `choice_id` / `choiceId` or `text` / `value`. The current backend accepts only an exact choice ID or metric label from the current semantic model. The same exact answer may be sent as `user_message` through the normal chat input. |
+| `session_state` | `object` | No | Current structured state. `active_mode` is backend carry-forward; it is not treated as a fresh explicit selection unless the request also supplies `requested_mode`. Conversational analytics use `last_analytic_context` / `analytics_state`; pending decision questions use `clarification_state`. |
 
 Successful turn and action responses include top-level `resolved_datasets`, an array containing the canonical `Dataset Summary` actually used, or an empty array when no dataset was resolved. The same identity appears in `dataset_trust.dataset`.
 
@@ -101,7 +102,32 @@ Successful turn and action responses include top-level `resolved_datasets`, an a
 
 Every `suggested_actions[]` item includes `action_id`, `enabled`, `disabled_reason`, `availability_reason`, and `payload_expectations`. An action is enabled only when its `action_id` is present in the backend handler catalog and its current prerequisites pass. Disabled actions carry a plain-language `disabled_reason`. `open_workspace` executes through `/api/decision/chat/actions` against `session_state.draft_workspace` and returns the current AI Chat decision-review artifact; clients must not locate it by scanning older chat messages.
 
-Returned `session_state.dataset_context` contains `schema_version`, a SHA-256 `fingerprint`, and a `Dataset Summary`. It never contains raw dataset rows. On a turn, a fingerprint change clears prior workspace, decision, scenario, analytic, and action state before new work runs. On an action request, a fingerprint change is refused so a stale workspace cannot execute against another dataset. `New Chat` must clear the persisted session state, messages, active result, and dataset context together.
+Returned `session_state.dataset_context` contains `schema_version`, a SHA-256 `fingerprint`, and a `Dataset Summary`. It never contains raw dataset rows. On a turn, a fingerprint change clears prior workspace, decision, scenario, analytic, clarification, and action state before new work runs. A terse referential follow-up such as `Show it as a chart` is then refused until the user names a metric or dimension for the new dataset. On an action request, a fingerprint change is refused so a stale workspace cannot execute against another dataset. `New Chat` must clear the persisted session state, messages, active result, and dataset context together.
+
+### AI Chat Conversational Continuity
+
+Successful turn responses include `conversation_context`, a compact `di_conversation_context_v1` object with `accepted_turn_count`, `accepted_roles`, `has_prior_user_turn`, `history_alignment`, `used_for_continuity`, `authoritative_source: "structured_session_state"`, and `raw_history_persisted: false`. The object reports how bounded role/content history corroborated a turn; it does not contain message content.
+
+Semantic metric turns store the same compact state under `session_state.last_analytic_context` and `session_state.analytics_state`. Public fields are `source: "semantic_metric"`, `metric_id`, `metric_name`, `group_by`, `filters`, `output_preference: "answer" | "chart"`, `last_user_message`, and `continuity_source`. `continuity_source` is `new_request`, `structured_session_state`, or `structured_state_with_bounded_history`. Metric and dimension references are re-resolved against the current semantic model on every turn. Categorical refinements use exact values present in the current dataset. Period refinements currently support explicit ISO date ranges, named month plus year, and `Q1` through `Q4` plus year. Filters are bounded to eight and are executed by the existing metric resolver.
+
+Semantic answer and chart artifacts include additive `content.result_context` with `schema_version: "di_conversational_result_context_v1"`, an `evidence` object containing `metric_id`, `group_by`, normalized `filters`, `filtered_row_count`, and `source_row_count`, an `uncertainty` array, `truth_boundary: "observational_analysis_only"`, and `next_action`. Concise assistant copy must identify the grounded row basis and keep the result descriptive and observational.
+
+When a decision workspace is missing its objective metric, turn and action responses may include `clarification_state` and the turn session stores the pending state. The current schema is `di_clarification_v1`:
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `status` | `string` | Yes | `pending` for an unanswered question or `resolved` on the turn that applies the answer. |
+| `question_id` | `string` | Yes | Current value is `objective_metric`. |
+| `missing_input` | `string` | Pending | Current value is `objective.metric_id_or_metric_name`. |
+| `prompt` | `string` | Pending | Focused backend-authored question. |
+| `response_kind` | `string` | Pending | Current value is `single_choice_or_exact_text`. |
+| `choices` | `object[]` | Pending | At most six current semantic metrics with `choice_id`, `label`, and `description`. |
+| `accepts_text` / `text_constraint` | `boolean` / `string` | Pending | Text is accepted only when it exactly matches a current choice ID, label, or metric name. |
+| `correction_type` / `target_path` | `string` | Pending | Current values are `objective_metric` and `decision_scope.objective.metric_ref`. |
+| `choice_id` / `summary` | `string` | Resolved | Applied choice and correction summary. |
+| `next_question` | `object \| null` | Resolved | Next pending clarification when one is safely supported, otherwise `null`. |
+
+Clarification answers execute through the existing deterministic workspace correction service. They update `decision_output.frame`, `decision_output.correction_state`, readiness, and session draft state without rebuilding unrelated levers, segments, constraints, or time horizon. Caller-supplied internal trust evidence is not accepted, and chat history is never treated as the source of a correction.
 
 ### AI Chat Artifact Source
 

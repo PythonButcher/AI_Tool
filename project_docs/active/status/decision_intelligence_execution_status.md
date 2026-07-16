@@ -10,7 +10,7 @@ The Decisions window remains secondary. Saved DecisionAssets support immutable h
 
 ## Current Project Gate
 
-Status: **Phase 2 - AI Chat Conversational Analysis: ACTIVE CODEX GATE**
+Status: **Phase 2 - AI Chat Conversational Analysis: FRONTEND VERIFICATION READY; BROWSER ACCEPTANCE NEEDED**
 
 Active gate:
 
@@ -24,13 +24,17 @@ Current Codex goal:
 
 `project_docs/active/decision_intelligence/active_gate/codex_ai_chat_conversational_analysis_goal.md`
 
-Active frontend handoff: none.
+Active frontend handoff:
 
-Latest verified fact: The user explicitly accepted the delivered dataset-identity scope and directed the project to transition. Mode-selector, action-dispatch, refresh recovery, and New Chat frontend polish remain deferred and are not represented as complete.
+`project_docs/active/ai_hand_off/antigravity_ai_chat_focused_clarification_choices.md`
+
+Latest verified fact: Antigravity has completed the second round of UI repairs. The `resolveRequestContext` helper now accurately targets `session_state.dataset_context.dataset` as contracted by the backend, successfully preserving Data Hub scope. Failed-request resilience has been implemented by moving the `clarification_state.status = 'resolved'` mutation into the success handler, ensuring buttons are temporarily disabled during requests but remain available if the request fails. Build and agent harness checks pass successfully.
 
 ## Next Focus
 
-Codex should execute `project_docs/active/decision_intelligence/active_gate/codex_ai_chat_conversational_analysis_goal.md`. Do not assign frontend work until conversational backend readiness and a bounded UI gap are proven.
+The user must provide browser acceptance for the focused decision clarification choices. Enter `How should we adjust discount rate by region next quarter?`, verify the focused metric choices appear, click `Revenue`, and confirm the updated decision frame stays in AI Chat with the existing lever, region segment, and next-quarter horizon preserved. Once accepted, Codex can review and close the phase or prepare the next handoff.
+
+Decision Comparison preparation is ready at `project_docs/active/future/codex/decision_comparison_preparation_plan.md` with its deferred Codex goal. It must not be promoted or implemented until this browser-acceptance gate closes.
 
 ## Future Cycle Memory
 

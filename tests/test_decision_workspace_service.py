@@ -324,6 +324,43 @@ class DecisionWorkspaceServiceTests(unittest.TestCase):
         self.assertIsNotNone(scoped_context["period_context"])
         self.assertTrue(any("Legacy decision-bundle diagnostics remain available" in note for note in scoped_context["notes"]))
 
+    def test_objective_metric_correction_preserves_unrelated_structured_frame(self):
+        payload = build_payload()
+        payload["objective"] = {
+            "statement": "Increase the selected success metric next quarter",
+            "direction": "maximize",
+            "time_horizon": {
+                "kind": "relative_period",
+                "label": "Next quarter",
+                "grain": "quarter",
+            },
+        }
+        initial = DecisionWorkspaceService.create_workspace(payload)["decision_workspace"]
+        original_levers = initial["decision_scope"]["levers"]
+        original_constraints = initial["decision_scope"]["constraints"]
+        original_horizon = initial["decision_scope"]["objective"]["time_horizon"]
+
+        corrected = DecisionWorkspaceService.correct_workspace({
+            "dataset": payload["dataset"],
+            "dataset_ref": payload["dataset_ref"],
+            "semantic_model": payload["semantic_model"],
+            "decision_workspace": initial,
+            "correction": {
+                "correction_type": "objective_metric",
+                "target_path": "decision_scope.objective.metric_ref",
+                "replacement": {"metric_id": "metric_revenue_sum"},
+                "reason": "Focused clarification response.",
+            },
+        })
+        workspace = corrected["decision_workspace"]
+
+        self.assertEqual(corrected["correction_result"]["status"], "applied")
+        self.assertEqual(workspace["workspace_id"], initial["workspace_id"])
+        self.assertEqual(workspace["decision_scope"]["objective"]["metric_ref"]["metric_id"], "metric_revenue_sum")
+        self.assertEqual(workspace["decision_scope"]["objective"]["time_horizon"], original_horizon)
+        self.assertEqual(workspace["decision_scope"]["levers"], original_levers)
+        self.assertEqual(workspace["decision_scope"]["constraints"], original_constraints)
+
     def test_missing_levers_stays_in_needs_input(self):
         payload = build_payload()
         payload["levers"] = []

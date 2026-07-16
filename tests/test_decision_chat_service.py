@@ -947,6 +947,56 @@ class DecisionChatApiTests(unittest.TestCase):
         self.assertIn("Next question:", body["assistant_message"])
         self.assertIn("Which metric should define success", body["assistant_message"])
         self.assertEqual(body["session_state"]["decision_state"]["objective_draft"]["metric"], None)
+        self.assertEqual(body["clarification_state"]["status"], "pending")
+        self.assertEqual(body["clarification_state"]["question_id"], "objective_metric")
+        self.assertTrue(body["clarification_state"]["choices"])
+
+    def test_decision_clarification_answer_updates_only_the_missing_metric(self):
+        first_response = self.client.post(
+            "/api/decision/chat/turns",
+            json={
+                "dataset": DATASET,
+                "semantic_model": SEMANTIC_MODEL,
+                "user_message": "How should we adjust discount rate by region next quarter?",
+                "conversation_history": [],
+                "session_state": {},
+            },
+        )
+        first_body = first_response.get_json()
+        first_state = first_body["session_state"]
+        first_workspace = first_state["draft_workspace"]
+        original_levers = first_workspace["decision_scope"]["levers"]
+        original_segments = first_workspace["decision_scope"]["segment_dimensions"]
+        original_horizon = first_workspace["decision_scope"]["objective"]["time_horizon"]
+
+        follow_up = self.client.post(
+            "/api/decision/chat/turns",
+            json={
+                "dataset": DATASET,
+                "semantic_model": SEMANTIC_MODEL,
+                "user_message": "Revenue",
+                "conversation_history": [
+                    {"role": "user", "content": "How should we adjust discount rate by region next quarter?"},
+                    {"role": "assistant", "content": first_body["assistant_message"]},
+                ],
+                "session_state": first_state,
+            },
+        )
+
+        self.assertEqual(follow_up.status_code, 200)
+        body = follow_up.get_json()
+        workspace = body["session_state"]["draft_workspace"]
+        self.assertEqual(body["mode_context"]["reason_code"], "decision_clarification_response")
+        self.assertEqual(body["clarification_state"]["status"], "resolved")
+        self.assertEqual(body["clarification_state"]["choice_id"], "metric_revenue_sum")
+        self.assertIsNone(body["clarification_state"]["next_question"])
+        self.assertNotIn("clarification_state", body["session_state"])
+        self.assertEqual(workspace["workspace_id"], first_workspace["workspace_id"])
+        self.assertEqual(workspace["decision_scope"]["objective"]["metric_ref"]["metric_id"], "metric_revenue_sum")
+        self.assertEqual(workspace["decision_scope"]["objective"]["time_horizon"], original_horizon)
+        self.assertEqual(workspace["decision_scope"]["levers"], original_levers)
+        self.assertEqual(workspace["decision_scope"]["segment_dimensions"], original_segments)
+        self.assertEqual(body["decision_output"]["correction_state"]["status"], "updated")
 
     def test_new_decision_prompt_rebuilds_stale_workspace_from_session_state(self):
         first_response = self.client.post(
@@ -1207,6 +1257,158 @@ class DecisionChatApiTests(unittest.TestCase):
         self.assertEqual(body["mode_context"]["reason_code"], "visualization_request")
         self.assertEqual(body["artifacts"][0]["default_view"], "inspector")
         self.assertEqual(body["artifacts"][0]["content"]["chartSpec"]["sourceMode"], "semantic")
+        self.assertEqual(
+            body["artifacts"][0]["content"]["result_context"]["truth_boundary"],
+            "observational_analysis_only",
+        )
+
+    def test_follow_up_turn_refines_metric_with_bounded_history_and_keeps_grouping(self):
+        first_prompt = "What is Revenue by Region?"
+        first_response = self.client.post(
+            "/api/decision/chat/turns",
+            json={
+                "dataset": DATASET,
+                "semantic_model": SEMANTIC_MODEL,
+                "user_message": first_prompt,
+                "conversation_history": [],
+                "session_state": {},
+            },
+        )
+        first_body = first_response.get_json()
+
+        follow_up = self.client.post(
+            "/api/decision/chat/turns",
+            json={
+                "dataset": DATASET,
+                "semantic_model": SEMANTIC_MODEL,
+                "user_message": "Use Gross Margin % instead",
+                "conversation_history": [
+                    {"role": "user", "content": first_prompt},
+                    {"role": "assistant", "content": first_body["assistant_message"]},
+                ],
+                "session_state": first_body["session_state"],
+            },
+        )
+
+        self.assertEqual(follow_up.status_code, 200)
+        body = follow_up.get_json()
+        state = body["session_state"]["last_analytic_context"]
+        self.assertEqual(state["metric_name"], "Gross Margin %")
+        self.assertEqual(state["group_by"], ["Region"])
+        self.assertEqual(state["continuity_source"], "structured_state_with_bounded_history")
+        self.assertTrue(body["conversation_context"]["history_alignment"])
+        self.assertTrue(body["conversation_context"]["used_for_continuity"])
+        self.assertFalse(body["conversation_context"]["raw_history_persisted"])
+        self.assertNotIn("conversation_history", body["session_state"])
+        self.assertIn("descriptive, observational evidence", body["assistant_message"])
+
+    def test_conversation_history_cannot_override_structured_analytic_state(self):
+        first_response = self.client.post(
+            "/api/decision/chat/turns",
+            json={
+                "dataset": DATASET,
+                "semantic_model": SEMANTIC_MODEL,
+                "user_message": "What is Revenue by Region?",
+                "session_state": {},
+            },
+        )
+
+        follow_up = self.client.post(
+            "/api/decision/chat/turns",
+            json={
+                "dataset": DATASET,
+                "semantic_model": SEMANTIC_MODEL,
+                "user_message": "Show it as a chart",
+                "conversation_history": [
+                    {"role": "user", "content": "Use Gross Margin % instead"},
+                    {"role": "assistant", "content": "The metric is now Gross Margin %."},
+                ],
+                "session_state": first_response.get_json()["session_state"],
+            },
+        )
+
+        self.assertEqual(follow_up.status_code, 200)
+        body = follow_up.get_json()
+        self.assertEqual(body["session_state"]["last_analytic_context"]["metric_name"], "Revenue")
+        self.assertEqual(body["artifacts"][0]["content"]["chartSpec"]["semanticConfig"]["metricName"], "Revenue")
+        self.assertFalse(body["conversation_context"]["history_alignment"])
+        self.assertEqual(body["conversation_context"]["authoritative_source"], "structured_session_state")
+
+    def test_follow_up_turn_refines_segment_filter_and_carries_it_forward(self):
+        first_response = self.client.post(
+            "/api/decision/chat/turns",
+            json={
+                "dataset": DATASET,
+                "semantic_model": SEMANTIC_MODEL,
+                "user_message": "What is Revenue by Region?",
+                "conversation_history": [],
+                "session_state": {},
+            },
+        )
+
+        follow_up = self.client.post(
+            "/api/decision/chat/turns",
+            json={
+                "dataset": DATASET,
+                "semantic_model": SEMANTIC_MODEL,
+                "user_message": "Only West",
+                "conversation_history": [],
+                "session_state": first_response.get_json()["session_state"],
+            },
+        )
+
+        self.assertEqual(follow_up.status_code, 200)
+        body = follow_up.get_json()
+        filters = body["session_state"]["last_analytic_context"]["filters"]
+        self.assertIn({"field": "Region", "operator": "eq", "value": "West", "values": None}, filters)
+        evidence = body["artifacts"][0]["content"]["result_context"]["evidence"]
+        self.assertEqual(evidence["filtered_row_count"], 2)
+        self.assertEqual(evidence["source_row_count"], 4)
+
+    def test_follow_up_turn_refines_period_without_losing_segment_filter(self):
+        first_response = self.client.post(
+            "/api/decision/chat/turns",
+            json={
+                "dataset": DATASET,
+                "semantic_model": SEMANTIC_MODEL,
+                "user_message": "What is Revenue by Region?",
+                "session_state": {},
+            },
+        )
+        segment_response = self.client.post(
+            "/api/decision/chat/turns",
+            json={
+                "dataset": DATASET,
+                "semantic_model": SEMANTIC_MODEL,
+                "user_message": "Only West",
+                "session_state": first_response.get_json()["session_state"],
+            },
+        )
+
+        period_response = self.client.post(
+            "/api/decision/chat/turns",
+            json={
+                "dataset": DATASET,
+                "semantic_model": SEMANTIC_MODEL,
+                "user_message": "Only Q1 2026",
+                "session_state": segment_response.get_json()["session_state"],
+            },
+        )
+
+        self.assertEqual(period_response.status_code, 200)
+        body = period_response.get_json()
+        filters = body["session_state"]["last_analytic_context"]["filters"]
+        filters_by_field = {}
+        for item in filters:
+            filters_by_field.setdefault(item["field"], []).append(item)
+        self.assertEqual(filters_by_field["Region"][0]["value"], "West")
+        self.assertEqual(
+            {(item["operator"], item["value"]) for item in filters_by_field["Order Date"]},
+            {("gte", "2026-01-01"), ("lte", "2026-03-31")},
+        )
+        evidence = body["artifacts"][0]["content"]["result_context"]["evidence"]
+        self.assertEqual(evidence["filtered_row_count"], 1)
+        self.assertEqual(evidence["source_row_count"], 4)
 
     def test_follow_up_turn_can_change_grouping_from_prior_semantic_context(self):
         first_response = self.client.post(
@@ -1844,6 +2046,44 @@ class DecisionChatApiTests(unittest.TestCase):
         self.assertNotIn("draft_workspace", body["session_state"])
         self.assertFalse(body["session_state"]["decision_state"]["has_draft_workspace"])
         self.assertEqual(body["resolved_datasets"][0]["dataset_id"], "sales_b")
+        self.assertTrue(any("prior structured analysis state was cleared" in warning for warning in body["warnings"]))
+
+    def test_dataset_change_cannot_reuse_stale_conversational_analytic_context(self):
+        first_response = self.client.post(
+            "/api/decision/chat/turns",
+            json={
+                "dataset": DATASET,
+                "dataset_ref": {"source": "inline", "dataset_id": "sales_a", "dataset_name": "Sales A"},
+                "semantic_model": SEMANTIC_MODEL,
+                "user_message": "What is Revenue by Region?",
+                "session_state": {},
+            },
+        )
+        first_state = first_response.get_json()["session_state"]
+        self.assertEqual(first_state["last_analytic_context"]["metric_name"], "Revenue")
+        changed_dataset = [dict(row, Revenue=row["Revenue"] + 500) for row in DATASET]
+
+        second_response = self.client.post(
+            "/api/decision/chat/turns",
+            json={
+                "dataset": changed_dataset,
+                "dataset_ref": {"source": "inline", "dataset_id": "sales_b", "dataset_name": "Sales B"},
+                "semantic_model": SEMANTIC_MODEL,
+                "user_message": "Show it as a chart",
+                "conversation_history": [
+                    {"role": "user", "content": "What is Revenue by Region?"},
+                    {"role": "assistant", "content": first_response.get_json()["assistant_message"]},
+                ],
+                "session_state": first_state,
+            },
+        )
+
+        self.assertEqual(second_response.status_code, 200)
+        body = second_response.get_json()
+        self.assertNotIn("last_analytic_context", body["session_state"])
+        self.assertNotIn("analytics_state", body["session_state"])
+        self.assertNotEqual((body["artifacts"][0].get("content") or {}).get("metric", {}).get("label"), "Revenue")
+        self.assertFalse(body["conversation_context"]["used_for_continuity"])
         self.assertTrue(any("prior structured analysis state was cleared" in warning for warning in body["warnings"]))
 
     def test_action_refuses_stale_workspace_after_dataset_change(self):
