@@ -6,15 +6,17 @@ Read this folder after `project_docs/active/status/decision_intelligence_executi
 
 ## Current Gate
 
-Status: Phase 1 - AI Chat Trustworthy Interaction is active for Codex source review, backend and contract repair, focused tests, and frontend handoff preparation when a bounded UI gap is proven.
+Status: Phase 2 - AI Chat Conversational Analysis is active for Codex source review, backend continuity behavior, contract work, and focused tests.
 
-Planning source: Release 1 in `project_docs/active/future/codex/ai_chat_decision_intelligence_user_outcome_audit_and_repair_plan.md`.
+Planning source: Release 2 in `project_docs/active/future/codex/ai_chat_decision_intelligence_user_outcome_audit_and_repair_plan.md`.
 
-Current plan: `phase_1_ai_chat_trustworthy_interaction_plan.md`.
+Current plan: `phase_2_ai_chat_conversational_analysis_plan.md`.
 
-Current Codex goal: `codex_ai_chat_trustworthy_interaction_goal.md`.
+Current Codex goal: `codex_ai_chat_conversational_analysis_goal.md`.
 
-Active frontend handoff: none. Frontend work requires a verified backend contract and a proven, bounded frontend gap.
+Active frontend handoff: none. Frontend work requires a verified conversational backend contract and a proven, bounded integration gap.
+
+Current owner: Codex. Backend readiness classification is pending source review.
 
 ## Active-Gate Rule
 

@@ -34,18 +34,32 @@ export const detectToken = (text, cursorPosition) => {
   return query;
 }
 
-export function extractTokens(text) {
+export function extractTokens(text, datasets = []) {
   if (!text || typeof text !== "string") return [];
 
-  // Match @ followed by valid dataset name characters (alphanumeric, underscores)
-  // Stops at punctuation, spaces, or end of string.
-  // Example: "Compare @Sales_2023, and @Marketing." -> captures "Sales_2023", "Marketing"
-  const matches = text.match(/@([a-zA-Z0-9_]+)/g);
+  const names = [];
+  let remainingText = text;
 
-  if (!matches) return [];
+  if (datasets && datasets.length > 0) {
+    // Sort datasets by length descending to match longest names first
+    const sortedDatasets = [...datasets].sort((a, b) => b.name.length - a.name.length);
+    for (const ds of sortedDatasets) {
+      const token = `@${ds.name}`;
+      if (remainingText.includes(token)) {
+        names.push(ds.name);
+        // Remove the matched token so we don't double-match substrings
+        remainingText = remainingText.split(token).join('');
+      }
+    }
+  }
 
-  // Remove '@', dedupe
-  const names = matches.map(m => m.slice(1));
+  // Match any remaining @ tokens that consist of alphanumeric/underscore chars
+  const matches = remainingText.match(/@([a-zA-Z0-9_]+)/g);
+  if (matches) {
+    const fallbackNames = matches.map(m => m.slice(1));
+    fallbackNames.forEach(name => names.push(name));
+  }
+
   return Array.from(new Set(names));
 }
 

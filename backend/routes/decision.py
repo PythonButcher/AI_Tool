@@ -86,11 +86,17 @@ def create_workspace_route():
 @decision_bp.route("/chat/turns", methods=["POST"])
 def decision_chat_turn_route():
     payload = request.get_json(silent=True) or {}
-    readiness, blocked = _governance_for_payload(payload, 'chat')
+    try:
+        prepared_payload = DecisionChatService.prepare_payload(payload)
+    except DecisionServiceError as exc:
+        error_response = _error_payload("INVALID_DECISION_CHAT_TURN_REQUEST", str(exc))
+        error_response["dataset_trust"] = DecisionChatService.build_dataset_trust_for_payload(payload)
+        return jsonify(error_response), 400
+    readiness, blocked = _governance_for_payload(prepared_payload, 'chat')
     if blocked:
         return blocked
     try:
-        service_payload = _payload_with_governance_readiness(payload, readiness)
+        service_payload = _payload_with_governance_readiness(prepared_payload, readiness)
         return _governed_response(DecisionChatService.handle_turn(service_payload), readiness)
     except DecisionServiceError as exc:
         error_response = _error_payload("INVALID_DECISION_CHAT_TURN_REQUEST", str(exc))
@@ -102,11 +108,17 @@ def decision_chat_turn_route():
 @decision_bp.route("/chat/actions", methods=["POST"])
 def decision_chat_action_route():
     payload = request.get_json(silent=True) or {}
-    readiness, blocked = _governance_for_payload(payload, 'chat_action')
+    try:
+        prepared_payload = DecisionChatService.prepare_payload(payload)
+    except DecisionServiceError as exc:
+        error_response = _error_payload("INVALID_DECISION_CHAT_ACTION_REQUEST", str(exc))
+        error_response["dataset_trust"] = DecisionChatService.build_dataset_trust_for_payload(payload)
+        return jsonify(error_response), 400
+    readiness, blocked = _governance_for_payload(prepared_payload, 'chat_action')
     if blocked:
         return blocked
     try:
-        service_payload = _payload_with_governance_readiness(payload, readiness)
+        service_payload = _payload_with_governance_readiness(prepared_payload, readiness)
         return _governed_response(DecisionChatService.handle_action(service_payload), readiness)
     except DecisionServiceError as exc:
         error_response = _error_payload("INVALID_DECISION_CHAT_ACTION_REQUEST", str(exc))

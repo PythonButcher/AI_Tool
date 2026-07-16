@@ -10,7 +10,7 @@ The Decisions window remains secondary. Saved DecisionAssets support immutable h
 
 ## Current Project Gate
 
-Status: **Phase 1 - AI Chat Trustworthy Interaction: ACTIVE CODEX GATE**
+Status: **Phase 2 - AI Chat Conversational Analysis: ACTIVE CODEX GATE**
 
 Active gate:
 
@@ -18,19 +18,19 @@ Active gate:
 
 Current plan:
 
-`project_docs/active/decision_intelligence/active_gate/phase_1_ai_chat_trustworthy_interaction_plan.md`
+`project_docs/active/decision_intelligence/active_gate/phase_2_ai_chat_conversational_analysis_plan.md`
 
 Current Codex goal:
 
-`project_docs/active/decision_intelligence/active_gate/codex_ai_chat_trustworthy_interaction_goal.md`
+`project_docs/active/decision_intelligence/active_gate/codex_ai_chat_conversational_analysis_goal.md`
 
 Active frontend handoff: none.
 
-Latest verified fact: The user approved Release 1 from the Codex AI Chat and Decision Intelligence audit. This gate covers trustworthy dataset identity, routing, action execution, and session recovery before broader decision features are added.
+Latest verified fact: The user explicitly accepted the delivered dataset-identity scope and directed the project to transition. Mode-selector, action-dispatch, refresh recovery, and New Chat frontend polish remain deferred and are not represented as complete.
 
 ## Next Focus
 
-Codex should execute `project_docs/active/decision_intelligence/active_gate/codex_ai_chat_trustworthy_interaction_goal.md`. Codex owns source truth, backend work, contracts, and tests. Do not assign frontend work until source review proves a bounded gap and classifies backend readiness.
+Codex should execute `project_docs/active/decision_intelligence/active_gate/codex_ai_chat_conversational_analysis_goal.md`. Do not assign frontend work until conversational backend readiness and a bounded UI gap are proven.
 
 ## Future Cycle Memory
 

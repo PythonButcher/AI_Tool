@@ -1,7 +1,9 @@
 import unittest
+from unittest.mock import patch
 
 from flask import Flask
 
+from backend.decision_engine import DecisionChatService
 from backend.routes.decision import decision_bp
 from backend.services.decision_output_service import DecisionOutputService
 from backend.utils.global_state import set_trained_model
@@ -1536,6 +1538,10 @@ class DecisionChatApiTests(unittest.TestCase):
             self.assertIn("enabled", action)
             self.assertTrue(action["availability_reason"])
             self.assertIsInstance(action["payload_expectations"], dict)
+            if action["enabled"]:
+                self.assertIsNone(action["disabled_reason"])
+            else:
+                self.assertTrue(action["disabled_reason"])
 
         self.assertEqual(actions["analyze_workspace"]["priority"], "primary")
         self.assertTrue(actions["analyze_workspace"]["enabled"])
@@ -1689,6 +1695,215 @@ class DecisionChatApiTests(unittest.TestCase):
             "objective.metric_id_or_metric_name",
             body["decision_output"]["readiness"]["missing_inputs"],
         )
+
+    def test_named_dataset_requires_matching_dataset_ref_before_analysis(self):
+        response = self.client.post(
+            "/api/decision/chat/turns",
+            json={
+                "dataset": DATASET,
+                "semantic_model": SEMANTIC_MODEL,
+                "resolved_datasets": ["Mentioned Sales"],
+                "_dataset_identity_prepared": True,
+                "user_message": "Show revenue for @Mentioned_Sales",
+                "session_state": {},
+            },
+        )
+
+        self.assertEqual(response.status_code, 400)
+        body = response.get_json()
+        self.assertEqual(body["error"]["code"], "INVALID_DECISION_CHAT_TURN_REQUEST")
+        self.assertIn("dataset_ref", body["error"]["message"])
+
+        matched = self.client.post(
+            "/api/decision/chat/turns",
+            json={
+                "dataset": DATASET,
+                "dataset_ref": {
+                    "source": "inline",
+                    "dataset_id": "mentioned_sales",
+                    "dataset_name": "Mentioned Sales",
+                },
+                "semantic_model": SEMANTIC_MODEL,
+                "resolved_datasets": ["Mentioned Sales"],
+                "user_message": "Show revenue for the selected dataset",
+                "session_state": {},
+            },
+        )
+
+        self.assertEqual(matched.status_code, 200)
+        matched_body = matched.get_json()
+        self.assertEqual(matched_body["resolved_datasets"][0]["dataset_id"], "mentioned_sales")
+        self.assertEqual(matched_body["dataset_trust"]["dataset"]["dataset_name"], "Mentioned Sales")
+
+    def test_datahub_selection_uses_selected_dataset_semantic_model(self):
+        class DatasetFrame:
+            """Minimal DataFrame stand-in for deterministic dataset resolution."""
+
+            @staticmethod
+            def to_dict(*, orient):
+                self.assertEqual(orient, "records")
+                return DATASET
+
+        selected_semantic_model = {
+            **SEMANTIC_MODEL,
+            "dataset": {"id": "selected_sales", "name": "Selected Sales"},
+        }
+        with patch("backend.decision_engine.chat_service.resolve_dataset_bundle") as resolver:
+            resolver.return_value = {
+                "dataframe": DatasetFrame(),
+                "semantic_model": selected_semantic_model,
+                "dataset_ref": {
+                    "source": "datahub",
+                    "dataset_id": "selected_sales",
+                    "dataset_name": "Selected Sales",
+                },
+            }
+            prepared = DecisionChatService.prepare_payload({
+                "dataset": [{"Wrong": 1}],
+                "dataset_ref": {
+                    "source": "datahub",
+                    "dataset_id": "selected_sales",
+                    "dataset_name": "Selected Sales",
+                },
+                "semantic_model": {"dataset": {"id": "wrong_active", "name": "Wrong Active"}},
+                "resolved_datasets": ["Selected Sales"],
+            })
+
+        self.assertIsNone(resolver.call_args.kwargs["semantic_model"])
+        self.assertEqual(prepared["dataset"], DATASET)
+        self.assertEqual(prepared["semantic_model"], selected_semantic_model)
+
+    def test_explicit_mode_override_precedes_keyword_routing(self):
+        response = self.client.post(
+            "/api/decision/chat/turns",
+            json={
+                "dataset": DATASET,
+                "semantic_model": SEMANTIC_MODEL,
+                "requested_mode": "explore",
+                "user_message": "How should we grow revenue without hurting gross margin?",
+                "session_state": {},
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.get_json()
+        self.assertEqual(body["mode"], "explore")
+        self.assertEqual(body["mode_context"]["reason_code"], "explicit_mode_override")
+        self.assertEqual(body["mode_context"]["selection_source"], "explicit")
+        self.assertFalse(body["mode_context"]["requires_confirmation"])
+
+    def test_ambiguous_chart_decision_comparison_requests_confirmation(self):
+        response = self.client.post(
+            "/api/decision/chat/turns",
+            json={
+                "dataset": DATASET,
+                "semantic_model": SEMANTIC_MODEL,
+                "requested_mode": "auto",
+                "user_message": "Compare revenue by region as a chart; what should we do to improve revenue?",
+                "session_state": {},
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.get_json()
+        self.assertEqual(body["mode"], "ask")
+        self.assertEqual(body["mode_context"]["reason_code"], "ambiguous_chart_decision_comparison")
+        self.assertTrue(body["mode_context"]["requires_confirmation"])
+        self.assertEqual(body["mode_context"]["confirmation_modes"], ["explore", "decide"])
+        self.assertEqual(body["artifacts"][0]["type"], "answer")
+        self.assertIsNone(body["draft_workspace_preview"])
+        self.assertIsNone(body["decision_output"])
+
+    def test_dataset_change_clears_stale_structured_turn_state(self):
+        first_response = self.client.post(
+            "/api/decision/chat/turns",
+            json={
+                "dataset": DATASET,
+                "dataset_ref": {"source": "inline", "dataset_id": "sales_a", "dataset_name": "Sales A"},
+                "semantic_model": SEMANTIC_MODEL,
+                "user_message": "How should we grow revenue next quarter without hurting gross margin?",
+                "session_state": {},
+            },
+        )
+        first_state = first_response.get_json()["session_state"]
+        changed_dataset = [dict(row, Revenue=row["Revenue"] + 500) for row in DATASET]
+
+        second_response = self.client.post(
+            "/api/decision/chat/turns",
+            json={
+                "dataset": changed_dataset,
+                "dataset_ref": {"source": "inline", "dataset_id": "sales_b", "dataset_name": "Sales B"},
+                "semantic_model": SEMANTIC_MODEL,
+                "user_message": "What is Revenue?",
+                "session_state": first_state,
+            },
+        )
+
+        self.assertEqual(second_response.status_code, 200)
+        body = second_response.get_json()
+        self.assertNotIn("draft_workspace", body["session_state"])
+        self.assertFalse(body["session_state"]["decision_state"]["has_draft_workspace"])
+        self.assertEqual(body["resolved_datasets"][0]["dataset_id"], "sales_b")
+        self.assertTrue(any("prior structured analysis state was cleared" in warning for warning in body["warnings"]))
+
+    def test_action_refuses_stale_workspace_after_dataset_change(self):
+        turn_response = self.client.post(
+            "/api/decision/chat/turns",
+            json={
+                "dataset": DATASET,
+                "dataset_ref": {"source": "inline", "dataset_id": "sales_a", "dataset_name": "Sales A"},
+                "semantic_model": SEMANTIC_MODEL,
+                "user_message": "How should we grow revenue next quarter without hurting gross margin?",
+                "session_state": {},
+            },
+        )
+        draft_state = turn_response.get_json()["session_state"]
+        changed_dataset = [dict(row, Revenue=row["Revenue"] + 500) for row in DATASET]
+
+        action_response = self.client.post(
+            "/api/decision/chat/actions",
+            json={
+                "action": "open_workspace",
+                "dataset": changed_dataset,
+                "dataset_ref": {"source": "inline", "dataset_id": "sales_b", "dataset_name": "Sales B"},
+                "semantic_model": SEMANTIC_MODEL,
+                "session_state": draft_state,
+            },
+        )
+
+        self.assertEqual(action_response.status_code, 400)
+        body = action_response.get_json()
+        self.assertIn("active dataset changed", body["error"]["message"])
+
+    def test_open_workspace_executes_from_current_structured_state(self):
+        turn_response = self.client.post(
+            "/api/decision/chat/turns",
+            json={
+                "dataset": DATASET,
+                "dataset_ref": {"source": "inline", "dataset_id": "sales_a", "dataset_name": "Sales A"},
+                "semantic_model": SEMANTIC_MODEL,
+                "user_message": "How should we grow revenue next quarter without hurting gross margin?",
+                "session_state": {},
+            },
+        )
+        turn_body = turn_response.get_json()
+        draft_state = turn_body["session_state"]
+        workspace_id = draft_state["draft_workspace"]["workspace_id"]
+
+        action_response = self.client.post(
+            "/api/decision/chat/actions",
+            json={
+                "action": "open_workspace",
+                "session_state": draft_state,
+            },
+        )
+
+        self.assertEqual(action_response.status_code, 200)
+        body = action_response.get_json()
+        self.assertEqual(body["executed_action"]["action_id"], "open_workspace")
+        self.assertEqual(body["artifacts"][0]["review_target"]["workspace_id"], workspace_id)
+        self.assertEqual(body["decision_output"]["source_refs"]["workspace_id"], workspace_id)
+        self.assertEqual(body["resolved_datasets"][0]["dataset_id"], "sales_a")
 
 
 if __name__ == "__main__":

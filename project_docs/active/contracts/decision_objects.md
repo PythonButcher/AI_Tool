@@ -79,6 +79,30 @@ Current placement:
 
 `DecisionChatService.handle_action` returns top-level `dataset_trust`, adds the same object to each returned artifact, and stores it in returned session state. Chat turn and action error responses include `dataset_trust` when the request fails before a normal response can be built.
 
+### Decision Chat Trustworthy Interaction
+
+`POST /api/decision/chat/turns` and `POST /api/decision/chat/actions` resolve one canonical dataset before governance, routing, workspace work, or action execution. An explicit dataset mention is carried in `resolved_datasets` and must be paired with a matching `dataset_ref`/`datasetRef`. A request with multiple named datasets, a named dataset without a reference, or a name/reference mismatch is refused with HTTP 400 before analysis. When a Data Hub reference is selected, the backend loads that referenced dataset and its registered or inferred semantic model instead of relabeling unrelated inline rows or reusing the active dataset's semantic model.
+
+Turn request fields:
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `user_message` | `string` | Yes | Current user turn. |
+| `dataset` | `object[] \| object` | Conditional | Inline rows for the active dataset. May be omitted when a resolvable Data Hub `dataset_ref` is supplied. |
+| `dataset_ref` / `datasetRef` | `object` | Conditional | Canonical identity metadata. Public fields include `source`, `dataset_id`, `dataset_name`, transform state, and stale state. Local file paths are not copied into Decision Chat session state. |
+| `resolved_datasets` / `resolvedDatasets` | `string[] \| object[]` | No | Dataset mention resolution hints. Release 1 permits one unique dataset. It must match `dataset_ref.dataset_name` or `dataset_ref.dataset_id`. |
+| `requested_mode` / `requestedMode` | `string` | No | User-controlled `auto`, `ask`/`ask_data`, `explore`, or `decide`. An explicit non-Auto selection has precedence over keyword routing. |
+| `conversation_history` | `object[]` | No | Accepted for compatibility but not interpreted in this release. Conversational refinement remains a later approved release and must not be implied by the backend. |
+| `session_state` | `object` | No | Current structured state. `active_mode` is backend carry-forward; it is not treated as a fresh explicit selection unless the request also supplies `requested_mode`. |
+
+Successful turn and action responses include top-level `resolved_datasets`, an array containing the canonical `Dataset Summary` actually used, or an empty array when no dataset was resolved. The same identity appears in `dataset_trust.dataset`.
+
+`mode_context` includes `current_mode`, `reason_code`, `reason`, `selection_source`, `requires_confirmation`, `confirmation_modes`, and `available_modes`. Auto routing that detects both chart/comparison and decision/trade-off intent returns `current_mode: "ask"`, `reason_code: "ambiguous_chart_decision_comparison"`, `requires_confirmation: true`, and `confirmation_modes: ["explore", "decide"]`; it does not execute either workflow. Explicit mode selection returns `reason_code: "explicit_mode_override"`.
+
+Every `suggested_actions[]` item includes `action_id`, `enabled`, `disabled_reason`, `availability_reason`, and `payload_expectations`. An action is enabled only when its `action_id` is present in the backend handler catalog and its current prerequisites pass. Disabled actions carry a plain-language `disabled_reason`. `open_workspace` executes through `/api/decision/chat/actions` against `session_state.draft_workspace` and returns the current AI Chat decision-review artifact; clients must not locate it by scanning older chat messages.
+
+Returned `session_state.dataset_context` contains `schema_version`, a SHA-256 `fingerprint`, and a `Dataset Summary`. It never contains raw dataset rows. On a turn, a fingerprint change clears prior workspace, decision, scenario, analytic, and action state before new work runs. On an action request, a fingerprint change is refused so a stale workspace cannot execute against another dataset. `New Chat` must clear the persisted session state, messages, active result, and dataset context together.
+
 ### AI Chat Artifact Source
 
 Decision Chat artifacts keep a compact `source` label that describes the backend path that produced the artifact. For chart artifacts, an explicit `content.meta.source` is authoritative and is copied to top-level `artifact.source`. Charts produced by semantic metric analytics use `source: "semantic_metric"` and `content.meta.source: "semantic_metric"` because the metric resolver supplied the grouped values and semantic lineage. Raw chart artifacts that do not provide `content.meta.source` fall back to `chart_engine`.

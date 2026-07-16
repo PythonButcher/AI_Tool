@@ -1,3 +1,7 @@
+# Completed Reference
+
+Status: Completed Codex backend/source gate and accepted dataset-identity frontend scope. This file is retained for reference and is not the active kickoff goal.
+
 Goal: Establish the source and backend foundation for trustworthy AI Chat interaction, then prepare only the first bounded frontend handoff proven necessary by the audit.
 
 Read `project_docs/INDEX.md`, `project_docs/active/README.md`, `project_docs/active/status/decision_intelligence_execution_status.md`, `project_docs/active/decision_intelligence/active_gate/README.md`, `project_docs/active/decision_intelligence/active_gate/phase_1_ai_chat_trustworthy_interaction_plan.md`, `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md`, `project_docs/active/contracts/decision_objects.md`, and `project_docs/active/contracts/data_catalog_lineage.md`. Use Release 1 in `project_docs/active/future/codex/ai_chat_decision_intelligence_user_outcome_audit_and_repair_plan.md` as the approved planning source. Read `project_docs/active/codex_harness_engineering.md` before broad source inspection.

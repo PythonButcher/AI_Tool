@@ -1,6 +1,10 @@
+# Completed Reference
+
+Status: Closed on 2026-07-15 by explicit user acceptance of the delivered dataset-identity scope. Mode-selector, action-dispatch, refresh recovery, and New Chat frontend items were not accepted as shipped and remain deferred rather than being represented as complete.
+
 # Phase 1 - AI Chat Trustworthy Interaction Plan
 
-Status: Active
+Status: Closed with accepted scope
 
 Owner: Codex for source truth, backend, contracts, tests, and coordination; Gemini or Antigravity for frontend implementation after a focused handoff.
 

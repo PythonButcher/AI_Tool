@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 from decimal import Decimal, InvalidOperation
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -12,10 +14,14 @@ from backend.decision_engine.mode_detection import (
     is_visualization_request,
 )
 from backend.services.aichat_nlp import analyse_columns, build_chart_response, extract_dataset, interpret_nl_query
+from backend.services.dataset_context import resolve_dataset_bundle
 from backend.services.decision_output_service import DecisionOutputService
 from backend.services.decision_support import DecisionServiceError, build_dataset_trust
 from backend.services.metric_resolver import MetricResolutionError, MetricResolver
 from backend.services.decision_workspace_service import DecisionWorkspaceService
+
+
+_PREPARED_DATASET_SENTINEL = object()
 
 
 class DecisionChatService:
@@ -104,8 +110,97 @@ class DecisionChatService:
     )
 
     @staticmethod
+    def prepare_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
+        """Resolve one truthful dataset identity before governance or analysis."""
+        payload = dict(payload) if isinstance(payload, dict) else {}
+        if payload.get("_dataset_identity_prepared") is _PREPARED_DATASET_SENTINEL:
+            return payload
+
+        semantic_model = payload.get("semantic_model") or payload.get("semanticModel")
+        dataset_ref = payload.get("dataset_ref") or payload.get("datasetRef")
+        normalized_ref = dict(dataset_ref) if isinstance(dataset_ref, dict) else {}
+        requested_datasets = DecisionChatService._normalize_requested_datasets(
+            payload.get("resolved_datasets") or payload.get("resolvedDatasets")
+        )
+        if len(requested_datasets) > 1:
+            raise DecisionServiceError(
+                "Decision Chat supports one analyzed dataset per turn; select one named dataset."
+            )
+
+        if requested_datasets:
+            if not normalized_ref:
+                raise DecisionServiceError(
+                    "The named dataset could not be verified. Send dataset_ref for the mentioned dataset or remove the mention."
+                )
+            requested_name = requested_datasets[0].casefold()
+            reference_names = {
+                str(normalized_ref.get("dataset_name") or "").strip().casefold(),
+                str(normalized_ref.get("dataset_id") or "").strip().casefold(),
+            } - {""}
+            if requested_name not in reference_names:
+                raise DecisionServiceError(
+                    "The named dataset does not match dataset_ref; the request was refused before analysis."
+                )
+
+        dataset = extract_dataset(payload.get("dataset"))
+        should_load_reference = bool(normalized_ref) and (
+            str(normalized_ref.get("source") or "").strip().lower() == "datahub"
+            or (not dataset and bool(normalized_ref.get("dataset_id")))
+        )
+        if should_load_reference:
+            try:
+                bundle = resolve_dataset_bundle(
+                    dataset=None,
+                    dataset_ref=normalized_ref,
+                    # The caller's semantic model may describe the unrelated
+                    # active dataset. Resolve model truth with the selected
+                    # Data Hub record instead.
+                    semantic_model=None,
+                    source="decision_chat_identity",
+                    allow_active_fallback=False,
+                )
+            except ValueError as exc:
+                raise DecisionServiceError(
+                    f"The selected dataset could not be resolved: {exc}"
+                ) from exc
+            dataset = bundle["dataframe"].to_dict(orient="records")
+            semantic_model = bundle.get("semantic_model")
+            loaded_ref = bundle.get("dataset_ref") if isinstance(bundle.get("dataset_ref"), dict) else {}
+            normalized_ref = {
+                **DecisionChatService._safe_dataset_ref(normalized_ref),
+                **DecisionChatService._safe_dataset_ref(loaded_ref),
+            }
+        elif normalized_ref and not dataset:
+            raise DecisionServiceError(
+                "dataset_ref was supplied without a resolvable dataset; the request was refused before analysis."
+            )
+        else:
+            normalized_ref = DecisionChatService._safe_dataset_ref(normalized_ref)
+
+        dataset_context = DecisionChatService._build_dataset_context(
+            dataset=dataset,
+            dataset_ref=normalized_ref,
+            semantic_model=semantic_model,
+        )
+        prepared = {
+            **payload,
+            "dataset": dataset or None,
+            "semantic_model": semantic_model,
+            "_dataset_identity_prepared": _PREPARED_DATASET_SENTINEL,
+            "_resolved_dataset_context": dataset_context,
+        }
+        prepared.pop("datasetRef", None)
+        prepared.pop("semanticModel", None)
+        prepared.pop("resolvedDatasets", None)
+        if normalized_ref:
+            prepared["dataset_ref"] = normalized_ref
+        else:
+            prepared.pop("dataset_ref", None)
+        return prepared
+
+    @staticmethod
     def handle_turn(payload: Dict[str, Any]) -> Dict[str, Any]:
-        payload = payload if isinstance(payload, dict) else {}
+        payload = DecisionChatService.prepare_payload(payload)
         user_message = str(payload.get("user_message") or "").strip()
         if not user_message:
             raise DecisionServiceError("user_message is required for decision chat turns.")
@@ -113,8 +208,18 @@ class DecisionChatService:
         dataset = extract_dataset(payload.get("dataset"))
         semantic_model = payload.get("semantic_model") or payload.get("semanticModel")
         session_state = DecisionChatService._normalize_session_state(payload.get("session_state"))
+        dataset_context = payload.get("_resolved_dataset_context")
+        session_state, dataset_changed = DecisionChatService._rebase_session_for_dataset(
+            session_state,
+            dataset_context,
+        )
         grounding_summary = build_grounding_summary(dataset, semantic_model)
-        mode_details = detect_chat_mode_details(user_message, session_state)
+        requested_mode = payload.get("requested_mode") or payload.get("requestedMode") or payload.get("mode")
+        mode_details = detect_chat_mode_details(
+            user_message,
+            session_state,
+            requested_mode=requested_mode,
+        )
         mode = mode_details["mode"]
         if (
             mode != "explore"
@@ -133,7 +238,11 @@ class DecisionChatService:
             )
 
         artifacts: List[Dict[str, Any]] = []
-        warnings: List[str] = []
+        warnings: List[str] = (
+            ["The active dataset changed, so prior structured analysis state was cleared before this turn."]
+            if dataset_changed
+            else []
+        )
         assistant_message = ""
         draft_workspace = DecisionChatService._extract_workspace(payload, session_state)
         workspace_analysis: Dict[str, Any] | None = None
@@ -141,8 +250,22 @@ class DecisionChatService:
         available_actions: List[Dict[str, Any]] = []
         analytic_state = DecisionChatService._normalize_analytic_state(session_state.get("last_analytic_context"))
 
+        if mode_details.get("requires_confirmation"):
+            assistant_message = (
+                "Should I explore this as a descriptive chart comparison, or frame it as a decision trade-off? "
+                "Choose Explore or Decide and resend the request."
+            )
+            artifacts.append({
+                "type": "answer",
+                "title": "Choose an analysis mode",
+                "content": {
+                    "message": assistant_message,
+                    "confirmation_modes": list(mode_details.get("confirmation_modes") or ["explore", "decide"]),
+                },
+            })
+
         # Explore mode now supports grounded analytics answers and stateful follow-up turns.
-        if mode == "explore" and dataset:
+        elif mode == "explore" and dataset:
             analytics_result = DecisionChatService._build_analytics_response(
                 user_message=user_message,
                 dataset=dataset,
@@ -164,7 +287,8 @@ class DecisionChatService:
                     "last_user_message": user_message,
                 }
             else:
-                assistant_message, warnings = DecisionChatService._build_grounded_reply(user_message, grounding_summary)
+                assistant_message, reply_warnings = DecisionChatService._build_grounded_reply(user_message, grounding_summary)
+                warnings.extend(reply_warnings)
                 artifacts.append({
                     "type": "answer",
                     "title": "Grounded chat status",
@@ -196,7 +320,7 @@ class DecisionChatService:
                 )
                 artifacts.extend(action_result["artifacts"])
                 assistant_message = action_result["assistant_message"]
-                warnings = list(action_result.get("warnings") or [])
+                warnings.extend(action_result.get("warnings") or [])
                 draft_workspace = action_result["workspace"]
                 workspace_analysis = action_result.get("workspace_analysis")
                 output_correction_result = action_result.get("correction_result")
@@ -218,7 +342,8 @@ class DecisionChatService:
             available_actions = DecisionChatService._build_decision_actions(draft_workspace)
 
         else:
-            assistant_message, warnings = DecisionChatService._build_grounded_reply(user_message, grounding_summary)
+            assistant_message, reply_warnings = DecisionChatService._build_grounded_reply(user_message, grounding_summary)
+            warnings.extend(reply_warnings)
             artifacts.append({
                 "type": "answer",
                 "title": "Grounded chat status",
@@ -230,7 +355,7 @@ class DecisionChatService:
         dataset_trust = DecisionChatService.build_dataset_trust_for_payload(payload, workspace=draft_workspace)
         scenario_preview = DecisionChatService._extract_scenario_preview(payload, session_state)
         decision_output = DecisionChatService._build_decision_output(
-            workspace=draft_workspace,
+            workspace=None if mode_details.get("requires_confirmation") else draft_workspace,
             dataset_trust=dataset_trust,
             workspace_analysis=workspace_analysis,
             correction_result=output_correction_result,
@@ -253,6 +378,7 @@ class DecisionChatService:
             analytic_state=analytic_state,
             draft_workspace=draft_workspace,
             grounding_summary=grounding_summary,
+            dataset_context=dataset_context,
         )
         DecisionChatService._attach_dataset_trust_to_state(updated_state, dataset_trust)
         # The top-level preview describes the active response artifact, while
@@ -292,6 +418,11 @@ class DecisionChatService:
             "draft_workspace_preview": draft_workspace_preview,
             "decision_output": decision_output,
             "dataset_trust": dataset_trust,
+            "resolved_datasets": (
+                [dict(dataset_context["dataset"])]
+                if isinstance(dataset_context, dict) and isinstance(dataset_context.get("dataset"), dict)
+                else []
+            ),
             "session_state": updated_state,
             "grounding_summary": grounding_summary,
             "warnings": warnings,
@@ -299,7 +430,7 @@ class DecisionChatService:
 
     @staticmethod
     def handle_action(payload: Dict[str, Any]) -> Dict[str, Any]:
-        payload = payload if isinstance(payload, dict) else {}
+        payload = DecisionChatService.prepare_payload(payload)
         action = str(payload.get("action") or payload.get("action_id") or "").strip().lower()
         if not action:
             raise DecisionServiceError("action is required for decision chat actions.")
@@ -307,6 +438,9 @@ class DecisionChatService:
             raise DecisionServiceError(f"Unsupported decision chat action: {action}")
 
         session_state = DecisionChatService._normalize_session_state(payload.get("session_state"))
+        provided_dataset_context = payload.get("_resolved_dataset_context")
+        DecisionChatService._assert_current_action_dataset(session_state, provided_dataset_context)
+        dataset_context = provided_dataset_context or DecisionChatService._prior_dataset_context(session_state)
         workspace = DecisionChatService._extract_workspace(payload, session_state)
         mode_details = {
             "mode": "decide",
@@ -357,6 +491,7 @@ class DecisionChatService:
             analytic_state=DecisionChatService._normalize_analytic_state(session_state.get("last_analytic_context")),
             draft_workspace=workspace,
             grounding_summary=None,
+            dataset_context=dataset_context,
         )
         DecisionChatService._attach_dataset_trust_to_state(updated_state, dataset_trust)
 
@@ -386,9 +521,163 @@ class DecisionChatService:
             "correction_result": correction_result,
             "trace": correction_trace,
             "dataset_trust": dataset_trust,
+            "resolved_datasets": (
+                [dict(dataset_context["dataset"])]
+                if isinstance(dataset_context, dict) and isinstance(dataset_context.get("dataset"), dict)
+                else []
+            ),
             "session_state": updated_state,
             "warnings": warnings,
         }
+
+    @staticmethod
+    def _normalize_requested_datasets(value: Any) -> List[str]:
+        """Normalize mention resolution hints while preserving their declared identity."""
+        if not isinstance(value, list):
+            return []
+        normalized: List[str] = []
+        for item in value:
+            if isinstance(item, dict):
+                candidate = item.get("dataset_name") or item.get("name") or item.get("dataset_id") or item.get("id")
+            else:
+                candidate = item
+            label = str(candidate or "").strip()
+            if label and label.casefold() not in {existing.casefold() for existing in normalized}:
+                normalized.append(label)
+        return normalized
+
+    @staticmethod
+    def _safe_dataset_ref(dataset_ref: Any) -> Dict[str, Any]:
+        """Keep public identity/readiness metadata and exclude local file paths."""
+        if not isinstance(dataset_ref, dict):
+            return {}
+        allowed_fields = (
+            "source",
+            "dataset_id",
+            "dataset_name",
+            "transform_state",
+            "transformation_state",
+            "cleaning_state",
+            "stale_state",
+            "freshness_state",
+            "is_cleaned",
+            "is_stale",
+        )
+        return {
+            field: dataset_ref.get(field)
+            for field in allowed_fields
+            if dataset_ref.get(field) is not None
+        }
+
+    @staticmethod
+    def _build_dataset_context(
+        *,
+        dataset: Any,
+        dataset_ref: Dict[str, Any],
+        semantic_model: Dict[str, Any] | None,
+    ) -> Dict[str, Any] | None:
+        """Build row-free session identity with a deterministic content fingerprint."""
+        rows = extract_dataset(dataset)
+        if not rows:
+            return None
+        semantic_dataset = (
+            semantic_model.get("dataset")
+            if isinstance(semantic_model, dict) and isinstance(semantic_model.get("dataset"), dict)
+            else {}
+        )
+        summary = {
+            "source": str(dataset_ref.get("source") or "inline").strip().lower() or "inline",
+            "dataset_id": dataset_ref.get("dataset_id") or semantic_dataset.get("id"),
+            "dataset_name": (
+                dataset_ref.get("dataset_name")
+                or semantic_dataset.get("name")
+                or "Inline Dataset"
+            ),
+            "row_count": len(rows),
+            "column_count": len(rows[0]) if rows else 0,
+        }
+        fingerprint_payload = {
+            "dataset": summary,
+            "rows": rows,
+        }
+        fingerprint = hashlib.sha256(
+            json.dumps(
+                fingerprint_payload,
+                sort_keys=True,
+                separators=(",", ":"),
+                default=str,
+            ).encode("utf-8")
+        ).hexdigest()
+        return {
+            "schema_version": "di_chat_dataset_context_v1",
+            "fingerprint": fingerprint,
+            "dataset": summary,
+        }
+
+    @staticmethod
+    def _prior_dataset_context(session_state: Dict[str, Any]) -> Dict[str, Any] | None:
+        context = session_state.get("dataset_context")
+        if isinstance(context, dict) and isinstance(context.get("dataset"), dict):
+            return context
+        context_summary = session_state.get("context_summary")
+        trust = context_summary.get("dataset_trust") if isinstance(context_summary, dict) else None
+        summary = trust.get("dataset") if isinstance(trust, dict) else None
+        if isinstance(summary, dict):
+            return {"dataset": summary}
+        return None
+
+    @staticmethod
+    def _dataset_context_changed(previous: Any, current: Any) -> bool:
+        if not isinstance(previous, dict) or not isinstance(current, dict):
+            return False
+        previous_fingerprint = str(previous.get("fingerprint") or "").strip()
+        current_fingerprint = str(current.get("fingerprint") or "").strip()
+        if previous_fingerprint and current_fingerprint:
+            return previous_fingerprint != current_fingerprint
+
+        previous_summary = previous.get("dataset") if isinstance(previous.get("dataset"), dict) else {}
+        current_summary = current.get("dataset") if isinstance(current.get("dataset"), dict) else {}
+        for field in ("dataset_id", "dataset_name", "row_count", "column_count"):
+            previous_value = previous_summary.get(field)
+            current_value = current_summary.get(field)
+            if previous_value is not None and current_value is not None and previous_value != current_value:
+                return True
+        return False
+
+    @staticmethod
+    def _rebase_session_for_dataset(
+        session_state: Dict[str, Any],
+        dataset_context: Dict[str, Any] | None,
+    ) -> Tuple[Dict[str, Any], bool]:
+        previous_context = DecisionChatService._prior_dataset_context(session_state)
+        if not DecisionChatService._dataset_context_changed(previous_context, dataset_context):
+            return session_state, False
+        rebased = dict(session_state)
+        for key in (
+            "draft_workspace",
+            "decision_state",
+            "decision_prompt",
+            "scenario_preview",
+            "scenarioPreview",
+            "last_analytic_context",
+            "analytics_state",
+            "available_actions",
+            "action_state",
+            "missing_inputs",
+        ):
+            rebased.pop(key, None)
+        return rebased, True
+
+    @staticmethod
+    def _assert_current_action_dataset(
+        session_state: Dict[str, Any],
+        dataset_context: Dict[str, Any] | None,
+    ) -> None:
+        previous_context = DecisionChatService._prior_dataset_context(session_state)
+        if DecisionChatService._dataset_context_changed(previous_context, dataset_context):
+            raise DecisionServiceError(
+                "The active dataset changed after this decision state was created. Start a new turn before running an action."
+            )
 
     @staticmethod
     def _normalize_session_state(session_state: Any) -> Dict[str, Any]:
@@ -444,6 +733,7 @@ class DecisionChatService:
         analytic_state: Dict[str, Any] | None,
         draft_workspace: Dict[str, Any] | None,
         grounding_summary: Dict[str, Any] | None,
+        dataset_context: Dict[str, Any] | None,
     ) -> Dict[str, Any]:
         previous_mode = str(session_state.get("active_mode") or "").strip().lower() or None
         preserved_state = dict(session_state)
@@ -456,6 +746,10 @@ class DecisionChatService:
             "active_mode": mode,
             "decision_prompt": active_decision_prompt or preserved_state.get("decision_prompt") or user_message,
         }
+        if isinstance(dataset_context, dict):
+            # This object contains only a digest and summary; raw rows never
+            # enter session persistence.
+            updated_state["dataset_context"] = dict(dataset_context)
 
         if analytic_state:
             updated_state["last_analytic_context"] = analytic_state
@@ -497,6 +791,7 @@ class DecisionChatService:
         previous_mode: str | None,
         mode_details: Dict[str, Any],
     ) -> Dict[str, Any]:
+        confirmation_modes = list(mode_details.get("confirmation_modes") or [])
         return {
             "current_mode": mode,
             "current_mode_label": DecisionChatService._mode_label(mode),
@@ -504,8 +799,12 @@ class DecisionChatService:
             "mode_changed": bool(previous_mode and previous_mode != mode),
             "reason_code": str(mode_details.get("reason_code") or "unspecified"),
             "reason": str(mode_details.get("reason") or "").strip(),
+            "selection_source": str(mode_details.get("selection_source") or "auto"),
+            "requires_confirmation": bool(mode_details.get("requires_confirmation")),
+            "confirmation_modes": confirmation_modes,
             "available_modes": [
-                {"mode": "ask", "label": "Ask"},
+                {"mode": "auto", "label": "Auto"},
+                {"mode": "ask", "label": "Ask data"},
                 {"mode": "explore", "label": "Explore"},
                 {"mode": "decide", "label": "Decide"},
             ],
@@ -751,6 +1050,14 @@ class DecisionChatService:
         payload_expectations = raw_action.get("payload_expectations")
         if not isinstance(payload_expectations, dict):
             payload_expectations = contract.get("payload_expectations") if isinstance(contract.get("payload_expectations"), dict) else {}
+        enabled = bool(raw_action.get("enabled", True)) and bool(contract)
+        availability_reason = str(raw_action.get("availability_reason") or "").strip() or None
+        disabled_reason = str(raw_action.get("disabled_reason") or "").strip() or None
+        if not contract:
+            enabled = False
+            disabled_reason = disabled_reason or "No backend action handler is registered for this action."
+        elif not enabled:
+            disabled_reason = disabled_reason or availability_reason or "This action is unavailable in the current state."
         return {
             "action_id": action_id,
             "label": label,
@@ -759,8 +1066,9 @@ class DecisionChatService:
             "mode": str(raw_action.get("mode") or mode).strip().lower() or mode,
             "kind": str(raw_action.get("kind") or "decision_tool").strip().lower() or "decision_tool",
             "priority": priority,
-            "enabled": bool(raw_action.get("enabled", True)),
-            "availability_reason": str(raw_action.get("availability_reason") or "").strip() or None,
+            "enabled": enabled,
+            "availability_reason": availability_reason,
+            "disabled_reason": disabled_reason,
             "payload_expectations": dict(payload_expectations),
         }
 
@@ -779,6 +1087,11 @@ class DecisionChatService:
         payload_expectations: Dict[str, Any] | None = None,
     ) -> Dict[str, Any]:
         contract = DecisionChatService.DECISION_ACTION_CONTRACTS.get(action_id, {})
+        normalized_disabled_reason = (
+            None
+            if enabled
+            else (availability_reason or "This action is unavailable in the current state.")
+        )
         return {
             "action_id": action_id,
             "label": label or contract.get("label") or action_id.replace("_", " ").title(),
@@ -789,6 +1102,7 @@ class DecisionChatService:
             "priority": priority,
             "enabled": enabled,
             "availability_reason": availability_reason,
+            "disabled_reason": normalized_disabled_reason,
             "payload_expectations": (
                 payload_expectations
                 if isinstance(payload_expectations, dict)
@@ -949,7 +1263,7 @@ class DecisionChatService:
     @staticmethod
     def _mode_label(mode: str) -> str:
         labels = {
-            "ask": "Ask",
+            "ask": "Ask data",
             "explore": "Explore",
             "decide": "Decide",
         }

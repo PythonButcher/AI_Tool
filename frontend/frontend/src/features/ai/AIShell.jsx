@@ -1262,7 +1262,7 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenDecisio
   const handleSendMessage = async () => {
     if (!userInput.trim()) return;
 
-    const tokens = extractTokens(userInput);
+    const tokens = extractTokens(userInput, datasets);
     const resolvedDatasets = datasets.filter(ds => tokens.includes(ds.name));
 
     setLoading(true);
@@ -1328,13 +1328,46 @@ function AIShell({ setShowAIChart, setAiChartType, setAiChartData, onOpenDecisio
     }
 
     // --- Phase 4 Decision Chat Path (Primary for analytics & decisions) ---
+    let payloadDataset = dsContext;
+    let payloadSemanticModel = semanticModel;
+    let datasetRef = undefined;
+
+    if (resolvedDatasets.length === 1) {
+      const selectedDs = resolvedDatasets[0];
+      // Check if the selected dataset is the currently loaded inline dataset
+      const isActiveInline = payloadSemanticModel && payloadSemanticModel.dataset && (payloadSemanticModel.dataset.id === selectedDs.id || payloadSemanticModel.dataset.name === selectedDs.name);
+
+      if (isActiveInline) {
+        datasetRef = {
+          source: 'active', // Truthful non-Data-Hub reference for the loaded rows
+          dataset_id: selectedDs.id,
+          dataset_name: selectedDs.name
+        };
+      } else {
+        datasetRef = {
+          source: 'datahub',
+          dataset_id: selectedDs.id,
+          dataset_name: selectedDs.name
+        };
+        // Do not send unrelated global dataset or semantic_model
+        payloadDataset = undefined;
+        payloadSemanticModel = undefined;
+      }
+    } else if (resolvedDatasets.length > 1) {
+      // The backend will return a 400 error for multiple mentions; we supply them all.
+      // We will clear out the dataset to let the backend validation handle it cleanly.
+      payloadDataset = undefined;
+      payloadSemanticModel = undefined;
+    }
+
     const payload = {
       user_message: msg,
-      dataset: dsContext,
-      semantic_model: semanticModel,
+      dataset: payloadDataset,
+      semantic_model: payloadSemanticModel,
+      dataset_ref: datasetRef,
       conversation_history: userMessages.map(m => ({ role: m.role, content: m.content })).slice(-10),
       session_state: { ...sessionState, active_mode: activeMode },
-      resolved_datasets: resolvedDatasets.map(ds => ds.name)
+      resolved_datasets: tokens
     };
 
     try {
