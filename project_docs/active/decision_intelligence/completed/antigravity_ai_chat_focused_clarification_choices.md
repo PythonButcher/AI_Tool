@@ -1,3 +1,5 @@
+> COMPLETED IMPLEMENTATION REFERENCE - NOT USER ACCEPTED. The Decision Intelligence clarification experience was superseded by the BI-first AI Chat reset.
+
 # AI Chat Focused Clarification Choices
 
 **IMPLEMENTATION COMPLETE — USER BROWSER ACCEPTANCE PENDING**

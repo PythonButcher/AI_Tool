@@ -1,3 +1,5 @@
+> SUPERSEDED REFERENCE - NOT USER ACCEPTED. The active product direction is the BI-first AI Chat reset.
+
 # Phase 2 - AI Chat Conversational Analysis Plan
 
 Status: Acceptance pending

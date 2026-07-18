@@ -1,6 +1,6 @@
 # Codex Decision Comparison Goal
 
-Status: Deferred. Promote with the preparation plan only after the active Decision Intelligence gate authorizes this work.
+Status: Withdrawn from the active product direction. Reference only; do not execute.
 
 Goal: Establish the smallest truthful backend and contract foundation for user-controlled decision comparison inside AI Chat.
 

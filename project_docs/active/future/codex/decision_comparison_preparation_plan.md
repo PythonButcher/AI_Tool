@@ -1,6 +1,6 @@
 # Decision Comparison Preparation Plan
 
-Status: Deferred and ready to promote after the current browser-acceptance gate closes.
+Status: Withdrawn from the active product direction. Reference only; do not promote.
 
 Owner: Codex for backend truth, contracts, tests, architecture, documentation, and coordination. Gemini or Antigravity owns any later React or CSS implementation after a verified frontend gap and focused handoff.
 
@@ -12,7 +12,7 @@ Give users a truthful way to compare at least two named alternatives against cri
 
 ## Promotion Gate
 
-This plan is preparation only. Do not move it into `project_docs/active/decision_intelligence/active_gate/` or begin implementation until the active status file records user browser acceptance of the current AI Chat clarification flow.
+This plan must not be promoted. AI Chat is BI-first and no longer exposes Decision Intelligence output.
 
 ## First Codex Slice
 

@@ -6,19 +6,19 @@ Read this folder after `project_docs/active/status/decision_intelligence_executi
 
 ## Current Gate
 
-Status: Phase 2 - AI Chat Conversational Analysis is implementation-complete and awaiting user browser acceptance.
+Status: Phase 2 - BI-First AI Chat Reset is implementation-verified and awaiting user browser acceptance.
 
-Planning source: Release 2 in `project_docs/active/future/codex/ai_chat_decision_intelligence_user_outcome_audit_and_repair_plan.md`.
+Product direction: AI Chat returns to grounded business intelligence. Decision Intelligence output is being removed from the AI Chat experience.
 
-Current plan: `phase_2_ai_chat_conversational_analysis_plan.md`.
+Current plan: `phase_2_bi_first_ai_chat_reset_plan.md`.
 
-Current Codex goal: `codex_ai_chat_conversational_analysis_goal.md`.
+Current Codex goal: `codex_bi_first_ai_chat_reset_goal.md`.
 
-Active frontend handoff: `project_docs/active/ai_hand_off/antigravity_ai_chat_focused_clarification_choices.md`.
+Active frontend handoff: none. The user explicitly authorized Codex to edit the AI Chat frontend for this reset.
 
-Current owner: User for browser-level acceptance. Codex has completed the final source review, and Gemini or Antigravity has no open repair item. Readiness classification: `user_browser_acceptance`.
+Current owner: User for browser acceptance. Codex source removal, BI-first routing, frontend integration, focused tests, build, and documentation checks are complete. Readiness classification: `user_browser_acceptance`.
 
-Prepared next work: `project_docs/active/future/codex/decision_comparison_preparation_plan.md`. This remains deferred until the current browser-acceptance gate is cleared.
+Decision Comparison and other Decision Intelligence expansion work are paused and must not be promoted.
 
 ## Active-Gate Rule
 

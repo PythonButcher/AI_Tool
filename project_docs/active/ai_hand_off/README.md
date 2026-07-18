@@ -10,9 +10,9 @@ Gemini or Antigravity owns frontend implementation, React/CSS, UI rendering, bro
 
 ## Active Handoffs And Goal Prompts
 
-Active frontend-agent handoff: `antigravity_ai_chat_focused_clarification_choices.md`.
+Active frontend-agent handoff: none.
 
-Readiness classification: `user_browser_acceptance`. The frontend implementation and repair review are complete; the active handoff remains only as the browser-acceptance reference until the current phase closes.
+Codex owns the active BI-first AI Chat reset because the user explicitly authorized Codex frontend edits in this session. Create a future frontend-agent handoff only if the active gate later identifies a bounded follow-up owned by Gemini or Antigravity.
 
 Codex-owned current goals live in `project_docs/active/decision_intelligence/active_gate/`, not in this handoff folder. Current active gate: `project_docs/active/decision_intelligence/active_gate/README.md`.
 

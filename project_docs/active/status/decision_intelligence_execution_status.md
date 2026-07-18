@@ -4,13 +4,13 @@ This is the short active status file. Implementation history belongs in complete
 
 ## Current Truth
 
-Decision Intelligence V3 is active. AI Chat remains the primary work surface for normal answers, charting, exploration, decision output, artifact inspection, and exports.
+AI Chat is returning to a BI-first NLP product. Its primary job is to answer grounded business questions using the active dataset and semantic model, support conversational refinements, and produce readable tables, charts, and exports.
 
-The Decisions window remains secondary. Saved DecisionAssets support immutable historical review and must not be presented as live data, final recommendations, predictions, simulations, optimizers, causal proof, or autonomous decisions.
+Decision Intelligence output, decision framing, clarification-choice workflows, workspace previews, command-center output, and Decision Output exports are being removed from AI Chat. Existing Decision Intelligence backend services may remain isolated and unused so the rollback is safe; they are not part of the active AI Chat product direction.
 
 ## Current Project Gate
 
-Status: **Phase 2 - AI Chat Conversational Analysis: FRONTEND VERIFICATION READY; BROWSER ACCEPTANCE NEEDED**
+Status: **Phase 2 - BI-First AI Chat Reset: IMPLEMENTATION VERIFIED; USER BROWSER ACCEPTANCE NEEDED**
 
 Active gate:
 
@@ -18,23 +18,19 @@ Active gate:
 
 Current plan:
 
-`project_docs/active/decision_intelligence/active_gate/phase_2_ai_chat_conversational_analysis_plan.md`
+`project_docs/active/decision_intelligence/active_gate/phase_2_bi_first_ai_chat_reset_plan.md`
 
 Current Codex goal:
 
-`project_docs/active/decision_intelligence/active_gate/codex_ai_chat_conversational_analysis_goal.md`
+`project_docs/active/decision_intelligence/active_gate/codex_bi_first_ai_chat_reset_goal.md`
 
-Active frontend handoff:
+Active frontend handoff: none. The user explicitly authorized Codex frontend implementation for this reset.
 
-`project_docs/active/ai_hand_off/antigravity_ai_chat_focused_clarification_choices.md`
-
-Latest verified fact: Antigravity has completed the second round of UI repairs. The `resolveRequestContext` helper now accurately targets `session_state.dataset_context.dataset` as contracted by the backend, successfully preserving Data Hub scope. Failed-request resilience has been implemented by moving the `clarification_state.status = 'resolved'` mutation into the success handler, ensuring buttons are temporarily disabled during requests but remain available if the request fails. Build and agent harness checks pass successfully.
+Latest verified fact: AI Chat now imports, invokes, renders, inspects, saves, and exports only BI answer and chart artifacts. Decide routing is overridden by explicit Explore routing for data-backed chat turns, and Decision Intelligence session state is removed at the frontend boundary. Decision Output review, Command Center, clarification controls, saved-decision UI, scenario preview, semantic decision references, and the Decision Intelligence PDF exporter were deleted from the AI Chat frontend. The frontend build and focused BI-routing tests pass.
 
 ## Next Focus
 
-The user must provide browser acceptance for the focused decision clarification choices. Enter `How should we adjust discount rate by region next quarter?`, verify the focused metric choices appear, click `Revenue`, and confirm the updated decision frame stays in AI Chat with the existing lever, region segment, and next-quarter horizon preserved. Once accepted, Codex can review and close the phase or prepare the next handoff.
-
-Decision Comparison preparation is ready at `project_docs/active/future/codex/decision_comparison_preparation_plan.md` with its deferred Codex goal. It must not be promoted or implemented until this browser-acceptance gate closes.
+The user performs one concise BI-first browser check: ask a metric question, request a chart, refine the metric or segment in a follow-up, reference a Data Hub dataset, and export one answer or chart. No Decision Intelligence workspace, frame, readiness, capability, command-center, scenario, or decision-asset output may appear. Decision Comparison is withdrawn and must not be promoted.
 
 ## Future Cycle Memory
 

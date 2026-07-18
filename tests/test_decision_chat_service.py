@@ -1993,6 +1993,13 @@ class DecisionChatApiTests(unittest.TestCase):
         self.assertEqual(body["mode_context"]["reason_code"], "explicit_mode_override")
         self.assertEqual(body["mode_context"]["selection_source"], "explicit")
         self.assertFalse(body["mode_context"]["requires_confirmation"])
+        # The BI-first AI Chat integration explicitly selects Explore so
+        # decision-like wording cannot construct or return DI workspace output.
+        self.assertTrue(body["artifacts"])
+        self.assertTrue(all(item["type"] in {"answer", "chart"} for item in body["artifacts"]))
+        self.assertIsNone(body["draft_workspace_preview"])
+        self.assertIsNone(body["decision_output"])
+        self.assertNotIn("draft_workspace", body["session_state"])
 
     def test_ambiguous_chart_decision_comparison_requests_confirmation(self):
         response = self.client.post(

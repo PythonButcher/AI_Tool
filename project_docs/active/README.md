@@ -16,13 +16,11 @@ This file is the active navigation hub. If this file conflicts with an archived 
 
 ## Current Direction
 
-AI Chat is the primary work surface. Existing AI Chat answers, charts, exploration outputs, artifact inspection, and exports must remain.
+AI Chat is a BI-first NLP workspace. Grounded answers, semantic-model reasoning, tables, charts, conversational refinements, artifact inspection, and BI exports are the active product scope.
 
-Decision Intelligence is now a richer structured output inside the AI Chat results pane. The completed rollout includes Dataset Trust, decision framing, chat-native corrections, Evidence Board, Decision Graph support, Scenario Compare, and export-ready decision sections.
+Decision Intelligence workspaces, decision frames, readiness and capability panels, command-center output, decision assets, Evidence Board, Decision Map, Scenario Compare, and Decision Output exports are not part of AI Chat. Their backend services may remain isolated for compatibility only.
 
-The Decisions window remains secondary. It should not become a required continuation path unless a new approved slice defines a saved decision library, fullscreen review, or historical asset viewer.
-
-Dataset truth remains important, but the old standalone Phase 4 dataset handoff is superseded. Dataset truth now appears as Dataset Trust inside the AI Chat decision output.
+Dataset identity and semantic truth remain required for every BI answer and chart.
 
 ## Active Areas
 

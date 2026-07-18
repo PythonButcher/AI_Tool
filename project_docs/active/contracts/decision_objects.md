@@ -2,6 +2,8 @@
 
 This document is the current contract reference for backend and frontend integration of the Decision Layer.
 
+Active product boundary: the BI-first AI Chat frontend does not consume or render this Decision Layer contract. These objects remain documented for isolated backend compatibility and must not be reintroduced into AI Chat without explicit user approval and a new active plan.
+
 All timestamps use ISO-8601 UTC strings. Optional fields may be `null`. All objects below are additive and sit on top of the existing semantic model, metric resolver, and dataset context systems.
 
 ## Shared Nested Objects

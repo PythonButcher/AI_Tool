@@ -1,3 +1,5 @@
+> COMPLETED BACKEND REFERENCE - DECISION INTELLIGENCE OUTPUT NOT USER ACCEPTED. The BI-first AI Chat reset is the current gate.
+
 Goal: Establish grounded conversational continuity in AI Chat so follow-up turns can refine the current analysis and missing decision inputs can be resolved through focused questions.
 
 Read `project_docs/INDEX.md`, `project_docs/active/README.md`, `project_docs/active/status/decision_intelligence_execution_status.md`, `project_docs/active/decision_intelligence/active_gate/README.md`, `project_docs/active/decision_intelligence/active_gate/phase_2_ai_chat_conversational_analysis_plan.md`, `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md`, and the relevant Decision Chat, Dataset Trust, Decision Output Frame, and correction sections of `project_docs/active/contracts/decision_objects.md`. Use Release 2 in `project_docs/active/future/codex/ai_chat_decision_intelligence_user_outcome_audit_and_repair_plan.md` as the approved planning source. Read `project_docs/active/codex_harness_engineering.md` before broad source inspection.
