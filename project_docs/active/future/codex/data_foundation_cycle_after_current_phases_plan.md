@@ -36,6 +36,6 @@ Let AI Chat inspect, explain, trigger, and monitor automations once automation s
 
 Do not run another AI Council automatically before this cycle. The next needs are already concrete. Use a council only if the project has conflicting priorities, unclear ownership, or a major architecture fork.
 
-## First Future Gate
+## Deferred First Gate
 
-The first future gate should be a scoped multiple-data-sources plan. Codex should inspect current data connection, upload, dataset registry, active dataset, AI Chat data context, and persistence code before proposing changes. Frontend work should wait for a backend contract and migration plan.
+The first future gate should be a scoped multiple-data-sources plan once the active AI Chat usability-repair gate is complete or reprioritized. Codex should inspect current data connection, upload, dataset registry, active dataset, AI Chat data context, and persistence code before proposing changes. Frontend work should wait for a backend contract and migration plan.

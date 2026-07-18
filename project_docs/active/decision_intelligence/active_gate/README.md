@@ -6,15 +6,19 @@ Read this folder after `project_docs/active/status/decision_intelligence_executi
 
 ## Current Gate
 
-Status: Phase 1 - Multiple Data Sources Foundation Discovery is active for Codex source discovery, backend contract planning, migration-risk analysis, tests, and documentation.
+Status: Phase 2 - BI-First AI Chat Reset is implementation-verified and awaiting user browser acceptance.
 
-Planning source: `project_docs/active/future/data_foundation_cycle_after_current_phases_plan.md`.
+Product direction: AI Chat returns to grounded business intelligence. Decision Intelligence output is being removed from the AI Chat experience.
 
-Current plan: `phase_1_multiple_data_sources_foundation_discovery_plan.md`.
+Current plan: `phase_2_bi_first_ai_chat_reset_plan.md`.
 
-Current Codex goal: `codex_multiple_data_sources_foundation_discovery_goal.md`.
+Current Codex goal: `codex_bi_first_ai_chat_reset_goal.md`.
 
-Active frontend handoff: none. Frontend work requires a verified backend contract and a proven, bounded frontend gap.
+Active frontend handoff: none. The user explicitly authorized Codex to edit the AI Chat frontend for this reset.
+
+Current owner: User for browser acceptance. Codex source removal, BI-first routing, frontend integration, focused tests, build, and documentation checks are complete. Readiness classification: `user_browser_acceptance`.
+
+Decision Comparison and other Decision Intelligence expansion work are paused and must not be promoted.
 
 ## Active-Gate Rule
 
