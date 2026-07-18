@@ -22,25 +22,25 @@ This file is the first routing helper for AI_Tool. It should point agents to cur
 
 ## Current Product Direction
 
-AI Chat is a BI-first NLP workspace. It keeps grounded answers, tables, charts, conversational refinements, semantic-model behavior, artifact inspection, and BI exports. It does not expose Decision Intelligence workspaces, decision frames, readiness panels, command centers, decision assets, scenario comparison, or Decision Output exports.
+AI Chat is a BI-first NLP workspace. It keeps grounded answers, tables, charts, conversational refinements, semantic-model behavior, artifact inspection, and BI exports. It does not expose Decision Intelligence workspaces.
 
 Decision Intelligence backend services may remain isolated for compatibility, but they are not part of the active AI Chat product direction. Do not reconnect them without explicit user approval and a new active plan.
 
 ## Ownership
 
-Codex owns backend truth, contracts, tests, architecture, documentation, cleanup planning, and review.
+Codex owns backend truth, contracts, tests, architecture, documentation, cleanup planning, and review for the broader AI Tool.
 
-Gemini or Antigravity owns frontend implementation unless the user explicitly authorizes Codex frontend edits in the current session.
+**AI Chat Exception:** For the AI Chat BI pivot, Antigravity/Gemini is the Lead Orchestrator. Antigravity owns the UI, the frontend architecture, and the project planning markdown. Codex acts as the backend provider, fulfilling API endpoints and contracts requested by Antigravity via handoff files.
 
-When Codex owns the next Decision Intelligence step, the active goal belongs in `project_docs/active/decision_intelligence/active_gate/`. When frontend work is needed, Codex writes the backend truth and a focused handoff file under `project_docs/active/ai_hand_off/`. The handoff file must contain the `Goal:` prompt that the frontend agent can execute through the auto-handoff flow. Gemini or Antigravity implements React/CSS/UI behavior, verifies it, and updates status truthfully.
+When Antigravity needs backend work for AI Chat, it writes a `Goal:` prompt in a handoff file under `project_docs/active/ai_hand_off/` for Codex to fulfill.
 
 Codex must never create, edit, restore, delete, move, rename, patch, or otherwise modify any `GEMINI.md` file. If a `GEMINI.md` file is missing, stale, damaged, or needs new instructions, Codex must report the issue and leave the file untouched for the user or another agent.
 
 ## Codex Orchestration Duty
 
-Codex is the project facilitator. At the end of substantial Decision Intelligence work, Codex must state the project gate clearly: whether the phase is complete end to end, backend-only complete, frontend-ready but unverified, blocked, or ready for the next phase.
+Codex is the general project facilitator for the overall AI Tool. However, for AI Chat, Codex follows Antigravity's lead.
 
-Codex must not make the user infer who acts next. State directly whether Codex continues, Gemini or Antigravity needs a handoff, both are done, or a specific audit is required before moving forward.
+At the end of substantial backend work, Codex must state the project gate clearly: whether the backend API is complete, blocked, or ready for Antigravity to resume UI work. Codex must not make the user infer who acts next.
 
 If a phase has backend and frontend parts, backend verification alone is not enough to call the phase complete. Say `backend complete; frontend verification or Gemini work still required` unless frontend behavior has also been verified or the active docs define the slice as backend-only.
 

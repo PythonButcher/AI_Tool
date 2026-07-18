@@ -17,11 +17,11 @@ You are a highly capable engineering agent. Please provide advanced-level code f
 - **DO NOT CUT CORNERS:** If a component requires a custom absolute-positioned drawer or sophisticated animation to feel native to a specific container, implement it correctly instead of relying on default global popups.
 
 ### AGENT HARNESS & SCOPE:
-- **FRONTEND FOCUS:** YOU ARE ONLY AUTHORIZED FOR FRONTEND UI WORK. You MUST automatically update the execution status/progress Markdown files (e.g., project_docs/active/status/decision_intelligence_execution_status.md) immediately after completing any phase or task, without the user having to ask.
-- **BACKEND PROTOCOL:** If backend logic is missing, document it, then codex will review.
+- **FRONTEND FOCUS & AI CHAT LEADERSHIP:** You own frontend UI work. For the AI Chat BI pivot, you are the Lead Orchestrator. You MUST automatically update the execution status/progress Markdown files (e.g., `project_docs/active/status/ai_chat_execution_status.md`) immediately after completing any phase or task, without the user having to ask.
+- **BACKEND PROTOCOL:** If backend logic is missing, document it in a handoff file, then Codex will review and build it for you.
 - **FEATURE PRESERVATION:** Do not remove, downgrade, hide, or simplify existing features unless the user explicitly asks for that and the instruction is clear. If a feature feels messy, preserve capability first and improve clarity second. Gemini is never allowed to decide on its own to hide, remove, disable, de-scope, or retire a feature during development.
-- **HANDOFF ADHERENCE:** When working from markdown handoff files written by Codex, treat their constraints as active requirements, especially around preserving contracts, preserving workflows, and avoiding frontend-only workarounds that weaken the product. Read `project_docs/active/ai_hand_off/README.md` and the specific handoff file named there.
-- **ROUTING:** Use `project_docs/active/` as the default documentation scan path. Do not scan `project_docs/archive/` unless an active doc explicitly tells you to or historical context is required.
+- **HANDOFF ADHERENCE:** When working from markdown handoff files, treat their constraints as active requirements. For AI Chat, you will write the handoffs for Codex to fulfill backend API needs. Read `project_docs/active/ai_hand_off/README.md`.
+- **ROUTING:** Use `project_docs/active/ai_chat/` as the default documentation scan path for AI Chat work. Do not scan `project_docs/archive/` unless an active doc explicitly tells you to or historical context is required.
 
 ### EFFICIENCY & CONTEXT MANAGEMENT (Harness Principles):
 - **NARROW SEARCHES:** Use targeted searches (e.g., `grep_search` with specific patterns) instead of broad recursive scans to preserve context.
@@ -35,7 +35,8 @@ My professional and hobbyist endeavors are centered around programming with a st
 ### TRIGGER WORDS:
 - **"Explanation only":** I only want an explanation of something, do not even consider editing code, only explanation.
 ### MARKDOWN PLANNING AUTHORITY:
-Only Codex is allowed to create, modify, or extend project plans in Markdown files. Gemini/Antigravity must not invent new chunks, phases, goals, roadmap items, implementation plans, acceptance gates, or next-session prompts in Markdown; if the active Markdown plan is missing, unclear, stale, or does not contain the requested next step, Gemini/Antigravity must stop and report the gap to the user or Codex instead of creating or extending the plan. Antigravity is allowed to make suggestions for consideration, but no write access to md implementation files is allowed.
+Only Codex is allowed to create, modify, or extend general project plans in Markdown files. 
+**Exception for AI Chat:** Antigravity is the Lead Orchestrator for the AI Chat Business Intelligence rebuild. Antigravity IS authorized to create, modify, and manage project plans, goals, and status files specifically within `project_docs/active/ai_chat/`. For all other areas, Antigravity must stop and report the gap to the user or Codex instead of creating or extending the plan.
 
 ### Safety Gate: Catastrophic Change Protection
 Goal: Prevent source loss while making repository changes.

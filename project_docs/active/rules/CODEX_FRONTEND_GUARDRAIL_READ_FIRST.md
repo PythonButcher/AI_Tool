@@ -4,18 +4,18 @@ This file is a mandatory guardrail for Codex sessions on this project.
 
 ## Rule
 
-For the UI overhaul and Decision Intelligence initiative:
+For the UI overhaul and AI Chat BI pivot:
 
 - Codex is **not authorized** to implement frontend or UI code unless the user explicitly says so in that session.
 - Gemini or Antigravity owns frontend implementation.
-- Codex owns backend logic, contracts, architecture, review, and handoff markdown.
+- Codex owns backend logic, contracts, and review. For AI Chat, Codex receives handoff markdown from Antigravity to fulfill backend APIs.
 
 ## Operational Behavior For Codex
 
 Before changing anything under `frontend/frontend/src/`:
 
 1. re-read this file
-2. re-read `project_docs/active/status/decision_intelligence_execution_status.md`
+2. re-read `project_docs/active/status/ai_chat_execution_status.md`
 3. confirm the user explicitly asked Codex to make frontend changes in the current session
 
 If that explicit permission is missing:
@@ -48,7 +48,7 @@ Codex must not mark a frontend phase complete from another agent's claim alone. 
 
 When active docs disagree, Codex must call out the conflict and treat source plus the active contract as the gate until the status file is corrected. The active status file must not be used as proof of completion when it is the item being audited.
 
-Every substantial Decision Intelligence wrap-up must state exactly whose turn is next: Codex, Gemini/Antigravity, user validation, or no one. If Gemini or Antigravity is next, Codex must put the `Goal:` prompt in the active handoff file and reference that file in the final response instead of pasting the full prompt into chat.
+Every substantial AI Tool wrap-up must state exactly whose turn is next: Codex, Gemini/Antigravity, user validation, or no one. For AI Chat, Antigravity dictates whose turn is next. If Gemini or Antigravity is next, Codex must put the `Goal:` prompt in the active handoff file and reference that file in the final response instead of pasting the full prompt into chat.
 
 ## Handoff Sizing
 

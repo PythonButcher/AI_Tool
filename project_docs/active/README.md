@@ -8,7 +8,7 @@ This file is the active navigation hub. If this file conflicts with an archived 
 
 | Step | Read | Why |
 | --- | --- | --- |
-| 1 | `project_docs/active/status/decision_intelligence_execution_status.md` | Short current truth |
+| 1 | `project_docs/active/status/ai_chat_execution_status.md` | Short current truth |
 | 2 | `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md` | Ownership boundary |
 | 3 | `project_docs/active/contracts/decision_objects.md` | Contract reference when touching payloads |
 | 4 | `project_docs/active/codex_harness_engineering.md` | Run efficiency for substantial Codex work |
@@ -27,13 +27,13 @@ Dataset identity and semantic truth remain required for every BI answer and char
 | Area | Location | Rule |
 | --- | --- | --- |
 | Status | `project_docs/active/status/` | Keep short; archive long history |
-| Current status | `project_docs/active/status/decision_intelligence_execution_status.md` | Single current source of truth |
+| Current status | `project_docs/active/status/ai_chat_execution_status.md` | Single current source of truth |
 | Completed rollout history | `project_docs/archive/ai_chat_decision_output_unification_rollout_completed.md` | Historical reference only; do not use as the current plan |
-| Completed plans | `project_docs/active/decision_intelligence/completed/` | Reference only |
+| Completed plans | `project_docs/active/ai_chat/completed/` | Reference only |
 | Contracts | `project_docs/active/contracts/` | Backend/frontend payload truth |
 | Dashboard canvas state contract | `project_docs/active/contracts/dashboard_canvas_state.md` | Local-first dashboard canvas, layout, and sharing skeleton state |
 | Dataset governance contract | `project_docs/active/contracts/data_catalog_lineage.md` | Readiness policy and enforcement truth |
-| Decision Intelligence active gate | `project_docs/active/decision_intelligence/active_gate/README.md` | The only active phase workspace |
+| AI Chat active gate | `project_docs/active/ai_chat/active_gate/README.md` | The only active phase workspace |
 | Deferred planning | `project_docs/active/future/README.md` | The one home for all deferred active-folder plans; not active until promoted |
 | Agent harness | `project_docs/active/agent_harness/` | Reusable agent backbone, hooks, and validation |
 | Handoffs | `project_docs/active/ai_hand_off/` | Active handoffs only |
@@ -50,11 +50,12 @@ Every prompt written for Gemini, Antigravity, Codex in a future session, or anot
 
 By default, `Goal:` prompts belong in handoff files under `project_docs/active/ai_hand_off/`, not in the chat final response. The final response should link or name the handoff file so the receiving agent can read it through the auto-handoff flow. Paste the full prompt in chat only when the user explicitly asks for that output.
 
-Decision Intelligence exception: Codex-owned current goals belong in `project_docs/active/decision_intelligence/active_gate/`. Use `project_docs/active/ai_hand_off/` only for active Gemini or Antigravity handoffs.
+Decision Intelligence exception: Codex-owned current goals belong in `project_docs/active/decision_intelligence/active_gate/`. Use `project_docs/active/ai_hand_off/` only for active Gemini handoffs.
+AI Chat exception: Antigravity-owned current goals belong in `project_docs/active/ai_chat/active_gate/`. When Antigravity needs backend work, it writes handoffs to Codex in `project_docs/active/ai_hand_off/`.
 
 ## Active-Gate Rule
 
-Decision Intelligence has one true active workspace: `project_docs/active/decision_intelligence/active_gate/`. Agents must not infer the next phase from `current/`, `completed/`, `future/`, archive files, or the mere existence of an old handoff. The active gate is the status file plus the active-gate README, and the ranking source must be named there when the gate comes from a council recommendation.
+AI Chat has one true active workspace: `project_docs/active/ai_chat/active_gate/`. Agents must not infer the next phase from `current/`, `completed/`, `future/`, archive files, or the mere existence of an old handoff. The active gate is the status file plus the active-gate README, and the ranking source must be named there when the gate comes from a council recommendation.
 
 ## Repair Handoff Clarity
 
@@ -62,9 +63,9 @@ When Codex finds a frontend-agent implementation is not complete, the active han
 
 ## Orchestration Rule
 
-Codex must facilitate the project, not only complete isolated implementation slices. Every wrap-up for Decision Intelligence work must say the current gate in plain language: complete end to end, backend-only complete, frontend verification needed, frontend-agent handoff needed, blocked, or ready for the next phase.
+For the overall project, Codex must facilitate, not only complete isolated implementation slices. Every wrap-up for backend work must say the current gate in plain language: complete end to end, blocked, or ready for frontend.
 
-Do not leave the user to decide whether Gemini is needed. Codex should make that call from the active docs and verified evidence. If evidence is missing, the next task is a named audit, not a vague prompt.
+For the AI Chat UI rebuild, Antigravity facilitates the project and owns the active markdown docs. Codex takes direction from Antigravity via handoff files. Do not leave the user to decide whether backend work is needed. Antigravity should make that call from the active docs and verified evidence.
 
 Do not create a frontend-agent handoff until Codex has confirmed a concrete frontend gap or the user explicitly asks for Gemini or Antigravity to implement frontend work. Backend-only completion should be recorded as backend-only completion, not phase completion.
 
@@ -92,7 +93,7 @@ Before sending a final response after substantial Decision Intelligence work, Co
 
 ## Current Active File
 
-`project_docs/active/status/decision_intelligence_execution_status.md`
+`project_docs/active/status/ai_chat_execution_status.md`
 
 ## Superseded Or Completed Records
 
