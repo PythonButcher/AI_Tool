@@ -917,7 +917,6 @@ function CanvasContainer({
         setShowAIChart={setShowAIChart}
         setAiChartType={setAiChartType}
         setAiChartData={setAiChartData}
-        onOpenDecisionGraph={onOpenDecisionGraph}
       />
     </WindowFrame>
   ) : null;

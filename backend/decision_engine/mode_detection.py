@@ -68,17 +68,38 @@ def is_decision_request(message: str) -> bool:
     return any(keyword in lower_message for keyword in DECISION_INTENT_KEYWORDS)
 
 
-def detect_chat_mode(message: str, session_state: Dict[str, Any] | None = None) -> str:
+def normalize_requested_mode(requested_mode: Any) -> str | None:
+    """Normalize the user-controlled mode selector without guessing intent."""
+    normalized = str(requested_mode or "").strip().lower().replace("-", "_").replace(" ", "_")
+    aliases = {
+        "auto": "auto",
+        "ask": "ask",
+        "ask_data": "ask",
+        "explore": "explore",
+        "decide": "decide",
+    }
+    return aliases.get(normalized)
+
+
+def detect_chat_mode(
+    message: str,
+    session_state: Dict[str, Any] | None = None,
+    requested_mode: Any = None,
+) -> str:
     """
     Pick the current chat mode.
 
     The engine keeps this intentionally simple for the first slice so the
     contract is stable before deeper orchestration logic arrives.
     """
-    return detect_chat_mode_details(message, session_state)["mode"]
+    return detect_chat_mode_details(message, session_state, requested_mode=requested_mode)["mode"]
 
 
-def detect_chat_mode_details(message: str, session_state: Dict[str, Any] | None = None) -> Dict[str, Any]:
+def detect_chat_mode_details(
+    message: str,
+    session_state: Dict[str, Any] | None = None,
+    requested_mode: Any = None,
+) -> Dict[str, Any]:
     """
     Return both the selected mode and the plain-language reason for that choice.
 
@@ -88,6 +109,38 @@ def detect_chat_mode_details(message: str, session_state: Dict[str, Any] | None 
     session_state = session_state if isinstance(session_state, dict) else {}
     lower_message = str(message or "").strip().lower()
     active_mode = str(session_state.get("active_mode") or "").strip().lower()
+    normalized_requested_mode = normalize_requested_mode(requested_mode)
+
+    # A mode chosen by the user is authoritative. ``auto`` deliberately falls
+    # through to backend routing so prior inferred state cannot masquerade as
+    # an explicit choice.
+    if normalized_requested_mode in {"ask", "explore", "decide"}:
+        labels = {"ask": "Ask data", "explore": "Explore", "decide": "Decide"}
+        return {
+            "mode": normalized_requested_mode,
+            "reason_code": "explicit_mode_override",
+            "reason": f"The user explicitly selected {labels[normalized_requested_mode]} mode.",
+            "selection_source": "explicit",
+            "requires_confirmation": False,
+        }
+
+    visualization_request = is_visualization_request(lower_message)
+    decision_request = is_decision_request(lower_message)
+
+    # Auto mode must not silently choose charting or decision framing when the
+    # same prompt contains strong cues for both workflows.
+    if visualization_request and decision_request:
+        return {
+            "mode": "ask",
+            "reason_code": "ambiguous_chart_decision_comparison",
+            "reason": (
+                "The prompt could mean a descriptive chart comparison or a decision trade-off, "
+                "so the user must choose which workflow to run."
+            ),
+            "selection_source": "auto",
+            "requires_confirmation": True,
+            "confirmation_modes": ["explore", "decide"],
+        }
 
     if any(keyword in lower_message for keyword in DECISION_FOLLOW_UP_KEYWORDS):
         return {
@@ -95,13 +148,13 @@ def detect_chat_mode_details(message: str, session_state: Dict[str, Any] | None 
             "reason_code": "decision_follow_up",
             "reason": "The message refers to decision-workspace follow-up steps, so decide mode stays active.",
         }
-    if is_visualization_request(lower_message):
+    if visualization_request:
         return {
             "mode": "explore",
             "reason_code": "visualization_request",
             "reason": "The message explicitly asks for a chart, comparison, or visual breakdown, so explore mode is active.",
         }
-    if is_decision_request(lower_message):
+    if decision_request:
         return {
             "mode": "decide",
             "reason_code": "decision_request",

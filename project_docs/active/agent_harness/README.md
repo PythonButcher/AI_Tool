@@ -40,7 +40,7 @@ Future harness planning notes live in `../future/`. They preserve ideas that are
 
 Current future plan:
 
-`../future/codex_antigravity_handoff_orchestration_plan.md` - planned orchestration layer for Codex and Antigravity phase handoffs, review loops, and user acceptance gates.
+`../future/codex/codex_antigravity_handoff_orchestration_plan.md` - planned orchestration layer for Codex and Antigravity phase handoffs, review loops, and user acceptance gates.
 
 ## Validation
 

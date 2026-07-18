@@ -32,11 +32,9 @@ This is the top-level routing file. Use it to find the smallest current document
 
 ## Current Product Truth
 
-Decision Intelligence V3 is active, and the 11-phase AI Chat decision-output rollout is complete.
+AI Chat is a BI-first NLP workspace. Existing grounded answers, semantic-model reasoning, tables, charts, conversational exploration, artifact inspection, and BI exports must remain.
 
-AI Chat is now the intended primary work surface for Decision Intelligence. Existing AI Chat behavior must remain: normal answers, charts, exploration, decide mode, artifact inspection, and exports.
-
-Decision Intelligence now appears as a structured output in the AI Chat results pane. The Decisions window should remain secondary unless a new approved slice defines saved decision library, fullscreen review, or historical asset behavior.
+Decision Intelligence output has been removed from the AI Chat product path. Isolated backend services remain for compatibility only and must not be treated as active UI scope.
 
 The old standalone Phase 4 Canonical Active Dataset handoff is superseded. Dataset truth remains required, but it should be implemented as Dataset Trust inside the unified AI Chat decision output flow.
 
@@ -59,6 +57,6 @@ Do not treat archived or completed files as active plans.
 
 Do not restart the old standalone Phase 4 dataset handoff.
 
-Do not build a separate dashboard project before unifying the current AI Chat output flow.
+Do not reconnect Decision Intelligence output to AI Chat without explicit user approval and a new active plan.
 
 Previous full index was preserved at `project_docs/archive/superseded_active_2026_05_24/INDEX_pre_map_cleanup_2026_05_24.md`.

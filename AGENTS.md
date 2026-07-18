@@ -22,9 +22,9 @@ This file is the first routing helper for AI_Tool. It should point agents to cur
 
 ## Current Product Direction
 
-Decision Intelligence is unified through AI Chat, not split into a separate required Decisions-window flow. AI Chat keeps its existing answer, chart, exploration, artifact, and export behavior. Decision Intelligence now has a richer structured output in the AI Chat results pane, including export-ready decision sections.
+AI Chat is a BI-first NLP workspace. It keeps grounded answers, tables, charts, conversational refinements, semantic-model behavior, artifact inspection, and BI exports. It does not expose Decision Intelligence workspaces, decision frames, readiness panels, command centers, decision assets, scenario comparison, or Decision Output exports.
 
-The Decisions window is not deleted. Its future role remains secondary: saved decision library, fullscreen review, or historical asset viewer after a dedicated next slice defines the persistence and review behavior.
+Decision Intelligence backend services may remain isolated for compatibility, but they are not part of the active AI Chat product direction. Do not reconnect them without explicit user approval and a new active plan.
 
 ## Ownership
 
