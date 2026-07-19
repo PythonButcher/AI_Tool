@@ -589,6 +589,85 @@ function AIShell() {
         role: 'assistant',
         content: assistantMessage,
         artifacts: biArtifacts,
+        suggested_actions: data.suggested_actions || [],
+        grounded: Boolean(payloadDataset || datasetRef),
+        session_state: nextSessionState,
+      }]);
+      setSessionState(nextSessionState);
+
+      if (data.governance_readiness?.status === 'warning') {
+        setGovernanceWarning(
+          data.governance_readiness.reasons?.[0]?.message
+          || 'The active dataset has a quality warning that may affect this result.',
+        );
+      }
+
+      const lastBiArtifact = biArtifacts[biArtifacts.length - 1];
+      if (lastBiArtifact) {
+        setActiveArtifact(lastBiArtifact);
+        setIsResultsPaneOpen(true);
+      }
+    } catch (requestError) {
+      const readinessMessage = requestError.response?.data?.governance_readiness?.reasons?.[0]?.message;
+      setError(readinessMessage || requestError.message || 'Could not reach the analytics service.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSuggestedAction = async (action, previousSessionState) => {
+    if (!action || !action.enabled || action.kind !== 'analytics_refinement' || !action.analytics_refinement || loading) return;
+
+    const message = action.label;
+    const tokens = extractTokens(message, datasets);
+    setLoading(true);
+    setError(null);
+    setGovernanceWarning(null);
+    setUserMessages((previous) => [
+      ...previous,
+      { role: 'user', content: message, grounded: tokens.length > 0 },
+    ]);
+
+    try {
+      const biSessionState = buildBiSessionState(previousSessionState);
+      const {
+        payloadDataset,
+        payloadSemanticModel,
+        datasetRef,
+      } = resolveRequestContext(biSessionState, tokens);
+
+      const response = await axios.post(`${API_URL}/api/decision/chat/turns`, {
+        user_message: message,
+        dataset: payloadDataset,
+        semantic_model: payloadSemanticModel,
+        dataset_ref: datasetRef,
+        resolved_datasets: tokens,
+        requested_mode: (payloadDataset || datasetRef) ? 'explore' : 'ask',
+        conversation_history: userMessages
+          .map(({ role, content }) => ({ role, content }))
+          .slice(-10),
+        session_state: biSessionState,
+        analytics_refinement: action.analytics_refinement,
+      });
+
+      const data = response.data;
+      if (data.status !== 'success') {
+        throw new Error(data.error?.message || 'The BI query could not be completed.');
+      }
+
+      const biArtifacts = filterBiArtifacts(data.artifacts);
+      const responseEnteredDecisionMode = data.mode === 'decide'
+        || (Array.isArray(data.artifacts) && data.artifacts.some((artifact) => !BI_ARTIFACT_TYPES.has(artifact?.type)));
+      const assistantMessage = responseEnteredDecisionMode && biArtifacts.length === 0
+        ? 'Ask about a metric, segment, time period, comparison, table, or chart and I will analyze the active data.'
+        : (data.assistant_message || 'The BI query completed.');
+      const nextSessionState = buildBiSessionState(data.session_state);
+
+      setUserMessages((previous) => [...previous, {
+        role: 'assistant',
+        content: assistantMessage,
+        artifacts: biArtifacts,
+        suggested_actions: data.suggested_actions || [],
         grounded: Boolean(payloadDataset || datasetRef),
         session_state: nextSessionState,
       }]);
@@ -731,6 +810,30 @@ function AIShell() {
                         {renderArtifact(artifact, false)}
                       </React.Fragment>
                     ))}
+                  </div>
+                )}
+
+                {message.suggested_actions?.length > 0 && (
+                  <div className="ai-shell__suggested-actions">
+                    {message.suggested_actions.map(action => {
+                      const isDisabled = !action.enabled;
+                      const title = isDisabled ? action.disabled_reason || 'Action disabled' : '';
+                      return (
+                        <Tooltip key={action.action_id} title={title}>
+                          <span>
+                            <Chip
+                              label={action.label}
+                              onClick={isDisabled ? undefined : () => handleSuggestedAction(action, message.session_state)}
+                              disabled={isDisabled}
+                              className={`ai-shell__suggested-action-chip ${isDisabled ? 'is-disabled' : 'is-enabled'}`}
+                              clickable={!isDisabled}
+                              variant="outlined"
+                              size="small"
+                            />
+                          </span>
+                        </Tooltip>
+                      );
+                    })}
                   </div>
                 )}
               </div>

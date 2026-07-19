@@ -1,3 +1,5 @@
+> COMPLETED REFERENCE ONLY: This planning goal is closed and must not be used as an active prompt.
+
 Goal: Define the exact implementation boundaries, target files, and acceptance criteria for Slice 3: Interactive Chart Context (Frontend).
 
 Target docs/files to inspect:

@@ -10,7 +10,9 @@ Antigravity owns bounded frontend implementation, React/CSS, UI rendering, and f
 
 ## Active Handoffs And Goal Prompts
 
-Current handoff: `slice_3_interactive_chart_context_frontend.md`
+No active Antigravity handoff.
+
+Codex owns the current Guided Exploration definition and backend-readiness gate. A frontend handoff may be created only after Codex identifies a concrete UI gap that is distinct from existing inline suggested actions and verifies the exact backend contract.
 
 The current AI Chat gate is `project_docs/active/ai_chat/active_gate/README.md`. Current status is recorded in `project_docs/active/status/ai_chat_execution_status.md`.
 

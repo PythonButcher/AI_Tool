@@ -1,23 +1,27 @@
 # AI Chat Active Gate
 
-**Current Phase:** Slice 3 — Interactive Chart Context (Frontend) [Active]
+**Current Phase:** Slice 4 — Guided Exploration (Definition and Backend Readiness) [Active]
 
-*Context: Slice 3 planning is complete. The Analytics Refinement backend API is ready. We are now implementing the frontend UI for Interactive Chart Context.*
+## Purpose
+Define one guided-exploration behavior that materially improves how a user discovers the next useful BI question. It must be distinct from the inline suggested-action chips already available and remain grounded in the active dataset, semantic model, and structured analytics state.
 
-## Objective
-Implement the interactive chart context (Slice 3) in the frontend by rendering and handling backend-provided `suggested_actions` for analytics refinement.
+## Current Gate
+Codex must inspect the current backend contract and frontend integration, define the smallest distinct user outcome, and classify backend readiness before any UI handoff is written.
+
+## Product Boundaries
+Guided Exploration stays inside BI answers, tables, charts, semantic metrics, filters, grouping, aggregation, and time periods. It must not restore Decision Intelligence workspaces, decision outputs, scenario tools, or command-center surfaces. It must not become an open-ended recommendation engine that invents unsupported questions.
 
 ## Ownership
-**Project Lead:** Codex
+**Project Lead and Current Owner:** Codex
 
-**Current Execution Owner:** Antigravity (bounded frontend implementation)
+Antigravity has no active assignment. Codex will implement or verify backend truth first, then create one bounded UI handoff only if source review proves a concrete frontend gap.
 
-Codex owns the gate, backend truth, handoff scope, and acceptance review. Antigravity may make presentation and interaction choices inside the existing design system as long as the handoff contract, required behavior, and scope limits remain intact.
+## Acceptance Checks
+1. The behavior is described as one clear user outcome and is not a duplicate of inline action chips.
+2. Exact request, response, session-state, enabled/disabled, and grounding fields are named from source.
+3. Backend readiness is classified from implementation and focused tests, not documentation alone.
+4. Any backend gap is implemented and tested before an Antigravity handoff is created.
+5. Decision Intelligence output remains disconnected from AI Chat.
 
-## Mandatory Control Flow
-1. Antigravity implements the current handoff and stops after reporting changed files and build evidence.
-2. Control returns to Codex. Codex reviews the source against the backend contract and acceptance checks, then either accepts it or writes a focused repair handoff.
-3. The user performs browser-level acceptance only after Codex declares the implementation ready for visible verification.
-
-## Active Handoff
-`project_docs/active/ai_hand_off/slice_3_interactive_chart_context_frontend.md`
+## Active Goal
+`project_docs/active/ai_chat/active_gate/guided_exploration_definition_goal.md`

@@ -4,6 +4,13 @@ This folder stores reference copies of completed plans and goals for the AI Chat
 
 ## Release History
 
+### Slice 3: Interactive Chart Context (Frontend)
+- **Completed On**: 2026-07-18
+- **Owner**: Antigravity (Frontend), reviewed and gated by Codex
+- **Summary**: Added inline, accessible suggested-action chips to grounded BI results. Enabled actions submit typed analytics refinements with the result's structured session state; disabled actions remain visible and non-interactive. User browser acceptance closed the slice.
+- **Reference**: `slice_3_interactive_chart_context_frontend.md`
+- **Planning Reference**: `slice_3_planning_goal.md`
+
 ### Slice 2: Trusted Result Card (Frontend)
 - **Completed On**: 2026-07-18
 - **Owner**: Antigravity (Frontend)

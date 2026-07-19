@@ -1,3 +1,15 @@
+> COMPLETED REFERENCE ONLY: This handoff is closed and must not be executed.
+
+# Interactive Chart Context Frontend Handoff
+
+**CODEX REVIEW ACCEPTED — USER BROWSER ACCEPTANCE REQUIRED**
+
+State: `user_acceptance_required`
+
+Next Owner: User
+
+Antigravity must not resume work unless Codex changes this file to `REPAIR REQUIRED` after user feedback.
+
 Goal: Implement the interactive chart context (Slice 3) in the frontend by rendering and handling backend-provided `suggested_actions` for analytics refinement.
 
 Target docs/files to inspect:
