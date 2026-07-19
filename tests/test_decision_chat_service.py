@@ -243,7 +243,11 @@ class DecisionChatApiTests(unittest.TestCase):
         self.assertIn(chart_spec["semanticConfig"]["groupByField"], {"region", "Region"})
         self.assertEqual(chart_spec["pin"]["sourceArtifact"], "ai_chat")
         self.assertIsNone(body["draft_workspace_preview"])
-        self.assertEqual(body["action_state"]["available_action_ids"], [])
+        self.assertEqual(
+            body["action_state"]["available_action_ids"],
+            [action["action_id"] for action in body["suggested_actions"] if action["enabled"]],
+        )
+        self.assertTrue(all(action["kind"] == "analytics_refinement" for action in body["suggested_actions"]))
 
     def test_turn_route_builds_workspace_preview_for_decision_prompt(self):
         response = self.client.post(
@@ -1200,7 +1204,10 @@ class DecisionChatApiTests(unittest.TestCase):
         self.assertEqual(body["artifacts"][0]["default_view"], "inline")
         self.assertEqual(body["artifacts"][0]["source"], "semantic_metric")
         self.assertIsNone(body["draft_workspace_preview"])
-        self.assertEqual(body["action_state"]["available_action_ids"], [])
+        self.assertEqual(
+            body["action_state"]["available_action_ids"],
+            [action["action_id"] for action in body["suggested_actions"] if action["enabled"]],
+        )
         self.assertEqual(body["session_state"]["analytics_state"]["metric_name"], "Revenue")
 
     def test_turn_route_answers_semantic_metric_question_without_chart_keyword(self):
@@ -1224,6 +1231,154 @@ class DecisionChatApiTests(unittest.TestCase):
         self.assertEqual(body["session_state"]["last_analytic_context"]["metric_name"], "Revenue")
         self.assertEqual(body["mode_context"]["reason_code"], "grounded_analytics_request")
         self.assertEqual(body["session_state"]["analytics_state"]["metric_name"], "Revenue")
+
+    def test_semantic_turn_returns_normalized_bi_grounding_and_typed_actions(self):
+        response = self.client.post(
+            "/api/decision/chat/turns",
+            json={
+                "dataset": DATASET,
+                "dataset_ref": {
+                    "source": "active",
+                    "dataset_id": "sales_q1",
+                    "dataset_name": "Q1 Sales",
+                    "transform_state": "cleaned",
+                    "stale_state": "current",
+                    "freshness_as_of": "2026-04-30T00:00:00Z",
+                },
+                "semantic_model": SEMANTIC_MODEL,
+                "user_message": "What is Revenue by Region?",
+                "session_state": {},
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.get_json()
+        self.assertEqual(body["contract_version"], "ai_chat_bi_result_v1")
+        grounding = body["bi_grounding"]
+        self.assertEqual(grounding["schema_version"], "ai_chat_bi_grounding_v1")
+        self.assertEqual(grounding["dataset"]["dataset_id"], "sales_q1")
+        self.assertEqual(grounding["dataset"]["dataset_name"], "Q1 Sales")
+        self.assertEqual(grounding["row_count"], 4)
+        self.assertEqual(grounding["source_row_count"], 4)
+        self.assertEqual(grounding["freshness"], {"state": "current", "as_of": "2026-04-30T00:00:00Z"})
+        self.assertEqual(grounding["cleaning"], {"state": "cleaned"})
+        self.assertEqual(grounding["metric_definition"]["id"], "metric_revenue_sum")
+        self.assertEqual(grounding["aggregation"], "sum")
+        self.assertEqual([item["field"] for item in grounding["dimensions"]], ["Region"])
+        self.assertEqual(grounding["filters"], [])
+        self.assertIsNone(grounding["time_period"])
+        self.assertEqual(body["artifacts"][0]["bi_grounding"], grounding)
+
+        refinement = body["analytics_refinement"]
+        self.assertEqual(refinement["schema_version"], "ai_chat_analytics_refinement_v1")
+        self.assertEqual(refinement["current_state"]["aggregation"], "sum")
+        self.assertIn("remove_filter", refinement["payload_expectations"]["operations"])
+        self.assertIn("set_aggregation", refinement["payload_expectations"]["operations"])
+
+        actions = body["suggested_actions"]
+        self.assertTrue(actions)
+        self.assertTrue(all(action["kind"] == "analytics_refinement" for action in actions))
+        self.assertTrue(all(action["enabled"] for action in actions))
+        self.assertTrue(all(action.get("analytics_refinement") for action in actions))
+        self.assertIn("show_trend_by_order_date", {action["action_id"] for action in actions})
+        self.assertIn("breakdown_by_channel", {action["action_id"] for action in actions})
+
+        analytic_state = body["session_state"]["analytics_state"]
+        self.assertEqual(body["session_state"]["schema_version"], "ai_chat_bi_session_state_v1")
+        self.assertEqual(analytic_state["schema_version"], "ai_chat_analytics_state_v1")
+        self.assertEqual(analytic_state["aggregation"], "sum")
+        self.assertNotIn("rows", analytic_state)
+        self.assertNotIn("chartData", analytic_state)
+        self.assertNotIn("dataset", analytic_state)
+
+    def test_structured_analytics_refinements_update_filters_aggregation_and_time(self):
+        initial = self.client.post(
+            "/api/decision/chat/turns",
+            json={
+                "dataset": DATASET,
+                "semantic_model": SEMANTIC_MODEL,
+                "user_message": "What is Revenue by Region?",
+                "session_state": {},
+            },
+        ).get_json()
+        filtered = self.client.post(
+            "/api/decision/chat/turns",
+            json={
+                "dataset": DATASET,
+                "semantic_model": SEMANTIC_MODEL,
+                "user_message": "Only West",
+                "session_state": initial["session_state"],
+            },
+        ).get_json()
+
+        removed_response = self.client.post(
+            "/api/decision/chat/turns",
+            json={
+                "dataset": DATASET,
+                "semantic_model": SEMANTIC_MODEL,
+                "user_message": "Remove the Region filter",
+                "analytics_refinement": {
+                    "operation": "remove_filter",
+                    "arguments": {"field": "Region"},
+                },
+                "session_state": filtered["session_state"],
+            },
+        )
+        self.assertEqual(removed_response.status_code, 200)
+        removed = removed_response.get_json()
+        self.assertEqual(removed["analytics_refinement"]["applied"]["operation"], "remove_filter")
+        self.assertEqual(removed["session_state"]["analytics_state"]["filters"], [])
+        self.assertEqual(removed["bi_grounding"]["filters"], [])
+        self.assertEqual(removed["bi_grounding"]["row_count"], 4)
+
+        aggregate_response = self.client.post(
+            "/api/decision/chat/turns",
+            json={
+                "dataset": DATASET,
+                "semantic_model": SEMANTIC_MODEL,
+                "user_message": "Use mean aggregation",
+                "analytics_refinement": {
+                    "operation": "set_aggregation",
+                    "arguments": {"aggregation": "mean"},
+                },
+                "session_state": removed["session_state"],
+            },
+        )
+        self.assertEqual(aggregate_response.status_code, 200)
+        aggregated = aggregate_response.get_json()
+        self.assertEqual(aggregated["session_state"]["analytics_state"]["aggregation"], "mean")
+        self.assertEqual(aggregated["analytics_refinement"]["current_state"]["aggregation"], "mean")
+        self.assertEqual(aggregated["bi_grounding"]["aggregation"], "mean")
+
+        period_response = self.client.post(
+            "/api/decision/chat/turns",
+            json={
+                "dataset": DATASET,
+                "semantic_model": SEMANTIC_MODEL,
+                "user_message": "Use the first quarter",
+                "analytics_refinement": {
+                    "operation": "set_time_period",
+                    "arguments": {
+                        "field": "Order Date",
+                        "start": "2026-01-01",
+                        "end": "2026-03-31",
+                    },
+                },
+                "session_state": aggregated["session_state"],
+            },
+        )
+        self.assertEqual(period_response.status_code, 200)
+        period = period_response.get_json()
+        self.assertEqual(
+            period["bi_grounding"]["time_period"],
+            {"field": "Order Date", "start": "2026-01-01", "end": "2026-03-31"},
+        )
+        self.assertEqual(period["bi_grounding"]["row_count"], 3)
+        self.assertEqual(period["analytics_refinement"]["current_state"]["time_period"], period["bi_grounding"]["time_period"])
+        self.assertIn(
+            {"field": "Order Date", "operator": "gte", "value": "2026-01-01", "values": None},
+            period["session_state"]["analytics_state"]["filters"],
+        )
 
     def test_follow_up_turn_reuses_last_metric_and_returns_chart(self):
         first_response = self.client.post(

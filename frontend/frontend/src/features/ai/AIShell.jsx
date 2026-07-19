@@ -76,6 +76,90 @@ const filterBiArtifacts = (artifacts) => (
     : []
 );
 
+const TrustedResultCard = ({ biGrounding }) => {
+  if (!biGrounding) return null;
+
+  const {
+    dataset,
+    row_count,
+    source_row_count,
+    freshness = {},
+    cleaning = {},
+    metric_definition,
+    aggregation,
+    dimensions = [],
+    filters = [],
+    time_period
+  } = biGrounding;
+
+  const datasetName = dataset?.dataset_name || 'unknown';
+  const rowCount = row_count ?? 'unknown';
+  const sourceRowCount = source_row_count ?? 'unknown';
+  const metricName = metric_definition?.label || metric_definition?.name;
+
+  return (
+    <div className="ai-shell__trusted-result">
+      <div className="ai-shell__trusted-header">
+        <FaShieldAlt /> <span>BI Grounding</span>
+      </div>
+      <div className="ai-shell__trusted-content">
+        <div className="ai-shell__trusted-row">
+          <span className="ai-shell__trusted-label">Dataset</span>
+          <span className="ai-shell__trusted-value">{datasetName}</span>
+        </div>
+        <div className="ai-shell__trusted-row">
+          <span className="ai-shell__trusted-label">Row Basis</span>
+          <span className="ai-shell__trusted-value">
+            {rowCount} {rowCount !== 'unknown' && sourceRowCount !== 'unknown' && rowCount !== sourceRowCount ? `(filtered from ${sourceRowCount})` : ''}
+          </span>
+        </div>
+        <div className="ai-shell__trusted-row">
+          <span className="ai-shell__trusted-label">Freshness</span>
+          <span className="ai-shell__trusted-value">
+            {freshness.state || 'unknown'}{freshness.as_of ? ` as of ${freshness.as_of}` : ''}
+          </span>
+        </div>
+        <div className="ai-shell__trusted-row">
+          <span className="ai-shell__trusted-label">Cleaning</span>
+          <span className="ai-shell__trusted-value">{cleaning.state || 'unknown'}</span>
+        </div>
+        {(metricName || aggregation) && (
+          <div className="ai-shell__trusted-row">
+            <span className="ai-shell__trusted-label">Metric</span>
+            <span className="ai-shell__trusted-value">
+              {metricName || 'unknown'} {aggregation ? `[${aggregation}]` : ''}
+            </span>
+          </div>
+        )}
+        {dimensions.length > 0 && (
+          <div className="ai-shell__trusted-row">
+            <span className="ai-shell__trusted-label">Dimensions</span>
+            <span className="ai-shell__trusted-value">
+              {dimensions.map(d => d.label || d.name || 'unknown').join(', ')}
+            </span>
+          </div>
+        )}
+        {filters.length > 0 && (
+          <div className="ai-shell__trusted-row">
+            <span className="ai-shell__trusted-label">Filters</span>
+            <span className="ai-shell__trusted-value">
+              {filters.map(f => `${f.field || 'unknown'} ${f.operator || ''} ${f.value ?? f.values?.join(',') ?? ''}`).join(' AND ')}
+            </span>
+          </div>
+        )}
+        {time_period && (
+          <div className="ai-shell__trusted-row">
+            <span className="ai-shell__trusted-label">Time Period</span>
+            <span className="ai-shell__trusted-value">
+              {time_period.start || 'unknown'} to {time_period.end || 'unknown'}
+            </span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 /**
  * AI Chat keeps its established split-pane layout while returning to a focused
  * workflow: grounded answers, tables, charts, and conversational refinements.
@@ -296,26 +380,30 @@ function AIShell() {
             </div>
           </div>
           <div className="ai-shell__artifact-content">{renderAnswerContent(content)}</div>
+          <TrustedResultCard biGrounding={artifact.bi_grounding} />
         </div>
       );
     }
 
     if (!isInspector) {
       return (
-        <div className="ai-shell__artifact-preview-link" onClick={() => handleInspect(artifact)}>
-          <div className="ai-shell__preview-icon"><FaChartBar /></div>
-          <div className="ai-shell__preview-info">
-            <Typography variant="caption" className="ai-shell__preview-type">Visualization</Typography>
-            <Typography variant="body2" className="ai-shell__preview-title">
-              {artifact.title || content.title || content.explanation || `${content.chartType || 'Chart'} result`}
-            </Typography>
+        <div className="ai-shell__artifact-preview-container">
+          <div className="ai-shell__artifact-preview-link" onClick={() => handleInspect(artifact)}>
+            <div className="ai-shell__preview-icon"><FaChartBar /></div>
+            <div className="ai-shell__preview-info">
+              <Typography variant="caption" className="ai-shell__preview-type">Visualization</Typography>
+              <Typography variant="body2" className="ai-shell__preview-title">
+                {artifact.title || content.title || content.explanation || `${content.chartType || 'Chart'} result`}
+              </Typography>
+            </div>
+            <div className="ai-shell__preview-actions">
+              {renderExportButton(artifact, 'is-preview-export')}
+              <IconButton size="small" className="ai-shell__preview-action" aria-label="Open chart">
+                <FaChevronRight />
+              </IconButton>
+            </div>
           </div>
-          <div className="ai-shell__preview-actions">
-            {renderExportButton(artifact, 'is-preview-export')}
-            <IconButton size="small" className="ai-shell__preview-action" aria-label="Open chart">
-              <FaChevronRight />
-            </IconButton>
-          </div>
+          <TrustedResultCard biGrounding={artifact.bi_grounding} />
         </div>
       );
     }
@@ -373,6 +461,7 @@ function AIShell() {
             </Typography>
           )}
         </div>
+        <TrustedResultCard biGrounding={artifact.bi_grounding} />
       </div>
     );
   };

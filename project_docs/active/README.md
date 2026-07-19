@@ -102,8 +102,5 @@ Before sending a final response after substantial Decision Intelligence work, Co
 | Full old active status | `project_docs/archive/superseded_active_2026_05_24/decision_intelligence_execution_status_full_2026_05_24.md` |
 | Old Phase 4 dataset plan | `project_docs/archive/superseded_active_2026_05_24/next_focus_execution_plan_old_phase4_dataset_2026_05_24.md` |
 | Old Phase 4 Gemini dataset handoff | `project_docs/archive/superseded_active_2026_05_24/phase_4_gemini_frontend_canonical_active_dataset.md` |
-| Completed Phase 2.5 plan | `project_docs/active/decision_intelligence/completed/phase_2_5_semantic_frame_completion_plan.md` |
-| Completed Phase 3 plan | `project_docs/active/decision_intelligence/completed/phase_3_correction_and_observational_evidence_plan.md` |
-| Completed AI Chat emergency overhaul plan | `project_docs/active/decision_intelligence/completed/ai_chat_emergency_overhaul_action_plan.md` |
 
 Previous full active README was preserved at `project_docs/archive/superseded_active_2026_05_24/active_README_pre_map_cleanup_2026_05_24.md`.

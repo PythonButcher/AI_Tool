@@ -10,7 +10,7 @@ Use this folder when the task is about making agents safer, faster, easier to re
 | --- | --- | --- |
 | Entry instructions | `AGENTS.md` | First project rules for Codex and other OpenAI agents |
 | Active routing | `project_docs/INDEX.md` and `project_docs/active/README.md` | Smallest-doc-first navigation |
-| Active gate | `project_docs/active/decision_intelligence/active_gate/README.md` | Single current Decision Intelligence phase workspace |
+| Active gate | `project_docs/active/ai_chat/active_gate/README.md` | Single current AI Chat slice workspace |
 | Codex run discipline | `project_docs/active/codex_harness_engineering.md` | Context, tool-output, and verification budget rules |
 | Agent harness design | `project_docs/active/agent_harness/harness_blueprint.md` | Reusable harness pattern for this and future repos |
 | Hook guidance | `project_docs/active/agent_harness/hooks.md` | Hook-ready checks and installation notes |

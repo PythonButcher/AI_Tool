@@ -10,17 +10,11 @@ Gemini or Antigravity owns frontend implementation, React/CSS, UI rendering, bro
 
 ## Active Handoffs And Goal Prompts
 
-Active frontend-agent handoff: none.
+No active handoff yet. A planning phase is underway to determine the exact frontend requirements for interactive chart context.
 
-Codex owns the active BI-first AI Chat reset because the user explicitly authorized Codex frontend edits in this session. Create a future frontend-agent handoff only if the active gate later identifies a bounded follow-up owned by Gemini or Antigravity.
+The current AI Chat gate is `project_docs/active/ai_chat/active_gate/README.md`. Current status is recorded in `project_docs/active/status/ai_chat_execution_status.md`.
 
-Codex-owned current goals live in `project_docs/active/decision_intelligence/active_gate/`, not in this handoff folder. Current active gate: `project_docs/active/decision_intelligence/active_gate/README.md`.
-
-The dashboard canvas handoff is completed and retained under `project_docs/active/decision_intelligence/completed/`. Deferred plans are retained only under `project_docs/active/future/` and must not be executed until the active status file and `project_docs/active/decision_intelligence/active_gate/README.md` promote them.
-
-Completed handoffs are retained under `project_docs/active/decision_intelligence/completed/` as reference only. Completed examples include `project_docs/active/decision_intelligence/completed/antigravity_ai_chat_dataset_identity_handoff.md`, `project_docs/active/decision_intelligence/completed/antigravity_decision_pdf_renderer_repair.md`, `project_docs/active/decision_intelligence/completed/antigravity_saved_decision_library_metadata_filters_handoff.md`, `project_docs/active/decision_intelligence/completed/phase_3_antigravity_charting_slicer_ui_handoff.md`, `project_docs/active/decision_intelligence/completed/phase_5_gemini_ai_chat_decision_command_center.md`, and `project_docs/active/decision_intelligence/completed/antigravity_chart_color_picker_handoff.md`.
-
-Current truth: `project_docs/active/status/decision_intelligence_execution_status.md`
+Completed handoffs belong outside this active folder.
 
 ## Handoff Rule
 

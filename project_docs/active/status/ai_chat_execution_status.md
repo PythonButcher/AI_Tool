@@ -2,17 +2,23 @@
 
 This file is the single current source of truth for the AI Chat BI pivot.
 
-## Current Gate: Slice 1 — BI Result Contract
+## Recent Activity
+* **Slice 2 (Trusted Result Card)** was successfully completed on 2026-07-18 after user browser verification.
+* **Slice 1 (BI Result Contract)** was completed by Codex in a prior session.
+*(For detailed history of completed work, see [Completed Milestones Log](file:///C:/Users/18022/Desktop/AI_Tool/project_docs/active/ai_chat/completed/README.md))*
 
-- **Status**: Handoff prepared. Blocked waiting on Codex.
-- **Owner**: Codex
-- **Next Action**: Codex to implement `bi_grounding`, `analytics_refinement`, and typed `suggested_actions` in the backend. 
-- **Active Handoff**: `project_docs/active/ai_hand_off/codex_slice_1_handoff.md`
+## Current Gate: Slice 3 — Interactive Chart Context
+
+- **Status**: Planning required.
+- **Owner**: Antigravity / Codex
+- **Next Action**: Define the implementation boundaries and acceptance checks for Slice 3.
+- **Active Handoff**: None yet.
+- **Backend Readiness**: To be verified during planning.
 
 ## Rollout Plan
 - [x] Documentation Overhaul
-- [ ] Slice 1: BI Result Contract (Backend)
-- [ ] Slice 2: Trusted Result Card (Frontend)
+- [x] Slice 1: BI Result Contract (Backend)
+- [x] Slice 2: Trusted Result Card (Frontend)
 - [ ] Slice 3: Interactive Chart Context (Frontend)
 - [ ] Slice 4: Guided Exploration (Frontend)
 - [ ] Slice 5: Multimodal Results (Frontend)

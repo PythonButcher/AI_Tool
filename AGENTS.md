@@ -10,8 +10,8 @@ This file is the first routing helper for AI_Tool. It should point agents to cur
 | --- | --- |
 | Start any project task | `project_docs/INDEX.md` |
 | Understand current truth and scan rules | `project_docs/active/README.md` |
-| Check current Decision Intelligence status | `project_docs/active/status/decision_intelligence_execution_status.md` |
-| Work on current Decision Intelligence phase | `project_docs/active/decision_intelligence/active_gate/README.md` |
+| Check current AI Chat status | `project_docs/active/status/ai_chat_execution_status.md` |
+| Work on the current AI Chat slice | `project_docs/active/ai_chat/active_gate/README.md` |
 | Confirm Codex vs Gemini ownership | `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md` |
 | Review completed AI Chat rollout history | `project_docs/archive/ai_chat_decision_output_unification_rollout_completed.md` only when historical context is needed |
 | Work on contracts | `project_docs/active/contracts/decision_objects.md` |
