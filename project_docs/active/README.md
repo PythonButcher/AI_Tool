@@ -46,12 +46,11 @@ Rollout plans must be written in plain language. Use short phase names, one purp
 
 ## Prompt Goal Format
 
-Every prompt written for Gemini, Antigravity, Codex in a future session, or another agent must start with `Goal:` and state the standalone outcome. It must then name target files, active docs, exact source or contract fields, acceptance checks, verification commands where relevant, and ownership constraints. Antigravity prompts follow this same format because Antigravity supports goals. Prompts stay forward-looking, directly executable, and free of code blocks.
+Every prompt written for Antigravity, Codex in a future session, or another agent must start with `Goal:` and state the standalone outcome. It must then name target files, active docs, exact source or contract fields, acceptance checks, verification commands where relevant, and ownership constraints. Antigravity prompts follow this same format because Antigravity supports goals. Prompts stay forward-looking, directly executable, and free of code blocks.
 
 By default, `Goal:` prompts belong in handoff files under `project_docs/active/ai_hand_off/`, not in the chat final response. The final response should link or name the handoff file so the receiving agent can read it through the auto-handoff flow. Paste the full prompt in chat only when the user explicitly asks for that output.
 
-Decision Intelligence exception: Codex-owned current goals belong in `project_docs/active/decision_intelligence/active_gate/`. Use `project_docs/active/ai_hand_off/` only for active Gemini handoffs.
-AI Chat exception: Antigravity-owned current goals belong in `project_docs/active/ai_chat/active_gate/`. When Antigravity needs backend work, it writes handoffs to Codex in `project_docs/active/ai_hand_off/`.
+Codex-owned current goals and gate truth belong in the product area's `active_gate/` folder. Active Antigravity UI assignments belong in `project_docs/active/ai_hand_off/`; Antigravity does not create backend work for Codex or own the active gate.
 
 ## Active-Gate Rule
 
@@ -65,15 +64,15 @@ When Codex finds a frontend-agent implementation is not complete, the active han
 
 For the overall project, Codex must facilitate, not only complete isolated implementation slices. Every wrap-up for backend work must say the current gate in plain language: complete end to end, blocked, or ready for frontend.
 
-For the AI Chat UI rebuild, Antigravity facilitates the project and owns the active markdown docs. Codex takes direction from Antigravity via handoff files. Do not leave the user to decide whether backend work is needed. Antigravity should make that call from the active docs and verified evidence.
+Codex facilitates the project, owns the active markdown truth, implements or verifies backend work, and decides when a frontend gap is ready for Antigravity. Antigravity implements only the current bounded UI handoff, then returns source and verification evidence for Codex review. Do not leave the user to decide which agent acts next.
 
-Do not create a frontend-agent handoff until Codex has confirmed a concrete frontend gap or the user explicitly asks for Gemini or Antigravity to implement frontend work. Backend-only completion should be recorded as backend-only completion, not phase completion.
+Do not create an Antigravity handoff until Codex has confirmed a concrete frontend gap or the user explicitly asks for frontend work. Backend-only completion should be recorded as backend-only completion, not phase completion.
 
-When Codex determines Gemini or Antigravity needs work, Codex must create or update a handoff file containing the clean `Goal:` prompt. The user should not have to copy a prompt from chat into another agent.
+When Codex determines Antigravity needs UI work, Codex must create or update a handoff file containing the clean `Goal:` prompt. The user should not have to copy a prompt from chat into another agent. Each handoff must distinguish non-negotiable contract and acceptance requirements from the presentation choices Antigravity may make creatively.
 
-Gemini frontend reviews must stay lightweight unless the user asks for deeper verification. Codex should use the active handoff, targeted source review, focused diff, and contract evidence before running expensive tools. A source-level blocker is enough to call `Not complete`; do not keep spending tokens on builds, browser automation, or broad scans after the blocker is clear.
+Antigravity frontend reviews must stay lightweight unless the user asks for deeper verification. Codex should use the active handoff, targeted source review, focused diff, and contract evidence before running expensive tools. A source-level blocker is enough to call `Not complete`; do not keep spending tokens on builds, browser automation, or broad scans after the blocker is clear.
 
-Frontend builds are for inconclusive source review, missing or questionable Gemini build evidence, likely syntax/import failures, or explicit user requests. Browser/E2E checks are not the default review path; use them only when the gate depends on visible behavior and cheaper evidence is clean or insufficient.
+Frontend builds are for inconclusive source review, missing or questionable Antigravity build evidence, likely syntax/import failures, or explicit user requests. Browser/E2E checks are not the default review path; use them only when the gate depends on visible behavior and cheaper evidence is clean or insufficient.
 
 Before starting, handing off, or closing a numbered phase, run `python .codex/hooks/agent_harness_check.py`. Its documentation-governance gate rejects a complete brief still kept in the current path, completed reference files under `current/`, and a current gate without a phase number. Use the `project-doc-governance` skill to repair any reported issue before continuing.
 
@@ -89,7 +88,7 @@ The active status file is for current truth, the current gate, and the latest ve
 
 When Codex wraps up a project phase or clears a phase gate, Codex must automatically create or update a handoff file containing the clean `Goal:` prompt for starting the next session when another agent or future session has work to do. The wrap-up summary may describe the phase just completed, but the handoff prompt must not recap prior phases, review history, implementation history, or who approved earlier work. It may include only the minimum prerequisite state needed to start safely, such as `backend contract is ready` or `active handoff exists`, then point to the current docs and name the next task. Do not include sentences like `Phase N is complete`, `Codex implemented`, `reviewed by`, or detailed verification history inside the handoff prompt.
 
-Before sending a final response after substantial Decision Intelligence work, Codex must run this stop check: did this response clear a backend gate, clear a frontend gate, wrap a project phase, mark a goal complete, or identify Gemini or Antigravity as the next owner? If yes and a forward-looking prompt is required, store it in a handoff file and reference that file in the final response. A status summary without the required handoff file reference is incomplete.
+Before sending a final response after substantial project work, Codex must run this stop check: did this response clear a backend gate, clear a frontend gate, wrap a project phase, mark a goal complete, or identify Antigravity as the next owner? If yes and a forward-looking prompt is required, store it in a handoff file and reference that file in the final response. A status summary without the required handoff file reference is incomplete.
 
 ## Current Active File
 

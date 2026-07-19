@@ -4,13 +4,13 @@ This folder is only for active Codex-to-frontend-agent handoffs.
 
 ## Ownership
 
-Codex owns backend truth, contracts, tests, architecture decisions, status documentation, cleanup planning, and final coordination.
+Codex is the Lead Orchestrator and owns the roadmap, active gate, backend truth and implementation, contracts, tests, architecture decisions, status documentation, handoff scope, integration review, cleanup planning, and final coordination.
 
-Gemini or Antigravity owns frontend implementation, React/CSS, UI rendering, browser verification, and frontend build work unless the user explicitly authorizes Codex frontend edits in the current session.
+Antigravity owns bounded frontend implementation, React/CSS, UI rendering, and frontend build work assigned by the current handoff unless the user explicitly authorizes Codex frontend edits in the current session. The user retains final browser-level acceptance.
 
 ## Active Handoffs And Goal Prompts
 
-No active handoff yet. A planning phase is underway to determine the exact frontend requirements for interactive chart context.
+Current handoff: `slice_3_interactive_chart_context_frontend.md`
 
 The current AI Chat gate is `project_docs/active/ai_chat/active_gate/README.md`. Current status is recorded in `project_docs/active/status/ai_chat_execution_status.md`.
 
@@ -27,6 +27,8 @@ If the handoff is for a failed or incomplete frontend-agent implementation, it m
 When Codex opens or updates an active frontend handoff, the final response should name or link the handoff file and tell the user which agent owns the next step. Do not paste the full `Goal:` prompt in chat unless the user explicitly asks for it.
 
 Do not make the frontend agent infer backend truth from raw contracts. Do not let the frontend agent invent backend APIs or silently change product scope.
+
+Each handoff must separate two things clearly. Non-negotiables are the goal, backend contract, required states, prohibited scope, regressions, and acceptance evidence. Creative latitude includes component composition, styling details, accessible interaction treatment, micro-interactions, and concise copy within the existing design system. Antigravity must ask Codex before changing a non-negotiable boundary, but does not need approval for choices inside the stated creative latitude.
 
 ## Task Sizing and Decomposition
 

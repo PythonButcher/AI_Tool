@@ -6,7 +6,7 @@ This file defines how Codex should run efficiently on AI_Tool without lowering i
 
 The main goal is to prevent a single implementation session from spending excessive context on broad file reads, full diffs, noisy browser logs, repeated verification attempts, or unrelated exploration. Codex should still do careful work, but every expensive read, test, browser run, artifact inspection, and diff must have a clear reason.
 
-This file applies to Codex. It is not a Gemini rule file.
+This file applies to Codex. It is not an Antigravity rule file.
 
 For reusable agent-harness structure, hook-ready checks, and future-project templates, use `project_docs/active/agent_harness/README.md`. This file remains the Codex run-efficiency rule; the agent harness folder owns reusable harness architecture.
 

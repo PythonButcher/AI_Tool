@@ -10,7 +10,7 @@ This is the top-level routing file. Use it to find the smallest current document
 | --- | --- | --- |
 | 1 | `project_docs/active/README.md` | Active navigation and scan rules |
 | 2 | `project_docs/active/status/ai_chat_execution_status.md` | Short current truth |
-| 3 | `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md` | Codex/Gemini ownership |
+| 3 | `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md` | Codex/Antigravity ownership |
 
 ## Current Work Map
 
@@ -42,13 +42,13 @@ The old standalone Phase 4 Canonical Active Dataset handoff is superseded. Datas
 
 | Agent | Owns |
 | --- | --- |
-| Codex | Backend truth, contracts, tests, architecture, docs, cleanup planning, and general project gate facilitation |
-| Antigravity | Lead Orchestrator for the AI Chat BI pivot. Owns frontend implementation, AI Chat project planning docs, UI architecture, and writing handoffs for Codex to build backend APIs. |
-| Gemini | General frontend implementation, React/CSS, browser verification |
+| Codex | Lead Orchestrator. Owns roadmap, active gates, backend truth and implementation, contracts, tests, architecture, documentation, handoff scope, integration review, and next-owner decisions. |
+| Antigravity | Primary UI implementer. Owns scoped React/CSS and browser-visible behavior assigned by a Codex-authored handoff, with bounded creative freedom inside the verified contract and product design system. |
+| User | Owns product direction and final browser-level acceptance. |
 
 Codex must not edit frontend files unless the user explicitly authorizes Codex frontend edits in the current session.
 
-For the broader AI Tool, Codex must make the current project gate explicit after substantial work. For AI Chat, Antigravity manages the active gate and states whether backend APIs, frontend implementation, or user verification is required next. Do not make the user infer who acts next.
+Codex manages the current gate for the broader AI Tool and AI Chat. After substantial work, Codex states whether backend work, an Antigravity UI handoff, Codex integration review, or user verification is required next. Do not make the user infer who acts next.
 
 ## Do Not Do This
 
