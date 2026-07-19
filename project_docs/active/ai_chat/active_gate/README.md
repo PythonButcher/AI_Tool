@@ -1,5 +1,12 @@
 # AI Chat Active Gate
 
-This folder contains the active goals, plans, and next-step directives for the AI Chat BI pivot.
+**Current Phase:** Slice 1 — BI Result Contract (Backend)
 
-Antigravity uses this directory to coordinate UI implementation and draft backend requirements (which are then moved to `project_docs/active/ai_hand_off/` for Codex).
+## Objective
+Define `bi_grounding`, `analytics_refinement`, and typed `suggested_actions` contracts in the backend to support the new BI-First AI Chat direction. Add backend tests for dataset identity, filters, aggregation, time context, and compact session state.
+
+## Current Owner
+**Codex** is currently responsible for implementing the backend payload updates. Antigravity will resume frontend implementation starting in Slice 2.
+
+## Active Handoff
+See `project_docs/active/ai_hand_off/codex_slice_1_handoff.md` for Codex's current implementation goals.
