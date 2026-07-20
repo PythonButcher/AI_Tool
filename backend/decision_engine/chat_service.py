@@ -35,6 +35,16 @@ class DecisionChatService:
     """
 
     CONTRACT_VERSION = "di_v3_phase4_5_chat_v1"
+    BI_RESULT_CONTRACT_VERSION = "ai_chat_bi_result_v1"
+    BI_GROUNDING_VERSION = "ai_chat_bi_grounding_v1"
+    ANALYTICS_REFINEMENT_VERSION = "ai_chat_analytics_refinement_v1"
+    ANALYTICS_REFINEMENT_OPERATIONS = {
+        "remove_filter",
+        "set_aggregation",
+        "set_group_by",
+        "set_time_period",
+        "set_output",
+    }
     # Keep this catalog explicit so frontend controls are driven by backend truth.
     DECISION_ACTION_CONTRACTS = {
         "draft_workspace": {
@@ -210,6 +220,21 @@ class DecisionChatService:
         dataset = extract_dataset(payload.get("dataset"))
         semantic_model = payload.get("semantic_model") or payload.get("semanticModel")
         session_state = DecisionChatService._normalize_session_state(payload.get("session_state"))
+        analytics_refinement = DecisionChatService._normalize_analytics_refinement(
+            payload.get("analytics_refinement") or payload.get("analyticsRefinement")
+        )
+        if analytics_refinement:
+            prior_analytic_state = DecisionChatService._normalize_analytic_state(
+                session_state.get("last_analytic_context")
+            )
+            if not prior_analytic_state:
+                raise DecisionServiceError(
+                    "analytics_refinement requires prior structured analytics state from session_state."
+                )
+            if prior_analytic_state.get("source") != "semantic_metric":
+                raise DecisionServiceError(
+                    "analytics_refinement currently requires semantic metric state; raw-field refinements are not supported."
+                )
         dataset_context = payload.get("_resolved_dataset_context")
         session_state, dataset_changed = DecisionChatService._rebase_session_for_dataset(
             session_state,
@@ -314,6 +339,7 @@ class DecisionChatService:
                     semantic_model=semantic_model,
                     session_state=session_state,
                     conversation_context=conversation_context,
+                    analytics_refinement=analytics_refinement,
                 )
                 if analytics_result is not None:
                     assistant_message = analytics_result["assistant_message"]
@@ -324,8 +350,18 @@ class DecisionChatService:
                     chart_artifact, assistant_message = DecisionChatService._build_chart_artifact(user_message, dataset)
                     artifacts.append(chart_artifact)
                     analytic_state = {
+                        "schema_version": "ai_chat_analytics_state_v1",
                         "source": "raw_nlp",
                         "fields": dict((chart_artifact.get("content") or {}).get("fieldsUsed") or {}),
+                        "aggregation": ((chart_artifact.get("content") or {}).get("chartSpec") or {}).get("aggregation") or "sum",
+                        "group_by": [
+                            value for value in (
+                                ((chart_artifact.get("content") or {}).get("fieldsUsed") or {}).get("category"),
+                                ((chart_artifact.get("content") or {}).get("fieldsUsed") or {}).get("time"),
+                            ) if value
+                        ],
+                        "filters": list((chart_artifact.get("content") or {}).get("filtersApplied") or []),
+                        "time_period": None,
                         "output_preference": "chart",
                         "last_user_message": user_message,
                     }
@@ -336,6 +372,7 @@ class DecisionChatService:
                     semantic_model=semantic_model,
                     session_state=session_state,
                     conversation_context=conversation_context,
+                    analytics_refinement=analytics_refinement,
                 )
                 if analytics_result is not None:
                     assistant_message = analytics_result["assistant_message"]
@@ -454,6 +491,17 @@ class DecisionChatService:
             DecisionChatService._annotate_artifacts(artifacts, mode=mode),
             dataset_trust,
         )
+        normalized_artifacts, bi_grounding = DecisionChatService._attach_bi_grounding(
+            artifacts=normalized_artifacts,
+            payload=payload,
+            dataset_trust=dataset_trust,
+            semantic_model=semantic_model,
+            analytic_state=analytic_state,
+        )
+        analytics_refinement_contract = DecisionChatService._build_analytics_refinement_contract(
+            analytic_state=analytic_state,
+            applied_refinement=analytics_refinement,
+        )
         updated_state = DecisionChatService._build_session_state(
             session_state=session_state,
             mode=mode,
@@ -484,7 +532,7 @@ class DecisionChatService:
 
         return {
             "status": "success",
-            "contract_version": DecisionChatService.CONTRACT_VERSION,
+            "contract_version": DecisionChatService.BI_RESULT_CONTRACT_VERSION,
             "assistant_message": assistant_message,
             "mode": mode,
             "mode_context": updated_state["mode_context"],
@@ -506,6 +554,8 @@ class DecisionChatService:
             "clarification_state": response_clarification,
             "conversation_context": conversation_context,
             "dataset_trust": dataset_trust,
+            "bi_grounding": bi_grounding,
+            "analytics_refinement": analytics_refinement_contract,
             "resolved_datasets": (
                 [dict(dataset_context["dataset"])]
                 if isinstance(dataset_context, dict) and isinstance(dataset_context.get("dataset"), dict)
@@ -656,6 +706,8 @@ class DecisionChatService:
             "freshness_state",
             "is_cleaned",
             "is_stale",
+            "freshness_as_of",
+            "updated_at",
         )
         return {
             field: dataset_ref.get(field)
@@ -883,7 +935,11 @@ class DecisionChatService:
             active_decision_prompt = str(draft_workspace.get("decision_prompt") or "").strip()
         updated_state = {
             **preserved_state,
-            "schema_version": "di_phase4_5_session_state_v1",
+            "schema_version": (
+                "di_phase4_5_session_state_v1"
+                if mode == "decide"
+                else "ai_chat_bi_session_state_v1"
+            ),
             "active_mode": mode,
             "decision_prompt": active_decision_prompt or preserved_state.get("decision_prompt") or user_message,
         }
@@ -1187,6 +1243,12 @@ class DecisionChatService:
         raw_action = raw_action if isinstance(raw_action, dict) else {}
         action_id = str(action_id or raw_action.get("action_id") or "").strip().lower()
         contract = DecisionChatService.DECISION_ACTION_CONTRACTS.get(action_id, {})
+        analytics_refinement = raw_action.get("analytics_refinement")
+        if isinstance(analytics_refinement, dict):
+            analytics_refinement = DecisionChatService._normalize_analytics_refinement(analytics_refinement)
+        else:
+            analytics_refinement = None
+        registered_action = bool(contract) or bool(analytics_refinement)
         label = str(raw_action.get("label") or contract.get("label") or action_id.replace("_", " ").title()).strip()
         description = str(raw_action.get("description") or contract.get("description") or "").strip() or None
         intent = str(raw_action.get("intent") or contract.get("intent") or action_id).strip().lower()
@@ -1196,15 +1258,15 @@ class DecisionChatService:
         payload_expectations = raw_action.get("payload_expectations")
         if not isinstance(payload_expectations, dict):
             payload_expectations = contract.get("payload_expectations") if isinstance(contract.get("payload_expectations"), dict) else {}
-        enabled = bool(raw_action.get("enabled", True)) and bool(contract)
+        enabled = bool(raw_action.get("enabled", True)) and registered_action
         availability_reason = str(raw_action.get("availability_reason") or "").strip() or None
         disabled_reason = str(raw_action.get("disabled_reason") or "").strip() or None
-        if not contract:
+        if not registered_action:
             enabled = False
             disabled_reason = disabled_reason or "No backend action handler is registered for this action."
         elif not enabled:
             disabled_reason = disabled_reason or availability_reason or "This action is unavailable in the current state."
-        return {
+        normalized_action = {
             "action_id": action_id,
             "label": label,
             "intent": intent,
@@ -1217,6 +1279,9 @@ class DecisionChatService:
             "disabled_reason": disabled_reason,
             "payload_expectations": dict(payload_expectations),
         }
+        if analytics_refinement:
+            normalized_action["analytics_refinement"] = analytics_refinement
+        return normalized_action
 
     @staticmethod
     def _build_action(
@@ -1255,6 +1320,157 @@ class DecisionChatService:
                 else dict(contract.get("payload_expectations") or {})
             ),
         }
+
+    @staticmethod
+    def _build_analytics_refinement_contract(
+        *,
+        analytic_state: Dict[str, Any] | None,
+        applied_refinement: Dict[str, Any] | None,
+    ) -> Dict[str, Any] | None:
+        """Expose current compact BI state and the accepted structured follow-up shape."""
+        state = DecisionChatService._normalize_analytic_state(analytic_state)
+        if not state:
+            return None
+        return {
+            "schema_version": DecisionChatService.ANALYTICS_REFINEMENT_VERSION,
+            "applied": dict(applied_refinement) if applied_refinement else None,
+            "current_state": {
+                "metric_id": state.get("metric_id"),
+                "metric_name": state.get("metric_name"),
+                "aggregation": state.get("aggregation"),
+                "group_by": list(state.get("group_by") or [])[:4],
+                "filters": [dict(item) for item in (state.get("filters") or [])[:8] if isinstance(item, dict)],
+                "time_period": state.get("time_period") if isinstance(state.get("time_period"), dict) else None,
+                "output_preference": state.get("output_preference"),
+            },
+            "payload_expectations": {
+                "endpoint": "/api/decision/chat/turns",
+                "required": ["user_message", "session_state", "analytics_refinement.operation", "analytics_refinement.arguments"],
+                "operations": {
+                    "remove_filter": {"required_arguments": ["field_or_dimension_id"]},
+                    "set_aggregation": {
+                        "required_arguments": ["aggregation"],
+                        "allowed_aggregations": ["sum", "mean", "count", "min", "max", "nunique"],
+                    },
+                    "set_group_by": {"required_arguments": ["dimension_id_or_field"]},
+                    "set_time_period": {"required_arguments": ["field_or_dimension_id", "start", "end"]},
+                    "set_output": {
+                        "required_arguments": ["output"],
+                        "allowed_outputs": ["answer", "chart"],
+                    },
+                },
+            },
+        }
+
+    @staticmethod
+    def _build_analytics_suggested_actions(
+        *,
+        semantic_model: Dict[str, Any],
+        analytic_state: Dict[str, Any],
+    ) -> List[Dict[str, Any]]:
+        """Create bounded, typed BI follow-ups from current semantic dimensions."""
+        actions: List[Dict[str, Any]] = []
+        grouped_fields = {str(item) for item in analytic_state.get("group_by") or [] if item}
+        dimensions = [
+            item for item in semantic_model.get("dimensions") or []
+            if isinstance(item, dict) and item.get("field")
+        ]
+        payload_expectations = {
+            "endpoint": "/api/decision/chat/turns",
+            "required": ["user_message", "session_state", "analytics_refinement"],
+            "produces": ["bi_grounding", "analytics_refinement", "suggested_actions", "artifacts"],
+        }
+
+        temporal_dimensions = [
+            item for item in dimensions
+            if str(item.get("semantic_kind") or "").lower() == "temporal"
+            or str(item.get("data_type") or "").lower() in {"date", "datetime", "timestamp"}
+        ]
+        if temporal_dimensions:
+            dimension = temporal_dimensions[0]
+            field = str(dimension.get("field"))
+            if field not in grouped_fields:
+                actions.append({
+                    "action_id": f"show_trend_by_{DecisionChatService._action_slug(field)}",
+                    "label": f"Show trend by {dimension.get('label') or dimension.get('name') or field}",
+                    "description": "Re-run the current metric as a time-series chart.",
+                    "intent": "refine_analytics",
+                    "kind": "analytics_refinement",
+                    "priority": "primary",
+                    "enabled": True,
+                    "analytics_refinement": {
+                        "operation": "set_group_by",
+                        "arguments": {
+                            "dimension_id": dimension.get("id"),
+                            "field": field,
+                            "output_preference": "chart",
+                        },
+                    },
+                    "payload_expectations": payload_expectations,
+                })
+
+        categorical_count = 0
+        for dimension in dimensions:
+            field = str(dimension.get("field"))
+            if field in grouped_fields or dimension in temporal_dimensions:
+                continue
+            actions.append({
+                "action_id": f"breakdown_by_{DecisionChatService._action_slug(field)}",
+                "label": f"Break down by {dimension.get('label') or dimension.get('name') or field}",
+                "description": "Re-run the current metric grouped by this semantic dimension.",
+                "intent": "refine_analytics",
+                "kind": "analytics_refinement",
+                "priority": "secondary",
+                "enabled": True,
+                "analytics_refinement": {
+                    "operation": "set_group_by",
+                    "arguments": {"dimension_id": dimension.get("id"), "field": field},
+                },
+                "payload_expectations": payload_expectations,
+            })
+            categorical_count += 1
+            if categorical_count >= 2:
+                break
+
+        filter_fields: List[str] = []
+        for filter_item in analytic_state.get("filters") or []:
+            field = str(filter_item.get("field") or "") if isinstance(filter_item, dict) else ""
+            if field and field not in filter_fields:
+                filter_fields.append(field)
+        for field in filter_fields[:2]:
+            actions.append({
+                "action_id": f"remove_filter_{DecisionChatService._action_slug(field)}",
+                "label": f"Remove {field} filter",
+                "description": "Re-run the current analysis without this filter.",
+                "intent": "refine_analytics",
+                "kind": "analytics_refinement",
+                "priority": "secondary",
+                "enabled": True,
+                "analytics_refinement": {"operation": "remove_filter", "arguments": {"field": field}},
+                "payload_expectations": payload_expectations,
+            })
+
+        current_aggregation = str(analytic_state.get("aggregation") or "").lower()
+        alternate_aggregation = "mean" if current_aggregation != "mean" else "sum"
+        actions.append({
+            "action_id": f"set_aggregation_{alternate_aggregation}",
+            "label": f"Use {alternate_aggregation} aggregation",
+            "description": "Re-run the current semantic metric with a request-local aggregation override.",
+            "intent": "refine_analytics",
+            "kind": "analytics_refinement",
+            "priority": "secondary",
+            "enabled": True,
+            "analytics_refinement": {
+                "operation": "set_aggregation",
+                "arguments": {"aggregation": alternate_aggregation},
+            },
+            "payload_expectations": payload_expectations,
+        })
+        return actions[:6]
+
+    @staticmethod
+    def _action_slug(value: Any) -> str:
+        return re.sub(r"[^a-z0-9]+", "_", str(value or "").strip().lower()).strip("_") or "field"
 
     @staticmethod
     def _annotate_artifacts(artifacts: List[Dict[str, Any]], mode: str) -> List[Dict[str, Any]]:
@@ -1320,6 +1536,131 @@ class DecisionChatService:
         decision_state = session_state.get("decision_state")
         if isinstance(decision_state, dict):
             decision_state["dataset_trust"] = dict(dataset_trust)
+
+    @staticmethod
+    def _attach_bi_grounding(
+        *,
+        artifacts: List[Dict[str, Any]],
+        payload: Dict[str, Any],
+        dataset_trust: Dict[str, Any],
+        semantic_model: Dict[str, Any] | None,
+        analytic_state: Dict[str, Any] | None,
+    ) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+        """Attach normalized BI lineage to every answer and chart artifact."""
+        grounded_artifacts: List[Dict[str, Any]] = []
+        primary_grounding: Dict[str, Any] | None = None
+        for artifact in artifacts:
+            if not isinstance(artifact, dict):
+                continue
+            if str(artifact.get("type") or "").lower() in {"answer", "chart"}:
+                grounding = DecisionChatService._build_bi_grounding(
+                    payload=payload,
+                    dataset_trust=dataset_trust,
+                    semantic_model=semantic_model,
+                    analytic_state=analytic_state,
+                    artifact=artifact,
+                )
+                grounded_artifacts.append({**artifact, "bi_grounding": grounding})
+                primary_grounding = primary_grounding or grounding
+            else:
+                grounded_artifacts.append(artifact)
+        if primary_grounding is None:
+            primary_grounding = DecisionChatService._build_bi_grounding(
+                payload=payload,
+                dataset_trust=dataset_trust,
+                semantic_model=semantic_model,
+                analytic_state=analytic_state,
+                artifact={},
+            )
+        return grounded_artifacts, primary_grounding
+
+    @staticmethod
+    def _build_bi_grounding(
+        *,
+        payload: Dict[str, Any],
+        dataset_trust: Dict[str, Any],
+        semantic_model: Dict[str, Any] | None,
+        analytic_state: Dict[str, Any] | None,
+        artifact: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        state = DecisionChatService._normalize_analytic_state(analytic_state)
+        content = artifact.get("content") if isinstance(artifact.get("content"), dict) else {}
+        result_context = content.get("result_context") if isinstance(content.get("result_context"), dict) else {}
+        evidence = result_context.get("evidence") if isinstance(result_context.get("evidence"), dict) else {}
+        dataset = dict(dataset_trust.get("dataset") or {})
+
+        metric_definition = content.get("metric") if isinstance(content.get("metric"), dict) else None
+        if metric_definition is None:
+            metric_definition = DecisionChatService._find_semantic_metric_by_reference(
+                state.get("metric_id") or state.get("metric_name"),
+                semantic_model,
+            )
+        fields_used = content.get("fieldsUsed") if isinstance(content.get("fieldsUsed"), dict) else {}
+        if metric_definition is None and fields_used.get("value"):
+            metric_definition = {
+                "id": None,
+                "name": fields_used.get("value"),
+                "label": fields_used.get("value"),
+                "field": fields_used.get("value"),
+                "default_aggregation": state.get("aggregation") or content.get("aggregation") or "sum",
+                "format_hint": None,
+                "expression": {"type": "column_aggregation", "column": fields_used.get("value")},
+            }
+        metric_definition = dict(metric_definition) if isinstance(metric_definition, dict) else None
+
+        aggregation = state.get("aggregation")
+        if not aggregation and metric_definition:
+            aggregation = metric_definition.get("default_aggregation") or (metric_definition.get("expression") or {}).get("aggregation")
+        if not aggregation:
+            chart_spec = content.get("chartSpec") if isinstance(content.get("chartSpec"), dict) else {}
+            aggregation = content.get("aggregation") or chart_spec.get("aggregation")
+
+        filters = evidence.get("filters") or content.get("filters") or content.get("filtersApplied") or state.get("filters") or []
+        normalized_filters = [dict(item) for item in filters if isinstance(item, dict)][:8]
+        group_fields = list(state.get("group_by") or evidence.get("group_by") or [])
+        if not group_fields:
+            group_fields = [value for value in (fields_used.get("category"), fields_used.get("time")) if value]
+        dimensions: List[Dict[str, Any]] = []
+        for field in group_fields[:4]:
+            definition = DecisionChatService._find_semantic_dimension_by_reference(field, semantic_model)
+            dimensions.append({
+                "id": (definition or {}).get("id"),
+                "name": (definition or {}).get("name") or field,
+                "label": (definition or {}).get("label") or field,
+                "field": (definition or {}).get("field") or field,
+                "semantic_kind": (definition or {}).get("semantic_kind"),
+                "data_type": (definition or {}).get("data_type"),
+            })
+
+        time_period = state.get("time_period") if isinstance(state.get("time_period"), dict) else None
+        if time_period is None:
+            time_period = DecisionChatService._extract_time_period(normalized_filters, semantic_model)
+        filtered_row_count = evidence.get("filtered_row_count")
+        if filtered_row_count is None:
+            filtered_row_count = content.get("row_count")
+        if filtered_row_count is None:
+            filtered_row_count = dataset_trust.get("row_count") or 0
+        source_row_count = evidence.get("source_row_count")
+        if source_row_count is None:
+            source_row_count = dataset_trust.get("row_count") or dataset.get("row_count") or 0
+        dataset_ref = payload.get("dataset_ref") if isinstance(payload.get("dataset_ref"), dict) else {}
+        return {
+            "schema_version": DecisionChatService.BI_GROUNDING_VERSION,
+            "dataset": dataset or None,
+            "row_count": int(filtered_row_count or 0),
+            "source_row_count": int(source_row_count or 0),
+            "freshness": {
+                "state": dataset_trust.get("stale_state") or "unknown",
+                "as_of": dataset_ref.get("freshness_as_of") or dataset_ref.get("updated_at"),
+            },
+            "cleaning": {"state": dataset_trust.get("transform_state") or "unknown"},
+            "metric_definition": metric_definition,
+            "aggregation": aggregation,
+            "dimensions": dimensions,
+            "filters": normalized_filters,
+            "time_period": time_period,
+            "output_type": artifact.get("type") or None,
+        }
 
     @staticmethod
     def _artifact_defaults(artifact_type: str) -> Dict[str, Any]:
@@ -1860,6 +2201,7 @@ class DecisionChatService:
         semantic_model: Dict[str, Any] | None,
         session_state: Dict[str, Any],
         conversation_context: Dict[str, Any] | None = None,
+        analytics_refinement: Dict[str, Any] | None = None,
     ) -> Dict[str, Any] | None:
         """
         Build a grounded analytics response.
@@ -1875,6 +2217,7 @@ class DecisionChatService:
             semantic_model=semantic_model,
             analytic_state=analytic_state,
             conversation_context=conversation_context,
+            analytics_refinement=analytics_refinement,
         )
         if semantic_response is not None:
             return semantic_response
@@ -1884,6 +2227,7 @@ class DecisionChatService:
             dataset=dataset,
             analytic_state=analytic_state,
             conversation_context=conversation_context,
+            analytics_refinement=analytics_refinement,
         )
         return raw_response
 
@@ -1894,6 +2238,7 @@ class DecisionChatService:
         semantic_model: Dict[str, Any] | None,
         analytic_state: Dict[str, Any],
         conversation_context: Dict[str, Any] | None = None,
+        analytics_refinement: Dict[str, Any] | None = None,
     ) -> Dict[str, Any] | None:
         semantic_model = semantic_model if isinstance(semantic_model, dict) else {}
         metric_ref = DecisionChatService._find_semantic_metric_reference(user_message, semantic_model)
@@ -1912,19 +2257,63 @@ class DecisionChatService:
         if metric_ref is None:
             return None
 
+        refinement_operation = str((analytics_refinement or {}).get("operation") or "")
+        refinement_arguments = (
+            (analytics_refinement or {}).get("arguments")
+            if isinstance((analytics_refinement or {}).get("arguments"), dict)
+            else {}
+        )
+        if refinement_operation == "set_group_by":
+            requested_dimension = (
+                refinement_arguments.get("dimension_id")
+                or refinement_arguments.get("field")
+                or refinement_arguments.get("dimension")
+            )
+            dimension_ref = DecisionChatService._find_semantic_dimension_by_reference(
+                requested_dimension,
+                semantic_model,
+            )
+            if dimension_ref is None:
+                raise DecisionServiceError(
+                    f"Analytics grouping dimension '{requested_dimension}' is not available in the semantic model."
+                )
+
         prefer_chart = DecisionChatService._should_return_chart(user_message, analytic_state)
+        if refinement_operation == "set_output":
+            prefer_chart = refinement_arguments.get("output") == "chart"
+        elif refinement_arguments.get("output_preference") in {"answer", "chart"}:
+            prefer_chart = refinement_arguments.get("output_preference") == "chart"
         group_by = [dimension_ref.get("id") or dimension_ref.get("field")] if isinstance(dimension_ref, dict) and (dimension_ref.get("id") or dimension_ref.get("field")) else []
         filters = DecisionChatService._build_semantic_filters(
             user_message=user_message,
             dataset=dataset,
             semantic_model=semantic_model,
             analytic_state=analytic_state,
+            analytics_refinement=analytics_refinement,
         )
+
+        metric_definition = DecisionChatService._find_semantic_metric_by_reference(
+            metric_ref.get("id") or metric_ref.get("label") or metric_ref.get("name"),
+            semantic_model,
+        )
+        aggregation_override = (
+            refinement_arguments.get("aggregation")
+            if refinement_operation == "set_aggregation"
+            else None
+        )
+        if aggregation_override:
+            if metric_definition is None:
+                raise DecisionServiceError("The current semantic metric cannot accept an aggregation refinement.")
+            metric_definition = DecisionChatService._override_metric_aggregation(
+                metric_definition,
+                str(aggregation_override),
+            )
 
         try:
             metric_result = MetricResolver.resolve(
-                metric_id=metric_ref.get("id"),
-                metric_name=metric_ref.get("label") or metric_ref.get("name"),
+                metric=metric_definition if aggregation_override else None,
+                metric_id=None if aggregation_override else metric_ref.get("id"),
+                metric_name=None if aggregation_override else metric_ref.get("label") or metric_ref.get("name"),
                 dataset=dataset,
                 semantic_model=semantic_model,
                 group_by=group_by,
@@ -1940,23 +2329,33 @@ class DecisionChatService:
         else:
             artifact = DecisionChatService._build_metric_answer_artifact(metric_result)
 
+        resolved_state = {
+            "schema_version": "ai_chat_analytics_state_v1",
+            "source": "semantic_metric",
+            "metric_id": (metric_result.get("metric") or {}).get("id"),
+            "metric_name": (metric_result.get("metric") or {}).get("label") or (metric_result.get("metric") or {}).get("name"),
+            "aggregation": (metric_result.get("execution") or {}).get("resolved_aggregation"),
+            "group_by": [item.get("field") for item in (metric_result.get("group_by") or []) if item.get("field")],
+            "filters": list(metric_result.get("filters") or []),
+            "time_period": DecisionChatService._extract_time_period(
+                metric_result.get("filters") or [],
+                semantic_model,
+            ),
+            "output_preference": "chart" if artifact.get("type") == "chart" else "answer",
+            "last_user_message": user_message,
+            "continuity_source": DecisionChatService._continuity_source(
+                analytic_state,
+                conversation_context,
+            ),
+        }
         return {
             "assistant_message": DecisionChatService._build_metric_summary_message(metric_result),
             "artifacts": [artifact],
-            "analytic_state": {
-                "source": "semantic_metric",
-                "metric_id": (metric_result.get("metric") or {}).get("id"),
-                "metric_name": (metric_result.get("metric") or {}).get("label") or (metric_result.get("metric") or {}).get("name"),
-                "group_by": [item.get("field") for item in (metric_result.get("group_by") or []) if item.get("field")],
-                "filters": list(metric_result.get("filters") or []),
-                "output_preference": "chart" if artifact.get("type") == "chart" else "answer",
-                "last_user_message": user_message,
-                "continuity_source": DecisionChatService._continuity_source(
-                    analytic_state,
-                    conversation_context,
-                ),
-            },
-            "suggested_actions": [],
+            "analytic_state": resolved_state,
+            "suggested_actions": DecisionChatService._build_analytics_suggested_actions(
+                semantic_model=semantic_model,
+                analytic_state=resolved_state,
+            ),
         }
 
     @staticmethod
@@ -1965,7 +2364,14 @@ class DecisionChatService:
         dataset: List[Dict[str, Any]],
         analytic_state: Dict[str, Any],
         conversation_context: Dict[str, Any] | None = None,
+        analytics_refinement: Dict[str, Any] | None = None,
     ) -> Dict[str, Any] | None:
+        refinement_operation = str((analytics_refinement or {}).get("operation") or "")
+        refinement_arguments = (
+            (analytics_refinement or {}).get("arguments")
+            if isinstance((analytics_refinement or {}).get("arguments"), dict)
+            else {}
+        )
         columns = analyse_columns(dataset)
         interpretation = interpret_nl_query(user_message, columns)
         merged_fields = DecisionChatService._merge_raw_fields(
@@ -1976,6 +2382,8 @@ class DecisionChatService:
             return None
 
         prefer_chart = DecisionChatService._should_return_chart(user_message, analytic_state)
+        if refinement_operation == "set_output":
+            prefer_chart = refinement_arguments.get("output") == "chart"
         if prefer_chart:
             chart_response = build_chart_response(
                 dataset,
@@ -2012,8 +2420,15 @@ class DecisionChatService:
                     "assistant_message": f"Generated a {chart_type.lower()} chart from the grounded dataset.",
                     "artifacts": [artifact],
                     "analytic_state": {
+                        "schema_version": "ai_chat_analytics_state_v1",
                         "source": "raw_nlp",
                         "fields": {key: value for key, value in merged_fields.items() if value},
+                        "aggregation": "sum",
+                        "group_by": [
+                            value for value in (merged_fields.get("category"), merged_fields.get("time")) if value
+                        ],
+                        "filters": list(filters_applied),
+                        "time_period": None,
                         "output_preference": "chart",
                         "last_user_message": user_message,
                         "continuity_source": DecisionChatService._continuity_source(
@@ -2032,8 +2447,15 @@ class DecisionChatService:
             "assistant_message": summary_result["assistant_message"],
             "artifacts": [summary_result["artifact"]],
             "analytic_state": {
+                "schema_version": "ai_chat_analytics_state_v1",
                 "source": "raw_nlp",
                 "fields": {key: value for key, value in merged_fields.items() if value},
+                "aggregation": summary_result["artifact"].get("content", {}).get("aggregation"),
+                "group_by": [
+                    value for value in (merged_fields.get("category"), merged_fields.get("time")) if value
+                ],
+                "filters": [],
+                "time_period": None,
                 "output_preference": "answer",
                 "last_user_message": user_message,
                 "continuity_source": DecisionChatService._continuity_source(
@@ -2073,6 +2495,7 @@ class DecisionChatService:
         dataset: List[Dict[str, Any]],
         semantic_model: Dict[str, Any],
         analytic_state: Dict[str, Any],
+        analytics_refinement: Dict[str, Any] | None = None,
     ) -> List[Dict[str, Any]]:
         """Carry and refine only filters grounded in current dimensions and values."""
         carried = (
@@ -2133,6 +2556,11 @@ class DecisionChatService:
             period_field = period_update[0]["field"]
             carried = [item for item in carried if item.get("field") != period_field]
             carried.extend(period_update)
+        carried = DecisionChatService._apply_refinement_to_filters(
+            filters=carried,
+            analytics_refinement=analytics_refinement,
+            semantic_model=semantic_model,
+        )
         return carried[:8]
 
     @staticmethod
@@ -2210,6 +2638,164 @@ class DecisionChatService:
     @staticmethod
     def _normalize_analytic_state(analytic_state: Any) -> Dict[str, Any]:
         return analytic_state if isinstance(analytic_state, dict) else {}
+
+    @staticmethod
+    def _normalize_analytics_refinement(value: Any) -> Dict[str, Any] | None:
+        """Validate a structured BI follow-up before it can alter resolver inputs."""
+        if value is None:
+            return None
+        if not isinstance(value, dict):
+            raise DecisionServiceError("analytics_refinement must be an object when provided.")
+        operation = str(value.get("operation") or "").strip().lower()
+        if operation not in DecisionChatService.ANALYTICS_REFINEMENT_OPERATIONS:
+            supported = ", ".join(sorted(DecisionChatService.ANALYTICS_REFINEMENT_OPERATIONS))
+            raise DecisionServiceError(f"Unsupported analytics_refinement operation. Supported operations: {supported}.")
+        arguments = value.get("arguments")
+        if not isinstance(arguments, dict):
+            raise DecisionServiceError("analytics_refinement.arguments must be an object.")
+
+        normalized_arguments = dict(arguments)
+        if operation == "remove_filter":
+            field = str(arguments.get("field") or arguments.get("dimension_id") or "").strip()
+            if not field:
+                raise DecisionServiceError("remove_filter requires arguments.field or arguments.dimension_id.")
+        elif operation == "set_aggregation":
+            aggregation = str(arguments.get("aggregation") or "").strip().lower()
+            if aggregation not in {"sum", "mean", "count", "min", "max", "nunique"}:
+                raise DecisionServiceError(
+                    "set_aggregation requires sum, mean, count, min, max, or nunique."
+                )
+            normalized_arguments["aggregation"] = aggregation
+        elif operation == "set_group_by":
+            reference = str(
+                arguments.get("dimension_id") or arguments.get("field") or arguments.get("dimension") or ""
+            ).strip()
+            if not reference:
+                raise DecisionServiceError(
+                    "set_group_by requires arguments.dimension_id, arguments.field, or arguments.dimension."
+                )
+        elif operation == "set_time_period":
+            field = str(arguments.get("field") or arguments.get("dimension_id") or "").strip()
+            start = str(arguments.get("start") or "").strip()
+            end = str(arguments.get("end") or "").strip()
+            if not field or not start or not end:
+                raise DecisionServiceError("set_time_period requires arguments.field, arguments.start, and arguments.end.")
+        elif operation == "set_output":
+            output = str(arguments.get("output") or "").strip().lower()
+            if output not in {"answer", "chart"}:
+                raise DecisionServiceError("set_output requires arguments.output to be answer or chart.")
+            normalized_arguments["output"] = output
+
+        return {
+            "schema_version": DecisionChatService.ANALYTICS_REFINEMENT_VERSION,
+            "operation": operation,
+            "arguments": normalized_arguments,
+        }
+
+    @staticmethod
+    def _apply_refinement_to_filters(
+        *,
+        filters: List[Dict[str, Any]],
+        analytics_refinement: Dict[str, Any] | None,
+        semantic_model: Dict[str, Any],
+    ) -> List[Dict[str, Any]]:
+        operation = str((analytics_refinement or {}).get("operation") or "")
+        arguments = (
+            (analytics_refinement or {}).get("arguments")
+            if isinstance((analytics_refinement or {}).get("arguments"), dict)
+            else {}
+        )
+        updated = [dict(item) for item in filters if isinstance(item, dict)]
+        if operation == "remove_filter":
+            reference = arguments.get("field") or arguments.get("dimension_id")
+            dimension = DecisionChatService._find_semantic_dimension_by_reference(reference, semantic_model)
+            field = (dimension or {}).get("field") or reference
+            updated = [item for item in updated if item.get("field") != field]
+        elif operation == "set_time_period":
+            reference = arguments.get("field") or arguments.get("dimension_id")
+            dimension = DecisionChatService._find_semantic_dimension_by_reference(reference, semantic_model)
+            field = (dimension or {}).get("field") or reference
+            updated = [item for item in updated if item.get("field") != field]
+            updated.extend([
+                {"field": field, "operator": "gte", "value": arguments.get("start")},
+                {"field": field, "operator": "lte", "value": arguments.get("end")},
+            ])
+        return updated
+
+    @staticmethod
+    def _find_semantic_metric_by_reference(
+        reference: Any,
+        semantic_model: Dict[str, Any] | None,
+    ) -> Dict[str, Any] | None:
+        normalized_reference = DecisionChatService._normalize_text(reference)
+        for metric in (semantic_model or {}).get("metrics") or []:
+            if not isinstance(metric, dict):
+                continue
+            candidates = (
+                metric.get("id"), metric.get("name"), metric.get("label"), metric.get("field")
+            )
+            if normalized_reference and normalized_reference in {
+                DecisionChatService._normalize_text(candidate) for candidate in candidates if candidate is not None
+            }:
+                return metric
+        return None
+
+    @staticmethod
+    def _find_semantic_dimension_by_reference(
+        reference: Any,
+        semantic_model: Dict[str, Any] | None,
+    ) -> Dict[str, Any] | None:
+        normalized_reference = DecisionChatService._normalize_text(reference)
+        for dimension in (semantic_model or {}).get("dimensions") or []:
+            if not isinstance(dimension, dict):
+                continue
+            candidates = (
+                dimension.get("id"), dimension.get("name"), dimension.get("label"), dimension.get("field")
+            )
+            if normalized_reference and normalized_reference in {
+                DecisionChatService._normalize_text(candidate) for candidate in candidates if candidate is not None
+            }:
+                return dimension
+        return None
+
+    @staticmethod
+    def _override_metric_aggregation(metric: Dict[str, Any], aggregation: str) -> Dict[str, Any]:
+        """Create a request-local metric override without mutating the semantic model."""
+        overridden = dict(metric)
+        expression = dict(overridden.get("expression") or {})
+        expression["aggregation"] = aggregation
+        overridden["expression"] = expression
+        overridden["default_aggregation"] = aggregation
+        return overridden
+
+    @staticmethod
+    def _extract_time_period(
+        filters: List[Dict[str, Any]],
+        semantic_model: Dict[str, Any] | None,
+    ) -> Dict[str, Any] | None:
+        temporal_fields = {
+            str(item.get("field"))
+            for item in (semantic_model or {}).get("dimensions") or []
+            if isinstance(item, dict)
+            and item.get("field")
+            and (
+                str(item.get("semantic_kind") or "").lower() == "temporal"
+                or str(item.get("data_type") or "").lower() in {"date", "datetime", "timestamp"}
+            )
+        }
+        for field in temporal_fields:
+            field_filters = [item for item in filters if isinstance(item, dict) and item.get("field") == field]
+            if not field_filters:
+                continue
+            start = next((item.get("value") for item in field_filters if item.get("operator") in {"gte", "gt"}), None)
+            end = next((item.get("value") for item in field_filters if item.get("operator") in {"lte", "lt"}), None)
+            exact = next((item.get("value") for item in field_filters if item.get("operator") == "eq"), None)
+            return {
+                "field": field,
+                "start": start or exact,
+                "end": end or exact,
+            }
+        return None
 
     @staticmethod
     def _normalize_text(value: Any) -> str:

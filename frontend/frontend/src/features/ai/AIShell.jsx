@@ -76,6 +76,90 @@ const filterBiArtifacts = (artifacts) => (
     : []
 );
 
+const TrustedResultCard = ({ biGrounding }) => {
+  if (!biGrounding) return null;
+
+  const {
+    dataset,
+    row_count,
+    source_row_count,
+    freshness = {},
+    cleaning = {},
+    metric_definition,
+    aggregation,
+    dimensions = [],
+    filters = [],
+    time_period
+  } = biGrounding;
+
+  const datasetName = dataset?.dataset_name || 'unknown';
+  const rowCount = row_count ?? 'unknown';
+  const sourceRowCount = source_row_count ?? 'unknown';
+  const metricName = metric_definition?.label || metric_definition?.name;
+
+  return (
+    <div className="ai-shell__trusted-result">
+      <div className="ai-shell__trusted-header">
+        <FaShieldAlt /> <span>BI Grounding</span>
+      </div>
+      <div className="ai-shell__trusted-content">
+        <div className="ai-shell__trusted-row">
+          <span className="ai-shell__trusted-label">Dataset</span>
+          <span className="ai-shell__trusted-value">{datasetName}</span>
+        </div>
+        <div className="ai-shell__trusted-row">
+          <span className="ai-shell__trusted-label">Row Basis</span>
+          <span className="ai-shell__trusted-value">
+            {rowCount} {rowCount !== 'unknown' && sourceRowCount !== 'unknown' && rowCount !== sourceRowCount ? `(filtered from ${sourceRowCount})` : ''}
+          </span>
+        </div>
+        <div className="ai-shell__trusted-row">
+          <span className="ai-shell__trusted-label">Freshness</span>
+          <span className="ai-shell__trusted-value">
+            {freshness.state || 'unknown'}{freshness.as_of ? ` as of ${freshness.as_of}` : ''}
+          </span>
+        </div>
+        <div className="ai-shell__trusted-row">
+          <span className="ai-shell__trusted-label">Cleaning</span>
+          <span className="ai-shell__trusted-value">{cleaning.state || 'unknown'}</span>
+        </div>
+        {(metricName || aggregation) && (
+          <div className="ai-shell__trusted-row">
+            <span className="ai-shell__trusted-label">Metric</span>
+            <span className="ai-shell__trusted-value">
+              {metricName || 'unknown'} {aggregation ? `[${aggregation}]` : ''}
+            </span>
+          </div>
+        )}
+        {dimensions.length > 0 && (
+          <div className="ai-shell__trusted-row">
+            <span className="ai-shell__trusted-label">Dimensions</span>
+            <span className="ai-shell__trusted-value">
+              {dimensions.map(d => d.label || d.name || 'unknown').join(', ')}
+            </span>
+          </div>
+        )}
+        {filters.length > 0 && (
+          <div className="ai-shell__trusted-row">
+            <span className="ai-shell__trusted-label">Filters</span>
+            <span className="ai-shell__trusted-value">
+              {filters.map(f => `${f.field || 'unknown'} ${f.operator || ''} ${f.value ?? f.values?.join(',') ?? ''}`).join(' AND ')}
+            </span>
+          </div>
+        )}
+        {time_period && (
+          <div className="ai-shell__trusted-row">
+            <span className="ai-shell__trusted-label">Time Period</span>
+            <span className="ai-shell__trusted-value">
+              {time_period.start || 'unknown'} to {time_period.end || 'unknown'}
+            </span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 /**
  * AI Chat keeps its established split-pane layout while returning to a focused
  * workflow: grounded answers, tables, charts, and conversational refinements.
@@ -296,26 +380,30 @@ function AIShell() {
             </div>
           </div>
           <div className="ai-shell__artifact-content">{renderAnswerContent(content)}</div>
+          <TrustedResultCard biGrounding={artifact.bi_grounding} />
         </div>
       );
     }
 
     if (!isInspector) {
       return (
-        <div className="ai-shell__artifact-preview-link" onClick={() => handleInspect(artifact)}>
-          <div className="ai-shell__preview-icon"><FaChartBar /></div>
-          <div className="ai-shell__preview-info">
-            <Typography variant="caption" className="ai-shell__preview-type">Visualization</Typography>
-            <Typography variant="body2" className="ai-shell__preview-title">
-              {artifact.title || content.title || content.explanation || `${content.chartType || 'Chart'} result`}
-            </Typography>
+        <div className="ai-shell__artifact-preview-container">
+          <div className="ai-shell__artifact-preview-link" onClick={() => handleInspect(artifact)}>
+            <div className="ai-shell__preview-icon"><FaChartBar /></div>
+            <div className="ai-shell__preview-info">
+              <Typography variant="caption" className="ai-shell__preview-type">Visualization</Typography>
+              <Typography variant="body2" className="ai-shell__preview-title">
+                {artifact.title || content.title || content.explanation || `${content.chartType || 'Chart'} result`}
+              </Typography>
+            </div>
+            <div className="ai-shell__preview-actions">
+              {renderExportButton(artifact, 'is-preview-export')}
+              <IconButton size="small" className="ai-shell__preview-action" aria-label="Open chart">
+                <FaChevronRight />
+              </IconButton>
+            </div>
           </div>
-          <div className="ai-shell__preview-actions">
-            {renderExportButton(artifact, 'is-preview-export')}
-            <IconButton size="small" className="ai-shell__preview-action" aria-label="Open chart">
-              <FaChevronRight />
-            </IconButton>
-          </div>
+          <TrustedResultCard biGrounding={artifact.bi_grounding} />
         </div>
       );
     }
@@ -373,6 +461,7 @@ function AIShell() {
             </Typography>
           )}
         </div>
+        <TrustedResultCard biGrounding={artifact.bi_grounding} />
       </div>
     );
   };
@@ -500,6 +589,85 @@ function AIShell() {
         role: 'assistant',
         content: assistantMessage,
         artifacts: biArtifacts,
+        suggested_actions: data.suggested_actions || [],
+        grounded: Boolean(payloadDataset || datasetRef),
+        session_state: nextSessionState,
+      }]);
+      setSessionState(nextSessionState);
+
+      if (data.governance_readiness?.status === 'warning') {
+        setGovernanceWarning(
+          data.governance_readiness.reasons?.[0]?.message
+          || 'The active dataset has a quality warning that may affect this result.',
+        );
+      }
+
+      const lastBiArtifact = biArtifacts[biArtifacts.length - 1];
+      if (lastBiArtifact) {
+        setActiveArtifact(lastBiArtifact);
+        setIsResultsPaneOpen(true);
+      }
+    } catch (requestError) {
+      const readinessMessage = requestError.response?.data?.governance_readiness?.reasons?.[0]?.message;
+      setError(readinessMessage || requestError.message || 'Could not reach the analytics service.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSuggestedAction = async (action, previousSessionState) => {
+    if (!action || !action.enabled || action.kind !== 'analytics_refinement' || !action.analytics_refinement || loading) return;
+
+    const message = action.label;
+    const tokens = extractTokens(message, datasets);
+    setLoading(true);
+    setError(null);
+    setGovernanceWarning(null);
+    setUserMessages((previous) => [
+      ...previous,
+      { role: 'user', content: message, grounded: tokens.length > 0 },
+    ]);
+
+    try {
+      const biSessionState = buildBiSessionState(previousSessionState);
+      const {
+        payloadDataset,
+        payloadSemanticModel,
+        datasetRef,
+      } = resolveRequestContext(biSessionState, tokens);
+
+      const response = await axios.post(`${API_URL}/api/decision/chat/turns`, {
+        user_message: message,
+        dataset: payloadDataset,
+        semantic_model: payloadSemanticModel,
+        dataset_ref: datasetRef,
+        resolved_datasets: tokens,
+        requested_mode: (payloadDataset || datasetRef) ? 'explore' : 'ask',
+        conversation_history: userMessages
+          .map(({ role, content }) => ({ role, content }))
+          .slice(-10),
+        session_state: biSessionState,
+        analytics_refinement: action.analytics_refinement,
+      });
+
+      const data = response.data;
+      if (data.status !== 'success') {
+        throw new Error(data.error?.message || 'The BI query could not be completed.');
+      }
+
+      const biArtifacts = filterBiArtifacts(data.artifacts);
+      const responseEnteredDecisionMode = data.mode === 'decide'
+        || (Array.isArray(data.artifacts) && data.artifacts.some((artifact) => !BI_ARTIFACT_TYPES.has(artifact?.type)));
+      const assistantMessage = responseEnteredDecisionMode && biArtifacts.length === 0
+        ? 'Ask about a metric, segment, time period, comparison, table, or chart and I will analyze the active data.'
+        : (data.assistant_message || 'The BI query completed.');
+      const nextSessionState = buildBiSessionState(data.session_state);
+
+      setUserMessages((previous) => [...previous, {
+        role: 'assistant',
+        content: assistantMessage,
+        artifacts: biArtifacts,
+        suggested_actions: data.suggested_actions || [],
         grounded: Boolean(payloadDataset || datasetRef),
         session_state: nextSessionState,
       }]);
@@ -642,6 +810,30 @@ function AIShell() {
                         {renderArtifact(artifact, false)}
                       </React.Fragment>
                     ))}
+                  </div>
+                )}
+
+                {message.suggested_actions?.length > 0 && (
+                  <div className="ai-shell__suggested-actions">
+                    {message.suggested_actions.map(action => {
+                      const isDisabled = !action.enabled;
+                      const title = isDisabled ? action.disabled_reason || 'Action disabled' : '';
+                      return (
+                        <Tooltip key={action.action_id} title={title}>
+                          <span>
+                            <Chip
+                              label={action.label}
+                              onClick={isDisabled ? undefined : () => handleSuggestedAction(action, message.session_state)}
+                              disabled={isDisabled}
+                              className={`ai-shell__suggested-action-chip ${isDisabled ? 'is-disabled' : 'is-enabled'}`}
+                              clickable={!isDisabled}
+                              variant="outlined"
+                              size="small"
+                            />
+                          </span>
+                        </Tooltip>
+                      );
+                    })}
                   </div>
                 )}
               </div>

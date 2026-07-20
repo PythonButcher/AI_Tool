@@ -10,9 +10,9 @@ This file is the first routing helper for AI_Tool. It should point agents to cur
 | --- | --- |
 | Start any project task | `project_docs/INDEX.md` |
 | Understand current truth and scan rules | `project_docs/active/README.md` |
-| Check current Decision Intelligence status | `project_docs/active/status/decision_intelligence_execution_status.md` |
-| Work on current Decision Intelligence phase | `project_docs/active/decision_intelligence/active_gate/README.md` |
-| Confirm Codex vs Gemini ownership | `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md` |
+| Check current AI Chat status | `project_docs/active/status/ai_chat_execution_status.md` |
+| Work on the current AI Chat slice | `project_docs/active/ai_chat/active_gate/README.md` |
+| Confirm Codex vs Antigravity ownership | `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md` |
 | Review completed AI Chat rollout history | `project_docs/archive/ai_chat_decision_output_unification_rollout_completed.md` only when historical context is needed |
 | Work on contracts | `project_docs/active/contracts/decision_objects.md` |
 | Review active Codex-to-frontend-agent handoffs | `project_docs/active/ai_hand_off/README.md` |
@@ -22,37 +22,39 @@ This file is the first routing helper for AI_Tool. It should point agents to cur
 
 ## Current Product Direction
 
-AI Chat is a BI-first NLP workspace. It keeps grounded answers, tables, charts, conversational refinements, semantic-model behavior, artifact inspection, and BI exports. It does not expose Decision Intelligence workspaces, decision frames, readiness panels, command centers, decision assets, scenario comparison, or Decision Output exports.
+AI Chat is a BI-first NLP workspace. It keeps grounded answers, tables, charts, conversational refinements, semantic-model behavior, artifact inspection, and BI exports. It does not expose Decision Intelligence workspaces.
 
 Decision Intelligence backend services may remain isolated for compatibility, but they are not part of the active AI Chat product direction. Do not reconnect them without explicit user approval and a new active plan.
 
 ## Ownership
 
-Codex owns backend truth, contracts, tests, architecture, documentation, cleanup planning, and review.
+Codex owns backend truth, contracts, tests, architecture, documentation, cleanup planning, and review for the broader AI Tool.
 
-Gemini or Antigravity owns frontend implementation unless the user explicitly authorizes Codex frontend edits in the current session.
+Codex is the Lead Orchestrator for AI_Tool, including the AI Chat BI pivot. Codex owns the roadmap, active gates, backend implementation, contracts, tests, architecture, project documentation, integration review, and the decision about which owner acts next.
 
-When Codex owns the next Decision Intelligence step, the active goal belongs in `project_docs/active/decision_intelligence/active_gate/`. When frontend work is needed, Codex writes the backend truth and a focused handoff file under `project_docs/active/ai_hand_off/`. The handoff file must contain the `Goal:` prompt that the frontend agent can execute through the auto-handoff flow. Gemini or Antigravity implements React/CSS/UI behavior, verifies it, and updates status truthfully.
+Antigravity is the primary UI implementation owner. Codex gives Antigravity one bounded frontend handoff at a time after backend readiness and the frontend gap are verified. The handoff fixes the contract, required behavior, scope boundary, regressions, and acceptance evidence while leaving Antigravity reasonable creative freedom over component composition, interaction polish, styling details, accessible presentation, and concise UI copy within the existing design system.
+
+The control-return sequence is mandatory: Antigravity implements only the current handoff, then stops and returns changed-file and verification evidence to Codex. Codex reviews source, build evidence, and contract compliance. Only after Codex accepts the implementation does the user perform final browser-level acceptance.
 
 Codex must never create, edit, restore, delete, move, rename, patch, or otherwise modify any `GEMINI.md` file. If a `GEMINI.md` file is missing, stale, damaged, or needs new instructions, Codex must report the issue and leave the file untouched for the user or another agent.
 
 ## Codex Orchestration Duty
 
-Codex is the project facilitator. At the end of substantial Decision Intelligence work, Codex must state the project gate clearly: whether the phase is complete end to end, backend-only complete, frontend-ready but unverified, blocked, or ready for the next phase.
+Codex leads the overall AI Tool and the AI Chat work. Antigravity executes UI work from Codex-authored handoffs and reports completion evidence back to Codex for review.
 
-Codex must not make the user infer who acts next. State directly whether Codex continues, Gemini or Antigravity needs a handoff, both are done, or a specific audit is required before moving forward.
+At the end of substantial work, Codex must state the project gate clearly: whether the backend API is complete, blocked, ready for an Antigravity UI handoff, awaiting Codex review, or awaiting user browser acceptance. Codex must not make the user infer who acts next.
 
-If a phase has backend and frontend parts, backend verification alone is not enough to call the phase complete. Say `backend complete; frontend verification or Gemini work still required` unless frontend behavior has also been verified or the active docs define the slice as backend-only.
+If a phase has backend and frontend parts, backend verification alone is not enough to call the phase complete. Say `backend complete; Antigravity implementation or frontend verification still required` unless frontend behavior has also been verified or the active docs define the slice as backend-only.
 
 Before writing a frontend-agent handoff, Codex must first confirm there is a real frontend gap from source review, browser verification, or explicit user direction. Do not send speculative frontend work.
 
-Whenever Codex determines Gemini or Antigravity needs work, Codex must create or update a handoff file with a clean `Goal:` prompt instead of pasting that prompt into chat. The final response should link or name the handoff file and state that the frontend agent should read the latest handoff. Only paste the full prompt in chat if the user explicitly asks for it.
+Whenever Codex determines Antigravity needs UI work, Codex must create or update a handoff file with a clean `Goal:` prompt instead of pasting that prompt into chat. The final response should link or name the handoff file and state that Antigravity should read the latest handoff. Only paste the full prompt in chat if the user explicitly asks for it.
 
 Keep active status short. Move completed slice diaries to `project_docs/archive/` once their facts are no longer the current gate.
 
 ## Final Response Stop Check
 
-Before every final response after substantial Decision Intelligence work, Codex must explicitly check whether it wrapped up a project phase, cleared a backend gate, cleared a frontend gate, or identified that Gemini or Antigravity takes over next.
+Before every final response after substantial project work, Codex must explicitly check whether it wrapped up a project phase, cleared a backend gate, cleared a frontend gate, or identified that Antigravity takes over next.
 
 If yes and a forward-looking `Goal:` prompt is needed, the prompt must live in a handoff file under `project_docs/active/ai_hand_off/`. The final response must reference that handoff file instead of pasting the full prompt into chat. This is required even when the backend work is complete, the goal is marked complete, or the response already states the project gate. Do not end with only a status summary when a handoff is the next action.
 
@@ -66,13 +68,13 @@ When creating prompts for another agent, put the prompt in a handoff file by def
 
 ## Prompt Goal Format
 
-All prompts generated for another agent or a future session must be written in goal format and stored in a handoff file unless the user explicitly asks for chat output. This includes Gemini, Antigravity, Codex next-session, review, handoff, and implementation prompts. Start with `Goal:` followed by the standalone outcome, then state the target files, active documentation to read, exact contract or source fields to use, acceptance checks, verification command when relevant, and ownership constraints. Antigravity prompts must use the same goal format because Antigravity supports goals. Keep every prompt forward-looking, clean, and free of code blocks.
+All prompts generated for another agent or a future session must be written in goal format and stored in a handoff file unless the user explicitly asks for chat output. This includes Antigravity, Codex next-session, review, handoff, and implementation prompts. Start with `Goal:` followed by the standalone outcome, then state the target files, active documentation to read, exact contract or source fields to use, acceptance checks, verification command when relevant, and ownership constraints. Antigravity prompts must use the same goal format because Antigravity supports goals. Keep every prompt forward-looking, clean, and free of code blocks.
 
 ## Catastrophic Change Protection
 
 Agents must use `apply_patch` for source edits. They must not use Python `open(path, "w")`, `Path.write_text`, PowerShell `Set-Content`, `Out-File`, redirection, or bulk-cleanup scripts to rewrite source files, especially when the target path is stored in a variable. Those patterns can truncate a file before its contents are read. Before claiming frontend work complete, run `python .codex/hooks/agent_harness_check.py`, `git diff --check`, and the relevant build. If a source file is unexpectedly empty or substantially smaller than its baseline, stop immediately, report the incident, and restore from the tracked baseline before any feature work continues.
 
-When Codex wraps up a project phase or clears a phase gate (or whenever the user requests a kick-off / next-session / new phase prompt), Codex must create or update the active-gate goal for Codex-owned work or a handoff file for Gemini/Antigravity-owned work, then reference that file in the final response. The user should not have to copy a prompt from chat into another agent.
+When Codex wraps up a project phase or clears a phase gate (or whenever the user requests a kick-off / next-session / new phase prompt), Codex must create or update the active-gate goal for Codex-owned work or a handoff file for Antigravity-owned UI work, then reference that file in the final response. The user should not have to copy a prompt from chat into another agent.
 CRITICAL: The generated kick-off/next-session handoff prompt MUST NEVER mention or refer to ANY previous phase names or numbers (e.g., do not say "Phase 4", "Phase 5", "previous phase", or recap what was just completed). It MUST NOT recap prior accomplishments, review history, implementation history, or who approved earlier work. It must start directly and cleanly by naming only the next standalone goal, specifying the target file, and listing the active doc links for the current task. Keep the prompt completely forward-looking and decoupled from history. Do not include sentences like "Phase N is complete", "Gemini did X", "reviewed by", or detailed verification history inside the next-session handoff prompt.
 
 
@@ -80,7 +82,7 @@ CRITICAL: The generated kick-off/next-session handoff prompt MUST NEVER mention 
 
 Always review current project Markdown before making project decisions. Start with `project_docs/INDEX.md`, then `project_docs/active/README.md`, then only the task-specific files named by those navigation docs.
 
-Before starting, handing off, or closing a numbered project phase, use the `project-doc-governance` skill and run `python .codex/hooks/agent_harness_check.py`. The check blocks a completed brief left in the active gate, completed reference files left under `active_gate/`, and a current gate without its declared phase number.
+Before starting, handing off, or closing a numbered project phase, use the `project-doc-governance` skill and run `python .codex/hooks/agent_harness_check.py`. The check blocks a completed brief left in the active gate, completed reference files left under `active_gate/`, and a current work gate without its declared phase number. The only unnumbered state allowed is the explicit idle gate `Awaiting User Epic Goal`.
 
 Do not scan every Markdown file. Do not scan `project_docs/archive/` unless an active doc points there or the user asks for historical context. Do not bulk scan `project_docs/active/decision_intelligence/`; read its README first and select only the relevant file.
 

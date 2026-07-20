@@ -22,7 +22,7 @@ Second, active routing docs tell agents what to read next and what not to scan. 
 
 Third, hook-ready checks turn high-risk rules into executable policy. In this repo, `.codex/hooks/pre_tool_use_policy.py` blocks or flags commands that violate known boundaries, and `.codex/hooks/agent_harness_check.py` validates the harness manually.
 
-Fourth, verification ladders keep checks proportional. Backend work starts with focused tests, frontend work stays with Gemini unless explicitly authorized, and documentation work uses path checks plus `git diff --check`.
+Fourth, verification ladders keep checks proportional. Backend work starts with focused tests, bounded frontend work stays with Antigravity unless Codex is explicitly authorized to implement it, and documentation work uses path checks plus `git diff --check`.
 
 Fifth, harness evolution is evidence-based. When an agent repeats a mistake, record the pattern here, add the smallest reusable check or instruction, and verify it. Avoid broad prompts that try to solve every future task at once.
 
