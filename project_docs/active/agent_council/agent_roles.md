@@ -60,11 +60,11 @@ Surface edge cases across prompt parsing, state carry-forward, action gating, du
 
 The Implementation Planner turns debate into phased execution proposals.
 
-This agent should ask how the strongest ideas can be sequenced safely, which work belongs to Codex versus Gemini, which files or docs need to be touched, and what evidence proves each phase is complete. It should challenge recommendations that are good in principle but too vague to hand to another AI.
+This agent should ask how the strongest ideas can be sequenced safely, which work belongs to Codex versus Antigravity, which files or docs need to be touched, and what evidence proves each phase is complete. It should challenge recommendations that are good in principle but too vague to hand to another AI.
 
 Expected focus:
 
-Convert reconciled recommendations into implementation phases with owners, entry criteria, exit criteria, affected areas, test expectations, and handoff notes. Preserve the project rule that Codex owns backend, contracts, architecture, review, and markdown coordination while Gemini owns frontend implementation unless explicitly reauthorized.
+Convert reconciled recommendations into implementation phases with owners, entry criteria, exit criteria, affected areas, test expectations, and handoff notes. Preserve the project rule that Codex is Lead Orchestrator and owns the roadmap, gates, backend, contracts, architecture, review, documentation, and handoff scope while Antigravity owns bounded frontend implementation.
 
 ## Council Behavior
 

@@ -259,6 +259,37 @@
   margin-top: 14px;
 }
 
+.ai-shell__suggested-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px dashed var(--border-color);
+}
+
+.ai-shell__suggested-action-chip {
+  font-family: inherit !important;
+  font-weight: 600 !important;
+  transition: all 0.2s ease !important;
+}
+
+.ai-shell__suggested-action-chip.is-enabled {
+  border-color: var(--primary-main) !important;
+  color: var(--primary-main) !important;
+  background-color: transparent !important;
+}
+
+.ai-shell__suggested-action-chip.is-enabled:hover {
+  background-color: var(--primary-light) !important;
+  transform: translateY(-1px);
+}
+
+.ai-shell__suggested-action-chip.is-disabled {
+  opacity: 0.6;
+  border-color: var(--border-color) !important;
+}
+
 .ai-shell__footer {
   padding: 0 10% 32px;
 }
@@ -430,24 +461,32 @@
 }
 
 /* Shared BI answer and chart artifacts. */
-.ai-shell__artifact-preview-link {
+.ai-shell__artifact-preview-container {
   display: flex;
+  flex-direction: column;
   width: 100%;
   max-width: 520px;
-  align-items: center;
-  gap: 16px;
-  padding: 12px 16px;
   border: 1px solid var(--border-color);
   border-radius: 12px;
   background: var(--bg-primary);
-  cursor: pointer;
   transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+  overflow: hidden;
 }
 
-.ai-shell__artifact-preview-link:hover {
+.ai-shell__artifact-preview-container:hover {
   border-color: var(--text-secondary);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   transform: translateX(3px);
+}
+
+.ai-shell__artifact-preview-link {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 16px;
+  background: transparent;
+  cursor: pointer;
 }
 
 .ai-shell__preview-icon {
@@ -643,6 +682,57 @@
   margin-bottom: 16px;
   padding-bottom: 12px;
   border-bottom: 1px solid var(--border-color);
+}
+
+.ai-shell__trusted-result {
+  padding: 12px 16px;
+  border-top: 1px dashed var(--border-color);
+  background: color-mix(in srgb, var(--bg-secondary) 30%, transparent);
+}
+
+.ai-shell__active-artifact .ai-shell__trusted-result,
+.ai-shell__artifact-preview-card .ai-shell__trusted-result {
+  border-radius: 0 0 12px 12px;
+  margin-top: auto;
+}
+
+.ai-shell__trusted-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 12px;
+  color: var(--text-secondary);
+  font-size: 0.65rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.ai-shell__trusted-content {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.ai-shell__trusted-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ai-shell__trusted-label {
+  color: var(--text-secondary);
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.ai-shell__trusted-value {
+  color: var(--text-primary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
 }
 
 @media (max-width: 900px) {

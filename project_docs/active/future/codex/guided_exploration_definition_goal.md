@@ -1,0 +1,11 @@
+> DEFERRED CODEX PROPOSAL: This goal is not active and must not be executed unless the user explicitly promotes it.
+
+Goal: Define the first distinct Guided Exploration behavior for BI-first AI Chat and verify or implement the backend contract required to support it before authorizing frontend work.
+
+Read `project_docs/INDEX.md`, `project_docs/active/README.md`, `project_docs/active/status/ai_chat_execution_status.md`, `project_docs/active/ai_chat/active_gate/README.md`, `project_docs/active/contracts/decision_objects.md`, and `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md`. Inspect the relevant paths in `backend/decision_engine/chat_service.py`, `tests/test_decision_chat_service.py`, and read `frontend/frontend/src/features/ai/AIShell.jsx` only to identify the current integration boundary.
+
+Use the backend fields `suggested_actions`, `analytics_refinement`, `session_state.analytics_state`, `bi_grounding`, `enabled`, `disabled_reason`, and `payload_expectations` as the starting contract. Define one user outcome that helps the user discover a useful next analysis and is materially different from merely rendering another inline action chip.
+
+Acceptance requires a source-backed description of that behavior, exact request and response fields, a clear session-state boundary, grounded enabled and disabled behavior, and a readiness classification of `backend_not_ready`, `backend_contract_ready`, or `frontend_repair_only`. If backend truth is missing, implement the smallest additive backend change and focused tests before writing any frontend handoff. Keep Decision Intelligence output disconnected and do not edit frontend implementation files without explicit user authorization.
+
+Verify backend changes with `python -m unittest tests.test_decision_chat_service`. Run `python .codex/hooks/agent_harness_check.py` and `git diff --check` before changing the gate. Create an Antigravity handoff only after a concrete frontend gap and verified backend contract exist; the handoff must cover one visible behavior, a limited file set, a short acceptance list, and bounded creative latitude.

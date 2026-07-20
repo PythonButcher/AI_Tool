@@ -42,7 +42,7 @@ The sample file is an example artifact only. It demonstrates the required shape 
 
 ## How To Run A Council
 
-Start by choosing a planning topic. Good topics are questions like what the next Decision Intelligence slice should be, whether a proposed UI handoff is strong enough, whether a backend contract is ready for Gemini, or which risks should gate the next implementation phase.
+Start by choosing a planning topic. Good topics are questions like what the next product slice should be, whether a proposed UI handoff is strong enough, whether a backend contract is ready for Antigravity, or which risks should gate the next implementation phase.
 
 Before running the council, the orchestrating agent should inspect the current active project docs. Start with `project_docs/INDEX.md`, then `project_docs/active/README.md`, then the active status and frontend guardrail. For Decision Intelligence work, use `project_docs/active/status/decision_intelligence_execution_status.md` for the current gate and `project_docs/active/decision_intelligence/active_gate/README.md` for the active phase workspace. Read completed plans or handoffs only when the topic explicitly needs historical evidence.
 
@@ -72,10 +72,10 @@ The validator is intentionally lightweight. It is good enough for council handof
 
 ## Current Project Fit
 
-The workflow matches the existing project division of labor. Codex remains responsible for backend logic, contracts, architecture, review, and markdown coordination. Gemini remains responsible for frontend implementation unless the user explicitly authorizes Codex frontend work in the current session.
+The workflow matches the project division of labor. Codex is Lead Orchestrator and remains responsible for the roadmap, active gates, backend logic, contracts, architecture, review, documentation, and handoff scope. Antigravity remains responsible for bounded frontend implementation unless the user explicitly authorizes Codex frontend work in the current session.
 
 The council also preserves the current Decision Intelligence truth. The active direction is AI Chat-first decision review: mode clarity, prompt-first intake reliability, action fidelity, artifact quality, in-chat decision output review, export, and evaluation coverage. The council should not recommend fake simulation, fake optimization, fake autonomous recommendation behavior, fake upload ingestion, or a required jump from AI Chat into the old Decisions window.
 
 ## What Good Council Output Looks Like
 
-A good council JSON artifact should show what was reviewed, what each role argued, where the roles disagreed, which ideas survived critique, what remains unresolved, and how implementation should be phased. It should be concrete enough that another AI can turn it into a Codex backend task, a Gemini frontend handoff, a test plan, or a future product planning document without re-litigating the whole debate.
+A good council JSON artifact should show what was reviewed, what each role argued, where the roles disagreed, which ideas survived critique, what remains unresolved, and how implementation should be phased. It should be concrete enough that another AI can turn it into a Codex backend task, an Antigravity frontend handoff, a test plan, or a future product planning document without re-litigating the whole debate.

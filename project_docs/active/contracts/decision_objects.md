@@ -1,10 +1,67 @@
 # Decision Objects Contract
 
-This document is the current contract reference for backend and frontend integration of the Decision Layer.
+This document is the current contract reference for backend and frontend integration of AI Chat BI results and the isolated Decision Layer compatibility services.
 
-Active product boundary: the BI-first AI Chat frontend does not consume or render this Decision Layer contract. These objects remain documented for isolated backend compatibility and must not be reintroduced into AI Chat without explicit user approval and a new active plan.
+Active product boundary: the BI-first AI Chat frontend consumes only the BI Result Contract below. It does not consume or render the later Decision Layer compatibility objects, which must not be reintroduced into AI Chat without explicit user approval and a new active plan.
 
 All timestamps use ISO-8601 UTC strings. Optional fields may be `null`. All objects below are additive and sit on top of the existing semantic model, metric resolver, and dataset context systems.
+
+## AI Chat BI Result Contract
+
+`POST /api/decision/chat/turns` returns `contract_version: "ai_chat_bi_result_v1"`. Analytical turns add top-level `bi_grounding`, `analytics_refinement`, and typed `suggested_actions`. Every returned `answer` or `chart` artifact carries its own `bi_grounding`; the top-level value matches the primary answer or chart. Other artifact types retain their existing compatibility contracts.
+
+### BI Grounding
+
+`bi_grounding` is normalized backend truth for the exact result shown. It is derived from the resolved dataset, Dataset Trust, semantic metric resolver output, normalized filters, and artifact mapping. The frontend must not infer these fields from chart labels or chat copy.
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `schema_version` | `string` | Yes | Current value is `ai_chat_bi_grounding_v1`. |
+| `dataset` | `Dataset Summary \| null` | Yes | Canonical dataset identity and full source row/column counts. |
+| `row_count` | `integer` | Yes | Rows used by this result after filters. |
+| `source_row_count` | `integer` | Yes | Rows in the resolved dataset before result filters. |
+| `freshness` | `object` | Yes | `state` reuses Dataset Trust stale state; `as_of` is an ISO timestamp when the dataset reference proves one, otherwise `null`. |
+| `cleaning` | `object` | Yes | `state` is `cleaned`, `raw`, `transformed`, or `unknown`. |
+| `metric_definition` | `object \| null` | Yes | Semantic or deterministic raw-field metric definition with identity, source field, default aggregation, format hint, and expression where available. |
+| `aggregation` | `string \| null` | Yes | Actual result aggregation, including request-local structured overrides. |
+| `dimensions` | `object[]` | Yes | Grouping dimensions with `id`, `name`, `label`, `field`, `semantic_kind`, and `data_type`. |
+| `filters` | `object[]` | Yes | At most eight normalized resolver filters with `field`, `operator`, `value`, and `values`. |
+| `time_period` | `object \| null` | Yes | Normalized `field`, `start`, and `end` derived from temporal filters. |
+| `output_type` | `string \| null` | Yes | `answer` or `chart` on artifact grounding; may be `null` only when a non-result response has top-level dataset context. |
+
+Freshness and cleaning remain conservative. Unknown backend evidence stays `unknown`; the service does not convert missing metadata into a positive trust claim. `row_count` and `source_row_count` distinguish the filtered evidence basis from the source dataset size.
+
+### Analytics Refinement
+
+A client can send `analytics_refinement` on a later turn to apply a structured follow-up to the compact `session_state.analytics_state`. The request must also include `user_message` and the prior `session_state`. A refinement without prior structured analytics state is rejected with HTTP 400. The backend validates every operation and re-runs the deterministic resolver; clients must not patch a prior chart locally and present it as a new grounded result.
+
+| Operation | Required `arguments` | Behavior |
+| --- | --- | --- |
+| `remove_filter` | `field` or `dimension_id` | Removes all carried filters for the resolved semantic field. |
+| `set_aggregation` | `aggregation` | Applies `sum`, `mean`, `count`, `min`, `max`, or `nunique` as a request-local metric override without mutating the semantic model. |
+| `set_group_by` | `dimension_id`, `field`, or `dimension` | Replaces the current grouping with a dimension verified against the current semantic model. Optional `output_preference: "chart"` requests chart output. |
+| `set_time_period` | `field` or `dimension_id`, plus `start` and `end` | Replaces filters on the temporal field with normalized `gte` and `lte` filters. |
+| `set_output` | `output` | Selects `answer` or `chart` for the re-run result. |
+
+Successful analytical responses return `analytics_refinement` with `schema_version: "ai_chat_analytics_refinement_v1"`, the normalized `applied` operation or `null`, compact `current_state`, and `payload_expectations`. `current_state` contains metric identity, aggregation, up to four grouping fields, up to eight filters, normalized time period, and output preference. It never contains dataset rows, chart data, or conversation transcripts.
+
+The same compact state is stored under `session_state.analytics_state` and `session_state.last_analytic_context` with `schema_version: "ai_chat_analytics_state_v1"`. The enclosing session uses `schema_version: "ai_chat_bi_session_state_v1"`; `session_state.dataset_context` retains only canonical identity, counts, and a deterministic fingerprint.
+
+### Typed Suggested Actions
+
+Analytical `suggested_actions` are bounded guided-exploration instructions derived from the current semantic model and applied state. They use `kind: "analytics_refinement"` and include a validated `analytics_refinement` object that the client may send to `/api/decision/chat/turns` with the current session state. Current suggestions can include a temporal trend, breakdown by an unused categorical dimension, removal of an applied filter, and an alternate aggregation.
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `action_id` | `string` | Yes | Stable typed ID such as `show_trend_by_order_date`, `breakdown_by_region`, `remove_filter_region`, or `set_aggregation_mean`. |
+| `label` / `description` | `string` | Yes | Backend-authored user-facing copy. |
+| `kind` | `string` | Yes | Current analytics value is `analytics_refinement`. |
+| `intent` | `string` | Yes | Current analytics value is `refine_analytics`. |
+| `priority` | `string` | Yes | `primary` or `secondary`. |
+| `enabled` | `boolean` | Yes | True only after the refinement operation validates against the backend contract. |
+| `disabled_reason` / `availability_reason` | `string \| null` | Yes | Explicit availability metadata retained from the shared action contract. |
+| `analytics_refinement` | `object` | Analytics only | Exact normalized operation and arguments for a later turn. |
+| `payload_expectations` | `object` | Yes | Names the turn endpoint, required request fields, and produced BI contract fields. |
 
 ## Shared Nested Objects
 
@@ -102,7 +159,7 @@ Successful turn and action responses include top-level `resolved_datasets`, an a
 
 `mode_context` includes `current_mode`, `reason_code`, `reason`, `selection_source`, `requires_confirmation`, `confirmation_modes`, and `available_modes`. Auto routing that detects both chart/comparison and decision/trade-off intent returns `current_mode: "ask"`, `reason_code: "ambiguous_chart_decision_comparison"`, `requires_confirmation: true`, and `confirmation_modes: ["explore", "decide"]`; it does not execute either workflow. Explicit mode selection returns `reason_code: "explicit_mode_override"`.
 
-Every `suggested_actions[]` item includes `action_id`, `enabled`, `disabled_reason`, `availability_reason`, and `payload_expectations`. An action is enabled only when its `action_id` is present in the backend handler catalog and its current prerequisites pass. Disabled actions carry a plain-language `disabled_reason`. `open_workspace` executes through `/api/decision/chat/actions` against `session_state.draft_workspace` and returns the current AI Chat decision-review artifact; clients must not locate it by scanning older chat messages.
+Every `suggested_actions[]` item includes `action_id`, `enabled`, `disabled_reason`, `availability_reason`, and `payload_expectations`. Decision tool actions are enabled only when their `action_id` is present in the backend action-handler catalog and current prerequisites pass. Analytics refinement actions are enabled only when their typed operation validates against the BI refinement contract and are sent through `/api/decision/chat/turns`, not the decision action route. Disabled actions carry a plain-language `disabled_reason`. `open_workspace` executes through `/api/decision/chat/actions` against `session_state.draft_workspace` and returns the current AI Chat decision-review artifact; clients must not locate it by scanning older chat messages.
 
 Returned `session_state.dataset_context` contains `schema_version`, a SHA-256 `fingerprint`, and a `Dataset Summary`. It never contains raw dataset rows. On a turn, a fingerprint change clears prior workspace, decision, scenario, analytic, clarification, and action state before new work runs. A terse referential follow-up such as `Show it as a chart` is then refused until the user names a metric or dimension for the new dataset. On an action request, a fingerprint change is refused so a stale workspace cannot execute against another dataset. `New Chat` must clear the persisted session state, messages, active result, and dataset context together.
 
@@ -110,7 +167,7 @@ Returned `session_state.dataset_context` contains `schema_version`, a SHA-256 `f
 
 Successful turn responses include `conversation_context`, a compact `di_conversation_context_v1` object with `accepted_turn_count`, `accepted_roles`, `has_prior_user_turn`, `history_alignment`, `used_for_continuity`, `authoritative_source: "structured_session_state"`, and `raw_history_persisted: false`. The object reports how bounded role/content history corroborated a turn; it does not contain message content.
 
-Semantic metric turns store the same compact state under `session_state.last_analytic_context` and `session_state.analytics_state`. Public fields are `source: "semantic_metric"`, `metric_id`, `metric_name`, `group_by`, `filters`, `output_preference: "answer" | "chart"`, `last_user_message`, and `continuity_source`. `continuity_source` is `new_request`, `structured_session_state`, or `structured_state_with_bounded_history`. Metric and dimension references are re-resolved against the current semantic model on every turn. Categorical refinements use exact values present in the current dataset. Period refinements currently support explicit ISO date ranges, named month plus year, and `Q1` through `Q4` plus year. Filters are bounded to eight and are executed by the existing metric resolver.
+Semantic metric turns store the same compact state under `session_state.last_analytic_context` and `session_state.analytics_state`. Public fields are `schema_version`, `source: "semantic_metric"`, `metric_id`, `metric_name`, `aggregation`, `group_by`, `filters`, `time_period`, `output_preference: "answer" | "chart"`, `last_user_message`, and `continuity_source`. `continuity_source` is `new_request`, `structured_session_state`, or `structured_state_with_bounded_history`. Metric and dimension references are re-resolved against the current semantic model on every turn. Categorical refinements use exact values present in the current dataset. Period refinements support explicit ISO date ranges, named month plus year, `Q1` through `Q4` plus year, and validated structured ranges. Filters are bounded to eight and are executed by the existing metric resolver.
 
 Semantic answer and chart artifacts include additive `content.result_context` with `schema_version: "di_conversational_result_context_v1"`, an `evidence` object containing `metric_id`, `group_by`, normalized `filters`, `filtered_row_count`, and `source_row_count`, an `uncertainty` array, `truth_boundary: "observational_analysis_only"`, and `next_action`. Concise assistant copy must identify the grounded row basis and keep the result descriptive and observational.
 

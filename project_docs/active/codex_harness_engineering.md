@@ -6,7 +6,7 @@ This file defines how Codex should run efficiently on AI_Tool without lowering i
 
 The main goal is to prevent a single implementation session from spending excessive context on broad file reads, full diffs, noisy browser logs, repeated verification attempts, or unrelated exploration. Codex should still do careful work, but every expensive read, test, browser run, artifact inspection, and diff must have a clear reason.
 
-This file applies to Codex. It is not a Gemini rule file.
+This file applies to Codex. It is not an Antigravity rule file.
 
 For reusable agent-harness structure, hook-ready checks, and future-project templates, use `project_docs/active/agent_harness/README.md`. This file remains the Codex run-efficiency rule; the agent harness folder owns reusable harness architecture.
 
@@ -16,15 +16,15 @@ Past expensive branches may be useful examples, but they are not global template
 
 Codex still starts with `AGENTS.md`.
 
-After `AGENTS.md`, use `project_docs/INDEX.md` and `project_docs/active/README.md` as routing maps. For Decision Intelligence work, read `project_docs/active/status/decision_intelligence_execution_status.md` and then `project_docs/active/decision_intelligence/active_gate/README.md`. Read only the active status file, active-gate files, frontend guardrail when relevant, this harness file for substantial repo work, and the task-specific active plan named by the routing docs.
+After `AGENTS.md`, use `project_docs/INDEX.md` and `project_docs/active/README.md` as routing maps. For AI Chat work, read `project_docs/active/status/ai_chat_execution_status.md` and then `project_docs/active/ai_chat/active_gate/README.md`. Read only the active status file, active-gate files, frontend guardrail when relevant, this harness file for substantial repo work, and the task-specific active plan named by the routing docs.
 
 Do not scan every Markdown file. Do not scan archive, completed, future, or old handoff folders unless the current task explicitly needs historical evidence.
 
 ## Active-Gate Context Pattern
 
-Decision Intelligence uses an active-gate pattern so context selection is explicit. The status file names the gate; `project_docs/active/decision_intelligence/active_gate/README.md` names the plan, goal, ranking source, and active owner. A file in `ai_hand_off/`, `future/`, `completed/`, or `archive/` is not active unless the active-gate README points to it.
+AI Chat uses an active-gate pattern so context selection is explicit. The status file names the gate; `project_docs/active/ai_chat/active_gate/README.md` names the current slice, objective, and owner. A file in `ai_hand_off/`, `future/`, `completed/`, or `archive/` is not active unless the status or active-gate README points to it.
 
-This follows the context-engineering rule of selecting only the context needed for the current step and isolating stale or future context away from the working set. If active status, active-gate README, and council ranking disagree, stop and repair docs before implementation.
+This follows the context-engineering rule of selecting only the context needed for the current step and isolating stale or future context away from the working set. If active status, active-gate README, and the active handoff disagree, stop and repair docs before implementation.
 
 ## Default Run Budget
 

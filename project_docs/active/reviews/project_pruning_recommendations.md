@@ -74,4 +74,4 @@ Fourth, preserve useful backend foundations and compose them into the new visibl
 
 ## Safety Rule
 
-Do not delete frontend product code in the first pass unless the user explicitly authorizes frontend edits. Codex should document the prune targets, clean obvious tracked artifacts, update backend/docs where authorized, and create Gemini handoffs for frontend demotion or rewrite work.
+Do not delete frontend product code in the first pass unless the user explicitly authorizes frontend edits. Codex should document the prune targets, clean obvious tracked artifacts, update backend/docs where authorized, and create bounded Antigravity handoffs for frontend demotion or rewrite work.

@@ -4,7 +4,7 @@ Hooks are optional automation around the agent lifecycle. In this repo they shou
 
 ## Current Scripts
 
-`.codex/hooks/pre_tool_use_policy.py` reads Codex hook JSON from stdin. It can deny destructive shell commands, deny attempted `GEMINI.md` edits, and add context when a command appears to touch Gemini-owned frontend source.
+`.codex/hooks/pre_tool_use_policy.py` reads Codex hook JSON from stdin. It can deny destructive shell commands, deny attempted `GEMINI.md` edits, and add context when a command appears to touch frontend-agent-owned source.
 
 It also denies dynamic-path Python writes such as `open(f, "w")`, dynamic `Path.write_text`, and direct PowerShell writes to frontend source. These patterns can truncate a file before its contents are read. Source edits must use `apply_patch`.
 
