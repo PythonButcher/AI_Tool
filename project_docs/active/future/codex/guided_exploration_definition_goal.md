@@ -1,3 +1,5 @@
+> DEFERRED CODEX PROPOSAL: This goal is not active and must not be executed unless the user explicitly promotes it.
+
 Goal: Define the first distinct Guided Exploration behavior for BI-first AI Chat and verify or implement the backend contract required to support it before authorizing frontend work.
 
 Read `project_docs/INDEX.md`, `project_docs/active/README.md`, `project_docs/active/status/ai_chat_execution_status.md`, `project_docs/active/ai_chat/active_gate/README.md`, `project_docs/active/contracts/decision_objects.md`, and `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md`. Inspect the relevant paths in `backend/decision_engine/chat_service.py`, `tests/test_decision_chat_service.py`, and read `frontend/frontend/src/features/ai/AIShell.jsx` only to identify the current integration boundary.

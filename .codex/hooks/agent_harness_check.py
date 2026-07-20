@@ -102,7 +102,7 @@ def _check_project_doc_links(errors: list[str]) -> None:
 
 
 def _check_active_doc_state(errors: list[str]) -> None:
-    """Reject stale completed plans and an unnumbered current AI Chat slice."""
+    """Reject stale plans and unnumbered work, while allowing an explicit user-owned idle gate."""
     status_path = ROOT / "project_docs" / "active" / "status" / "ai_chat_execution_status.md"
     active_gate_dir = ROOT / "project_docs" / "active" / "ai_chat" / "active_gate"
     if not status_path.exists() or not active_gate_dir.exists():
@@ -110,7 +110,17 @@ def _check_active_doc_state(errors: list[str]) -> None:
 
     status_text = status_path.read_text(encoding="utf-8", errors="replace")
     gate_match = re.search(r"## Current Gate:\s*(.+)", status_text)
-    if not gate_match or not re.search(r"\bSlice\s+\d+\b", gate_match.group(1), re.IGNORECASE):
+    awaiting_user_goal = bool(
+        gate_match
+        and re.search(r"awaiting\s+user\s+epic\s+goal", gate_match.group(1), re.IGNORECASE)
+    )
+    if (
+        not gate_match
+        or (
+            not awaiting_user_goal
+            and not re.search(r"\bSlice\s+\d+\b", gate_match.group(1), re.IGNORECASE)
+        )
+    ):
         errors.append("Current AI Chat gate must name the active slice number.")
 
     complete = bool(re.search(r"- \*\*Status\*\*:\s*Complete", status_text, re.IGNORECASE))

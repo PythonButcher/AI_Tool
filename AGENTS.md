@@ -82,7 +82,7 @@ CRITICAL: The generated kick-off/next-session handoff prompt MUST NEVER mention 
 
 Always review current project Markdown before making project decisions. Start with `project_docs/INDEX.md`, then `project_docs/active/README.md`, then only the task-specific files named by those navigation docs.
 
-Before starting, handing off, or closing a numbered project phase, use the `project-doc-governance` skill and run `python .codex/hooks/agent_harness_check.py`. The check blocks a completed brief left in the active gate, completed reference files left under `active_gate/`, and a current gate without its declared phase number.
+Before starting, handing off, or closing a numbered project phase, use the `project-doc-governance` skill and run `python .codex/hooks/agent_harness_check.py`. The check blocks a completed brief left in the active gate, completed reference files left under `active_gate/`, and a current work gate without its declared phase number. The only unnumbered state allowed is the explicit idle gate `Awaiting User Epic Goal`.
 
 Do not scan every Markdown file. Do not scan `project_docs/archive/` unless an active doc points there or the user asks for historical context. Do not bulk scan `project_docs/active/decision_intelligence/`; read its README first and select only the relevant file.
 

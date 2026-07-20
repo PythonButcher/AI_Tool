@@ -74,7 +74,7 @@ Antigravity frontend reviews must stay lightweight unless the user asks for deep
 
 Frontend builds are for inconclusive source review, missing or questionable Antigravity build evidence, likely syntax/import failures, or explicit user requests. Browser/E2E checks are not the default review path; use them only when the gate depends on visible behavior and cheaper evidence is clean or insufficient.
 
-Before starting, handing off, or closing a numbered phase, run `python .codex/hooks/agent_harness_check.py`. Its documentation-governance gate rejects a complete brief still kept in the current path, completed reference files under `current/`, and a current gate without a phase number. Use the `project-doc-governance` skill to repair any reported issue before continuing.
+Before starting, handing off, or closing a numbered phase, run `python .codex/hooks/agent_harness_check.py`. Its documentation-governance gate rejects a complete brief still kept in the current path, completed reference files under `current/`, and active work without a phase number. The explicit idle state `Awaiting User Epic Goal` is allowed so the user can author the next gate without inherited agent scope. Use the `project-doc-governance` skill to repair any reported issue before continuing.
 
 ## Browser Acceptance Control
 
