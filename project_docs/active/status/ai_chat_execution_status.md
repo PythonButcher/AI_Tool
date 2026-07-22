@@ -11,10 +11,10 @@ This file is the single current source of truth for the AI Chat BI workspace.
 
 ## Current Gate: Slice 1 — Source Registry and Workspace Context
 
-- **Status**: Ready for Codex backend implementation
-- **Backend Readiness**: `backend_not_ready`
+- **Status**: Backend evidence ready for Codex contract and gate review
+- **Backend Readiness**: `backend_not_ready` pending Codex contract and gate acceptance
 - **Current Owner**: Codex
-- **Next Action**: Execute `project_docs/active/ai_chat/active_gate/codex_source_registry_workspace_goal.md`
+- **Next Action**: Review the verified source/workspace implementation, finalized contract, and required test evidence before activating relationship work
 - **Roadmap**: `project_docs/active/ai_chat/multiple_data_sources_implementation_plan.md`
 - **Antigravity Handoff**: None; frontend work waits for verified workspace and relationship APIs
 
