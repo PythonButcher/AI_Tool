@@ -33,7 +33,9 @@ Dataset identity and semantic truth remain required for every BI answer and char
 | Contracts | `project_docs/active/contracts/` | Backend/frontend payload truth |
 | Dashboard canvas state contract | `project_docs/active/contracts/dashboard_canvas_state.md` | Local-first dashboard canvas, layout, and sharing skeleton state |
 | Dataset governance contract | `project_docs/active/contracts/data_catalog_lineage.md` | Readiness policy and enforcement truth |
+| Multiple-source workspace contract | `project_docs/active/contracts/multiple_data_source_workspace.md` | Source, workspace membership, and analysis-context truth |
 | AI Chat active gate | `project_docs/active/ai_chat/active_gate/README.md` | The only active phase workspace |
+| Multiple data sources roadmap | `project_docs/active/ai_chat/multiple_data_sources_implementation_plan.md` | Ordered backend, frontend, acceptance, and handoff plan |
 | Deferred planning | `project_docs/active/future/README.md` | The one home for all deferred active-folder plans; not active until promoted |
 | Agent harness | `project_docs/active/agent_harness/` | Reusable agent backbone, hooks, and validation |
 | Handoffs | `project_docs/active/ai_hand_off/` | Active handoffs only |
