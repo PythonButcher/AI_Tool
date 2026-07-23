@@ -24,7 +24,7 @@ The destination uses the live current workspace identity, renders every returned
 
 ## Verification
 
-Run `python .codex/hooks/agent_harness_check.py`, `git diff --check`, and `npm --prefix frontend\frontend run build`. Perform one browser check for a current one-source workspace and one empty/unavailable state, then return exact changed files and evidence to Codex.
+Run `python .codex/hooks/agent_harness_check.py`, `git diff --check`, and `npm --prefix frontend\frontend run build`, then return exact changed files and evidence to Codex. Codex supplies a concise manual browser checklist after source acceptance; the user owns browser verification.
 
 ## Owner
 

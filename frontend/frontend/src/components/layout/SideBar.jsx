@@ -4,11 +4,13 @@ import {
   FaDatabase,
   FaRobot,
   FaTachometerAlt,
+  FaProjectDiagram,
 } from 'react-icons/fa';
 import './SideBar.css';
 
 const DESTINATIONS = {
   WORKSPACE: 'workspace',
+  DATA_MODEL: 'data_model',
   EXPLORE: 'explore',
   DASHBOARDS: 'dashboards',
   AI: 'ai',
@@ -17,6 +19,7 @@ const DESTINATIONS = {
 const navigationItems = [
   { id: DESTINATIONS.AI, label: 'AI Suite', icon: <FaRobot /> },
   { id: DESTINATIONS.WORKSPACE, label: 'Workspace', icon: <FaDatabase /> },
+  { id: DESTINATIONS.DATA_MODEL, label: 'Data Model', icon: <FaProjectDiagram /> },
   { id: DESTINATIONS.EXPLORE, label: 'Explore', icon: <FaChartBar /> },
   { id: DESTINATIONS.DASHBOARDS, label: 'Dashboards', icon: <FaTachometerAlt /> },
 ];

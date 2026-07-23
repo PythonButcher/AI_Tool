@@ -11,8 +11,8 @@ This file is the single current source of truth for active AI_Tool delivery.
 
 ## Current Gate: Slice 4 — Read-Only Source Model Canvas
 
-- **Status**: Ready for bounded Antigravity frontend implementation
-- **Backend Readiness**: `backend_contract_ready`
+- **Status**: Repair required after Codex source review
+- **Backend Readiness**: `frontend_repair_only`
 - **Current Owner**: Antigravity
 - **Next Action**: Execute `project_docs/active/ai_hand_off/antigravity_source_model_canvas_goal.md`
 - **Roadmap**: `project_docs/active/data_sources/multiple_data_sources_implementation_plan.md`
@@ -20,4 +20,4 @@ This file is the single current source of truth for active AI_Tool delivery.
 
 ## Control Return
 
-Antigravity implements only the active read-only source-model canvas handoff, then stops and returns changed-file, build, and browser evidence to Codex. Codex performs the integration review before the user performs browser acceptance.
+Antigravity repairs only the blockers named in the active handoff, then stops and returns changed-file and build evidence to Codex. Codex performs the integration review before the user performs browser acceptance.

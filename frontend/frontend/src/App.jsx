@@ -37,6 +37,7 @@ const parseRecords = (source) => {
 
 const DESTINATIONS = {
   WORKSPACE: 'workspace',
+  DATA_MODEL: 'data_model',
   EXPLORE: 'explore',
   DASHBOARDS: 'dashboards',
   AI: 'ai',
@@ -160,6 +161,9 @@ function AppContent() {
     setUploadedData({
       data_preview: previewRows,
       semantic_model: raw?.semantic_model || null,
+      source: raw?.source || null,
+      workspace: raw?.workspace || null,
+      analysis_context: raw?.analysis_context || null,
     });
     setFullData(finalDataset);
     setCleanedData(finalDataset);
