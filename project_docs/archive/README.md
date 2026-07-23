@@ -20,3 +20,7 @@ Completed Decision Intelligence slice records moved out of active status on June
 
 `project_docs/archive/decision_intelligence_status_history_2026_06_01.md`
 
+The verified governed-relationship backend gate is preserved at:
+
+`project_docs/archive/slice_2_relationship_trust_gate_completed_2026_07_22.md`
+

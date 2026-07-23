@@ -1,31 +1,77 @@
-# Governed Data Source Relationship Contract
+# Multiple Data Source Relationship Contract
 
 ## Status
 
-Draft contract for the active relationship persistence and trust gate. Codex must finalize field names, validation states, diagnostics, and error behavior against implementation and tests.
+Verified backend contract for durable relationship configuration, candidate profiling, validation diagnostics, and workspace-isolated CRUD. This contract does not authorize joined execution, multi-source AI behavior, chart integration, or frontend behavior.
 
-## Boundary
+## Contract Version
 
-A relationship belongs to one durable data workspace and connects two sources that are members of that workspace. It records analytical intent and validation evidence only. It does not authorize dataframe joins, multi-source AI execution, chart execution, or frontend behavior.
+Stored relationship objects use `contract_version: "multi_source_relationships_v1"`. Candidate proposals are not stored relationship objects and carry a deterministic `candidate_id` instead of a `relationship_id`. Additive response fields may be introduced within this version; renamed fields or changed meanings require a new version or compatibility adapter.
 
 ## Relationship Object
 
-The public object must include a contract version, stable relationship ID, workspace ID, left and right source IDs, ordered field pairs, declared cardinality, join behavior, filter direction, active state, validation state, diagnostics, the fingerprints used during validation, a monotonic version, and created and updated timestamps.
+| Field | Meaning |
+| --- | --- |
+| `relationship_id` | Stable server-generated `rel_` identity |
+| `workspace_id` | Workspace that owns and isolates the relationship |
+| `left_source_id`, `right_source_id` | Two different catalog sources that must both be members of the owning workspace |
+| `field_pairs` | One or more ordered `{ left_field, right_field }` pairs; repeated fields and empty pairs are rejected |
+| `cardinality` | `one_to_one`, `one_to_many`, `many_to_one`, or `many_to_many` |
+| `join_behavior` | Future execution intent: `inner`, `left`, `right`, or `full`; no join is executed in this contract |
+| `filter_direction` | Future propagation intent: `none`, `left_to_right`, `right_to_left`, or `both` |
+| `is_active` | Whether the relationship belongs to the active model graph; activation still does not execute it |
+| `is_suggested` | Whether the saved configuration originated from a candidate proposal |
+| `is_confirmed` | Explicit user or caller confirmation; required before activation |
+| `validation_state` | `unvalidated`, `valid`, `invalid`, `stale`, or `blocked` |
+| `diagnostics` | Ordered, value-safe explanations from the latest validation |
+| `source_fingerprints` | Left and right `source_id`, `content_fingerprint`, and `schema_version` used by the latest validation |
+| `version` | Monotonic relationship version advanced by every durable mutation |
+| `created_at`, `updated_at`, `validated_at` | ISO-8601 lifecycle timestamps; `validated_at` is null until profiling succeeds |
 
-Field pairs name one left field and one right field. Composite relationships preserve field-pair order. Candidate suggestions remain inactive until explicit confirmation and successful validation.
+Creating a relationship always stores it inactive and `unvalidated`. Configuration edits remove old validation evidence, return the relationship to `unvalidated`, and deactivate it. An activation request must include explicit confirmation and triggers a fresh validation before `is_active` can become true. Deactivation is always permitted. Relationship creation, update, validation, activation, deactivation, and deletion also advance the owning workspace version because each changes the stored model boundary.
 
-## Validation
+## Validation Semantics
 
-Validation checks workspace membership, field existence, type compatibility, null rates, uniqueness on the declared key side, unmatched keys, declared cardinality, cycles, ambiguous active paths, estimated row multiplication, and source fingerprint or schema staleness.
+Validation reads each existing source through the established Data Hub dataset loader solely to compute aggregate evidence. It does not merge dataframes, return source values, compile a join, or change global single-source state.
 
-Validation states must distinguish at least valid, warning, blocked, and stale. Diagnostics use stable codes, severity, an evidence-based message, affected sources or fields, measured values when safe, and a direct next action. Candidate confidence is explanatory evidence, not proof that a join is semantically correct.
+The validator first rechecks workspace existence, source existence, membership, configured field existence, and compatible type families. Numeric fields are compatible with numeric fields, strings with strings, datetimes with datetimes, and booleans with booleans. A missing field produces `relationship_field_missing`; an incompatible pair produces `relationship_type_mismatch`. Both states are `invalid`.
 
-Unsupported many-to-many execution is blocked. A source fingerprint or schema change makes affected validation stale until it is rerun. No relationship becomes active merely because it was suggested.
+For valid field pairs, the validator profiles complete single or composite keys. `relationship_key_profile` records aggregate row counts, null rates, distinct-key counts, uniqueness on each side, unmatched-key counts and rates, estimated joined rows, and estimated row multiplication relative to the left source grain. `relationship_key_nulls`, `relationship_unmatched_keys`, and `estimated_row_multiplication` are warnings that preserve a valid state when no blocking or invalid evidence exists. Estimated multiplication above `2.0` is surfaced as a warning for future execution design; no rows are joined.
 
-## Isolation And Errors
+Observed uniqueness must support the declaration. `one_to_one` requires both sides unique, `one_to_many` requires the left side unique, and `many_to_one` requires the right side unique. A mismatch produces `declared_cardinality_mismatch` and an `invalid` state. A declared `many_to_many` relationship always receives `many_to_many_execution_unsupported` and is `blocked`, even when observed duplicates support that declaration.
 
-Relationship reads and writes are scoped by workspace. Cross-workspace source membership fails safely. Stable errors must cover missing workspace, missing source, invalid membership, missing field, invalid field pair, relationship not found, version conflict, cycle, ambiguous path, stale source, and blocked cardinality without exposing managed source paths or row values.
+The active source graph is treated as undirected for safety. If the relationship being validated would connect sources that already have an active path, validation emits both `relationship_cycle` and `ambiguous_active_path` and marks the relationship `blocked`. It therefore cannot be activated. These diagnostics describe model safety only and do not imply an execution engine exists.
 
-## Compatibility
+After validation, each read compares the stored left and right source fingerprints and schema versions with current catalog truth. Any change transitions the validation to `stale`, deactivates the relationship, replaces prior diagnostics with `relationship_source_stale`, and advances the relationship and workspace versions once. Fresh validation is required before reactivation.
 
-Existing source registration, one-source workspace context, governance, Data Hub resolution, Decision Chat identity, and the process-global single-dataset compatibility adapter remain unchanged. Relationship IDs remain absent from current analysis contexts until a later execution gate explicitly integrates them.
+Every diagnostic contains stable `code`, `severity`, `message`, and `next_action` fields. Aggregate evidence is nested under `evidence`. Diagnostics do not expose source rows, key values, private locators, or filesystem paths.
+
+## Candidate Profiling
+
+`POST /api/data-workspaces/<workspace_id>/relationship-candidates` conservatively compares workspace source pairs. It proposes compatible fields only when normalized field names match and profiled keys overlap. Each proposal explains name match, type family, matched-key ratio, observed uniqueness, inferred cardinality, and bounded confidence.
+
+Candidates are evidence-backed suggestions, not truth. Every candidate returns `is_active: false`, `is_suggested: true`, `is_confirmed: false`, and `confirmation_required: true`. Profiling does not persist or activate candidates. A caller must explicitly create a relationship from the proposed fields, confirm it, and pass fresh validation before activation.
+
+## Endpoints
+
+| Method and path | Behavior |
+| --- | --- |
+| `POST /api/data-workspaces/<workspace_id>/relationships` | Create an inactive relationship. `validate: true` optionally profiles it immediately. `is_active: true` additionally requires `is_confirmed: true` and a valid fresh result. |
+| `GET /api/data-workspaces/<workspace_id>/relationships` | List only that workspace's relationships and reconcile stale validation state. |
+| `GET /api/data-workspaces/<workspace_id>/relationships/<relationship_id>` | Retrieve one workspace-isolated relationship and reconcile staleness. |
+| `PATCH /api/data-workspaces/<workspace_id>/relationships/<relationship_id>` | Edit configuration, confirm, activate, or deactivate. Optional `version` enforces optimistic concurrency. |
+| `DELETE /api/data-workspaces/<workspace_id>/relationships/<relationship_id>` | Delete relationship metadata without deleting either source. |
+| `POST /api/data-workspaces/<workspace_id>/relationships/<relationship_id>/validate` | Refresh profiling, fingerprints, state, and diagnostics without executing a join. |
+| `POST /api/data-workspaces/<workspace_id>/relationship-candidates` | Return inactive, non-persisted candidate proposals. |
+
+Successful single-record responses use `{ relationship }`; list responses use `{ relationships }`; candidate responses use `{ candidates }`. Delete returns HTTP 204.
+
+## Errors and Isolation
+
+Errors use `{ error: { code, message } }`, with validation diagnostics added to `error.diagnostics` when activation fails. Missing workspaces, sources, and workspace-scoped relationships return HTTP 404. `source_not_in_workspace`, `relationship_version_conflict`, and `relationship_confirmation_required` return HTTP 409. Unavailable source storage returns HTTP 409. A freshly invalid or blocked relationship cannot activate and returns HTTP 422 with `relationship_not_activatable` plus the persisted diagnostics.
+
+Relationship lookup always includes both `workspace_id` and `relationship_id`. A relationship ID requested through another workspace returns `relationship_not_found` and does not reveal its real owner. Foreign keys cascade relationship removal when its workspace or source is deleted, while relationship deletion never removes sources or memberships.
+
+## Compatibility Boundary
+
+The existing `multi_source_workspace_v1` source, workspace, upload, and `analysis_context` behavior is unchanged. Its `relationship_ids` remains empty for current single-source consumers. No current Decision Chat, chart, semantic-model, governance, Data Hub, or global-state caller reads this relationship table. Joined execution and propagation semantics remain deferred behind a future service contract.

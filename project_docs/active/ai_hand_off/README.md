@@ -12,7 +12,7 @@ Antigravity owns bounded frontend implementation, React/CSS, UI rendering, and f
 
 No active Antigravity handoff.
 
-Codex owns the governed relationship-contract backend gate. Frontend delivery remains inactive until the exact workspace and relationship endpoints are implemented and verified.
+Codex owns the safe multi-source analytics backend gate. Frontend delivery remains inactive until the execution, lineage, and compatibility contracts are implemented and verified.
 
 The current project gate is `project_docs/active/active_gate/README.md`. Current status is recorded in `project_docs/active/status/project_execution_status.md`.
 

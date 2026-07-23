@@ -21,6 +21,7 @@ from backend.routes.raw_data import raw_data_bp
 from backend.routes.autopilot import autopilot_bp
 from backend.routes.datahub_routes import datahub_bp
 from backend.routes.data_workspaces import data_workspaces_bp
+from backend.routes.source_relationships import source_relationships_bp
 from backend.routes.ml_prep import ml_prep_bp
 from backend.routes.automl import automl_bp
 from backend.routes.semantic_model import semantic_model_bp
@@ -58,6 +59,7 @@ def create_app():
     app.register_blueprint(autopilot_bp)
     app.register_blueprint(datahub_bp)
     app.register_blueprint(data_workspaces_bp)
+    app.register_blueprint(source_relationships_bp)
     app.register_blueprint(ml_prep_bp)
     app.register_blueprint(automl_bp)
     app.register_blueprint(semantic_model_bp)

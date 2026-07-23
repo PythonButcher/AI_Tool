@@ -90,6 +90,55 @@ def _ensure_schema(conn):
         ON workspace_sources (source_id)
         '''
     )
+    conn.execute(
+        '''
+        CREATE TABLE IF NOT EXISTS workspace_relationships (
+            relationship_id TEXT PRIMARY KEY,
+            workspace_id TEXT NOT NULL,
+            left_source_id TEXT NOT NULL,
+            right_source_id TEXT NOT NULL,
+            field_pairs_json TEXT NOT NULL,
+            cardinality TEXT NOT NULL CHECK (
+                cardinality IN ('one_to_one', 'one_to_many', 'many_to_one', 'many_to_many')
+            ),
+            join_behavior TEXT NOT NULL CHECK (
+                join_behavior IN ('inner', 'left', 'right', 'full')
+            ),
+            filter_direction TEXT NOT NULL CHECK (
+                filter_direction IN ('none', 'left_to_right', 'right_to_left', 'both')
+            ),
+            is_active INTEGER NOT NULL DEFAULT 0 CHECK (is_active IN (0, 1)),
+            is_suggested INTEGER NOT NULL DEFAULT 0 CHECK (is_suggested IN (0, 1)),
+            is_confirmed INTEGER NOT NULL DEFAULT 0 CHECK (is_confirmed IN (0, 1)),
+            validation_state TEXT NOT NULL CHECK (
+                validation_state IN ('unvalidated', 'valid', 'invalid', 'stale', 'blocked')
+            ),
+            diagnostics_json TEXT NOT NULL DEFAULT '[]',
+            source_fingerprints_json TEXT NOT NULL DEFAULT '{}',
+            version INTEGER NOT NULL DEFAULT 1,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            validated_at TEXT,
+            FOREIGN KEY (workspace_id) REFERENCES data_workspaces(workspace_id) ON DELETE CASCADE,
+            FOREIGN KEY (left_source_id) REFERENCES datahub_datasets(id) ON DELETE CASCADE,
+            FOREIGN KEY (right_source_id) REFERENCES datahub_datasets(id) ON DELETE CASCADE,
+            CHECK (left_source_id <> right_source_id),
+            CHECK (is_active = 0 OR (is_confirmed = 1 AND validation_state = 'valid'))
+        )
+        '''
+    )
+    conn.execute(
+        '''
+        CREATE INDEX IF NOT EXISTS idx_workspace_relationships_workspace
+        ON workspace_relationships (workspace_id, created_at, relationship_id)
+        '''
+    )
+    conn.execute(
+        '''
+        CREATE INDEX IF NOT EXISTS idx_workspace_relationships_sources
+        ON workspace_relationships (left_source_id, right_source_id)
+        '''
+    )
 
     conn.execute(
         '''
