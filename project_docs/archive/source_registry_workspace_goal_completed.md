@@ -1,3 +1,5 @@
+> COMPLETED REFERENCE ONLY: This record is not an executable current goal.
+
 Goal: Implement a durable source registry and one-source workspace context for governed file uploads without breaking current single-dataset consumers.
 
 Target `backend/db/backend_db.py`, `backend/routes/upload.py`, new bounded repository and workspace-context modules under `backend/`, focused tests under `tests/`, and finalize `project_docs/active/contracts/multiple_data_source_workspace.md` against verified behavior.

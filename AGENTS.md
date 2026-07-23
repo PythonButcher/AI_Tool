@@ -10,8 +10,8 @@ This file is the first routing helper for AI_Tool. It should point agents to cur
 | --- | --- |
 | Start any project task | `project_docs/INDEX.md` |
 | Understand current truth and scan rules | `project_docs/active/README.md` |
-| Check current AI Chat status | `project_docs/active/status/ai_chat_execution_status.md` |
-| Work on the current AI Chat slice | `project_docs/active/ai_chat/active_gate/README.md` |
+| Check current project status | `project_docs/active/status/project_execution_status.md` |
+| Work on the current project slice | `project_docs/active/active_gate/README.md` |
 | Confirm Codex vs Antigravity ownership | `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md` |
 | Review completed AI Chat rollout history | `project_docs/archive/ai_chat_decision_output_unification_rollout_completed.md` only when historical context is needed |
 | Work on contracts | `project_docs/active/contracts/decision_objects.md` |
@@ -83,6 +83,8 @@ CRITICAL: The generated kick-off/next-session handoff prompt MUST NEVER mention 
 Always review current project Markdown before making project decisions. Start with `project_docs/INDEX.md`, then `project_docs/active/README.md`, then only the task-specific files named by those navigation docs.
 
 Before starting, handing off, or closing a numbered project phase, use the `project-doc-governance` skill and run `python .codex/hooks/agent_harness_check.py`. The check blocks a completed brief left in the active gate, completed reference files left under `active_gate/`, and a current work gate without its declared phase number. The only unnumbered state allowed is the explicit idle gate `Awaiting User Epic Goal`.
+
+For this repository, the authoritative documentation checks are `python .codex/hooks/agent_harness_check.py` and `python C:/Users/18022/.codex/skills/active-gate-governance/scripts/check_active_gate.py project_docs/active/active_gate .`. The installed generic `project-doc-governance/scripts/audit_project_docs.py` is hard-coded to retired `project_docs/active/decision_intelligence/` paths and must not be used as this repository's release gate. Do not recreate retired paths to satisfy that external script.
 
 Do not scan every Markdown file. Do not scan `project_docs/archive/` unless an active doc points there or the user asks for historical context. Do not bulk scan `project_docs/active/decision_intelligence/`; read its README first and select only the relevant file.
 

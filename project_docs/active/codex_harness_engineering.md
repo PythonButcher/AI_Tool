@@ -16,13 +16,15 @@ Past expensive branches may be useful examples, but they are not global template
 
 Codex still starts with `AGENTS.md`.
 
-After `AGENTS.md`, use `project_docs/INDEX.md` and `project_docs/active/README.md` as routing maps. For AI Chat work, read `project_docs/active/status/ai_chat_execution_status.md` and then `project_docs/active/ai_chat/active_gate/README.md`. Read only the active status file, active-gate files, frontend guardrail when relevant, this harness file for substantial repo work, and the task-specific active plan named by the routing docs.
+After `AGENTS.md`, use `project_docs/INDEX.md` and `project_docs/active/README.md` as routing maps. Read `project_docs/active/status/project_execution_status.md` and then `project_docs/active/active_gate/README.md`. Read only the active status file, active-gate files, frontend guardrail when relevant, this harness file for substantial repo work, and the task-specific active plan named by the routing docs.
 
 Do not scan every Markdown file. Do not scan archive, completed, future, or old handoff folders unless the current task explicitly needs historical evidence.
 
 ## Active-Gate Context Pattern
 
-AI Chat uses an active-gate pattern so context selection is explicit. The status file names the gate; `project_docs/active/ai_chat/active_gate/README.md` names the current slice, objective, and owner. A file in `ai_hand_off/`, `future/`, `completed/`, or `archive/` is not active unless the status or active-gate README points to it.
+The project uses one global active gate so context selection and ownership are explicit. The status file names the gate; `project_docs/active/active_gate/README.md` names the current slice, objective, and owner. A file in a product-area folder, `ai_hand_off/`, `future/`, `completed/`, or `archive/` is not active unless the status or active-gate README points to it.
+
+When Codex is the current owner, the status `Next Action` must point to one executable `Goal:` file inside `project_docs/active/active_gate/`. Codex must perform its own source, contract, and test review before ending a gate. It must never return control to an unspecified future Codex review or leave the user to infer whether a new session is required.
 
 This follows the context-engineering rule of selecting only the context needed for the current step and isolating stale or future context away from the working set. If active status, active-gate README, and the active handoff disagree, stop and repair docs before implementation.
 

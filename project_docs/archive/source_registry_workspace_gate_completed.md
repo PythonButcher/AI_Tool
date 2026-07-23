@@ -1,4 +1,6 @@
-# AI Chat Active Gate — Slice 1: Source Registry and Workspace Context
+> COMPLETED REFERENCE ONLY: This record is not an active gate.
+
+# Source Registry and Workspace Context Gate
 
 ## Goal
 

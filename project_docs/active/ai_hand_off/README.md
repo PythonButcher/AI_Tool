@@ -12,9 +12,9 @@ Antigravity owns bounded frontend implementation, React/CSS, UI rendering, and f
 
 No active Antigravity handoff.
 
-Codex is implementing the source-registry and workspace-context backend gate. Frontend delivery is scheduled as three bounded handoffs—source-model navigation and canvas, relationship editing, then AI Chat and result lineage—but none becomes active until the exact workspace and relationship endpoints are implemented and verified.
+Codex owns the governed relationship-contract backend gate. Frontend delivery remains inactive until the exact workspace and relationship endpoints are implemented and verified.
 
-The current AI Chat gate is `project_docs/active/ai_chat/active_gate/README.md`. Current status is recorded in `project_docs/active/status/ai_chat_execution_status.md`.
+The current project gate is `project_docs/active/active_gate/README.md`. Current status is recorded in `project_docs/active/status/project_execution_status.md`.
 
 Completed handoffs belong outside this active folder.
 

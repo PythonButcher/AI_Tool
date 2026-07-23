@@ -9,8 +9,8 @@ Target files:
 Read first:
 - `project_docs/INDEX.md`
 - `project_docs/active/README.md`
-- `project_docs/active/status/ai_chat_execution_status.md`
-- `project_docs/active/ai_chat/active_gate/README.md`
+- `project_docs/active/status/project_execution_status.md`
+- `project_docs/active/active_gate/README.md`
 - `project_docs/active/contracts/decision_objects.md`, especially `AI Chat BI Result Contract` and `BI Grounding`
 - `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md`
 
