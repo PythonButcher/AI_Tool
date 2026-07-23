@@ -183,7 +183,10 @@ def _normalize_null_thresholds(value: Any) -> Dict[str, Any]:
     return {
         "default": default,
         "fields": {str(key): _ratio(item, f"null_thresholds.{key}") for key, item in fields.items()},
-        "configured": True,
+        # A normalized policy may be evaluated again after catalog storage.
+        # Preserve whether the threshold was caller-configured so a default
+        # warning cannot silently become a blocking rule on later execution.
+        "configured": bool(value.get("configured", True)),
     }
 
 

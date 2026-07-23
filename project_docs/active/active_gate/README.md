@@ -1,35 +1,33 @@
-# Project Active Gate — Slice 3: Safe Multi-Source Analytics
+# Project Active Gate — Slice 4: Read-Only Source Model Canvas
 
 ## Goal
 
-Execute explicitly selected, validated workspace relationships safely in AI Chat and chart analysis while preserving unchanged one-source behavior.
+Render the current governed workspace as a read-only source-model canvas from live backend source, workspace, and relationship contracts.
 
 ## User Outcome
 
-A user can select governed sources and relationship paths in one analysis context, ask a cross-source question, and receive a deterministic answer, table, or chart with complete source and relationship lineage and honest fanout diagnostics.
+A user can open a dedicated source-model destination, see the current workspace sources and their aliases, inspect relationship paths and trust states, and understand when no workspace or relationship evidence is available.
 
 ## Scope
 
-Add a bounded relationship execution service and integrate selected relationship IDs from `analysis_context` with dataset resolution, Decision Chat, semantic resolution, and chart construction. Execution must use only active, confirmed, freshly valid relationships in the requested workspace, require an explicit acyclic path, namespace multi-source fields, preserve the primary-source grain, enforce row-expansion limits, and return lineage and fanout diagnostics.
+Persist the upload response's `source`, `workspace`, and `analysis_context` in frontend application state, add one original source-model destination, and load the current workspace and relationship records through verified read endpoints. Render source nodes, relationship connectors, trust status, and accessible empty, loading, and error states. Keep this surface read-only.
 
-Do not add relationship-canvas UI, frontend code, automatic relationship activation, unsupported many-to-many execution, or changes to any `GEMINI.md` file.
+Do not add relationship creation or editing, membership mutation, AI Chat multi-source payloads, backend code, automatic relationship activation, or changes to any `GEMINI.md` file.
 
 ## Contracts
 
-Use `project_docs/active/data_sources/multiple_data_sources_implementation_plan.md`, `project_docs/active/contracts/multiple_data_source_workspace.md`, `project_docs/active/contracts/multiple_data_source_relationships.md`, `project_docs/active/contracts/data_catalog_lineage.md`, `project_docs/active/contracts/decision_objects.md`, and `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md`.
+Use `project_docs/active/ai_hand_off/antigravity_source_model_canvas_goal.md`, `project_docs/active/contracts/multiple_data_source_workspace.md`, `project_docs/active/contracts/multiple_data_source_relationships.md`, `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md`, and `project_docs/active/data_sources/multiple_data_sources_implementation_plan.md`.
 
 ## Acceptance
 
-Execution refuses missing, inactive, unconfirmed, invalid, stale, blocked, cross-workspace, cyclic, ambiguous, or many-to-many relationship paths. Valid one-to-one, one-to-many, many-to-one, and composite-key paths produce deterministic namespaced columns while enforcing a documented row-expansion ceiling and preserving primary-source grain semantics. Every multi-source result returns participating source IDs, relationship IDs and versions, source fingerprints, field lineage, join order, unmatched-key evidence, and observed fanout.
-
-Focused tests cover direct and multi-hop paths, composite keys, ambiguous paths, stale relationships, many-to-many refusal, row-expansion refusal, namespaced field collisions, governance aggregation, lineage, conversational context retention, charts, and unchanged legacy one-source requests.
+The destination uses the live current workspace identity, renders every returned membership once with its persisted alias and role, renders every returned relationship once with its endpoints and trust state, and never implies that suggested, inactive, unconfirmed, invalid, stale, blocked, or many-to-many relationships are executable. Empty, loading, unavailable, and API-error states are visible and accessible. Existing upload, Workspace, Explore, Dashboards, and AI destinations remain functional.
 
 ## Verification
 
-Run the focused relationship-execution, Decision Chat, semantic, and chart tests, the existing source/workspace and governance regressions, `python .codex/hooks/agent_harness_check.py`, `python C:/Users/18022/.codex/skills/active-gate-governance/scripts/check_active_gate.py project_docs/active/active_gate .`, and `git diff --check`.
+Run `python .codex/hooks/agent_harness_check.py`, `git diff --check`, and `npm --prefix frontend\frontend run build`. Perform one browser check for a current one-source workspace and one empty/unavailable state, then return exact changed files and evidence to Codex.
 
 ## Owner
 
-Codex owns backend implementation, contract updates, tests, and acceptance review. Codex performs its own gate review before creating any frontend handoff. The user has no action during this backend gate.
+Antigravity owns the bounded frontend implementation in `project_docs/active/ai_hand_off/antigravity_source_model_canvas_goal.md`, then stops and returns control to Codex for source and contract review. The user performs browser acceptance only after Codex accepts the implementation.
 
-Kickoff goal: `project_docs/active/active_gate/codex_safe_multi_source_analytics_goal.md`.
+Kickoff goal: `project_docs/active/active_gate/antigravity_source_model_canvas_goal.md`.

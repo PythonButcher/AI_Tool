@@ -2,7 +2,7 @@
 
 ## Status
 
-Verified backend contract for durable relationship configuration, candidate profiling, validation diagnostics, and workspace-isolated CRUD. This contract does not authorize joined execution, multi-source AI behavior, chart integration, or frontend behavior.
+Verified backend contract for durable relationship configuration, candidate profiling, validation diagnostics, workspace-isolated CRUD, and explicitly selected backend execution. It does not authorize frontend behavior or automatic relationship selection.
 
 ## Contract Version
 
@@ -72,6 +72,14 @@ Errors use `{ error: { code, message } }`, with validation diagnostics added to 
 
 Relationship lookup always includes both `workspace_id` and `relationship_id`. A relationship ID requested through another workspace returns `relationship_not_found` and does not reveal its real owner. Foreign keys cascade relationship removal when its workspace or source is deleted, while relationship deletion never removes sources or memberships.
 
+## Verified Execution Semantics
+
+Multi-source execution accepts only relationship IDs explicitly present in the verified `analysis_context`. Every relationship is reloaded through the requested workspace and must be active, confirmed, freshly `valid`, and not `many_to_many`. The selected edges must form exactly one connected acyclic tree over the ordered selected sources. Missing, cross-workspace, stale, inactive, blocked, invalid, cyclic, disconnected, or ambiguous selections are refused; the executor never chooses an unrequested relationship or activates a candidate.
+
+Execution starts from the persisted workspace primary source. The ordered selected source IDs determine deterministic traversal, with relationship ID used only as a stable tie-breaker inside the already explicit tree. Single and composite field pairs are supported. Every physical field is emitted as `<workspace_alias>.<source_field>`, and the composed semantic model namespaces metric IDs, dimension IDs, names, labels, fields, filters, and formula field references.
+
+The pandas executor refuses a result above either `250000` rows or `5.0` times the primary-source row count. This is the documented hard ceiling, independent of the validation-time `2.0` warning threshold. Returned `analysis_lineage` includes ordered sources and relationships, relationship versions, validation fingerprints, field origins, join order, aggregate unmatched-key evidence, primary-grain anchoring, per-step fanout, and final observed fanout. Raw relationship keys are never returned.
+
 ## Compatibility Boundary
 
-The existing `multi_source_workspace_v1` source, workspace, upload, and `analysis_context` behavior is unchanged. Its `relationship_ids` remains empty for current single-source consumers. No current Decision Chat, chart, semantic-model, governance, Data Hub, or global-state caller reads this relationship table. Joined execution and propagation semantics remain deferred behind a future service contract.
+The existing source, workspace, upload, Data Hub, and global-state compatibility paths remain unchanged. `relationship_ids` stays empty for one-source consumers. Decision Chat and `/api/nlp/chart` read the relationship table only when an explicit multi-source `analysis_context` is supplied or retained in verified Decision Chat session state.

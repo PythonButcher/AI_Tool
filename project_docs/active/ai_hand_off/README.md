@@ -10,9 +10,7 @@ Antigravity owns bounded frontend implementation, React/CSS, UI rendering, and f
 
 ## Active Handoffs And Goal Prompts
 
-No active Antigravity handoff.
-
-Codex owns the safe multi-source analytics backend gate. Frontend delivery remains inactive until the execution, lineage, and compatibility contracts are implemented and verified.
+Antigravity owns `project_docs/active/ai_hand_off/antigravity_source_model_canvas_goal.md` as the single active bounded frontend handoff.
 
 The current project gate is `project_docs/active/active_gate/README.md`. Current status is recorded in `project_docs/active/status/project_execution_status.md`.
 

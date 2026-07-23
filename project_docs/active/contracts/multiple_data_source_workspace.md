@@ -2,7 +2,7 @@
 
 ## Status
 
-Verified backend contract for durable upload sources and one-source workspace context. Relationship persistence, relationship inference, joined execution, and multi-source AI Chat behavior are not part of this contract state.
+Verified backend contract for durable upload sources, workspace context, and identity-only multi-source analysis requests. Joined execution is permitted only through the separately governed relationship execution boundary described below.
 
 ## Contract Version
 
@@ -67,7 +67,9 @@ A source may belong to several workspaces. An alias must be unique inside its wo
 | `workspace_version` | Version used to reject stale requests |
 | `primary_source_id` | Default analytical grain |
 | `source_ids` | Ordered selected source IDs |
-| `relationship_ids` | Empty in the active gate; populated only by verified relationship work |
+| `relationship_ids` | Ordered, explicit relationship IDs selected for this analysis. Empty for one-source analysis. |
+
+The execution boundary re-resolves this object only from `workspace_id`, the exact current `workspace_version`, `primary_source_id`, ordered `source_ids`, and ordered `relationship_ids`. Caller-provided rows, aliases, relationship definitions, fingerprints, or lineage are never treated as execution truth. The workspace primary source must be selected and must match persisted workspace truth.
 
 ## Active Upload Response
 
@@ -87,6 +89,10 @@ Workspace creation, membership mutation, aliases conflicts, stale-version writes
 
 `datahub_datasets` remains canonical and carries `source_kind`, `locator_kind`, private `locator_json`, `content_fingerprint`, `schema_version`, `created_at`, and `updated_at`. `data_workspaces` persists workspace identity, version, and primary source. `workspace_sources` persists composite membership, workspace-unique alias, role, optional position, and added timestamp. Upload registration writes all three records in one SQLite transaction after managed-file creation; a database failure removes the newly created managed file.
 
+## Verified Analysis Resolution
+
+One selected source with no relationships resolves through the existing source dataframe and semantic model without namespacing its fields. Two or more selected sources require an explicit active relationship tree. Successful multi-source resolution returns the canonical `analysis_context`, a namespaced dataframe/model bundle for backend consumers, a conservative multi-source governance rollup, and `analysis_lineage` using `multi_source_analysis_lineage_v1`.
+
 ## Compatibility Boundary
 
-Requests containing only `dataset` or `dataset_ref` continue to resolve as one-source analysis. `backend/utils/global_state.py` may mirror the active one-source context for existing callers, but durable source, workspace, and membership records are authoritative. No multi-source relationship or joined result may be inferred from global state.
+Requests containing only `dataset` or `dataset_ref` continue to resolve as one-source analysis. One-source `analysis_context` requests preserve original field names, the source semantic model, and the standard governance response. `backend/utils/global_state.py` may mirror the active one-source context for existing callers, but durable source, workspace, and membership records are authoritative. No multi-source relationship or joined result may be inferred from global state.

@@ -32,6 +32,17 @@ def _error_payload(code: str, message: str):
 
 def _governance_for_payload(payload, operation):
     """Evaluate only when this decision request actually carries a dataset."""
+    multi_source_readiness = (
+        payload.get('_multi_source_governance_readiness')
+        if isinstance(payload, dict)
+        else None
+    )
+    if isinstance(multi_source_readiness, dict):
+        if is_blocked(multi_source_readiness):
+            return multi_source_readiness, (
+                jsonify(governance_error_payload(multi_source_readiness)), 422
+            )
+        return multi_source_readiness, None
     if not isinstance(payload, dict) or (payload.get('dataset') is None and not (payload.get('dataset_ref') or payload.get('datasetRef'))):
         return None, None
     try:
