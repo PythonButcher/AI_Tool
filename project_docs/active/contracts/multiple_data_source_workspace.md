@@ -83,7 +83,7 @@ The server generates the source ID, workspace ID, managed storage locator, times
 
 The read endpoints return structured `{ error: { code, message } }` responses. Missing workspaces and sources use HTTP 404 with `workspace_not_found` or `source_not_found`. Cross-workspace selection uses HTTP 409 with `source_not_in_workspace`. Missing managed file storage uses HTTP 409 with `managed_source_unavailable` and does not expose the private path.
 
-Workspace creation, membership mutation, aliases conflicts, stale-version writes, and relationship routes remain outside the verified surface.
+Workspace creation, membership mutation, alias conflicts, and direct workspace stale-version writes remain outside this contract's verified surface. Relationship persistence, validation, activation, and workspace-version effects are verified separately in `project_docs/active/contracts/multiple_data_source_relationships.md`.
 
 ## Persistence
 

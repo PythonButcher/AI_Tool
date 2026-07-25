@@ -81,9 +81,24 @@
 .field-row {
   display: flex;
   justify-content: space-between;
-  padding: 4px;
+  padding: 4px 12px;
   font-size: 12px;
   border-bottom: 1px solid var(--border-light, #f1f3f5);
+  position: relative;
+}
+
+.field-handle {
+  width: 8px !important;
+  height: 8px !important;
+  border-radius: 50% !important;
+  background-color: #adb5bd !important;
+  border: 1px solid #fff !important;
+  transition: background-color 0.2s ease;
+}
+
+.field-handle:hover, .field-handle.react-flow__handle-connecting {
+  background-color: #0d6efd !important;
+  transform: scale(1.2);
 }
 
 .field-row:last-child {
