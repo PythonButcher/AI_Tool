@@ -39,8 +39,6 @@ AI Chat is a BI-first NLP workspace. Existing grounded answers, semantic-model r
 
 Decision Intelligence output has been removed from the AI Chat product path. Isolated backend services remain for compatibility only and must not be treated as active UI scope.
 
-The old standalone Phase 4 Canonical Active Dataset handoff is superseded. Dataset truth remains required, but it should be implemented as Dataset Trust inside the unified AI Chat decision output flow.
-
 ## Ownership
 
 | Agent | Owns |

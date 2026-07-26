@@ -4,6 +4,8 @@
 **Author:** Antigravity — full source audit including backend routes, frontend wiring, and component-level data flow  
 **Scope:** Everything touching AI Chat and Decision Intelligence. This audit goes past the UI surface into actual functional gaps: routes that have no frontend caller, backend capabilities with no UI hook, components that receive no data, and placeholder sections the user sees that cannot do anything.
 
+**Status:** Archived supporting analysis. Its combined execution plan was superseded by the BI-first AI Chat direction.
+
 ---
 
 ## What Was Audited (With Line Counts)

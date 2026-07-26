@@ -29,7 +29,7 @@ Dataset identity and semantic truth remain required for every BI answer and char
 | Status | `project_docs/active/status/` | Keep short; archive long history |
 | Current status | `project_docs/active/status/project_execution_status.md` | Single current source of truth |
 | Completed rollout history | `project_docs/archive/ai_chat_decision_output_unification_rollout_completed.md` | Historical reference only; do not use as the current plan |
-| Completed plans | `project_docs/active/ai_chat/completed/` | Reference only |
+| Completed AI Chat milestones | `project_docs/archive/ai_chat_completed_milestones/` | Historical reference only |
 | Contracts | `project_docs/active/contracts/` | Backend/frontend payload truth |
 | Dashboard canvas state contract | `project_docs/active/contracts/dashboard_canvas_state.md` | Local-first dashboard canvas, layout, and sharing skeleton state |
 | Dataset governance contract | `project_docs/active/contracts/data_catalog_lineage.md` | Readiness policy and enforcement truth |
@@ -81,7 +81,7 @@ Before starting, handing off, or closing a numbered phase, run `python .codex/ho
 
 ## Browser Acceptance Control
 
-The user exclusively controls browser-level acceptance. Codex must not launch, navigate, automate, upload through, export from, or claim browser verification unless the user explicitly requests that specific browser action. Codex provides implementation, backend/API verification, build results, static review, and a concise manual browser checklist; the user performs and accepts visible browser behavior.
+The user exclusively controls browser-level acceptance. Codex must not launch, navigate, automate, upload through, export from, or claim browser verification unless the user explicitly requests that specific browser action. Any browser checklist or acceptance discussion stays in chat. Never create, update, retain, or link a project goal, handoff, checklist, prompt, or other file for user browser acceptance.
 
 ## Status File Discipline
 

@@ -44,6 +44,8 @@ Codex leads the overall AI Tool and the AI Chat work. Antigravity executes UI wo
 
 At the end of substantial work, Codex must state the project gate clearly: whether the backend API is complete, blocked, ready for an Antigravity UI handoff, awaiting Codex review, or awaiting user browser acceptance. Codex must not make the user infer who acts next.
 
+User browser acceptance is coordinated only in chat. Never create, update, retain, or link a project goal, handoff, checklist, prompt, or other file for user browser acceptance.
+
 If a phase has backend and frontend parts, backend verification alone is not enough to call the phase complete. Say `backend complete; Antigravity implementation or frontend verification still required` unless frontend behavior has also been verified or the active docs define the slice as backend-only.
 
 Before writing a frontend-agent handoff, Codex must first confirm there is a real frontend gap from source review, browser verification, or explicit user direction. Do not send speculative frontend work.

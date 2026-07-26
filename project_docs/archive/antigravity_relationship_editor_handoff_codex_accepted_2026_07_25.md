@@ -1,4 +1,20 @@
+# COMPLETED FRONTEND HANDOFF
+
+Codex source and contract review accepted this implementation on 2026-07-25.
+
 Goal: Add safe relationship creation and editing to the existing Data Model canvas through the verified workspace-isolated relationship API.
+
+# REPAIR REQUIRED
+
+## Repair Blockers
+
+The successful relationship upsert is accepted. The winning `fetchWorkspaceData()` request still resolves without returning the selected authoritative relationship, so `RelationshipInspector.jsx` awaits only network completion and continues to rely on a later effect to copy `relationship.version` into local mutation state. Return the selected reconciled relationship from the winning or chained request and apply its `version` and server trust fields in the inspector before mutation controls are enabled. A superseded request may chain to the winning promise, but that promise must resolve with the authoritative record actually applied, not `undefined`.
+
+Unmount cleanup aborts the request but does not invalidate `fetchIdRef`, so the aborted current request still satisfies the `finally` equality check and calls `setLoading(false)` after unmount. Invalidate the request generation before aborting, or use an equivalent mounted guard, so no unmounted canvas receives late state.
+
+`handleSaveAndRefresh` still catches and discards refresh failure. Because the canvas renders its fetch error only when `sources.length === 0`, this failure is invisible when a model is already loaded. Do not swallow the error: keep the successful returned relationship rendered, but surface the failed broader reconciliation as a non-destructive actionable error.
+
+The duplicate-field guard, immediate successful relationship upsert, authoritative diagnostics on successful mutations, `version` and `validated_at` display, working-copy whitespace repair, and authorized `project_docs/active/ai_hand_off/README.md` update are accepted. Ensure the resulting committed repair also passes `git show --check HEAD`; reporting known failures from the prior commit is not final pass evidence.
 
 ## Target
 
@@ -26,4 +42,4 @@ Creative latitude includes inspector composition, field-handle treatment, respon
 
 Acceptance requires a user to draft a relationship from exact live source fields, add or remove composite key pairs, cancel without mutation, create an inactive server-backed relationship, edit it with optimistic versioning, validate it, and explicitly activate or deactivate it. The canvas must immediately reflect each returned server record. After an activation or version failure, the next user action must use reconciled server truth without losing the recoverable form draft or entering a stale-version retry loop. Invalid, blocked, stale, suggested, inactive, unconfirmed, and many-to-many relationships must never appear executable. Error and diagnostic states must be visible, accessible, and preserve recoverable form input. Existing upload, Workspace, Explore, Dashboards, AI, Data Hub, and read-only Data Model behavior must remain intact.
 
-Run `python .codex/hooks/agent_harness_check.py`, `git diff --check`, and `npm --prefix frontend\frontend run build`. Return the exact changed files and verification output to Codex, then stop. Do not claim browser acceptance and do not start AI Chat or active-model integration.
+Run `python .codex/hooks/agent_harness_check.py`, `git diff --check`, `git show --check HEAD`, and `npm --prefix frontend\frontend run build`. Return the exact changed files and exact pass/fail output for every command to Codex, then stop. Do not claim browser acceptance and do not start AI Chat or active-model integration.

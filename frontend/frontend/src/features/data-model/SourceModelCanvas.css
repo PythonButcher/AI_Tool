@@ -149,3 +149,19 @@
   pointer-events: none;
   z-index: 5;
 }
+.canvas-floating-error {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #dc3545;
+  color: white;
+  padding: 8px 16px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4);
+  font-size: 14px;
+  font-weight: 500;
+  z-index: 10;
+  max-width: 80%;
+  text-align: center;
+}

@@ -1,3 +1,5 @@
+> COMPLETED REFERENCE: This discovery proposal was promoted into the active multiple-data-sources roadmap. Do not execute it as a current plan.
+
 # Multiple Data Sources Proposal — Promoted Reference
 
 The user promoted this proposal into active implementation planning on 2026-07-21.

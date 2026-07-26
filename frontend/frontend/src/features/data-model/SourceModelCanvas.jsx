@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { ReactFlow, Controls, Background, MarkerType, Handle, Position, ConnectionMode } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import './SourceModelCanvas.css';
@@ -36,37 +36,49 @@ const SourceModelCanvas = ({ workspaceId }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const [refreshCounter, setRefreshCounter] = useState(0);
   const [draftRelationship, setDraftRelationship] = useState(null);
   const [selectedRelationship, setSelectedRelationship] = useState(null);
-
-  const handleRefresh = useCallback(() => {
-    setRefreshCounter(c => c + 1);
-  }, []);
+  const fetchIdRef = useRef(0);
+  const abortControllerRef = useRef(null);
+  const fetchPromiseRef = useRef(null);
 
   const handleSave = useCallback((updatedRel) => {
     setDraftRelationship(null);
     setSelectedRelationship(updatedRel);
-    handleRefresh();
-  }, [handleRefresh]);
+    setRelationships(prev => {
+      const idx = prev.findIndex(r => r.relationship_id === updatedRel.relationship_id);
+      if (idx !== -1) {
+        const next = [...prev];
+        next[idx] = updatedRel;
+        return next;
+      }
+      return [...prev, updatedRel];
+    });
+  }, []);
 
   const handleCancel = useCallback(() => {
     setDraftRelationship(null);
     setSelectedRelationship(null);
   }, []);
 
-  useEffect(() => {
-    if (!workspaceId) {
-      return;
+  const fetchWorkspaceData = useCallback(() => {
+    if (!workspaceId) return Promise.resolve();
+
+    const currentFetchId = ++fetchIdRef.current;
+
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
     }
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+    const signal = abortController.signal;
 
-    let isMounted = true;
-    const fetchWorkspaceData = async () => {
-      setLoading(true);
-      setError(null);
+    setLoading(true);
+    setError(null);
 
+    const doFetch = async () => {
       try {
-        const wsRes = await fetch(`${API_URL}/api/data-workspaces/${workspaceId}`);
+          const wsRes = await fetch(`${API_URL}/api/data-workspaces/${workspaceId}`, { signal });
         const wsData = await wsRes.json();
         if (!wsRes.ok) throw new Error(wsData.error?.message || wsData.error || 'Failed to fetch workspace');
 
@@ -75,7 +87,7 @@ const SourceModelCanvas = ({ workspaceId }) => {
         let fullSources = [];
         if (workspaceSources.length > 0) {
           const sourceParams = workspaceSources.map(s => `source_id=${s.source_id}`).join('&');
-          const acRes = await fetch(`${API_URL}/api/data-workspaces/${workspaceId}/analysis-context?${sourceParams}`);
+          const acRes = await fetch(`${API_URL}/api/data-workspaces/${workspaceId}/analysis-context?${sourceParams}`, { signal });
           const acData = await acRes.json();
           if (!acRes.ok) {
             if (acData.error?.code === 'managed_source_unavailable') {
@@ -91,35 +103,68 @@ const SourceModelCanvas = ({ workspaceId }) => {
           return { ...detail, ...wsSrc };
         });
 
-        const relRes = await fetch(`${API_URL}/api/data-workspaces/${workspaceId}/relationships`);
+        const relRes = await fetch(`${API_URL}/api/data-workspaces/${workspaceId}/relationships`, { signal });
         const relData = await relRes.json();
         if (!relRes.ok) {
            throw new Error(relData.error?.message || 'Failed to fetch relationships');
         }
         const fetchedRelationships = relData.relationships || [];
 
-        if (isMounted) {
-          setSources(mergedSources);
-          setRelationships(fetchedRelationships);
+        if (currentFetchId !== fetchIdRef.current) return fetchPromiseRef.current;
 
-          // Reconcile selection if it exists (e.g. after validation or activation)
-          setSelectedRelationship(current => {
-             if (current) {
-                return fetchedRelationships.find(r => r.relationship_id === current.relationship_id) || null;
-             }
-             return current;
-          });
-        }
+        setSources(mergedSources);
+        setRelationships(fetchedRelationships);
+
+        // Reconcile selection if it exists (e.g. after validation or activation)
+        setSelectedRelationship(current => {
+           if (current) {
+              return fetchedRelationships.find(r => r.relationship_id === current.relationship_id) || null;
+           }
+           return current;
+        });
+
+        return fetchedRelationships;
       } catch (err) {
-        if (isMounted) setError(err);
+        if (err.name === 'AbortError') {
+           if (currentFetchId !== fetchIdRef.current) return fetchPromiseRef.current;
+           throw err;
+        }
+        if (currentFetchId !== fetchIdRef.current) return fetchPromiseRef.current;
+        setError(err);
+        throw err;
       } finally {
-        if (isMounted) setLoading(false);
+        if (currentFetchId === fetchIdRef.current) setLoading(false);
       }
     };
 
-    fetchWorkspaceData();
-    return () => { isMounted = false; };
-  }, [workspaceId, refreshCounter]);
+    const promise = doFetch();
+    fetchPromiseRef.current = promise;
+    return promise;
+  }, [workspaceId]);
+
+  useEffect(() => {
+    fetchWorkspaceData().catch(() => {});
+    return () => {
+      fetchIdRef.current = -1;
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, [fetchWorkspaceData]);
+
+  const handleRefresh = useCallback(async (relId) => {
+    const rels = await fetchWorkspaceData();
+    if (rels && relId) {
+      return rels.find(r => r.relationship_id === relId);
+    }
+    return rels;
+  }, [fetchWorkspaceData]);
+
+  // Wrap handleSave to also refresh after updating selection
+  const handleSaveAndRefresh = useCallback(async (updatedRel) => {
+    handleSave(updatedRel);
+    await handleRefresh().catch(() => {});
+  }, [handleSave, handleRefresh]);
 
   const onConnect = useCallback((params) => {
     if (params.source === params.target) return;
@@ -249,6 +294,12 @@ const SourceModelCanvas = ({ workspaceId }) => {
         <Controls showInteractive={false} />
       </ReactFlow>
 
+      {error && sources.length > 0 && (
+        <div className="canvas-floating-error" role="alert" aria-live="assertive">
+          {error.message}
+        </div>
+      )}
+
       {relationships.length === 0 && !draftRelationship && (
         <div className="no-relationships-overlay" role="status" aria-live="polite">
           No relationships defined. Connect fields between sources to draft one.
@@ -260,7 +311,7 @@ const SourceModelCanvas = ({ workspaceId }) => {
           workspaceId={workspaceId}
           relationship={activeRelationship}
           sources={sources}
-          onSave={handleSave}
+          onSave={handleSaveAndRefresh}
           onCancel={handleCancel}
           onRefresh={handleRefresh}
         />

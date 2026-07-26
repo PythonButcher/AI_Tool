@@ -4,7 +4,7 @@
 **Author:** Antigravity (full codebase audit)  
 **Scope:** Everything visible through AI Chat related to Decision Intelligence, charting, and the Command Center. Backend-only hidden contracts are out of scope here. This plan is about making what exists actually usable.
 
-**Status:** Deferred UI audit retained as supporting analysis. Current execution truth lives in `project_docs/active/decision_intelligence/active_gate/`.
+**Status:** Archived supporting analysis. Its combined execution plan was superseded by the BI-first AI Chat direction.
 
 ---
 

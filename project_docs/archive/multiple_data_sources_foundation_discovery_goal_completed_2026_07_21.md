@@ -1,4 +1,4 @@
-> DEFERRED: This goal is retained for future reference only. Do not execute it unless the active status file promotes the accompanying discovery plan.
+> COMPLETED REFERENCE: This discovery goal produced the active multiple-data-sources roadmap. Do not execute it.
 
 Goal: Define a source-backed, bounded backend implementation plan for multiple data sources in one analytical workspace.
 

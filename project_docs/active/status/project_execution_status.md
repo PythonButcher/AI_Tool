@@ -9,15 +9,14 @@ This file is the single current source of truth for active AI_Tool delivery.
 - **UI Delivery Owner**: Antigravity, only from one active bounded handoff
 - **Browser Acceptance Owner**: User
 
-## Current Gate: Slice 5 — Relationship Creation and Editing
+## Current Gate: Phase 5 / Slice 5 — Workspace Membership API
 
-- **Status**: Ready for bounded frontend implementation
-- **Backend Readiness**: `backend_contract_ready`
-- **Current Owner**: Antigravity
-- **Next Action**: Execute `project_docs/active/ai_hand_off/antigravity_relationship_editor_goal.md`
+- **Status**: Ready for backend implementation
+- **Backend Readiness**: `backend_not_ready`
+- **Current Owner**: Codex
+- **Next Action**: Execute `project_docs/active/active_gate/codex_workspace_membership_api_goal.md`
 - **Roadmap**: `project_docs/active/data_sources/multiple_data_sources_implementation_plan.md`
-- **Antigravity Handoff**: `project_docs/active/ai_hand_off/antigravity_relationship_editor_goal.md`
 
 ## Control Return
 
-Antigravity implements only the relationship-management behavior in the active handoff, then stops and returns changed-file and build evidence to Codex. Codex performs a targeted source and contract review before any broader workspace-to-AI-Chat handoff.
+Codex implements and verifies the workspace membership API, then performs the backend source and test review. No frontend handoff is active until the backend contract is accepted.
