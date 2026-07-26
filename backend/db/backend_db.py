@@ -9,6 +9,9 @@ _SCHEMA_READY = False
 
 
 def _ensure_schema(conn):
+    # Foreign-key enforcement is connection-local in SQLite. Enabling it here
+    # protects workspace membership without changing callers of this module.
+    conn.execute('PRAGMA foreign_keys = ON')
     conn.execute(
         '''
         CREATE TABLE IF NOT EXISTS datahub_datasets (
@@ -37,6 +40,105 @@ def _ensure_schema(conn):
         conn.execute('ALTER TABLE datahub_datasets ADD COLUMN governance_policy_json TEXT')
     if 'governance_readiness_json' not in existing_columns:
         conn.execute('ALTER TABLE datahub_datasets ADD COLUMN governance_readiness_json TEXT')
+    source_columns = {
+        'source_kind': "TEXT NOT NULL DEFAULT 'catalog'",
+        'locator_kind': "TEXT NOT NULL DEFAULT 'legacy_path'",
+        'locator_json': 'TEXT',
+        'content_fingerprint': 'TEXT',
+        'schema_version': 'INTEGER NOT NULL DEFAULT 1',
+        'created_at': 'TEXT',
+        'updated_at': 'TEXT',
+    }
+    for column_name, column_definition in source_columns.items():
+        if column_name not in existing_columns:
+            conn.execute(
+                f'ALTER TABLE datahub_datasets ADD COLUMN {column_name} {column_definition}'
+            )
+
+    conn.execute(
+        '''
+        CREATE TABLE IF NOT EXISTS data_workspaces (
+            workspace_id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            version INTEGER NOT NULL DEFAULT 1,
+            primary_source_id TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            FOREIGN KEY (primary_source_id) REFERENCES datahub_datasets(id) ON DELETE SET NULL
+        )
+        '''
+    )
+    conn.execute(
+        '''
+        CREATE TABLE IF NOT EXISTS workspace_sources (
+            workspace_id TEXT NOT NULL,
+            source_id TEXT NOT NULL,
+            alias TEXT NOT NULL,
+            role TEXT NOT NULL CHECK (role IN ('primary', 'lookup', 'context')),
+            position_json TEXT,
+            added_at TEXT NOT NULL,
+            PRIMARY KEY (workspace_id, source_id),
+            UNIQUE (workspace_id, alias),
+            FOREIGN KEY (workspace_id) REFERENCES data_workspaces(workspace_id) ON DELETE CASCADE,
+            FOREIGN KEY (source_id) REFERENCES datahub_datasets(id) ON DELETE CASCADE
+        )
+        '''
+    )
+    conn.execute(
+        '''
+        CREATE INDEX IF NOT EXISTS idx_workspace_sources_source_id
+        ON workspace_sources (source_id)
+        '''
+    )
+    conn.execute(
+        '''
+        CREATE TABLE IF NOT EXISTS workspace_relationships (
+            relationship_id TEXT PRIMARY KEY,
+            workspace_id TEXT NOT NULL,
+            left_source_id TEXT NOT NULL,
+            right_source_id TEXT NOT NULL,
+            field_pairs_json TEXT NOT NULL,
+            cardinality TEXT NOT NULL CHECK (
+                cardinality IN ('one_to_one', 'one_to_many', 'many_to_one', 'many_to_many')
+            ),
+            join_behavior TEXT NOT NULL CHECK (
+                join_behavior IN ('inner', 'left', 'right', 'full')
+            ),
+            filter_direction TEXT NOT NULL CHECK (
+                filter_direction IN ('none', 'left_to_right', 'right_to_left', 'both')
+            ),
+            is_active INTEGER NOT NULL DEFAULT 0 CHECK (is_active IN (0, 1)),
+            is_suggested INTEGER NOT NULL DEFAULT 0 CHECK (is_suggested IN (0, 1)),
+            is_confirmed INTEGER NOT NULL DEFAULT 0 CHECK (is_confirmed IN (0, 1)),
+            validation_state TEXT NOT NULL CHECK (
+                validation_state IN ('unvalidated', 'valid', 'invalid', 'stale', 'blocked')
+            ),
+            diagnostics_json TEXT NOT NULL DEFAULT '[]',
+            source_fingerprints_json TEXT NOT NULL DEFAULT '{}',
+            version INTEGER NOT NULL DEFAULT 1,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            validated_at TEXT,
+            FOREIGN KEY (workspace_id) REFERENCES data_workspaces(workspace_id) ON DELETE CASCADE,
+            FOREIGN KEY (left_source_id) REFERENCES datahub_datasets(id) ON DELETE CASCADE,
+            FOREIGN KEY (right_source_id) REFERENCES datahub_datasets(id) ON DELETE CASCADE,
+            CHECK (left_source_id <> right_source_id),
+            CHECK (is_active = 0 OR (is_confirmed = 1 AND validation_state = 'valid'))
+        )
+        '''
+    )
+    conn.execute(
+        '''
+        CREATE INDEX IF NOT EXISTS idx_workspace_relationships_workspace
+        ON workspace_relationships (workspace_id, created_at, relationship_id)
+        '''
+    )
+    conn.execute(
+        '''
+        CREATE INDEX IF NOT EXISTS idx_workspace_relationships_sources
+        ON workspace_relationships (left_source_id, right_source_id)
+        '''
+    )
 
     conn.execute(
         '''
@@ -75,6 +177,7 @@ def get_db_connection():
 
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
+    conn.execute('PRAGMA foreign_keys = ON')
 
     if not _SCHEMA_READY:
         with _SCHEMA_LOCK:

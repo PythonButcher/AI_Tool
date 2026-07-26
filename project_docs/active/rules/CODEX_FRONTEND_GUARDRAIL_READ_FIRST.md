@@ -15,7 +15,7 @@ For the UI overhaul and AI Chat BI pivot:
 Before changing anything under `frontend/frontend/src/`:
 
 1. re-read this file
-2. re-read `project_docs/active/status/ai_chat_execution_status.md`
+2. re-read `project_docs/active/status/project_execution_status.md`
 3. confirm the user explicitly asked Codex to make frontend changes in the current session
 
 If that explicit permission is missing:

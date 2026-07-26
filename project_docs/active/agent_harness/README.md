@@ -1,6 +1,6 @@
 # Agent Harness
 
-This folder is the repo-local backbone for agent work. It is not a new product area and it does not replace `AGENTS.md`, `GEMINI.md`, or the active Decision Intelligence docs.
+This folder is the repo-local backbone for agent work. It is not a new product area and it does not replace `AGENTS.md`, `GEMINI.md`, or the project-wide active gate.
 
 Use this folder when the task is about making agents safer, faster, easier to resume, or easier to verify across future projects.
 
@@ -10,7 +10,7 @@ Use this folder when the task is about making agents safer, faster, easier to re
 | --- | --- | --- |
 | Entry instructions | `AGENTS.md` | First project rules for Codex and other OpenAI agents |
 | Active routing | `project_docs/INDEX.md` and `project_docs/active/README.md` | Smallest-doc-first navigation |
-| Active gate | `project_docs/active/ai_chat/active_gate/README.md` | Single current AI Chat slice workspace |
+| Active gate | `project_docs/active/active_gate/README.md` | Single current project slice workspace |
 | Codex run discipline | `project_docs/active/codex_harness_engineering.md` | Context, tool-output, and verification budget rules |
 | Agent harness design | `project_docs/active/agent_harness/harness_blueprint.md` | Reusable harness pattern for this and future repos |
 | Hook guidance | `project_docs/active/agent_harness/hooks.md` | Hook-ready checks and installation notes |
@@ -20,7 +20,7 @@ Use this folder when the task is about making agents safer, faster, easier to re
 
 Harness changes must make existing rules easier to follow. They must not weaken ownership boundaries, skip active Markdown review, edit any `GEMINI.md` file, or add broad automation that silently changes source files.
 
-For Decision Intelligence, harness changes must preserve the active-gate model: one active phase folder, completed work under `completed/`, deferred ideas in the shared `project_docs/active/future/` hub, old history under `archive/`, and frontend-agent prompts under `ai_hand_off/` only when a frontend agent is truly next.
+Harness changes must preserve the project-wide active-gate model: one active phase folder directly under `project_docs/active/`, completed work outside that folder, deferred ideas in the shared `project_docs/active/future/` hub, old history under `archive/`, and frontend-agent prompts under `ai_hand_off/` only when a frontend agent is truly next.
 
 ## When To Use This Folder
 
@@ -47,5 +47,11 @@ Current future plan:
 Run the repo-local harness check before calling harness work complete:
 
 `python .codex/hooks/agent_harness_check.py`
+
+For active-gate changes, also run:
+
+`python C:/Users/18022/.codex/skills/active-gate-governance/scripts/check_active_gate.py project_docs/active/active_gate .`
+
+These are the authoritative project checks. The installed generic project-doc audit still targets retired Decision Intelligence paths; do not recreate those paths or treat that external script as project truth.
 
 Also run `git diff --check` after Markdown or hook edits.

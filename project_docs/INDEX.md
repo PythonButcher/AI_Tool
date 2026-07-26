@@ -9,17 +9,20 @@ This is the top-level routing file. Use it to find the smallest current document
 | Order | File | Why |
 | --- | --- | --- |
 | 1 | `project_docs/active/README.md` | Active navigation and scan rules |
-| 2 | `project_docs/active/status/ai_chat_execution_status.md` | Short current truth |
+| 2 | `project_docs/active/status/project_execution_status.md` | Short current truth |
 | 3 | `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md` | Codex/Antigravity ownership |
 
 ## Current Work Map
 
 | Need | Read |
 | --- | --- |
-| Check concise current status | `project_docs/active/status/ai_chat_execution_status.md` |
-| Work on the current AI Chat gate | `project_docs/active/ai_chat/active_gate/README.md` |
+| Check concise current status | `project_docs/active/status/project_execution_status.md` |
+| Work on the current project gate | `project_docs/active/active_gate/README.md` |
+| Review the multiple data sources roadmap | `project_docs/active/data_sources/multiple_data_sources_implementation_plan.md` |
 | Review completed AI Chat rollout history | `project_docs/archive/ai_chat_decision_output_unification_rollout_completed.md` only when historical context is needed |
 | Work on backend/frontend contracts | `project_docs/active/contracts/decision_objects.md` |
+| Work on multiple-source workspace contracts | `project_docs/active/contracts/multiple_data_source_workspace.md` |
+| Work on governed source relationships | `project_docs/active/contracts/multiple_data_source_relationships.md` |
 | Work on dashboard canvas local state | `project_docs/active/contracts/dashboard_canvas_state.md` |
 | Work on dataset governance and lineage | `project_docs/active/contracts/data_catalog_lineage.md` |
 | Prepare or review frontend-agent handoffs | `project_docs/active/ai_hand_off/README.md` |
@@ -35,8 +38,6 @@ This is the top-level routing file. Use it to find the smallest current document
 AI Chat is a BI-first NLP workspace. Existing grounded answers, semantic-model reasoning, tables, charts, conversational exploration, artifact inspection, and BI exports must remain.
 
 Decision Intelligence output has been removed from the AI Chat product path. Isolated backend services remain for compatibility only and must not be treated as active UI scope.
-
-The old standalone Phase 4 Canonical Active Dataset handoff is superseded. Dataset truth remains required, but it should be implemented as Dataset Trust inside the unified AI Chat decision output flow.
 
 ## Ownership
 

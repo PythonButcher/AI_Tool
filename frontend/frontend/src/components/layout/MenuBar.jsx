@@ -38,6 +38,7 @@ import { ThemeContext } from '../../context/ThemeContext';
 
 const DESTINATIONS = {
   WORKSPACE: 'workspace',
+  DATA_MODEL: 'data_model',
   EXPLORE: 'explore',
   DASHBOARDS: 'dashboards',
   AI: 'ai',

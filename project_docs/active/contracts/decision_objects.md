@@ -28,6 +28,7 @@ All timestamps use ISO-8601 UTC strings. Optional fields may be `null`. All obje
 | `filters` | `object[]` | Yes | At most eight normalized resolver filters with `field`, `operator`, `value`, and `values`. |
 | `time_period` | `object \| null` | Yes | Normalized `field`, `start`, and `end` derived from temporal filters. |
 | `output_type` | `string \| null` | Yes | `answer` or `chart` on artifact grounding; may be `null` only when a non-result response has top-level dataset context. |
+| `analysis_lineage` | `Multi-Source Analysis Lineage` | Multi-source only | Exact source, relationship, field-origin, join-order, unmatched-key, and fanout evidence for the joined result. |
 
 Freshness and cleaning remain conservative. Unknown backend evidence stays `unknown`; the service does not convert missing metadata into a positive trust claim. `row_count` and `source_row_count` distinguish the filtered evidence basis from the source dataset size.
 
@@ -45,7 +46,22 @@ A client can send `analytics_refinement` on a later turn to apply a structured f
 
 Successful analytical responses return `analytics_refinement` with `schema_version: "ai_chat_analytics_refinement_v1"`, the normalized `applied` operation or `null`, compact `current_state`, and `payload_expectations`. `current_state` contains metric identity, aggregation, up to four grouping fields, up to eight filters, normalized time period, and output preference. It never contains dataset rows, chart data, or conversation transcripts.
 
-The same compact state is stored under `session_state.analytics_state` and `session_state.last_analytic_context` with `schema_version: "ai_chat_analytics_state_v1"`. The enclosing session uses `schema_version: "ai_chat_bi_session_state_v1"`; `session_state.dataset_context` retains only canonical identity, counts, and a deterministic fingerprint.
+The same compact state is stored under `session_state.analytics_state` and `session_state.last_analytic_context` with `schema_version: "ai_chat_analytics_state_v1"`. The enclosing session uses `schema_version: "ai_chat_bi_session_state_v1"`; `session_state.dataset_context` retains only canonical identity, counts, a deterministic fingerprint, and, for multi-source results, the identity-only canonical `analysis_context` plus aggregate-only `analysis_lineage`. Raw rows are never stored. A later refinement re-resolves the retained IDs and current versions before execution.
+
+### Multi-Source Analysis Lineage
+
+Successful multi-source turns return top-level `analysis_context` and `analysis_lineage`. Every `answer`, `table`, or `chart` artifact also carries the same `analysis_lineage`, and its `bi_grounding.analysis_lineage` matches. The schema version is `multi_source_analysis_lineage_v1`.
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `workspace_id`, `workspace_version`, `primary_source_id` | identity fields | Yes | Exact persisted workspace boundary used for execution. |
+| `source_ids`, `relationship_ids` | `string[]` | Yes | Ordered explicit selection. |
+| `sources` | `object[]` | Yes | Source ID, alias, name, current content fingerprint, and schema version. |
+| `relationships` | `object[]` | Yes | Relationship ID and version, endpoints, composite field pairs, cardinality, join behavior, and validation fingerprints. |
+| `field_origins` | `object` | Yes | Namespaced output field to source ID, alias, and original source field. |
+| `join_order` | `object[]` | Yes | Deterministic steps with endpoint direction, namespaced keys, input/output rows, fanout, and aggregate unmatched-key evidence. |
+| `observed_fanout` | `object` | Yes | Primary and result row counts, row-expansion ratio, maximum primary-row fanout, and hard row/ratio ceiling. |
+| `primary_grain` | `object` | Yes | Confirms that compilation was anchored at the persisted primary source. |
 
 ### Typed Suggested Actions
 

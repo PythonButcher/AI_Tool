@@ -20,8 +20,8 @@ REQUIRED_PATHS = (
     "GEMINI.md",
     "project_docs/INDEX.md",
     "project_docs/active/README.md",
-    "project_docs/active/status/ai_chat_execution_status.md",
-    "project_docs/active/ai_chat/active_gate/README.md",
+    "project_docs/active/status/project_execution_status.md",
+    "project_docs/active/active_gate/README.md",
     "project_docs/active/codex_harness_engineering.md",
     "project_docs/active/agent_harness/README.md",
     "project_docs/active/agent_harness/harness_blueprint.md",
@@ -84,11 +84,11 @@ def _check_project_doc_links(errors: list[str]) -> None:
         ROOT / "README.md",
         ROOT / "project_docs" / "INDEX.md",
         ROOT / "project_docs" / "active" / "README.md",
-        ROOT / "project_docs" / "active" / "status" / "ai_chat_execution_status.md",
+        ROOT / "project_docs" / "active" / "status" / "project_execution_status.md",
         ROOT / "project_docs" / "active" / "ai_hand_off" / "README.md",
         ROOT / "project_docs" / "active" / "codex_harness_engineering.md",
     ]
-    markdown_files.extend((ROOT / "project_docs" / "active" / "ai_chat" / "active_gate").rglob("*.md"))
+    markdown_files.extend((ROOT / "project_docs" / "active" / "active_gate").rglob("*.md"))
     markdown_files.extend((ROOT / "project_docs" / "active" / "agent_harness").rglob("*.md"))
     pattern = re.compile(r"`(project_docs/[^`]+?\.md)`")
     for md_path in markdown_files:
@@ -103,8 +103,8 @@ def _check_project_doc_links(errors: list[str]) -> None:
 
 def _check_active_doc_state(errors: list[str]) -> None:
     """Reject stale plans and unnumbered work, while allowing an explicit user-owned idle gate."""
-    status_path = ROOT / "project_docs" / "active" / "status" / "ai_chat_execution_status.md"
-    active_gate_dir = ROOT / "project_docs" / "active" / "ai_chat" / "active_gate"
+    status_path = ROOT / "project_docs" / "active" / "status" / "project_execution_status.md"
+    active_gate_dir = ROOT / "project_docs" / "active" / "active_gate"
     if not status_path.exists() or not active_gate_dir.exists():
         return
 
@@ -121,7 +121,35 @@ def _check_active_doc_state(errors: list[str]) -> None:
             and not re.search(r"\bSlice\s+\d+\b", gate_match.group(1), re.IGNORECASE)
         )
     ):
-        errors.append("Current AI Chat gate must name the active slice number.")
+        errors.append("Current project gate must name the active slice number.")
+
+    goal_files = sorted(path for path in active_gate_dir.glob("*.md") if path.name != "README.md")
+    if not awaiting_user_goal and len(goal_files) != 1:
+        errors.append(
+            "The active gate must contain exactly one executable goal file in addition to README.md."
+        )
+    for goal_path in goal_files:
+        if not goal_path.read_text(encoding="utf-8", errors="replace").lstrip().startswith("Goal:"):
+            errors.append(f"Active goal must start with 'Goal:': {goal_path.relative_to(ROOT)}")
+
+    current_owner_is_codex = bool(
+        re.search(r"- \*\*Current Owner\*\*:\s*Codex\b", status_text, re.IGNORECASE)
+    )
+    next_goal_match = re.search(
+        r"- \*\*Next Action\*\*:\s*Execute\s+`(project_docs/active/active_gate/[^`]+\.md)`",
+        status_text,
+        re.IGNORECASE,
+    )
+    if current_owner_is_codex and not next_goal_match:
+        errors.append(
+            "When Codex is current owner, Next Action must execute one goal file in project_docs/active/active_gate/."
+        )
+    if next_goal_match:
+        next_goal_path = ROOT / next_goal_match.group(1)
+        if not next_goal_path.exists():
+            errors.append(f"Next Action references a missing active goal: {next_goal_match.group(1)}")
+        elif goal_files and next_goal_path.resolve() not in {path.resolve() for path in goal_files}:
+            errors.append("Next Action does not reference the active gate's executable goal file.")
 
     complete = bool(re.search(r"- \*\*Status\*\*:\s*Complete", status_text, re.IGNORECASE))
     handoff_match = re.search(r"`(project_docs/active/ai_hand_off/[^`]+\.md)`", status_text)
@@ -137,10 +165,10 @@ def _check_active_doc_state(errors: list[str]) -> None:
         if text.startswith("> COMPLETED") or text.startswith("# Completed Reference"):
             errors.append(f"Completed reference remains in active gate: {path.relative_to(ROOT)}")
 
-    active_gate_reference = "project_docs/active/ai_chat/active_gate/README.md"
+    active_gate_reference = "project_docs/active/active_gate/README.md"
     index_text = (ROOT / "project_docs" / "INDEX.md").read_text(encoding="utf-8", errors="replace")
     if active_gate_reference not in index_text:
-        errors.append("Project index must point to the AI Chat active_gate README.")
+        errors.append("Project index must point to the project active_gate README.")
 
 
 def _check_critical_source_sizes(errors: list[str]) -> None:

@@ -411,3 +411,15 @@ def resolve_dataset_bundle(
             or "Active Dataset",
         },
     }
+
+
+def resolve_analysis_dataset_bundle(analysis_context: Any) -> Dict[str, Any]:
+    """Resolve a durable one- or multi-source analysis identity.
+
+    The import stays local because relationship execution reuses the existing
+    Data Hub loader above. This keeps the legacy dataset bundle path free of a
+    module-level dependency cycle.
+    """
+    from backend.services.relationship_execution import execute_analysis_context
+
+    return execute_analysis_context(analysis_context)

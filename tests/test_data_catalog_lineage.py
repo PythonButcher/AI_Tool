@@ -2,6 +2,8 @@
 
 import unittest
 from io import BytesIO
+from pathlib import Path
+from tempfile import TemporaryDirectory
 
 import pandas as pd
 from flask import Flask
@@ -11,6 +13,8 @@ from backend.routes.decision import decision_bp
 from backend.routes.export import export_bp
 from backend.routes.nlp_routes import nlp_bp
 from backend.routes.upload import upload_bp
+from backend.db import backend_db
+from backend.services import workspace_context
 from backend.services.data_catalog_lineage import evaluate_dataset_readiness
 from backend.utils.global_state import set_cleaned_data, set_governance_state
 
@@ -30,6 +34,14 @@ BAD_POLICY = {
 
 class DataCatalogLineageTests(unittest.TestCase):
     def setUp(self):
+        # Uploads are durable now, so every test gets an isolated catalog and
+        # server-managed storage root instead of mutating repository data.
+        self.temp_dir = TemporaryDirectory()
+        self.original_db_path = backend_db.DB_PATH
+        self.original_upload_root = workspace_context.MANAGED_UPLOAD_ROOT
+        backend_db.DB_PATH = str(Path(self.temp_dir.name) / "catalog.db")
+        backend_db._SCHEMA_READY = False
+        workspace_context.MANAGED_UPLOAD_ROOT = Path(self.temp_dir.name) / "managed"
         app = Flask(__name__)
         app.register_blueprint(nlp_bp)
         app.register_blueprint(decision_bp)
@@ -42,6 +54,10 @@ class DataCatalogLineageTests(unittest.TestCase):
         # Prevent shared in-memory dataframe state from leaking into other tests.
         set_cleaned_data(None)
         set_governance_state(None, None)
+        backend_db.DB_PATH = self.original_db_path
+        backend_db._SCHEMA_READY = False
+        workspace_context.MANAGED_UPLOAD_ROOT = self.original_upload_root
+        self.temp_dir.cleanup()
 
     def test_policy_reports_explainable_blocking_reasons(self):
         readiness = evaluate_dataset_readiness(pd.DataFrame(BAD_DATASET), BAD_POLICY, operation="test")
