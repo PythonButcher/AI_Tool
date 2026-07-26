@@ -8,7 +8,7 @@ This file is the active navigation hub. If this file conflicts with an archived 
 
 | Step | Read | Why |
 | --- | --- | --- |
-| 1 | `project_docs/active/status/ai_chat_execution_status.md` | Short current truth |
+| 1 | `project_docs/active/status/project_execution_status.md` | Short current truth |
 | 2 | `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md` | Ownership boundary |
 | 3 | `project_docs/active/contracts/decision_objects.md` | Contract reference when touching payloads |
 | 4 | `project_docs/active/codex_harness_engineering.md` | Run efficiency for substantial Codex work |
@@ -27,13 +27,16 @@ Dataset identity and semantic truth remain required for every BI answer and char
 | Area | Location | Rule |
 | --- | --- | --- |
 | Status | `project_docs/active/status/` | Keep short; archive long history |
-| Current status | `project_docs/active/status/ai_chat_execution_status.md` | Single current source of truth |
+| Current status | `project_docs/active/status/project_execution_status.md` | Single current source of truth |
 | Completed rollout history | `project_docs/archive/ai_chat_decision_output_unification_rollout_completed.md` | Historical reference only; do not use as the current plan |
-| Completed plans | `project_docs/active/ai_chat/completed/` | Reference only |
+| Completed AI Chat milestones | `project_docs/archive/ai_chat_completed_milestones/` | Historical reference only |
 | Contracts | `project_docs/active/contracts/` | Backend/frontend payload truth |
 | Dashboard canvas state contract | `project_docs/active/contracts/dashboard_canvas_state.md` | Local-first dashboard canvas, layout, and sharing skeleton state |
 | Dataset governance contract | `project_docs/active/contracts/data_catalog_lineage.md` | Readiness policy and enforcement truth |
-| AI Chat active gate | `project_docs/active/ai_chat/active_gate/README.md` | The only active phase workspace |
+| Multiple-source workspace contract | `project_docs/active/contracts/multiple_data_source_workspace.md` | Source, workspace membership, and analysis-context truth |
+| Multiple-source relationship contract | `project_docs/active/contracts/multiple_data_source_relationships.md` | Relationship persistence, validation, diagnostics, and activation truth |
+| Project active gate | `project_docs/active/active_gate/README.md` | The only active phase workspace |
+| Multiple data sources roadmap | `project_docs/active/data_sources/multiple_data_sources_implementation_plan.md` | Ordered backend, frontend, acceptance, and handoff plan |
 | Deferred planning | `project_docs/active/future/README.md` | The one home for all deferred active-folder plans; not active until promoted |
 | Agent harness | `project_docs/active/agent_harness/` | Reusable agent backbone, hooks, and validation |
 | Handoffs | `project_docs/active/ai_hand_off/` | Active handoffs only |
@@ -50,11 +53,11 @@ Every prompt written for Antigravity, Codex in a future session, or another agen
 
 By default, `Goal:` prompts belong in handoff files under `project_docs/active/ai_hand_off/`, not in the chat final response. The final response should link or name the handoff file so the receiving agent can read it through the auto-handoff flow. Paste the full prompt in chat only when the user explicitly asks for that output.
 
-Codex-owned current goals and gate truth belong in the product area's `active_gate/` folder. Active Antigravity UI assignments belong in `project_docs/active/ai_hand_off/`; Antigravity does not create backend work for Codex or own the active gate.
+Codex-owned current goals and gate truth belong only in `project_docs/active/active_gate/`. Active Antigravity UI assignments belong in `project_docs/active/ai_hand_off/`; Antigravity does not create backend work for Codex or own the active gate.
 
 ## Active-Gate Rule
 
-AI Chat has one true active workspace: `project_docs/active/ai_chat/active_gate/`. Agents must not infer the next phase from `current/`, `completed/`, `future/`, archive files, or the mere existence of an old handoff. The active gate is the status file plus the active-gate README, and the ranking source must be named there when the gate comes from a council recommendation.
+The project has one true active workspace: `project_docs/active/active_gate/`. Agents must not infer the next phase from product-area folders, `completed/`, `future/`, archive files, or the mere existence of an old handoff. The active gate is the project status file plus the active-gate README, and the ranking source must be named there when the gate comes from a council recommendation.
 
 ## Repair Handoff Clarity
 
@@ -78,7 +81,7 @@ Before starting, handing off, or closing a numbered phase, run `python .codex/ho
 
 ## Browser Acceptance Control
 
-The user exclusively controls browser-level acceptance. Codex must not launch, navigate, automate, upload through, export from, or claim browser verification unless the user explicitly requests that specific browser action. Codex provides implementation, backend/API verification, build results, static review, and a concise manual browser checklist; the user performs and accepts visible browser behavior.
+The user exclusively controls browser-level acceptance. Codex must not launch, navigate, automate, upload through, export from, or claim browser verification unless the user explicitly requests that specific browser action. Any browser checklist or acceptance discussion stays in chat. Never create, update, retain, or link a project goal, handoff, checklist, prompt, or other file for user browser acceptance.
 
 ## Status File Discipline
 
@@ -92,7 +95,7 @@ Before sending a final response after substantial project work, Codex must run t
 
 ## Current Active File
 
-`project_docs/active/status/ai_chat_execution_status.md`
+`project_docs/active/status/project_execution_status.md`
 
 ## Superseded Or Completed Records
 

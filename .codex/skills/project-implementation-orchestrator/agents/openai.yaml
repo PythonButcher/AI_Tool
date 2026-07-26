@@ -1,0 +1,4 @@
+interface:
+  display_name: "Project Implementation Orchestrator"
+  short_description: "Plan phases, gates, handoffs, and kickoff goals"
+  default_prompt: "Use $project-implementation-orchestrator to turn this product goal into a source-backed phased roadmap with an active gate and bounded handoffs."

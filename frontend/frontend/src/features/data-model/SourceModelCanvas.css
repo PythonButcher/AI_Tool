@@ -1,0 +1,167 @@
+.source-model-canvas {
+  width: 100%;
+  height: 100%;
+  background-color: var(--bg-canvas, #f8f9fa);
+  position: relative;
+}
+
+.canvas-state {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  font-size: 1.2rem;
+  color: var(--text-secondary, #6c757d);
+  background: var(--bg-primary, #ffffff);
+}
+
+.canvas-state.error {
+  color: #dc3545;
+}
+
+.source-node {
+  background: var(--bg-surface, #ffffff);
+  border: 2px solid var(--border-color, #dee2e6);
+  border-radius: 8px;
+  min-width: 200px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.source-node:hover {
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+.source-node.primary {
+  border-color: #0d6efd;
+}
+
+.node-header {
+  background: var(--bg-secondary, #f8f9fa);
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-color, #dee2e6);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.source-node.primary .node-header {
+  background: rgba(13, 110, 253, 0.1);
+}
+
+.node-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text-primary, #212529);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 140px;
+}
+
+.badge {
+  background: #0d6efd;
+  color: white;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.node-body {
+  padding: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+  background: var(--bg-surface, #ffffff);
+}
+
+.field-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 12px;
+  font-size: 12px;
+  border-bottom: 1px solid var(--border-light, #f1f3f5);
+  position: relative;
+}
+
+.field-handle {
+  width: 8px !important;
+  height: 8px !important;
+  border-radius: 50% !important;
+  background-color: #adb5bd !important;
+  border: 1px solid #fff !important;
+  transition: background-color 0.2s ease;
+}
+
+.field-handle:hover, .field-handle.react-flow__handle-connecting {
+  background-color: #0d6efd !important;
+  transform: scale(1.2);
+}
+
+.field-row:last-child {
+  border-bottom: none;
+}
+
+.field-name {
+  color: var(--text-primary, #212529);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100px;
+}
+
+.field-type {
+  color: var(--text-muted, #adb5bd);
+  font-family: monospace;
+}
+
+.react-flow__edge-path {
+  stroke-linecap: round;
+}
+
+.react-flow__edge-text {
+  font-size: 10px;
+  font-family: 'Inter', sans-serif;
+  fill: #495057;
+}
+
+.react-flow__edge-textbg {
+  fill: rgba(255, 255, 255, 0.85);
+  rx: 4px;
+  ry: 4px;
+}
+
+.no-relationships-overlay {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255, 255, 255, 0.9);
+  padding: 8px 16px;
+  border-radius: 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  font-size: 14px;
+  color: var(--text-secondary, #6c757d);
+  font-weight: 500;
+  pointer-events: none;
+  z-index: 5;
+}
+.canvas-floating-error {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #dc3545;
+  color: white;
+  padding: 8px 16px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4);
+  font-size: 14px;
+  font-weight: 500;
+  z-index: 10;
+  max-width: 80%;
+  text-align: center;
+}

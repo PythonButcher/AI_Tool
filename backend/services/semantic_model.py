@@ -256,6 +256,91 @@ def list_semantic_metrics(semantic_model: Optional[Dict[str, Any]]) -> List[Dict
     return model["metrics"]
 
 
+def build_namespaced_semantic_model(
+    *,
+    sources: Sequence[Dict[str, Any]],
+    semantic_models: Dict[str, Dict[str, Any]],
+    aliases: Dict[str, str],
+    workspace: Dict[str, Any],
+) -> Dict[str, Any]:
+    """Compose source-bound models for a joined workspace dataframe.
+
+    IDs and physical fields use the persisted workspace alias. Labels include
+    that alias as well, preventing silent resolution when two sources expose
+    the same business name.
+    """
+    combined: Dict[str, Any] = {
+        "schema_version": "semantic_model_v1",
+        "dataset": {
+            "id": workspace["workspace_id"],
+            "name": workspace["name"],
+            "source": "workspace_relationship_execution",
+        },
+        "metrics": [],
+        "dimensions": [],
+        "field_profiles": [],
+    }
+
+    def namespace_item(item: Dict[str, Any], alias: str, source_id: str) -> Dict[str, Any]:
+        """Namespace one semantic definition without mutating source truth."""
+        namespaced = deepcopy(item)
+        original_field = str(namespaced.get("field") or namespaced.get("name") or "").strip()
+        original_id = str(namespaced.get("id") or namespaced.get("name") or original_field).strip()
+        if original_field:
+            namespaced["field"] = f"{alias}.{original_field}"
+        original_name = str(namespaced.get("name") or original_field).strip()
+        if original_name:
+            namespaced["name"] = f"{alias}.{original_name}"
+        if original_id:
+            namespaced["id"] = f"{alias}.{original_id}"
+        original_label = namespaced.get("label") or namespaced.get("name") or original_field
+        if original_label:
+            namespaced["label"] = f"{alias}.{original_label}"
+        if isinstance(namespaced.get("aliases"), list):
+            namespaced["aliases"] = [
+                f"{alias}.{item}" for item in namespaced["aliases"] if str(item).strip()
+            ]
+        namespaced["source_id"] = source_id
+        namespaced["source_alias"] = alias
+        namespaced["source_field"] = original_field or None
+
+        expression = namespaced.get("expression")
+        if isinstance(expression, dict):
+            expression = deepcopy(expression)
+            for key in ("column", "field"):
+                value = expression.get(key)
+                if isinstance(value, str) and value:
+                    expression[key] = f"{alias}.{value}"
+            formula = expression.get("formula")
+            if isinstance(formula, str):
+                expression["formula"] = FORMULA_COLUMN_PATTERN.sub(
+                    lambda match: f"[{alias}.{str(match.group(1)).strip()}]", formula
+                )
+            namespaced["expression"] = expression
+        filters = namespaced.get("filters")
+        if isinstance(filters, list):
+            namespaced["filters"] = [
+                {
+                    **deepcopy(filter_def),
+                    "field": f"{alias}.{filter_def['field']}",
+                }
+                if isinstance(filter_def, dict) and filter_def.get("field")
+                else deepcopy(filter_def)
+                for filter_def in filters
+            ]
+        return namespaced
+
+    for source in sources:
+        source_id = source["source_id"]
+        alias = aliases[source_id]
+        model = finalize_semantic_model(semantic_models.get(source_id))
+        for collection in ("metrics", "dimensions", "field_profiles"):
+            for item in model.get(collection) or []:
+                if isinstance(item, dict):
+                    combined[collection].append(namespace_item(item, alias, source_id))
+    return finalize_semantic_model(combined)
+
+
 def create_user_defined_metric(
     semantic_model: Dict[str, Any],
     payload: Dict[str, Any],

@@ -3,8 +3,8 @@
 Goal: Define the exact implementation boundaries, target files, and acceptance criteria for Slice 3: Interactive Chart Context (Frontend).
 
 Target docs/files to inspect:
-- `project_docs/active/status/ai_chat_execution_status.md`
-- `project_docs/active/ai_chat/active_gate/README.md`
+- `project_docs/active/status/project_execution_status.md`
+- `project_docs/active/active_gate/README.md`
 - `project_docs/active/contracts/decision_objects.md` (Check chart contract support for interactivity)
 
 Acceptance checks:

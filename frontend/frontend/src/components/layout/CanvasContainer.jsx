@@ -27,6 +27,7 @@ import KpiCardWindow from '../../features/dashboard/KpiCardWindow';
 import { WINDOW_SIZING } from '../../utils/windowSizing';
 import DecisionGraphWorkspace from '../../features/business/decision/graph/DecisionGraphWorkspace';
 import DestinationHome from './DestinationHome';
+import SourceModelCanvas from '../../features/data-model/SourceModelCanvas';
 import {
   FaSave,
   FaUndo,
@@ -45,6 +46,7 @@ import {
 const DESTINATIONS = {
   WORKSPACE: 'workspace',
   EXPLORE: 'explore',
+  DATA_MODEL: 'data_model',
   DASHBOARDS: 'dashboards',
   AI: 'ai',
 };
@@ -122,6 +124,7 @@ function CanvasContainer({
   const isDashboardDest = activeDestination === DESTINATIONS.DASHBOARDS;
   const isExploreDest = activeDestination === DESTINATIONS.EXPLORE;
   const isWorkspaceDest = activeDestination === DESTINATIONS.WORKSPACE;
+  const isDataModelDest = activeDestination === DESTINATIONS.DATA_MODEL;
   const isAiDest = activeDestination === DESTINATIONS.AI;
 
   const handleDestinationHomeAction = useCallback((action) => {
@@ -943,6 +946,7 @@ function CanvasContainer({
 
   const shouldShowHome = useMemo(() => {
     if (isWorkspaceDest) return !showDataPreview && !showRawViewer && !showMachineLearning;
+    if (isDataModelDest) return false; // Data model has its own canvas UI
     if (isExploreDest) return charts.length === 0 && !showDataPreview;
     if (isDashboardDest) return dashboardItems.length === 0;
     if (isAiDest) {
@@ -952,6 +956,7 @@ function CanvasContainer({
     return true;
   }, [
     isWorkspaceDest,
+    isDataModelDest,
     isExploreDest,
     isDashboardDest,
     isAiDest,
@@ -965,7 +970,6 @@ function CanvasContainer({
     showStoryPanel,
     showWhiteBoard,
     outputWindows.length,
-    showDecisionGraph,
     showAiChat,
   ]);
 
@@ -999,6 +1003,11 @@ function CanvasContainer({
         {isDashboardDest && (dashboardItems.length > 0 || dashboardState.isVisible) && (
           <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1 }}>
             <DashboardCanvas />
+          </div>
+        )}
+        {isDataModelDest && (
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1, backgroundColor: 'var(--bg-canvas, #f8f9fa)' }}>
+            <SourceModelCanvas workspaceId={uploadedData?.analysis_context?.workspace_id || uploadedData?.workspace?.workspace_id} />
           </div>
         )}
         {isAiDest && decisionGraphElement}

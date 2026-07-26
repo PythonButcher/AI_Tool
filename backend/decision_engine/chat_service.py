@@ -6,6 +6,7 @@ import hashlib
 import json
 import re
 from calendar import monthrange
+from copy import deepcopy
 from decimal import Decimal, InvalidOperation
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -16,7 +17,7 @@ from backend.decision_engine.mode_detection import (
     is_visualization_request,
 )
 from backend.services.aichat_nlp import analyse_columns, build_chart_response, extract_dataset, interpret_nl_query
-from backend.services.dataset_context import resolve_dataset_bundle
+from backend.services.dataset_context import resolve_analysis_dataset_bundle, resolve_dataset_bundle
 from backend.services.decision_output_service import DecisionOutputService
 from backend.services.decision_support import DecisionServiceError, build_dataset_trust
 from backend.services.metric_resolver import MetricResolutionError, MetricResolver
@@ -131,15 +132,29 @@ class DecisionChatService:
         semantic_model = payload.get("semantic_model") or payload.get("semanticModel")
         dataset_ref = payload.get("dataset_ref") or payload.get("datasetRef")
         normalized_ref = dict(dataset_ref) if isinstance(dataset_ref, dict) else {}
+        session_state = payload.get("session_state") if isinstance(payload.get("session_state"), dict) else {}
+        prior_dataset_context = (
+            session_state.get("dataset_context")
+            if isinstance(session_state.get("dataset_context"), dict)
+            else {}
+        )
+        analysis_context = payload.get("analysis_context") or payload.get("analysisContext")
+        if analysis_context is None and payload.get("dataset") is None and not normalized_ref:
+            # Re-resolve identity-only context on refinements; never trust
+            # client-carried joined rows or lineage as execution truth.
+            analysis_context = prior_dataset_context.get("analysis_context")
+        analysis_lineage = None
+        multi_source_governance = None
+        resolved_governance_policy = None
         requested_datasets = DecisionChatService._normalize_requested_datasets(
             payload.get("resolved_datasets") or payload.get("resolvedDatasets")
         )
-        if len(requested_datasets) > 1:
+        if len(requested_datasets) > 1 and not isinstance(analysis_context, dict):
             raise DecisionServiceError(
                 "Decision Chat supports one analyzed dataset per turn; select one named dataset."
             )
 
-        if requested_datasets:
+        if requested_datasets and not isinstance(analysis_context, dict):
             if not normalized_ref:
                 raise DecisionServiceError(
                     "The named dataset could not be verified. Send dataset_ref for the mentioned dataset or remove the mention."
@@ -155,11 +170,26 @@ class DecisionChatService:
                 )
 
         dataset = extract_dataset(payload.get("dataset"))
+        if isinstance(analysis_context, dict):
+            try:
+                bundle = resolve_analysis_dataset_bundle(analysis_context)
+            except ValueError as exc:
+                code = getattr(exc, "code", "analysis_context_invalid")
+                raise DecisionServiceError(f"{code}: {exc}") from exc
+            dataset = bundle["dataframe"].to_dict(orient="records")
+            semantic_model = bundle.get("semantic_model")
+            normalized_ref = DecisionChatService._safe_dataset_ref(bundle.get("dataset_ref"))
+            analysis_context = bundle.get("analysis_context")
+            analysis_lineage = bundle.get("analysis_lineage")
+            if isinstance(analysis_lineage, dict):
+                multi_source_governance = bundle.get("governance_readiness")
+            else:
+                resolved_governance_policy = bundle.get("governance_policy")
         should_load_reference = bool(normalized_ref) and (
             str(normalized_ref.get("source") or "").strip().lower() == "datahub"
             or (not dataset and bool(normalized_ref.get("dataset_id")))
         )
-        if should_load_reference:
+        if should_load_reference and not isinstance(analysis_context, dict):
             try:
                 bundle = resolve_dataset_bundle(
                     dataset=None,
@@ -193,6 +223,8 @@ class DecisionChatService:
             dataset=dataset,
             dataset_ref=normalized_ref,
             semantic_model=semantic_model,
+            analysis_context=analysis_context,
+            analysis_lineage=analysis_lineage,
         )
         prepared = {
             **payload,
@@ -201,7 +233,18 @@ class DecisionChatService:
             "_dataset_identity_prepared": _PREPARED_DATASET_SENTINEL,
             "_resolved_dataset_context": dataset_context,
         }
+        if isinstance(analysis_context, dict):
+            prepared["analysis_context"] = analysis_context
+        if isinstance(analysis_lineage, dict):
+            prepared["_analysis_lineage"] = analysis_lineage
+        if isinstance(multi_source_governance, dict):
+            prepared["_multi_source_governance_readiness"] = multi_source_governance
+        if isinstance(resolved_governance_policy, dict) and not (
+            prepared.get("governance_policy") or prepared.get("governancePolicy")
+        ):
+            prepared["governance_policy"] = resolved_governance_policy
         prepared.pop("datasetRef", None)
+        prepared.pop("analysisContext", None)
         prepared.pop("semanticModel", None)
         prepared.pop("resolvedDatasets", None)
         if normalized_ref:
@@ -555,6 +598,8 @@ class DecisionChatService:
             "conversation_context": conversation_context,
             "dataset_trust": dataset_trust,
             "bi_grounding": bi_grounding,
+            **({"analysis_context": dict(payload["analysis_context"])} if isinstance(payload.get("analysis_context"), dict) else {}),
+            **({"analysis_lineage": deepcopy(payload["_analysis_lineage"])} if isinstance(payload.get("_analysis_lineage"), dict) else {}),
             "analytics_refinement": analytics_refinement_contract,
             "resolved_datasets": (
                 [dict(dataset_context["dataset"])]
@@ -665,6 +710,8 @@ class DecisionChatService:
             "correction_result": correction_result,
             "trace": correction_trace,
             "dataset_trust": dataset_trust,
+            **({"analysis_context": dict(payload["analysis_context"])} if isinstance(payload.get("analysis_context"), dict) else {}),
+            **({"analysis_lineage": deepcopy(payload["_analysis_lineage"])} if isinstance(payload.get("_analysis_lineage"), dict) else {}),
             "resolved_datasets": (
                 [dict(dataset_context["dataset"])]
                 if isinstance(dataset_context, dict) and isinstance(dataset_context.get("dataset"), dict)
@@ -721,6 +768,8 @@ class DecisionChatService:
         dataset: Any,
         dataset_ref: Dict[str, Any],
         semantic_model: Dict[str, Any] | None,
+        analysis_context: Dict[str, Any] | None = None,
+        analysis_lineage: Dict[str, Any] | None = None,
     ) -> Dict[str, Any] | None:
         """Build row-free session identity with a deterministic content fingerprint."""
         rows = extract_dataset(dataset)
@@ -754,11 +803,17 @@ class DecisionChatService:
                 default=str,
             ).encode("utf-8")
         ).hexdigest()
-        return {
+        context = {
             "schema_version": "di_chat_dataset_context_v1",
             "fingerprint": fingerprint,
             "dataset": summary,
         }
+        if isinstance(analysis_context, dict):
+            context["analysis_context"] = dict(analysis_context)
+        if isinstance(analysis_lineage, dict):
+            # Lineage contains identities and aggregate diagnostics only.
+            context["analysis_lineage"] = deepcopy(analysis_lineage)
+        return context
 
     @staticmethod
     def _prior_dataset_context(session_state: Dict[str, Any]) -> Dict[str, Any] | None:
@@ -1552,7 +1607,7 @@ class DecisionChatService:
         for artifact in artifacts:
             if not isinstance(artifact, dict):
                 continue
-            if str(artifact.get("type") or "").lower() in {"answer", "chart"}:
+            if str(artifact.get("type") or "").lower() in {"answer", "table", "chart"}:
                 grounding = DecisionChatService._build_bi_grounding(
                     payload=payload,
                     dataset_trust=dataset_trust,
@@ -1560,7 +1615,12 @@ class DecisionChatService:
                     analytic_state=analytic_state,
                     artifact=artifact,
                 )
-                grounded_artifacts.append({**artifact, "bi_grounding": grounding})
+                lineage = payload.get("_analysis_lineage")
+                grounded_artifacts.append({
+                    **artifact,
+                    "bi_grounding": grounding,
+                    **({"analysis_lineage": deepcopy(lineage)} if isinstance(lineage, dict) else {}),
+                })
                 primary_grounding = primary_grounding or grounding
             else:
                 grounded_artifacts.append(artifact)
@@ -1644,7 +1704,7 @@ class DecisionChatService:
         if source_row_count is None:
             source_row_count = dataset_trust.get("row_count") or dataset.get("row_count") or 0
         dataset_ref = payload.get("dataset_ref") if isinstance(payload.get("dataset_ref"), dict) else {}
-        return {
+        grounding = {
             "schema_version": DecisionChatService.BI_GROUNDING_VERSION,
             "dataset": dataset or None,
             "row_count": int(filtered_row_count or 0),
@@ -1661,6 +1721,10 @@ class DecisionChatService:
             "time_period": time_period,
             "output_type": artifact.get("type") or None,
         }
+        lineage = payload.get("_analysis_lineage")
+        if isinstance(lineage, dict):
+            grounding["analysis_lineage"] = deepcopy(lineage)
+        return grounding
 
     @staticmethod
     def _artifact_defaults(artifact_type: str) -> Dict[str, Any]:

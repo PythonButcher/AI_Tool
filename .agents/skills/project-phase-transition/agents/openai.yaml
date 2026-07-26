@@ -1,4 +1,4 @@
 interface:
   display_name: "Project Phase Transition"
-  short_description: "Close phases and prepare kickoff goals"
-  default_prompt: "Use $project-phase-transition to close the current phase, clean active docs, and prepare the next kickoff goal."
+  short_description: "Audit active docs, archive, and transition gates"
+  default_prompt: "Use $project-phase-transition to close the current phase, inventory every active file, archive verified completed records, repair links, and prepare the next kickoff goal."
