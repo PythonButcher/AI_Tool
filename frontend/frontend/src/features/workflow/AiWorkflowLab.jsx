@@ -20,7 +20,7 @@ import { DataContext } from '../../context/DataContext';
 import AIPipeline from './AIPipeline';
 import DropZoneNode from './DropZoneNode';
 import { useWindowContext } from '../../context/WindowContext';
-import { FiCopy, FiDownload, FiPlay, FiPlus, FiRefreshCw, FiSave, FiUpload, FiHelpCircle, FiSidebar } from 'react-icons/fi';
+import { FiCopy, FiDownload, FiPlay, FiPlus, FiRefreshCw, FiSave, FiUpload, FiHelpCircle, FiSidebar, FiXCircle, FiClock, FiRotateCw } from 'react-icons/fi';
 import {
   buildReactFlowGraph,
   buildWorkflowDefinition,
@@ -83,7 +83,12 @@ function AiWorkflowLab({ label = 'AI WorkFlow Lab:', savedState }) {
   const [catalogStatus, setCatalogStatus] = useState('idle');
   const [catalogError, setCatalogError] = useState(null);
   const [runState, setRunState] = useState(null);
+  const [inspectedRunState, setInspectedRunState] = useState(null);
+  const [runUiError, setRunUiError] = useState(null);
   const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(false);
+  const [runHistory, setRunHistory] = useState([]);
+  const [runHistoryStatus, setRunHistoryStatus] = useState('idle');
+  const [isCancelling, setIsCancelling] = useState(false);
 
   const { isHelpVisible, toggleHelp, closeHelp } = useHelpOverlay();
   const workflowRef = useRef(null);
@@ -135,6 +140,8 @@ function AiWorkflowLab({ label = 'AI WorkFlow Lab:', savedState }) {
     setWorkflowMeta(toWorkflowMeta(spec));
     setSelectedNodeId(graph.nodes.find((node) => node.id !== DROPZONE_NODE_ID)?.id || null);
     setRunState(null);
+    setInspectedRunState(null);
+    setRunUiError(null);
     setPipelineResults({});
     setHasExecuted(false);
 
@@ -190,6 +197,116 @@ function AiWorkflowLab({ label = 'AI WorkFlow Lab:', savedState }) {
       window.runAIPipeline();
     }
   }, []);
+
+  const refreshRunHistory = useCallback(async () => {
+    if (!workflowMeta.id) {
+      setRunHistory([]);
+      return;
+    }
+    setRunHistoryStatus('loading');
+    try {
+      const response = await workflowApi.listRuns({ workflowId: workflowMeta.id, limit: 20 });
+      setRunHistory(response.runs || []);
+      setRunHistoryStatus('ready');
+    } catch (error) {
+      console.error('Failed to load run history:', error);
+      setRunHistoryStatus('error');
+    }
+  }, [workflowMeta.id]);
+
+  useEffect(() => {
+    if (workflowMeta.id && isRightSidebarOpen) {
+      refreshRunHistory();
+    }
+  }, [workflowMeta.id, isRightSidebarOpen, refreshRunHistory]);
+
+  const handleCancelRun = useCallback(async () => {
+    if (!runState?.run_id || isCancelling) return;
+    setIsCancelling(true);
+    try {
+      const result = await workflowApi.cancelRun(runState.run_id);
+      setRunState(result);
+    } catch (error) {
+      console.error('Failed to cancel run:', error);
+      setRunUiError(error.response?.data?.error || error.message || 'Unable to cancel the workflow run.');
+    } finally {
+      setIsCancelling(false);
+    }
+  }, [runState, isCancelling]);
+
+  const handleSelectRun = useCallback(async (runId) => {
+    if (!runId) return;
+    try {
+      const run = await workflowApi.getRun(runId);
+      setInspectedRunState(runState?.run_id === runId ? null : run);
+      setRunUiError(null);
+      // Update pipeline results from the stored run
+      if (run.results) {
+        const merged = {};
+        Object.entries(run.node_states || {}).forEach(([nodeId, nodeState]) => {
+          const resultEntry = (run.results || {})[nodeId] || {};
+          merged[nodeId] = {
+            status: resultEntry.status || nodeState.status || 'idle',
+            result: resultEntry.result || null,
+            error: resultEntry.error || nodeState.error || null,
+            command: resultEntry.command || nodeState.command || null,
+            label: resultEntry.label || nodeState.label || nodeId,
+          };
+        });
+        setPipelineResults(merged);
+      }
+    } catch (error) {
+      console.error('Failed to load run:', error);
+      setRunHistoryStatus('error');
+    }
+  }, [runState?.run_id, setPipelineResults]);
+
+  const handleRefreshCurrentRun = useCallback(async () => {
+    if (!runState?.run_id) return;
+    try {
+      const refreshed = await workflowApi.getRun(runState.run_id);
+      setRunState(refreshed);
+      setRunUiError(null);
+    } catch (error) {
+      console.error('Failed to refresh current run:', error);
+      setRunUiError(error.response?.data?.error || error.message || 'Current run status is unavailable.');
+    }
+  }, [runState?.run_id]);
+
+  const handleReturnToLiveRun = useCallback(() => {
+    setInspectedRunState(null);
+    if (!runState?.results) return;
+
+    const merged = {};
+    Object.entries(runState.node_states || {}).forEach(([nodeId, nodeState]) => {
+      const resultEntry = (runState.results || {})[nodeId] || {};
+      merged[nodeId] = {
+        status: resultEntry.status || nodeState.status || 'idle',
+        result: resultEntry.result || null,
+        error: resultEntry.error || nodeState.error || null,
+        command: resultEntry.command || nodeState.command || null,
+        label: resultEntry.label || nodeState.label || nodeId,
+      };
+    });
+    setPipelineResults(merged);
+  }, [runState, setPipelineResults]);
+
+  const handleActiveRunStateChange = useCallback((nextRunState) => {
+    setRunState(nextRunState);
+    if (nextRunState === null) {
+      // Starting a new run always returns the execution panel to live state.
+      setInspectedRunState(null);
+      setRunUiError(null);
+      return;
+    }
+
+    if (
+      isRightSidebarOpen
+      && ['completed', 'failed', 'cancelled', 'interrupted'].includes(nextRunState.status)
+    ) {
+      refreshRunHistory();
+    }
+  }, [isRightSidebarOpen, refreshRunHistory]);
 
   const handleExecuteDrop = useCallback(() => {
     handleRunWorkflow();
@@ -387,6 +504,8 @@ function AiWorkflowLab({ label = 'AI WorkFlow Lab:', savedState }) {
     setWorkflowMeta(createEmptyWorkflowMeta());
     setSelectedNodeId(null);
     setRunState(null);
+    setInspectedRunState(null);
+    setRunUiError(null);
     setPipelineResults({});
   }, [setPipelineResults]);
 
@@ -441,10 +560,13 @@ function AiWorkflowLab({ label = 'AI WorkFlow Lab:', savedState }) {
     },
   }));
 
-  const runStatusLabel = runState?.status
-    ? runState.status.charAt(0).toUpperCase() + runState.status.slice(1)
+  const displayedRunState = inspectedRunState || runState;
+  const runStatusLabel = displayedRunState?.status
+    ? displayedRunState.status.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
     : 'Idle';
-  const runProgress = runState?.progress || { total: workflowDefinition.execution_order.length, completed: 0, failed: 0, running: 0 };
+  const runProgress = displayedRunState?.progress || { total: workflowDefinition.execution_order.length, completed: 0, failed: 0, running: 0 };
+  const isRunActive = !inspectedRunState && !runUiError && (runState?.status === 'running' || runState?.status === 'cancel_requested');
+  const isTerminal = ['completed', 'failed', 'cancelled', 'interrupted'].includes(displayedRunState?.status);
 
   return (
     <div
@@ -639,6 +761,41 @@ function AiWorkflowLab({ label = 'AI WorkFlow Lab:', savedState }) {
         <aside className={`wf-sidebar right ${isRightSidebarOpen ? 'open' : ''}`}>
           <div className="wf-panel-section">
             <div className="wf-panel-title">Execution</div>
+            {inspectedRunState && (
+              <div className="wf-history-inspection" role="status">
+                <span>
+                  Viewing saved run from{' '}
+                  {inspectedRunState.started_at
+                    ? new Date(inspectedRunState.started_at).toLocaleString()
+                    : 'an unknown start time'}.
+                  {runState?.status === 'running' || runState?.status === 'cancel_requested'
+                    ? ' A current run is still active.'
+                    : ''}
+                </span>
+                <button
+                  type="button"
+                  className="wf-btn subtle"
+                  onClick={handleReturnToLiveRun}
+                >
+                  Return to Current Run
+                </button>
+              </div>
+            )}
+            {runUiError && !inspectedRunState && (
+              <div className="wf-empty-state wf-error-state" role="alert">
+                <div>{runUiError}</div>
+                <div>Live status may be stale. Refresh it before taking another action.</div>
+                {runState?.run_id && (
+                  <button
+                    type="button"
+                    className="wf-btn subtle"
+                    onClick={handleRefreshCurrentRun}
+                  >
+                    Refresh Current Run
+                  </button>
+                )}
+              </div>
+            )}
             <div className="wf-run-stats">
               <div className="wf-stat-card">
                 <span className="wf-stat-val">{runProgress.completed}</span>
@@ -655,20 +812,131 @@ function AiWorkflowLab({ label = 'AI WorkFlow Lab:', savedState }) {
             </div>
 
             <div className="wf-field">
-              <label>Status: {runStatusLabel}</label>
+              <label>
+                Status:{' '}
+                <span
+                  className={`wf-status-badge wf-status-${(displayedRunState?.status || 'idle').replace(/_/g, '-')}`}
+                  role="status"
+                  aria-live="polite"
+                >
+                  {runStatusLabel}
+                </span>
+              </label>
             </div>
+
+            {/* Cancel button — visible when run is active */}
+            {isRunActive && (
+              <button
+                type="button"
+                className="wf-btn wf-btn-cancel"
+                onClick={handleCancelRun}
+                disabled={isCancelling || runState?.status === 'cancel_requested'}
+                aria-label={runState?.status === 'cancel_requested' ? 'Cancellation pending' : 'Cancel workflow run'}
+                title={runState?.status === 'cancel_requested'
+                  ? 'Cancellation requested — waiting for current node to finish'
+                  : 'Cancel this workflow run'}
+              >
+                <FiXCircle aria-hidden="true" />
+                <span>{runState?.status === 'cancel_requested' ? 'Cancelling…' : 'Cancel Run'}</span>
+              </button>
+            )}
+
+            {/* Retry placeholder — visibly disabled and labeled as unavailable */}
+            {isTerminal && (
+              <button
+                type="button"
+                className="wf-btn wf-btn-retry-placeholder"
+                disabled
+                aria-disabled="true"
+                title="Retry is not yet available. An idempotency and side-effect contract is required before retry can be safely enabled."
+              >
+                <FiRotateCw aria-hidden="true" />
+                <span>Retry (Coming Later)</span>
+              </button>
+            )}
+
+            {/* Timestamps */}
+            {displayedRunState?.started_at && (
+              <div className="wf-run-timestamp">
+                <FiClock aria-hidden="true" size={12} />
+                <span>Started: {new Date(displayedRunState.started_at).toLocaleString()}</span>
+              </div>
+            )}
+            {displayedRunState?.finished_at && (
+              <div className="wf-run-timestamp">
+                <FiClock aria-hidden="true" size={12} />
+                <span>Finished: {new Date(displayedRunState.finished_at).toLocaleString()}</span>
+              </div>
+            )}
 
             <div className="wf-panel-title" style={{ marginTop: '20px' }}>Sequence</div>
             <ol className="wf-exec-list">
               {workflowDefinition.execution_order.map((nodeId) => {
                 const currentNode = workflowDefinition.nodes.find((node) => node.id === nodeId);
+                const nodeState = displayedRunState?.node_states?.[nodeId];
                 return (
-                  <li key={nodeId} className="wf-exec-item">
+                  <li
+                    key={nodeId}
+                    className={`wf-exec-item ${nodeState?.status ? `wf-exec-${nodeState.status}` : ''}`}
+                  >
                     {currentNode?.label || nodeId}
+                    {nodeState?.status && nodeState.status !== 'idle' && (
+                      <span className={`wf-exec-status-badge wf-exec-status-${nodeState.status}`}>
+                        {nodeState.status}
+                      </span>
+                    )}
                   </li>
                 );
               })}
             </ol>
+          </div>
+
+          {/* Run History Panel */}
+          <div className="wf-panel-section">
+            <div className="wf-panel-title">
+              Run History
+              <button
+                type="button"
+                className="wf-btn subtle icon-only"
+                onClick={refreshRunHistory}
+                title="Refresh run history"
+                aria-label="Refresh run history"
+                style={{ marginLeft: 'auto', padding: '4px' }}
+              >
+                <FiRefreshCw size={12} aria-hidden="true" />
+              </button>
+            </div>
+            {runHistoryStatus === 'loading' && (
+              <div className="wf-empty-state">Loading history…</div>
+            )}
+            {runHistoryStatus === 'error' && (
+              <div className="wf-empty-state wf-error-state">Failed to load history.</div>
+            )}
+            {runHistoryStatus === 'ready' && runHistory.length === 0 && (
+              <div className="wf-empty-state">No prior runs found.</div>
+            )}
+            {runHistory.length > 0 && (
+              <ul className="wf-run-history-list" aria-label="Run history">
+                {runHistory.map((run) => (
+                  <li key={run.run_id} className="wf-run-history-item">
+                    <button
+                      type="button"
+                      className={`wf-run-history-btn${displayedRunState?.run_id === run.run_id ? ' active' : ''}`}
+                      onClick={() => handleSelectRun(run.run_id)}
+                      aria-pressed={displayedRunState?.run_id === run.run_id}
+                      aria-label={`${run.workflow_name || 'Run'} — ${run.status}`}
+                    >
+                      <span className={`wf-status-dot wf-status-dot-${(run.status || 'idle').replace(/_/g, '-')}`} />
+                      <span className="wf-run-history-name">{run.workflow_name || 'Unnamed'}</span>
+                      <span className="wf-run-history-status">{(run.status || 'idle').replace(/_/g, ' ')}</span>
+                      <span className="wf-run-history-time">
+                        {run.started_at ? new Date(run.started_at).toLocaleString() : '—'}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
 
           <div className="wf-panel-section">
@@ -735,7 +1003,8 @@ function AiWorkflowLab({ label = 'AI WorkFlow Lab:', savedState }) {
         dataset={dataset}
         onResults={setPipelineResults}
         onDataCleaned={setCleanedData}
-        onRunStateChange={setRunState}
+        onRunStateChange={handleActiveRunStateChange}
+        onRunError={setRunUiError}
       />
     </div>
   );

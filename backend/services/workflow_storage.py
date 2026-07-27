@@ -5,6 +5,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from backend.services.workflow_validator import validate_workflow_definition
+
 
 WORKFLOW_STORAGE_DIR = Path(__file__).resolve().parent.parent / "storage" / "workflows"
 
@@ -232,24 +234,63 @@ def _compute_execution_order(nodes: List[Dict[str, Any]], edges: List[Dict[str, 
                 )
 
     if len(ordered) != len(node_map):
-        fallback = sorted(
-            node_map.values(),
-            key=lambda node: (
-                (node.get("position") or {}).get("y", 0),
-                (node.get("position") or {}).get("x", 0),
-            ),
+        # The assignment forbids executing a cyclic graph by falling
+        # back to visual position.  Raise so the caller gets a clear
+        # error instead of silent incorrect behaviour.
+        cycle_nodes = [nid for nid, deg in indegree.items() if deg > 0]
+        raise ValueError(
+            f"Workflow graph contains a cycle involving node(s): "
+            f"{', '.join(cycle_nodes)}.  Cyclic workflows cannot be executed."
         )
-        return [node["id"] for node in fallback]
 
     return ordered
 
 
 def normalize_workflow_definition(workflow: Dict[str, Any], existing: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     existing = existing or {}
-    nodes = copy.deepcopy(workflow.get("nodes") or workflow.get("graph", {}).get("nodes") or [])
-    edges = copy.deepcopy(workflow.get("edges") or workflow.get("graph", {}).get("edges") or [])
-    execution_order = workflow.get("execution_order") or workflow.get("graph", {}).get("execution_order")
-    if not execution_order:
+    workflow_graph = workflow.get("graph") or {}
+    existing_graph = existing.get("graph") or {}
+
+    if "nodes" in workflow:
+        node_source = workflow["nodes"]
+    elif "nodes" in workflow_graph:
+        node_source = workflow_graph["nodes"]
+    elif "nodes" in existing:
+        node_source = existing["nodes"]
+    else:
+        node_source = existing_graph.get("nodes") or []
+
+    if "edges" in workflow:
+        edge_source = workflow["edges"]
+    elif "edges" in workflow_graph:
+        edge_source = workflow_graph["edges"]
+    elif "edges" in existing:
+        edge_source = existing["edges"]
+    else:
+        edge_source = existing_graph.get("edges") or []
+
+    nodes = copy.deepcopy(node_source)
+    edges = copy.deepcopy(edge_source)
+    graph_changed = (
+        "nodes" in workflow
+        or "nodes" in workflow_graph
+        or "edges" in workflow
+        or "edges" in workflow_graph
+    )
+
+    if "execution_order" in workflow:
+        execution_order = workflow["execution_order"]
+    elif "execution_order" in workflow_graph:
+        execution_order = workflow_graph["execution_order"]
+    else:
+        execution_order = None
+
+    if execution_order is None and not graph_changed:
+        execution_order = (
+            existing.get("execution_order")
+            or existing_graph.get("execution_order")
+        )
+    if execution_order is None:
         execution_order = _compute_execution_order(nodes, edges)
 
     now = _utc_now()
@@ -354,6 +395,11 @@ def get_workflow(workflow_id: str) -> Optional[Dict[str, Any]]:
 
 def create_workflow(workflow_definition: Dict[str, Any]) -> Dict[str, Any]:
     workflow = normalize_workflow_definition(workflow_definition)
+    # Validate before persisting; raises WorkflowValidationError on failure
+    errors = validate_workflow_definition(workflow)
+    if errors:
+        from backend.services.workflow_validator import WorkflowValidationError
+        raise WorkflowValidationError(errors)
     return get_workflow(_write_workflow(workflow)["id"])
 
 
@@ -362,6 +408,11 @@ def update_workflow(workflow_id: str, workflow_definition: Dict[str, Any]) -> Op
     if not existing:
         return None
     normalized = normalize_workflow_definition({**workflow_definition, "id": workflow_id}, existing=existing)
+    # Validate before persisting
+    errors = validate_workflow_definition(normalized)
+    if errors:
+        from backend.services.workflow_validator import WorkflowValidationError
+        raise WorkflowValidationError(errors)
     return get_workflow(_write_workflow(normalized)["id"])
 
 
