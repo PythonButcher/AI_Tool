@@ -24,7 +24,7 @@ Do not scan every Markdown file. Do not scan archive, completed, future, or old 
 
 The project uses one global active gate so context selection and ownership are explicit. The status file names the gate; `project_docs/active/active_gate/README.md` names the current slice, objective, and owner. A file in a product-area folder, `ai_hand_off/`, `future/`, `completed/`, or `archive/` is not active unless the status or active-gate README points to it.
 
-When Codex is the current owner, the status `Next Action` must point to one executable `Goal:` file inside `project_docs/active/active_gate/`. Codex must perform its own source, contract, and test review before ending a gate. It must never return control to an unspecified future Codex review or leave the user to infer whether a new session is required.
+When Codex is the current owner, the status `Next Action` must point to the sole executable gate at `project_docs/active/active_gate/README.md`. That directory must contain no companion goal, kickoff, plan, status, or supporting file. Codex must perform its own source, contract, and test review before ending a gate. It must never return control to an unspecified future Codex review or leave the user to infer whether a new session is required.
 
 This follows the context-engineering rule of selecting only the context needed for the current step and isolating stale or future context away from the working set. If active status, active-gate README, and the active handoff disagree, stop and repair docs before implementation.
 

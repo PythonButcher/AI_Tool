@@ -76,13 +76,15 @@ All prompts generated for another agent or a future session must be written in g
 
 Agents must use `apply_patch` for source edits. They must not use Python `open(path, "w")`, `Path.write_text`, PowerShell `Set-Content`, `Out-File`, redirection, or bulk-cleanup scripts to rewrite source files, especially when the target path is stored in a variable. Those patterns can truncate a file before its contents are read. Before claiming frontend work complete, run `python .codex/hooks/agent_harness_check.py`, `git diff --check`, and the relevant build. If a source file is unexpectedly empty or substantially smaller than its baseline, stop immediately, report the incident, and restore from the tracked baseline before any feature work continues.
 
-When Codex wraps up a project phase or clears a phase gate (or whenever the user requests a kick-off / next-session / new phase prompt), Codex must create or update the active-gate goal for Codex-owned work or a handoff file for Antigravity-owned UI work, then reference that file in the final response. The user should not have to copy a prompt from chat into another agent.
+When Codex wraps up a project phase or clears a phase gate (or whenever the user requests a kick-off / next-session / new phase prompt), Codex must replace the sole `project_docs/active/active_gate/README.md` for Codex-owned work or create a handoff file for Antigravity-owned UI work, then reference that file in the final response. Never create a second plan, goal, kickoff, or status file under `active_gate/`. The user should not have to copy a prompt from chat into another agent.
 CRITICAL: The generated kick-off/next-session handoff prompt MUST NEVER mention or refer to ANY previous phase names or numbers (e.g., do not say "Phase 4", "Phase 5", "previous phase", or recap what was just completed). It MUST NOT recap prior accomplishments, review history, implementation history, or who approved earlier work. It must start directly and cleanly by naming only the next standalone goal, specifying the target file, and listing the active doc links for the current task. Keep the prompt completely forward-looking and decoupled from history. Do not include sentences like "Phase N is complete", "Gemini did X", "reviewed by", or detailed verification history inside the next-session handoff prompt.
 
 
 ## Working Rules
 
 Always review current project Markdown before making project decisions. Start with `project_docs/INDEX.md`, then `project_docs/active/README.md`, then only the task-specific files named by those navigation docs.
+
+The active gate has exactly one authoritative file: `project_docs/active/active_gate/README.md`. It must contain the current `Goal:`, user outcome, target files, required context, contract details, acceptance checks, boundaries, verification commands, owner, and control-return rule. No other file or subdirectory may exist under `project_docs/active/active_gate/`.
 
 Before starting, handing off, or closing a numbered project phase, use the `project-doc-governance` skill and run `python .codex/hooks/agent_harness_check.py`. The check blocks a completed brief left in the active gate, completed reference files left under `active_gate/`, and a current work gate without its declared phase number. The only unnumbered state allowed is the explicit idle gate `Awaiting User Epic Goal`.
 

@@ -14,7 +14,7 @@ This file is the single current source of truth for active AI_Tool delivery.
 - **Status**: Ready for backend implementation
 - **Backend Readiness**: `backend_not_ready`
 - **Current Owner**: Codex
-- **Next Action**: Execute `project_docs/active/active_gate/codex_workspace_membership_api_goal.md`
+- **Next Action**: Execute `project_docs/active/active_gate/README.md`
 - **Roadmap**: `project_docs/active/data_sources/multiple_data_sources_implementation_plan.md`
 
 ## Control Return
