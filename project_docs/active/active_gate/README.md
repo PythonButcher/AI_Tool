@@ -1,57 +1,39 @@
-# Project Active Gate — Phase 5 / Slice 5: Workspace Membership API
+# Project Active Gate — Phase 6 / Slice 6: Add Sources To The Current Workspace
 
-Goal: Build versioned workspace membership APIs so a governed catalog source or upload can join one analytical workspace safely.
+Goal: Deliver and verify one bounded Data Model action that adds a governed catalog source or upload to the currently displayed workspace without changing the primary analytical source.
 
 ## User Outcome
 
-A client can list eligible sources, attach a catalog source to a workspace, or upload a new source into that workspace without creating a separate workspace or silently changing the analytical model.
+A user can remain in the current Data Model workspace, choose an eligible catalog source or upload one governed file, set its alias and non-primary role, and see the authoritative new member appear without creating or selecting another workspace.
 
-## Target Files
+## Scope
 
-Implement and verify the gate in:
+Antigravity implements only `project_docs/active/ai_hand_off/add_sources_current_workspace.md`. The primary target is `frontend/frontend/src/features/data-model/SourceModelCanvas.jsx` and its focused styling or sibling component under the same feature directory.
 
-`backend/repositories/source_workspace_repository.py`
+Codex reviews the returned frontend source and verification evidence against `project_docs/active/contracts/multiple_data_source_workspace.md`, the route behavior in `backend/routes/data_workspaces.py` and `backend/routes/upload.py`, and the bounded handoff.
 
-`backend/services/workspace_context.py`
+## Contracts
 
-`backend/routes/data_workspaces.py`
+The implementation uses `GET /api/data-sources`, `POST /api/data-workspaces/<workspace_id>/sources`, and the optional existing-workspace multipart fields on `POST /api/upload`.
 
-`backend/routes/upload.py`
+Successful membership mutations return authoritative `source`, `workspace`, and `analysis_context`. The updated workspace version and memberships come from `workspace`; `analysis_context` remains primary-only with empty `relationship_ids`.
 
-`tests/test_source_workspace_context.py`
-
-Update `project_docs/active/contracts/multiple_data_source_workspace.md` only when implementation evidence requires a contract correction.
-
-## Required Context
-
-Read `AGENTS.md`, `project_docs/INDEX.md`, `project_docs/active/README.md`, this file, `project_docs/active/data_sources/multiple_data_sources_implementation_plan.md`, `project_docs/active/contracts/multiple_data_source_workspace.md`, `project_docs/active/contracts/multiple_data_source_relationships.md`, `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md`, and `project_docs/active/codex_harness_engineering.md`.
-
-## Contract
-
-Add `GET /api/data-sources` using the public source serializer so callers can choose catalog identities without receiving host paths, private locator data, or secrets.
-
-Add `POST /api/data-workspaces/<workspace_id>/sources` with JSON `source_id`, optional `alias`, `role`, and required workspace `version`. Only `lookup` and `context` are valid added roles. Reject duplicate membership, duplicate alias, missing workspace or source, invalid role, and stale workspace version with stable structured errors.
-
-Extend `POST /api/upload` with optional multipart `workspace_id`, `workspace_version`, `alias`, and `role`. When no workspace is supplied, preserve the current one-source upload behavior and every legacy response field. When a workspace is supplied, create the governed source, attach it to that workspace, and advance workspace version exactly once in one database transaction. Remove the newly created managed file if the database transaction fails.
-
-Successful membership responses return authoritative `source`, `workspace`, and `analysis_context`. Membership alone must not select a multi-source path: return a primary-only `analysis_context` with empty `relationship_ids` until a caller explicitly selects verified sources and relationships.
+Only `lookup` and `context` are valid added roles. Duplicate membership, alias conflict, stale version, missing identities, and invalid inputs remain structured server errors.
 
 ## Acceptance
 
-Repository writes use compare-and-swap workspace versioning and remain workspace-isolated. Alias defaults are deterministic and conflicts are explicit rather than silently renamed. Every successful membership mutation advances the workspace version exactly once.
+The current Data Model workspace exposes one accessible Add Source action supporting one catalog attachment or one file upload at a time. The interaction shows the current workspace, alias, role, progress, recoverable conflicts, and safe cancellation.
 
-Failed writes leave no membership, no version advancement, and no orphaned managed upload. Restart retrieval returns the new membership and version. Default upload, source reads, workspace reads, relationship validation, and one-source compatibility remain intact.
+Success awaits an authoritative canvas refresh and keeps the existing primary source and relationship state. It does not create another workspace, select a multi-source path, activate a relationship, change the default upload surface, or begin retained global workspace state.
 
-Focused tests cover safe source listing, attaching an existing source, uploading into a workspace, version conflict, duplicate membership, alias conflict, invalid role, missing identities, rollback and managed-file cleanup, restart persistence, and unchanged default upload behavior.
-
-## Boundaries
-
-Do not implement membership removal, source deletion, primary-source changes, canvas position persistence, frontend behavior, relationship activation, candidate profiling, AI Chat request changes, or any `GEMINI.md` change. Do not issue a frontend handoff until Codex verifies the route, transaction, response, and error contracts from source and tests.
+Codex acceptance requires a focused source review against the handoff, a clean frontend build result from Antigravity, and evidence that pending user choices survive alias and version conflicts.
 
 ## Verification
 
-Run `python -m unittest tests.test_source_workspace_context tests.test_source_relationships tests.test_relationship_execution`, `python .codex/hooks/agent_harness_check.py`, `python C:/Users/18022/.codex/skills/active-gate-governance/scripts/check_active_gate.py project_docs/active/active_gate .`, and `git diff --check`.
+Antigravity runs `npm --prefix frontend\frontend run build`, `python .codex/hooks/agent_harness_check.py`, and `git diff --check`.
+
+Codex performs the targeted contract review after control returns. Browser-level acceptance remains with the user in chat after Codex accepts the implementation.
 
 ## Owner And Control Return
 
-Codex owns backend implementation, contract updates, tests, and review. Return exact changed files and verification evidence to Codex. Codex performs the backend acceptance review and decides whether the bounded add-sources frontend handoff is ready.
+Antigravity owns the bounded frontend implementation in `project_docs/active/ai_hand_off/add_sources_current_workspace.md`. Antigravity stops after the requested source changes and verification evidence, then returns control to Codex. Codex owns acceptance classification, documentation truth, and the next gate decision.

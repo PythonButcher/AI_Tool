@@ -10,7 +10,7 @@ The experience should feel like a modern data-model studio built for this applic
 
 The backend now persists governed sources, workspaces, workspace memberships, validated relationships, safe multi-source execution, and lineage. The Data Model canvas can read a workspace containing several sources and can create, edit, validate, activate, and deactivate relationships through the verified relationship API.
 
-The product still cannot create that multi-source workspace through normal user actions. `POST /api/upload` always creates a new source and a new one-source workspace. `FileUpload.jsx` accepts only `files[0]`, and `backend/routes/data_workspaces.py` exposes workspace reads but no membership mutation. Relationship tests insert extra memberships directly with SQL because no public service or route exists. A second upload therefore replaces the active one-source context instead of joining the current workspace.
+The backend can now populate one workspace through `GET /api/data-sources`, `POST /api/data-workspaces/<workspace_id>/sources`, and the optional existing-workspace fields on `POST /api/upload`. The normal frontend path does not use those contracts yet. `FileUpload.jsx` still posts only a file to the default upload path, so a second upload through the current interface creates and selects a separate one-source workspace instead of joining the current workspace.
 
 ## Architecture Direction
 
@@ -65,6 +65,8 @@ Acceptance requires the canvas and editor to consume only server identities and 
 Control returns to Codex for targeted source and contract review.
 
 ### Phase 5 — Workspace Membership API
+
+Status: delivered backend foundation.
 
 Codex adds the missing backend boundary for populating one workspace with several sources. Add a safe source-catalog read endpoint, a versioned endpoint that attaches an existing catalog source to a workspace, and an optional existing-workspace target for governed file upload. Membership writes must be transactional, workspace-isolated, alias-safe, and optimistic-concurrency protected.
 

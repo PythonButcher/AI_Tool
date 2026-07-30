@@ -3,6 +3,7 @@ import { ReactFlow, Controls, Background, MarkerType, Handle, Position, Connecti
 import '@xyflow/react/dist/style.css';
 import './SourceModelCanvas.css';
 import RelationshipInspector from './RelationshipInspector';
+import AddSourcePanel from './AddSourcePanel';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
@@ -35,6 +36,8 @@ const SourceModelCanvas = ({ workspaceId }) => {
   const [relationships, setRelationships] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [workspace, setWorkspace] = useState(null);
+  const [showAddSource, setShowAddSource] = useState(false);
 
   const [draftRelationship, setDraftRelationship] = useState(null);
   const [selectedRelationship, setSelectedRelationship] = useState(null);
@@ -81,6 +84,9 @@ const SourceModelCanvas = ({ workspaceId }) => {
           const wsRes = await fetch(`${API_URL}/api/data-workspaces/${workspaceId}`, { signal });
         const wsData = await wsRes.json();
         if (!wsRes.ok) throw new Error(wsData.error?.message || wsData.error || 'Failed to fetch workspace');
+
+        if (currentFetchId !== fetchIdRef.current) return fetchPromiseRef.current;
+        setWorkspace(wsData.workspace);
 
         const workspaceSources = wsData.workspace?.sources || [];
 
@@ -158,6 +164,13 @@ const SourceModelCanvas = ({ workspaceId }) => {
       return rels.find(r => r.relationship_id === relId);
     }
     return rels;
+  }, [fetchWorkspaceData]);
+
+  const handleAddSourceSuccess = useCallback(async (conflictRefresh = false) => {
+    await fetchWorkspaceData().catch(() => {});
+    if (!conflictRefresh) {
+      setShowAddSource(false);
+    }
   }, [fetchWorkspaceData]);
 
   // Wrap handleSave to also refresh after updating selection
@@ -277,6 +290,12 @@ const SourceModelCanvas = ({ workspaceId }) => {
 
   return (
     <div className="source-model-canvas">
+      {workspace && (
+        <div className="canvas-header" style={{ position: 'absolute', top: 16, right: 16, zIndex: 10 }}>
+          <button className="btn btn-primary" onClick={() => setShowAddSource(true)} aria-label="Add Source">Add Source</button>
+        </div>
+      )}
+
       <ReactFlow 
         nodes={nodes}
         edges={edges}
@@ -314,6 +333,15 @@ const SourceModelCanvas = ({ workspaceId }) => {
           onSave={handleSaveAndRefresh}
           onCancel={handleCancel}
           onRefresh={handleRefresh}
+        />
+      )}
+
+      {showAddSource && workspace && (
+        <AddSourcePanel
+          workspace={workspace}
+          existingSources={sources}
+          onClose={() => setShowAddSource(false)}
+          onSuccess={handleAddSourceSuccess}
         />
       )}
     </div>

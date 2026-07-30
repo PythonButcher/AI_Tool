@@ -71,23 +71,25 @@ A source may belong to several workspaces. An alias must be unique inside its wo
 
 The execution boundary re-resolves this object only from `workspace_id`, the exact current `workspace_version`, `primary_source_id`, ordered `source_ids`, and ordered `relationship_ids`. Caller-provided rows, aliases, relationship definitions, fingerprints, or lineage are never treated as execution truth. The workspace primary source must be selected and must match persisted workspace truth.
 
-## Active Upload Response
+## Upload Response And Workspace Targeting
 
 `POST /api/upload` retains `message`, `data_preview`, `full_data`, `numeric_summary`, `categorical_summary`, `semantic_model`, and `governance_readiness`. It adds `source`, `workspace`, and `analysis_context`. Existing clients may ignore the additions.
 
 The server generates the source ID, workspace ID, managed storage locator, timestamps, and fingerprint. The server does not accept a request path as managed-storage truth. A governance-blocked upload creates no managed file, source record, workspace, or membership. The returned top-level `semantic_model` and `source.semantic_model` identify the generated `source_id`, preserving that identity when current Data Hub and Decision Chat resolution loads the record.
 
-## Implemented Read Endpoints
+When optional multipart `workspace_id`, `workspace_version`, `alias`, and `role` fields are supplied, the upload creates the governed source and attaches it to the named workspace in one database transaction. `workspace_version` is required for this path. Added roles are limited to `lookup` and `context`; omitted alias and role values default deterministically from the file name and to `lookup`. A failed transaction removes the new managed file. The response keeps every legacy field, returns the authoritative updated workspace, and returns a primary-only `analysis_context` with empty `relationship_ids`.
 
-`GET /api/data-sources/<source_id>` returns `{ source }`. `GET /api/data-workspaces/<workspace_id>` returns `{ workspace }` with only that workspace's memberships. `GET /api/data-workspaces/<workspace_id>/analysis-context` returns `{ workspace, sources, analysis_context }`; repeated `source_id` query parameters select members, while omission selects the primary source.
+## Implemented Endpoints
 
-The read endpoints return structured `{ error: { code, message } }` responses. Missing workspaces and sources use HTTP 404 with `workspace_not_found` or `source_not_found`. Cross-workspace selection uses HTTP 409 with `source_not_in_workspace`. Missing managed file storage uses HTTP 409 with `managed_source_unavailable` and does not expose the private path.
+`GET /api/data-sources` returns `{ sources }` using the same public source serializer as `GET /api/data-sources/<source_id>`. Neither endpoint returns `path`, private `locator_json`, host paths, or secrets. `GET /api/data-workspaces/<workspace_id>` returns `{ workspace }` with only that workspace's memberships. `GET /api/data-workspaces/<workspace_id>/analysis-context` returns `{ workspace, sources, analysis_context }`; repeated `source_id` query parameters select members, while omission selects the primary source.
 
-Workspace creation, membership mutation, alias conflicts, and direct workspace stale-version writes remain outside this contract's verified surface. Relationship persistence, validation, activation, and workspace-version effects are verified separately in `project_docs/active/contracts/multiple_data_source_relationships.md`.
+`POST /api/data-workspaces/<workspace_id>/sources` accepts JSON `source_id`, required `version`, optional `alias`, and optional `role`. It attaches an existing catalog source with compare-and-swap workspace versioning and returns `{ source, workspace, analysis_context }`. Membership changes advance the workspace version exactly once and never change `primary_source_id`, activate a relationship, or select a multi-source path.
+
+Errors use structured `{ error: { code, message } }` responses. Missing workspaces and sources use HTTP 404 with `workspace_not_found` or `source_not_found`. Cross-workspace selection, duplicate membership, alias conflict, and stale workspace version use HTTP 409 with `source_not_in_workspace`, `duplicate_workspace_membership`, `workspace_alias_conflict`, or `workspace_version_conflict`. Invalid alias, role, or version inputs use HTTP 400 with `invalid_source_alias`, `invalid_workspace_role`, or `invalid_workspace_version`. Missing managed file storage uses HTTP 409 with `managed_source_unavailable` and does not expose the private path. Relationship persistence, validation, activation, and workspace-version effects are verified separately in `project_docs/active/contracts/multiple_data_source_relationships.md`.
 
 ## Persistence
 
-`datahub_datasets` remains canonical and carries `source_kind`, `locator_kind`, private `locator_json`, `content_fingerprint`, `schema_version`, `created_at`, and `updated_at`. `data_workspaces` persists workspace identity, version, and primary source. `workspace_sources` persists composite membership, workspace-unique alias, role, optional position, and added timestamp. Upload registration writes all three records in one SQLite transaction after managed-file creation; a database failure removes the newly created managed file.
+`datahub_datasets` remains canonical and carries `source_kind`, `locator_kind`, private `locator_json`, `content_fingerprint`, `schema_version`, `created_at`, and `updated_at`. `data_workspaces` persists workspace identity, version, and primary source. `workspace_sources` persists composite membership, workspace-unique alias, role, optional position, and added timestamp. Default upload registration writes the source, one-source workspace, and primary membership in one SQLite transaction after managed-file creation. Existing-workspace upload writes the source, added membership, and one compare-and-swap version increment in one transaction. A database failure rolls back every record and removes the newly created managed file.
 
 ## Verified Analysis Resolution
 
