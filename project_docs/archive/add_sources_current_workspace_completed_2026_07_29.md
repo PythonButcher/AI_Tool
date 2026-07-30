@@ -1,4 +1,16 @@
+# Completed Reference — Add Sources To The Current Workspace
+
+This completed frontend handoff is retained for implementation and contract-review history. It is not an active goal.
+
 # Add Sources To The Current Workspace
+
+## REPAIR REQUIRED
+
+## Repair Blocker
+
+`frontend/frontend/src/features/data-model/AddSourcePanel.jsx` discards the successful mutation payload instead of passing the returned authoritative `workspace` to the canvas. `frontend/frontend/src/features/data-model/SourceModelCanvas.jsx` then catches and suppresses `fetchWorkspaceData()` failures inside `handleAddSourceSuccess`, so the panel closes even when the authoritative refresh fails. This violates the required mutation-truth and awaited-refresh contract and can leave a stale workspace version or source graph presented as complete.
+
+Repair only these two files. Pass the successful `{ source, workspace, analysis_context }` payload into the parent completion handler, reconcile `workspace.version` and `workspace.sources` from the returned `workspace`, and then await `fetchWorkspaceData()` without suppressing failure. Close the panel only after that refresh succeeds. If the refresh fails, keep the panel open, preserve the selected catalog source or file, alias, and role, and render the failure as actionable panel state. A version-conflict refresh must likewise retain the pending choice and surface refresh failure instead of silently re-enabling submission against an unknown version.
 
 Goal: Add one accessible Data Model action that lets a user attach an eligible catalog source or upload a governed file into the currently displayed workspace without changing the primary analytical source.
 
@@ -26,7 +38,7 @@ The Data Model surface shows one clear Add Source action only when a workspace e
 
 A successful mutation immediately refreshes the canvas from the returned workspace identity and the existing workspace read path. It must not create a separate workspace, replace the primary source, select a multi-source analysis path, activate a relationship, or route the new upload through the legacy global `setUploadedData` behavior.
 
-An alias or stale-version conflict remains visible and actionable without losing the user's pending choice. Closing or cancelling performs no mutation. Existing relationship drafting, validation, activation, canvas error recovery, and the default one-source upload surface remain unchanged.
+An alias or stale-version conflict remains visible and actionable without losing the user's pending choice. A failed post-mutation or version-conflict refresh also remains visible and does not close the panel or discard the pending choice. Closing or cancelling performs no mutation. Existing relationship drafting, validation, activation, canvas error recovery, and the default one-source upload surface remain unchanged.
 
 ## Creative Latitude
 

@@ -1,39 +1,47 @@
-# Project Active Gate — Phase 6 / Slice 6: Add Sources To The Current Workspace
+# Project Active Gate — Phase 7 / Slice 7: Retained Active Workspace State
 
-Goal: Deliver and verify one bounded Data Model action that adds a governed catalog source or upload to the currently displayed workspace without changing the primary analytical source.
+Goal: Define and verify the authoritative frontend state contract that retains one workspace and its ordered memberships across source addition, destination changes, and Data Model refreshes without inferring a multi-source analysis selection.
 
 ## User Outcome
 
-A user can remain in the current Data Model workspace, choose an eligible catalog source or upload one governed file, set its alias and non-primary role, and see the authoritative new member appear without creating or selecting another workspace.
+A newly added source remains part of the active workspace when the user navigates between destinations or refreshes the Data Model, while existing one-source consumers continue using the primary source unless the user explicitly selects a verified multi-source analysis path.
 
-## Scope
+## Target Files
 
-Antigravity implements only `project_docs/active/ai_hand_off/add_sources_current_workspace.md`. The primary target is `frontend/frontend/src/features/data-model/SourceModelCanvas.jsx` and its focused styling or sibling component under the same feature directory.
+Codex reviews `frontend/frontend/src/context/DataContext.jsx`, `frontend/frontend/src/components/layout/CanvasContainer.jsx`, `frontend/frontend/src/components/data_management/FileUpload.jsx`, and `frontend/frontend/src/features/data-model/SourceModelCanvas.jsx`.
 
-Codex reviews the returned frontend source and verification evidence against `project_docs/active/contracts/multiple_data_source_workspace.md`, the route behavior in `backend/routes/data_workspaces.py` and `backend/routes/upload.py`, and the bounded handoff.
+Update `project_docs/active/contracts/multiple_data_source_workspace.md` with the retained frontend state boundary. Change backend files or tests only if source review proves that the existing workspace read and membership APIs cannot support the contract. Do not edit frontend implementation files or any `GEMINI.md` file.
 
-## Contracts
+## Required Context
 
-The implementation uses `GET /api/data-sources`, `POST /api/data-workspaces/<workspace_id>/sources`, and the optional existing-workspace multipart fields on `POST /api/upload`.
+Read `AGENTS.md`, `project_docs/INDEX.md`, `project_docs/active/README.md`, this file, `project_docs/active/data_sources/multiple_data_sources_implementation_plan.md`, `project_docs/active/contracts/multiple_data_source_workspace.md`, `project_docs/active/contracts/multiple_data_source_relationships.md`, `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md`, and `project_docs/active/codex_harness_engineering.md`.
 
-Successful membership mutations return authoritative `source`, `workspace`, and `analysis_context`. The updated workspace version and memberships come from `workspace`; `analysis_context` remains primary-only with empty `relationship_ids`.
+## Contract Questions
 
-Only `lookup` and `context` are valid added roles. Duplicate membership, alias conflict, stale version, missing identities, and invalid inputs remain structured server errors.
+Define the minimum authoritative workspace state held by the frontend, including `workspace_id`, `version`, `primary_source_id`, ordered `workspace.sources`, and the narrower `analysis_context`. State which server response replaces each part of state after default upload, workspace-targeted upload, existing-source attachment, workspace refresh, and stale-version recovery.
+
+Keep workspace membership separate from analytical selection. Several `workspace.sources` must not expand `analysis_context.source_ids`, infer `relationship_ids`, change the primary source, or alter one-source global compatibility state.
+
+Define how the last authoritative workspace remains visible during refresh failure, how stale workspace versions are surfaced, and how navigation consumers obtain the same workspace identity without reconstructing it from dataset rows or process-global state.
 
 ## Acceptance
 
-The current Data Model workspace exposes one accessible Add Source action supporting one catalog attachment or one file upload at a time. The interaction shows the current workspace, alias, role, progress, recoverable conflicts, and safe cancellation.
+The contract identifies one owner for retained workspace state, one authoritative replacement rule for successful server responses, and explicit boundaries between workspace membership, active primary-source compatibility data, and selected multi-source analysis context.
 
-Success awaits an authoritative canvas refresh and keeps the existing primary source and relationship state. It does not create another workspace, select a multi-source path, activate a relationship, change the default upload surface, or begin retained global workspace state.
+Source review proves the exact current frontend gaps and confirms whether the existing backend endpoints are sufficient. No speculative frontend handoff is created before that evidence exists.
 
-Codex acceptance requires a focused source review against the handoff, a clean frontend build result from Antigravity, and evidence that pending user choices survive alias and version conflicts.
+If frontend work is required, Codex creates one bounded Antigravity handoff naming the exact state fields, target files, reconciliation behavior, regressions, build command, and control-return evidence.
+
+## Boundaries
+
+Do not implement AI Chat multi-source request construction, relationship auto-selection, source deletion, membership removal, primary-source changes, canvas position persistence, or frontend code. Do not use user browser acceptance as a project file or goal.
 
 ## Verification
 
-Antigravity runs `npm --prefix frontend\frontend run build`, `python .codex/hooks/agent_harness_check.py`, and `git diff --check`.
+Run `python .codex/hooks/agent_harness_check.py`, `python C:/Users/18022/.codex/skills/active-gate-governance/scripts/check_active_gate.py project_docs/active/active_gate .`, and `git diff --check`.
 
-Codex performs the targeted contract review after control returns. Browser-level acceptance remains with the user in chat after Codex accepts the implementation.
+Run focused backend tests only if backend or contract evidence requires a backend change.
 
 ## Owner And Control Return
 
-Antigravity owns the bounded frontend implementation in `project_docs/active/ai_hand_off/add_sources_current_workspace.md`. Antigravity stops after the requested source changes and verification evidence, then returns control to Codex. Codex owns acceptance classification, documentation truth, and the next gate decision.
+Codex owns contract definition, source review, backend-gap classification, documentation truth, and any resulting bounded frontend handoff. Antigravity acts only after Codex verifies a concrete frontend gap and writes that handoff.

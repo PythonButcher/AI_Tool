@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import './AddSourcePanel.css';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
@@ -135,10 +135,11 @@ const AddSourcePanel = ({ workspace, existingSources, onClose, onSuccess }) => {
            setConflictError(errMsg);
            
            if (errCode === 'workspace_version_conflict') {
-              // We need to refresh authoritative workspace data after a version conflict
-              // while keeping the user's pending choice visible.
-              // We'll call onSuccess with a special flag or just trigger a refresh and let useEffect catch the new version.
-              await onSuccess(true); // true indicates conflict refresh, don't close panel
+              try {
+                await onSuccess(true);
+              } catch (refreshErr) {
+                setConflictError(`${errMsg} (Refresh also failed: ${refreshErr.message})`);
+              }
            }
            setIsSubmitting(false);
            return;
@@ -148,8 +149,13 @@ const AddSourcePanel = ({ workspace, existingSources, onClose, onSuccess }) => {
       }
 
       // Success
-      await onSuccess();
-      onClose();
+      try {
+        await onSuccess(false, data.workspace);
+        onClose();
+      } catch (refreshErr) {
+        setError(`Source added, but workspace refresh failed: ${refreshErr.message}`);
+        setIsSubmitting(false);
+      }
     } catch (err) {
       setError(err.message);
       setIsSubmitting(false);

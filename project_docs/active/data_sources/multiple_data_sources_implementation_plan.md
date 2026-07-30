@@ -10,7 +10,7 @@ The experience should feel like a modern data-model studio built for this applic
 
 The backend now persists governed sources, workspaces, workspace memberships, validated relationships, safe multi-source execution, and lineage. The Data Model canvas can read a workspace containing several sources and can create, edit, validate, activate, and deactivate relationships through the verified relationship API.
 
-The backend can now populate one workspace through `GET /api/data-sources`, `POST /api/data-workspaces/<workspace_id>/sources`, and the optional existing-workspace fields on `POST /api/upload`. The normal frontend path does not use those contracts yet. `FileUpload.jsx` still posts only a file to the default upload path, so a second upload through the current interface creates and selects a separate one-source workspace instead of joining the current workspace.
+The backend can populate one workspace through `GET /api/data-sources`, `POST /api/data-workspaces/<workspace_id>/sources`, and the optional existing-workspace fields on `POST /api/upload`. The Data Model surface can attach an eligible catalog source or upload a governed file into its currently displayed workspace while preserving primary-only analytical selection. The broader frontend context does not yet retain that authoritative workspace and ordered membership across destination changes and refreshes.
 
 ## Architecture Direction
 
@@ -77,6 +77,8 @@ Acceptance requires safe public source listing without private paths or locators
 Control returns to Codex for route, transaction, contract, and test review. Frontend readiness remains `backend_not_ready` until this phase is accepted.
 
 ### Phase 6 — Add Sources to the Current Workspace
+
+Status: delivered frontend foundation.
 
 Antigravity receives one bounded frontend handoff after Phase 5 reaches `backend_contract_ready`. Add one clear action in the existing workspace or Data Model surface that lets a user upload another governed file into the current workspace or choose an eligible existing catalog source. The interface must show the current workspace, source identity, proposed alias and role, progress, conflicts, and the authoritative returned membership.
 

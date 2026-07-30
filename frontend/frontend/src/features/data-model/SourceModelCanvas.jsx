@@ -166,8 +166,13 @@ const SourceModelCanvas = ({ workspaceId }) => {
     return rels;
   }, [fetchWorkspaceData]);
 
-  const handleAddSourceSuccess = useCallback(async (conflictRefresh = false) => {
-    await fetchWorkspaceData().catch(() => {});
+  const handleAddSourceSuccess = useCallback(async (conflictRefresh = false, returnedWorkspace = null) => {
+    if (returnedWorkspace) {
+      setWorkspace(prev => prev ? { ...prev, version: returnedWorkspace.version, sources: returnedWorkspace.sources } : returnedWorkspace);
+    }
+
+    await fetchWorkspaceData();
+
     if (!conflictRefresh) {
       setShowAddSource(false);
     }

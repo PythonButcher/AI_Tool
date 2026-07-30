@@ -9,14 +9,14 @@ This file is the single current source of truth for active AI_Tool delivery.
 - **UI Delivery Owner**: Antigravity, only from one active bounded handoff
 - **Browser Acceptance Owner**: User
 
-## Current Gate: Phase 6 / Slice 6 — Add Sources To The Current Workspace
+## Current Gate: Phase 7 / Slice 7 — Retained Active Workspace State
 
-- **Status**: Ready for bounded frontend implementation
+- **Status**: Ready for Codex contract and source review
 - **Backend Readiness**: `backend_contract_ready`
-- **Current Owner**: Antigravity
-- **Next Action**: Execute `project_docs/active/ai_hand_off/add_sources_current_workspace.md`
+- **Current Owner**: Codex
+- **Next Action**: Execute `project_docs/active/active_gate/README.md`
 - **Roadmap**: `project_docs/active/data_sources/multiple_data_sources_implementation_plan.md`
 
 ## Control Return
 
-Antigravity implements only the active add-sources handoff, runs its required verification, and returns exact changed-file and build evidence to Codex. Codex then performs the targeted source and contract review before user browser acceptance.
+Codex defines the retained-workspace frontend state boundary, verifies the current source gaps, and determines whether the existing backend APIs are sufficient. Antigravity receives no implementation work until Codex writes one bounded handoff from verified evidence.
