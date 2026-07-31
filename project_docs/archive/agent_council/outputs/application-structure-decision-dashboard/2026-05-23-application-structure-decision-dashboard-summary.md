@@ -1,3 +1,7 @@
+# Archived Reference — Application Structure Decision Dashboard Council Summary
+
+This completed council summary belongs to a retired product direction and is not an active project gate.
+
 # Application Structure Decision Dashboard Council Summary
 
 Date: 2026-05-23

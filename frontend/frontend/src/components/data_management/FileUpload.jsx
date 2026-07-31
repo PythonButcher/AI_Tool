@@ -14,7 +14,6 @@ function FileUpload({
   allowedExtensions = ['csv', 'xls', 'xlsx', 'json', 'pdf', 'geojson'],
   onFileUploadSuccess,
 }) {
-  const { setUploadedData } = useContext(DataContext);
   const warehouseContext = useContext(WarehouseContext);
   const { datasets = [], addDataset } = warehouseContext || {};
   const [file, setFile] = useState(null);
@@ -101,7 +100,6 @@ function FileUpload({
         setGovernanceNotice(`Warning: ${readiness.reasons?.[0]?.message || 'Dataset quality needs review.'} ${readiness.next_action}`);
       }
 
-      setUploadedData(response.data);
       if (onFileUploadSuccess) {
         onFileUploadSuccess(response.data, file);
       }

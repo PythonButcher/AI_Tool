@@ -1,3 +1,7 @@
+# Archived Reference — React State Flow Review
+
+This source review is historical and must be revalidated against current frontend state before reuse.
+
 # React State Flow Review
 
 Scope reviewed: `C:\Users\18022\Desktop\AI_Tool\frontend\frontend\src`

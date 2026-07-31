@@ -53,6 +53,86 @@ export const DataProvider = ({ children }) => {
   const [semanticModel, setSemanticModel] = useState(null);
   const [semanticModelStatus, setSemanticModelStatus] = useState('idle');
 
+  const [activeWorkspace, setActiveWorkspace] = useState(null);
+  const [analysisContext, setAnalysisContext] = useState(null);
+  const [workspaceRefreshStatus, setWorkspaceRefreshStatus] = useState('idle');
+  const [workspaceRefreshError, setWorkspaceRefreshError] = useState(null);
+  const [workspaceVersionConflict, setWorkspaceVersionConflict] = useState(null);
+
+  const setWorkspaceEnvelope = useCallback((envelope, clearConflict = true) => {
+    if (envelope?.workspace) setActiveWorkspace(envelope.workspace);
+    if (envelope?.analysis_context) setAnalysisContext(envelope.analysis_context);
+    setWorkspaceRefreshStatus('idle');
+    setWorkspaceRefreshError(null);
+    if (clearConflict) {
+      setWorkspaceVersionConflict(null);
+    }
+  }, []);
+
+  const recordWorkspaceMutationConflict = useCallback((conflictData) => {
+    setWorkspaceVersionConflict({
+      code: conflictData.code || 'workspace_version_conflict',
+      message: conflictData.message || 'Workspace version conflict.',
+      attemptedVersion: conflictData.attemptedVersion,
+      currentVersion: null,
+    });
+  }, []);
+
+  const refreshWorkspace = useCallback(async (workspaceId) => {
+    if (!workspaceId) return null;
+    setWorkspaceRefreshStatus('refreshing');
+    setWorkspaceRefreshError(null);
+    // Intentionally do not clear workspaceVersionConflict here to keep it visible during reconciliation
+
+    try {
+      const response = await fetch(`${API_URL}/api/data-workspaces/${workspaceId}`);
+      const data = await response.json();
+
+      if (!response.ok) {
+        const err = new Error(data.error?.message || data.error || 'Failed to refresh workspace');
+        err.code = data.error?.code;
+        throw err;
+      }
+
+      const ws = data.workspace;
+
+      setWorkspaceVersionConflict(prev => {
+        if (prev) {
+          return { ...prev, currentVersion: ws.version };
+        }
+        return prev;
+      });
+      const isIdentityMatch = analysisContext &&
+                              ws.workspace_id === analysisContext.workspace_id &&
+                              ws.primary_source_id === analysisContext.primary_source_id &&
+                              ws.version === analysisContext.workspace_version;
+
+      if (isIdentityMatch) {
+        setActiveWorkspace(ws);
+        setWorkspaceRefreshStatus('idle');
+        return { workspace: ws, analysis_context: analysisContext };
+      } else {
+        const acResponse = await fetch(`${API_URL}/api/data-workspaces/${workspaceId}/analysis-context`);
+        const acData = await acResponse.json();
+
+        if (!acResponse.ok) {
+          const err = new Error(acData.error?.message || 'Failed to fetch analysis context');
+          err.code = acData.error?.code;
+          throw err;
+        }
+
+        const envelope = { workspace: acData.workspace || ws, analysis_context: acData.analysis_context || acData };
+        setWorkspaceEnvelope(envelope, false); // Preserve conflict visibility
+        return envelope;
+      }
+    } catch (error) {
+      console.error('Failed to refresh workspace:', error);
+      setWorkspaceRefreshError({ code: error.code || 'refresh_error', message: error.message });
+      setWorkspaceRefreshStatus('error');
+      return null;
+    }
+  }, [analysisContext, setWorkspaceEnvelope]);
+
   const detectAnomalies = useCallback(async () => {
     if (isDetecting) return;
     setIsDetecting(true);
@@ -243,6 +323,15 @@ export const DataProvider = ({ children }) => {
     createSemanticMetric,
     updateSemanticMetric,
     deleteSemanticMetric,
+    activeWorkspace,
+    analysisContext,
+    workspaceRefreshStatus,
+    workspaceRefreshError,
+    workspaceVersionConflict,
+    setWorkspaceVersionConflict,
+    setWorkspaceEnvelope,
+    refreshWorkspace,
+    recordWorkspaceMutationConflict,
   }), [
     uploadedData,
     fullData,
@@ -262,6 +351,15 @@ export const DataProvider = ({ children }) => {
     createSemanticMetric,
     updateSemanticMetric,
     deleteSemanticMetric,
+    activeWorkspace,
+    analysisContext,
+    workspaceRefreshStatus,
+    workspaceRefreshError,
+    workspaceVersionConflict,
+    setWorkspaceVersionConflict,
+    setWorkspaceEnvelope,
+    refreshWorkspace,
+    recordWorkspaceMutationConflict,
   ]);
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

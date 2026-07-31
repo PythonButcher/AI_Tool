@@ -1,3 +1,7 @@
+# Archived Reference — Codex Next Session Kickoff
+
+This kickoff belongs to a retired product direction and must not be executed.
+
 # Codex Next Session Kickoff - AI Chat Decision Command Center
 
 Goal: Turn the Next Implementation Cycle Priorities council into an executable active Decision Intelligence plan, starting with an AI Chat-native Decision Command Center backend contract that extends or wraps the existing `decision_output` artifact without breaking AI Chat answers, charts, exploration, artifact inspection, saved DecisionAssets, or exports.

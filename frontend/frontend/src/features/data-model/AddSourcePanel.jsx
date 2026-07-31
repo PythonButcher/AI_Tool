@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import './AddSourcePanel.css';
+import { DataContext } from '../../context/DataContext';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
@@ -8,6 +9,7 @@ const AddSourcePanel = ({ workspace, existingSources, onClose, onSuccess }) => {
   const [loadingSources, setLoadingSources] = useState(false);
   const [error, setError] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { recordWorkspaceMutationConflict } = useContext(DataContext);
 
   // Form state
   const [sourceType, setSourceType] = useState('catalog'); // 'catalog' or 'upload'
@@ -135,6 +137,11 @@ const AddSourcePanel = ({ workspace, existingSources, onClose, onSuccess }) => {
            setConflictError(errMsg);
            
            if (errCode === 'workspace_version_conflict') {
+              recordWorkspaceMutationConflict({
+                code: errCode,
+                message: errMsg,
+                attemptedVersion: currentWorkspaceVersion
+              });
               try {
                 await onSuccess(true);
               } catch (refreshErr) {
@@ -150,7 +157,7 @@ const AddSourcePanel = ({ workspace, existingSources, onClose, onSuccess }) => {
 
       // Success
       try {
-        await onSuccess(false, data.workspace);
+        await onSuccess(false, data);
         onClose();
       } catch (refreshErr) {
         setError(`Source added, but workspace refresh failed: ${refreshErr.message}`);

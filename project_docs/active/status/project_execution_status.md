@@ -9,14 +9,14 @@ This file is the single current source of truth for active AI_Tool delivery.
 - **UI Delivery Owner**: Antigravity, only from one active bounded handoff
 - **Browser Acceptance Owner**: User
 
-## Current Gate: Phase 7 / Slice 7 — Retained Active Workspace State
+## Current Gate: Phase 8 / Slice 1 — Explicit Analysis Context Selection
 
-- **Status**: Ready for Codex contract and source review
-- **Backend Readiness**: `backend_contract_ready`
+- **Status**: Backend selection boundary required before frontend integration
+- **Backend Readiness**: `backend_not_ready`
 - **Current Owner**: Codex
 - **Next Action**: Execute `project_docs/active/active_gate/README.md`
 - **Roadmap**: `project_docs/active/data_sources/multiple_data_sources_implementation_plan.md`
 
 ## Control Return
 
-Codex defines the retained-workspace frontend state boundary, verifies the current source gaps, and determines whether the existing backend APIs are sufficient. Antigravity receives no implementation work until Codex writes one bounded handoff from verified evidence.
+Codex implements and verifies the explicit source-and-relationship selection contract, then prepares one bounded Antigravity handoff for visible AI Chat integration.

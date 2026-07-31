@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef, useContext } from 'react';
 import { ReactFlow, Controls, Background, MarkerType, Handle, Position, ConnectionMode } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import './SourceModelCanvas.css';
 import RelationshipInspector from './RelationshipInspector';
 import AddSourcePanel from './AddSourcePanel';
+import { DataContext } from '../../context/DataContext';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
@@ -36,7 +37,8 @@ const SourceModelCanvas = ({ workspaceId }) => {
   const [relationships, setRelationships] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [workspace, setWorkspace] = useState(null);
+  const { activeWorkspace, refreshWorkspace, setWorkspaceEnvelope } = useContext(DataContext);
+  const workspace = activeWorkspace;
   const [showAddSource, setShowAddSource] = useState(false);
 
   const [draftRelationship, setDraftRelationship] = useState(null);
@@ -81,33 +83,26 @@ const SourceModelCanvas = ({ workspaceId }) => {
 
     const doFetch = async () => {
       try {
-          const wsRes = await fetch(`${API_URL}/api/data-workspaces/${workspaceId}`, { signal });
-        const wsData = await wsRes.json();
-        if (!wsRes.ok) throw new Error(wsData.error?.message || wsData.error || 'Failed to fetch workspace');
-
-        if (currentFetchId !== fetchIdRef.current) return fetchPromiseRef.current;
-        setWorkspace(wsData.workspace);
-
-        const workspaceSources = wsData.workspace?.sources || [];
-
-        let fullSources = [];
-        if (workspaceSources.length > 0) {
-          const sourceParams = workspaceSources.map(s => `source_id=${s.source_id}`).join('&');
-          const acRes = await fetch(`${API_URL}/api/data-workspaces/${workspaceId}/analysis-context?${sourceParams}`, { signal });
-          const acData = await acRes.json();
-          if (!acRes.ok) {
-            if (acData.error?.code === 'managed_source_unavailable') {
-               throw new Error('Managed source unavailable. Please re-upload.');
-            }
-            throw new Error(acData.error?.message || 'Failed to fetch source details');
-          }
-          fullSources = acData.sources || [];
+        const envelope = await refreshWorkspace(workspaceId);
+        if (!envelope) {
+          throw new Error('Failed to refresh workspace context');
         }
 
-        const mergedSources = workspaceSources.map(wsSrc => {
-          const detail = fullSources.find(s => s.source_id === wsSrc.source_id) || {};
-          return { ...detail, ...wsSrc };
-        });
+        if (currentFetchId !== fetchIdRef.current) return fetchPromiseRef.current;
+
+        const currentWorkspace = envelope.workspace;
+        const workspaceSources = currentWorkspace?.sources || [];
+
+        const mergedSources = await Promise.all(workspaceSources.map(async (wsSrc) => {
+          try {
+            const res = await fetch(`${API_URL}/api/data-sources/${wsSrc.source_id}`, { signal });
+            const data = await res.json();
+            if (!res.ok) return wsSrc;
+            return { ...data.source, ...wsSrc };
+          } catch (e) {
+            return wsSrc;
+          }
+        }));
 
         const relRes = await fetch(`${API_URL}/api/data-workspaces/${workspaceId}/relationships`, { signal });
         const relData = await relRes.json();
@@ -146,7 +141,7 @@ const SourceModelCanvas = ({ workspaceId }) => {
     const promise = doFetch();
     fetchPromiseRef.current = promise;
     return promise;
-  }, [workspaceId]);
+  }, [workspaceId, refreshWorkspace]);
 
   useEffect(() => {
     fetchWorkspaceData().catch(() => {});
@@ -166,9 +161,9 @@ const SourceModelCanvas = ({ workspaceId }) => {
     return rels;
   }, [fetchWorkspaceData]);
 
-  const handleAddSourceSuccess = useCallback(async (conflictRefresh = false, returnedWorkspace = null) => {
-    if (returnedWorkspace) {
-      setWorkspace(prev => prev ? { ...prev, version: returnedWorkspace.version, sources: returnedWorkspace.sources } : returnedWorkspace);
+  const handleAddSourceSuccess = useCallback(async (conflictRefresh = false, responseData = null) => {
+    if (responseData && responseData.workspace && responseData.analysis_context) {
+      setWorkspaceEnvelope({ workspace: responseData.workspace, analysis_context: responseData.analysis_context });
     }
 
     await fetchWorkspaceData();

@@ -10,7 +10,7 @@ The experience should feel like a modern data-model studio built for this applic
 
 The backend now persists governed sources, workspaces, workspace memberships, validated relationships, safe multi-source execution, and lineage. The Data Model canvas can read a workspace containing several sources and can create, edit, validate, activate, and deactivate relationships through the verified relationship API.
 
-The backend can populate one workspace through `GET /api/data-sources`, `POST /api/data-workspaces/<workspace_id>/sources`, and the optional existing-workspace fields on `POST /api/upload`. The Data Model surface can attach an eligible catalog source or upload a governed file into its currently displayed workspace while preserving primary-only analytical selection. The broader frontend context does not yet retain that authoritative workspace and ordered membership across destination changes and refreshes.
+The backend can populate one workspace through `GET /api/data-sources`, `POST /api/data-workspaces/<workspace_id>/sources`, and the optional existing-workspace fields on `POST /api/upload`. The Data Model surface can attach an eligible catalog source or upload a governed file into its currently displayed workspace while preserving primary-only analytical selection. The frontend now retains the authoritative workspace and ordered membership across destination changes and refreshes. Explicit source-and-relationship selection for AI Chat is the current missing boundary.
 
 ## Architecture Direction
 
@@ -87,6 +87,8 @@ Acceptance requires no accidental creation of a separate workspace, no automatic
 Control returns to Codex for targeted source and contract review.
 
 ### Phase 7 — Retained Active Workspace State
+
+Status: delivered frontend foundation.
 
 Codex first fixes the frontend state contract, then Antigravity receives one bounded handoff to retain the authoritative workspace and its ordered members across upload, source addition, destination changes, and Data Model refreshes. The active state must distinguish workspace membership from the narrower source and relationship selections used for analysis.
 

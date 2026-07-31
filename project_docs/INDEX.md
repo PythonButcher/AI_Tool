@@ -29,7 +29,6 @@ This is the top-level routing file. Use it to find the smallest current document
 | Review deferred planning | `project_docs/active/future/README.md` |
 | Keep Codex runs efficient | `project_docs/active/codex_harness_engineering.md` |
 | Improve or reuse the agent harness | `project_docs/active/agent_harness/README.md` |
-| Review cleanup/pruning candidates | `project_docs/active/reviews/project_pruning_recommendations.md` |
 | Run Agent Council workflow | `project_docs/active/agent_council/README.md` |
 | Find old status or superseded plans | `project_docs/archive/superseded_active_2026_05_24/` |
 

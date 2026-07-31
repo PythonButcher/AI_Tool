@@ -1,3 +1,7 @@
+# Archived Reference — App-Wide UI Flaws Council Topic
+
+This completed council topic is historical and is not an active project gate.
+
 # App-Wide UI Flaws Council Topic
 
 ## Purpose

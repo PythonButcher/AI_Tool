@@ -14,10 +14,4 @@ Recommended topic layout:
 
 The topic README should explain the purpose, list the artifacts, include the validation command for any council JSON, and define the topic boundary so future agents do not mix unrelated planning work into the same folder.
 
-Current topics:
-
-`app-wide-ui-flaws/`
-
-`application-next-focus-priorities/`
-
-`compounding-phase-results/`
+There are no live council topics. Completed council artifacts are stored under `project_docs/archive/agent_council/outputs/`.
