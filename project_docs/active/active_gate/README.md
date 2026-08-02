@@ -1,31 +1,31 @@
-# Project Active Gate — Phase 8 / Slice 1: Explicit Analysis Context Selection
+# Project Active Gate — Phase 8 / Slice 1: Persisted Data Model Layout
 
-Goal: Implement a server-authoritative selection boundary that returns explicit source and relationship IDs for multi-source AI Chat requests.
+Goal: Add the backend contract required to save and restore each data source position on the Data Model canvas.
 
 ## User Outcome
 
-A user can deliberately choose a verified multi-source model path for AI Chat instead of the application treating workspace membership as analytical selection.
+Each data source can be moved freely on the canvas and returns to its saved location after refresh or navigation.
 
 ## Scope
 
-Extend `GET /api/data-workspaces/<workspace_id>/analysis-context` to accept repeated `source_id` and `relationship_id` parameters. Update `backend/routes/data_workspaces.py`, `backend/services/workspace_context.py`, and the smallest reusable validation boundary in `backend/services/relationship_execution.py`. Update `tests/test_source_workspace_context.py` and `tests/test_relationship_execution.py`.
+Define and implement a versioned workspace-membership position update using the existing `workspace_sources.position_json` persistence. Update `backend/routes/data_workspaces.py`, `backend/services/workspace_context.py`, `backend/repositories/source_workspace_repository.py`, `project_docs/active/contracts/multiple_data_source_workspace.md`, and focused workspace tests.
 
 ## Contracts
 
-Use `project_docs/active/contracts/multiple_data_source_workspace.md` and `project_docs/active/contracts/multiple_data_source_relationships.md`. The returned `analysis_context` must contain the current `workspace_version`, persisted `primary_source_id`, ordered selected `source_ids`, and ordered explicit `relationship_ids`. Never infer a relationship merely because sources share a workspace.
+Persist a finite numeric `{ x, y }` position for one source membership inside one workspace. Require the current workspace version, preserve workspace isolation, advance the workspace version exactly once, and return the authoritative updated `{ workspace }`. Position is presentation state only and must not change membership, primary source, analysis context, relationships, semantic metadata, or source data.
 
 ## Acceptance
 
-One-source requests remain relationship-free. Multi-source selection requires the primary source and an explicit active, confirmed, freshly valid, connected, acyclic relationship tree. Missing, stale, inactive, cross-workspace, disconnected, cyclic, or ambiguous selections return structured errors. The successful response remains `{ workspace, sources, analysis_context }` and contains no joined rows or private storage data.
+The API saves valid coordinates and returns the updated workspace. Invalid coordinates, missing membership, cross-workspace access, and stale versions return structured errors. Restart retrieval returns the saved position. Existing source registration, membership mutation, relationship behavior, and one-source compatibility remain unchanged.
 
 ## Boundaries
 
-Do not edit frontend files, auto-activate relationships, choose paths for the user, change the primary source, execute an AI Chat request, or alter one-source compatibility behavior.
+Do not edit frontend files in this slice. Do not add automatic layout, relationship inference, AI Chat integration, source removal, or primary-source changes.
 
 ## Verification
 
-Run the focused workspace-context and relationship-execution tests, `python .codex/hooks/agent_harness_check.py`, the active-gate validator, and `git diff --check`.
+Run the focused workspace repository, route, and context tests, `python .codex/hooks/agent_harness_check.py`, the active-gate validator, and `git diff --check`.
 
 ## Owner And Control Return
 
-Codex owns this backend contract slice. After source and test verification, Codex creates one bounded Antigravity handoff for explicit model selection and AI Chat request integration.
+Codex owns the backend layout contract. After verification, Codex creates one bounded Antigravity handoff for draggable nodes, saved positions, and the usable relationship-authoring interface.

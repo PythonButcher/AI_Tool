@@ -10,7 +10,7 @@ The experience should feel like a modern data-model studio built for this applic
 
 The backend now persists governed sources, workspaces, workspace memberships, validated relationships, safe multi-source execution, and lineage. The Data Model canvas can read a workspace containing several sources and can create, edit, validate, activate, and deactivate relationships through the verified relationship API.
 
-The backend can populate one workspace through `GET /api/data-sources`, `POST /api/data-workspaces/<workspace_id>/sources`, and the optional existing-workspace fields on `POST /api/upload`. The Data Model surface can attach an eligible catalog source or upload a governed file into its currently displayed workspace while preserving primary-only analytical selection. The frontend now retains the authoritative workspace and ordered membership across destination changes and refreshes. Explicit source-and-relationship selection for AI Chat is the current missing boundary.
+The backend can populate one workspace through `GET /api/data-sources`, `POST /api/data-workspaces/<workspace_id>/sources`, and the optional existing-workspace fields on `POST /api/upload`. Durable relationship CRUD, validation, confirmation, activation, deactivation, deletion, and diagnostics already exist. The frontend retains the authoritative workspace across navigation, but the canvas currently disables node dragging and does not provide a usable relationship-authoring workflow. The backend stores membership positions but has no public position-update operation.
 
 ## Architecture Direction
 
@@ -96,15 +96,27 @@ Acceptance requires a newly added source to remain visible after navigation and 
 
 Control returns to Codex for state-flow and regression review.
 
-### Phase 8 — AI Chat Model Context and Lineage
+### Phase 8 — Interactive Data Model Authoring
 
-Antigravity receives a separate frontend handoff only after workspace membership and active workspace state are verified. Connect explicit selected source IDs and active relationship IDs to AI Chat, tables, charts, and result lineage. Show source mentions, active-model context, namespaced fields, governance warnings, and honest relationship limitations without automatically choosing paths.
+Codex first adds a versioned backend operation that saves finite `{ x, y }` canvas coordinates into the existing workspace-membership position record. Position changes are presentation state only: they must not alter membership, primary source, analysis selection, relationships, or source data.
+
+After backend verification, Antigravity receives one bounded frontend handoff for the Data Model authoring surface. Every source node must be freely draggable, preserve its position through refresh and navigation, and remain connected by visible relationship edges while moving. The interface must provide discoverable tools to start a relationship, select source fields, configure ordered field pairs, cardinality, join behavior, and filter direction, then save, validate, confirm, activate, deactivate, edit, or delete it using the verified backend endpoints.
+
+The interface must show relationship state and actionable diagnostics in plain language. Draft, unvalidated, invalid, blocked, stale, valid-inactive, and active relationships must be distinguishable. Failed saves or stale versions must retain the user's draft and last authoritative canvas state. Suggested relationships remain optional candidates and never activate automatically.
+
+Acceptance requires freely movable persisted nodes, usable mouse and keyboard relationship authoring, visible saved edges that track moved nodes, exact server-backed validation and activation behavior, safe cancellation and retry, and unchanged source membership and one-source analysis behavior. Backend tests, focused frontend tests, production build evidence, Codex source review, and user browser acceptance are required.
+
+Control returns to Codex after backend implementation and after each bounded Antigravity handoff.
+
+### Phase 9 — AI Chat Model Context and Lineage
+
+Antigravity receives a separate frontend handoff only after interactive Data Model authoring is verified. Connect explicit selected source IDs and active relationship IDs to AI Chat, tables, charts, and result lineage. Show source mentions, active-model context, namespaced fields, governance warnings, and honest relationship limitations without automatically choosing paths.
 
 Acceptance requires cross-source questions and charts to use only the explicit verified analysis context, conversational refinements to retain that context, and result artifacts to show source and relationship lineage. Existing one-source AI Chat remains unchanged.
 
 Control returns to Codex for integration review.
 
-### Phase 9 — Reliability and Release
+### Phase 10 — Reliability and Release
 
 Codex owns cross-path regression, migration, concurrency, deletion, and performance hardening. Source deletion must protect or explicitly invalidate dependent relationships and workspaces. Tests cover restart persistence, duplicate uploads, stale schemas, large joins, row-explosion limits, governance aggregation, and one-source compatibility. Documentation and API examples are finalized from verified behavior.
 
