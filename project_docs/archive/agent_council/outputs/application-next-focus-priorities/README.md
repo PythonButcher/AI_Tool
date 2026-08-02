@@ -1,3 +1,7 @@
+# Archived Reference — Application Next Focus Priorities Council Topic
+
+This completed council topic is historical and is not an active project gate.
+
 # Application Next Focus Priorities Council Topic
 
 ## Purpose

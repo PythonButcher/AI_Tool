@@ -1,33 +1,31 @@
-# Project Active Gate — Phase 5 / Slice 5: Workspace Membership API
+# Project Active Gate — Phase 8 / Slice 1: Persisted Data Model Layout
 
-## Goal
-
-Add a safe, versioned backend boundary that lets one analytical workspace contain several governed sources.
+Goal: Add the backend contract required to save and restore each data source position on the Data Model canvas.
 
 ## User Outcome
 
-A client can list eligible sources, attach a catalog source to a workspace, or upload a new source into that workspace without creating a separate workspace or silently changing the analytical model.
+Each data source can be moved freely on the canvas and returns to its saved location after refresh or navigation.
 
 ## Scope
 
-Implement membership repository transactions, workspace-context service behavior, public routes, upload targeting, and focused tests in `backend/repositories/source_workspace_repository.py`, `backend/services/workspace_context.py`, `backend/routes/data_workspaces.py`, `backend/routes/upload.py`, and `tests/test_source_workspace_context.py`.
-
-Do not change frontend files, remove memberships, change the primary source, activate relationships, select analysis paths, alter AI Chat requests, or modify `GEMINI.md`.
+Define and implement a versioned workspace-membership position update using the existing `workspace_sources.position_json` persistence. Update `backend/routes/data_workspaces.py`, `backend/services/workspace_context.py`, `backend/repositories/source_workspace_repository.py`, `project_docs/active/contracts/multiple_data_source_workspace.md`, and focused workspace tests.
 
 ## Contracts
 
-Use `project_docs/active/contracts/multiple_data_source_workspace.md`, `project_docs/active/contracts/multiple_data_source_relationships.md`, `project_docs/active/data_sources/multiple_data_sources_implementation_plan.md`, and `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md`.
+Persist a finite numeric `{ x, y }` position for one source membership inside one workspace. Require the current workspace version, preserve workspace isolation, advance the workspace version exactly once, and return the authoritative updated `{ workspace }`. Position is presentation state only and must not change membership, primary source, analysis context, relationships, semantic metadata, or source data.
 
 ## Acceptance
 
-The backend exposes a safe source list, attaches an eligible catalog source with optimistic workspace versioning, and accepts a governed upload targeted at a workspace. Each successful mutation advances workspace version exactly once and returns authoritative source, workspace, and primary-only analysis context. Duplicate membership, alias conflict, invalid role, missing identity, stale version, and failed upload membership are safe, structured, and transactionally clean. Default one-source upload behavior remains unchanged.
+The API saves valid coordinates and returns the updated workspace. Invalid coordinates, missing membership, cross-workspace access, and stale versions return structured errors. Restart retrieval returns the saved position. Existing source registration, membership mutation, relationship behavior, and one-source compatibility remain unchanged.
+
+## Boundaries
+
+Do not edit frontend files in this slice. Do not add automatic layout, relationship inference, AI Chat integration, source removal, or primary-source changes.
 
 ## Verification
 
-Run `python -m unittest tests.test_source_workspace_context tests.test_source_relationships tests.test_relationship_execution`, `python .codex/hooks/agent_harness_check.py`, `python C:/Users/18022/.codex/skills/active-gate-governance/scripts/check_active_gate.py project_docs/active/active_gate .`, and `git diff --check`.
+Run the focused workspace repository, route, and context tests, `python .codex/hooks/agent_harness_check.py`, the active-gate validator, and `git diff --check`.
 
-## Owner
+## Owner And Control Return
 
-Codex owns backend implementation, contract updates, tests, and review. Control returns to Codex for a source and test gate before any frontend handoff.
-
-Kickoff goal: `project_docs/active/active_gate/codex_workspace_membership_api_goal.md`.
+Codex owns the backend layout contract. After verification, Codex creates one bounded Antigravity handoff for draggable nodes, saved positions, and the usable relationship-authoring interface.

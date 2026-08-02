@@ -5,6 +5,7 @@ from pathlib import Path
 import sqlite3
 from tempfile import TemporaryDirectory
 import unittest
+from unittest.mock import patch
 
 from flask import Flask
 
@@ -157,6 +158,216 @@ class SourceWorkspaceContextTests(unittest.TestCase):
         error = response.get_json()["error"]
         self.assertEqual(error["code"], "managed_source_unavailable")
         self.assertNotIn(str(self.managed_root), error["message"])
+
+    def test_source_listing_returns_only_public_catalog_records(self):
+        first = self._upload("orders.csv").get_json()["source"]
+        second = self._upload("customers.csv", b"customer_id,name\n1,Ada\n").get_json()["source"]
+
+        response = self.client.get("/api/data-sources")
+
+        self.assertEqual(response.status_code, 200)
+        sources = response.get_json()["sources"]
+        self.assertEqual(
+            [source["source_id"] for source in sources],
+            [first["source_id"], second["source_id"]],
+        )
+        for source in sources:
+            self.assertNotIn("path", source)
+            self.assertNotIn("private_locator", source)
+            self.assertNotIn(str(self.managed_root), str(source))
+
+    def test_existing_catalog_source_joins_workspace_and_advances_once(self):
+        orders = self._upload("orders.csv").get_json()
+        customers = self._upload(
+            "customers.csv", b"customer_id,name\n1,Ada\n"
+        ).get_json()
+        workspace_id = orders["workspace"]["workspace_id"]
+
+        response = self.client.post(
+            f"/api/data-workspaces/{workspace_id}/sources",
+            json={
+                "source_id": customers["source"]["source_id"],
+                "alias": "customers",
+                "role": "lookup",
+                "version": orders["workspace"]["version"],
+            },
+        )
+
+        self.assertEqual(response.status_code, 200, response.get_json())
+        body = response.get_json()
+        self.assertEqual(body["source"]["source_id"], customers["source"]["source_id"])
+        self.assertEqual(body["workspace"]["version"], 2)
+        self.assertEqual(body["workspace"]["source_count"], 2)
+        self.assertEqual(
+            body["analysis_context"]["source_ids"],
+            [orders["source"]["source_id"]],
+        )
+        self.assertEqual(body["analysis_context"]["relationship_ids"], [])
+
+        backend_db._SCHEMA_READY = False
+        restarted = get_workspace(workspace_id)
+        self.assertEqual(restarted["version"], 2)
+        self.assertEqual(
+            [membership["alias"] for membership in restarted["sources"]],
+            ["orders", "customers"],
+        )
+
+    def test_membership_conflicts_and_invalid_requests_leave_workspace_unchanged(self):
+        orders = self._upload("orders.csv").get_json()
+        customers = self._upload(
+            "customers.csv", b"customer_id,name\n1,Ada\n"
+        ).get_json()
+        regions = self._upload(
+            "regions.csv", b"region_id,region\n1,East\n"
+        ).get_json()
+        workspace_id = orders["workspace"]["workspace_id"]
+        initial_version = orders["workspace"]["version"]
+
+        invalid_role = self.client.post(
+            f"/api/data-workspaces/{workspace_id}/sources",
+            json={
+                "source_id": customers["source"]["source_id"],
+                "role": "primary",
+                "version": initial_version,
+            },
+        )
+        self.assertEqual(invalid_role.status_code, 400)
+        self.assertEqual(invalid_role.get_json()["error"]["code"], "invalid_workspace_role")
+        invalid_alias = self.client.post(
+            f"/api/data-workspaces/{workspace_id}/sources",
+            json={
+                "source_id": customers["source"]["source_id"],
+                "alias": 42,
+                "role": "lookup",
+                "version": initial_version,
+            },
+        )
+        self.assertEqual(invalid_alias.status_code, 400)
+        self.assertEqual(invalid_alias.get_json()["error"]["code"], "invalid_source_alias")
+
+        attached = self.client.post(
+            f"/api/data-workspaces/{workspace_id}/sources",
+            json={
+                "source_id": customers["source"]["source_id"],
+                "alias": "customers",
+                "role": "lookup",
+                "version": initial_version,
+            },
+        )
+        self.assertEqual(attached.status_code, 200)
+
+        cases = [
+            (
+                {
+                    "source_id": customers["source"]["source_id"],
+                    "alias": "customers_again",
+                    "role": "lookup",
+                    "version": 2,
+                },
+                "duplicate_workspace_membership",
+            ),
+            (
+                {
+                    "source_id": regions["source"]["source_id"],
+                    "alias": "customers",
+                    "role": "context",
+                    "version": 2,
+                },
+                "workspace_alias_conflict",
+            ),
+            (
+                {
+                    "source_id": regions["source"]["source_id"],
+                    "alias": "regions",
+                    "role": "context",
+                    "version": 1,
+                },
+                "workspace_version_conflict",
+            ),
+        ]
+        for payload, error_code in cases:
+            with self.subTest(error_code=error_code):
+                response = self.client.post(
+                    f"/api/data-workspaces/{workspace_id}/sources", json=payload
+                )
+                self.assertEqual(response.status_code, 409)
+                self.assertEqual(response.get_json()["error"]["code"], error_code)
+
+        missing_source = self.client.post(
+            f"/api/data-workspaces/{workspace_id}/sources",
+            json={"source_id": "src_missing", "version": 2},
+        )
+        self.assertEqual(missing_source.status_code, 404)
+        self.assertEqual(missing_source.get_json()["error"]["code"], "source_not_found")
+        missing_workspace = self.client.post(
+            "/api/data-workspaces/ws_missing/sources",
+            json={"source_id": regions["source"]["source_id"], "version": 1},
+        )
+        self.assertEqual(missing_workspace.status_code, 404)
+        self.assertEqual(
+            missing_workspace.get_json()["error"]["code"], "workspace_not_found"
+        )
+
+        unchanged = get_workspace(workspace_id)
+        self.assertEqual(unchanged["version"], 2)
+        self.assertEqual(unchanged["source_count"], 2)
+
+    def test_upload_can_join_existing_workspace_without_selecting_new_source(self):
+        orders = self._upload("orders.csv").get_json()
+        workspace_id = orders["workspace"]["workspace_id"]
+
+        response = self._upload(
+            "customers.csv",
+            b"customer_id,name\n1,Ada\n",
+            workspace_id=workspace_id,
+            workspace_version=str(orders["workspace"]["version"]),
+            alias="customers",
+            role="lookup",
+        )
+
+        self.assertEqual(response.status_code, 200, response.get_json())
+        body = response.get_json()
+        self.assertEqual(body["workspace"]["workspace_id"], workspace_id)
+        self.assertEqual(body["workspace"]["version"], 2)
+        self.assertEqual(body["workspace"]["source_count"], 2)
+        self.assertEqual(
+            body["analysis_context"]["source_ids"],
+            [orders["source"]["source_id"]],
+        )
+        self.assertEqual(body["analysis_context"]["relationship_ids"], [])
+        self.assertTrue(
+            (self.managed_root / body["source"]["managed_locator"]["storage_key"]).is_file()
+        )
+
+    def test_failed_workspace_upload_removes_file_and_rolls_back_catalog(self):
+        orders = self._upload("orders.csv").get_json()
+        files_before = {path.name for path in self.managed_root.iterdir()}
+
+        with patch(
+            "backend.repositories.source_workspace_repository._insert_membership",
+            side_effect=RuntimeError("forced membership write failure"),
+        ), patch("backend.routes.upload.logger.exception"):
+            response = self._upload(
+                "customers.csv",
+                b"customer_id,name\n1,Ada\n",
+                workspace_id=orders["workspace"]["workspace_id"],
+                workspace_version=str(orders["workspace"]["version"]),
+                alias="customers",
+                role="lookup",
+            )
+
+        self.assertEqual(response.status_code, 500)
+        self.assertEqual(
+            {path.name for path in self.managed_root.iterdir()}, files_before
+        )
+        workspace = get_workspace(orders["workspace"]["workspace_id"])
+        self.assertEqual(workspace["version"], 1)
+        self.assertEqual(workspace["source_count"], 1)
+        source_ids = [
+            source["source_id"]
+            for source in self.client.get("/api/data-sources").get_json()["sources"]
+        ]
+        self.assertEqual(source_ids, [orders["source"]["source_id"]])
 
 
 if __name__ == "__main__":

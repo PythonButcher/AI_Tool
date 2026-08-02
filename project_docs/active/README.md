@@ -53,11 +53,11 @@ Every prompt written for Antigravity, Codex in a future session, or another agen
 
 By default, `Goal:` prompts belong in handoff files under `project_docs/active/ai_hand_off/`, not in the chat final response. The final response should link or name the handoff file so the receiving agent can read it through the auto-handoff flow. Paste the full prompt in chat only when the user explicitly asks for that output.
 
-Codex-owned current goals and gate truth belong only in `project_docs/active/active_gate/`. Active Antigravity UI assignments belong in `project_docs/active/ai_hand_off/`; Antigravity does not create backend work for Codex or own the active gate.
+Codex-owned current goals and gate truth belong only in `project_docs/active/active_gate/README.md`. That README is the sole file permitted under `active_gate/` and must be detailed enough to execute without a companion goal or kickoff file. Active Antigravity UI assignments belong in `project_docs/active/ai_hand_off/`; Antigravity does not create backend work for Codex or own the active gate.
 
 ## Active-Gate Rule
 
-The project has one true active workspace: `project_docs/active/active_gate/`. Agents must not infer the next phase from product-area folders, `completed/`, `future/`, archive files, or the mere existence of an old handoff. The active gate is the project status file plus the active-gate README, and the ranking source must be named there when the gate comes from a council recommendation.
+The project has one true active workspace: `project_docs/active/active_gate/README.md`. It is the only authoritative gate document; do not create separate goal, kickoff, plan, status, or supporting files inside `active_gate/`. Agents must not infer the next phase from product-area folders, `completed/`, `future/`, archive files, or the mere existence of an old handoff. The project status routes to the active-gate README, and the ranking source must be named there when the gate comes from a council recommendation.
 
 ## Repair Handoff Clarity
 
@@ -89,7 +89,7 @@ The active status file is for current truth, the current gate, and the latest ve
 
 ## Phase Wrap-Up Rule
 
-When Codex wraps up a project phase or clears a phase gate, Codex must automatically create or update a handoff file containing the clean `Goal:` prompt for starting the next session when another agent or future session has work to do. The wrap-up summary may describe the phase just completed, but the handoff prompt must not recap prior phases, review history, implementation history, or who approved earlier work. It may include only the minimum prerequisite state needed to start safely, such as `backend contract is ready` or `active handoff exists`, then point to the current docs and name the next task. Do not include sentences like `Phase N is complete`, `Codex implemented`, `reviewed by`, or detailed verification history inside the handoff prompt.
+When Codex wraps up a project phase or clears a phase gate, Codex must replace `project_docs/active/active_gate/README.md` with the next clean, standalone `Goal:` when Codex remains the owner, or create a handoff file when another agent owns the next work. The new active-gate README must not recap prior phases, review history, implementation history, or who approved earlier work. It may include only the minimum prerequisite state needed to start safely, then define the current target, contract, acceptance, boundaries, verification, owner, and control return.
 
 Before sending a final response after substantial project work, Codex must run this stop check: did this response clear a backend gate, clear a frontend gate, wrap a project phase, mark a goal complete, or identify Antigravity as the next owner? If yes and a forward-looking prompt is required, store it in a handoff file and reference that file in the final response. A status summary without the required handoff file reference is incomplete.
 

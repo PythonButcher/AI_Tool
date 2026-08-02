@@ -28,6 +28,7 @@ from backend.routes.semantic_model import semantic_model_bp
 from backend.routes.semantic_metrics import semantic_metrics_bp
 from backend.routes.decision import decision_bp
 from backend.routes.workflows import workflow_bp
+from backend.services.workflow_run_repository import recover_incomplete_runs
 
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -66,6 +67,13 @@ def create_app():
     app.register_blueprint(semantic_metrics_bp)
     app.register_blueprint(decision_bp)
     app.register_blueprint(workflow_bp)
+
+    # Mark any non-terminal workflow runs from a previous process as
+    # interrupted.  A restart must not pretend an unfinished run completed.
+    with app.app_context():
+        interrupted = recover_incomplete_runs()
+        if interrupted:
+            print(f"Workflow recovery: marked {len(interrupted)} in-progress run(s) as interrupted.")
 
     @app.route('/', methods=['GET'])
     def home():

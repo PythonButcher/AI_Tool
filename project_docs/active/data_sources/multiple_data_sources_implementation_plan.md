@@ -10,7 +10,7 @@ The experience should feel like a modern data-model studio built for this applic
 
 The backend now persists governed sources, workspaces, workspace memberships, validated relationships, safe multi-source execution, and lineage. The Data Model canvas can read a workspace containing several sources and can create, edit, validate, activate, and deactivate relationships through the verified relationship API.
 
-The product still cannot create that multi-source workspace through normal user actions. `POST /api/upload` always creates a new source and a new one-source workspace. `FileUpload.jsx` accepts only `files[0]`, and `backend/routes/data_workspaces.py` exposes workspace reads but no membership mutation. Relationship tests insert extra memberships directly with SQL because no public service or route exists. A second upload therefore replaces the active one-source context instead of joining the current workspace.
+The backend can populate one workspace through `GET /api/data-sources`, `POST /api/data-workspaces/<workspace_id>/sources`, and the optional existing-workspace fields on `POST /api/upload`. Durable relationship CRUD, validation, confirmation, activation, deactivation, deletion, and diagnostics already exist. The frontend retains the authoritative workspace across navigation, but the canvas currently disables node dragging and does not provide a usable relationship-authoring workflow. The backend stores membership positions but has no public position-update operation.
 
 ## Architecture Direction
 
@@ -66,6 +66,8 @@ Control returns to Codex for targeted source and contract review.
 
 ### Phase 5 — Workspace Membership API
 
+Status: delivered backend foundation.
+
 Codex adds the missing backend boundary for populating one workspace with several sources. Add a safe source-catalog read endpoint, a versioned endpoint that attaches an existing catalog source to a workspace, and an optional existing-workspace target for governed file upload. Membership writes must be transactional, workspace-isolated, alias-safe, and optimistic-concurrency protected.
 
 The existing-source request uses `source_id`, `alias`, `role`, and current workspace `version`. Upload-to-workspace uses multipart `workspace_id`, `workspace_version`, optional `alias`, and `role` while preserving every legacy upload response field. Added sources may use only `lookup` or `context`; membership mutation never changes the primary source, activates a relationship, or selects a multi-source analysis path. Responses return authoritative `{ source, workspace, analysis_context }`, with `analysis_context` remaining a safe one-source primary context until explicit source and relationship selections are made.
@@ -76,6 +78,8 @@ Control returns to Codex for route, transaction, contract, and test review. Fron
 
 ### Phase 6 — Add Sources to the Current Workspace
 
+Status: delivered frontend foundation.
+
 Antigravity receives one bounded frontend handoff after Phase 5 reaches `backend_contract_ready`. Add one clear action in the existing workspace or Data Model surface that lets a user upload another governed file into the current workspace or choose an eligible existing catalog source. The interface must show the current workspace, source identity, proposed alias and role, progress, conflicts, and the authoritative returned membership.
 
 Acceptance requires no accidental creation of a separate workspace, no automatic relationship or analysis-path selection, visible alias and version conflicts without losing the user's choice, safe cancellation, and an immediate refresh of the workspace source list from the returned server record. Existing one-source upload remains unchanged.
@@ -84,21 +88,35 @@ Control returns to Codex for targeted source and contract review.
 
 ### Phase 7 — Retained Active Workspace State
 
+Status: delivered frontend foundation.
+
 Codex first fixes the frontend state contract, then Antigravity receives one bounded handoff to retain the authoritative workspace and its ordered members across upload, source addition, destination changes, and Data Model refreshes. The active state must distinguish workspace membership from the narrower source and relationship selections used for analysis.
 
 Acceptance requires a newly added source to remain visible after navigation and refresh, the Data Model canvas to receive all workspace members, one-source consumers to keep their current behavior, and no multi-source AI Chat request to be inferred merely because several sources belong to the workspace. Stale workspace versions and failed refreshes remain visible without discarding the last authoritative workspace.
 
 Control returns to Codex for state-flow and regression review.
 
-### Phase 8 — AI Chat Model Context and Lineage
+### Phase 8 — Interactive Data Model Authoring
 
-Antigravity receives a separate frontend handoff only after workspace membership and active workspace state are verified. Connect explicit selected source IDs and active relationship IDs to AI Chat, tables, charts, and result lineage. Show source mentions, active-model context, namespaced fields, governance warnings, and honest relationship limitations without automatically choosing paths.
+Codex first adds a versioned backend operation that saves finite `{ x, y }` canvas coordinates into the existing workspace-membership position record. Position changes are presentation state only: they must not alter membership, primary source, analysis selection, relationships, or source data.
+
+After backend verification, Antigravity receives one bounded frontend handoff for the Data Model authoring surface. Every source node must be freely draggable, preserve its position through refresh and navigation, and remain connected by visible relationship edges while moving. The interface must provide discoverable tools to start a relationship, select source fields, configure ordered field pairs, cardinality, join behavior, and filter direction, then save, validate, confirm, activate, deactivate, edit, or delete it using the verified backend endpoints.
+
+The interface must show relationship state and actionable diagnostics in plain language. Draft, unvalidated, invalid, blocked, stale, valid-inactive, and active relationships must be distinguishable. Failed saves or stale versions must retain the user's draft and last authoritative canvas state. Suggested relationships remain optional candidates and never activate automatically.
+
+Acceptance requires freely movable persisted nodes, usable mouse and keyboard relationship authoring, visible saved edges that track moved nodes, exact server-backed validation and activation behavior, safe cancellation and retry, and unchanged source membership and one-source analysis behavior. Backend tests, focused frontend tests, production build evidence, Codex source review, and user browser acceptance are required.
+
+Control returns to Codex after backend implementation and after each bounded Antigravity handoff.
+
+### Phase 9 — AI Chat Model Context and Lineage
+
+Antigravity receives a separate frontend handoff only after interactive Data Model authoring is verified. Connect explicit selected source IDs and active relationship IDs to AI Chat, tables, charts, and result lineage. Show source mentions, active-model context, namespaced fields, governance warnings, and honest relationship limitations without automatically choosing paths.
 
 Acceptance requires cross-source questions and charts to use only the explicit verified analysis context, conversational refinements to retain that context, and result artifacts to show source and relationship lineage. Existing one-source AI Chat remains unchanged.
 
 Control returns to Codex for integration review.
 
-### Phase 9 — Reliability and Release
+### Phase 10 — Reliability and Release
 
 Codex owns cross-path regression, migration, concurrency, deletion, and performance hardening. Source deletion must protect or explicitly invalidate dependent relationships and workspaces. Tests cover restart persistence, duplicate uploads, stale schemas, large joins, row-explosion limits, governance aggregation, and one-source compatibility. Documentation and API examples are finalized from verified behavior.
 

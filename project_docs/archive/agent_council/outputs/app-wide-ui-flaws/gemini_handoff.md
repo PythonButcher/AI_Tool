@@ -1,3 +1,7 @@
+# Archived Reference — App-Wide UI Flaws Gemini Handoff
+
+This completed handoff is historical and must not be executed.
+
 # App-Wide UI Flaws Gemini Handoff
 
 ## Superseded Notice

@@ -1,3 +1,7 @@
+# Archived Reference — Next Implementation Cycle Priorities Summary
+
+This completed council summary belongs to a retired product direction and is not an active project gate.
+
 # Next Implementation Cycle Priorities Summary
 
 Date: 2026-06-28
