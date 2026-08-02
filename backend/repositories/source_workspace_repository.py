@@ -318,6 +318,67 @@ def attach_source_to_workspace(
         conn.close()
 
 
+def update_workspace_source_position(
+    *,
+    workspace_id: str,
+    source_id: str,
+    position: Dict[str, Any],
+    expected_version: int,
+    updated_at: str,
+) -> Dict[str, Any]:
+    """Persist one membership position and advance the workspace atomically."""
+    conn = get_db_connection()
+    try:
+        conn.execute("BEGIN")
+        workspace = conn.execute(
+            "SELECT version FROM data_workspaces WHERE workspace_id = ?",
+            (workspace_id,),
+        ).fetchone()
+        if workspace is None:
+            raise SourceWorkspaceRepositoryError(
+                "workspace_not_found", f"Workspace '{workspace_id}' was not found."
+            )
+        membership = conn.execute(
+            """
+            SELECT 1 FROM workspace_sources
+            WHERE workspace_id = ? AND source_id = ?
+            """,
+            (workspace_id, source_id),
+        ).fetchone()
+        if membership is None:
+            raise SourceWorkspaceRepositoryError(
+                "source_not_in_workspace",
+                f"Source '{source_id}' is not a member of workspace '{workspace_id}'.",
+            )
+        if workspace["version"] != expected_version:
+            raise SourceWorkspaceRepositoryError(
+                "workspace_version_conflict",
+                f"Workspace '{workspace_id}' has changed; refresh it and retry.",
+            )
+
+        conn.execute(
+            """
+            UPDATE workspace_sources
+            SET position_json = ?
+            WHERE workspace_id = ? AND source_id = ?
+            """,
+            (json.dumps(position), workspace_id, source_id),
+        )
+        _advance_workspace_version(
+            conn,
+            workspace_id=workspace_id,
+            expected_version=expected_version,
+            updated_at=updated_at,
+        )
+        conn.commit()
+        return get_workspace(workspace_id, connection=conn)
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
 def register_source_in_workspace(
     *,
     source: Dict[str, Any],

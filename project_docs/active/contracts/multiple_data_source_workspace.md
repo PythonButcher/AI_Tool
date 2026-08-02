@@ -51,7 +51,7 @@ The persistence layer stores the compatibility `path` and private `locator_json`
 | `workspace_id`, `source_id` | Composite membership identity |
 | `alias` | Unique, stable field namespace inside the workspace |
 | `role` | `primary`, `lookup`, or `context` |
-| `position` | Optional persisted canvas ordering value; not analytical truth |
+| `position` | Optional persisted finite numeric `{ x, y }` canvas coordinate; presentation state only |
 | `added_at` | ISO-8601 timestamp |
 
 A source may belong to several workspaces. An alias must be unique inside its workspace. A workspace must have exactly one primary source while it contains sources.
@@ -85,7 +85,9 @@ When optional multipart `workspace_id`, `workspace_version`, `alias`, and `role`
 
 `POST /api/data-workspaces/<workspace_id>/sources` accepts JSON `source_id`, required `version`, optional `alias`, and optional `role`. It attaches an existing catalog source with compare-and-swap workspace versioning and returns `{ source, workspace, analysis_context }`. Membership changes advance the workspace version exactly once and never change `primary_source_id`, activate a relationship, or select a multi-source path.
 
-Errors use structured `{ error: { code, message } }` responses. Missing workspaces and sources use HTTP 404 with `workspace_not_found` or `source_not_found`. Cross-workspace selection, duplicate membership, alias conflict, and stale workspace version use HTTP 409 with `source_not_in_workspace`, `duplicate_workspace_membership`, `workspace_alias_conflict`, or `workspace_version_conflict`. Invalid alias, role, or version inputs use HTTP 400 with `invalid_source_alias`, `invalid_workspace_role`, or `invalid_workspace_version`. Missing managed file storage uses HTTP 409 with `managed_source_unavailable` and does not expose the private path. Relationship persistence, validation, activation, and workspace-version effects are verified separately in `project_docs/active/contracts/multiple_data_source_relationships.md`.
+`PATCH /api/data-workspaces/<workspace_id>/sources/<source_id>/position` accepts required JSON `version` and `position`, where `position` contains exactly finite numeric `x` and `y` coordinates. The source must be a member of the named workspace. The operation updates only `workspace_sources.position_json`, advances the workspace version exactly once, and returns the authoritative `{ workspace }`. It does not change membership, aliases, roles, `primary_source_id`, analysis selection, relationships, source metadata, semantic metadata, or source data.
+
+Errors use structured `{ error: { code, message } }` responses. Missing workspaces and sources use HTTP 404 with `workspace_not_found` or `source_not_found`. Cross-workspace selection, a missing position-target membership, duplicate membership, alias conflict, and stale workspace version use HTTP 409 with `source_not_in_workspace`, `duplicate_workspace_membership`, `workspace_alias_conflict`, or `workspace_version_conflict`. Invalid alias, role, version, or canvas coordinates use HTTP 400 with `invalid_source_alias`, `invalid_workspace_role`, `invalid_workspace_version`, or `invalid_workspace_position`. Missing managed file storage uses HTTP 409 with `managed_source_unavailable` and does not expose the private path. Relationship persistence, validation, activation, and workspace-version effects are verified separately in `project_docs/active/contracts/multiple_data_source_relationships.md`.
 
 ## Retained Frontend Workspace State
 
@@ -100,6 +102,7 @@ The replacement rules are:
 | Default `POST /api/upload` | Atomically replace `activeWorkspace` and `analysisContext` from the response; separately update the existing one-source dataset compatibility state. |
 | Workspace-targeted `POST /api/upload` | Atomically replace `activeWorkspace` and `analysisContext`; do not replace the active primary dataset with the added source. |
 | `POST /api/data-workspaces/<workspace_id>/sources` | Atomically replace `activeWorkspace` and `analysisContext`; do not change one-source compatibility data. |
+| Successful `PATCH /api/data-workspaces/<workspace_id>/sources/<source_id>/position` | Replace `activeWorkspace` wholesale with the returned server workspace, then reconcile the version-mismatched `analysisContext` through the standard workspace refresh path before issuing analysis. Do not derive a new analysis context from the position response. |
 | `GET /api/data-workspaces/<workspace_id>` with unchanged identity, primary source, and version | Replace `activeWorkspace` and retain the matching `analysisContext`. |
 | `GET /api/data-workspaces/<workspace_id>` when the retained analysis context is absent or its workspace ID, primary source, or version no longer matches | Do not commit the workspace-only response. Treat the retained analysis context as stale, fetch `GET /api/data-workspaces/<workspace_id>/analysis-context` with no `source_id` parameters, and atomically apply its authoritative primary-only `{ workspace, analysis_context }`. Do not construct a replacement analysis context locally. |
 | Explicit `GET /api/data-workspaces/<workspace_id>/analysis-context` with selected `source_id` parameters | Atomically replace `activeWorkspace` and `analysisContext` only after the explicit selection succeeds. |
@@ -110,7 +113,7 @@ The shared state exposes `workspaceRefreshStatus` as `idle`, `refreshing`, or `e
 
 ## Persistence
 
-`datahub_datasets` remains canonical and carries `source_kind`, `locator_kind`, private `locator_json`, `content_fingerprint`, `schema_version`, `created_at`, and `updated_at`. `data_workspaces` persists workspace identity, version, and primary source. `workspace_sources` persists composite membership, workspace-unique alias, role, optional position, and added timestamp. Default upload registration writes the source, one-source workspace, and primary membership in one SQLite transaction after managed-file creation. Existing-workspace upload writes the source, added membership, and one compare-and-swap version increment in one transaction. A database failure rolls back every record and removes the newly created managed file.
+`datahub_datasets` remains canonical and carries `source_kind`, `locator_kind`, private `locator_json`, `content_fingerprint`, `schema_version`, `created_at`, and `updated_at`. `data_workspaces` persists workspace identity, version, and primary source. `workspace_sources` persists composite membership, workspace-unique alias, role, optional position, and added timestamp. Position updates write one membership coordinate and one compare-and-swap workspace version increment in the same transaction. Default upload registration writes the source, one-source workspace, and primary membership in one SQLite transaction after managed-file creation. Existing-workspace upload writes the source, added membership, and one compare-and-swap version increment in one transaction. A database failure rolls back every record and removes the newly created managed file.
 
 ## Verified Analysis Resolution
 

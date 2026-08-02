@@ -8,9 +8,9 @@ The experience should feel like a modern data-model studio built for this applic
 
 ## Current Source Truth
 
-The backend now persists governed sources, workspaces, workspace memberships, validated relationships, safe multi-source execution, and lineage. The Data Model canvas can read a workspace containing several sources and can create, edit, validate, activate, and deactivate relationships through the verified relationship API.
+The backend now persists governed sources, workspaces, workspace memberships, validated relationships, safe multi-source execution, and lineage. The accepted frontend source implementation provides controlled draggable nodes, versioned position persistence, discoverable relationship creation, relationship editing and validation, activation and deactivation, and relationship deletion through the verified APIs. Browser acceptance identified one bounded responsive-layout repair in the relationship inspector before acceptance can resume.
 
-The backend can populate one workspace through `GET /api/data-sources`, `POST /api/data-workspaces/<workspace_id>/sources`, and the optional existing-workspace fields on `POST /api/upload`. Durable relationship CRUD, validation, confirmation, activation, deactivation, deletion, and diagnostics already exist. The frontend retains the authoritative workspace across navigation, but the canvas currently disables node dragging and does not provide a usable relationship-authoring workflow. The backend stores membership positions but has no public position-update operation.
+The backend can populate one workspace through `GET /api/data-sources`, `POST /api/data-workspaces/<workspace_id>/sources`, and the optional existing-workspace fields on `POST /api/upload`. Durable relationship CRUD, validation, confirmation, activation, deactivation, deletion, and diagnostics already exist. `PATCH /api/data-workspaces/<workspace_id>/sources/<source_id>/position` persists finite canvas coordinates with workspace compare-and-swap versioning. The frontend retains authoritative workspace state, persists drag-end coordinates, reconciles workspace conflicts, and exposes the relationship-authoring workflow.
 
 ## Architecture Direction
 
@@ -20,7 +20,7 @@ Relationships are persisted separately from source files. Each relationship name
 
 The pandas execution boundary compiles only explicitly selected, validated, acyclic relationship trees, blocks ambiguous or unsupported many-to-many execution, and enforces row-expansion limits. The service boundary allows a different execution engine later without changing the public workspace contract.
 
-AI Chat and charting consume an `analysis_context` containing the workspace ID, workspace version, primary source ID, selected source IDs, and selected relationship IDs. Membership changes do not automatically select or activate analytical paths. The current `dataset` and `dataset_ref` request forms remain supported for one-source compatibility, while multi-source fields and artifacts use namespaced references and return source and relationship lineage.
+AI Chat and charting consume a server-resolved `analysis_context` containing the workspace ID, workspace version, primary source ID, source IDs, and relationship IDs from the active Data Model graph. Membership changes never activate analytical paths; explicit relationship validation and activation in Data Model establishes the executable model. End users do not choose joins or relationship paths in AI Chat. The current `dataset` and `dataset_ref` request forms remain supported for one-source compatibility, while multi-source fields and artifacts use namespaced references and return source and relationship lineage.
 
 ## Delivery Phases
 
@@ -98,7 +98,9 @@ Control returns to Codex for state-flow and regression review.
 
 ### Phase 8 — Interactive Data Model Authoring
 
-Codex first adds a versioned backend operation that saves finite `{ x, y }` canvas coordinates into the existing workspace-membership position record. Position changes are presentation state only: they must not alter membership, primary source, analysis selection, relationships, or source data.
+Status: complete.
+
+The backend position boundary saves finite `{ x, y }` canvas coordinates into the existing workspace-membership position record with optimistic workspace versioning. Position changes are presentation state only: they do not alter membership, primary source, analysis selection, relationships, or source data.
 
 After backend verification, Antigravity receives one bounded frontend handoff for the Data Model authoring surface. Every source node must be freely draggable, preserve its position through refresh and navigation, and remain connected by visible relationship edges while moving. The interface must provide discoverable tools to start a relationship, select source fields, configure ordered field pairs, cardinality, join behavior, and filter direction, then save, validate, confirm, activate, deactivate, edit, or delete it using the verified backend endpoints.
 
@@ -110,9 +112,11 @@ Control returns to Codex after backend implementation and after each bounded Ant
 
 ### Phase 9 — AI Chat Model Context and Lineage
 
-Antigravity receives a separate frontend handoff only after interactive Data Model authoring is verified. Connect explicit selected source IDs and active relationship IDs to AI Chat, tables, charts, and result lineage. Show source mentions, active-model context, namespaced fields, governance warnings, and honest relationship limitations without automatically choosing paths.
+Status: active. Codex is adding automatic active-model resolution and retained request context; lineage presentation follows after backend verification.
 
-Acceptance requires cross-source questions and charts to use only the explicit verified analysis context, conversational refinements to retain that context, and result artifacts to show source and relationship lineage. Existing one-source AI Chat remains unchanged.
+Codex connects the current workspace's active, confirmed, freshly valid relationship graph to AI Chat without exposing source or join selection to end users. The backend resolves the governed model deterministically, retains that canonical context through refinements, and refuses unsafe model state without guessing or activating relationships during chat. Any required frontend work must remain unobtrusive and must not add a model-context picker.
+
+Acceptance requires users to ask cross-source questions normally after relationships are activated in Data Model. Questions and charts use only the server-resolved governed context, conversational refinements retain that context, and result artifacts show source and relationship lineage. Existing one-source AI Chat remains unchanged.
 
 Control returns to Codex for integration review.
 

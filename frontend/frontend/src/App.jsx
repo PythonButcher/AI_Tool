@@ -515,10 +515,6 @@ function AppContent() {
           activeTab={activeDataPaneTab}
           setActiveTab={setActiveDataPaneTab}
         />
-
-        {activeDestination !== DESTINATIONS.AI && (
-          <AIChat onOpenAiChat={handleOpenAiChat} />
-        )}
       </div>
     </DndContext>
   );

@@ -16,10 +16,10 @@
   background: var(--bg-secondary);
   padding: 12px 0;
   align-items: center;
-  gap: 20px;
+  justify-content: space-between;
 }
 
-.workflow-rail__top {
+.workflow-rail__top, .workflow-rail__bottom {
   display: flex;
   flex-direction: column;
   gap: 12px;

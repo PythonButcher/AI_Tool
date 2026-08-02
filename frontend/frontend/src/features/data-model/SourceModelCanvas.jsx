@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef, useContext } from 'react';
-import { ReactFlow, Controls, Background, MarkerType, Handle, Position, ConnectionMode } from '@xyflow/react';
+import { ReactFlow, Controls, Background, MarkerType, Handle, Position, ConnectionMode, useNodesState, useEdgesState } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import './SourceModelCanvas.css';
 import RelationshipInspector from './RelationshipInspector';
@@ -37,12 +37,15 @@ const SourceModelCanvas = ({ workspaceId }) => {
   const [relationships, setRelationships] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const { activeWorkspace, refreshWorkspace, setWorkspaceEnvelope } = useContext(DataContext);
+  const { activeWorkspace, refreshWorkspace, setWorkspaceEnvelope, recordWorkspaceMutationConflict } = useContext(DataContext);
   const workspace = activeWorkspace;
   const [showAddSource, setShowAddSource] = useState(false);
 
   const [draftRelationship, setDraftRelationship] = useState(null);
   const [selectedRelationship, setSelectedRelationship] = useState(null);
+  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+
   const fetchIdRef = useRef(0);
   const abortControllerRef = useRef(null);
   const fetchPromiseRef = useRef(null);
@@ -176,13 +179,14 @@ const SourceModelCanvas = ({ workspaceId }) => {
   // Wrap handleSave to also refresh after updating selection
   const handleSaveAndRefresh = useCallback(async (updatedRel) => {
     handleSave(updatedRel);
-    await handleRefresh().catch(() => {});
+    await handleRefresh();
   }, [handleSave, handleRefresh]);
 
   const onConnect = useCallback((params) => {
     if (params.source === params.target) return;
 
     setDraftRelationship({
+      _draftId: Date.now(),
       left_source_id: params.source,
       right_source_id: params.target,
       field_pairs: [{ left_field: params.sourceHandle, right_field: params.targetHandle }],
@@ -206,7 +210,7 @@ const SourceModelCanvas = ({ workspaceId }) => {
     }
   }, [draftRelationship]);
 
-  const { nodes, edges } = useMemo(() => {
+  useEffect(() => {
     const rfNodes = sources.map((src, i) => {
       const position = src.position ? { x: src.position.x ?? (250 * i + 100), y: src.position.y ?? 150 } : { x: 250 * i + 100, y: 150 };
       return {
@@ -216,7 +220,10 @@ const SourceModelCanvas = ({ workspaceId }) => {
         data: { source: src }
       };
     });
+    setNodes(rfNodes);
+  }, [sources, setNodes]);
 
+  useEffect(() => {
     const rfEdges = relationships.map(rel => {
       const isExecutable = !rel.is_suggested && rel.is_active && rel.is_confirmed && rel.validation_state === 'valid' && rel.cardinality !== 'many_to_many';
 
@@ -255,7 +262,7 @@ const SourceModelCanvas = ({ workspaceId }) => {
       };
     });
 
-    if (draftRelationship) {
+    if (draftRelationship && draftRelationship.left_source_id && draftRelationship.right_source_id) {
       rfEdges.push({
         id: 'draft-edge',
         source: draftRelationship.left_source_id,
@@ -270,8 +277,47 @@ const SourceModelCanvas = ({ workspaceId }) => {
       });
     }
 
-    return { nodes: rfNodes, edges: rfEdges };
-  }, [sources, relationships, selectedRelationship, draftRelationship]);
+    setEdges(rfEdges);
+  }, [relationships, selectedRelationship, draftRelationship, setEdges]);
+
+  const onNodeDragStop = useCallback(async (event, node) => {
+    const sourceId = node.id;
+    const { x, y } = node.position;
+
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+
+    try {
+      const res = await fetch(`${API_URL}/api/data-workspaces/${workspaceId}/sources/${sourceId}/position`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          version: activeWorkspace.version,
+          position: { x, y }
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        if (data.error?.code === 'workspace_version_conflict') {
+           recordWorkspaceMutationConflict({
+             code: 'workspace_version_conflict',
+             message: data.error.message,
+             attemptedVersion: activeWorkspace.version
+           });
+           await refreshWorkspace(workspaceId);
+           return;
+        }
+        throw new Error(data.error?.message || 'Failed to save position');
+      }
+
+      if (data.workspace) {
+        setWorkspaceEnvelope({ workspace: data.workspace }, true);
+        await refreshWorkspace(workspaceId);
+      }
+    } catch (err) {
+       setError(err);
+    }
+  }, [workspaceId, activeWorkspace, setWorkspaceEnvelope, refreshWorkspace, recordWorkspaceMutationConflict]);
 
   const nodeTypes = useMemo(() => ({ sourceNode: SourceNode }), []);
 
@@ -292,6 +338,18 @@ const SourceModelCanvas = ({ workspaceId }) => {
     <div className="source-model-canvas">
       {workspace && (
         <div className="canvas-header" style={{ position: 'absolute', top: 16, right: 16, zIndex: 10 }}>
+          <button className="btn btn-secondary" style={{ marginRight: 8 }} onClick={() => {
+            setDraftRelationship({
+              _draftId: Date.now(),
+              left_source_id: '',
+              right_source_id: '',
+              field_pairs: [{ left_field: '', right_field: '' }],
+              cardinality: 'one_to_one',
+              join_behavior: 'inner',
+              filter_direction: 'none'
+            });
+            setSelectedRelationship(null);
+          }} aria-label="Create Relationship">Create Relationship</button>
           <button className="btn btn-primary" onClick={() => setShowAddSource(true)} aria-label="Add Source">Add Source</button>
         </div>
       )}
@@ -301,7 +359,9 @@ const SourceModelCanvas = ({ workspaceId }) => {
         edges={edges}
         nodeTypes={nodeTypes}
         fitView
-        nodesDraggable={false}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        onNodeDragStop={onNodeDragStop}
         nodesConnectable={true}
         elementsSelectable={true}
         connectionMode={ConnectionMode.Loose}

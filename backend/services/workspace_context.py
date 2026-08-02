@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from copy import deepcopy
 from hashlib import sha256
+import math
 from pathlib import Path
 import re
 from typing import Any, Dict, Iterable, Optional
@@ -23,6 +24,7 @@ from backend.repositories.source_workspace_repository import (
     register_source_with_workspace,
     register_source_in_workspace,
     require_workspace_sources,
+    update_workspace_source_position,
 )
 
 
@@ -101,6 +103,35 @@ def _workspace_version(version: Any) -> int:
             "invalid_workspace_version", "Workspace version must be a positive integer."
         )
     return normalized
+
+
+def _workspace_position(position: Any) -> Dict[str, int | float]:
+    """Validate an exact finite canvas coordinate without accepting booleans."""
+    if not isinstance(position, dict) or set(position) != {"x", "y"}:
+        raise WorkspaceContextError(
+            "invalid_workspace_position",
+            "Position must contain exactly finite numeric 'x' and 'y' coordinates.",
+        )
+    coordinates: Dict[str, int | float] = {}
+    for axis in ("x", "y"):
+        value = position[axis]
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            raise WorkspaceContextError(
+                "invalid_workspace_position",
+                "Position must contain exactly finite numeric 'x' and 'y' coordinates.",
+            )
+        try:
+            finite = math.isfinite(value)
+        except OverflowError:
+            # Oversized JSON integers are numeric in Python but unusable coordinates.
+            finite = False
+        if not finite:
+            raise WorkspaceContextError(
+                "invalid_workspace_position",
+                "Position must contain exactly finite numeric 'x' and 'y' coordinates.",
+            )
+        coordinates[axis] = value
+    return coordinates
 
 
 def dataframe_schema(dataframe: pd.DataFrame) -> list[Dict[str, Any]]:
@@ -285,6 +316,31 @@ def add_source_to_workspace(
         "workspace": workspace,
         "analysis_context": _analysis_context(workspace, [workspace["primary_source_id"]]),
     }
+
+
+def update_source_position(
+    *,
+    workspace_id: str,
+    source_id: Any,
+    version: Any,
+    position: Any,
+) -> Dict[str, Any]:
+    """Save presentation-only membership coordinates with optimistic versioning."""
+    if not isinstance(source_id, str) or not source_id.strip():
+        raise WorkspaceContextError(
+            "source_not_in_workspace", "A non-empty workspace source ID is required."
+        )
+    try:
+        workspace = update_workspace_source_position(
+            workspace_id=workspace_id,
+            source_id=source_id.strip(),
+            position=_workspace_position(position),
+            expected_version=_workspace_version(version),
+            updated_at=_utc_now(),
+        )
+    except SourceWorkspaceRepositoryError as exc:
+        raise WorkspaceContextError(exc.code, str(exc)) from exc
+    return {"workspace": workspace}
 
 
 def resolve_analysis_context(

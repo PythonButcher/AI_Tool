@@ -11,7 +11,7 @@ This file is the first routing helper for AI_Tool. It should point agents to cur
 | Start any project task | `project_docs/INDEX.md` |
 | Understand current truth and scan rules | `project_docs/active/README.md` |
 | Check current project status | `project_docs/active/status/project_execution_status.md` |
-| Work on the current project slice | `project_docs/active/active_gate/README.md` |
+| Work on the current project gate | `project_docs/active/active_gate/README.md` |
 | Confirm Codex vs Antigravity ownership | `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md` |
 | Review completed AI Chat rollout history | `project_docs/archive/ai_chat_decision_output_unification_rollout_completed.md` only when historical context is needed |
 | Work on contracts | `project_docs/active/contracts/decision_objects.md` |
@@ -46,13 +46,13 @@ At the end of substantial work, Codex must state the project gate clearly: wheth
 
 User browser acceptance is coordinated only in chat. Never create, update, retain, or link a project goal, handoff, checklist, prompt, or other file for user browser acceptance.
 
-If a phase has backend and frontend parts, backend verification alone is not enough to call the phase complete. Say `backend complete; Antigravity implementation or frontend verification still required` unless frontend behavior has also been verified or the active docs define the slice as backend-only.
+If a phase has backend and frontend parts, backend verification alone is not enough to call the phase complete. Say `backend complete; Antigravity implementation or frontend verification still required` unless frontend behavior has also been verified or the active docs define the current work as backend-only.
 
 Before writing a frontend-agent handoff, Codex must first confirm there is a real frontend gap from source review, browser verification, or explicit user direction. Do not send speculative frontend work.
 
 Whenever Codex determines Antigravity needs UI work, Codex must create or update a handoff file with a clean `Goal:` prompt instead of pasting that prompt into chat. The final response should link or name the handoff file and state that Antigravity should read the latest handoff. Only paste the full prompt in chat if the user explicitly asks for it.
 
-Keep active status short. Move completed slice diaries to `project_docs/archive/` once their facts are no longer the current gate.
+Keep active status short. Move completed work diaries to `project_docs/archive/` once their facts are no longer the current gate.
 
 ## Final Response Stop Check
 
@@ -86,7 +86,7 @@ Always review current project Markdown before making project decisions. Start wi
 
 The active gate has exactly one authoritative file: `project_docs/active/active_gate/README.md`. It must contain the current `Goal:`, user outcome, target files, required context, contract details, acceptance checks, boundaries, verification commands, owner, and control-return rule. No other file or subdirectory may exist under `project_docs/active/active_gate/`.
 
-Before starting, handing off, or closing a numbered project phase, use the `project-doc-governance` skill and run `python .codex/hooks/agent_harness_check.py`. The check blocks a completed brief left in the active gate, completed reference files left under `active_gate/`, and a current work gate without its declared phase number. The only unnumbered state allowed is the explicit idle gate `Awaiting User Epic Goal`.
+Before starting, handing off, or closing a numbered roadmap phase, use the `project-doc-governance` skill and run `python .codex/hooks/agent_harness_check.py`. Use one roadmap phase number in the status file's `Roadmap Phase` field. Give the current gate a plain descriptive name; never combine `Phase N / Slice N`. The check blocks completed briefs or reference files left under `active_gate/`, ambiguous combined numbering, and active work without a declared roadmap phase. The explicit idle gate `Awaiting User Epic Goal` does not require a roadmap phase.
 
 For this repository, the authoritative documentation checks are `python .codex/hooks/agent_harness_check.py` and `python C:/Users/18022/.codex/skills/active-gate-governance/scripts/check_active_gate.py project_docs/active/active_gate .`. The installed generic `project-doc-governance/scripts/audit_project_docs.py` is hard-coded to retired `project_docs/active/decision_intelligence/` paths and must not be used as this repository's release gate. Do not recreate retired paths to satisfy that external script.
 
