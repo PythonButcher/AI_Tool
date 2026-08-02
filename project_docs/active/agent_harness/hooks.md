@@ -8,7 +8,7 @@ Hooks are optional automation around the agent lifecycle. In this repo they shou
 
 It also denies dynamic-path Python writes such as `open(f, "w")`, dynamic `Path.write_text`, and direct PowerShell writes to frontend source. These patterns can truncate a file before its contents are read. Source edits must use `apply_patch`.
 
-`.codex/hooks/agent_harness_check.py` is a manual validation command. It checks that harness navigation exists, hook scripts are parseable, active docs point to existing paths, `GEMINI.md` is not modified in the current git diff, completed plans are not left in the active current path, and the active gate declares a phase number.
+`.codex/hooks/agent_harness_check.py` is a manual validation command. It checks that harness navigation exists, hook scripts are parseable, active docs point to existing paths, `GEMINI.md` is not modified in the current git diff, completed plans are not left in the active current path, and the active gate declares a phase number while containing only its authoritative `README.md`.
 
 `.codex/hooks/codex_hooks.example.toml` is a sample hook configuration. It is not active by itself. Review it before copying entries into a real Codex config.
 

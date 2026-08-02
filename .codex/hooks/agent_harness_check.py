@@ -123,33 +123,39 @@ def _check_active_doc_state(errors: list[str]) -> None:
     ):
         errors.append("Current project gate must name the active slice number.")
 
-    goal_files = sorted(path for path in active_gate_dir.glob("*.md") if path.name != "README.md")
-    if not awaiting_user_goal and len(goal_files) != 1:
+    gate_readme = active_gate_dir / "README.md"
+    unexpected_gate_files = sorted(
+        path.relative_to(ROOT)
+        for path in active_gate_dir.rglob("*")
+        if path.is_file() and path.resolve() != gate_readme.resolve()
+    )
+    if unexpected_gate_files:
         errors.append(
-            "The active gate must contain exactly one executable goal file in addition to README.md."
+            "The active gate may contain only project_docs/active/active_gate/README.md; "
+            f"remove: {', '.join(str(path) for path in unexpected_gate_files)}"
         )
-    for goal_path in goal_files:
-        if not goal_path.read_text(encoding="utf-8", errors="replace").lstrip().startswith("Goal:"):
-            errors.append(f"Active goal must start with 'Goal:': {goal_path.relative_to(ROOT)}")
+    if gate_readme.exists():
+        gate_readme_text = gate_readme.read_text(encoding="utf-8", errors="replace")
+        if not re.search(r"^Goal:\s+\S", gate_readme_text, re.MULTILINE):
+            errors.append("The active-gate README must contain an executable 'Goal:' line.")
 
     current_owner_is_codex = bool(
         re.search(r"- \*\*Current Owner\*\*:\s*Codex\b", status_text, re.IGNORECASE)
     )
-    next_goal_match = re.search(
-        r"- \*\*Next Action\*\*:\s*Execute\s+`(project_docs/active/active_gate/[^`]+\.md)`",
+    next_gate_match = re.search(
+        r"- \*\*Next Action\*\*:\s*Execute\s+`(project_docs/active/active_gate/README\.md)`",
         status_text,
         re.IGNORECASE,
     )
-    if current_owner_is_codex and not next_goal_match:
+    if current_owner_is_codex and not next_gate_match:
         errors.append(
-            "When Codex is current owner, Next Action must execute one goal file in project_docs/active/active_gate/."
+            "When Codex is current owner, Next Action must execute "
+            "project_docs/active/active_gate/README.md."
         )
-    if next_goal_match:
-        next_goal_path = ROOT / next_goal_match.group(1)
-        if not next_goal_path.exists():
-            errors.append(f"Next Action references a missing active goal: {next_goal_match.group(1)}")
-        elif goal_files and next_goal_path.resolve() not in {path.resolve() for path in goal_files}:
-            errors.append("Next Action does not reference the active gate's executable goal file.")
+    if next_gate_match:
+        next_gate_path = ROOT / next_gate_match.group(1)
+        if not next_gate_path.exists():
+            errors.append(f"Next Action references a missing active gate: {next_gate_match.group(1)}")
 
     complete = bool(re.search(r"- \*\*Status\*\*:\s*Complete", status_text, re.IGNORECASE))
     handoff_match = re.search(r"`(project_docs/active/ai_hand_off/[^`]+\.md)`", status_text)
@@ -160,10 +166,10 @@ def _check_active_doc_state(errors: list[str]) -> None:
             "A complete gate still points to its implementation handoff; archive or replace the handoff and update status."
         )
 
-    for path in active_gate_dir.glob("*.md"):
-        text = path.read_text(encoding="utf-8", errors="replace")
-        if text.startswith("> COMPLETED") or text.startswith("# Completed Reference"):
-            errors.append(f"Completed reference remains in active gate: {path.relative_to(ROOT)}")
+    if gate_readme.exists():
+        gate_text = gate_readme.read_text(encoding="utf-8", errors="replace")
+        if gate_text.startswith("> COMPLETED") or gate_text.startswith("# Completed Reference"):
+            errors.append(f"Completed reference remains in active gate: {gate_readme.relative_to(ROOT)}")
 
     active_gate_reference = "project_docs/active/active_gate/README.md"
     index_text = (ROOT / "project_docs" / "INDEX.md").read_text(encoding="utf-8", errors="replace")

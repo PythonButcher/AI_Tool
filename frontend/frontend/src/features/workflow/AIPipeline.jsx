@@ -66,7 +66,14 @@ const getMissingCleanNodes = (workflow) => {
   return nodes.filter((node) => node.command === '/clean' && !node.params?.instructions?.trim());
 };
 
-const AIPipeline = ({ workflowDefinition, dataset, onResults, onDataCleaned, onRunStateChange }) => {
+const AIPipeline = ({
+  workflowDefinition,
+  dataset,
+  onResults,
+  onDataCleaned,
+  onRunStateChange,
+  onRunError,
+}) => {
   const [pendingClean, setPendingClean] = useState(null);
   const [isRunning, setIsRunning] = useState(false);
   const [activeRunId, setActiveRunId] = useState(null);
@@ -127,7 +134,12 @@ const AIPipeline = ({ workflowDefinition, dataset, onResults, onDataCleaned, onR
       onDataCleaned?.(cleanedNode.result.cleaned_data);
     }
 
-    if (runState.status === 'completed' || runState.status === 'failed') {
+    if (
+      runState.status === 'completed' ||
+      runState.status === 'failed' ||
+      runState.status === 'cancelled' ||
+      runState.status === 'interrupted'
+    ) {
       setIsRunning(false);
       setActiveRunId(null);
     }
@@ -141,6 +153,7 @@ const AIPipeline = ({ workflowDefinition, dataset, onResults, onDataCleaned, onR
 
     setIsRunning(true);
     onRunStateChange?.(null);
+    onRunError?.(null);
 
     try {
       const preparedWorkflow = await collectCleaningInstructions(workflowDefinition);
@@ -152,6 +165,7 @@ const AIPipeline = ({ workflowDefinition, dataset, onResults, onDataCleaned, onR
       console.error('Failed to execute workflow:', error);
       setIsRunning(false);
       const message = error.response?.data?.error || error.message || 'Failed to execute workflow.';
+      onRunError?.(message);
       onResults?.({
         ai_report: {
           status: 'failed',
@@ -162,7 +176,7 @@ const AIPipeline = ({ workflowDefinition, dataset, onResults, onDataCleaned, onR
         },
       });
     }
-  }, [collectCleaningInstructions, isRunning, onResults, onRunStateChange, resolvedDataset, workflowDefinition]);
+  }, [collectCleaningInstructions, isRunning, onResults, onRunError, onRunStateChange, resolvedDataset, workflowDefinition]);
 
   useEffect(() => {
     window.runAIPipeline = runWorkflow;
@@ -190,6 +204,11 @@ const AIPipeline = ({ workflowDefinition, dataset, onResults, onDataCleaned, onR
         console.error('Failed to poll workflow run:', error);
         setIsRunning(false);
         setActiveRunId(null);
+        onRunError?.(
+          error.response?.data?.error
+          || error.message
+          || 'Live workflow status could not be refreshed.'
+        );
       }
     };
 
@@ -200,7 +219,7 @@ const AIPipeline = ({ workflowDefinition, dataset, onResults, onDataCleaned, onR
       isDisposed = true;
       window.clearInterval(intervalId);
     };
-  }, [activeRunId, pollRun]);
+  }, [activeRunId, onRunError, pollRun]);
 
   return (
     <>

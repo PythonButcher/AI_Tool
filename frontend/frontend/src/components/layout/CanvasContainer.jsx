@@ -209,7 +209,7 @@ function CanvasContainer({
     return () => observer.disconnect();
   }, []);
 
-  const { fullData } = useContext(DataContext);
+  const { fullData, activeWorkspace } = useContext(DataContext);
   const dataset = useActiveDataset();
 
   const previewData = useMemo(() => {
@@ -1007,7 +1007,7 @@ function CanvasContainer({
         )}
         {isDataModelDest && (
           <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1, backgroundColor: 'var(--bg-canvas, #f8f9fa)' }}>
-            <SourceModelCanvas workspaceId={uploadedData?.analysis_context?.workspace_id || uploadedData?.workspace?.workspace_id} />
+            <SourceModelCanvas workspaceId={activeWorkspace?.workspace_id} />
           </div>
         )}
         {isAiDest && decisionGraphElement}

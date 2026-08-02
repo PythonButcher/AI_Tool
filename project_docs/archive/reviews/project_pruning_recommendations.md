@@ -1,3 +1,7 @@
+# Archived Reference — Project Pruning Recommendations
+
+This recommendation set belongs to a retired product direction and is not a current cleanup plan.
+
 # Project Pruning Recommendations
 
 Date: 2026-05-23

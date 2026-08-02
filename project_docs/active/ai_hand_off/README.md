@@ -10,9 +10,9 @@ Antigravity owns bounded frontend implementation, React/CSS, UI rendering, and f
 
 ## Active Handoffs And Goal Prompts
 
-There is no active Antigravity handoff. Workspace membership backend readiness is `backend_not_ready`; frontend source-adding work must wait for Codex verification.
+There is no active frontend implementation handoff. Codex owns the current backend gate.
 
-The current project gate is `project_docs/active/active_gate/README.md`. Current status is recorded in `project_docs/active/status/project_execution_status.md`.
+Current status is recorded in `project_docs/active/status/project_execution_status.md`.
 
 Completed handoffs belong outside this active folder.
 

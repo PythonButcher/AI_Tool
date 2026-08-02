@@ -8,6 +8,7 @@ Decision Chat consumers continue resolving the same dataset identity.
 from __future__ import annotations
 
 import json
+import sqlite3
 from typing import Any, Dict, Iterable, Optional
 
 from backend.db.backend_db import get_db_connection
@@ -93,6 +94,60 @@ def _serialize_workspace(row, memberships: Iterable[Any]) -> Dict[str, Any]:
     }
 
 
+def _insert_source(conn, source: Dict[str, Any]) -> None:
+    """Insert one canonical source using an existing transaction."""
+    conn.execute(
+        """
+        INSERT INTO datahub_datasets (
+            id, name, path, uploadedAt, numRows, numCols, schema_json,
+            preview_json, semantic_model_json, governance_policy_json,
+            governance_readiness_json, source_kind, locator_kind,
+            locator_json, content_fingerprint, schema_version,
+            created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            source["source_id"],
+            source["name"],
+            source["private_path"],
+            source["created_at"],
+            source["row_count"],
+            source["column_count"],
+            json.dumps(source["schema"]),
+            json.dumps(source["preview"]),
+            json.dumps(source["semantic_model"]),
+            json.dumps(source["governance_policy"]),
+            json.dumps(source["governance_readiness"]),
+            source["source_kind"],
+            source["locator_kind"],
+            json.dumps(source["private_locator"]),
+            source["content_fingerprint"],
+            source["schema_version"],
+            source["created_at"],
+            source["updated_at"],
+        ),
+    )
+
+
+def _insert_membership(conn, membership: Dict[str, Any]) -> None:
+    """Insert one workspace membership using an existing transaction."""
+    conn.execute(
+        """
+        INSERT INTO workspace_sources (
+            workspace_id, source_id, alias, role, position_json, added_at
+        ) VALUES (?, ?, ?, ?, ?, ?)
+        """,
+        (
+            membership["workspace_id"],
+            membership["source_id"],
+            membership["alias"],
+            membership["role"],
+            json.dumps(membership.get("position")) if membership.get("position") is not None else None,
+            membership["added_at"],
+        ),
+    )
+
+
 def register_source_with_workspace(
     *,
     source: Dict[str, Any],
@@ -103,37 +158,7 @@ def register_source_with_workspace(
     conn = get_db_connection()
     try:
         conn.execute("BEGIN")
-        conn.execute(
-            """
-            INSERT INTO datahub_datasets (
-                id, name, path, uploadedAt, numRows, numCols, schema_json,
-                preview_json, semantic_model_json, governance_policy_json,
-                governance_readiness_json, source_kind, locator_kind,
-                locator_json, content_fingerprint, schema_version,
-                created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                source["source_id"],
-                source["name"],
-                source["private_path"],
-                source["created_at"],
-                source["row_count"],
-                source["column_count"],
-                json.dumps(source["schema"]),
-                json.dumps(source["preview"]),
-                json.dumps(source["semantic_model"]),
-                json.dumps(source["governance_policy"]),
-                json.dumps(source["governance_readiness"]),
-                source["source_kind"],
-                source["locator_kind"],
-                json.dumps(source["private_locator"]),
-                source["content_fingerprint"],
-                source["schema_version"],
-                source["created_at"],
-                source["updated_at"],
-            ),
-        )
+        _insert_source(conn, source)
         conn.execute(
             """
             INSERT INTO data_workspaces (
@@ -149,25 +174,200 @@ def register_source_with_workspace(
                 workspace["updated_at"],
             ),
         )
-        conn.execute(
-            """
-            INSERT INTO workspace_sources (
-                workspace_id, source_id, alias, role, position_json, added_at
-            ) VALUES (?, ?, ?, ?, ?, ?)
-            """,
-            (
-                membership["workspace_id"],
-                membership["source_id"],
-                membership["alias"],
-                membership["role"],
-                json.dumps(membership.get("position")) if membership.get("position") is not None else None,
-                membership["added_at"],
-            ),
-        )
+        _insert_membership(conn, membership)
         conn.commit()
         return get_source(source["source_id"], connection=conn), get_workspace(
             workspace["workspace_id"], connection=conn
         )
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
+def list_sources() -> list[Dict[str, Any]]:
+    """List public catalog identities without exposing private locators."""
+    conn = get_db_connection()
+    try:
+        rows = conn.execute(
+            "SELECT * FROM datahub_datasets ORDER BY created_at, id"
+        ).fetchall()
+        return [serialize_source(row) for row in rows]
+    finally:
+        conn.close()
+
+
+def _require_membership_write(
+    conn,
+    *,
+    workspace_id: str,
+    source_id: str,
+    alias: str,
+    expected_version: int,
+    require_existing_source: bool = True,
+) -> None:
+    """Validate stable membership errors before performing a write."""
+    workspace = conn.execute(
+        "SELECT version FROM data_workspaces WHERE workspace_id = ?",
+        (workspace_id,),
+    ).fetchone()
+    if workspace is None:
+        raise SourceWorkspaceRepositoryError(
+            "workspace_not_found", f"Workspace '{workspace_id}' was not found."
+        )
+    if require_existing_source and conn.execute(
+        "SELECT 1 FROM datahub_datasets WHERE id = ?", (source_id,)
+    ).fetchone() is None:
+        raise SourceWorkspaceRepositoryError(
+            "source_not_found", f"Source '{source_id}' was not found."
+        )
+    if conn.execute(
+        "SELECT 1 FROM workspace_sources WHERE workspace_id = ? AND source_id = ?",
+        (workspace_id, source_id),
+    ).fetchone() is not None:
+        raise SourceWorkspaceRepositoryError(
+            "duplicate_workspace_membership",
+            f"Source '{source_id}' is already a member of workspace '{workspace_id}'.",
+        )
+    if conn.execute(
+        "SELECT 1 FROM workspace_sources WHERE workspace_id = ? AND alias = ?",
+        (workspace_id, alias),
+    ).fetchone() is not None:
+        raise SourceWorkspaceRepositoryError(
+            "workspace_alias_conflict",
+            f"Alias '{alias}' is already used in workspace '{workspace_id}'.",
+        )
+    if workspace["version"] != expected_version:
+        raise SourceWorkspaceRepositoryError(
+            "workspace_version_conflict",
+            f"Workspace '{workspace_id}' has changed; refresh it and retry.",
+        )
+
+
+def _advance_workspace_version(
+    conn, *, workspace_id: str, expected_version: int, updated_at: str
+) -> None:
+    """Advance a workspace exactly once with compare-and-swap semantics."""
+    cursor = conn.execute(
+        """
+        UPDATE data_workspaces
+        SET version = version + 1, updated_at = ?
+        WHERE workspace_id = ? AND version = ?
+        """,
+        (updated_at, workspace_id, expected_version),
+    )
+    if cursor.rowcount != 1:
+        raise SourceWorkspaceRepositoryError(
+            "workspace_version_conflict",
+            f"Workspace '{workspace_id}' has changed; refresh it and retry.",
+        )
+
+
+def attach_source_to_workspace(
+    *,
+    workspace_id: str,
+    source_id: str,
+    alias: str,
+    role: str,
+    expected_version: int,
+    added_at: str,
+) -> tuple[Dict[str, Any], Dict[str, Any]]:
+    """Attach an existing source and advance the workspace in one transaction."""
+    conn = get_db_connection()
+    try:
+        conn.execute("BEGIN")
+        _require_membership_write(
+            conn,
+            workspace_id=workspace_id,
+            source_id=source_id,
+            alias=alias,
+            expected_version=expected_version,
+        )
+        _insert_membership(
+            conn,
+            {
+                "workspace_id": workspace_id,
+                "source_id": source_id,
+                "alias": alias,
+                "role": role,
+                "position": None,
+                "added_at": added_at,
+            },
+        )
+        _advance_workspace_version(
+            conn,
+            workspace_id=workspace_id,
+            expected_version=expected_version,
+            updated_at=added_at,
+        )
+        conn.commit()
+        return get_source(source_id, connection=conn), get_workspace(
+            workspace_id, connection=conn
+        )
+    except sqlite3.IntegrityError as exc:
+        conn.rollback()
+        raise SourceWorkspaceRepositoryError(
+            "workspace_membership_conflict",
+            "The workspace membership could not be created because its identity conflicts.",
+        ) from exc
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
+def register_source_in_workspace(
+    *,
+    source: Dict[str, Any],
+    workspace_id: str,
+    alias: str,
+    role: str,
+    expected_version: int,
+    added_at: str,
+) -> tuple[Dict[str, Any], Dict[str, Any]]:
+    """Register an upload and attach it to an existing workspace atomically."""
+    conn = get_db_connection()
+    try:
+        conn.execute("BEGIN")
+        # Validate the workspace version and alias before inserting the source.
+        _require_membership_write(
+            conn,
+            workspace_id=workspace_id,
+            source_id=source["source_id"],
+            alias=alias,
+            expected_version=expected_version,
+            require_existing_source=False,
+        )
+        _insert_source(conn, source)
+        _insert_membership(
+            conn,
+            {
+                "workspace_id": workspace_id,
+                "source_id": source["source_id"],
+                "alias": alias,
+                "role": role,
+                "position": None,
+                "added_at": added_at,
+            },
+        )
+        _advance_workspace_version(
+            conn,
+            workspace_id=workspace_id,
+            expected_version=expected_version,
+            updated_at=added_at,
+        )
+        conn.commit()
+        return get_source(source["source_id"], connection=conn), get_workspace(
+            workspace_id, connection=conn
+        )
+    except sqlite3.IntegrityError as exc:
+        conn.rollback()
+        raise SourceWorkspaceRepositoryError(
+            "workspace_membership_conflict",
+            "The workspace membership could not be created because its identity conflicts.",
+        ) from exc
     except Exception:
         conn.rollback()
         raise

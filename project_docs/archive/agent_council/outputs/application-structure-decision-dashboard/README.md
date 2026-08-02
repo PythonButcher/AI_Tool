@@ -1,3 +1,7 @@
+# Archived Reference — Application Structure Decision Dashboard Council
+
+This completed council topic belongs to a retired product direction and is not an active project gate.
+
 # Application Structure Decision Dashboard Council
 
 ## Purpose

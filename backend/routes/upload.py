@@ -12,7 +12,7 @@ from backend.services.data_catalog_lineage import (
     normalize_governance_policy,
 )
 from backend.services.semantic_model import infer_semantic_model_from_dataframe
-from backend.services.workspace_context import register_managed_upload
+from backend.services.workspace_context import WorkspaceContextError, register_managed_upload
 from backend.utils.global_state import set_governance_state, set_semantic_model, set_uploaded_df
 
 logger = logging.getLogger(__name__)
@@ -50,6 +50,7 @@ def upload_file():
         )
         data_preview = json.loads(df.head().to_json(orient='records', date_format='iso'))
         full_data = json.loads(df.to_json(orient='records', date_format='iso'))
+        workspace_id = request.form.get('workspace_id')
         registered = register_managed_upload(
             file_bytes=file_bytes,
             filename=file.filename,
@@ -58,14 +59,20 @@ def upload_file():
             governance_policy=policy,
             governance_readiness=readiness,
             preview=data_preview,
+            workspace_id=workspace_id,
+            workspace_version=request.form.get('workspace_version'),
+            alias=request.form.get('alias'),
+            role=request.form.get('role'),
         )
         semantic_model = registered['source']['semantic_model']
 
         # Preserve the process-global state only as a compatibility mirror for
-        # current single-dataset consumers. Durable records are authoritative.
-        set_uploaded_df(df)
-        set_governance_state(policy, readiness)
-        set_semantic_model(semantic_model)
+        # current single-dataset consumers. Adding a workspace member must not
+        # silently select that new source as the active analytical dataset.
+        if not workspace_id:
+            set_uploaded_df(df)
+            set_governance_state(policy, readiness)
+            set_semantic_model(semantic_model)
 
         return jsonify({
             'message': f"File '{file.filename}' uploaded successfully!",
@@ -82,6 +89,20 @@ def upload_file():
 
     except (json.JSONDecodeError, GovernancePolicyError) as e:
         return jsonify({'error': f'Invalid governance policy: {str(e)}'}), 400
+    except WorkspaceContextError as e:
+        status_by_code = {
+            'workspace_not_found': 404,
+            'source_not_found': 404,
+            'workspace_version_conflict': 409,
+            'workspace_alias_conflict': 409,
+            'workspace_membership_conflict': 409,
+            'invalid_source_alias': 400,
+            'invalid_workspace_role': 400,
+            'invalid_workspace_version': 400,
+        }
+        return jsonify({
+            'error': {'code': e.code, 'message': str(e)}
+        }), status_by_code.get(e.code, 400)
     except Exception as e:
         logger.exception("Failed to process uploaded file %s", file.filename)
         return jsonify({'error': f'Failed to process the file: {str(e)}'}), 500

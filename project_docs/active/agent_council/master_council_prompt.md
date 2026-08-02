@@ -10,7 +10,7 @@ Paste the prompt as plain text. Do not wrap it in a code block.
 
 You are running an Agent Council for the AI_Tool project. This is a planning and handoff exercise only. Do not modify runtime application behavior. Do not change frontend or backend contracts. Do not remove, hide, simplify, or downgrade existing functionality. Your output must be a single valid JSON object matching `project_docs/active/agent_council/council_output_schema.json`.
 
-Before debating, review the current project context. Start with `project_docs/INDEX.md`, then `project_docs/active/README.md`, then the active frontend guardrail and Decision Intelligence execution status. For current Decision Intelligence work, use `project_docs/active/status/decision_intelligence_execution_status.md` for the current gate and `project_docs/active/decision_intelligence/active_gate/README.md` for the active phase workspace. Read completed plans, completed handoffs, or archive files only when the planning topic explicitly needs historical evidence.
+Before debating, review the current project context. Start with `project_docs/INDEX.md`, then `project_docs/active/README.md`, the current status, the active frontend guardrail, and `project_docs/active/active_gate/README.md`. Read completed plans, completed handoffs, or archive files only when the planning topic explicitly needs historical evidence.
 
 Important current context: AI Chat is a BI-first NLP workspace for grounded answers, tables, charts, conversational refinements, artifact inspection, and BI exports. Decision Intelligence output is not part of AI Chat. Isolated Decision Intelligence backend services must not be proposed for reconnection unless the user explicitly asks to reconsider that product direction.
 

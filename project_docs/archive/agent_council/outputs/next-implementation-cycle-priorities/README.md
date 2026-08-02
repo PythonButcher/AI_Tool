@@ -1,3 +1,7 @@
+# Archived Reference — Next Implementation Cycle Priorities
+
+This completed council topic belongs to a retired product direction and is not an active project gate.
+
 # Next Implementation Cycle Priorities
 
 This topic captures the Agent Council run that ranks the next five Decision Intelligence implementation phases after the completed AI Chat decision-output rollout and fullscreen saved-asset review.

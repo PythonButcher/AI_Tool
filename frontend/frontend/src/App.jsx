@@ -54,6 +54,7 @@ function AppContent() {
     semanticModel,
     setSemanticModel,
     refreshSemanticModelFromDataset,
+    setWorkspaceEnvelope,
   } = useContext(DataContext);
 
   const { theme } = useContext(ThemeContext);
@@ -162,11 +163,13 @@ function AppContent() {
       data_preview: previewRows,
       semantic_model: raw?.semantic_model || null,
       source: raw?.source || null,
-      workspace: raw?.workspace || null,
-      analysis_context: raw?.analysis_context || null,
     });
     setFullData(finalDataset);
     setCleanedData(finalDataset);
+
+    if (raw?.workspace && raw?.analysis_context) {
+      setWorkspaceEnvelope({ workspace: raw.workspace, analysis_context: raw.analysis_context });
+    }
 
     if (raw?.semantic_model) {
       setSemanticModel(raw.semantic_model);
@@ -178,7 +181,8 @@ function AppContent() {
     }
     setShowDataPreview(true);
     if (file) setRawUploadFile(file);
-  }, [setUploadedData, setFullData, setCleanedData, setSemanticModel, refreshSemanticModelFromDataset]);
+  }, [setUploadedData, setFullData, setCleanedData, setSemanticModel, refreshSemanticModelFromDataset, setWorkspaceEnvelope]);
+
 
   const handleApiData = (data) => handleFileUpload(data);
   const handleDatabaseData = (data) => handleFileUpload(data);
