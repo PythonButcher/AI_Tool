@@ -112,7 +112,7 @@ Control returns to Codex after backend implementation and after each bounded Ant
 
 ### Phase 9 — AI Chat Model Context and Lineage
 
-Status: active. Codex is adding automatic active-model resolution and retained request context; lineage presentation follows after backend verification.
+Status: complete.
 
 Codex connects the current workspace's active, confirmed, freshly valid relationship graph to AI Chat without exposing source or join selection to end users. The backend resolves the governed model deterministically, retains that canonical context through refinements, and refuses unsafe model state without guessing or activating relationships during chat. Any required frontend work must remain unobtrusive and must not add a model-context picker.
 
@@ -122,7 +122,9 @@ Control returns to Codex for integration review.
 
 ### Phase 10 — Reliability and Release
 
-Codex owns cross-path regression, migration, concurrency, deletion, and performance hardening. Source deletion must protect or explicitly invalidate dependent relationships and workspaces. Tests cover restart persistence, duplicate uploads, stale schemas, large joins, row-explosion limits, governance aggregation, and one-source compatibility. Documentation and API examples are finalized from verified behavior.
+Status: active. Codex owns release hardening and cross-path verification.
+
+Codex owns cross-source natural-language resolution, chart correctness, business-readable result-label contracts, cross-path regression, migration, concurrency, deletion, and performance hardening. Natural questions must resolve the intended governed measure and dimension, technical source aliases must not create accidental value filters, and unusable measures must produce a clear grounded error instead of an empty chart. Source deletion must protect or explicitly invalidate dependent relationships and workspaces. Tests cover cross-source metric-by-dimension questions, explicit filters, readable chart artifacts, restart persistence, duplicate uploads, stale schemas, large joins, row-explosion limits, governance aggregation, and one-source compatibility. Documentation and API examples are finalized from verified behavior.
 
 Antigravity receives a repair-only handoff if integration review finds a concrete UI defect. The phase is complete only after backend verification, Codex frontend review, a clean production build, harness checks, and user acceptance discussed in chat.
 

@@ -55,13 +55,27 @@
   padding: 16px 20px;
   border-top: 1px solid var(--border-color, #dee2e6);
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: 12px;
   background: var(--bg-secondary, #f8f9fa);
 }
 
 .footer-left, .footer-right {
   display: flex;
   gap: 8px;
+  width: 100%;
+}
+
+.inspector-footer button {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 10px 8px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 6px;
+  white-space: nowrap;
 }
 
 .btn-primary {

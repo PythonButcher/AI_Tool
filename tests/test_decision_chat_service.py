@@ -316,6 +316,66 @@ class DecisionChatApiTests(unittest.TestCase):
         self.assertEqual(prepared["dataset"], DATASET)
         self.assertEqual(prepared["semantic_model"], selected_semantic_model)
 
+    def test_workspace_identity_resolves_server_model_over_legacy_rows(self):
+        class WorkspaceFrame:
+            """Minimal joined-frame stand-in for automatic model resolution."""
+
+            @staticmethod
+            def to_dict(*, orient):
+                if orient != "records":
+                    raise AssertionError("The model resolver must request record-oriented rows.")
+                return DATASET
+
+        canonical_context = {
+            "contract_version": "multi_source_workspace_v1",
+            "workspace_id": "ws_current",
+            "workspace_version": 7,
+            "primary_source_id": "src_orders",
+            "source_ids": ["src_orders", "src_customers"],
+            "relationship_ids": ["rel_orders_customers"],
+        }
+        with (
+            patch(
+                "backend.decision_engine.chat_service.resolve_active_model_analysis_context"
+            ) as model_resolver,
+            patch(
+                "backend.decision_engine.chat_service.resolve_analysis_dataset_bundle"
+            ) as bundle_resolver,
+        ):
+            model_resolver.return_value = canonical_context
+            bundle_resolver.return_value = {
+                "dataframe": WorkspaceFrame(),
+                "semantic_model": SEMANTIC_MODEL,
+                "dataset_ref": {
+                    "source": "workspace",
+                    "dataset_id": "ws_current",
+                    "dataset_name": "Current workspace",
+                },
+                "analysis_context": canonical_context,
+                "analysis_lineage": {
+                    "schema_version": "multi_source_analysis_lineage_v1",
+                    "relationship_ids": ["rel_orders_customers"],
+                },
+                "governance_readiness": {"status": "ready"},
+            }
+
+            prepared = DecisionChatService.prepare_payload(
+                {
+                    "workspace_id": "ws_current",
+                    "dataset": [{"Wrong": 1}],
+                    "semantic_model": {"dataset": {"id": "wrong_active"}},
+                }
+            )
+
+        model_resolver.assert_called_once_with("ws_current")
+        bundle_resolver.assert_called_once_with(canonical_context)
+        self.assertEqual(prepared["dataset"], DATASET)
+        self.assertEqual(prepared["analysis_context"], canonical_context)
+        self.assertEqual(
+            prepared["_resolved_dataset_context"]["analysis_context"],
+            canonical_context,
+        )
+
     def test_explicit_explore_mode_prevents_decision_output(self):
         # Decision-like wording must stay on the active BI path when the AI Chat
         # integration explicitly requests Explore mode.

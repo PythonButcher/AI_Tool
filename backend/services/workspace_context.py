@@ -18,6 +18,7 @@ from backend.repositories.source_workspace_repository import (
     CONTRACT_VERSION,
     SourceWorkspaceRepositoryError,
     attach_source_to_workspace,
+    delete_source_if_unreferenced,
     get_source,
     get_source_private_locator,
     get_workspace,
@@ -36,9 +37,15 @@ MANAGED_UPLOAD_ROOT = Path(__file__).resolve().parents[1] / "storage" / "managed
 class WorkspaceContextError(ValueError):
     """Stable service error suitable for API translation."""
 
-    def __init__(self, code: str, message: str):
+    def __init__(
+        self,
+        code: str,
+        message: str,
+        details: Optional[Dict[str, Any]] = None,
+    ):
         super().__init__(message)
         self.code = code
+        self.details = details or {}
 
 
 def _utc_now() -> str:
@@ -147,15 +154,24 @@ def dataframe_schema(dataframe: pd.DataFrame) -> list[Dict[str, Any]]:
     ]
 
 
-def _analysis_context(workspace: Dict[str, Any], source_ids: Iterable[str]) -> Dict[str, Any]:
-    """Build the current relationship-free analysis boundary."""
+def build_analysis_context(
+    workspace: Dict[str, Any],
+    source_ids: Iterable[str],
+    relationship_ids: Iterable[str] = (),
+) -> Dict[str, Any]:
+    """Build the canonical identity-only analysis boundary.
+
+    Callers must supply identities resolved from persisted workspace and
+    relationship truth. Rows, aliases, join fields, and lineage are excluded
+    so every execution re-verifies the server records.
+    """
     return {
         "contract_version": CONTRACT_VERSION,
         "workspace_id": workspace["workspace_id"],
         "workspace_version": workspace["version"],
         "primary_source_id": workspace["primary_source_id"],
         "source_ids": list(source_ids),
-        "relationship_ids": [],
+        "relationship_ids": list(relationship_ids),
     }
 
 
@@ -278,7 +294,9 @@ def register_managed_upload(
     return {
         "source": source,
         "workspace": workspace,
-        "analysis_context": _analysis_context(workspace, [workspace["primary_source_id"]]),
+        "analysis_context": build_analysis_context(
+            workspace, [workspace["primary_source_id"]]
+        ),
     }
 
 
@@ -314,7 +332,9 @@ def add_source_to_workspace(
     return {
         "source": source,
         "workspace": workspace,
-        "analysis_context": _analysis_context(workspace, [workspace["primary_source_id"]]),
+        "analysis_context": build_analysis_context(
+            workspace, [workspace["primary_source_id"]]
+        ),
     }
 
 
@@ -341,6 +361,24 @@ def update_source_position(
     except SourceWorkspaceRepositoryError as exc:
         raise WorkspaceContextError(exc.code, str(exc)) from exc
     return {"workspace": workspace}
+
+
+def delete_catalog_source(source_id: Any) -> bool:
+    """Delete an unreferenced source or return a stable dependency refusal."""
+    normalized_source_id = str(source_id or "").strip()
+    if not normalized_source_id:
+        raise WorkspaceContextError(
+            "source_not_found",
+            "A non-empty source ID is required.",
+        )
+    try:
+        return delete_source_if_unreferenced(normalized_source_id)
+    except SourceWorkspaceRepositoryError as exc:
+        raise WorkspaceContextError(
+            exc.code,
+            str(exc),
+            exc.details,
+        ) from exc
 
 
 def resolve_analysis_context(
@@ -387,5 +425,5 @@ def resolve_analysis_context(
     return {
         "workspace": workspace,
         "sources": sources,
-        "analysis_context": _analysis_context(workspace, selected_ids),
+        "analysis_context": build_analysis_context(workspace, selected_ids),
     }

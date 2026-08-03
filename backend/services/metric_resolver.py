@@ -39,7 +39,11 @@ _ALLOWED_UNARY_OPERATORS = {
 
 
 class MetricResolutionError(ValueError):
-    pass
+    """Stable semantic-metric execution failure."""
+
+    def __init__(self, message: str, *, code: str = "metric_resolution_failed"):
+        super().__init__(message)
+        self.code = code
 
 
 class MetricResolver:
@@ -119,7 +123,13 @@ class MetricResolver:
             },
             "rows": rows,
             "chart_ready": {
-                "labels": [MetricResolver._build_group_label(row.get("group") or {}) for row in rows],
+                "labels": [
+                    MetricResolver._build_group_label(
+                        row.get("group") or {},
+                        group_defs,
+                    )
+                    for row in rows
+                ],
                 "values": [row.get("value") for row in rows],
             },
             "execution": execution,
@@ -242,6 +252,7 @@ class MetricResolver:
                 raise MetricResolutionError("Filters must be objects.")
 
             field_name = item.get("field")
+            definition = None
             if not field_name:
                 reference = item.get("dimension_id") or item.get("dimension") or item.get("name")
                 definition = MetricResolver._find_dimension(dimensions, reference)
@@ -249,6 +260,8 @@ class MetricResolver:
                     field_name = definition.get("field")
                 elif reference in dataframe.columns:
                     field_name = reference
+            else:
+                definition = MetricResolver._find_dimension(dimensions, field_name)
 
             if not field_name:
                 raise MetricResolutionError(f"Filter field could not be resolved for {item}.")
@@ -257,6 +270,16 @@ class MetricResolver:
 
             normalized.append({
                 "field": field_name,
+                "dimension_id": (
+                    definition.get("id")
+                    if isinstance(definition, dict)
+                    else item.get("dimension_id")
+                ),
+                "label": (
+                    definition.get("label")
+                    if isinstance(definition, dict)
+                    else item.get("label")
+                ) or field_name,
                 "operator": str(item.get("operator") or "eq").lower(),
                 "value": item.get("value"),
                 "values": item.get("values"),
@@ -371,6 +394,16 @@ class MetricResolver:
                 raise MetricResolutionError("Metric expression is missing a column reference.")
             if value_field not in dataframe.columns:
                 raise MetricResolutionError(f"Metric field '{value_field}' does not exist in the dataset.")
+            if resolved_aggregation in {"sum", "mean", "min", "max"}:
+                numeric_values = pd.to_numeric(
+                    dataframe[value_field],
+                    errors="coerce",
+                )
+                if int(numeric_values.notna().sum()) == 0:
+                    raise MetricResolutionError(
+                        f"Selected metric '{value_field}' has no usable numeric values.",
+                        code="metric_measure_not_numeric",
+                    )
             execution_field = value_field
             summary_value = MetricResolver._scalar_aggregate(dataframe, value_field, resolved_aggregation)
             execution_aggregation = resolved_aggregation
@@ -637,10 +670,24 @@ class MetricResolver:
         }
 
     @staticmethod
-    def _build_group_label(group_values: Dict[str, Any]) -> str:
+    def _build_group_label(
+        group_values: Dict[str, Any],
+        group_defs: Sequence[Dict[str, Any]] = (),
+    ) -> str:
+        """Render readable values while result rows retain qualified field keys."""
         if not group_values:
             return "All Data"
-        parts = [f"{field}: {value}" for field, value in group_values.items()]
+        if len(group_values) == 1:
+            return str(next(iter(group_values.values())))
+        labels_by_field = {
+            definition.get("field"): definition.get("label") or definition.get("name")
+            for definition in group_defs
+            if isinstance(definition, dict) and definition.get("field")
+        }
+        parts = [
+            f"{labels_by_field.get(field) or field}: {value}"
+            for field, value in group_values.items()
+        ]
         return " | ".join(parts)
 
     @staticmethod

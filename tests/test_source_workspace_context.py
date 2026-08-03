@@ -11,6 +11,7 @@ from flask import Flask
 
 from backend.db import backend_db
 from backend.repositories.source_workspace_repository import get_source, get_workspace
+from backend.routes.datahub_routes import datahub_bp
 from backend.routes.data_workspaces import data_workspaces_bp
 from backend.routes.upload import upload_bp
 from backend.services import workspace_context
@@ -33,6 +34,7 @@ class SourceWorkspaceContextTests(unittest.TestCase):
         app = Flask(__name__)
         app.register_blueprint(upload_bp)
         app.register_blueprint(data_workspaces_bp)
+        app.register_blueprint(datahub_bp)
         self.client = app.test_client()
 
     def tearDown(self):
@@ -124,6 +126,45 @@ class SourceWorkspaceContextTests(unittest.TestCase):
         self.assertEqual(bundle["dataset_ref"]["dataset_id"], source_id)
         self.assertEqual(bundle["semantic_model"]["dataset"]["id"], source_id)
         self.assertEqual(bundle["dataframe"].shape, (2, 2))
+
+    def test_duplicate_upload_bytes_create_isolated_source_and_workspace_identities(self):
+        """Repeated files must not overwrite or cross-link existing catalog truth."""
+        first = self._upload("orders.csv").get_json()
+        second = self._upload("orders.csv").get_json()
+
+        self.assertNotEqual(
+            first["source"]["source_id"],
+            second["source"]["source_id"],
+        )
+        self.assertNotEqual(
+            first["workspace"]["workspace_id"],
+            second["workspace"]["workspace_id"],
+        )
+        self.assertEqual(
+            first["source"]["content_fingerprint"],
+            second["source"]["content_fingerprint"],
+        )
+        first_workspace = get_workspace(first["workspace"]["workspace_id"])
+        second_workspace = get_workspace(second["workspace"]["workspace_id"])
+        self.assertEqual(
+            [item["source_id"] for item in first_workspace["sources"]],
+            [first["source"]["source_id"]],
+        )
+        self.assertEqual(
+            [item["source_id"] for item in second_workspace["sources"]],
+            [second["source"]["source_id"]],
+        )
+        listed_ids = {
+            source["source_id"]
+            for source in self.client.get("/api/data-sources").get_json()["sources"]
+        }
+        self.assertEqual(
+            listed_ids,
+            {
+                first["source"]["source_id"],
+                second["source"]["source_id"],
+            },
+        )
 
     def test_workspace_context_rejects_cross_workspace_membership(self):
         first = self._upload("orders.csv").get_json()
@@ -467,6 +508,41 @@ class SourceWorkspaceContextTests(unittest.TestCase):
             for source in self.client.get("/api/data-sources").get_json()["sources"]
         ]
         self.assertEqual(source_ids, [orders["source"]["source_id"]])
+
+    def test_source_deletion_refuses_workspace_dependencies_atomically(self):
+        """Catalog deletion must not cascade through workspace/model truth."""
+        uploaded = self._upload().get_json()
+        source_id = uploaded["source"]["source_id"]
+        workspace_id = uploaded["workspace"]["workspace_id"]
+
+        response = self.client.delete(f"/api/datahub/{source_id}")
+
+        self.assertEqual(response.status_code, 409, response.get_json())
+        error = response.get_json()["error"]
+        self.assertEqual(error["code"], "source_has_dependencies")
+        self.assertEqual(error["details"]["workspace_ids"], [workspace_id])
+        self.assertEqual(error["details"]["membership_count"], 1)
+        self.assertEqual(error["details"]["primary_workspace_count"], 1)
+        self.assertIsNotNone(get_source(source_id))
+        self.assertEqual(get_workspace(workspace_id)["source_count"], 1)
+
+    def test_source_deletion_removes_only_an_unreferenced_catalog_record(self):
+        """A standalone legacy catalog record remains safely deletable."""
+        connection = backend_db.get_db_connection()
+        connection.execute(
+            """
+            INSERT INTO datahub_datasets (id, name, path)
+            VALUES ('src_unreferenced', 'Unreferenced', 'remote://opaque')
+            """
+        )
+        connection.commit()
+        connection.close()
+
+        response = self.client.delete("/api/datahub/src_unreferenced")
+
+        self.assertEqual(response.status_code, 200, response.get_json())
+        self.assertEqual(response.get_json()["source_id"], "src_unreferenced")
+        self.assertIsNone(get_source("src_unreferenced"))
 
 
 if __name__ == "__main__":

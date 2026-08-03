@@ -10,7 +10,7 @@ Antigravity owns bounded frontend implementation, React/CSS, UI rendering, and f
 
 ## Active Handoffs And Goal Prompts
 
-There is no active frontend implementation handoff. Codex owns the current backend gate at `project_docs/active/active_gate/README.md`.
+The active frontend repair handoff is `project_docs/active/ai_hand_off/antigravity_ai_chat_readable_filter_labels.md`.
 
 Current status is recorded in `project_docs/active/status/project_execution_status.md`.
 

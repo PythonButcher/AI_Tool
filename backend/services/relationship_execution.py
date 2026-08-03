@@ -12,6 +12,10 @@ from typing import Any, Dict, Iterable
 
 import pandas as pd
 
+from backend.repositories.source_relationship_repository import (
+    SourceRelationshipRepositoryError,
+    list_relationships as list_persisted_relationships,
+)
 from backend.repositories.source_workspace_repository import get_source, get_workspace
 from backend.services.data_catalog_lineage import evaluate_dataset_readiness
 from backend.services.dataset_context import load_datahub_dataset
@@ -20,6 +24,7 @@ from backend.services.semantic_model import (
     infer_semantic_model_from_dataframe,
 )
 from backend.services.source_relationships import SourceRelationshipError, get_relationship
+from backend.services.workspace_context import build_analysis_context
 
 
 LINEAGE_VERSION = "multi_source_analysis_lineage_v1"
@@ -101,6 +106,172 @@ def _source_aliases(workspace: Dict[str, Any]) -> Dict[str, str]:
         for item in workspace.get("sources") or []
         if item.get("source_id") and item.get("alias")
     }
+
+
+def _preflight_relationship_bounds(
+    relationship: Dict[str, Any],
+    *,
+    primary_rows: int,
+) -> None:
+    """Refuse a validated join estimate that already exceeds hard ceilings."""
+    profile = next(
+        (
+            diagnostic.get("evidence") or {}
+            for diagnostic in (relationship.get("diagnostics") or [])
+            if isinstance(diagnostic, dict)
+            and diagnostic.get("code") == "relationship_key_profile"
+        ),
+        {},
+    )
+    estimated_rows = profile.get("estimated_join_rows")
+    if not isinstance(estimated_rows, (int, float)):
+        return
+    estimated_ratio = float(estimated_rows) / max(primary_rows, 1)
+    if estimated_rows > MAX_EXECUTION_ROWS or estimated_ratio > MAX_ROW_EXPANSION_RATIO:
+        raise RelationshipExecutionError(
+            "row_expansion_limit_exceeded",
+            "The selected relationship path exceeds the bounded row-expansion ceiling.",
+            [{
+                "relationship_id": relationship["relationship_id"],
+                "estimated_rows": int(estimated_rows),
+                "estimated_ratio": round(estimated_ratio, 6),
+                "maximum_rows": MAX_EXECUTION_ROWS,
+                "maximum_ratio": MAX_ROW_EXPANSION_RATIO,
+                "preflight": True,
+            }],
+        )
+
+
+def resolve_active_model_analysis_context(workspace_id: Any) -> Dict[str, Any]:
+    """Resolve the executable active Data Model into canonical ordered IDs.
+
+    The workspace identity is the only caller input. Relationship selection is
+    derived exclusively from persisted active-model truth and never activates,
+    validates, repairs, or guesses an edge during chat.
+    """
+    normalized_workspace_id = str(workspace_id or "").strip()
+    if not normalized_workspace_id:
+        raise RelationshipExecutionError(
+            "workspace_id_required",
+            "workspace_id is required to resolve the current Data Model.",
+        )
+
+    workspace = get_workspace(normalized_workspace_id)
+    if workspace is None:
+        raise RelationshipExecutionError(
+            "workspace_not_found",
+            f"Workspace '{normalized_workspace_id}' was not found.",
+        )
+    try:
+        persisted_relationships = list_persisted_relationships(normalized_workspace_id)
+    except SourceRelationshipRepositoryError as exc:
+        raise RelationshipExecutionError(exc.code, str(exc)) from exc
+
+    # Inactive relationships are modeling drafts, not analysis paths. When no
+    # active edge exists, the primary source remains the compatibility path.
+    active_candidates = [
+        relationship
+        for relationship in persisted_relationships
+        if relationship.get("is_active")
+    ]
+    if not active_candidates:
+        return build_analysis_context(
+            workspace,
+            [workspace["primary_source_id"]],
+        )
+
+    member_ids = {
+        membership["source_id"]
+        for membership in workspace.get("sources") or []
+        if membership.get("source_id")
+    }
+    executable_relationships = []
+    for candidate in active_candidates:
+        try:
+            # Reconciliation can deactivate a relationship whose validation
+            # fingerprints became stale after it was activated.
+            relationship = get_relationship(
+                normalized_workspace_id,
+                candidate["relationship_id"],
+            )
+        except SourceRelationshipError as exc:
+            raise _relationship_error(exc) from exc
+
+        if relationship["validation_state"] == "stale" or not relationship["is_active"]:
+            raise RelationshipExecutionError(
+                "active_data_model_stale",
+                "The active Data Model contains a stale relationship. Revalidate and reactivate it in Data Model.",
+                relationship.get("diagnostics"),
+            )
+        if (
+            relationship["validation_state"] != "valid"
+            or not relationship["is_confirmed"]
+            or relationship["cardinality"] == "many_to_many"
+        ):
+            raise RelationshipExecutionError(
+                "active_data_model_not_executable",
+                "The active Data Model contains a relationship that cannot execute. Repair its validation, confirmation, or cardinality in Data Model.",
+                relationship.get("diagnostics"),
+            )
+        if (
+            relationship["left_source_id"] not in member_ids
+            or relationship["right_source_id"] not in member_ids
+        ):
+            raise RelationshipExecutionError(
+                "active_data_model_source_missing",
+                "The active Data Model references a source outside this workspace. Repair the relationship in Data Model.",
+            )
+        executable_relationships.append(relationship)
+
+    primary_source_id = workspace["primary_source_id"]
+    selected_source_ids = {primary_source_id}
+    adjacency: Dict[str, set[str]] = {}
+    for relationship in executable_relationships:
+        left_id = relationship["left_source_id"]
+        right_id = relationship["right_source_id"]
+        selected_source_ids.update((left_id, right_id))
+        adjacency.setdefault(left_id, set()).add(right_id)
+        adjacency.setdefault(right_id, set()).add(left_id)
+
+    connected = set()
+    pending = [primary_source_id]
+    while pending:
+        source_id = pending.pop()
+        if source_id in connected:
+            continue
+        connected.add(source_id)
+        pending.extend(adjacency.get(source_id, set()) - connected)
+    if connected != selected_source_ids:
+        raise RelationshipExecutionError(
+            "active_data_model_disconnected",
+            "The active Data Model is disconnected from the workspace primary source. Connect or deactivate the isolated relationships in Data Model.",
+        )
+
+    # Workspace membership order is persisted and deterministic. Supplying it
+    # to the existing compiler also makes relationship traversal deterministic.
+    ordered_source_ids = [
+        membership["source_id"]
+        for membership in workspace.get("sources") or []
+        if membership.get("source_id") in selected_source_ids
+    ]
+    try:
+        ordered_relationships = _validate_graph(
+            ordered_source_ids,
+            executable_relationships,
+            primary_source_id,
+        )
+    except RelationshipExecutionError as exc:
+        raise RelationshipExecutionError(
+            "active_data_model_ambiguous",
+            "The active Data Model contains a cyclic or ambiguous relationship path. Repair the active relationships in Data Model.",
+            [{"code": exc.code, "message": str(exc)}],
+        ) from exc
+
+    return build_analysis_context(
+        workspace,
+        ordered_source_ids,
+        [relationship["relationship_id"] for relationship in ordered_relationships],
+    )
 
 
 def _validate_graph(
@@ -357,6 +528,10 @@ def execute_analysis_context(value: Any) -> Dict[str, Any]:
     joined_sources = {primary_id}
     join_order = []
     for step, relationship in enumerate(ordered_relationships, start=1):
+        _preflight_relationship_bounds(
+            relationship,
+            primary_rows=primary_rows,
+        )
         left_id, right_id = relationship["left_source_id"], relationship["right_source_id"]
         current_is_left = left_id in joined_sources
         new_source_id = right_id if current_is_left else left_id

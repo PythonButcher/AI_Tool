@@ -1,13 +1,16 @@
 """Focused acceptance coverage for bounded multi-source execution."""
 
 from io import BytesIO
+import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
+from unittest.mock import patch
 
 from flask import Flask
 
 from backend.db import backend_db
+from backend.decision_engine.chat_service import DecisionChatService
 from backend.repositories.source_workspace_repository import get_workspace
 from backend.routes.decision import decision_bp
 from backend.routes.nlp_routes import nlp_bp
@@ -18,6 +21,7 @@ from backend.services.relationship_execution import (
     RelationshipExecutionError,
     _validate_graph,
     execute_analysis_context,
+    resolve_active_model_analysis_context,
 )
 from backend.services.metric_resolver import MetricResolver
 
@@ -173,6 +177,16 @@ class RelationshipExecutionTests(unittest.TestCase):
             source_ids[2],
             field_pairs=[{"left_field": "sku", "right_field": "sku"}],
         )
+        resolved_context = resolve_active_model_analysis_context(workspace_id)
+        expected_source_ids = [
+            membership["source_id"]
+            for membership in get_workspace(workspace_id)["sources"]
+        ]
+        self.assertEqual(resolved_context["source_ids"], expected_source_ids)
+        self.assertEqual(
+            resolved_context["relationship_ids"],
+            [first["relationship_id"], second["relationship_id"]],
+        )
         bundle = execute_analysis_context(
             self._context(
                 workspace_id,
@@ -263,6 +277,49 @@ class RelationshipExecutionTests(unittest.TestCase):
             )
         self.assertEqual(many_error.exception.code, "many_to_many_execution_unsupported")
 
+    def test_large_join_estimate_is_refused_before_materializing_merge(self):
+        """Validation evidence must enforce the hard row ceiling pre-merge."""
+        workspace_id, source_ids = self._workspace([
+            ("primary.csv", b"id,value\n1,a\n2,b\n"),
+            ("lookup.csv", b"id,label\n1,A\n2,B\n"),
+        ])
+        relationship = self._activate(workspace_id, *source_ids)
+        diagnostics = list(relationship["diagnostics"])
+        profile = next(
+            diagnostic
+            for diagnostic in diagnostics
+            if diagnostic["code"] == "relationship_key_profile"
+        )
+        profile["evidence"]["estimated_join_rows"] = 300_000
+        connection = backend_db.get_db_connection()
+        connection.execute(
+            """
+            UPDATE workspace_relationships
+            SET diagnostics_json = ?
+            WHERE relationship_id = ?
+            """,
+            (json.dumps(diagnostics), relationship["relationship_id"]),
+        )
+        connection.commit()
+        connection.close()
+
+        with patch(
+            "pandas.DataFrame.merge",
+            side_effect=AssertionError("merge must not execute after failed preflight"),
+        ):
+            with self.assertRaises(RelationshipExecutionError) as error:
+                execute_analysis_context(
+                    self._context(
+                        workspace_id,
+                        source_ids,
+                        [relationship["relationship_id"]],
+                    )
+                )
+
+        self.assertEqual(error.exception.code, "row_expansion_limit_exceeded")
+        self.assertTrue(error.exception.diagnostics[0]["preflight"])
+        self.assertEqual(error.exception.diagnostics[0]["estimated_rows"], 300_000)
+
     def test_compiler_refuses_ambiguous_and_cyclic_selected_graphs(self):
         """Selected IDs cannot encode parallel choices or a cycle."""
         relationships = [
@@ -291,6 +348,65 @@ class RelationshipExecutionTests(unittest.TestCase):
         self.assertIsNone(bundle["analysis_lineage"])
         self.assertEqual(bundle["dataset_ref"]["dataset_id"], source_id)
 
+    def test_active_model_resolver_ignores_inactive_relationship_drafts(self):
+        workspace_id, source_ids = self._workspace([
+            ("orders.csv", b"id,revenue\n1,10\n"),
+            ("customers.csv", b"id,region\n1,East\n"),
+        ])
+        created = self.client.post(
+            f"/api/data-workspaces/{workspace_id}/relationships",
+            json={
+                "left_source_id": source_ids[0],
+                "right_source_id": source_ids[1],
+                "field_pairs": [{"left_field": "id", "right_field": "id"}],
+                "cardinality": "one_to_one",
+                "join_behavior": "left",
+                "filter_direction": "left_to_right",
+            },
+        )
+        self.assertEqual(created.status_code, 201, created.get_json())
+
+        resolved = resolve_active_model_analysis_context(workspace_id)
+
+        self.assertEqual(resolved["source_ids"], [source_ids[0]])
+        self.assertEqual(resolved["relationship_ids"], [])
+
+    def test_active_model_resolver_refuses_stale_and_disconnected_graphs(self):
+        stale_workspace_id, stale_source_ids = self._workspace([
+            ("stale_orders.csv", b"id,revenue\n1,10\n"),
+            ("stale_customers.csv", b"id,region\n1,East\n"),
+        ])
+        self._activate(stale_workspace_id, *stale_source_ids)
+        connection = backend_db.get_db_connection()
+        connection.execute(
+            "UPDATE datahub_datasets SET content_fingerprint = 'sha256:changed' WHERE id = ?",
+            (stale_source_ids[1],),
+        )
+        connection.commit()
+        connection.close()
+        with self.assertRaises(RelationshipExecutionError) as stale_error:
+            resolve_active_model_analysis_context(stale_workspace_id)
+        self.assertEqual(stale_error.exception.code, "active_data_model_stale")
+        self.assertIn("Data Model", str(stale_error.exception))
+
+        disconnected_workspace_id, disconnected_source_ids = self._workspace([
+            ("primary.csv", b"id,value\n1,A\n"),
+            ("lookup_a.csv", b"id,label\n1,A\n"),
+            ("lookup_b.csv", b"id,label\n1,B\n"),
+        ])
+        self._activate(
+            disconnected_workspace_id,
+            disconnected_source_ids[1],
+            disconnected_source_ids[2],
+        )
+        with self.assertRaises(RelationshipExecutionError) as disconnected_error:
+            resolve_active_model_analysis_context(disconnected_workspace_id)
+        self.assertEqual(
+            disconnected_error.exception.code,
+            "active_data_model_disconnected",
+        )
+        self.assertIn("Data Model", str(disconnected_error.exception))
+
     def test_default_source_governance_warnings_do_not_become_blocks(self):
         workspace_id, source_ids = self._workspace([
             ("orders.csv", b"id,note\n1,\n2,ok\n3,\n"),
@@ -305,7 +421,7 @@ class RelationshipExecutionTests(unittest.TestCase):
         self.assertEqual(primary_readiness["status"], "warning")
         self.assertFalse(primary_readiness["policy"]["null_thresholds"]["configured"])
 
-    def test_decision_chat_chart_and_refinement_retain_verified_context(self):
+    def test_decision_chat_resolves_active_model_and_retains_it_for_refinement(self):
         workspace_id, source_ids = self._workspace([
             ("orders.csv", b"id,revenue\n1,12345.67\n2,23456.78\n"),
             ("customers.csv", b"id,region\n1,East\n2,West\n"),
@@ -318,7 +434,7 @@ class RelationshipExecutionTests(unittest.TestCase):
             "/api/decision/chat/turns",
             json={
                 "user_message": "Show orders.Revenue by source_2.Region as a chart",
-                "analysis_context": analysis_context,
+                "workspace_id": workspace_id,
             },
         )
         self.assertEqual(response.status_code, 200, response.get_json())
@@ -350,6 +466,251 @@ class RelationshipExecutionTests(unittest.TestCase):
             {key: refined_body["analysis_context"][key] for key in analysis_context}, analysis_context
         )
         self.assertEqual(refined_body["analysis_lineage"], body["analysis_lineage"])
+
+    def test_cross_source_revenue_by_category_uses_business_semantics_and_all_groups(self):
+        """A natural question must resolve governed fields without alias-derived filters."""
+        workspace_id, source_ids = self._workspace([
+            (
+                "sales_transactions_5000.csv",
+                b"TransactionID,ProductID,Quantity,UnitPrice,TotalAmount\n"
+                b"TXN-000001,PROD-001,2,60,120\n"
+                b"TXN-000002,PROD-002,1,80,80\n"
+                b"TXN-000003,PROD-001,1,60,60\n"
+                b"TXN-000004,PROD-003,3,20,60\n",
+            ),
+            (
+                "hardware_inventory_5000.csv",
+                b"ProductID,Category\n"
+                b"PROD-001,Hardware\n"
+                b"PROD-002,Office\n"
+                b"PROD-003,Accessories\n",
+            ),
+        ])
+        connection = backend_db.get_db_connection()
+        connection.execute(
+            "UPDATE workspace_sources SET alias = ? WHERE workspace_id = ? AND source_id = ?",
+            ("sales_transactions_5000_csv", workspace_id, source_ids[0]),
+        )
+        connection.execute(
+            "UPDATE workspace_sources SET alias = ? WHERE workspace_id = ? AND source_id = ?",
+            ("hardware_inventory_5000_csv", workspace_id, source_ids[1]),
+        )
+        connection.commit()
+        connection.close()
+        self._activate(
+            workspace_id,
+            source_ids[0],
+            source_ids[1],
+            field_pairs=[{"left_field": "ProductID", "right_field": "ProductID"}],
+            cardinality="many_to_one",
+        )
+
+        response = self.client.post(
+            "/api/decision/chat/turns",
+            json={
+                "workspace_id": workspace_id,
+                "user_message": (
+                    "Which inventory categories generated the most total sales revenue? "
+                    "Show total revenue by category as a bar chart."
+                ),
+            },
+        )
+
+        self.assertEqual(response.status_code, 200, response.get_json())
+        body = response.get_json()
+        chart = next(item for item in body["artifacts"] if item["type"] == "chart")
+        content = chart["content"]
+        self.assertEqual(
+            content["fieldsUsed"]["value"],
+            "sales_transactions_5000_csv.TotalAmount",
+        )
+        self.assertEqual(
+            content["fieldsUsed"]["category"],
+            "hardware_inventory_5000_csv.Category",
+        )
+        self.assertEqual(content["filtersApplied"], [])
+        self.assertEqual(
+            content["chartData"]["labels"],
+            ["Hardware", "Office", "Accessories"],
+        )
+        self.assertEqual(content["chartData"]["datasets"][0]["data"], [180, 80, 60])
+        self.assertEqual(content["chartData"]["datasets"][0]["label"], "Total Sales Revenue")
+        self.assertEqual(
+            content["chartData"]["meta"]["axisLabels"],
+            {
+                "x": "Inventory Category",
+                "y": "Total Sales Revenue",
+            },
+        )
+        self.assertEqual(chart["title"], "Total Sales Revenue chart")
+        self.assertIn("Total Sales Revenue", body["assistant_message"])
+        self.assertIn("Hardware", body["assistant_message"])
+        self.assertNotIn("hardware_inventory_5000_csv", body["assistant_message"])
+        self.assertEqual(
+            body["session_state"]["last_analytic_context"]["source"],
+            "semantic_metric",
+        )
+        self.assertEqual(
+            content["result_context"]["metric"]["label"],
+            "Total Sales Revenue",
+        )
+        self.assertEqual(
+            content["result_context"]["group_by"][0]["label"],
+            "Inventory Category",
+        )
+
+        filtered_response = self.client.post(
+            "/api/decision/chat/turns",
+            json={
+                "workspace_id": workspace_id,
+                "user_message": (
+                    "Show total sales revenue by inventory category for "
+                    "Hardware as a bar chart."
+                ),
+            },
+        )
+        self.assertEqual(
+            filtered_response.status_code,
+            200,
+            filtered_response.get_json(),
+        )
+        filtered_chart = next(
+            item
+            for item in filtered_response.get_json()["artifacts"]
+            if item["type"] == "chart"
+        )
+        filtered_content = filtered_chart["content"]
+        self.assertEqual(filtered_content["chartData"]["labels"], ["Hardware"])
+        self.assertEqual(
+            filtered_content["filtersApplied"],
+            [{
+                "field": "hardware_inventory_5000_csv.Category",
+                "dimension_id": "hardware_inventory_5000_csv.dimension_category",
+                "label": "Inventory Category",
+                "operator": "eq",
+                "value": "Hardware",
+                "values": None,
+            }],
+        )
+        self.assertEqual(
+            filtered_content["chartSpec"]["slicers"][0]["label"],
+            "Inventory Category",
+        )
+
+    def test_qualified_field_reference_does_not_create_a_value_filter(self):
+        """A value inside a technical namespace is not explicit filter evidence."""
+        dataset = [
+            {
+                "hardware_inventory_5000_csv.Category": "Hardware",
+                "sales_transactions_5000_csv.TotalAmount": 120,
+            },
+            {
+                "hardware_inventory_5000_csv.Category": "Office",
+                "sales_transactions_5000_csv.TotalAmount": 80,
+            },
+        ]
+        semantic_model = {
+            "dimensions": [
+                {
+                    "id": "hardware_inventory_5000_csv.dimension_category",
+                    "field": "hardware_inventory_5000_csv.Category",
+                    "name": "hardware_inventory_5000_csv.Category",
+                    "label": "Inventory Category",
+                }
+            ]
+        }
+
+        implicit = DecisionChatService._build_semantic_filters(
+            user_message="Group by hardware_inventory_5000_csv.Category",
+            dataset=dataset,
+            semantic_model=semantic_model,
+            analytic_state={},
+        )
+        explicit = DecisionChatService._build_semantic_filters(
+            user_message="Show only Category = Hardware",
+            dataset=dataset,
+            semantic_model=semantic_model,
+            analytic_state={},
+        )
+
+        self.assertEqual(implicit, [])
+        self.assertEqual(
+            explicit,
+            [
+                {
+                    "field": "hardware_inventory_5000_csv.Category",
+                    "operator": "eq",
+                    "value": "Hardware",
+                    "values": None,
+                }
+            ],
+        )
+
+    def test_nlp_chart_route_returns_grounded_error_for_text_measure(self):
+        """The public chart boundary must not turn an empty series into success."""
+        response = self.client.post(
+            "/api/nlp/chart",
+            json={
+                "query": "Chart: Bar; Value: TransactionID; Dimension: Category",
+                "dataset": [
+                    {"TransactionID": "TXN-000001", "Category": "Hardware"},
+                    {"TransactionID": "TXN-000002", "Category": "Office"},
+                ],
+            },
+        )
+
+        self.assertEqual(response.status_code, 422, response.get_json())
+        self.assertEqual(
+            response.get_json()["error"]["code"],
+            "chart_measure_not_numeric",
+        )
+        self.assertIn(
+            "usable numeric values",
+            response.get_json()["error"]["message"],
+        )
+
+    def test_decision_chat_returns_grounded_error_for_text_semantic_measure(self):
+        """Decision Chat must not fall back after a resolved metric proves unusable."""
+        response = self.client.post(
+            "/api/decision/chat/turns",
+            json={
+                "user_message": "Show Transaction ID by Category as a bar chart",
+                "dataset": [
+                    {"TransactionID": "TXN-000001", "Category": "Hardware"},
+                    {"TransactionID": "TXN-000002", "Category": "Office"},
+                ],
+                "semantic_model": {
+                    "metrics": [
+                        {
+                            "id": "metric_transaction_id_sum",
+                            "name": "Transaction ID",
+                            "label": "Transaction ID",
+                            "field": "TransactionID",
+                            "default_aggregation": "sum",
+                            "expression": {
+                                "type": "column_aggregation",
+                                "column": "TransactionID",
+                                "aggregation": "sum",
+                            },
+                        }
+                    ],
+                    "dimensions": [
+                        {
+                            "id": "dimension_category",
+                            "name": "Category",
+                            "label": "Category",
+                            "field": "Category",
+                        }
+                    ],
+                },
+            },
+        )
+
+        self.assertEqual(response.status_code, 400, response.get_json())
+        error = response.get_json()["error"]
+        self.assertEqual(error["code"], "INVALID_DECISION_CHAT_TURN_REQUEST")
+        self.assertIn("metric_measure_not_numeric", error["message"])
+        self.assertIn("usable numeric values", error["message"])
 
     def test_nlp_chart_returns_relationship_lineage_in_chart_meta(self):
         workspace_id, source_ids = self._workspace([

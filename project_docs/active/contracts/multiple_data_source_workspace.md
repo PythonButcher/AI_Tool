@@ -66,10 +66,20 @@ A source may belong to several workspaces. An alias must be unique inside its wo
 | `workspace_id` | Durable workspace identity |
 | `workspace_version` | Version used to reject stale requests |
 | `primary_source_id` | Default analytical grain |
-| `source_ids` | Ordered selected source IDs |
-| `relationship_ids` | Ordered, explicit relationship IDs selected for this analysis. Empty for one-source analysis. |
+| `source_ids` | Ordered source IDs in the server-resolved analysis model |
+| `relationship_ids` | Ordered relationship IDs in the server-resolved execution tree. Empty for one-source analysis. |
 
 The execution boundary re-resolves this object only from `workspace_id`, the exact current `workspace_version`, `primary_source_id`, ordered `source_ids`, and ordered `relationship_ids`. Caller-provided rows, aliases, relationship definitions, fingerprints, or lineage are never treated as execution truth. The workspace primary source must be selected and must match persisted workspace truth.
+
+## Automatic AI Chat Resolution
+
+`POST /api/decision/chat/turns` accepts the current `workspace_id` without caller-selected `source_ids`, `relationship_ids`, source tables, join fields, or relationship paths. When no explicit compatibility `analysis_context` is supplied, Decision Chat resolves the workspace's active Data Model on the server and replaces any legacy caller rows or semantic model with the verified workspace bundle before analysis.
+
+The resolver selects only active, confirmed, freshly `valid`, executable relationships connected to the workspace primary source. Source order follows persisted workspace-membership order, and relationship order follows deterministic traversal from the primary source. Inactive relationship drafts are ignored. If no active relationship exists, the resolver returns the unchanged primary-only context.
+
+Decision Chat stores the canonical identity-only context and aggregate-safe lineage in row-free session state. Suggested-action refinements recover the workspace identity from that verified state, re-resolve current server truth, and return the canonical context again. A stale, non-executable, disconnected, cyclic, or ambiguous active graph is refused with a message directing model repair to Data Model; chat never activates, validates, substitutes, or guesses a relationship.
+
+The joined semantic model keeps qualified `id`, `name`, `field`, expression columns, source IDs, and source aliases as machine truth. It also supplies additive `qualified_label`, `display_name`, `label`, `source_label`, and business aliases for interpretation and presentation. Natural-language matching requires a business field term or semantic alias; a source namespace by itself cannot select every field in that source. Result artifacts keep qualified identities in `fieldsUsed`, semantic configuration, result rows, and lineage while chart titles, dataset labels, axis labels, grouping labels, answer text, and BI grounding use readable semantic labels. Normalized semantic filters retain qualified `field`, add authoritative `dimension_id` and business-readable `label`, and carry that label into chart slicers.
 
 ## Upload Response And Workspace Targeting
 
@@ -84,6 +94,8 @@ When optional multipart `workspace_id`, `workspace_version`, `alias`, and `role`
 `GET /api/data-sources` returns `{ sources }` using the same public source serializer as `GET /api/data-sources/<source_id>`. Neither endpoint returns `path`, private `locator_json`, host paths, or secrets. `GET /api/data-workspaces/<workspace_id>` returns `{ workspace }` with only that workspace's memberships. `GET /api/data-workspaces/<workspace_id>/analysis-context` returns `{ workspace, sources, analysis_context }`; repeated `source_id` query parameters select members, while omission selects the primary source.
 
 `POST /api/data-workspaces/<workspace_id>/sources` accepts JSON `source_id`, required `version`, optional `alias`, and optional `role`. It attaches an existing catalog source with compare-and-swap workspace versioning and returns `{ source, workspace, analysis_context }`. Membership changes advance the workspace version exactly once and never change `primary_source_id`, activate a relationship, or select a multi-source path.
+
+`DELETE /api/datahub/<source_id>` deletes only a catalog source with no workspace membership, primary-workspace reference, or relationship dependency. The dependency check and delete execute under one immediate database transaction. A referenced source returns HTTP 409 with `source_has_dependencies` plus aggregate-safe workspace IDs, membership count, relationship IDs, relationship count, and primary-workspace count; no membership, relationship, workspace, or source row is changed. A missing source returns HTTP 404 with `source_not_found`.
 
 `PATCH /api/data-workspaces/<workspace_id>/sources/<source_id>/position` accepts required JSON `version` and `position`, where `position` contains exactly finite numeric `x` and `y` coordinates. The source must be a member of the named workspace. The operation updates only `workspace_sources.position_json`, advances the workspace version exactly once, and returns the authoritative `{ workspace }`. It does not change membership, aliases, roles, `primary_source_id`, analysis selection, relationships, source metadata, semantic metadata, or source data.
 
@@ -118,6 +130,8 @@ The shared state exposes `workspaceRefreshStatus` as `idle`, `refreshing`, or `e
 ## Verified Analysis Resolution
 
 One selected source with no relationships resolves through the existing source dataframe and semantic model without namespacing its fields. Two or more selected sources require an explicit active relationship tree. Successful multi-source resolution returns the canonical `analysis_context`, a namespaced dataframe/model bundle for backend consumers, a conservative multi-source governance rollup, and `analysis_lineage` using `multi_source_analysis_lineage_v1`.
+
+Natural-language numeric inference accepts complete formatted numbers but rejects mixed identifiers such as `TXN-000001`. Qualified source terms may disambiguate an already matched field but do not contribute field relevance alone. Value-filter extraction removes qualified machine references before comparing the prompt with observed dimension values, so `hardware_inventory_5000_csv.Category` does not imply `Category = Hardware`; an explicit request for Hardware remains a valid filter. Raw chart and semantic-metric aggregation return `chart_measure_not_numeric` or `metric_measure_not_numeric` when a selected summed measure contains no usable numeric values.
 
 ## Compatibility Boundary
 
