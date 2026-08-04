@@ -1,4 +1,4 @@
-# Multiple Data Sources Implementation Roadmap
+# AI_Tool Data And Backend Delivery Roadmap
 
 ## Product Outcome
 
@@ -8,7 +8,7 @@ The experience should feel like a modern data-model studio built for this applic
 
 ## Current Source Truth
 
-The backend now persists governed sources, workspaces, workspace memberships, validated relationships, safe multi-source execution, and lineage. The accepted frontend source implementation provides controlled draggable nodes, versioned position persistence, discoverable relationship creation, relationship editing and validation, activation and deactivation, and relationship deletion through the verified APIs. Browser acceptance identified one bounded responsive-layout repair in the relationship inspector before acceptance can resume.
+The backend persists governed sources, workspaces, workspace memberships, validated relationships, safe multi-source execution, lineage, and BI-first AI Chat artifacts. The frontend provides controlled draggable nodes, versioned position persistence, relationship creation and editing, validation, activation and deactivation, deletion, and readable trusted-result presentation through verified APIs.
 
 The backend can populate one workspace through `GET /api/data-sources`, `POST /api/data-workspaces/<workspace_id>/sources`, and the optional existing-workspace fields on `POST /api/upload`. Durable relationship CRUD, validation, confirmation, activation, deactivation, deletion, and diagnostics already exist. `PATCH /api/data-workspaces/<workspace_id>/sources/<source_id>/position` persists finite canvas coordinates with workspace compare-and-swap versioning. The frontend retains authoritative workspace state, persists drag-end coordinates, reconciles workspace conflicts, and exposes the relationship-authoring workflow.
 
@@ -122,15 +122,25 @@ Control returns to Codex for integration review.
 
 ### Phase 10 — Reliability and Release
 
-Status: active. Codex owns release hardening and cross-path verification.
+Status: complete.
 
 Codex owns cross-source natural-language resolution, chart correctness, business-readable result-label contracts, cross-path regression, migration, concurrency, deletion, and performance hardening. Natural questions must resolve the intended governed measure and dimension, technical source aliases must not create accidental value filters, and unusable measures must produce a clear grounded error instead of an empty chart. Source deletion must protect or explicitly invalidate dependent relationships and workspaces. Tests cover cross-source metric-by-dimension questions, explicit filters, readable chart artifacts, restart persistence, duplicate uploads, stale schemas, large joins, row-explosion limits, governance aggregation, and one-source compatibility. Documentation and API examples are finalized from verified behavior.
 
 Antigravity receives a repair-only handoff if integration review finds a concrete UI defect. The phase is complete only after backend verification, Codex frontend review, a clean production build, harness checks, and user acceptance discussed in chat.
 
+### Phase 11 — Backend Enhancement and AI Chat Continuity
+
+Status: active. Codex owns backend implementation and compatibility isolation.
+
+Codex first reproduces and repairs the AI Chat defect that causes a sustained conversation to replay the first answer after roughly three distinct questions. The public route must handle at least eight realistic turns using rolling conversation history and returned structured session state. Each independent question must answer its own current intent, while explicit refinements retain only compatible governed analytical context.
+
+Codex then inventories the Decision Intelligence Python routes, services, imports, persistence dependencies, tests, and frontend callers. Active BI chat responsibilities remain supported. Decision Intelligence workspaces, outputs, assets, graphs, scenarios, recommendations, and related compatibility services move behind an explicit isolated registration and execution boundary. No supported feature, response field, endpoint, or stored record is removed until its callers and compatibility requirements are proven.
+
+Acceptance requires sustained multi-turn API coverage beyond the third question, unchanged natural-language charting and one-source or multi-source analysis, source-backed classification of every Decision Intelligence backend entry point, primary application startup without compatibility-only execution, stable compatibility tests for retained services, and repository checks.
+
 ## Current Backend File Areas
 
-Phase 5 centers on `backend/repositories/source_workspace_repository.py`, `backend/services/workspace_context.py`, `backend/routes/data_workspaces.py`, `backend/routes/upload.py`, and `tests/test_source_workspace_context.py`, with relationship and execution regressions where membership changes affect their fixtures. Later work may extend `frontend/frontend/src/context/DataContext.jsx`, the upload and Data Model feature areas, Decision Chat request construction, charting, and lineage rendering. `backend/utils/global_state.py` remains a one-source compatibility boundary, not workspace truth.
+Current work centers on `backend/decision_engine/chat_service.py`, `backend/decision_engine/mode_detection.py`, `backend/routes/decision.py`, `backend/app.py`, the `backend/services/decision_*.py` compatibility boundary, and focused Decision Chat tests. `frontend/frontend/src/features/ai/AIShell.jsx` is a read-only request-contract reference unless Codex proves a frontend defect and creates a bounded Antigravity handoff.
 
 ## Handoff Discipline
 

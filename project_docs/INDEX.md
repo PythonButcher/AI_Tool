@@ -18,7 +18,7 @@ This is the top-level routing file. Use it to find the smallest current document
 | --- | --- |
 | Check concise current status | `project_docs/active/status/project_execution_status.md` |
 | Work on the current project gate | `project_docs/active/active_gate/README.md` |
-| Review the multiple data sources roadmap | `project_docs/active/data_sources/multiple_data_sources_implementation_plan.md` |
+| Review the active data and backend roadmap | `project_docs/active/data_sources/multiple_data_sources_implementation_plan.md` |
 | Review completed AI Chat rollout history | `project_docs/archive/ai_chat_decision_output_unification_rollout_completed.md` only when historical context is needed |
 | Work on backend/frontend contracts | `project_docs/active/contracts/decision_objects.md` |
 | Work on multiple-source workspace contracts | `project_docs/active/contracts/multiple_data_source_workspace.md` |

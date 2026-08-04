@@ -145,7 +145,7 @@ const TrustedResultCard = ({ biGrounding, analysisLineage }) => {
           <div className="ai-shell__trusted-row">
             <span className="ai-shell__trusted-label">Filters</span>
             <span className="ai-shell__trusted-value">
-              {filters.map(f => `${f.field || 'unknown'} ${f.operator || ''} ${f.value ?? f.values?.join(',') ?? ''}`).join(' AND ')}
+              {filters.map(f => `${f.label || f.field || 'unknown'} ${f.operator || ''} ${f.value ?? f.values?.join(',') ?? ''}`).join(' AND ')}
             </span>
           </div>
         )}

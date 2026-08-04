@@ -1,47 +1,53 @@
-# Project Active Gate — Cross-Source AI Chat Reliability And Release
+# Project Active Gate — AI Chat Conversation Continuity And Backend Isolation
 
-Goal: Make governed cross-source AI Chat answer natural-language metric-by-dimension questions correctly, produce complete charts without accidental filters, present business-readable result labels, and complete the remaining multi-source release hardening.
+Goal: Make AI Chat answer every new question correctly across sustained conversations and isolate Decision Intelligence compatibility services from the primary BI backend runtime without removing supported AI Chat, charting, data, semantic-model, governance, artifact, or export behavior.
 
 ## User Outcome
 
-Users can ask a normal question such as “Which inventory categories generated the most total sales revenue? Show total revenue by category as a bar chart” and receive the complete governed cross-source result. The chart must not silently substitute an identifier field, invent a category filter from a source alias, collapse to one bar, or expose technical field namespaces as the primary explanation.
+Users can ask more than three distinct questions in one AI Chat conversation and receive an answer to the latest question every time. A new question must not replay the first answer, reuse a stale chart, or silently treat an unrelated request as a refinement. Legitimate follow-up requests still retain the governed dataset, workspace, metric, dimension, filters, and lineage needed for continuity.
 
-Users can also rely on multi-source workspaces across restarts, conflicting edits, changing source schemas, large joins, and source lifecycle operations without silent corruption, unsafe execution, or regressions to one-source analysis.
+The primary backend exposes and executes BI-first AI Chat behavior without loading Decision Intelligence workspaces, decision frames, readiness panels, command-center output, decision assets, graphs, scenarios, or recommendation pipelines into the normal request path. Compatibility-only services remain isolated and recoverable while their callers, routes, tests, and data dependencies are audited.
 
 ## Scope
 
-Repair cross-source question interpretation and artifact construction in `backend/nlp_engine/nlp_extraction.py`, `backend/nlp_engine/nlp_interpreter.py`, `backend/decision_engine/chat_service.py`, and the chart-building boundary used by Decision Chat. Add focused regression coverage in `tests/test_decision_chat_service.py` and the narrow NLP or chart test modules that own the repaired behavior.
+Start by reproducing the sustained-conversation defect through `POST /api/decision/chat/turns` with at least eight distinct user questions in one session. Pass each returned `session_state` into the next request and supply the same rolling role/content message-list shape used by `frontend/frontend/src/features/ai/AIShell.jsx`. Prove whether the defect originates in request construction, mode detection, conversation-context alignment, session-state normalization, analytical refinement, artifact reuse, or response rendering before changing behavior.
 
-The repair must address the verified failure modes directly: identifier-shaped text such as `TXN-000001` must not become a numeric measure; tokens from source namespaces such as `sales` and `inventory` must not give every field in that source equal semantic relevance; “sales revenue” must resolve to the governed `TotalAmount` measure; and the word `hardware` inside `hardware_inventory_5000_csv.Category` must not become an implicit `Category = Hardware` filter.
+The first backend targets are `backend/decision_engine/chat_service.py`, `backend/decision_engine/mode_detection.py`, `backend/routes/decision.py`, and focused coverage in `tests/test_decision_chat_service.py`. Inspect `frontend/frontend/src/features/ai/AIShell.jsx` only to verify the request and response boundary. Codex must not edit frontend files without explicit user authorization and a verified frontend defect.
 
-Define a backend presentation boundary that preserves fully qualified field identity for execution and lineage while supplying business-readable labels for answer text, chart titles, axes, metrics, dimensions, and filters. After that contract is verified, create one bounded Antigravity repair handoff for `frontend/frontend/src/features/ai/AIShell.jsx` and its adjacent result/chart presentation only if the frontend still renders internal identifiers directly.
+Repair continuity so the current `user_message` is authoritative for every independent question. Structured state may carry dataset identity and validated analytical context, but it must not substitute an old `decision_prompt`, first-turn intent, cached artifact, or stale answer for the current request. Explicit refinements may reuse the last analytical context only when the request supplies valid refinement evidence.
 
-Continue auditing and hardening `backend/repositories/source_workspace_repository.py`, `backend/repositories/source_relationship_repository.py`, `backend/services/workspace_context.py`, `backend/services/source_relationships.py`, and `backend/services/relationship_execution.py`, with route changes only where verified service errors require accurate HTTP translation. Add focused coverage in `tests/test_source_workspace_context.py`, `tests/test_source_relationships.py`, `tests/test_relationship_execution.py`, and adjacent upload tests when their compatibility boundary is affected.
+Then inventory the runtime imports, blueprint registrations, endpoints, service calls, tests, persistence tables, and frontend callers for `backend/routes/decision.py`, `backend/decision_engine/`, and `backend/services/decision_*.py`. Separate active BI chat responsibilities from Decision Intelligence compatibility responsibilities at module and application-registration boundaries. Do not delete or disable a Python module, endpoint, persistence record, or response field until its active callers and compatibility requirements are proven.
 
-Use `project_docs/active/data_sources/multiple_data_sources_implementation_plan.md`, `project_docs/active/contracts/multiple_data_source_workspace.md`, and `project_docs/active/contracts/multiple_data_source_relationships.md` as the required context. Update contracts only with behavior proven by implementation and tests.
+Keep `/api/decision/chat/turns` compatible while the primary AI Chat boundary is separated. Any route migration must use a compatibility adapter and requires contract evidence plus a bounded frontend handoff only when source review proves one is necessary.
+
+Use `project_docs/active/contracts/decision_objects.md`, `project_docs/active/contracts/multiple_data_source_workspace.md`, and `project_docs/active/contracts/multiple_data_source_relationships.md` as the supporting contracts. Update them only with behavior verified in source and tests.
 
 ## Contracts
 
-Source deletion must refuse unsafe removal or explicitly and transactionally invalidate every dependent workspace membership and relationship. Restart persistence, duplicate registration, optimistic workspace and relationship versions, stale source fingerprints, and schema changes must retain stable errors and workspace isolation.
+Every AI Chat turn accepts the latest `user_message`, a bounded role/content message list, and structured `session_state`. The backend returns a new response derived from the latest message, an updated state, grounded artifacts when requested, and stable dataset or relationship lineage. Conversation length must not impose a hidden three-question limit.
 
-Relationship execution must continue refusing ambiguous, cyclic, disconnected, stale, blocked, unsupported many-to-many, and row-expanding graphs. Governance aggregation and lineage remain value-safe. Existing upload, Data Hub, AI Chat, chart, export, cleaning, and one-source dataset behavior must remain compatible.
+Independent questions replace stale analytical intent while retaining only safe dataset and workspace identity. Follow-up refinements preserve the last compatible metric, dimension, filters, chart type, and governed analysis context. Dataset or workspace changes invalidate incompatible state instead of replaying old output.
 
-Internal source aliases, qualified field names, relationship IDs, and execution locators remain stable machine identities. They must not be treated as natural-language filter evidence or used as the primary user-facing labels. Filter extraction must require evidence that the user actually requested a dimension value, not merely that the value appears inside a technical identifier.
+AI Chat remains a BI-first surface. Grounded answers, tables, natural-language charting, conversational refinement, semantic metrics, multi-source execution, lineage, artifact inspection, dashboard pinning, exports, cleaning, governance, and one-source compatibility are protected behavior.
+
+Decision Intelligence compatibility services are not primary AI Chat dependencies. Their registration and execution must be explicit, isolated, testable, and unable to alter AI Chat mode selection, session continuity, artifacts, or startup reliability.
 
 ## Acceptance
 
-Focused tests prove restart persistence, duplicate uploads or memberships, stale workspace and relationship versions, dependent-source deletion behavior, stale schemas, large bounded joins, row-explosion refusal, governance aggregation, and unchanged one-source analysis. Every mutation is atomic, workspace-isolated, and leaves no orphaned relationship or membership state.
+An automated conversation test sends at least eight distinct questions through the public chat route using a realistic rolling message list and returned state. Every response addresses its own current question, no turn repeats the first answer or chart unless the user explicitly asks for it, and the test includes both independent questions and valid refinements beyond the third question.
 
-A deterministic sales-to-inventory relationship fixture proves that the natural-language revenue-by-category question selects `TotalAmount` as the summed measure, selects inventory `Category` as the grouping dimension, produces every category in the result, and produces no `Category = Hardware` filter. A technical structured prompt that contains `hardware_inventory_5000_csv.Category` must also produce no filter unless the user explicitly requests Hardware.
+Focused tests cover message-list truncation, stale `decision_prompt` state, mode changes, unrelated new questions, chart-to-answer and answer-to-chart transitions, dataset changes, multi-source context, explicit filters, and one-source compatibility. Natural-language charting continues resolving readable measures and dimensions without accidental filters.
 
-Chart construction must fail with a useful grounded error when the selected measure has no usable numeric values instead of emitting an empty chart with default axes. Result artifacts must retain qualified identities and lineage while providing readable labels such as “Total Sales Revenue” and “Inventory Category.” One-source question interpretation and explicit user-requested filters remain unchanged.
+A source-backed backend inventory classifies each Decision Intelligence route and service as primary BI chat, compatibility-only, or unused with evidence. Primary application startup and normal AI Chat requests do not import or execute compatibility-only workspace, output, graph, asset, scenario, or recommendation pipelines. Compatibility behavior that remains supported has focused tests and an explicit registration boundary.
 
-Release documentation and API examples match verified request fields, response fields, error codes, labels, and compatibility behavior. The verified result-presentation defect is handed to Antigravity only after Codex fixes and documents the backend label contract.
+No supported AI Chat or data feature is removed. API and artifact compatibility remains stable unless a separately verified migration contract and owner handoff are created.
 
 ## Verification
 
-Start with focused NLP interpretation, semantic-filter, Decision Chat, and chart-construction tests for the exact cross-source question. Then run the focused workspace, relationship, execution, upload, and Decision Chat regression suites affected by the implementation. Run `python .codex/hooks/agent_harness_check.py`, `python C:/Users/18022/.codex/skills/active-gate-governance/scripts/check_active_gate.py project_docs/active/active_gate .`, and `git diff --check`.
+Run the focused sustained-conversation test first, then `python -m unittest tests.test_decision_chat_service tests.test_nlp_chart_reliability tests.test_relationship_execution`. Add the focused route, application-registration, and compatibility suites affected by backend isolation.
+
+Run `python -m py_compile` for every changed Python module, `python .codex/hooks/agent_harness_check.py`, `python C:/Users/18022/.codex/skills/active-gate-governance/scripts/check_active_gate.py project_docs/active/active_gate .`, and `git diff --check`.
 
 ## Owner And Control Return
 
-Codex owns question-resolution repair, backend display-label contract, reliability implementation, regression verification, contracts, status truth, and release readiness. After backend verification, Codex creates a bounded repair handoff if readable presentation still requires React changes. Antigravity stops after that handoff and returns changed-file and build evidence to Codex for integration review.
+Codex owns reproduction, backend implementation, compatibility inventory, contract updates, tests, documentation, and integration review. No frontend handoff is active. If source review proves a frontend defect or route migration requirement, Codex creates one bounded Antigravity handoff and retains control until that implementation returns for review.

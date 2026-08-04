@@ -10,7 +10,7 @@ Antigravity owns bounded frontend implementation, React/CSS, UI rendering, and f
 
 ## Active Handoffs And Goal Prompts
 
-The active frontend repair handoff is `project_docs/active/ai_hand_off/antigravity_ai_chat_readable_filter_labels.md`.
+No frontend handoff is active.
 
 Current status is recorded in `project_docs/active/status/project_execution_status.md`.
 
