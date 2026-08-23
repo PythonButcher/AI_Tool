@@ -1,4 +1,4 @@
-"""Read-only routes for durable sources and one-source workspace context."""
+"""Durable source and workspace routes for governed analysis context."""
 
 from flask import Blueprint, jsonify, request
 
@@ -7,6 +7,7 @@ from backend.services.workspace_context import (
     WorkspaceContextError,
     add_source_to_workspace,
     resolve_analysis_context,
+    update_source_position,
 )
 
 
@@ -27,6 +28,7 @@ def _workspace_error(error: WorkspaceContextError):
         "invalid_source_alias": 400,
         "invalid_workspace_role": 400,
         "invalid_workspace_version": 400,
+        "invalid_workspace_position": 400,
     }
     return jsonify({"error": {"code": error.code, "message": str(error)}}), status_by_code.get(error.code, 400)
 
@@ -71,6 +73,30 @@ def add_data_workspace_source(workspace_id):
                 version=payload.get("version"),
                 alias=payload.get("alias"),
                 role=payload.get("role"),
+            )
+        ), 200
+    except WorkspaceContextError as exc:
+        return _workspace_error(exc)
+
+
+@data_workspaces_bp.route(
+    "/data-workspaces/<workspace_id>/sources/<source_id>/position",
+    methods=["PATCH"],
+)
+def update_data_workspace_source_position(workspace_id, source_id):
+    """Persist one source node's presentation-only canvas position."""
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return _workspace_error(
+            WorkspaceContextError("invalid_request", "A JSON request body is required.")
+        )
+    try:
+        return jsonify(
+            update_source_position(
+                workspace_id=workspace_id,
+                source_id=source_id,
+                version=payload.get("version"),
+                position=payload.get("position"),
             )
         ), 200
     except WorkspaceContextError as exc:

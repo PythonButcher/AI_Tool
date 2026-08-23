@@ -7,6 +7,7 @@ import math
 from collections import defaultdict
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
+from .nlp_extraction import _safe_float
 from .temporal_utils import _ensure_datetime_from_info
 
 # --------------------------------------------------------------------
@@ -16,6 +17,14 @@ COLOR_PALETTE = [
     "#4e79a7", "#f28e2b", "#e15759", "#76b7b2", "#59a14f",
     "#edc949", "#af7aa1", "#ff9da7", "#9c755f", "#bab0ab"
 ]
+
+
+class ChartBuildError(ValueError):
+    """Stable chart-construction failure for grounded API translation."""
+
+    def __init__(self, code: str, message: str):
+        super().__init__(message)
+        self.code = code
 
 
 def _palette_color(label: str) -> str:
@@ -108,6 +117,21 @@ def _build_chart_data(
     time_field = fields.get("time")
     secondary_value = fields.get("secondary_value")
 
+    # A named measure is an execution contract, not a hint. Reject a field
+    # that contains no numeric evidence before emitting a technically shaped
+    # but empty Chart.js dataset with meaningless default axes.
+    if value_field and aggregation.lower() not in {"count"}:
+        numeric_values = [
+            numeric
+            for row in dataset
+            if (numeric := _safe_float(row.get(value_field))) is not None
+        ]
+        if not numeric_values:
+            raise ChartBuildError(
+                "chart_measure_not_numeric",
+                f"Selected measure '{value_field}' has no usable numeric values.",
+            )
+
     # Aggregation-aware Y label
     y_label = f"{aggregation.title()} of {value_field}" if value_field else "Value"
     x_label = category_field or time_field or "Category"
@@ -121,8 +145,8 @@ def _build_chart_data(
         time_to_values = defaultdict(list)
         for row in dataset:
             tval = _ensure_datetime_from_info(row.get(time_field))
-            val = row.get(value_field)
-            if tval is not None and isinstance(val, (int, float)):
+            val = _safe_float(row.get(value_field))
+            if tval is not None and val is not None:
                 time_to_values[tval].append(val)
 
         # Aggregate and sort chronologically (ascending)
@@ -150,7 +174,11 @@ def _build_chart_data(
     # Histogram (auto-bin)
     # ----------------------------------------------------------------
     if chart_type == "Histogram" and value_field:
-        numeric_values = [float(row.get(value_field)) for row in dataset if isinstance(row.get(value_field), (int, float))]
+        numeric_values = [
+            numeric
+            for row in dataset
+            if (numeric := _safe_float(row.get(value_field))) is not None
+        ]
         labels, bin_counts = _auto_bin_numeric(numeric_values, bins=10)
 
         chart_data = {
@@ -170,9 +198,9 @@ def _build_chart_data(
     if chart_type == "Scatter" and value_field and secondary_value:
         points = []
         for row in dataset:
-            x_val = row.get(value_field)
-            y_val = row.get(secondary_value)
-            if isinstance(x_val, (int, float)) and isinstance(y_val, (int, float)):
+            x_val = _safe_float(row.get(value_field))
+            y_val = _safe_float(row.get(secondary_value))
+            if x_val is not None and y_val is not None:
                 points.append({"x": x_val, "y": y_val})
         chart_data = {
             "datasets": [{
@@ -191,8 +219,8 @@ def _build_chart_data(
         cat_to_values = defaultdict(list)
         for row in dataset:
             cat = str(row.get(category_field))
-            val = row.get(value_field)
-            if cat and isinstance(val, (int, float)):
+            val = _safe_float(row.get(value_field))
+            if cat and val is not None:
                 cat_to_values[cat].append(val)
 
         aggregated = {c: _aggregate(vals, aggregation) for c, vals in cat_to_values.items()}
@@ -222,8 +250,8 @@ def _build_chart_data(
         cat_to_values = defaultdict(list)
         for row in dataset:
             cat = str(row.get(category_field))
-            val = row.get(value_field)
-            if cat and isinstance(val, (int, float)):
+            val = _safe_float(row.get(value_field))
+            if cat and val is not None:
                 cat_to_values[cat].append(val)
 
         aggregated = {c: _aggregate(vals, aggregation) for c, vals in cat_to_values.items()}

@@ -26,7 +26,7 @@ from backend.routes.ml_prep import ml_prep_bp
 from backend.routes.automl import automl_bp
 from backend.routes.semantic_model import semantic_model_bp
 from backend.routes.semantic_metrics import semantic_metrics_bp
-from backend.routes.decision import decision_bp
+from backend.routes.decision_chat import decision_chat_bp
 from backend.routes.workflows import workflow_bp
 from backend.services.workflow_run_repository import recover_incomplete_runs
 
@@ -34,8 +34,20 @@ from backend.services.workflow_run_repository import recover_incomplete_runs
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 
-def create_app():
+def create_app(config=None):
+    """Create the primary BI backend with optional compatibility registration."""
     app = Flask(__name__)
+    if isinstance(config, dict):
+        app.config.update(config)
+
+    compatibility_env = str(
+        os.getenv("ENABLE_DECISION_INTELLIGENCE_COMPATIBILITY", "")
+    ).strip().lower()
+    compatibility_enabled = bool(
+        app.config.get("ENABLE_DECISION_INTELLIGENCE_COMPATIBILITY", False)
+        or compatibility_env in {"1", "true", "yes", "on"}
+    )
+    app.config["ENABLE_DECISION_INTELLIGENCE_COMPATIBILITY"] = compatibility_enabled
 
     # Limit uploads to 100 MB (adjust as needed)
     app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024
@@ -65,7 +77,15 @@ def create_app():
     app.register_blueprint(automl_bp)
     app.register_blueprint(semantic_model_bp)
     app.register_blueprint(semantic_metrics_bp)
-    app.register_blueprint(decision_bp)
+    app.register_blueprint(decision_chat_bp)
+    if compatibility_enabled:
+        # Importing the compatibility blueprint loads legacy workspaces,
+        # assets, graphs, scenarios, and recommendation services. Keep that
+        # import behind an explicit runtime boundary so primary BI startup and
+        # ordinary AI Chat requests do not load those pipelines.
+        from backend.routes.decision import decision_bp
+
+        app.register_blueprint(decision_bp)
     app.register_blueprint(workflow_bp)
 
     # Mark any non-terminal workflow runs from a previous process as

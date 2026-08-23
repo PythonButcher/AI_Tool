@@ -1,8 +1,7 @@
-/* Floating Chat Icon (Bottom Right) */
 .chat-icon {
   position: fixed;
-  bottom: 24px;
-  right: 24px;
+  bottom: 16px;
+  left: 16px;
   background-color: var(--text-primary);
   color: var(--bg-primary);
   border-radius: 50%;

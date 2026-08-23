@@ -22,7 +22,7 @@
       "reviewed_by": ["architecture_guardian", "implementation_planner"]
     },
     {
-      "path": "project_docs/active/status/decision_intelligence_execution_status.md",
+      "path": "project_docs/active/status/project_execution_status.md",
       "source_type": "status",
       "relevance": "States that Slice 3 is complete, the backend contract is real, and the main remaining risk is experience quality and intake reliability.",
       "reviewed_by": ["product_ux_strategist", "skeptic_qa_reviewer", "implementation_planner"]
@@ -535,8 +535,8 @@
       "originating_agents": ["decision_intelligence_specialist", "data_ml_readiness_specialist", "skeptic_qa_reviewer", "product_ux_strategist"],
       "source_paths": [
         "project_docs/active/decision_intelligence/completed/phase_4_5_ai_chat_decision_intelligence_plan.md",
-        "project_docs/active/status/decision_intelligence_execution_status.md",
-        "project_docs/active/status/decision_intelligence_execution_status.md"
+        "project_docs/active/status/project_execution_status.md",
+        "project_docs/active/status/project_execution_status.md"
       ],
       "priority": "high",
       "confidence": 0.91,
@@ -796,7 +796,7 @@
       "validation_plan": [
         "Run frontend build.",
         "Use benchmark prompts in live UI verification.",
-        "Update `project_docs/active/status/decision_intelligence_execution_status.md` truthfully."
+        "Update `project_docs/active/status/project_execution_status.md` truthfully."
       ]
     }
   ],

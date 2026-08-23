@@ -8,6 +8,7 @@ import unittest
 from flask import Flask
 
 from backend.db import backend_db
+from backend.routes.datahub_routes import datahub_bp
 from backend.routes.source_relationships import source_relationships_bp
 from backend.routes.upload import upload_bp
 from backend.services import workspace_context
@@ -28,6 +29,7 @@ class SourceRelationshipTests(unittest.TestCase):
         app = Flask(__name__)
         app.register_blueprint(upload_bp)
         app.register_blueprint(source_relationships_bp)
+        app.register_blueprint(datahub_bp)
         self.client = app.test_client()
 
     def tearDown(self):
@@ -308,6 +310,30 @@ class SourceRelationshipTests(unittest.TestCase):
         self.assertFalse(candidates[0]["is_confirmed"])
         self.assertTrue(candidates[0]["confirmation_required"])
         self.assertIn("do not prove", candidates[0]["explanation"])
+
+    def test_source_deletion_reports_relationship_dependencies_without_cascade(self):
+        """Dependency refusal must preserve the relationship and both memberships."""
+        workspace_id, source_ids = self._workspace(
+            [
+                ("orders.csv", b"customer_id,amount\n1,10\n2,20\n"),
+                ("customers.csv", b"customer_id,name\n1,Ada\n2,Lin\n"),
+            ]
+        )
+        created = self._create(workspace_id, *source_ids).get_json()["relationship"]
+
+        response = self.client.delete(f"/api/datahub/{source_ids[1]}")
+
+        self.assertEqual(response.status_code, 409, response.get_json())
+        details = response.get_json()["error"]["details"]
+        self.assertEqual(details["relationship_count"], 1)
+        self.assertEqual(details["relationship_ids"], [created["relationship_id"]])
+        listed = self.client.get(
+            f"/api/data-workspaces/{workspace_id}/relationships"
+        ).get_json()["relationships"]
+        self.assertEqual(
+            [relationship["relationship_id"] for relationship in listed],
+            [created["relationship_id"]],
+        )
 
 
 if __name__ == "__main__":

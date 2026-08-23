@@ -76,8 +76,10 @@ const filterBiArtifacts = (artifacts) => (
     : []
 );
 
-const TrustedResultCard = ({ biGrounding }) => {
-  if (!biGrounding) return null;
+const TrustedResultCard = ({ biGrounding, analysisLineage }) => {
+  if (!biGrounding && !analysisLineage) return null;
+
+  const lineage = analysisLineage || biGrounding?.analysis_lineage;
 
   const {
     dataset,
@@ -90,7 +92,7 @@ const TrustedResultCard = ({ biGrounding }) => {
     dimensions = [],
     filters = [],
     time_period
-  } = biGrounding;
+  } = biGrounding || {};
 
   const datasetName = dataset?.dataset_name || 'unknown';
   const rowCount = row_count ?? 'unknown';
@@ -143,7 +145,7 @@ const TrustedResultCard = ({ biGrounding }) => {
           <div className="ai-shell__trusted-row">
             <span className="ai-shell__trusted-label">Filters</span>
             <span className="ai-shell__trusted-value">
-              {filters.map(f => `${f.field || 'unknown'} ${f.operator || ''} ${f.value ?? f.values?.join(',') ?? ''}`).join(' AND ')}
+              {filters.map(f => `${f.label || f.field || 'unknown'} ${f.operator || ''} ${f.value ?? f.values?.join(',') ?? ''}`).join(' AND ')}
             </span>
           </div>
         )}
@@ -153,6 +155,31 @@ const TrustedResultCard = ({ biGrounding }) => {
             <span className="ai-shell__trusted-value">
               {time_period.start || 'unknown'} to {time_period.end || 'unknown'}
             </span>
+          </div>
+        )}
+        {lineage && lineage.sources && lineage.sources.length > 1 && (
+          <div className="ai-shell__trusted-row" style={{ gridColumn: '1 / -1' }}>
+            <span className="ai-shell__trusted-label">Model Lineage</span>
+            <span className="ai-shell__trusted-value" style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
+              {lineage.sources.map((s, idx) => (
+                <React.Fragment key={idx}>
+                  {idx > 0 && <FaLayerGroup style={{ opacity: 0.4, fontSize: '0.65rem' }} />}
+                  <span>{s.source_alias || s.source_name || 'unknown'}</span>
+                </React.Fragment>
+              ))}
+            </span>
+            {lineage.relationships && lineage.relationships.length > 0 && (
+              <span className="ai-shell__trusted-value" style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap', marginTop: '4px' }}>
+                {lineage.relationships.map((rel, idx) => (
+                  <span key={idx} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '2px 6px', border: '1px solid var(--border-color)', borderRadius: '4px', background: 'var(--bg-primary)', fontSize: '0.65rem', color: 'var(--text-secondary)' }}>
+                    <FaLayerGroup style={{ fontSize: '0.55rem', opacity: 0.7 }} />
+                    <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{rel.relationship_id}</span>
+                    {rel.join_behavior && <span>{rel.join_behavior} join</span>}
+                    {rel.cardinality && <span>({rel.cardinality.replace(/_/g, ' ')})</span>}
+                  </span>
+                ))}
+              </span>
+            )}
           </div>
         )}
       </div>
@@ -166,6 +193,7 @@ const TrustedResultCard = ({ biGrounding }) => {
  */
 function AIShell() {
   const {
+    activeWorkspace,
     cleanedData,
     fullData,
     setCleanedData,
@@ -380,7 +408,7 @@ function AIShell() {
             </div>
           </div>
           <div className="ai-shell__artifact-content">{renderAnswerContent(content)}</div>
-          <TrustedResultCard biGrounding={artifact.bi_grounding} />
+          <TrustedResultCard biGrounding={artifact.bi_grounding} analysisLineage={artifact.analysis_lineage} />
         </div>
       );
     }
@@ -403,7 +431,7 @@ function AIShell() {
               </IconButton>
             </div>
           </div>
-          <TrustedResultCard biGrounding={artifact.bi_grounding} />
+          <TrustedResultCard biGrounding={artifact.bi_grounding} analysisLineage={artifact.analysis_lineage} />
         </div>
       );
     }
@@ -461,7 +489,7 @@ function AIShell() {
             </Typography>
           )}
         </div>
-        <TrustedResultCard biGrounding={artifact.bi_grounding} />
+        <TrustedResultCard biGrounding={artifact.bi_grounding} analysisLineage={artifact.analysis_lineage} />
       </div>
     );
   };
@@ -559,13 +587,16 @@ function AIShell() {
         datasetRef,
       } = resolveRequestContext(biSessionState, tokens);
 
+      const hasWorkspaceContext = Boolean(activeWorkspace?.workspace_id);
+
       const response = await axios.post(`${API_URL}/api/decision/chat/turns`, {
+        workspace_id: activeWorkspace?.workspace_id,
         user_message: message,
         dataset: payloadDataset,
         semantic_model: payloadSemanticModel,
         dataset_ref: datasetRef,
         resolved_datasets: tokens,
-        requested_mode: (payloadDataset || datasetRef) ? 'explore' : 'ask',
+        requested_mode: (payloadDataset || datasetRef || hasWorkspaceContext) ? 'explore' : 'ask',
         conversation_history: userMessages
           .map(({ role, content }) => ({ role, content }))
           .slice(-10),
@@ -590,7 +621,7 @@ function AIShell() {
         content: assistantMessage,
         artifacts: biArtifacts,
         suggested_actions: data.suggested_actions || [],
-        grounded: Boolean(payloadDataset || datasetRef),
+        grounded: Boolean(payloadDataset || datasetRef || hasWorkspaceContext),
         session_state: nextSessionState,
       }]);
       setSessionState(nextSessionState);
@@ -609,7 +640,8 @@ function AIShell() {
       }
     } catch (requestError) {
       const readinessMessage = requestError.response?.data?.governance_readiness?.reasons?.[0]?.message;
-      setError(readinessMessage || requestError.message || 'Could not reach the analytics service.');
+      const apiErrorMessage = requestError.response?.data?.error?.message;
+      setError(readinessMessage || apiErrorMessage || requestError.message || 'Could not reach the analytics service.');
     } finally {
       setLoading(false);
     }
@@ -636,13 +668,16 @@ function AIShell() {
         datasetRef,
       } = resolveRequestContext(biSessionState, tokens);
 
+      const hasWorkspaceContext = Boolean(activeWorkspace?.workspace_id);
+
       const response = await axios.post(`${API_URL}/api/decision/chat/turns`, {
+        workspace_id: activeWorkspace?.workspace_id,
         user_message: message,
         dataset: payloadDataset,
         semantic_model: payloadSemanticModel,
         dataset_ref: datasetRef,
         resolved_datasets: tokens,
-        requested_mode: (payloadDataset || datasetRef) ? 'explore' : 'ask',
+        requested_mode: (payloadDataset || datasetRef || hasWorkspaceContext) ? 'explore' : 'ask',
         conversation_history: userMessages
           .map(({ role, content }) => ({ role, content }))
           .slice(-10),
@@ -668,7 +703,7 @@ function AIShell() {
         content: assistantMessage,
         artifacts: biArtifacts,
         suggested_actions: data.suggested_actions || [],
-        grounded: Boolean(payloadDataset || datasetRef),
+        grounded: Boolean(payloadDataset || datasetRef || hasWorkspaceContext),
         session_state: nextSessionState,
       }]);
       setSessionState(nextSessionState);
@@ -687,7 +722,8 @@ function AIShell() {
       }
     } catch (requestError) {
       const readinessMessage = requestError.response?.data?.governance_readiness?.reasons?.[0]?.message;
-      setError(readinessMessage || requestError.message || 'Could not reach the analytics service.');
+      const apiErrorMessage = requestError.response?.data?.error?.message;
+      setError(readinessMessage || apiErrorMessage || requestError.message || 'Could not reach the analytics service.');
     } finally {
       setLoading(false);
     }

@@ -1,13 +1,10 @@
 from flask import Blueprint, jsonify, request
 
-from backend.decision_engine import DecisionChatService
-from backend.services.data_catalog_lineage import (
-    GovernancePolicyError,
-    evaluate_dataset_readiness,
-    governance_error_payload,
-    is_blocked,
+from backend.routes.decision_common import (
+    error_payload as _error_payload,
+    governance_for_payload as _governance_for_payload,
+    governed_response as _governed_response,
 )
-from backend.services.dataset_context import resolve_dataset_bundle
 from backend.services.decision_brief_service import generate_decision_brief
 from backend.services.decision_asset_service import DecisionAssetService
 from backend.services.decision_graph_service import DecisionGraphService
@@ -19,67 +16,6 @@ from backend.services.scenario_service import evaluate_scenario
 from backend.services.decision_workspace_service import DecisionWorkspaceService
 
 decision_bp = Blueprint("decision_bp", __name__, url_prefix="/api/decision")
-
-def _error_payload(code: str, message: str):
-    return {
-        "status": "error",
-        "error": {
-            "code": code,
-            "message": message,
-        },
-    }
-
-
-def _governance_for_payload(payload, operation):
-    """Evaluate only when this decision request actually carries a dataset."""
-    multi_source_readiness = (
-        payload.get('_multi_source_governance_readiness')
-        if isinstance(payload, dict)
-        else None
-    )
-    if isinstance(multi_source_readiness, dict):
-        if is_blocked(multi_source_readiness):
-            return multi_source_readiness, (
-                jsonify(governance_error_payload(multi_source_readiness)), 422
-            )
-        return multi_source_readiness, None
-    if not isinstance(payload, dict) or (payload.get('dataset') is None and not (payload.get('dataset_ref') or payload.get('datasetRef'))):
-        return None, None
-    try:
-        bundle = resolve_dataset_bundle(
-            dataset=payload.get('dataset'),
-            dataset_ref=payload.get('dataset_ref') or payload.get('datasetRef'),
-            semantic_model=payload.get('semantic_model') or payload.get('semanticModel'),
-            source=f'decision_{operation}',
-            allow_active_fallback=False,
-        )
-        readiness = evaluate_dataset_readiness(
-            bundle['dataframe'],
-            payload.get('governance_policy') or payload.get('governancePolicy') or bundle.get('governance_policy'),
-            operation=f'decision_{operation}',
-        )
-    except (ValueError, GovernancePolicyError) as exc:
-        return None, (jsonify(_error_payload('INVALID_DATASET_GOVERNANCE_REQUEST', str(exc))), 400)
-    if is_blocked(readiness):
-        return readiness, (jsonify(governance_error_payload(readiness)), 422)
-    return readiness, None
-
-
-def _governed_response(result, readiness):
-    if readiness is not None:
-        result['governance_readiness'] = readiness
-    return jsonify(result), 200
-
-
-def _payload_with_governance_readiness(payload, readiness):
-    """Pass route-verified governance evidence to backend composers only."""
-    service_payload = dict(payload)
-    service_payload.pop('_governance_readiness', None)
-    if readiness is not None:
-        # The underscore keeps this as internal route-to-service evidence. A
-        # caller cannot bypass governance by declaring its own readiness.
-        service_payload['_governance_readiness'] = readiness
-    return service_payload
 
 @decision_bp.route("/workspaces", methods=["POST"])
 def create_workspace_route():
@@ -93,50 +29,6 @@ def create_workspace_route():
         return jsonify(_error_payload("INVALID_DECISION_WORKSPACE_REQUEST", str(exc))), 400
     except Exception as exc:
         return jsonify(_error_payload("DECISION_WORKSPACE_CREATION_FAILED", f"Failed to create decision workspace: {exc}")), 500
-
-@decision_bp.route("/chat/turns", methods=["POST"])
-def decision_chat_turn_route():
-    payload = request.get_json(silent=True) or {}
-    try:
-        prepared_payload = DecisionChatService.prepare_payload(payload)
-    except DecisionServiceError as exc:
-        error_response = _error_payload("INVALID_DECISION_CHAT_TURN_REQUEST", str(exc))
-        error_response["dataset_trust"] = DecisionChatService.build_dataset_trust_for_payload(payload)
-        return jsonify(error_response), 400
-    readiness, blocked = _governance_for_payload(prepared_payload, 'chat')
-    if blocked:
-        return blocked
-    try:
-        service_payload = _payload_with_governance_readiness(prepared_payload, readiness)
-        return _governed_response(DecisionChatService.handle_turn(service_payload), readiness)
-    except DecisionServiceError as exc:
-        error_response = _error_payload("INVALID_DECISION_CHAT_TURN_REQUEST", str(exc))
-        error_response["dataset_trust"] = DecisionChatService.build_dataset_trust_for_payload(payload)
-        return jsonify(error_response), 400
-    except Exception as exc:
-        return jsonify(_error_payload("DECISION_CHAT_TURN_FAILED", f"Failed to process decision chat turn: {exc}")), 500
-
-@decision_bp.route("/chat/actions", methods=["POST"])
-def decision_chat_action_route():
-    payload = request.get_json(silent=True) or {}
-    try:
-        prepared_payload = DecisionChatService.prepare_payload(payload)
-    except DecisionServiceError as exc:
-        error_response = _error_payload("INVALID_DECISION_CHAT_ACTION_REQUEST", str(exc))
-        error_response["dataset_trust"] = DecisionChatService.build_dataset_trust_for_payload(payload)
-        return jsonify(error_response), 400
-    readiness, blocked = _governance_for_payload(prepared_payload, 'chat_action')
-    if blocked:
-        return blocked
-    try:
-        service_payload = _payload_with_governance_readiness(prepared_payload, readiness)
-        return _governed_response(DecisionChatService.handle_action(service_payload), readiness)
-    except DecisionServiceError as exc:
-        error_response = _error_payload("INVALID_DECISION_CHAT_ACTION_REQUEST", str(exc))
-        error_response["dataset_trust"] = DecisionChatService.build_dataset_trust_for_payload(payload)
-        return jsonify(error_response), 400
-    except Exception as exc:
-        return jsonify(_error_payload("DECISION_CHAT_ACTION_FAILED", f"Failed to process decision chat action: {exc}")), 500
 
 @decision_bp.route("/workspaces/analyze", methods=["POST"])
 def analyze_workspace_route():

@@ -102,7 +102,7 @@ def _check_project_doc_links(errors: list[str]) -> None:
 
 
 def _check_active_doc_state(errors: list[str]) -> None:
-    """Reject stale plans and unnumbered work, while allowing an explicit user-owned idle gate."""
+    """Reject stale plans and ambiguous gates, while allowing an explicit user-owned idle gate."""
     status_path = ROOT / "project_docs" / "active" / "status" / "project_execution_status.md"
     active_gate_dir = ROOT / "project_docs" / "active" / "active_gate"
     if not status_path.exists() or not active_gate_dir.exists():
@@ -114,14 +114,31 @@ def _check_active_doc_state(errors: list[str]) -> None:
         gate_match
         and re.search(r"awaiting\s+user\s+epic\s+goal", gate_match.group(1), re.IGNORECASE)
     )
-    if (
-        not gate_match
-        or (
-            not awaiting_user_goal
-            and not re.search(r"\bSlice\s+\d+\b", gate_match.group(1), re.IGNORECASE)
-        )
+    if not gate_match or not gate_match.group(1).strip():
+        errors.append("Current project gate must have a descriptive name.")
+    elif re.search(
+        r"\bPhase\s+\d+\s*/\s*Slice\s+\d+\b",
+        gate_match.group(1),
+        re.IGNORECASE,
     ):
-        errors.append("Current project gate must name the active slice number.")
+        # Keep roadmap ordering separate from the plain-language name of current work.
+        errors.append(
+            "Current project gate must use a descriptive name, not 'Phase N / Slice N'. "
+            "Declare the roadmap phase in the separate Roadmap Phase field."
+        )
+
+    roadmap_phase_declared = bool(
+        re.search(
+            r"- \*\*Roadmap Phase\*\*:\s*Phase\s+\d+\b",
+            status_text,
+            re.IGNORECASE,
+        )
+    )
+    if not awaiting_user_goal and not roadmap_phase_declared:
+        errors.append(
+            "Active project status must declare one numbered roadmap phase in the "
+            "'Roadmap Phase' field."
+        )
 
     gate_readme = active_gate_dir / "README.md"
     unexpected_gate_files = sorted(

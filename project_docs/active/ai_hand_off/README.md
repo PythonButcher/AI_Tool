@@ -10,9 +10,7 @@ Antigravity owns bounded frontend implementation, React/CSS, UI rendering, and f
 
 ## Active Handoffs And Goal Prompts
 
-There is no active frontend implementation handoff. Codex owns the current backend gate.
-
-Current status is recorded in `project_docs/active/status/project_execution_status.md`.
+There is no active frontend handoff. Current ownership and the next action are recorded in `project_docs/active/status/project_execution_status.md`.
 
 Completed handoffs belong outside this active folder.
 
@@ -32,9 +30,9 @@ Each handoff must separate two things clearly. Non-negotiables are the goal, bac
 
 ## Task Sizing and Decomposition
 
-Codex is responsible for decomposing frontend work before handing it off. A frontend handoff must be one independently reviewable slice: a small set of related files, one visible behavior, one API or state boundary, and a short acceptance list. It must not combine a new UI surface, persistence integration, state migration, export behavior, and broad regression validation in one request.
+Codex is responsible for decomposing frontend work before handing it off. A frontend handoff must be one independently reviewable work item: a small set of related files, one visible behavior, one API or state boundary, and a short acceptance list. It must not combine a new UI surface, persistence integration, state migration, export behavior, and broad regression validation in one request.
 
-If a request needs more than one independently reviewable slice, Codex must write the dependency order and issue only the first slice. The frontend agent must stop before beginning an oversized or ambiguous request, report the blocking scope, and request a breakdown. The frontend agent must not silently delegate, broaden scope, or declare a multi-slice task complete without that communication.
+If a request needs more than one independently reviewable work item, Codex must write the dependency order and issue only the first one. The frontend agent must stop before beginning an oversized or ambiguous request, report the blocking scope, and request a breakdown. The frontend agent must not silently delegate, broaden scope, or declare an oversized task complete without that communication.
 
 Previous full handoff README was preserved at `project_docs/archive/superseded_active_2026_05_24/ai_hand_off_README_pre_map_cleanup_2026_05_24.md`.
 

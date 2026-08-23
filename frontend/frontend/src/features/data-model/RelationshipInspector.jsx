@@ -7,6 +7,8 @@ const RelationshipInspector = ({ workspaceId, relationship, sources, onSave, onC
   const isDraft = !relationship.relationship_id;
 
   const [formData, setFormData] = useState({
+    left_source_id: relationship.left_source_id || '',
+    right_source_id: relationship.right_source_id || '',
     cardinality: relationship.cardinality || 'one_to_one',
     join_behavior: relationship.join_behavior || 'inner',
     filter_direction: relationship.filter_direction || 'none',
@@ -18,15 +20,18 @@ const RelationshipInspector = ({ workspaceId, relationship, sources, onSave, onC
   const [error, setError] = useState(null);
   const [diagnostics, setDiagnostics] = useState(relationship.diagnostics || []);
 
-  const leftSource = sources.find(s => s.source_id === relationship.left_source_id);
-  const rightSource = sources.find(s => s.source_id === relationship.right_source_id);
+  const leftSource = sources.find(s => s.source_id === formData.left_source_id);
+  const rightSource = sources.find(s => s.source_id === formData.right_source_id);
 
-  const currentRelIdRef = useRef(relationship.relationship_id);
+  const currentRelIdRef = useRef(relationship.relationship_id || relationship._draftId);
 
   useEffect(() => {
-    // Only reset form data and diagnostics if the selected relationship ID changes.
-    if (relationship.relationship_id !== currentRelIdRef.current) {
+    // Only reset form data and diagnostics if the selected relationship ID (or draft ID) changes.
+    const currentId = relationship.relationship_id || relationship._draftId;
+    if (currentId !== currentRelIdRef.current) {
       setFormData({
+        left_source_id: relationship.left_source_id || '',
+        right_source_id: relationship.right_source_id || '',
         cardinality: relationship.cardinality || 'one_to_one',
         join_behavior: relationship.join_behavior || 'inner',
         filter_direction: relationship.filter_direction || 'none',
@@ -34,7 +39,7 @@ const RelationshipInspector = ({ workspaceId, relationship, sources, onSave, onC
       });
       setDiagnostics(relationship.diagnostics || []);
       setError(null);
-      currentRelIdRef.current = relationship.relationship_id;
+      currentRelIdRef.current = currentId;
     }
     // Always sync authoritative version
     setVersion(relationship.version);
@@ -88,12 +93,17 @@ const RelationshipInspector = ({ workspaceId, relationship, sources, onSave, onC
     try {
       let res;
       if (isDraft) {
+        if (!formData.left_source_id || !formData.right_source_id) {
+           setError('Both Left and Right sources must be selected.');
+           setIsSubmitting(false);
+           return;
+        }
         res = await fetch(`${API_URL}/api/data-workspaces/${workspaceId}/relationships`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            left_source_id: relationship.left_source_id,
-            right_source_id: relationship.right_source_id,
+            left_source_id: formData.left_source_id,
+            right_source_id: formData.right_source_id,
             field_pairs: formData.field_pairs,
             cardinality: formData.cardinality,
             join_behavior: formData.join_behavior,
@@ -124,7 +134,7 @@ const RelationshipInspector = ({ workspaceId, relationship, sources, onSave, onC
       }
 
       setDiagnostics(data.relationship?.diagnostics || []);
-      onSave(data.relationship);
+      await onSave(data.relationship);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -147,7 +157,7 @@ const RelationshipInspector = ({ workspaceId, relationship, sources, onSave, onC
       }
 
       setDiagnostics(data.relationship?.diagnostics || []);
-      onSave(data.relationship);
+      await onSave(data.relationship);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -187,7 +197,28 @@ const RelationshipInspector = ({ workspaceId, relationship, sources, onSave, onC
       }
 
       setDiagnostics(data.relationship?.diagnostics || []);
-      onSave(data.relationship);
+      await onSave(data.relationship);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!window.confirm('Are you sure you want to delete this relationship?')) return;
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      const res = await fetch(`${API_URL}/api/data-workspaces/${workspaceId}/relationships/${relationship.relationship_id}`, {
+        method: 'DELETE'
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error?.message || 'Failed to delete relationship');
+      }
+      onCancel();
+      if (onRefresh) await onRefresh();
     } catch (err) {
       setError(err.message);
     } finally {
@@ -240,9 +271,33 @@ const RelationshipInspector = ({ workspaceId, relationship, sources, onSave, onC
 
         <div className="form-section">
           <div className="source-headers">
-            <div className="source-name" title={leftSource?.name}>{leftSource?.alias || leftSource?.name || 'Left Source'}</div>
+            {isDraft ? (
+              <select
+                value={formData.left_source_id}
+                onChange={(e) => setFormData({...formData, left_source_id: e.target.value, field_pairs: [{left_field: '', right_field: ''}]})}
+                className="source-select"
+              >
+                <option value="">Select Left Source...</option>
+                {sources.map(s => <option key={s.source_id} value={s.source_id}>{s.alias || s.name}</option>)}
+              </select>
+            ) : (
+              <div className="source-name" title={leftSource?.name}>{leftSource?.alias || leftSource?.name || 'Left Source'}</div>
+            )}
+
             <div className="link-icon">↔</div>
-            <div className="source-name" title={rightSource?.name}>{rightSource?.alias || rightSource?.name || 'Right Source'}</div>
+
+            {isDraft ? (
+              <select
+                value={formData.right_source_id}
+                onChange={(e) => setFormData({...formData, right_source_id: e.target.value, field_pairs: [{left_field: '', right_field: ''}]})}
+                className="source-select"
+              >
+                <option value="">Select Right Source...</option>
+                {sources.map(s => <option key={s.source_id} value={s.source_id}>{s.alias || s.name}</option>)}
+              </select>
+            ) : (
+              <div className="source-name" title={rightSource?.name}>{rightSource?.alias || rightSource?.name || 'Right Source'}</div>
+            )}
           </div>
 
           <div className="field-pairs">
@@ -349,7 +404,7 @@ const RelationshipInspector = ({ workspaceId, relationship, sources, onSave, onC
         <div className="footer-left">
           {!isDraft && (
             <button
-              className="btn-danger"
+              className="btn-secondary"
               onClick={() => handleActivation(!relationship.is_active)}
               disabled={isSubmitting}
             >
@@ -363,6 +418,15 @@ const RelationshipInspector = ({ workspaceId, relationship, sources, onSave, onC
               disabled={isSubmitting}
             >
               Validate
+            </button>
+          )}
+          {!isDraft && (
+            <button
+              className="btn-danger"
+              onClick={handleDelete}
+              disabled={isSubmitting}
+            >
+              Delete
             </button>
           )}
         </div>

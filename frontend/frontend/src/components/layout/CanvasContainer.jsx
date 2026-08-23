@@ -25,7 +25,6 @@ import DashboardCommandBar from '../../features/dashboard/DashboardCommandBar';
 import DashboardCanvas from '../../features/dashboard/DashboardCanvas';
 import KpiCardWindow from '../../features/dashboard/KpiCardWindow';
 import { WINDOW_SIZING } from '../../utils/windowSizing';
-import DecisionGraphWorkspace from '../../features/business/decision/graph/DecisionGraphWorkspace';
 import DestinationHome from './DestinationHome';
 import SourceModelCanvas from '../../features/data-model/SourceModelCanvas';
 import {
@@ -35,7 +34,6 @@ import {
   FaShare,
   FaTrash,
   FaFileExport,
-  FaProjectDiagram,
   FaCogs,
   FaBookOpen,
   FaRobot,
@@ -94,11 +92,6 @@ function CanvasContainer({
   onDestinationSelect,
   setShowDataVisual,
   setIsDataPaneOpen,
-  showDecisionGraph,
-  setShowDecisionGraph,
-  onOpenDecisionGraph,
-  decisionGraphContext,
-  semanticModel,
 }) {
   const {
     minimizedWindows,
@@ -741,22 +734,6 @@ function CanvasContainer({
     </WindowFrame>
   ) : null;
 
-
-  const decisionGraphElement = (showDecisionGraph && !minimizedWindows.decisionGraph) ? (
-    <WindowFrame
-      {...getWindowProps('decisionGraph', '📊 Decision Graph', () => setShowDecisionGraph(false), () => minimizeWindow('decisionGraph', 'Decision Graph'))}
-      initialState={getInitialState('decisionGraph', 9, 25, WINDOW_SIZING.DECISION_PANEL.defW, WINDOW_SIZING.DECISION_PANEL.defH, WINDOW_SIZING.DECISION_PANEL.minW, WINDOW_SIZING.DECISION_PANEL.minH)}
-      minWidth={WINDOW_SIZING.DECISION_PANEL.minW}
-      minHeight={WINDOW_SIZING.DECISION_PANEL.minH}
-    >
-      <DecisionGraphWorkspace
-        dataset={decisionGraphContext?.dataset || (cleanedData?.length > 0 ? cleanedData : fullData?.length > 0 ? fullData : null)}
-        semanticModel={decisionGraphContext?.semantic_model || semanticModel}
-        initialContext={decisionGraphContext}
-      />
-    </WindowFrame>
-  ) : null;
-
   const closeAiChatPopupWindow = useCallback(() => {
     const popupWindow = aiChatPopupWindowRef.current;
     aiChatPopupWindowRef.current = null;
@@ -1010,7 +987,6 @@ function CanvasContainer({
             <SourceModelCanvas workspaceId={activeWorkspace?.workspace_id} />
           </div>
         )}
-        {isAiDest && decisionGraphElement}
       </div>
       {aiChatPortal}
       <MinimizedDock />

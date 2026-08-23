@@ -1,31 +1,27 @@
-# Project Active Gate — Phase 8 / Slice 1: Persisted Data Model Layout
+# Project Active Gate — Awaiting User Epic Goal
 
-Goal: Add the backend contract required to save and restore each data source position on the Data Model canvas.
+Goal: Hold AI_Tool in a clean, verified idle state until the user selects the next standalone product outcome.
 
 ## User Outcome
 
-Each data source can be moved freely on the canvas and returns to its saved location after refresh or navigation.
+The user can choose the next product goal without inheriting stale implementation scope, an obsolete frontend assignment, or conflicting roadmap numbering.
 
 ## Scope
 
-Define and implement a versioned workspace-membership position update using the existing `workspace_sources.position_json` persistence. Update `backend/routes/data_workspaces.py`, `backend/services/workspace_context.py`, `backend/repositories/source_workspace_repository.py`, `project_docs/active/contracts/multiple_data_source_workspace.md`, and focused workspace tests.
+No implementation work is authorized by this gate. Preserve the current BI-first AI Chat, governed data workspace, Data Model, charts, dashboards, exports, and compatibility boundaries while the next epic is defined.
 
 ## Contracts
 
-Persist a finite numeric `{ x, y }` position for one source membership inside one workspace. Require the current workspace version, preserve workspace isolation, advance the workspace version exactly once, and return the authoritative updated `{ workspace }`. Position is presentation state only and must not change membership, primary source, analysis context, relationships, semantic metadata, or source data.
+Current product and payload truth remains in `project_docs/active/contracts/`. Ownership remains governed by `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md`.
 
 ## Acceptance
 
-The API saves valid coordinates and returns the updated workspace. Invalid coordinates, missing membership, cross-workspace access, and stale versions return structured errors. Restart retrieval returns the saved position. Existing source registration, membership mutation, relationship behavior, and one-source compatibility remain unchanged.
-
-## Boundaries
-
-Do not edit frontend files in this slice. Do not add automatic layout, relationship inference, AI Chat integration, source removal, or primary-source changes.
+The user names one standalone product outcome. Codex then converts that outcome into one numbered roadmap phase or one bounded active gate, confirms the required backend and frontend boundaries from current source, and assigns exactly one current owner.
 
 ## Verification
 
-Run the focused workspace repository, route, and context tests, `python .codex/hooks/agent_harness_check.py`, the active-gate validator, and `git diff --check`.
+Run `python .codex/hooks/agent_harness_check.py`, `python C:/Users/18022/.codex/skills/active-gate-governance/scripts/check_active_gate.py project_docs/active/active_gate .`, and `git diff --check` after establishing the next gate.
 
 ## Owner And Control Return
 
-Codex owns the backend layout contract. After verification, Codex creates one bounded Antigravity handoff for draggable nodes, saved positions, and the usable relationship-authoring interface.
+The user owns selection of the next epic goal. Control returns to Codex after that goal is stated so Codex can prepare the executable gate and determine the first implementation owner.

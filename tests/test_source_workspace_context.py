@@ -11,6 +11,7 @@ from flask import Flask
 
 from backend.db import backend_db
 from backend.repositories.source_workspace_repository import get_source, get_workspace
+from backend.routes.datahub_routes import datahub_bp
 from backend.routes.data_workspaces import data_workspaces_bp
 from backend.routes.upload import upload_bp
 from backend.services import workspace_context
@@ -33,6 +34,7 @@ class SourceWorkspaceContextTests(unittest.TestCase):
         app = Flask(__name__)
         app.register_blueprint(upload_bp)
         app.register_blueprint(data_workspaces_bp)
+        app.register_blueprint(datahub_bp)
         self.client = app.test_client()
 
     def tearDown(self):
@@ -125,6 +127,45 @@ class SourceWorkspaceContextTests(unittest.TestCase):
         self.assertEqual(bundle["semantic_model"]["dataset"]["id"], source_id)
         self.assertEqual(bundle["dataframe"].shape, (2, 2))
 
+    def test_duplicate_upload_bytes_create_isolated_source_and_workspace_identities(self):
+        """Repeated files must not overwrite or cross-link existing catalog truth."""
+        first = self._upload("orders.csv").get_json()
+        second = self._upload("orders.csv").get_json()
+
+        self.assertNotEqual(
+            first["source"]["source_id"],
+            second["source"]["source_id"],
+        )
+        self.assertNotEqual(
+            first["workspace"]["workspace_id"],
+            second["workspace"]["workspace_id"],
+        )
+        self.assertEqual(
+            first["source"]["content_fingerprint"],
+            second["source"]["content_fingerprint"],
+        )
+        first_workspace = get_workspace(first["workspace"]["workspace_id"])
+        second_workspace = get_workspace(second["workspace"]["workspace_id"])
+        self.assertEqual(
+            [item["source_id"] for item in first_workspace["sources"]],
+            [first["source"]["source_id"]],
+        )
+        self.assertEqual(
+            [item["source_id"] for item in second_workspace["sources"]],
+            [second["source"]["source_id"]],
+        )
+        listed_ids = {
+            source["source_id"]
+            for source in self.client.get("/api/data-sources").get_json()["sources"]
+        }
+        self.assertEqual(
+            listed_ids,
+            {
+                first["source"]["source_id"],
+                second["source"]["source_id"],
+            },
+        )
+
     def test_workspace_context_rejects_cross_workspace_membership(self):
         first = self._upload("orders.csv").get_json()
         second = self._upload("customers.csv", b"customer_id,name\n1,Ada\n").get_json()
@@ -211,6 +252,105 @@ class SourceWorkspaceContextTests(unittest.TestCase):
             [membership["alias"] for membership in restarted["sources"]],
             ["orders", "customers"],
         )
+
+    def test_workspace_source_position_is_versioned_and_restart_safe(self):
+        """Save one node position without changing analytical workspace truth."""
+        orders = self._upload("orders.csv").get_json()
+        workspace = orders["workspace"]
+        source_id = orders["source"]["source_id"]
+
+        response = self.client.patch(
+            f"/api/data-workspaces/{workspace['workspace_id']}/sources/{source_id}/position",
+            json={"version": workspace["version"], "position": {"x": 125.5, "y": -40}},
+        )
+
+        self.assertEqual(response.status_code, 200, response.get_json())
+        updated = response.get_json()["workspace"]
+        self.assertEqual(set(response.get_json()), {"workspace"})
+        self.assertEqual(updated["version"], workspace["version"] + 1)
+        self.assertEqual(updated["primary_source_id"], workspace["primary_source_id"])
+        self.assertEqual(updated["source_count"], workspace["source_count"])
+        self.assertEqual(updated["sources"][0]["position"], {"x": 125.5, "y": -40})
+
+        # Force a fresh schema/connection path to prove persisted retrieval.
+        backend_db._SCHEMA_READY = False
+        restarted = get_workspace(workspace["workspace_id"])
+        self.assertEqual(restarted["version"], 2)
+        self.assertEqual(restarted["sources"][0]["position"], {"x": 125.5, "y": -40})
+
+    def test_workspace_source_position_rejects_invalid_stale_and_foreign_writes(self):
+        """Keep invalid coordinates and non-member writes transactionally inert."""
+        orders = self._upload("orders.csv").get_json()
+        customers = self._upload(
+            "customers.csv", b"customer_id,name\n1,Ada\n"
+        ).get_json()
+        workspace = orders["workspace"]
+        workspace_id = workspace["workspace_id"]
+        source_id = orders["source"]["source_id"]
+        endpoint = (
+            f"/api/data-workspaces/{workspace_id}/sources/{source_id}/position"
+        )
+
+        invalid_positions = [
+            None,
+            {"x": 1},
+            {"x": 1, "y": 2, "z": 3},
+            {"x": True, "y": 2},
+            {"x": "1", "y": 2},
+            {"x": float("nan"), "y": 2},
+            {"x": float("inf"), "y": 2},
+            {"x": 10**400, "y": 2},
+        ]
+        for position in invalid_positions:
+            with self.subTest(position=position):
+                response = self.client.patch(
+                    endpoint,
+                    json={"version": workspace["version"], "position": position},
+                )
+                self.assertEqual(response.status_code, 400)
+                self.assertEqual(
+                    response.get_json()["error"]["code"],
+                    "invalid_workspace_position",
+                )
+
+        stale = self.client.patch(
+            endpoint,
+            json={"version": workspace["version"] + 1, "position": {"x": 1, "y": 2}},
+        )
+        self.assertEqual(stale.status_code, 409)
+        self.assertEqual(
+            stale.get_json()["error"]["code"], "workspace_version_conflict"
+        )
+
+        foreign_source_id = customers["source"]["source_id"]
+        foreign = self.client.patch(
+            f"/api/data-workspaces/{workspace_id}/sources/{foreign_source_id}/position",
+            json={"version": workspace["version"], "position": {"x": 1, "y": 2}},
+        )
+        self.assertEqual(foreign.status_code, 409)
+        self.assertEqual(
+            foreign.get_json()["error"]["code"], "source_not_in_workspace"
+        )
+        missing = self.client.patch(
+            f"/api/data-workspaces/{workspace_id}/sources/src_missing/position",
+            json={"version": workspace["version"], "position": {"x": 1, "y": 2}},
+        )
+        self.assertEqual(missing.status_code, 409)
+        self.assertEqual(
+            missing.get_json()["error"]["code"], "source_not_in_workspace"
+        )
+        missing_workspace = self.client.patch(
+            f"/api/data-workspaces/ws_missing/sources/{source_id}/position",
+            json={"version": workspace["version"], "position": {"x": 1, "y": 2}},
+        )
+        self.assertEqual(missing_workspace.status_code, 404)
+        self.assertEqual(
+            missing_workspace.get_json()["error"]["code"], "workspace_not_found"
+        )
+
+        unchanged = get_workspace(workspace_id)
+        self.assertEqual(unchanged["version"], workspace["version"])
+        self.assertIsNone(unchanged["sources"][0]["position"])
 
     def test_membership_conflicts_and_invalid_requests_leave_workspace_unchanged(self):
         orders = self._upload("orders.csv").get_json()
@@ -368,6 +508,41 @@ class SourceWorkspaceContextTests(unittest.TestCase):
             for source in self.client.get("/api/data-sources").get_json()["sources"]
         ]
         self.assertEqual(source_ids, [orders["source"]["source_id"]])
+
+    def test_source_deletion_refuses_workspace_dependencies_atomically(self):
+        """Catalog deletion must not cascade through workspace/model truth."""
+        uploaded = self._upload().get_json()
+        source_id = uploaded["source"]["source_id"]
+        workspace_id = uploaded["workspace"]["workspace_id"]
+
+        response = self.client.delete(f"/api/datahub/{source_id}")
+
+        self.assertEqual(response.status_code, 409, response.get_json())
+        error = response.get_json()["error"]
+        self.assertEqual(error["code"], "source_has_dependencies")
+        self.assertEqual(error["details"]["workspace_ids"], [workspace_id])
+        self.assertEqual(error["details"]["membership_count"], 1)
+        self.assertEqual(error["details"]["primary_workspace_count"], 1)
+        self.assertIsNotNone(get_source(source_id))
+        self.assertEqual(get_workspace(workspace_id)["source_count"], 1)
+
+    def test_source_deletion_removes_only_an_unreferenced_catalog_record(self):
+        """A standalone legacy catalog record remains safely deletable."""
+        connection = backend_db.get_db_connection()
+        connection.execute(
+            """
+            INSERT INTO datahub_datasets (id, name, path)
+            VALUES ('src_unreferenced', 'Unreferenced', 'remote://opaque')
+            """
+        )
+        connection.commit()
+        connection.close()
+
+        response = self.client.delete("/api/datahub/src_unreferenced")
+
+        self.assertEqual(response.status_code, 200, response.get_json())
+        self.assertEqual(response.get_json()["source_id"], "src_unreferenced")
+        self.assertIsNone(get_source("src_unreferenced"))
 
 
 if __name__ == "__main__":

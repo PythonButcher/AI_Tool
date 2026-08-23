@@ -6,6 +6,7 @@ from __future__ import annotations
 # --------------------------------------------------------------------
 from backend.nlp_engine.chart_builder import (
     COLOR_PALETTE,
+    ChartBuildError,
     _build_chart_data,
     _limit_categories,
     _palette_color,
@@ -47,6 +48,7 @@ from backend.nlp_engine.temporal_utils import (
 
 __all__ = [
     "COLOR_PALETTE",
+    "ChartBuildError",
     "NLP_QUERY_FORMAT",
     "QueryInterpretation",
     "_aggregate_time_series",

@@ -60,6 +60,48 @@ def _normalize(text: str) -> str:
     return re.sub(r"[^a-z0-9]+", " ", text.lower()).strip()
 
 
+def _semantic_normalize(text: str) -> str:
+    """Normalize business names while preserving technical full-name matching."""
+    camel_spaced = re.sub(r"(?<=[a-z0-9])(?=[A-Z])", " ", str(text or ""))
+    normalized = _normalize(camel_spaced)
+    tokens = []
+    for token in normalized.split():
+        if token.endswith("ies") and len(token) > 3:
+            token = f"{token[:-3]}y"
+        elif token.endswith("s") and len(token) > 3 and not token.endswith("ss"):
+            token = token[:-1]
+        tokens.append(token)
+    return " ".join(tokens)
+
+
+def _column_reference_parts(name: str) -> Dict[str, Any]:
+    """Separate stable machine identity from business field semantics."""
+    namespace, separator, business_name = str(name or "").rpartition(".")
+    if not separator:
+        business_name = str(name or "")
+        namespace = ""
+    business = _semantic_normalize(business_name)
+    qualifier = _semantic_normalize(namespace)
+    aliases = {business}
+
+    # Inferred upload models do not yet carry curated synonyms. Supply a
+    # conservative bridge only when both the business field and source role
+    # support it; a source qualifier alone can never select a field.
+    business_tokens = set(business.split())
+    qualifier_tokens = set(qualifier.split())
+    if "amount" in business_tokens and "sale" in qualifier_tokens:
+        aliases.update({"revenue", "sales revenue", "total revenue", "total sales revenue"})
+    if "category" in business_tokens and "inventory" in qualifier_tokens:
+        aliases.add("inventory category")
+
+    return {
+        "technical": _normalize(name),
+        "business": business,
+        "qualifier": qualifier,
+        "aliases": {_semantic_normalize(alias) for alias in aliases if alias},
+    }
+
+
 def _parse_directives(query: str) -> Dict[str, List[str]]:
     directives: Dict[str, List[str]] = {}
     for match in re.finditer(
@@ -78,8 +120,9 @@ def _parse_directives(query: str) -> Dict[str, List[str]]:
 #  - Fuzzy is capped very low to avoid overpowering exact matches.
 # --------------------------------------------------------------------
 def _score_columns(query: str, columns: Sequence[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
-    tokens = _normalize(query).split()
+    tokens = _semantic_normalize(query).split()
     normalized_query = _normalize(query)
+    semantic_query = _semantic_normalize(query)
     quoted_phrases: set[str] = set()
     for double, single in re.findall(r"\"([^\"]+)\"|'([^']+)'", query):
         phrase = double or single
@@ -91,7 +134,9 @@ def _score_columns(query: str, columns: Sequence[Dict[str, Any]]) -> Dict[str, D
     for column in columns:
         name = column["name"]
         normalized_name = _normalize(name)
-        col_tokens = [token for token in normalized_name.split() if token]
+        references = _column_reference_parts(name)
+        business_tokens = set(references["business"].split())
+        qualifier_tokens = set(references["qualifier"].split())
         score = 0.0
         reasons: List[str] = []
 
@@ -122,26 +167,48 @@ def _score_columns(query: str, columns: Sequence[Dict[str, Any]]) -> Dict[str, D
             score += 10.0
             reasons.append("column referenced verbatim")
 
-        # Token overlap (deterministic, small nudge)
-        direct_tokens = [token for token in tokens if token in col_tokens]
-        for token in direct_tokens:
-            score += 4.0
-            reasons.append(f"matched token '{token}'")
+        # Business-name and curated semantic aliases carry the field meaning.
+        # Namespace terms only disambiguate an already meaningful match.
+        semantic_match = False
+        for alias in sorted(references["aliases"], key=len, reverse=True):
+            if f" {alias} " in f" {semantic_query} ":
+                score += 14.0 if " " in alias else 8.0
+                reasons.append(f"matched business term '{alias}'")
+                semantic_match = True
+                break
+
+        direct_tokens = [token for token in tokens if token in business_tokens]
+        for token in dict.fromkeys(direct_tokens):
+            score += 5.0
+            reasons.append(f"matched business token '{token}'")
+            semantic_match = True
+
+        if semantic_match:
+            qualifier_overlap = qualifier_tokens.intersection(tokens)
+            if qualifier_overlap:
+                score += min(2.0, float(len(qualifier_overlap)))
+                reasons.append("matched source qualifier after business field match")
 
         # Very low-weight fuzzy match (never outweighs explicit/phrase/name/token)
         if not direct_tokens:
             for token in tokens:
                 if not token:
                     continue
-                similarity = difflib.SequenceMatcher(None, token, normalized_name).ratio()
+                similarity = max(
+                    (
+                        difflib.SequenceMatcher(None, token, alias).ratio()
+                        for alias in references["aliases"]
+                    ),
+                    default=0.0,
+                )
                 if similarity >= 0.8:
                     fuzzy_score = min(1.0, similarity)  # tighter cap than before
                     score += fuzzy_score
                     reasons.append(f"fuzzy matched token '{token}' ({similarity:.2f})")
 
         # Partial overlap as last resort
-        if not reasons and normalized_name:
-            if any(token in normalized_name for token in tokens):
+        if not reasons and references["business"]:
+            if any(token in references["business"] for token in tokens):
                 score += 0.25
                 reasons.append("partial token overlap")
 
@@ -154,6 +221,7 @@ def _score_columns(query: str, columns: Sequence[Dict[str, Any]]) -> Dict[str, D
 # --------------------------------------------------------------------
 def _resolve_column(label: str, columns: Sequence[Dict[str, Any]]) -> Optional[str]:
     normalized_label = _normalize(label.strip("'\""))
+    semantic_label = _semantic_normalize(label.strip("'\""))
     if not normalized_label:
         return None
 
@@ -161,19 +229,25 @@ def _resolve_column(label: str, columns: Sequence[Dict[str, Any]]) -> Optional[s
     for column in columns:
         if normalized_label == _normalize(column["name"]):
             return column["name"]
+        references = _column_reference_parts(column["name"])
+        if semantic_label in references["aliases"]:
+            return column["name"]
 
     # Token-overlap ratio
-    label_tokens = [token for token in normalized_label.split() if token]
+    label_tokens = [token for token in semantic_label.split() if token]
     if label_tokens:
         best_token_match: Tuple[float, Optional[str]] = (0.0, None)
         for column in columns:
-            normalized_name = _normalize(column["name"])
-            if not normalized_name:
+            references = _column_reference_parts(column["name"])
+            candidate_tokens = set(references["business"].split())
+            if not candidate_tokens:
                 continue
-            name_tokens = normalized_name.split()
-            overlap = sum(1 for token in label_tokens if token in name_tokens)
+            overlap = sum(1 for token in label_tokens if token in candidate_tokens)
             if overlap:
-                score = overlap / max(len(label_tokens), len(name_tokens))
+                score = overlap / max(len(label_tokens), len(candidate_tokens))
+                if references["qualifier"]:
+                    qualifier_tokens = set(references["qualifier"].split())
+                    score += 0.05 * len(qualifier_tokens.intersection(label_tokens))
                 if score > best_token_match[0]:
                     best_token_match = (score, column["name"])
         if best_token_match[1]:
@@ -182,10 +256,14 @@ def _resolve_column(label: str, columns: Sequence[Dict[str, Any]]) -> Optional[s
     # Low-impact fuzzy backup
     best_fuzzy: Tuple[float, Optional[str]] = (0.0, None)
     for column in columns:
-        normalized_name = _normalize(column["name"])
-        if not normalized_name:
-            continue
-        similarity = difflib.SequenceMatcher(None, normalized_label, normalized_name).ratio()
+        references = _column_reference_parts(column["name"])
+        similarity = max(
+            (
+                difflib.SequenceMatcher(None, semantic_label, alias).ratio()
+                for alias in references["aliases"]
+            ),
+            default=0.0,
+        )
         if similarity > best_fuzzy[0]:
             best_fuzzy = (similarity, column["name"])
     return best_fuzzy[1]

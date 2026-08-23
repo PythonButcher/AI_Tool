@@ -10,6 +10,7 @@ from backend.services.data_catalog_lineage import (
     is_blocked,
 )
 from backend.services.aichat_nlp import (
+    ChartBuildError,
     NLP_QUERY_FORMAT,
     analyse_columns,
     build_chart_response,
@@ -95,7 +96,17 @@ def generate_chart_from_nlp():
             fields.get("time"),
         )
 
-        chart_response = build_chart_response(dataset, interpretation)
+        try:
+            chart_response = build_chart_response(dataset, interpretation)
+        except ChartBuildError as exc:
+            return jsonify({
+                "intent": interpretation.get("intent"),
+                "error": {"code": exc.code, "message": str(exc)},
+                "fieldsUsed": {k: v for k, v in fields.items() if v},
+                "fieldMatches": interpretation.get("matchDetails", []),
+                "filtersApplied": interpretation.get("filters", []),
+                "usageFormat": NLP_QUERY_FORMAT,
+            }), 422
         chart_data = chart_response.get("chartData") or {}
         chart_type = chart_response.get("chartType") or interpretation.get("chart_type", "Bar")
         meta = chart_response.get("meta") or {}

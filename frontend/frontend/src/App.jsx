@@ -46,12 +46,11 @@ const DESTINATIONS = {
 function AppContent() {
   const {
     uploadedData, setUploadedData,
-    fullData, setFullData,
+    setFullData,
     cleanedData, setCleanedData,
     pipelineResults, setPipelineResults,
     aiReportReady, setAiReportReady,
     showAiReport, setShowAiReport,
-    semanticModel,
     setSemanticModel,
     refreshSemanticModelFromDataset,
     setWorkspaceEnvelope,
@@ -111,11 +110,9 @@ function AppContent() {
   const [showCleaningForm, setShowCleaningForm] = useState(false);
   const [showExportPanel, setShowExportPanel] = useState(false);
 
-  // AI & Decision Intelligence State
+  // AI State
   const [aiChartData, setAiChartData] = useState(null);
   const [aiChartType, setAiChartType] = useState('Bar');
-  const [showDecisionGraph, setShowDecisionGraph] = useState(false);
-  const [decisionGraphContext, setDecisionGraphContext] = useState(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
@@ -124,12 +121,6 @@ function AppContent() {
   const handleOpenAiChat = useCallback(() => {
     setShowAiChat(true);
     restoreWindow('aiChat');
-  }, [restoreWindow]);
-
-  const handleOpenDecisionGraph = useCallback((context = null) => {
-    setDecisionGraphContext(context);
-    setShowDecisionGraph(true);
-    restoreWindow('decisionGraph');
   }, [restoreWindow]);
 
   const handleStatsSelect = useCallback((statType) => setSelectedStat(statType), []);
@@ -370,9 +361,6 @@ function AppContent() {
             aiReportReady={aiReportReady}
             onAiReportClick={handleAiReportOpen}
             isSnowing={isSnowing}
-            showDecisionGraph={showDecisionGraph}
-            setShowDecisionGraph={setShowDecisionGraph}
-            onOpenDecisionGraph={handleOpenDecisionGraph}
             onSnowToggle={() => setIsSnowing((prev) => !prev)}
             onDashboardToggle={handleDashboardToggle}
             isDashboardVisible={dashboardState.isVisible}
@@ -408,9 +396,6 @@ function AppContent() {
             addDashboardChart={addDashboardChart}
             setIsDataPaneOpen={setIsDataPaneOpen}
             setActiveDataPaneTab={setActiveDataPaneTab}
-            cleanedData={cleanedData}
-            fullData={fullData}
-            semanticModel={semanticModel}
           />
 
           <DataFilterPanel openDataFilter={openDataFilter} setOpenDataFilter={setOpenDataFilter} />
@@ -482,14 +467,8 @@ function AppContent() {
               setShowMachineLearning={setShowMachineLearning}
               showAiChat={showAiChat}
               setShowAiChat={setShowAiChat}
-              showDecisionGraph={showDecisionGraph}
-              setShowDecisionGraph={setShowDecisionGraph}
-              decisionGraphContext={decisionGraphContext}
-              fullData={fullData}
-              semanticModel={semanticModel}
               activeWorkflow={activeWorkflow}
               setActiveWorkflow={setActiveWorkflow}
-              onOpenDecisionGraph={handleOpenDecisionGraph}
 
               onDestinationSelect={handleDestinationSelect}
               setShowDataVisual={setShowDataVisual}
@@ -515,10 +494,6 @@ function AppContent() {
           activeTab={activeDataPaneTab}
           setActiveTab={setActiveDataPaneTab}
         />
-
-        {activeDestination !== DESTINATIONS.AI && (
-          <AIChat onOpenAiChat={handleOpenAiChat} />
-        )}
       </div>
     </DndContext>
   );

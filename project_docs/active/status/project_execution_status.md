@@ -9,18 +9,21 @@ This file is the single current source of truth for active AI_Tool delivery.
 - **UI Delivery Owner**: Antigravity, only from one active bounded handoff
 - **Browser Acceptance Owner**: User
 
-## Current Gate: Phase 8 / Slice 1 — Persisted Data Model Layout
+## Current Gate: Awaiting User Epic Goal
 
-- **Status**: Backend position-update boundary required
-- **Backend Readiness**: `backend_not_ready`
-- **Current Owner**: Codex
-- **Next Action**: Execute `project_docs/active/active_gate/README.md`
-- **Roadmap**: `project_docs/active/data_sources/multiple_data_sources_implementation_plan.md`
+- **Status**: Idle; delivered implementation gates are verified
+- **Backend Readiness**: `complete`
+- **Frontend Readiness**: `complete`
+- **Current Owner**: User
+- **Next Action**: Define the next standalone product outcome in chat
+- **Active Gate**: `project_docs/active/active_gate/README.md`
+- **Completed Roadmap**: `project_docs/archive/multiple_data_sources_implementation_plan_completed.md`
+- **Latest Integration Record**: `project_docs/archive/primary_ui_compatibility_removal_handoff_completed.md`
 
-## Phase Outcome
+## Current Product State
 
-Phase 8 is complete only when users can freely move sources, save and restore their positions, and create, edit, validate, activate, deactivate, and delete relationships through a clear Data Model interface backed by verified APIs.
+AI_Tool is a BI-first NLP workspace with governed single-source and multi-source analysis, retained conversational context, lineage-aware results, Data Model relationship authoring, and compatibility-only Decision Intelligence services isolated from the primary product path.
 
 ## Control Return
 
-Codex implements and verifies layout persistence, then issues one bounded Antigravity handoff for the interactive Data Model authoring experience.
+The user selects the next epic goal. Codex then creates the next forward-looking gate, assigns the correct owner, and updates this status before implementation begins.

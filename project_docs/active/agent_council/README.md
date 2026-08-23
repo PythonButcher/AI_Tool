@@ -36,7 +36,7 @@ Current topic folders:
 
 ## Setup Summary
 
-The reusable setup now consists of an agent role definition, master council prompt, strict JSON schema, realistic sample output, usage documentation, output registry, and dependency-free validator. The framework is linked from `project_docs/INDEX.md` and `project_docs/active/status/decision_intelligence_execution_status.md`, and live outputs are stored under `project_docs/active/agent_council/outputs/`.
+The reusable setup now consists of an agent role definition, master council prompt, strict JSON schema, realistic sample output, usage documentation, output registry, and dependency-free validator. The framework is linked from `project_docs/INDEX.md` and `project_docs/active/status/project_execution_status.md`, and live outputs are stored under `project_docs/active/agent_council/outputs/`.
 
 The sample file is an example artifact only. It demonstrates the required shape and level of detail for a council output; it should not be treated as the result of a newly run council unless a future task explicitly says to run that topic.
 
@@ -44,7 +44,7 @@ The sample file is an example artifact only. It demonstrates the required shape 
 
 Start by choosing a planning topic. Good topics are questions like what the next product slice should be, whether a proposed UI handoff is strong enough, whether a backend contract is ready for Antigravity, or which risks should gate the next implementation phase.
 
-Before running the council, the orchestrating agent should inspect the current active project docs. Start with `project_docs/INDEX.md`, then `project_docs/active/README.md`, then the active status and frontend guardrail. For Decision Intelligence work, use `project_docs/active/status/decision_intelligence_execution_status.md` for the current gate and `project_docs/active/decision_intelligence/active_gate/README.md` for the active phase workspace. Read completed plans or handoffs only when the topic explicitly needs historical evidence.
+Before running the council, the orchestrating agent should inspect the current active project docs. Start with `project_docs/INDEX.md`, then `project_docs/active/README.md`, then `project_docs/active/status/project_execution_status.md`, `project_docs/active/active_gate/README.md`, and the frontend guardrail. Read archived plans or handoffs only when the topic explicitly needs historical evidence.
 
 Then paste `project_docs/active/agent_council/master_council_prompt.md` into the AI system that will simulate or coordinate the agents. Add the specific planning topic after the prompt in plain language. The council should run four rounds: independent proposals, critique, reconciliation, and final JSON synthesis.
 

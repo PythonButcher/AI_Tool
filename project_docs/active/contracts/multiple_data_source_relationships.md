@@ -2,7 +2,7 @@
 
 ## Status
 
-Verified backend contract for durable relationship configuration, candidate profiling, validation diagnostics, workspace-isolated CRUD, and explicitly selected backend execution. It does not authorize frontend behavior or automatic relationship selection.
+Verified backend contract for durable relationship configuration, candidate profiling, validation diagnostics, workspace-isolated CRUD, explicitly selected backend execution, and automatic AI Chat resolution from the active Data Model. It does not authorize frontend behavior.
 
 ## Contract Version
 
@@ -17,7 +17,7 @@ Stored relationship objects use `contract_version: "multi_source_relationships_v
 | `left_source_id`, `right_source_id` | Two different catalog sources that must both be members of the owning workspace |
 | `field_pairs` | One or more ordered `{ left_field, right_field }` pairs; repeated fields and empty pairs are rejected |
 | `cardinality` | `one_to_one`, `one_to_many`, `many_to_one`, or `many_to_many` |
-| `join_behavior` | Future execution intent: `inner`, `left`, `right`, or `full`; no join is executed in this contract |
+| `join_behavior` | `inner`, `left`, `right`, or `full` behavior used when this relationship is selected by the verified execution boundary |
 | `filter_direction` | Future propagation intent: `none`, `left_to_right`, `right_to_left`, or `both` |
 | `is_active` | Whether the relationship belongs to the active model graph; activation still does not execute it |
 | `is_suggested` | Whether the saved configuration originated from a candidate proposal |
@@ -70,16 +70,22 @@ Successful single-record responses use `{ relationship }`; list responses use `{
 
 Errors use `{ error: { code, message } }`, with validation diagnostics added to `error.diagnostics` when activation fails. Missing workspaces, sources, and workspace-scoped relationships return HTTP 404. `source_not_in_workspace`, `relationship_version_conflict`, and `relationship_confirmation_required` return HTTP 409. Unavailable source storage returns HTTP 409. A freshly invalid or blocked relationship cannot activate and returns HTTP 422 with `relationship_not_activatable` plus the persisted diagnostics.
 
-Relationship lookup always includes both `workspace_id` and `relationship_id`. A relationship ID requested through another workspace returns `relationship_not_found` and does not reveal its real owner. Foreign keys cascade relationship removal when its workspace or source is deleted, while relationship deletion never removes sources or memberships.
+Relationship lookup always includes both `workspace_id` and `relationship_id`. A relationship ID requested through another workspace returns `relationship_not_found` and does not reveal its real owner. The public source-deletion boundary refuses any source with workspace or relationship dependencies, so it never relies on a foreign-key cascade as product behavior. Database foreign keys remain a last-resort integrity guard. Relationship deletion never removes sources or memberships.
 
 ## Verified Execution Semantics
 
 Multi-source execution accepts only relationship IDs explicitly present in the verified `analysis_context`. Every relationship is reloaded through the requested workspace and must be active, confirmed, freshly `valid`, and not `many_to_many`. The selected edges must form exactly one connected acyclic tree over the ordered selected sources. Missing, cross-workspace, stale, inactive, blocked, invalid, cyclic, disconnected, or ambiguous selections are refused; the executor never chooses an unrequested relationship or activates a candidate.
 
-Execution starts from the persisted workspace primary source. The ordered selected source IDs determine deterministic traversal, with relationship ID used only as a stable tie-breaker inside the already explicit tree. Single and composite field pairs are supported. Every physical field is emitted as `<workspace_alias>.<source_field>`, and the composed semantic model namespaces metric IDs, dimension IDs, names, labels, fields, filters, and formula field references.
+Execution starts from the persisted workspace primary source. The ordered selected source IDs determine deterministic traversal, with relationship ID used only as a stable tie-breaker inside the already explicit tree. Single and composite field pairs are supported. Every physical field is emitted as `<workspace_alias>.<source_field>`. The composed semantic model keeps IDs, names, physical fields, filter fields, and formula references qualified while exposing separate business-readable labels and aliases for interpretation and presentation.
 
-The pandas executor refuses a result above either `250000` rows or `5.0` times the primary-source row count. This is the documented hard ceiling, independent of the validation-time `2.0` warning threshold. Returned `analysis_lineage` includes ordered sources and relationships, relationship versions, validation fingerprints, field origins, join order, aggregate unmatched-key evidence, primary-grain anchoring, per-step fanout, and final observed fanout. Raw relationship keys are never returned.
+The pandas executor refuses a result above either `250000` rows or `5.0` times the primary-source row count. This is the documented hard ceiling, independent of the validation-time `2.0` warning threshold. Fresh `relationship_key_profile` evidence is checked against the same hard ceilings before each merge, so an already oversized estimate is refused before pandas materializes the result. The observed row count and primary-grain ratio are checked again after every merge to contain multi-hop or runtime fanout that pairwise validation could not predict. Returned `analysis_lineage` includes ordered sources and relationships, relationship versions, validation fingerprints, field origins, join order, aggregate unmatched-key evidence, primary-grain anchoring, per-step fanout, and final observed fanout. Raw relationship keys are never returned.
+
+## Automatic AI Chat Model Resolution
+
+Decision Chat may receive only the current `workspace_id`. The server reads the persisted active relationship graph, reconciles fresh validation evidence for every active edge, and produces deterministic ordered `source_ids` and `relationship_ids` before calling the same bounded executor. Persisted workspace-membership order fixes source order; traversal from the primary source fixes relationship order.
+
+Inactive drafts are never selected. An active edge must remain confirmed, freshly `valid`, executable, and attached to workspace members. An active graph must be one connected acyclic tree rooted at the workspace primary source. Stale, blocked, invalid, many-to-many, disconnected, cyclic, and ambiguous active state is refused with Data Model repair guidance. Chat never validates, confirms, activates, repairs, or substitutes a relationship. A workspace with no active edge retains primary-only one-source behavior.
 
 ## Compatibility Boundary
 
-The existing source, workspace, upload, Data Hub, and global-state compatibility paths remain unchanged. `relationship_ids` stays empty for one-source consumers. Decision Chat and `/api/nlp/chart` read the relationship table only when an explicit multi-source `analysis_context` is supplied or retained in verified Decision Chat session state.
+The existing source, workspace, upload, Data Hub, and global-state compatibility paths remain unchanged. `relationship_ids` stays empty for one-source consumers. `/api/nlp/chart` continues to require an explicit multi-source `analysis_context`. Decision Chat accepts that compatibility form or resolves the active model from `workspace_id` and verified Decision Chat session state.

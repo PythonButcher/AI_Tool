@@ -281,11 +281,71 @@ def build_namespaced_semantic_model(
         "field_profiles": [],
     }
 
-    def namespace_item(item: Dict[str, Any], alias: str, source_id: str) -> Dict[str, Any]:
+    def humanize_identifier(value: Any) -> str:
+        """Turn source and field identifiers into compact presentation text."""
+        camel_spaced = re.sub(r"(?<=[a-z0-9])(?=[A-Z])", " ", str(value or ""))
+        words = re.findall(r"[A-Za-z]+|\d+", camel_spaced.replace("_", " "))
+        return " ".join(word.capitalize() for word in words if word)
+
+    def source_role_label(alias: str) -> str:
+        """Choose a stable business qualifier without exposing file-shaped names."""
+        tokens = re.findall(r"[a-z]+", str(alias or "").lower())
+        preferred_roles = (
+            "sales",
+            "inventory",
+            "customer",
+            "customers",
+            "product",
+            "products",
+            "order",
+            "orders",
+            "finance",
+            "marketing",
+            "support",
+        )
+        role = next((candidate for candidate in preferred_roles if candidate in tokens), None)
+        if role:
+            return role.rstrip("s").capitalize() if role != "sales" else "Sales"
+        ignored = {"csv", "data", "dataset", "file", "records", "source", "lookup"}
+        fallback = next((token for token in tokens if token not in ignored), "")
+        return fallback.capitalize()
+
+    def business_label(
+        *,
+        collection: str,
+        original_label: Any,
+        original_field: str,
+        alias: str,
+    ) -> str:
+        """Build a readable label while machine fields stay fully qualified."""
+        field_label = humanize_identifier(original_label or original_field)
+        role_label = source_role_label(alias)
+        normalized_field = field_label.lower()
+
+        if collection == "metrics" and role_label == "Sales" and "amount" in normalized_field:
+            return "Total Sales Revenue" if "total" in normalized_field else "Sales Revenue"
+        if collection == "dimensions" and role_label == "Inventory" and normalized_field == "category":
+            return "Inventory Category"
+        if role_label and role_label.lower() not in normalized_field:
+            return f"{role_label} {field_label}".strip()
+        return field_label or humanize_identifier(original_field)
+
+    def namespace_item(
+        item: Dict[str, Any],
+        alias: str,
+        source_id: str,
+        collection: str,
+    ) -> Dict[str, Any]:
         """Namespace one semantic definition without mutating source truth."""
         namespaced = deepcopy(item)
         original_field = str(namespaced.get("field") or namespaced.get("name") or "").strip()
         original_id = str(namespaced.get("id") or namespaced.get("name") or original_field).strip()
+        original_label = namespaced.get("label") or namespaced.get("display_name") or original_field
+        original_aliases = [
+            str(candidate).strip()
+            for candidate in (namespaced.get("aliases") or [])
+            if str(candidate).strip()
+        ]
         if original_field:
             namespaced["field"] = f"{alias}.{original_field}"
         original_name = str(namespaced.get("name") or original_field).strip()
@@ -293,16 +353,40 @@ def build_namespaced_semantic_model(
             namespaced["name"] = f"{alias}.{original_name}"
         if original_id:
             namespaced["id"] = f"{alias}.{original_id}"
-        original_label = namespaced.get("label") or namespaced.get("name") or original_field
-        if original_label:
-            namespaced["label"] = f"{alias}.{original_label}"
-        if isinstance(namespaced.get("aliases"), list):
-            namespaced["aliases"] = [
-                f"{alias}.{item}" for item in namespaced["aliases"] if str(item).strip()
-            ]
+        qualified_label = f"{alias}.{original_label}" if original_label else None
+        display_label = business_label(
+            collection=collection,
+            original_label=original_label,
+            original_field=original_field,
+            alias=alias,
+        )
+        if qualified_label:
+            namespaced["qualified_label"] = qualified_label
+        if display_label:
+            namespaced["label"] = display_label
+            namespaced["display_name"] = display_label
+
+        aliases_for_matching = [
+            *original_aliases,
+            *[f"{alias}.{candidate}" for candidate in original_aliases],
+            str(original_label or ""),
+            humanize_identifier(original_label or original_field),
+            str(qualified_label or ""),
+            display_label,
+        ]
+        if collection == "metrics" and display_label == "Total Sales Revenue":
+            aliases_for_matching.extend(
+                ["Revenue", "Sales Revenue", "Total Revenue", "Total Sales Revenue"]
+            )
+        if collection == "dimensions" and display_label == "Inventory Category":
+            aliases_for_matching.extend(["Category", "Inventory Category", "Categories"])
+        namespaced["aliases"] = list(
+            dict.fromkeys(candidate for candidate in aliases_for_matching if candidate)
+        )
         namespaced["source_id"] = source_id
         namespaced["source_alias"] = alias
         namespaced["source_field"] = original_field or None
+        namespaced["source_label"] = source_role_label(alias) or None
 
         expression = namespaced.get("expression")
         if isinstance(expression, dict):
@@ -337,7 +421,9 @@ def build_namespaced_semantic_model(
         for collection in ("metrics", "dimensions", "field_profiles"):
             for item in model.get(collection) or []:
                 if isinstance(item, dict):
-                    combined[collection].append(namespace_item(item, alias, source_id))
+                    combined[collection].append(
+                        namespace_item(item, alias, source_id, collection)
+                    )
     return finalize_semantic_model(combined)
 
 

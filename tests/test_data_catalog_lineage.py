@@ -9,7 +9,7 @@ import pandas as pd
 from flask import Flask
 
 from backend.routes.automl import automl_bp
-from backend.routes.decision import decision_bp
+from backend.routes.decision_chat import decision_chat_bp
 from backend.routes.export import export_bp
 from backend.routes.nlp_routes import nlp_bp
 from backend.routes.upload import upload_bp
@@ -44,7 +44,7 @@ class DataCatalogLineageTests(unittest.TestCase):
         workspace_context.MANAGED_UPLOAD_ROOT = Path(self.temp_dir.name) / "managed"
         app = Flask(__name__)
         app.register_blueprint(nlp_bp)
-        app.register_blueprint(decision_bp)
+        app.register_blueprint(decision_chat_bp)
         app.register_blueprint(automl_bp)
         app.register_blueprint(export_bp)
         app.register_blueprint(upload_bp)
