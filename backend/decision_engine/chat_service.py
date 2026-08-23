@@ -24,10 +24,8 @@ from backend.services.aichat_nlp import (
     interpret_nl_query,
 )
 from backend.services.dataset_context import resolve_analysis_dataset_bundle, resolve_dataset_bundle
-from backend.services.decision_output_service import DecisionOutputService
 from backend.services.decision_support import DecisionServiceError, build_dataset_trust
 from backend.services.metric_resolver import MetricResolutionError, MetricResolver
-from backend.services.decision_workspace_service import DecisionWorkspaceService
 from backend.services.relationship_execution import resolve_active_model_analysis_context
 
 
@@ -378,7 +376,17 @@ class DecisionChatService:
         output_correction_result: Dict[str, Any] | None = None
         resolved_clarification: Dict[str, Any] | None = None
         available_actions: List[Dict[str, Any]] = []
-        analytic_state = DecisionChatService._normalize_analytic_state(session_state.get("last_analytic_context"))
+        prior_analytic_state = DecisionChatService._normalize_analytic_state(
+            session_state.get("last_analytic_context")
+        )
+        reuse_analytic_context = DecisionChatService._should_reuse_analytic_context(
+            user_message=user_message,
+            dataset=dataset,
+            semantic_model=semantic_model,
+            analytic_state=prior_analytic_state,
+            analytics_refinement=analytics_refinement,
+        )
+        analytic_state = prior_analytic_state if reuse_analytic_context else {}
 
         if mode_details.get("requires_confirmation"):
             assistant_message = (
@@ -420,7 +428,7 @@ class DecisionChatService:
                     user_message=user_message,
                     dataset=dataset,
                     semantic_model=semantic_model,
-                    session_state=session_state,
+                    analytic_state=analytic_state,
                     conversation_context=conversation_context,
                     analytics_refinement=analytics_refinement,
                 )
@@ -453,7 +461,7 @@ class DecisionChatService:
                     user_message=user_message,
                     dataset=dataset,
                     semantic_model=semantic_model,
-                    session_state=session_state,
+                    analytic_state=analytic_state,
                     conversation_context=conversation_context,
                     analytics_refinement=analytics_refinement,
                 )
@@ -1036,8 +1044,18 @@ class DecisionChatService:
                 else "ai_chat_bi_session_state_v1"
             ),
             "active_mode": mode,
-            "decision_prompt": active_decision_prompt or preserved_state.get("decision_prompt") or user_message,
         }
+        if mode == "decide":
+            updated_state["decision_prompt"] = (
+                active_decision_prompt
+                or preserved_state.get("decision_prompt")
+                or user_message
+            )
+        else:
+            # Compatibility-only Decision Intelligence prompts do not belong
+            # in the compact BI session and must never compete with the latest
+            # user_message on a future turn.
+            updated_state.pop("decision_prompt", None)
         if isinstance(dataset_context, dict):
             # This object contains only a digest and summary; raw rows never
             # enter session persistence.
@@ -1046,6 +1064,11 @@ class DecisionChatService:
         if analytic_state:
             updated_state["last_analytic_context"] = analytic_state
             updated_state["analytics_state"] = analytic_state
+        elif mode == "explore":
+            # An independent BI question must retire incompatible analytical
+            # intent instead of leaving it available for a later replay.
+            updated_state.pop("last_analytic_context", None)
+            updated_state.pop("analytics_state", None)
 
         if draft_workspace is not None:
             updated_state["draft_workspace"] = draft_workspace
@@ -1842,6 +1865,10 @@ class DecisionChatService:
         """Compose the display artifact while keeping Evidence Board normalization centralized."""
         if not isinstance(workspace, dict) or not workspace:
             return None
+        # Decision output is compatibility-only. Import it only when an
+        # explicitly enabled decision workflow supplies a real workspace.
+        from backend.services.decision_output_service import DecisionOutputService
+
         return DecisionOutputService.compose(
             workspace=workspace,
             dataset_trust=dataset_trust,
@@ -2027,7 +2054,7 @@ class DecisionChatService:
         if isinstance(payload.get("decision_workspace") or payload.get("decisionWorkspace"), dict):
             return False
 
-        normalized_message = DecisionWorkspaceService._normalize_phrase(user_message)
+        normalized_message = DecisionChatService._normalize_text(user_message)
         if not normalized_message:
             return False
 
@@ -2036,7 +2063,7 @@ class DecisionChatService:
             existing_prompt = str(draft_workspace.get("decision_prompt") or "").strip()
         if not existing_prompt:
             existing_prompt = str(session_state.get("decision_prompt") or "").strip()
-        normalized_existing = DecisionWorkspaceService._normalize_phrase(existing_prompt)
+        normalized_existing = DecisionChatService._normalize_text(existing_prompt)
 
         return bool(not normalized_existing or normalized_existing != normalized_message)
 
@@ -2068,6 +2095,8 @@ class DecisionChatService:
         user_message: str,
     ) -> Dict[str, Any]:
         """Execute decision actions for both explicit action calls and typed chat follow-ups."""
+        from backend.services.decision_workspace_service import DecisionWorkspaceService
+
         if action not in DecisionChatService.DECISION_ACTION_CONTRACTS:
             raise DecisionServiceError(f"Unsupported decision chat action: {action}")
         artifacts: List[Dict[str, Any]] = []
@@ -2240,6 +2269,10 @@ class DecisionChatService:
 
     @staticmethod
     def _create_draft_workspace(payload: Dict[str, Any], user_message: str) -> Dict[str, Any]:
+        # Workspace drafting is retained only for explicitly invoked
+        # compatibility flows and must not load during ordinary BI turns.
+        from backend.services.decision_workspace_service import DecisionWorkspaceService
+
         workspace_payload = {
             "dataset": payload.get("dataset"),
             "dataset_ref": payload.get("dataset_ref") or payload.get("datasetRef"),
@@ -2348,11 +2381,76 @@ class DecisionChatService:
         return any(keyword in lowered for keyword in DecisionChatService.ANALYTICS_INTENT_KEYWORDS)
 
     @staticmethod
+    def _should_reuse_analytic_context(
+        *,
+        user_message: str,
+        dataset: List[Dict[str, Any]],
+        semantic_model: Dict[str, Any] | None,
+        analytic_state: Dict[str, Any],
+        analytics_refinement: Dict[str, Any] | None,
+    ) -> bool:
+        """Reuse prior analysis only when the current message proves refinement intent."""
+        if not analytic_state:
+            return False
+        if analytics_refinement:
+            return True
+
+        # Naming a metric starts a new analytical request. It must not inherit
+        # the prior grouping, filters, chart preference, or cached intent.
+        if DecisionChatService._find_semantic_metric_reference(user_message, semantic_model):
+            return False
+
+        normalized = DecisionChatService._normalize_text(user_message)
+        if not normalized:
+            return False
+
+        # Output-only chart commands are valid refinements even when the user
+        # omits the prior metric and dimension (for example, "show it as a chart").
+        if is_visualization_request(user_message):
+            return True
+
+        # A dimension value or time range grounded in the current model is
+        # explicit evidence that the user is narrowing the previous analysis.
+        explicit_filters = DecisionChatService._build_semantic_filters(
+            user_message=user_message,
+            dataset=dataset,
+            semantic_model=semantic_model if isinstance(semantic_model, dict) else {},
+            analytic_state={},
+        )
+        if explicit_filters:
+            return True
+
+        refinement_phrases = (
+            "what about",
+            "how about",
+            "instead",
+            "same ",
+            "again",
+            "use ",
+            "switch ",
+            "change ",
+            "remove ",
+            "add ",
+            "group by",
+            "break down by",
+        )
+        if any(phrase in normalized for phrase in refinement_phrases):
+            return True
+
+        # A terse "by Region"-style request supplies a new grouping while
+        # intentionally relying on the previous metric.
+        dimension_ref = DecisionChatService._find_semantic_dimension_reference(
+            user_message,
+            semantic_model,
+        )
+        return bool(dimension_ref and normalized.startswith("by "))
+
+    @staticmethod
     def _build_analytics_response(
         user_message: str,
         dataset: List[Dict[str, Any]],
         semantic_model: Dict[str, Any] | None,
-        session_state: Dict[str, Any],
+        analytic_state: Dict[str, Any],
         conversation_context: Dict[str, Any] | None = None,
         analytics_refinement: Dict[str, Any] | None = None,
     ) -> Dict[str, Any] | None:
@@ -2363,7 +2461,20 @@ class DecisionChatService:
         - semantic metrics when they can be resolved from the semantic model
         - raw-field NLP analytics using the existing deterministic parser
         """
-        analytic_state = DecisionChatService._normalize_analytic_state(session_state.get("last_analytic_context"))
+        analytic_state = DecisionChatService._normalize_analytic_state(analytic_state)
+        lowered = str(user_message or "").strip().lower()
+        has_current_metric = bool(
+            DecisionChatService._find_semantic_metric_reference(user_message, semantic_model)
+        )
+        has_current_analytic_intent = bool(
+            is_visualization_request(user_message)
+            or any(keyword in lowered for keyword in DecisionChatService.ANALYTICS_INTENT_KEYWORDS)
+        )
+        if not analytic_state and not analytics_refinement and not has_current_metric and not has_current_analytic_intent:
+            # An explicit Explore-mode request is not automatically a metric
+            # refinement. Let grounded chat answer dataset-shape or general
+            # questions instead of allowing the raw parser to guess a measure.
+            return None
         semantic_response = DecisionChatService._build_semantic_metric_response(
             user_message=user_message,
             dataset=dataset,

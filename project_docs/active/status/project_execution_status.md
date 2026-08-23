@@ -9,21 +9,21 @@ This file is the single current source of truth for active AI_Tool delivery.
 - **UI Delivery Owner**: Antigravity, only from one active bounded handoff
 - **Browser Acceptance Owner**: User
 
-## Current Gate: AI Chat Conversation Continuity And Backend Isolation
+## Current Gate: Awaiting User Epic Goal
 
-- **Roadmap Phase**: Phase 11 — Backend Enhancement and AI Chat Continuity
-- **Status**: Active; reproduce the sustained-conversation replay defect before backend isolation work
-- **Backend Readiness**: `implementation_required`
-- **Frontend Readiness**: `not_assessed_backend_first`
-- **Current Owner**: Codex
-- **Next Action**: Execute `project_docs/active/active_gate/README.md`
-- **Roadmap**: `project_docs/active/data_sources/multiple_data_sources_implementation_plan.md`
-- **Closed Gate Record**: `project_docs/archive/cross_source_ai_chat_reliability_and_release_completed.md`
+- **Status**: Idle; delivered implementation gates are verified
+- **Backend Readiness**: `complete`
+- **Frontend Readiness**: `complete`
+- **Current Owner**: User
+- **Next Action**: Define the next standalone product outcome in chat
+- **Active Gate**: `project_docs/active/active_gate/README.md`
+- **Completed Roadmap**: `project_docs/archive/multiple_data_sources_implementation_plan_completed.md`
+- **Latest Integration Record**: `project_docs/archive/primary_ui_compatibility_removal_handoff_completed.md`
 
-## Roadmap Phase Outcome
+## Current Product State
 
-AI Chat answers the latest question across sustained conversations, preserves only compatible analytical context for refinements, and keeps Decision Intelligence compatibility services isolated from the primary BI backend without removing supported product behavior.
+AI_Tool is a BI-first NLP workspace with governed single-source and multi-source analysis, retained conversational context, lineage-aware results, Data Model relationship authoring, and compatibility-only Decision Intelligence services isolated from the primary product path.
 
 ## Control Return
 
-Codex owns backend reproduction, implementation, isolation planning, contracts, tests, documentation, and integration review. No frontend handoff is active.
+The user selects the next epic goal. Codex then creates the next forward-looking gate, assigns the correct owner, and updates this status before implementation begins.

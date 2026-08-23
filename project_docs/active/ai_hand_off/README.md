@@ -10,9 +10,7 @@ Antigravity owns bounded frontend implementation, React/CSS, UI rendering, and f
 
 ## Active Handoffs And Goal Prompts
 
-No frontend handoff is active.
-
-Current status is recorded in `project_docs/active/status/project_execution_status.md`.
+There is no active frontend handoff. Current ownership and the next action are recorded in `project_docs/active/status/project_execution_status.md`.
 
 Completed handoffs belong outside this active folder.
 

@@ -12,7 +12,7 @@ from flask import Flask
 from backend.db import backend_db
 from backend.decision_engine.chat_service import DecisionChatService
 from backend.repositories.source_workspace_repository import get_workspace
-from backend.routes.decision import decision_bp
+from backend.routes.decision_chat import decision_chat_bp
 from backend.routes.nlp_routes import nlp_bp
 from backend.routes.source_relationships import source_relationships_bp
 from backend.routes.upload import upload_bp
@@ -39,7 +39,7 @@ class RelationshipExecutionTests(unittest.TestCase):
         app = Flask(__name__)
         app.register_blueprint(upload_bp)
         app.register_blueprint(source_relationships_bp)
-        app.register_blueprint(decision_bp)
+        app.register_blueprint(decision_chat_bp)
         app.register_blueprint(nlp_bp)
         self.client = app.test_client()
 
