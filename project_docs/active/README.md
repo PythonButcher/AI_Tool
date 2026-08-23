@@ -35,8 +35,8 @@ Dataset identity and semantic truth remain required for every BI answer and char
 | Dataset governance contract | `project_docs/active/contracts/data_catalog_lineage.md` | Readiness policy and enforcement truth |
 | Multiple-source workspace contract | `project_docs/active/contracts/multiple_data_source_workspace.md` | Source, workspace membership, and analysis-context truth |
 | Multiple-source relationship contract | `project_docs/active/contracts/multiple_data_source_relationships.md` | Relationship persistence, validation, diagnostics, and activation truth |
-| Project active gate | `project_docs/active/active_gate/README.md` | The only active phase workspace |
-| Multiple data sources roadmap | `project_docs/active/data_sources/multiple_data_sources_implementation_plan.md` | Ordered backend, frontend, acceptance, and handoff plan |
+| Project active gate | `project_docs/active/active_gate/README.md` | The only active work workspace |
+| Completed data and backend roadmap | `project_docs/archive/multiple_data_sources_implementation_plan_completed.md` | Historical delivery record; not active scope |
 | Deferred planning | `project_docs/active/future/README.md` | The one home for all deferred active-folder plans; not active until promoted |
 | Agent harness | `project_docs/active/agent_harness/` | Reusable agent backbone, hooks, and validation |
 | Handoffs | `project_docs/active/ai_hand_off/` | Active handoffs only |
@@ -65,7 +65,7 @@ When Codex finds a frontend-agent implementation is not complete, the active han
 
 ## Orchestration Rule
 
-For the overall project, Codex must facilitate, not only complete isolated implementation slices. Every wrap-up for backend work must say the current gate in plain language: complete end to end, blocked, or ready for frontend.
+For the overall project, Codex must facilitate, not only complete isolated work items. Every wrap-up for backend work must say the current gate in plain language: complete end to end, blocked, or ready for frontend.
 
 Codex facilitates the project, owns the active markdown truth, implements or verifies backend work, and decides when a frontend gap is ready for Antigravity. Antigravity implements only the current bounded UI handoff, then returns source and verification evidence for Codex review. Do not leave the user to decide which agent acts next.
 
@@ -77,7 +77,7 @@ Antigravity frontend reviews must stay lightweight unless the user asks for deep
 
 Frontend builds are for inconclusive source review, missing or questionable Antigravity build evidence, likely syntax/import failures, or explicit user requests. Browser/E2E checks are not the default review path; use them only when the gate depends on visible behavior and cheaper evidence is clean or insufficient.
 
-Before starting, handing off, or closing a numbered phase, run `python .codex/hooks/agent_harness_check.py`. Its documentation-governance gate rejects a complete brief still kept in the current path, completed reference files under `current/`, and active work without a phase number. The explicit idle state `Awaiting User Epic Goal` is allowed so the user can author the next gate without inherited agent scope. Use the `project-doc-governance` skill to repair any reported issue before continuing.
+Before starting, handing off, or closing a numbered roadmap phase, run `python .codex/hooks/agent_harness_check.py`. Status declares one roadmap phase in its own field, while the current gate uses a plain descriptive name. Never combine `Phase N / Slice N`. The documentation-governance check rejects a complete brief still kept in the current path, completed reference files under `current/`, ambiguous combined numbering, and active work without a declared roadmap phase. The explicit idle state `Awaiting User Epic Goal` is allowed so the user can author the next gate without inherited agent scope. Use the `project-doc-governance` skill to repair any reported issue before continuing.
 
 ## Browser Acceptance Control
 
@@ -85,7 +85,7 @@ The user exclusively controls browser-level acceptance. Codex must not launch, n
 
 ## Status File Discipline
 
-The active status file is for current truth, the current gate, and the latest verified fact. It is not an implementation diary. When a phase is fully closed and verified, move detailed slice notes to `project_docs/archive/` and leave a short archive pointer in active status.
+The active status file is for current truth, the current gate, and the latest verified fact. It is not an implementation diary. When a phase is fully closed and verified, move detailed work notes to `project_docs/archive/` and leave a short archive pointer in active status.
 
 ## Phase Wrap-Up Rule
 

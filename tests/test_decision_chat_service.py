@@ -4,7 +4,7 @@ from unittest.mock import patch
 from flask import Flask
 
 from backend.decision_engine import DecisionChatService
-from backend.routes.decision import decision_bp
+from backend.routes.decision_chat import decision_chat_bp
 
 
 # This fixture intentionally contains only fields used by the active BI-first
@@ -118,7 +118,7 @@ class DecisionChatApiTests(unittest.TestCase):
 
     def setUp(self):
         app = Flask(__name__)
-        app.register_blueprint(decision_bp)
+        app.register_blueprint(decision_chat_bp)
         self.client = app.test_client()
 
     def _post_turn(self, user_message, *, session_state=None, **overrides):
@@ -251,6 +251,152 @@ class DecisionChatApiTests(unittest.TestCase):
             "structured_session_state",
         )
 
+    def test_sustained_conversation_keeps_latest_question_authoritative(self):
+        """Exercise the public route with the rolling history shape used by AI Chat."""
+        conversation_history = []
+        session_state = {}
+
+        def send_turn(user_message):
+            """Carry returned state and the frontend's bounded role/content history."""
+            nonlocal session_state
+            response = self._post_turn(
+                user_message,
+                session_state=session_state,
+                conversation_history=conversation_history[-10:],
+                requested_mode="explore",
+            )
+            self.assertEqual(response.status_code, 200, response.get_json())
+            body = response.get_json()
+            conversation_history.extend([
+                {"role": "user", "content": user_message},
+                {"role": "assistant", "content": body["assistant_message"]},
+            ])
+            session_state = body["session_state"]
+            return body
+
+        # Independent questions replace stale intent, while short referential
+        # follow-ups deliberately retain the compatible analytical context.
+        revenue_by_region = send_turn("What is Revenue by Region?")
+        self.assertEqual(revenue_by_region["bi_grounding"]["metric_definition"]["id"], "metric_revenue_sum")
+        self.assertEqual([item["field"] for item in revenue_by_region["bi_grounding"]["dimensions"]], ["Region"])
+
+        revenue_chart = send_turn("Show it as a chart")
+        self.assertEqual(revenue_chart["artifacts"][0]["type"], "chart")
+        self.assertEqual(revenue_chart["bi_grounding"]["metric_definition"]["id"], "metric_revenue_sum")
+
+        margin_by_channel = send_turn("What is Gross Margin % by Channel?")
+        self.assertEqual(margin_by_channel["bi_grounding"]["metric_definition"]["id"], "metric_margin_pct")
+        self.assertEqual([item["field"] for item in margin_by_channel["bi_grounding"]["dimensions"]], ["Channel"])
+
+        online_margin = send_turn("Only Online")
+        self.assertEqual(online_margin["bi_grounding"]["filters"][0]["field"], "Channel")
+        self.assertEqual(online_margin["bi_grounding"]["filters"][0]["value"], "Online")
+
+        # This unrelated question currently exposes the replay defect: stale
+        # metric state must not substitute the prior margin answer.
+        dataset_shape = send_turn("What columns are available in this dataset?")
+        self.assertIn("4 rows across 6 columns", dataset_shape["assistant_message"])
+        self.assertIsNone(dataset_shape["bi_grounding"]["metric_definition"])
+
+        category_revenue = send_turn("What is Revenue by Product Category?")
+        self.assertEqual(category_revenue["bi_grounding"]["metric_definition"]["id"], "metric_revenue_sum")
+        self.assertEqual(
+            [item["field"] for item in category_revenue["bi_grounding"]["dimensions"]],
+            ["Product Category"],
+        )
+        self.assertEqual(category_revenue["bi_grounding"]["filters"], [])
+
+        category_chart = send_turn("Show that as a chart")
+        self.assertEqual(category_chart["artifacts"][0]["type"], "chart")
+        self.assertEqual(category_chart["bi_grounding"]["metric_definition"]["id"], "metric_revenue_sum")
+
+        electronics_only = send_turn("Only Electronics")
+        self.assertEqual(electronics_only["bi_grounding"]["filters"][0]["field"], "Product Category")
+        self.assertEqual(electronics_only["bi_grounding"]["filters"][0]["value"], "Electronics")
+
+    def test_stale_decision_prompt_cannot_override_current_bi_question(self):
+        """Keep compatibility state from becoming an alternate source of user intent."""
+        response = self._post_turn(
+            "What is Revenue by Region?",
+            requested_mode="explore",
+            session_state={
+                "active_mode": "explore",
+                "decision_prompt": "What is Gross Margin % by Channel?",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        body = response.get_json()
+        self.assertEqual(body["bi_grounding"]["metric_definition"]["id"], "metric_revenue_sum")
+        self.assertEqual([item["field"] for item in body["bi_grounding"]["dimensions"]], ["Region"])
+        self.assertNotIn("decision_prompt", body["session_state"])
+
+    def test_twenty_four_turn_stress_keeps_independent_and_refinement_state_separate(self):
+        """Protect continuity beyond the minimum eight-turn acceptance floor."""
+        conversation_history = []
+        session_state = {}
+        independent_turns = (
+            ("What is Revenue by Region?", "metric_revenue_sum", "Region"),
+            ("What is Gross Margin % by Channel?", "metric_margin_pct", "Channel"),
+            ("What is Revenue by Product Category?", "metric_revenue_sum", "Product Category"),
+        )
+
+        for cycle in range(8):
+            question, expected_metric, expected_dimension = independent_turns[cycle % len(independent_turns)]
+            response = self._post_turn(
+                question,
+                session_state=session_state,
+                conversation_history=conversation_history[-10:],
+                requested_mode="explore",
+            )
+            self.assertEqual(response.status_code, 200, response.get_json())
+            independent = response.get_json()
+            self.assertEqual(independent["bi_grounding"]["metric_definition"]["id"], expected_metric)
+            self.assertEqual(
+                [item["field"] for item in independent["bi_grounding"]["dimensions"]],
+                [expected_dimension],
+            )
+            self.assertEqual(independent["bi_grounding"]["filters"], [])
+            conversation_history.extend([
+                {"role": "user", "content": question},
+                {"role": "assistant", "content": independent["assistant_message"]},
+            ])
+            session_state = independent["session_state"]
+
+            chart_message = "Show it as a chart"
+            chart_response = self._post_turn(
+                chart_message,
+                session_state=session_state,
+                conversation_history=conversation_history[-10:],
+                requested_mode="explore",
+            )
+            self.assertEqual(chart_response.status_code, 200, chart_response.get_json())
+            chart = chart_response.get_json()
+            self.assertEqual(chart["artifacts"][0]["type"], "chart")
+            self.assertEqual(chart["bi_grounding"]["metric_definition"]["id"], expected_metric)
+            conversation_history.extend([
+                {"role": "user", "content": chart_message},
+                {"role": "assistant", "content": chart["assistant_message"]},
+            ])
+            session_state = chart["session_state"]
+
+            shape_message = "What columns are available in this dataset?"
+            shape_response = self._post_turn(
+                shape_message,
+                session_state=session_state,
+                conversation_history=conversation_history[-10:],
+                requested_mode="explore",
+            )
+            self.assertEqual(shape_response.status_code, 200, shape_response.get_json())
+            shape = shape_response.get_json()
+            self.assertIn("4 rows across 6 columns", shape["assistant_message"])
+            self.assertIsNone(shape["bi_grounding"]["metric_definition"])
+            conversation_history.extend([
+                {"role": "user", "content": shape_message},
+                {"role": "assistant", "content": shape["assistant_message"]},
+            ])
+            session_state = shape["session_state"]
+
     def test_named_dataset_requires_matching_dataset_reference(self):
         missing_reference = self._post_turn(
             "Show revenue for @Mentioned_Sales",
@@ -315,6 +461,66 @@ class DecisionChatApiTests(unittest.TestCase):
         self.assertIsNone(resolver.call_args.kwargs["semantic_model"])
         self.assertEqual(prepared["dataset"], DATASET)
         self.assertEqual(prepared["semantic_model"], selected_semantic_model)
+
+    def test_workspace_identity_resolves_server_model_over_legacy_rows(self):
+        class WorkspaceFrame:
+            """Minimal joined-frame stand-in for automatic model resolution."""
+
+            @staticmethod
+            def to_dict(*, orient):
+                if orient != "records":
+                    raise AssertionError("The model resolver must request record-oriented rows.")
+                return DATASET
+
+        canonical_context = {
+            "contract_version": "multi_source_workspace_v1",
+            "workspace_id": "ws_current",
+            "workspace_version": 7,
+            "primary_source_id": "src_orders",
+            "source_ids": ["src_orders", "src_customers"],
+            "relationship_ids": ["rel_orders_customers"],
+        }
+        with (
+            patch(
+                "backend.decision_engine.chat_service.resolve_active_model_analysis_context"
+            ) as model_resolver,
+            patch(
+                "backend.decision_engine.chat_service.resolve_analysis_dataset_bundle"
+            ) as bundle_resolver,
+        ):
+            model_resolver.return_value = canonical_context
+            bundle_resolver.return_value = {
+                "dataframe": WorkspaceFrame(),
+                "semantic_model": SEMANTIC_MODEL,
+                "dataset_ref": {
+                    "source": "workspace",
+                    "dataset_id": "ws_current",
+                    "dataset_name": "Current workspace",
+                },
+                "analysis_context": canonical_context,
+                "analysis_lineage": {
+                    "schema_version": "multi_source_analysis_lineage_v1",
+                    "relationship_ids": ["rel_orders_customers"],
+                },
+                "governance_readiness": {"status": "ready"},
+            }
+
+            prepared = DecisionChatService.prepare_payload(
+                {
+                    "workspace_id": "ws_current",
+                    "dataset": [{"Wrong": 1}],
+                    "semantic_model": {"dataset": {"id": "wrong_active"}},
+                }
+            )
+
+        model_resolver.assert_called_once_with("ws_current")
+        bundle_resolver.assert_called_once_with(canonical_context)
+        self.assertEqual(prepared["dataset"], DATASET)
+        self.assertEqual(prepared["analysis_context"], canonical_context)
+        self.assertEqual(
+            prepared["_resolved_dataset_context"]["analysis_context"],
+            canonical_context,
+        )
 
     def test_explicit_explore_mode_prevents_decision_output(self):
         # Decision-like wording must stay on the active BI path when the AI Chat

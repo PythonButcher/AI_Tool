@@ -3,6 +3,8 @@
   top: 0;
   right: 0;
   width: 400px;
+  max-width: 100%;
+  box-sizing: border-box;
   height: 100%;
   background: var(--bg-surface, #ffffff);
   border-left: 1px solid var(--border-color, #dee2e6);
@@ -53,13 +55,27 @@
   padding: 16px 20px;
   border-top: 1px solid var(--border-color, #dee2e6);
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: 12px;
   background: var(--bg-secondary, #f8f9fa);
 }
 
 .footer-left, .footer-right {
   display: flex;
   gap: 8px;
+  width: 100%;
+}
+
+.inspector-footer button {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 10px 8px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 6px;
+  white-space: nowrap;
 }
 
 .btn-primary {
@@ -173,10 +189,23 @@ button:disabled {
   border-radius: 4px;
   padding: 8px 12px;
   font-weight: 600;
+  gap: 8px;
+}
+
+.source-select {
+  flex: 1;
+  min-width: 0;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+  padding: 4px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
 }
 
 .source-name {
   flex: 1;
+  min-width: 0;
   text-align: center;
   white-space: nowrap;
   overflow: hidden;
@@ -184,7 +213,7 @@ button:disabled {
 }
 
 .link-icon {
-  margin: 0 12px;
+  flex-shrink: 0;
   color: #6c757d;
 }
 
@@ -207,18 +236,24 @@ button:disabled {
 
 .field-select {
   flex: 1;
+  min-width: 0;
   padding: 6px;
   border: 1px solid #ced4da;
   border-radius: 4px;
   font-size: 13px;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
 }
 
 .equals-sign {
+  flex-shrink: 0;
   color: #adb5bd;
   font-weight: bold;
 }
 
 .remove-pair-btn {
+  flex-shrink: 0;
   background: none;
   border: none;
   color: #dc3545;
@@ -238,7 +273,7 @@ button:disabled {
 
 .config-grid {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
   margin-bottom: 24px;
 }

@@ -14,6 +14,10 @@ from backend.services.data_catalog_lineage import (
 )
 from backend.services.dataset_context import read_dataset_file
 from backend.services.semantic_model import infer_semantic_model_from_dataframe
+from backend.services.workspace_context import (
+    WorkspaceContextError,
+    delete_catalog_source,
+)
 
 
 datahub_bp = Blueprint('datahub_bp', __name__, url_prefix='/api/datahub')
@@ -137,17 +141,30 @@ def register_dataset():
 
 @datahub_bp.route('/<dataset_id>', methods=['DELETE'])
 def delete_dataset(dataset_id):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute('DELETE FROM datahub_datasets WHERE id = ?', (dataset_id,))
-    conn.commit()
-    deleted = cursor.rowcount
-    conn.close()
+    try:
+        deleted = delete_catalog_source(dataset_id)
+    except WorkspaceContextError as exc:
+        status_code = 409 if exc.code == "source_has_dependencies" else 400
+        return jsonify({
+            "error": {
+                "code": exc.code,
+                "message": str(exc),
+                **({"details": exc.details} if exc.details else {}),
+            }
+        }), status_code
 
-    if deleted == 0:
-        return jsonify({'error': 'Dataset not found'}), 404
+    if not deleted:
+        return jsonify({
+            "error": {
+                "code": "source_not_found",
+                "message": f"Source '{dataset_id}' was not found.",
+            }
+        }), 404
 
-    return jsonify({'message': 'Dataset deleted successfully'}), 200
+    return jsonify({
+        "message": "Dataset deleted successfully",
+        "source_id": dataset_id,
+    }), 200
 
 
 @datahub_bp.route('/<dataset_id>/semantic-model', methods=['GET'])

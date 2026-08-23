@@ -17,7 +17,6 @@ const DESTINATIONS = {
 };
 
 const navigationItems = [
-  { id: DESTINATIONS.AI, label: 'AI Suite', icon: <FaRobot /> },
   { id: DESTINATIONS.WORKSPACE, label: 'Workspace', icon: <FaDatabase /> },
   { id: DESTINATIONS.DATA_MODEL, label: 'Data Model', icon: <FaProjectDiagram /> },
   { id: DESTINATIONS.EXPLORE, label: 'Explore', icon: <FaChartBar /> },
@@ -51,6 +50,18 @@ function SideBar({
               <span className="workflow-rail__label">{item.label}</span>
             </button>
           ))}
+        </div>
+        <div className="workflow-rail__bottom">
+          <button
+            type="button"
+            className={`workflow-rail__button ${activeDestination === DESTINATIONS.AI ? 'is-active' : ''}`}
+            onClick={() => onDestinationSelect(DESTINATIONS.AI)}
+            aria-pressed={activeDestination === DESTINATIONS.AI}
+            title="AI Suite"
+          >
+            <span className="workflow-rail__icon" aria-hidden="true"><FaRobot /></span>
+            <span className="workflow-rail__label">AI Suite</span>
+          </button>
         </div>
       </div>
     </aside>

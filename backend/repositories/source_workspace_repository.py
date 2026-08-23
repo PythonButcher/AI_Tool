@@ -20,9 +20,15 @@ CONTRACT_VERSION = "multi_source_workspace_v1"
 class SourceWorkspaceRepositoryError(ValueError):
     """Raised when a source/workspace persistence invariant is violated."""
 
-    def __init__(self, code: str, message: str):
+    def __init__(
+        self,
+        code: str,
+        message: str,
+        details: Optional[Dict[str, Any]] = None,
+    ):
         super().__init__(message)
         self.code = code
+        self.details = details or {}
 
 
 def _load_json(value: Optional[str], fallback: Any) -> Any:
@@ -318,6 +324,67 @@ def attach_source_to_workspace(
         conn.close()
 
 
+def update_workspace_source_position(
+    *,
+    workspace_id: str,
+    source_id: str,
+    position: Dict[str, Any],
+    expected_version: int,
+    updated_at: str,
+) -> Dict[str, Any]:
+    """Persist one membership position and advance the workspace atomically."""
+    conn = get_db_connection()
+    try:
+        conn.execute("BEGIN")
+        workspace = conn.execute(
+            "SELECT version FROM data_workspaces WHERE workspace_id = ?",
+            (workspace_id,),
+        ).fetchone()
+        if workspace is None:
+            raise SourceWorkspaceRepositoryError(
+                "workspace_not_found", f"Workspace '{workspace_id}' was not found."
+            )
+        membership = conn.execute(
+            """
+            SELECT 1 FROM workspace_sources
+            WHERE workspace_id = ? AND source_id = ?
+            """,
+            (workspace_id, source_id),
+        ).fetchone()
+        if membership is None:
+            raise SourceWorkspaceRepositoryError(
+                "source_not_in_workspace",
+                f"Source '{source_id}' is not a member of workspace '{workspace_id}'.",
+            )
+        if workspace["version"] != expected_version:
+            raise SourceWorkspaceRepositoryError(
+                "workspace_version_conflict",
+                f"Workspace '{workspace_id}' has changed; refresh it and retry.",
+            )
+
+        conn.execute(
+            """
+            UPDATE workspace_sources
+            SET position_json = ?
+            WHERE workspace_id = ? AND source_id = ?
+            """,
+            (json.dumps(position), workspace_id, source_id),
+        )
+        _advance_workspace_version(
+            conn,
+            workspace_id=workspace_id,
+            expected_version=expected_version,
+            updated_at=updated_at,
+        )
+        conn.commit()
+        return get_workspace(workspace_id, connection=conn)
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
 def register_source_in_workspace(
     *,
     source: Dict[str, Any],
@@ -388,6 +455,94 @@ def get_source(source_id: str, *, connection=None) -> Optional[Dict[str, Any]]:
     finally:
         if owns_connection:
             conn.close()
+
+
+def delete_source_if_unreferenced(source_id: str) -> bool:
+    """Delete one catalog source only when no workspace/model depends on it.
+
+    ``BEGIN IMMEDIATE`` makes the dependency check and delete one atomic write
+    decision. A concurrent membership or relationship write therefore cannot
+    race between the dependency check and the catalog mutation.
+    """
+    conn = get_db_connection()
+    try:
+        conn.execute("BEGIN IMMEDIATE")
+        source = conn.execute(
+            "SELECT id FROM datahub_datasets WHERE id = ?",
+            (source_id,),
+        ).fetchone()
+        if source is None:
+            conn.rollback()
+            return False
+
+        memberships = conn.execute(
+            """
+            SELECT workspace_id, role
+            FROM workspace_sources
+            WHERE source_id = ?
+            ORDER BY workspace_id
+            """,
+            (source_id,),
+        ).fetchall()
+        relationships = conn.execute(
+            """
+            SELECT relationship_id, workspace_id
+            FROM workspace_relationships
+            WHERE left_source_id = ? OR right_source_id = ?
+            ORDER BY workspace_id, relationship_id
+            """,
+            (source_id, source_id),
+        ).fetchall()
+        primary_workspaces = conn.execute(
+            """
+            SELECT workspace_id
+            FROM data_workspaces
+            WHERE primary_source_id = ?
+            ORDER BY workspace_id
+            """,
+            (source_id,),
+        ).fetchall()
+
+        if memberships or relationships or primary_workspaces:
+            details = {
+                "workspace_ids": list(
+                    dict.fromkeys(
+                        [
+                            *[row["workspace_id"] for row in memberships],
+                            *[row["workspace_id"] for row in primary_workspaces],
+                        ]
+                    )
+                ),
+                "membership_count": len(memberships),
+                "relationship_ids": [
+                    row["relationship_id"] for row in relationships
+                ],
+                "relationship_count": len(relationships),
+                "primary_workspace_count": len(primary_workspaces),
+            }
+            conn.rollback()
+            raise SourceWorkspaceRepositoryError(
+                "source_has_dependencies",
+                (
+                    f"Source '{source_id}' is still used by a workspace or "
+                    "relationship and cannot be deleted safely."
+                ),
+                details,
+            )
+
+        cursor = conn.execute(
+            "DELETE FROM datahub_datasets WHERE id = ?",
+            (source_id,),
+        )
+        conn.commit()
+        return cursor.rowcount == 1
+    except SourceWorkspaceRepositoryError:
+        raise
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
 
 
 def get_source_private_locator(source_id: str) -> Optional[Dict[str, Any]]:

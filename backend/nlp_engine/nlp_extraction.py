@@ -56,20 +56,46 @@ def extract_dataset(dataset_obj: Any) -> List[Dict[str, Any]]:
 # Safe numeric conversion
 # --------------------------------------------------------------------
 def _safe_float(value: Any) -> Optional[float]:
-    """Attempt to convert a value to float safely and deterministically."""
+    """Convert a complete numeric value without mining digits from identifiers.
+
+    Currency symbols, grouped thousands, percentages, and accounting
+    parentheses remain valid presentation syntax. Mixed identifiers such as
+    ``TXN-000001`` are intentionally rejected because treating their embedded
+    digits as measures corrupts field typing and downstream chart selection.
+    """
     if value is None:
+        return None
+    if isinstance(value, bool):
         return None
     if isinstance(value, (int, float)):
         return float(value)
     if isinstance(value, str):
-        cleaned = value.strip().replace(",", "")
+        cleaned = value.strip()
         if not cleaned:
             return None
-        match = re.search(r"-?\d+(?:\.\d+)?", cleaned)
-        if not match:
+
+        accounting_negative = cleaned.startswith("(") and cleaned.endswith(")")
+        if accounting_negative:
+            cleaned = cleaned[1:-1].strip()
+        elif cleaned.startswith("(") or cleaned.endswith(")"):
             return None
+
+        sign = ""
+        if cleaned[:1] in {"+", "-"}:
+            sign, cleaned = cleaned[0], cleaned[1:].strip()
+        if cleaned[:1] in {"$", "€", "£", "¥"}:
+            cleaned = cleaned[1:].strip()
+        if cleaned.endswith("%"):
+            cleaned = cleaned[:-1].strip()
+
+        grouped_integer = r"(?:\d{1,3}(?:,\d{3})+|\d+)"
+        numeric_pattern = rf"(?:{grouped_integer}(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?"
+        if not re.fullmatch(numeric_pattern, cleaned):
+            return None
+
         try:
-            return float(match.group())
+            numeric_value = float(f"{sign}{cleaned.replace(',', '')}")
+            return -abs(numeric_value) if accounting_negative else numeric_value
         except ValueError:
             return None
     return None
@@ -114,13 +140,19 @@ def _temporal_score(name: str, values: Sequence[Any]) -> float:
         text = str(value).strip()
         if not text:
             continue
+
+        # Numeric measures must not become temporal merely because dateutil can
+        # coerce small integers or decimals into clock/date components.
+        numeric_value = _safe_float(text)
+        if numeric_value is not None:
+            if 1800 <= numeric_value <= 2200 and float(numeric_value).is_integer():
+                numeric_years += 1
+            continue
+
         try:
             date_parser.parse(text)
             parsed += 1
         except Exception:
-            numeric_value = _safe_float(text)
-            if numeric_value is not None and 1800 <= numeric_value <= 2200 and float(numeric_value).is_integer():
-                numeric_years += 1
             if iso_pattern.match(text):
                 iso_like += 1
 
