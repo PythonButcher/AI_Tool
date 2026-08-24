@@ -13,7 +13,7 @@ This file is the single current source of truth for active AI_Tool delivery.
 ## Current Gate: Document Studio Contracts And Local Records
 
 - **Roadmap Phase**: Phase 12 — Document Studio Foundation
-- **Status**: Active; Claude contracts and local-records handoff is ready for execution
+- **Status**: Repair required; Claude must enforce the UTC timestamp contract and return focused evidence
 - **Backend Readiness**: `implementation_required`
 - **Frontend Readiness**: `blocked_backend_first`
 - **Current Owner**: Codex
@@ -23,6 +23,7 @@ This file is the single current source of truth for active AI_Tool delivery.
 - **Roadmap**: `project_docs/active/document_studio/README.md`
 - **Active Backend Handoff**: `project_docs/active/ai_hand_off/document_studio_claude_contracts_local_records.md`
 - **Latest Verified Fact**: The standalone FastAPI package, application factory, exact health contract, and five focused tests passed Codex review.
+- **Review Blocker**: Domain records accept non-UTC timezone offsets even though every `created_at` field is contracted as UTC.
 
 ## Roadmap Outcome
 

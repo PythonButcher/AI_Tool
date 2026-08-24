@@ -1,5 +1,13 @@
 Goal: Add portable Document Studio domain contracts, managed local file storage, and SQLite metadata repositories with deterministic tests, then stop for Codex review.
 
+## REPAIR REQUIRED
+
+### Repair Blocker
+
+`document_studio/backend/src/document_studio/domain/records.py` lines 237, 281, 319, and 390 only reject naive datetimes. They accept timezone-aware values with non-UTC offsets, even though the contract requires every `created_at` value to be UTC. A direct construction with `timezone(timedelta(hours=5))` succeeds and serializes as `2026-01-01T00:00:00+05:00`.
+
+Add one shared domain validation helper that requires a timezone-aware datetime whose UTC offset is exactly zero, and apply it to `Document`, `DocumentVersion`, `ProcessingRun`, and `DocumentBlueprint`. Add focused tests proving that naive timestamps and nonzero offsets are rejected while `timezone.utc` timestamps remain valid and serialize with a UTC offset. Do not broaden the repair beyond this timestamp contract. Run the full handoff verification and stop for Codex re-review.
+
 ## Read First
 
 Read `AGENTS.md`, `project_docs/INDEX.md`, `project_docs/active/README.md`, `project_docs/active/status/project_execution_status.md`, `project_docs/active/active_gate/README.md`, `project_docs/active/document_studio/README.md`, and `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md`.
