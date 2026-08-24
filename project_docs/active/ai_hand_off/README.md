@@ -10,7 +10,9 @@ Antigravity owns bounded frontend implementation, React/CSS, UI rendering, and f
 
 ## Active Handoffs And Goal Prompts
 
-There is no active frontend handoff. Current ownership and the next action are recorded in `project_docs/active/status/project_execution_status.md`.
+The active backend implementation handoff is `document_studio_claude_contracts_local_records.md`. Claude executes only that bounded backend assignment and returns evidence to Codex.
+
+There is no active frontend handoff. Gemini remains the exclusive Document Studio frontend owner but does not begin until Codex verifies the required backend contract and creates a bounded frontend handoff.
 
 Completed handoffs belong outside this active folder.
 

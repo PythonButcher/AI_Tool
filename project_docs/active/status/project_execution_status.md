@@ -6,24 +6,28 @@ This file is the single current source of truth for active AI_Tool delivery.
 
 - **Lead Orchestrator**: Codex
 - **Backend and Contract Owner**: Codex
-- **UI Delivery Owner**: Antigravity, only from one active bounded handoff
+- **Backend Implementation Delegate**: Claude, one bounded handoff at a time
+- **Document Studio UI Delivery Owner**: Gemini, only after backend readiness and from one bounded handoff
 - **Browser Acceptance Owner**: User
 
-## Current Gate: Awaiting User Epic Goal
+## Current Gate: Document Studio Contracts And Local Records
 
-- **Status**: Idle; delivered implementation gates are verified
-- **Backend Readiness**: `complete`
-- **Frontend Readiness**: `complete`
-- **Current Owner**: User
-- **Next Action**: Define the next standalone product outcome in chat
+- **Roadmap Phase**: Phase 12 — Document Studio Foundation
+- **Status**: Active; Claude contracts and local-records handoff is ready for execution
+- **Backend Readiness**: `implementation_required`
+- **Frontend Readiness**: `blocked_backend_first`
+- **Current Owner**: Codex
+- **Implementation Delegate**: Claude
+- **Next Action**: Execute `project_docs/active/active_gate/README.md`
 - **Active Gate**: `project_docs/active/active_gate/README.md`
-- **Completed Roadmap**: `project_docs/archive/multiple_data_sources_implementation_plan_completed.md`
-- **Latest Integration Record**: `project_docs/archive/primary_ui_compatibility_removal_handoff_completed.md`
+- **Roadmap**: `project_docs/active/document_studio/README.md`
+- **Active Backend Handoff**: `project_docs/active/ai_hand_off/document_studio_claude_contracts_local_records.md`
+- **Latest Verified Fact**: The standalone FastAPI package, application factory, exact health contract, and five focused tests passed Codex review.
 
-## Current Product State
+## Roadmap Outcome
 
-AI_Tool is a BI-first NLP workspace with governed single-source and multi-source analysis, retained conversational context, lineage-aware results, Data Model relationship authoring, and compatibility-only Decision Intelligence services isolated from the primary product path.
+Document Studio runs independently inside the repository, extracts structured information from supported documents with confidence and evidence, and remains reusable by AI_Tool or future platforms through stable backend contracts.
 
 ## Control Return
 
-The user selects the next epic goal. Codex then creates the next forward-looking gate, assigns the correct owner, and updates this status before implementation begins.
+Claude executes only the active backend handoff, reports changed files and verification evidence, and stops. Codex reviews the implementation before another backend chunk or any Gemini frontend handoff is activated.

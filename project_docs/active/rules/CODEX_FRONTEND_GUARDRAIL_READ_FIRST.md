@@ -10,6 +10,10 @@ For the UI overhaul and AI Chat BI pivot:
 - Codex is the project lead and owns the roadmap, active gate, backend logic, contracts, tests, architecture, documentation, handoff scope, and integration review.
 - Antigravity is the primary frontend implementation owner and works from one bounded Codex-authored handoff at a time.
 
+## Document Studio Frontend Override
+
+The user has assigned all Document Studio frontend work to Gemini. Gemini follows the same bounded-handoff, source-evidence, build-evidence, stop-and-return, Codex-review, and user browser-acceptance rules defined here for Antigravity. Claude is limited to backend implementation and must not create or edit `document_studio/web/` or `frontend/frontend/src/`.
+
 ## Operational Behavior For Codex
 
 Before changing anything under `frontend/frontend/src/`:

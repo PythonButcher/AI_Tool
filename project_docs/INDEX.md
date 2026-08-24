@@ -18,6 +18,7 @@ This is the top-level routing file. Use it to find the smallest current document
 | --- | --- |
 | Check concise current status | `project_docs/active/status/project_execution_status.md` |
 | Work on the current project gate | `project_docs/active/active_gate/README.md` |
+| Review the active Document Studio roadmap | `project_docs/active/document_studio/README.md` |
 | Review the completed data and backend roadmap | `project_docs/archive/multiple_data_sources_implementation_plan_completed.md` only when historical context is needed |
 | Review completed AI Chat rollout history | `project_docs/archive/ai_chat_decision_output_unification_rollout_completed.md` only when historical context is needed |
 | Work on backend/frontend contracts | `project_docs/active/contracts/decision_objects.md` |
@@ -43,7 +44,7 @@ Decision Intelligence output has been removed from the AI Chat product path. Iso
 | Agent | Owns |
 | --- | --- |
 | Codex | Lead Orchestrator. Owns roadmap, active gates, backend truth and implementation, contracts, tests, architecture, documentation, handoff scope, integration review, and next-owner decisions. |
-| Antigravity | Primary UI implementer. Owns scoped React/CSS and browser-visible behavior assigned by a Codex-authored handoff, with bounded creative freedom inside the verified contract and product design system. |
+| Antigravity | Primary UI implementer by default. Document Studio uses Gemini as the user-directed frontend implementer under the same bounded handoff and review rules. |
 | User | Owns product direction and final browser-level acceptance. |
 
 Codex must not edit frontend files unless the user explicitly authorizes Codex frontend edits in the current session.

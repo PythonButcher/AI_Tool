@@ -2,7 +2,7 @@
 
 ## Status
 
-This is a deferred plan for user review. It is not an active implementation gate and does not authorize Claude, Gemini, Codex, or another agent to begin implementation. After user approval, Codex will activate only the first backend chunk through the project active gate.
+This is the active Document Studio roadmap. Only the chunk named by `project_docs/active/active_gate/README.md` is authorized for implementation. Every chunk stops for Codex review before the next chunk can begin.
 
 ## Product Outcome
 
@@ -125,6 +125,6 @@ Repository documentation checks are run when the active gate, status, navigation
 
 The first delivery does not include batching, watched printer folders, production authentication, tenant isolation, cloud deployment, Context Ledger writes, arbitrary database delivery, custom model training, or a claim of universal document accuracy. These remain future capabilities after the single-document workflow is trustworthy.
 
-## Promotion Rule
+## Activation Discipline
 
-After the user approves this plan, Codex will use the repository gate-governance process to replace the idle active gate with one clean goal for Chunk 1 and update the current status. Claude will receive only that bounded scaffold assignment. No later chunk becomes active until Codex has reviewed and accepted the current chunk.
+The active gate and current status name the only executable chunk. Claude receives one bounded backend handoff, returns changed-file and verification evidence, and stops. Codex reviews that evidence before activating another backend chunk or preparing a Gemini frontend handoff.

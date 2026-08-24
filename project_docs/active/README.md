@@ -36,6 +36,7 @@ Dataset identity and semantic truth remain required for every BI answer and char
 | Multiple-source workspace contract | `project_docs/active/contracts/multiple_data_source_workspace.md` | Source, workspace membership, and analysis-context truth |
 | Multiple-source relationship contract | `project_docs/active/contracts/multiple_data_source_relationships.md` | Relationship persistence, validation, diagnostics, and activation truth |
 | Project active gate | `project_docs/active/active_gate/README.md` | The only active work workspace |
+| Document Studio roadmap | `project_docs/active/document_studio/README.md` | Ordered standalone backend work, Codex review gates, and Gemini-only frontend sequence |
 | Completed data and backend roadmap | `project_docs/archive/multiple_data_sources_implementation_plan_completed.md` | Historical delivery record; not active scope |
 | Deferred planning | `project_docs/active/future/README.md` | The one home for all deferred active-folder plans; not active until promoted |
 | Agent harness | `project_docs/active/agent_harness/` | Reusable agent backbone, hooks, and validation |
