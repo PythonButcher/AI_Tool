@@ -1,3 +1,7 @@
+# Completed Document Studio Contracts And Local Records Handoff
+
+This archived handoff preserves the bounded implementation and repair requirements that were accepted by Codex on 2026-08-24.
+
 Goal: Add portable Document Studio domain contracts, managed local file storage, and SQLite metadata repositories with deterministic tests, then stop for Codex review.
 
 ## REPAIR REQUIRED

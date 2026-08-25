@@ -10,10 +10,10 @@ This file is the single current source of truth for active AI_Tool delivery.
 - **Document Studio UI Delivery Owner**: Gemini, only after backend readiness and from one bounded handoff
 - **Browser Acceptance Owner**: User
 
-## Current Gate: Document Studio Contracts And Local Records
+## Current Gate: Document Studio File Ingestion And Normalization
 
 - **Roadmap Phase**: Phase 12 — Document Studio Foundation
-- **Status**: Repair required; Claude must enforce the UTC timestamp contract and return focused evidence
+- **Status**: Ready for bounded Claude backend implementation
 - **Backend Readiness**: `implementation_required`
 - **Frontend Readiness**: `blocked_backend_first`
 - **Current Owner**: Codex
@@ -21,9 +21,9 @@ This file is the single current source of truth for active AI_Tool delivery.
 - **Next Action**: Execute `project_docs/active/active_gate/README.md`
 - **Active Gate**: `project_docs/active/active_gate/README.md`
 - **Roadmap**: `project_docs/active/document_studio/README.md`
-- **Active Backend Handoff**: `project_docs/active/ai_hand_off/document_studio_claude_contracts_local_records.md`
-- **Latest Verified Fact**: The standalone FastAPI package, application factory, exact health contract, and five focused tests passed Codex review.
-- **Review Blocker**: Domain records accept non-UTC timezone offsets even though every `created_at` field is contracted as UTC.
+- **Active Backend Handoff**: `project_docs/active/ai_hand_off/document_studio_claude_file_ingestion_normalization.md`
+- **Latest Verified Fact**: Portable domain records, managed content-addressed storage, and SQLite metadata persistence passed Codex review with 107 focused tests; UTC timestamp enforcement is verified.
+- **Review Blocker**: None for the active implementation handoff.
 
 ## Roadmap Outcome
 

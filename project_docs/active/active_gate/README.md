@@ -1,32 +1,32 @@
-# Project Active Gate — Document Studio Contracts And Local Records
+# Project Active Gate — Document Studio File Ingestion And Normalization
 
-Goal: Establish portable document contracts, managed local file storage, and durable SQLite metadata records for Document Studio.
+Goal: Ingest supported document bytes into one portable normalized representation while identifying scanned PDFs that require OCR.
 
 ## User Outcome
 
-Document Studio can identify and version locally stored source files, preserve extraction and evidence records through stable domain objects, and reopen those records without losing their meaning.
+Document Studio can safely interpret digital PDFs, Word documents, and Excel workbooks without trusting a client-supplied filesystem path, while reporting when a PDF has no usable embedded text and requires OCR.
 
 ## Scope
 
-Claude executes `project_docs/active/ai_hand_off/document_studio_claude_contracts_local_records.md` and changes only approved paths under `document_studio/`.
+Claude executes `project_docs/active/ai_hand_off/document_studio_claude_file_ingestion_normalization.md` and changes only approved paths under `document_studio/`.
 
-Add framework-independent domain records, JSON-compatible serialization, application repository ports, a content-addressed local file store, a SQLite metadata repository, and focused temporary-directory tests.
+Add framework-independent normalized-document contracts plus format-specific ingestion adapters for digital PDF, DOCX, and XLSX bytes. Preserve pages or sheets, text blocks, tables or cells, and available source locations. Detect a scanned or image-only PDF honestly and return a structured result indicating that OCR is required.
 
-Do not add document parsing, OCR, schema discovery, model providers, document API routes, AI_Tool integration, or frontend files.
+Do not add OCR execution, handwriting processing, schema discovery, model providers, extraction orchestration, document API routes, AI_Tool integration, or frontend files.
 
 ## Contracts
 
-Domain records use frozen standard-library dataclasses, UUID identities, timezone-aware UTC timestamps, explicit enums, validated evidence locations, separate confidence signals, and JSON-compatible public serialization.
+Normalized domain records remain portable, immutable, and JSON serializable. Application orchestration may depend on domain contracts and ingestion ports but not concrete parser libraries, web frameworks, SQLite, filesystem paths supplied by clients, or AI_Tool state.
 
-Application ports do not import storage implementations or web frameworks. Infrastructure implementations keep all managed files under a configured root, use lowercase SHA-256 hashes, use parameterized SQLite operations with foreign keys and transactions, and reconstruct domain records without losing nested data.
+Infrastructure adapters accept server-received bytes plus safe metadata, enforce supported media types, filename safety, and configurable size limits, and preserve format-specific structure instead of flattening spreadsheets into images.
 
 Use `project_docs/active/document_studio/README.md` for the roadmap and `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md` for ownership boundaries.
 
 ## Acceptance
 
-Tests prove domain validation and serialization, managed-path containment, idempotent byte storage, duplicate-content handling, sequential versions, append-only identities, processing-run and blueprint round trips, and persistence after reopening the repository.
+Tests use small controlled fixtures and prove digital PDF text extraction, DOCX paragraph and table normalization, XLSX workbook structure, useful source locations, format detection, safe filename handling, configurable size limits, unsupported-format errors, and a structured `requires_ocr` result for scanned or image-only PDFs.
 
-The existing health contract remains stable. Every changed implementation file is under `document_studio/`, and no frontend or AI_Tool runtime file changes.
+The existing health, domain, file-store, and repository contracts remain stable. Every changed implementation file is under `document_studio/`, and no frontend or AI_Tool runtime file changes.
 
 Claude reports the branch, changed files, commands, results, design decisions, and any environment caveat, then stops for Codex review.
 
