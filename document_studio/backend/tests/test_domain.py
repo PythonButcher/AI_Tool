@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 import unittest
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 from document_studio.domain.records import (
@@ -589,6 +589,129 @@ class TestRecordToDict(unittest.TestCase):
     def test_raises_for_plain_object(self) -> None:
         with self.assertRaises(TypeError):
             record_to_dict("not a record")
+
+
+# ---------------------------------------------------------------------------
+# UTC offset enforcement (repair)
+# ---------------------------------------------------------------------------
+
+
+_NONZERO_TZ = timezone(timedelta(hours=5))
+_NAIVE_DT = datetime(2026, 1, 1)
+_NONZERO_DT = datetime(2026, 1, 1, tzinfo=_NONZERO_TZ)
+
+
+class TestUtcOffsetEnforcement(unittest.TestCase):
+    """Every record with ``created_at`` must reject naive datetimes *and*
+    timezone-aware datetimes whose UTC offset is not zero.  Only
+    ``timezone.utc`` (offset == 0) is accepted.
+    """
+
+    # -- Document ----------------------------------------------------------
+
+    def test_document_rejects_naive(self) -> None:
+        with self.assertRaises(ValueError):
+            Document(
+                id=uuid4(), content_hash="h", original_filename="f.pdf",
+                media_type="application/pdf", created_at=_NAIVE_DT,
+            )
+
+    def test_document_rejects_nonzero_offset(self) -> None:
+        with self.assertRaises(ValueError):
+            Document(
+                id=uuid4(), content_hash="h", original_filename="f.pdf",
+                media_type="application/pdf", created_at=_NONZERO_DT,
+            )
+
+    def test_document_accepts_utc(self) -> None:
+        doc = Document(
+            id=uuid4(), content_hash="h", original_filename="f.pdf",
+            media_type="application/pdf", created_at=_NOW,
+        )
+        iso = doc.to_dict()["created_at"]
+        parsed = datetime.fromisoformat(iso)
+        self.assertEqual(parsed.utcoffset(), timedelta(0))
+
+    # -- DocumentVersion ---------------------------------------------------
+
+    def test_version_rejects_naive(self) -> None:
+        with self.assertRaises(ValueError):
+            DocumentVersion(
+                id=uuid4(), document_id=uuid4(), version_number=1,
+                content_hash="h", storage_key="k", byte_size=0,
+                created_at=_NAIVE_DT,
+            )
+
+    def test_version_rejects_nonzero_offset(self) -> None:
+        with self.assertRaises(ValueError):
+            DocumentVersion(
+                id=uuid4(), document_id=uuid4(), version_number=1,
+                content_hash="h", storage_key="k", byte_size=0,
+                created_at=_NONZERO_DT,
+            )
+
+    def test_version_accepts_utc(self) -> None:
+        v = DocumentVersion(
+            id=uuid4(), document_id=uuid4(), version_number=1,
+            content_hash="h", storage_key="k", byte_size=0,
+            created_at=_NOW,
+        )
+        iso = v.to_dict()["created_at"]
+        parsed = datetime.fromisoformat(iso)
+        self.assertEqual(parsed.utcoffset(), timedelta(0))
+
+    # -- ProcessingRun -----------------------------------------------------
+
+    def test_run_rejects_naive(self) -> None:
+        with self.assertRaises(ValueError):
+            ProcessingRun(
+                id=uuid4(), version_id=uuid4(), blueprint_id=None,
+                status=ProcessingStatus.pending, extracted_fields=(),
+                created_at=_NAIVE_DT,
+            )
+
+    def test_run_rejects_nonzero_offset(self) -> None:
+        with self.assertRaises(ValueError):
+            ProcessingRun(
+                id=uuid4(), version_id=uuid4(), blueprint_id=None,
+                status=ProcessingStatus.pending, extracted_fields=(),
+                created_at=_NONZERO_DT,
+            )
+
+    def test_run_accepts_utc(self) -> None:
+        run = ProcessingRun(
+            id=uuid4(), version_id=uuid4(), blueprint_id=None,
+            status=ProcessingStatus.pending, extracted_fields=(),
+            created_at=_NOW,
+        )
+        iso = run.to_dict()["created_at"]
+        parsed = datetime.fromisoformat(iso)
+        self.assertEqual(parsed.utcoffset(), timedelta(0))
+
+    # -- DocumentBlueprint -------------------------------------------------
+
+    def test_blueprint_rejects_naive(self) -> None:
+        with self.assertRaises(ValueError):
+            DocumentBlueprint(
+                id=uuid4(), name="B", version_number=1,
+                field_definitions=(), created_at=_NAIVE_DT,
+            )
+
+    def test_blueprint_rejects_nonzero_offset(self) -> None:
+        with self.assertRaises(ValueError):
+            DocumentBlueprint(
+                id=uuid4(), name="B", version_number=1,
+                field_definitions=(), created_at=_NONZERO_DT,
+            )
+
+    def test_blueprint_accepts_utc(self) -> None:
+        bp = DocumentBlueprint(
+            id=uuid4(), name="B", version_number=1,
+            field_definitions=(), created_at=_NOW,
+        )
+        iso = bp.to_dict()["created_at"]
+        parsed = datetime.fromisoformat(iso)
+        self.assertEqual(parsed.utcoffset(), timedelta(0))
 
 
 if __name__ == "__main__":
