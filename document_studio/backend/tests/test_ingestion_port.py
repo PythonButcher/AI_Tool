@@ -126,5 +126,58 @@ class TestResolveMediaType(unittest.TestCase):
             resolve_media_type("data.xlsx", "application/pdf")
 
 
+# ---------------------------------------------------------------------------
+# Content-signature verification (unit level)
+# ---------------------------------------------------------------------------
+
+
+class TestVerifyContentSignature(unittest.TestCase):
+    """Unit tests for ``verify_content_signature``."""
+
+    def test_valid_pdf_signature_passes(self) -> None:
+        """Bytes starting with %PDF- pass PDF verification."""
+        from document_studio.application.ingestion import (
+            verify_content_signature,
+        )
+
+        # Minimal PDF-like bytes (just the magic header).
+        verify_content_signature(b"%PDF-1.7 rest", "application/pdf")
+
+    def test_non_pdf_bytes_as_pdf_raises(self) -> None:
+        """Arbitrary bytes declared as PDF must fail."""
+        from document_studio.application.ingestion import (
+            verify_content_signature,
+        )
+
+        with self.assertRaises(UnsupportedFormatError):
+            verify_content_signature(b"NOTAPDF", "application/pdf")
+
+    def test_non_zip_bytes_as_docx_raises(self) -> None:
+        """Bytes without a ZIP header declared as DOCX must fail."""
+        from document_studio.application.ingestion import (
+            verify_content_signature,
+        )
+
+        docx_type = (
+            "application/vnd.openxmlformats-officedocument"
+            ".wordprocessingml.document"
+        )
+        with self.assertRaises(UnsupportedFormatError):
+            verify_content_signature(b"NOT A ZIP", docx_type)
+
+    def test_pdf_bytes_declared_as_docx_raises_mismatch(self) -> None:
+        """PDF bytes declared as DOCX must raise MediaTypeMismatchError."""
+        from document_studio.application.ingestion import (
+            verify_content_signature,
+        )
+
+        docx_type = (
+            "application/vnd.openxmlformats-officedocument"
+            ".wordprocessingml.document"
+        )
+        with self.assertRaises(MediaTypeMismatchError):
+            verify_content_signature(b"%PDF-1.7 rest", docx_type)
+
+
 if __name__ == "__main__":
     unittest.main()

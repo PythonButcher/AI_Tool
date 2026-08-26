@@ -17,6 +17,7 @@ from document_studio.application.ingestion import (
     UnsupportedFormatError,
     resolve_media_type,
     validate_filename,
+    verify_content_signature,
 )
 from document_studio.domain.normalized import IngestionResult
 
@@ -52,14 +53,17 @@ class IngestionService(IngestionPort):
         # 3. Resolve and validate media type.
         media_type = resolve_media_type(original_filename, declared_media_type)
 
-        # 4. Enforce size limit.
+        # 4. Enforce size limit (before any content inspection).
         if len(data) > max_byte_size:
             raise FileSizeLimitError(
                 f"Document size {len(data)} bytes exceeds the "
                 f"maximum of {max_byte_size} bytes."
             )
 
-        # 5. Dispatch to format-specific adapter.
+        # 5. Verify actual byte content matches declared media type.
+        verify_content_signature(data, media_type)
+
+        # 6. Dispatch to format-specific adapter.
         if media_type == "application/pdf":
             from document_studio.infrastructure.pdf_adapter import ingest_pdf
 

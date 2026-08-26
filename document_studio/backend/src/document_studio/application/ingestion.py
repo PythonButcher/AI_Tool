@@ -150,6 +150,192 @@ def resolve_media_type(filename: str, declared_media_type: str) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Content-signature verification
+# ---------------------------------------------------------------------------
+
+# Magic-byte prefixes for supported formats.
+_PDF_SIGNATURE = b"%PDF-"
+_ZIP_SIGNATURE = b"PK\x03\x04"
+
+# Exact main-document content types inside OOXML [Content_Types].xml.
+# These identify the standard (non-macro-enabled) document formats.
+# Macro-enabled variants (DOCM, XLSM) use different content types:
+#   DOCM: application/vnd.ms-word.document.macroEnabled.main+xml
+#   XLSM: application/vnd.ms-excel.sheet.macroEnabled.main+xml
+# Those must NOT match — they are unsupported formats.
+_DOCX_MAIN_CONTENT_TYPE = (
+    "application/vnd.openxmlformats-officedocument"
+    ".wordprocessingml.document.main+xml"
+)
+_XLSX_MAIN_CONTENT_TYPE = (
+    "application/vnd.openxmlformats-officedocument"
+    ".spreadsheetml.sheet.main+xml"
+)
+
+# Macro-enabled content types (used only for explicit rejection messages).
+_DOCM_MAIN_CONTENT_TYPE = (
+    "application/vnd.ms-word.document.macroEnabled.main+xml"
+)
+_XLSM_MAIN_CONTENT_TYPE = (
+    "application/vnd.ms-excel.sheet.macroEnabled.main+xml"
+)
+
+# A normal OOXML content-type manifest is small. Checking the declared
+# uncompressed size before reading it prevents a compressed manifest from
+# consuming arbitrary memory during format detection.
+_MAX_CONTENT_TYPES_BYTES = 1024 * 1024
+
+_DOCX_MAIN_PART = "/word/document.xml"
+_XLSX_MAIN_PART = "/xl/workbook.xml"
+
+# Canonical OOXML media types for error messages.
+_MEDIA_TYPE_DOCX = (
+    "application/vnd.openxmlformats-officedocument"
+    ".wordprocessingml.document"
+)
+_MEDIA_TYPE_XLSX = (
+    "application/vnd.openxmlformats-officedocument"
+    ".spreadsheetml.sheet"
+)
+
+
+def _detect_ooxml_media_type(data: bytes) -> str | None:
+    """Inspect a ZIP archive's ``[Content_Types].xml`` to determine
+    whether the package is a standard DOCX or XLSX.
+
+    Returns the canonical media type string, or ``None`` if the package
+    cannot be identified as a supported non-macro-enabled format.
+
+    Validates **both** the exact main-document content type attribute
+    value in ``[Content_Types].xml`` **and** the existence of the
+    corresponding main-part path in the archive:
+
+    - DOCX: ``word/document.xml`` with content type
+      ``...wordprocessingml.document.main+xml``
+    - XLSX: ``xl/workbook.xml`` with content type
+      ``...spreadsheetml.sheet.main+xml``
+
+    Macro-enabled variants (DOCM, XLSM) are explicitly rejected as
+    unsupported rather than silently accepted.
+
+    Uses only the standard library ``zipfile`` module (no parser libs).
+    """
+    import io
+    import zipfile
+    from xml.etree import ElementTree
+
+    try:
+        with zipfile.ZipFile(io.BytesIO(data), "r") as zf:
+            entries = frozenset(zf.namelist())
+
+            if "[Content_Types].xml" not in entries:
+                return None
+            manifest_info = zf.getinfo("[Content_Types].xml")
+            if manifest_info.file_size > _MAX_CONTENT_TYPES_BYTES:
+                return None
+            content_types = zf.read("[Content_Types].xml")
+    except (zipfile.BadZipFile, KeyError, OSError, RuntimeError, ValueError):
+        return None
+
+    try:
+        root = ElementTree.fromstring(content_types)
+    except ElementTree.ParseError:
+        return None
+
+    overrides: set[tuple[str, str]] = set()
+    for element in root.iter():
+        if element.tag.rsplit("}", 1)[-1] != "Override":
+            continue
+        part_name = element.attrib.get("PartName")
+        content_type = element.attrib.get("ContentType")
+        if part_name and content_type:
+            overrides.add((part_name, content_type))
+
+    declared_content_types = {content_type for _, content_type in overrides}
+
+    # Reject macro-enabled packages explicitly.
+    if (
+        _DOCM_MAIN_CONTENT_TYPE in declared_content_types
+        or _XLSM_MAIN_CONTENT_TYPE in declared_content_types
+    ):
+        raise UnsupportedFormatError(
+            "Macro-enabled OOXML packages (DOCM/XLSM) are not supported."
+        )
+
+    has_docx_main = (
+        (_DOCX_MAIN_PART, _DOCX_MAIN_CONTENT_TYPE) in overrides
+        and _DOCX_MAIN_PART.lstrip("/") in entries
+    )
+    has_xlsx_main = (
+        (_XLSX_MAIN_PART, _XLSX_MAIN_CONTENT_TYPE) in overrides
+        and _XLSX_MAIN_PART.lstrip("/") in entries
+    )
+
+    if has_docx_main and not has_xlsx_main:
+        return _MEDIA_TYPE_DOCX
+    if has_xlsx_main and not has_docx_main:
+        return _MEDIA_TYPE_XLSX
+    # Ambiguous or unrecognized OOXML package.
+    return None
+
+
+def verify_content_signature(data: bytes, declared_media_type: str) -> None:
+    """Verify that the actual bytes match the declared media type.
+
+    Checks PDF magic bytes (``%PDF-``) for PDF files and ZIP package
+    structure plus ``[Content_Types].xml`` for OOXML files (DOCX/XLSX).
+
+    Raises:
+        MediaTypeMismatchError: if the bytes belong to a *different*
+            supported format than declared (e.g. DOCX bytes declared
+            as XLSX).
+        UnsupportedFormatError: if the bytes do not match any
+            recognized content signature for the declared format.
+    """
+    if declared_media_type == "application/pdf":
+        # PDF must start with %PDF-.
+        if data[:5] == _PDF_SIGNATURE:
+            return  # Valid PDF bytes.
+        # Check if bytes are actually a ZIP (OOXML) mislabeled as PDF.
+        if data[:4] == _ZIP_SIGNATURE:
+            actual = _detect_ooxml_media_type(data)
+            if actual is not None:
+                raise MediaTypeMismatchError(
+                    f"Content is {actual!r} but was declared as "
+                    f"{declared_media_type!r}."
+                )
+        raise UnsupportedFormatError(
+            "Content does not have a valid PDF signature."
+        )
+
+    if declared_media_type in (_MEDIA_TYPE_DOCX, _MEDIA_TYPE_XLSX):
+        # OOXML formats are ZIP archives.
+        if data[:4] != _ZIP_SIGNATURE:
+            # Check if it's actually a PDF mislabeled as OOXML.
+            if data[:5] == _PDF_SIGNATURE:
+                raise MediaTypeMismatchError(
+                    f"Content is 'application/pdf' but was declared as "
+                    f"{declared_media_type!r}."
+                )
+            raise UnsupportedFormatError(
+                "Content does not have a valid ZIP/OOXML signature."
+            )
+        # Distinguish DOCX from XLSX by package contents.
+        actual = _detect_ooxml_media_type(data)
+        if actual is None:
+            raise UnsupportedFormatError(
+                "Content is a ZIP archive but does not contain "
+                "recognizable OOXML package contents."
+            )
+        if actual != declared_media_type:
+            raise MediaTypeMismatchError(
+                f"Content is {actual!r} but was declared as "
+                f"{declared_media_type!r}."
+            )
+        return  # Valid OOXML bytes matching declared type.
+
+
+# ---------------------------------------------------------------------------
 # Ingestion Port
 # ---------------------------------------------------------------------------
 

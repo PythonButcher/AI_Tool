@@ -506,6 +506,402 @@ class TestFormatDetection(unittest.TestCase):
         result = self.svc.ingest(xlsx_data, "detect.xlsx", mt)
         self.assertEqual(result.document.media_type, mt)
 
+# ---------------------------------------------------------------------------
+# Content-signature cross-labeling (mislabeled bytes)
+# ---------------------------------------------------------------------------
+
+
+class TestContentSignatureMismatch(unittest.TestCase):
+    """Valid bytes deliberately mislabeled as a different supported format.
+
+    These tests prove that the ingestion service rejects mislabeled
+    content based on actual byte signatures and OOXML package contents,
+    not just the filename extension and declared media type.
+    """
+
+    DOCX_TYPE = (
+        "application/vnd.openxmlformats-officedocument"
+        ".wordprocessingml.document"
+    )
+    XLSX_TYPE = (
+        "application/vnd.openxmlformats-officedocument"
+        ".spreadsheetml.sheet"
+    )
+
+    def setUp(self) -> None:
+        self.svc = IngestionService()
+        # Generate real fixture bytes once per test.
+        self.pdf_bytes = _make_pdf_with_text("real PDF")
+        self.docx_bytes = _make_docx_with_content()
+        self.xlsx_bytes = _make_xlsx_with_sheets()
+
+    # -- OOXML cross-labeling (the exact defect scenario) ------------------
+
+    def test_docx_bytes_labeled_as_xlsx_raises(self) -> None:
+        """DOCX payload named report.xlsx with XLSX media type must fail."""
+        with self.assertRaises(MediaTypeMismatchError) as ctx:
+            self.svc.ingest(self.docx_bytes, "report.xlsx", self.XLSX_TYPE)
+        self.assertIn("wordprocessingml", str(ctx.exception))
+
+    def test_xlsx_bytes_labeled_as_docx_raises(self) -> None:
+        """XLSX payload named data.docx with DOCX media type must fail."""
+        with self.assertRaises(MediaTypeMismatchError) as ctx:
+            self.svc.ingest(self.xlsx_bytes, "data.docx", self.DOCX_TYPE)
+        self.assertIn("spreadsheetml", str(ctx.exception))
+
+    # -- PDF vs OOXML cross-labeling --------------------------------------
+
+    def test_pdf_bytes_labeled_as_docx_raises(self) -> None:
+        """PDF bytes declared as DOCX must fail."""
+        with self.assertRaises((MediaTypeMismatchError, UnsupportedFormatError)):
+            self.svc.ingest(self.pdf_bytes, "fake.docx", self.DOCX_TYPE)
+
+    def test_pdf_bytes_labeled_as_xlsx_raises(self) -> None:
+        """PDF bytes declared as XLSX must fail."""
+        with self.assertRaises((MediaTypeMismatchError, UnsupportedFormatError)):
+            self.svc.ingest(self.pdf_bytes, "fake.xlsx", self.XLSX_TYPE)
+
+    def test_docx_bytes_labeled_as_pdf_raises(self) -> None:
+        """DOCX bytes declared as PDF must fail."""
+        with self.assertRaises((MediaTypeMismatchError, UnsupportedFormatError)):
+            self.svc.ingest(self.docx_bytes, "fake.pdf", "application/pdf")
+
+    def test_xlsx_bytes_labeled_as_pdf_raises(self) -> None:
+        """XLSX bytes declared as PDF must fail."""
+        with self.assertRaises((MediaTypeMismatchError, UnsupportedFormatError)):
+            self.svc.ingest(self.xlsx_bytes, "fake.pdf", "application/pdf")
+
+    # -- Arbitrary / garbage bytes ----------------------------------------
+
+    def test_garbage_bytes_as_pdf_raises(self) -> None:
+        """Random bytes declared as PDF must fail."""
+        with self.assertRaises(UnsupportedFormatError):
+            self.svc.ingest(b"not a real file", "garbage.pdf", "application/pdf")
+
+    def test_garbage_bytes_as_docx_raises(self) -> None:
+        """Random bytes declared as DOCX must fail."""
+        with self.assertRaises(UnsupportedFormatError):
+            self.svc.ingest(
+                b"not a real file", "garbage.docx", self.DOCX_TYPE
+            )
+
+    def test_garbage_bytes_as_xlsx_raises(self) -> None:
+        """Random bytes declared as XLSX must fail."""
+        with self.assertRaises(UnsupportedFormatError):
+            self.svc.ingest(
+                b"not a real file", "garbage.xlsx", self.XLSX_TYPE
+            )
+
+    # -- Correctly labeled bytes still work --------------------------------
+
+    def test_correctly_labeled_pdf_passes(self) -> None:
+        """Sanity: real PDF bytes with correct label still succeed."""
+        result = self.svc.ingest(
+            self.pdf_bytes, "real.pdf", "application/pdf"
+        )
+        self.assertEqual(result.outcome, IngestionOutcome.success)
+
+    def test_correctly_labeled_docx_passes(self) -> None:
+        """Sanity: real DOCX bytes with correct label still succeed."""
+        result = self.svc.ingest(
+            self.docx_bytes, "real.docx", self.DOCX_TYPE
+        )
+        self.assertEqual(result.outcome, IngestionOutcome.success)
+
+    def test_correctly_labeled_xlsx_passes(self) -> None:
+        """Sanity: real XLSX bytes with correct label still succeed."""
+        result = self.svc.ingest(
+            self.xlsx_bytes, "real.xlsx", self.XLSX_TYPE
+        )
+        self.assertEqual(result.outcome, IngestionOutcome.success)
+
+# ---------------------------------------------------------------------------
+# Regression: size limit enforced before ZIP inspection
+# ---------------------------------------------------------------------------
+
+
+class TestSizeLimitBeforeZipInspection(unittest.TestCase):
+    """Oversized OOXML content must be rejected by FileSizeLimitError
+    before any ZIP decompression or content-type inspection occurs.
+
+    Regression for: ingestion_service.py previously ran
+    verify_content_signature (which opens the ZIP) before enforcing
+    the byte-size limit.
+    """
+
+    DOCX_TYPE = (
+        "application/vnd.openxmlformats-officedocument"
+        ".wordprocessingml.document"
+    )
+    XLSX_TYPE = (
+        "application/vnd.openxmlformats-officedocument"
+        ".spreadsheetml.sheet"
+    )
+
+    def setUp(self) -> None:
+        self.svc = IngestionService()
+
+    def test_oversized_docx_rejected_before_inspection(self) -> None:
+        """DOCX bytes exceeding max_byte_size raise FileSizeLimitError,
+        not any ZIP-related or content-type error."""
+        docx_data = _make_docx_with_content()
+        # Set limit smaller than the actual DOCX.
+        with self.assertRaises(FileSizeLimitError):
+            self.svc.ingest(
+                docx_data, "big.docx", self.DOCX_TYPE,
+                max_byte_size=10,
+            )
+
+    def test_oversized_xlsx_rejected_before_inspection(self) -> None:
+        """XLSX bytes exceeding max_byte_size raise FileSizeLimitError."""
+        xlsx_data = _make_xlsx_with_sheets()
+        with self.assertRaises(FileSizeLimitError):
+            self.svc.ingest(
+                xlsx_data, "big.xlsx", self.XLSX_TYPE,
+                max_byte_size=10,
+            )
+
+    def test_oversized_pdf_rejected_before_inspection(self) -> None:
+        """PDF bytes exceeding max_byte_size raise FileSizeLimitError."""
+        pdf_data = _make_pdf_with_text("oversized test")
+        with self.assertRaises(FileSizeLimitError):
+            self.svc.ingest(
+                pdf_data, "big.pdf", "application/pdf",
+                max_byte_size=10,
+            )
+
+
+# ---------------------------------------------------------------------------
+# Regression: macro-enabled OOXML rejection
+# ---------------------------------------------------------------------------
+
+
+def _make_macro_docm_bytes() -> bytes:
+    """Create a minimal ZIP that mimics a DOCM package.
+
+    Contains a [Content_Types].xml with the macro-enabled Word
+    main content type, which should be rejected as unsupported.
+    """
+    import io
+    import zipfile
+
+    content_types_xml = (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        '<Types xmlns="http://schemas.openxmlformats.org/package/2006/'
+        'content-types">'
+        '<Override PartName="/word/document.xml" ContentType='
+        '"application/vnd.ms-word.document.macroEnabled.main+xml"/>'
+        '</Types>'
+    )
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as zf:
+        zf.writestr("[Content_Types].xml", content_types_xml)
+        zf.writestr("word/document.xml", "<document/>")
+    return buf.getvalue()
+
+
+def _make_macro_xlsm_bytes() -> bytes:
+    """Create a minimal ZIP that mimics an XLSM package.
+
+    Contains a [Content_Types].xml with the macro-enabled Excel
+    main content type, which should be rejected as unsupported.
+    """
+    import io
+    import zipfile
+
+    content_types_xml = (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        '<Types xmlns="http://schemas.openxmlformats.org/package/2006/'
+        'content-types">'
+        '<Override PartName="/xl/workbook.xml" ContentType='
+        '"application/vnd.ms-excel.sheet.macroEnabled.main+xml"/>'
+        '</Types>'
+    )
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as zf:
+        zf.writestr("[Content_Types].xml", content_types_xml)
+        zf.writestr("xl/workbook.xml", "<workbook/>")
+    return buf.getvalue()
+
+
+class TestMacroEnabledOoxmlRejection(unittest.TestCase):
+    """Macro-enabled OOXML packages (DOCM/XLSM) renamed to .docx/.xlsx
+    must be rejected as UnsupportedFormatError.
+
+    Regression for: ingestion.py previously used broad substring markers
+    (wordprocessingml / spreadsheetml) that matched both standard and
+    macro-enabled content types in [Content_Types].xml.
+    """
+
+    DOCX_TYPE = (
+        "application/vnd.openxmlformats-officedocument"
+        ".wordprocessingml.document"
+    )
+    XLSX_TYPE = (
+        "application/vnd.openxmlformats-officedocument"
+        ".spreadsheetml.sheet"
+    )
+
+    def setUp(self) -> None:
+        self.svc = IngestionService()
+
+    def test_docm_renamed_to_docx_rejected(self) -> None:
+        """A DOCM package renamed to .docx must not reach the parser."""
+        docm_bytes = _make_macro_docm_bytes()
+        with self.assertRaises(UnsupportedFormatError) as ctx:
+            self.svc.ingest(docm_bytes, "report.docx", self.DOCX_TYPE)
+        self.assertIn("Macro-enabled", str(ctx.exception))
+
+    def test_xlsm_renamed_to_xlsx_rejected(self) -> None:
+        """An XLSM package renamed to .xlsx must not reach the parser."""
+        xlsm_bytes = _make_macro_xlsm_bytes()
+        with self.assertRaises(UnsupportedFormatError) as ctx:
+            self.svc.ingest(xlsm_bytes, "data.xlsx", self.XLSX_TYPE)
+        self.assertIn("Macro-enabled", str(ctx.exception))
+
+    def test_docm_renamed_to_pdf_rejected(self) -> None:
+        """A DOCM package renamed to .pdf must be rejected."""
+        docm_bytes = _make_macro_docm_bytes()
+        with self.assertRaises(UnsupportedFormatError):
+            self.svc.ingest(docm_bytes, "report.pdf", "application/pdf")
+
+    def test_xlsm_renamed_to_pdf_rejected(self) -> None:
+        """An XLSM package renamed to .pdf must be rejected."""
+        xlsm_bytes = _make_macro_xlsm_bytes()
+        with self.assertRaises(UnsupportedFormatError):
+            self.svc.ingest(xlsm_bytes, "data.pdf", "application/pdf")
+
+# ---------------------------------------------------------------------------
+# Regression: malformed OOXML packages (missing main-part files)
+# ---------------------------------------------------------------------------
+
+
+def _make_malformed_docx_missing_main_part() -> bytes:
+    """Create a ZIP with DOCX content-type declaration but no
+    word/document.xml entry.
+
+    This mimics a malformed or hand-crafted package that declares
+    the correct content type but lacks the actual main-part file.
+    """
+    import io
+    import zipfile
+
+    content_types_xml = (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        '<Types xmlns="http://schemas.openxmlformats.org/package/2006/'
+        'content-types">'
+        '<Override PartName="/word/document.xml" ContentType='
+        '"application/vnd.openxmlformats-officedocument'
+        '.wordprocessingml.document.main+xml"/>'
+        '</Types>'
+    )
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as zf:
+        zf.writestr("[Content_Types].xml", content_types_xml)
+        # Deliberately omit word/document.xml
+        zf.writestr("word/styles.xml", "<styles/>")
+    return buf.getvalue()
+
+
+def _make_malformed_xlsx_missing_main_part() -> bytes:
+    """Create a ZIP with XLSX content-type declaration but no
+    xl/workbook.xml entry.
+
+    This mimics a malformed or hand-crafted package that declares
+    the correct content type but lacks the actual main-part file.
+    """
+    import io
+    import zipfile
+
+    content_types_xml = (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        '<Types xmlns="http://schemas.openxmlformats.org/package/2006/'
+        'content-types">'
+        '<Override PartName="/xl/workbook.xml" ContentType='
+        '"application/vnd.openxmlformats-officedocument'
+        '.spreadsheetml.sheet.main+xml"/>'
+        '</Types>'
+    )
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as zf:
+        zf.writestr("[Content_Types].xml", content_types_xml)
+        # Deliberately omit xl/workbook.xml
+        zf.writestr("xl/styles.xml", "<styles/>")
+    return buf.getvalue()
+
+
+def _make_ooxml_with_type_text_only() -> bytes:
+    """Create a ZIP where a DOCX type appears only inside an XML comment."""
+    import io
+    import zipfile
+
+    content_types_xml = (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        '<Types xmlns="http://schemas.openxmlformats.org/package/2006/'
+        'content-types">'
+        '<!-- application/vnd.openxmlformats-officedocument'
+        '.wordprocessingml.document.main+xml -->'
+        '</Types>'
+    )
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as zf:
+        zf.writestr("[Content_Types].xml", content_types_xml)
+        zf.writestr("word/document.xml", "<document/>")
+    return buf.getvalue()
+
+
+class TestMalformedOoxmlPackages(unittest.TestCase):
+    """Malformed OOXML packages that declare the correct content type
+    in [Content_Types].xml but are missing the actual main-part file
+    must be rejected as UnsupportedFormatError.
+
+    Regression for: _detect_ooxml_media_type previously accepted any
+    ZIP with matching content-type text, allowing malformed packages
+    to reach the parser adapter.
+    """
+
+    DOCX_TYPE = (
+        "application/vnd.openxmlformats-officedocument"
+        ".wordprocessingml.document"
+    )
+    XLSX_TYPE = (
+        "application/vnd.openxmlformats-officedocument"
+        ".spreadsheetml.sheet"
+    )
+
+    def setUp(self) -> None:
+        self.svc = IngestionService()
+
+    def test_docx_missing_main_part_rejected(self) -> None:
+        """ZIP with DOCX content type but no word/document.xml must fail."""
+        data = _make_malformed_docx_missing_main_part()
+        with self.assertRaises(UnsupportedFormatError):
+            self.svc.ingest(data, "bad.docx", self.DOCX_TYPE)
+
+    def test_xlsx_missing_main_part_rejected(self) -> None:
+        """ZIP with XLSX content type but no xl/workbook.xml must fail."""
+        data = _make_malformed_xlsx_missing_main_part()
+        with self.assertRaises(UnsupportedFormatError):
+            self.svc.ingest(data, "bad.xlsx", self.XLSX_TYPE)
+
+    def test_real_docx_still_accepted(self) -> None:
+        """Sanity: a real DOCX (which has word/document.xml) still works."""
+        docx_data = _make_docx_with_content()
+        result = self.svc.ingest(docx_data, "good.docx", self.DOCX_TYPE)
+        self.assertEqual(result.outcome, IngestionOutcome.success)
+
+    def test_real_xlsx_still_accepted(self) -> None:
+        """Sanity: a real XLSX (which has xl/workbook.xml) still works."""
+        xlsx_data = _make_xlsx_with_sheets()
+        result = self.svc.ingest(xlsx_data, "good.xlsx", self.XLSX_TYPE)
+        self.assertEqual(result.outcome, IngestionOutcome.success)
+
+    def test_content_type_text_outside_override_is_rejected(self) -> None:
+        """Type-like text must be an exact ``Override`` declaration."""
+        data = _make_ooxml_with_type_text_only()
+        with self.assertRaises(UnsupportedFormatError):
+            self.svc.ingest(data, "bad.docx", self.DOCX_TYPE)
+
 
 if __name__ == "__main__":
     unittest.main()

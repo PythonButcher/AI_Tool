@@ -1,3 +1,7 @@
+# Completed Backend Handoff — Document Studio File Ingestion And Normalization
+
+This file is a completed historical record and is not an active implementation prompt.
+
 Goal: Add safe PDF, DOCX, and XLSX ingestion adapters that produce one portable normalized document contract, then stop for Codex review.
 
 ## Read First

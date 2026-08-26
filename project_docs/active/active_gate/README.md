@@ -1,41 +1,41 @@
-# Project Active Gate — Document Studio File Ingestion And Normalization
+# Project Active Gate — Document Studio Scan And Handwriting Processing
 
-Goal: Ingest supported document bytes into one portable normalized representation while identifying scanned PDFs that require OCR.
+Goal: Convert scanned PDF pages into evidence-linked normalized text while reporting handwriting and document-quality trouble honestly.
 
 ## User Outcome
 
-Document Studio can safely interpret digital PDFs, Word documents, and Excel workbooks without trusting a client-supplied filesystem path, while reporting when a PDF has no usable embedded text and requires OCR.
+Document Studio can process printer scans through a replaceable OCR boundary, preserve recognized text and page coordinates, surface provider confidence, and return a plain structured result when a page needs human help.
 
 ## Scope
 
-Claude executes `project_docs/active/ai_hand_off/document_studio_claude_file_ingestion_normalization.md` and changes only approved paths under `document_studio/`.
+Work only under `document_studio/`. Add an application-layer OCR provider port, deterministic orchestration, one local baseline OCR infrastructure adapter selected from implementation evidence, document-quality checks, and focused tests.
 
-Add framework-independent normalized-document contracts plus format-specific ingestion adapters for digital PDF, DOCX, and XLSX bytes. Preserve pages or sheets, text blocks, tables or cells, and available source locations. Detect a scanned or image-only PDF honestly and return a structured result indicating that OCR is required.
+The OCR result must preserve page number, recognized text, available page coordinates, provider confidence, and whether handwriting was detected or suspected. Quality checks cover unreadable pages, extreme rotation, and empty OCR output. A processing failure that requires human action returns a structured `needs_help` result with a plain reason.
 
-Do not add OCR execution, handwriting processing, schema discovery, model providers, extraction orchestration, document API routes, AI_Tool integration, or frontend files.
+Do not add schema proposals, extracted-field inference, model providers, blueprint selection, exports, destination integrations, batching, watched folders, AI_Tool routes, production deployment behavior, or frontend files.
 
 ## Contracts
 
-Normalized domain records remain portable, immutable, and JSON serializable. Application orchestration may depend on domain contracts and ingestion ports but not concrete parser libraries, web frameworks, SQLite, filesystem paths supplied by clients, or AI_Tool state.
+Use `project_docs/active/document_studio/README.md` for the roadmap, `document_studio/backend/src/document_studio/domain/normalized.py` for normalized documents and source locations, and `document_studio/backend/src/document_studio/application/ingestion.py` for the ingestion boundary.
 
-Infrastructure adapters accept server-received bytes plus safe metadata, enforce supported media types, filename safety, and configurable size limits, and preserve format-specific structure instead of flattening spreadsheets into images.
+Application code may depend on portable domain contracts and OCR ports but not a concrete OCR library, web framework, filesystem path supplied by a client, SQLite implementation, or AI_Tool state. Parser and OCR-library imports remain inside infrastructure adapters.
 
-Use `project_docs/active/document_studio/README.md` for the roadmap and `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md` for ownership boundaries.
+Use `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md` for ownership boundaries.
 
 ## Acceptance
 
-Tests use small controlled fixtures and prove digital PDF text extraction, DOCX paragraph and table normalization, XLSX workbook structure, useful source locations, format detection, safe filename handling, configurable size limits, unsupported-format errors, and a structured `requires_ocr` result for scanned or image-only PDFs.
+Deterministic unit tests use a fake OCR provider to prove application behavior without network access, model keys, production paths, or installed OCR executables.
 
-The existing health, domain, file-store, and repository contracts remain stable. Every changed implementation file is under `document_studio/`, and no frontend or AI_Tool runtime file changes.
+At least one printer-scan fixture and one handwriting fixture exercise the selected local adapter in explicitly marked integration tests. Tests prove recognized text, available page coordinates, provider confidence, handwriting detection or suspicion, unreadable-page handling, extreme-rotation handling, empty-output handling, and the structured `needs_help` result.
 
-Claude reports the branch, changed files, commands, results, design decisions, and any environment caveat, then stops for Codex review.
+Existing health, domain, file-store, repository, normalization, and ingestion tests remain stable. Every implementation change stays under `document_studio/`; no frontend or AI_Tool runtime file changes.
 
 ## Verification
 
-Run `python -m pip install -e "document_studio/backend[test]"`, `python -m unittest discover -s document_studio/backend/tests -p "test_*.py"`, and `python -m py_compile` for each changed Python module.
+Run `python -m pip install -e "document_studio/backend[test]"`, the focused OCR unit tests, explicitly marked local-adapter integration tests, and `python -m unittest discover -s document_studio/backend/tests -p "test_*.py"`.
 
-Run `python .codex/hooks/agent_harness_check.py`, `git diff --check`, and `git diff --name-only`.
+Run `python -m py_compile` for every changed Python module, `python .codex/hooks/agent_harness_check.py`, `git diff --check`, and `git diff --name-only`.
 
 ## Owner And Control Return
 
-Codex owns the gate, architecture, contracts, and acceptance decision. Claude is the bounded backend implementation delegate. Control returns to Codex immediately after Claude reports its evidence. Gemini owns all Document Studio frontend work and has no active assignment in this gate.
+Codex owns implementation, architecture, contracts, verification, and the acceptance decision. Gemini owns all Document Studio frontend work and has no active assignment in this gate.
