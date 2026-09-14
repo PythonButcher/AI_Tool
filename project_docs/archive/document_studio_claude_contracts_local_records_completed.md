@@ -14,7 +14,7 @@ Add one shared domain validation helper that requires a timezone-aware datetime 
 
 ## Read First
 
-Read `AGENTS.md`, `project_docs/INDEX.md`, `project_docs/active/README.md`, `project_docs/active/status/project_execution_status.md`, `project_docs/active/active_gate/README.md`, `project_docs/active/document_studio/README.md`, and `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md`.
+Read `AGENTS.md`, `project_docs/INDEX.md`, `project_docs/active/README.md`, `project_docs/active/status/project_execution_status.md`, `project_docs/archive/document_studio/standalone_ingestion_api_gate_retired_2026_09_13.md`, `project_docs/archive/document_studio/standalone_product_roadmap_retired_2026_09_13.md`, and `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md`.
 
 Inspect the current files under `document_studio/backend/` before editing. Do not infer requirements from archived handoffs.
 

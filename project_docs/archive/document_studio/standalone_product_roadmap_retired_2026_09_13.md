@@ -1,8 +1,10 @@
+> Archived September 13, 2026. Historical roadmap only; it is not an active plan or authorization to continue Document Studio.
+
 # Document Studio Implementation Plan
 
 ## Status
 
-This is the active Document Studio roadmap. Only the chunk named by `project_docs/active/active_gate/README.md` is authorized for implementation. Every chunk stops for Codex review before the next chunk can begin.
+This was the active Document Studio roadmap. Only the chunk named by `project_docs/archive/document_studio/standalone_ingestion_api_gate_retired_2026_09_13.md` was authorized for implementation. Every chunk stopped for Codex review before the next chunk could begin.
 
 ## Product Outcome
 

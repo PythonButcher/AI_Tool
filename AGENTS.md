@@ -39,7 +39,7 @@ Read the smallest relevant path. Do not bulk-scan Markdown, active product folde
 ## Ownership And Handoffs
 
 - Codex must not implement frontend or browser-visible UI unless the user explicitly authorizes it in the current session.
-- The frontend owner works from one bounded handoff at a time. Follow the owner named by current status; Document Studio frontend work belongs to Gemini.
+- The frontend owner works from one bounded handoff at a time. Follow the owner named by current status.
 - Confirm a real frontend gap and backend readiness from source before creating a frontend handoff. Never send speculative UI work or let the frontend owner invent backend contracts.
 - Store agent prompts in `project_docs/active/ai_hand_off/` unless the user explicitly requests the prompt in chat.
 - Every handoff starts with `Goal:` and names target files, required active docs, exact contract fields, scope boundaries, acceptance evidence, and build or test commands.
