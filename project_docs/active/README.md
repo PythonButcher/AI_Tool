@@ -24,7 +24,7 @@ Decision Intelligence workspaces, decision frames, readiness and capability pane
 
 Dataset identity and semantic truth remain required for every BI answer and chart.
 
-ML Studio Phase 13 is the restored product direction. Its contract-and-evaluation gate is available for review, but implementation remains unauthorized until the user explicitly asks Codex to begin. No frontend work is authorized.
+ML Studio Phase 13 is the active product direction. Backend implementation is authorized, and Codex owns the durable-experiments gate. No frontend work is authorized.
 
 ## Active Areas
 

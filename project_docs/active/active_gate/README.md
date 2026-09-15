@@ -1,58 +1,63 @@
-Goal: Establish one leakage-safe ML Studio contract and evaluation core for reproducible regression and classification experiments.
+Goal: Persist immutable ML Studio experiments, restart-safe run state, and integrity-checked server-owned artifacts.
 
 ## User Outcome
 
-A developer can rely on ML Studio evaluation results that keep model selection separate from final testing, compare every candidate with a baseline, retain exact dataset and experiment identity, and explain when a run is invalid or too weak to trust.
+A developer can create reproducible experiment versions, submit isolated runs safely, recover truthful lifecycle state after restart, cancel eligible work, and verify every managed artifact without relying on process memory or client filesystem paths.
 
 ## Scope
 
 **Phase Identity**: `phase-13-ml-studio-foundation`
 
-This gate is review-only until the user explicitly instructs Codex to begin Phase 13 implementation. No source or contract mutation is authorized by the restored gate alone.
+Implement only the durable experiment, run, and managed-artifact foundation described by Gate 2 in `project_docs/active/ml_studio/README.md`.
 
-After authorization, work only on the backend contract and evaluation foundation described by Gate 1 in `project_docs/active/ml_studio/README.md`.
+**Current Step**: Step 1: Define durable schemas and managed artifact boundaries
 
-Create `project_docs/active/contracts/ml_studio.md` and a focused, framework-independent package under `backend/ml_studio/`. Define JSON-compatible versioned objects for dataset snapshot identity, experiment specifications, run specifications, evaluation results, reviewed-candidate references, and structured errors.
+**Target Files**: `backend/ml_studio/repository.py`, `backend/ml_studio/artifacts.py`, `project_docs/active/contracts/ml_studio.md`, and `tests/test_ml_studio_persistence.py`
 
-Implement regression and classification evaluation only. Use a compact candidate library: a regularized linear or logistic baseline candidate, random forest, and histogram gradient boosting. A user-selected task type remains authoritative.
+**Step Acceptance**: The storage design defines immutable experiment versions, idempotent run submission, valid lifecycle transitions, cancellation and restart recovery, atomic server-owned artifact writes, integrity hashes, bounded safe paths, and structured failure behavior before persistence implementation begins.
 
-Partition an untouched final holdout before candidate work. Perform preprocessing, feature selection, and candidate comparison only inside development data through deterministic cross-validation. Refit the selected candidate on development data and evaluate it once on the final holdout. Support random, stratified, time-ordered, and grouped split policies with explicit validation.
+**Step Verification**: `python -m unittest tests.test_ml_studio_persistence`
 
-Return task-appropriate baseline and candidate metrics, fold distributions, final-holdout metrics, warnings, split evidence, structural leakage findings, feature-influence method and limitations, environment and reproducibility fields, and an explicit truth boundary.
+**Next Step**: Step 2: Implement experiment and run persistence
 
-Do not modify frontend files, Flask routes, persistence, asynchronous execution, model artifact storage, prediction serving, clustering, forecasting, deep learning, arbitrary Python execution, MLflow, Context Ledger integration, authentication, or deployment behavior.
+**Continuation Rule**: Continue automatically while Codex remains the owner and the next step is executable.
+
+**Stop Condition**: Stop only for a concrete blocker, a recorded ownership handoff, a user-requested pause, or the durable-experiments gate acceptance boundary.
+
+- [ ] **Step 1: Define durable schemas and managed artifact boundaries** — [IN PROGRESS]
+- [ ] **Step 2: Implement experiment and run persistence** — [PENDING]
+- [ ] **Step 3: Implement atomic artifact storage and recovery** — [PENDING]
+- [ ] **Step 4: Prove isolation, immutability, idempotency, and resource safety** — [PENDING]
+- [ ] **Step 5: Run persistence and regression acceptance** — [PENDING]
+
+Do not modify Flask routes, frontend files, legacy ML services, authentication, deployment, prediction serving, Context Ledger, or process-global model state. Do not deserialize client-supplied estimators or accept client-selected storage paths.
+
+Use local SQLite metadata and one server-owned managed artifact root. Reuse established workflow-run lifecycle patterns where they fit, but keep the ML Studio repository and artifact interfaces framework-independent. Database and artifact mutations must be atomic at their respective boundaries, and cleanup must never escape the managed root.
 
 ## Contracts
 
-Use `ml_studio_contract_v1` for new public objects.
+Use `project_docs/active/contracts/ml_studio.md` for ML Studio identity, experiment, run, evaluation, reviewed-candidate, error, and durability semantics.
 
-Dataset snapshot identity includes `snapshot_id`, `workspace_id`, `workspace_version`, ordered `source_ids`, ordered `relationship_ids`, source fingerprints, schema version, semantic-model version, governance result, transformation recipe hash, row count, column profile, and creation metadata. Browser-supplied rows and filesystem paths are never authoritative snapshot identity.
-
-Experiment specifications include `experiment_id`, specification version, task type, target, feature roles, excluded columns, split policy, optional time or group column, candidate families, metric policy, resource limits, and random-seed policy.
-
-Evaluation results separate `selection_evidence` from `final_holdout_evidence` and name the baseline, fold metrics, selected candidate, final metrics, warnings, limitations, leakage findings, dataset identity, specification version, runtime versions, and truth boundary.
-
-Structured errors contain stable `code`, `message`, and safe `remediation` fields without tracebacks, filesystem paths, serialized estimators, secrets, or raw data samples.
-
-Use `project_docs/active/contracts/multiple_data_source_workspace.md`, `project_docs/active/contracts/multiple_data_source_relationships.md`, and `project_docs/active/contracts/data_catalog_lineage.md` as existing identity and governance boundaries. The new core must not import Flask or `backend/utils/global_state.py`.
+Use `project_docs/active/ml_studio/README.md` only for the Phase 13 Gate 2 architecture and acceptance boundary.
 
 ## Acceptance
 
-- Contract objects reject missing, contradictory, stale, or non-JSON-safe fields.
-- Target and final-holdout rows cannot enter preprocessing, feature selection, tuning, or candidate selection.
-- Random and stratified splits are deterministic and preserve valid class representation.
-- Time-ordered splits never train on observations after evaluation observations.
-- Grouped splits keep each group wholly on one side of a split.
-- Model selection uses development cross-validation only, followed by one final-holdout evaluation.
-- Regression and classification include suitable naive baselines and cannot claim success from raw accuracy or fit alone.
-- Invalid data and split states return stable blocked results or structured errors.
-- Feature influence is labeled non-causal and every result carries reproducibility and truth-boundary metadata.
-- The new package has no Flask, process-global state, client-path, persistence, Context Ledger, or frontend dependency.
+- Experiment identities support immutable, monotonically versioned specifications.
+- Run submissions are idempotent for one explicit submission key and cannot cross experiment or snapshot identity.
+- Run state transitions are validated, timestamps are truthful, terminal records are immutable, and cancellation is explicit.
+- Interrupted non-terminal runs recover to a stable restart state without claiming success.
+- Concurrent experiments and runs do not share mutable process state or overwrite each other's metadata.
+- Artifacts are written atomically beneath a server-owned root and store content hashes, sizes, media types, and creation metadata.
+- Artifact names and resolved paths reject traversal, absolute paths, symlink escapes, and overwrite of immutable completed-run artifacts.
+- Client uploads are never deserialized as estimators, and repository responses never expose filesystem paths or artifact bytes.
+- Structured errors remain safe, stable, and free of tracebacks, secrets, paths, serialized objects, or raw dataset values.
+- Existing ML Studio contract/evaluation and dataset-governance behavior remains stable.
 
-Existing governance and readiness tests remain stable. Changed files stay inside `backend/ml_studio/`, focused ML Studio tests, `project_docs/active/contracts/ml_studio.md`, and required gate/status control files.
+Changed files stay inside `backend/ml_studio/`, focused ML Studio tests, `project_docs/active/contracts/ml_studio.md`, and required gate/status control files.
 
 ## Verification
 
+- `python -m unittest tests.test_ml_studio_persistence`
 - `python -m unittest tests.test_ml_studio_contracts tests.test_ml_studio_evaluation`
 - `python -m unittest tests.test_data_catalog_lineage tests.test_advanced_readiness_service`
 - `python -m py_compile` for every changed Python module
@@ -63,4 +68,4 @@ Existing governance and readiness tests remain stable. Changed files stay inside
 
 ## Owner And Control Return
 
-The user owns authorization to begin. After explicit authorization, Codex owns the contract, backend architecture, evaluation implementation, tests, documentation, and acceptance decision. Antigravity remains blocked until Codex verifies the identity-first ML Studio API and creates one bounded frontend handoff.
+Codex owns the persistence contract, backend architecture, implementation, tests, documentation, and acceptance decision. Antigravity remains blocked until the identity-first ML Studio API is verified and Codex creates one bounded frontend handoff. Control returns at this gate's backend acceptance boundary or on a concrete blocker.

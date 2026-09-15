@@ -196,7 +196,7 @@ Do not add dozens of estimators, arbitrary Python execution, uploaded pickles, G
 
 ## Activation And Sequencing
 
-**Phase 13 — Machine Learning Studio Foundation** is active with Gate 1 as the sole executable gate and Codex as the owner. No frontend handoff exists. Antigravity must not begin until Codex verifies the backend contracts and representative evaluation behavior required by the first frontend surface.
+**Phase 13 — Machine Learning Studio Foundation** is active with Gate 2 as the sole executable gate and Codex as the owner. No frontend handoff exists. Antigravity must not begin until Codex verifies the identity-first API and creates one bounded frontend handoff.
 
 Later gates remain roadmap context only. Finishing one gate does not authorize the next; Codex must review the evidence, update current status, and replace the sole active gate before work continues.
 
