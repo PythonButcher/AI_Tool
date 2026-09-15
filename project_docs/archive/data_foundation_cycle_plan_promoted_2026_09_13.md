@@ -1,3 +1,5 @@
+> Archived September 13, 2026. The data and relationship foundation was delivered, and its ML direction was promoted into the active Phase 13 roadmap. This file is historical context, not current authorization.
+
 # Future Cycle - Data Foundation And Automation Plan
 
 This is a deferred planning record, not the active Decision Intelligence gate. Do not execute it until the active status file promotes it.
@@ -39,3 +41,4 @@ Do not run another AI Council automatically before this cycle. The next needs ar
 ## Deferred First Gate
 
 The first future gate should be a scoped multiple-data-sources plan once the active AI Chat usability-repair gate is complete or reprioritized. Codex should inspect current data connection, upload, dataset registry, active dataset, AI Chat data context, and persistence code before proposing changes. Frontend work should wait for a backend contract and migration plan.
+

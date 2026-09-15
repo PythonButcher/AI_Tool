@@ -18,6 +18,8 @@ This is the top-level routing file. Use it to find the smallest current document
 | --- | --- |
 | Check concise current status | `project_docs/active/status/project_execution_status.md` |
 | Work on the current project gate | `project_docs/active/active_gate/README.md` |
+| Review the active ML Studio roadmap | `project_docs/active/ml_studio/README.md` |
+| Review retired product and roadmap decisions | `project_docs/archive/README.md`, only when historical context is needed |
 | Review the completed data and backend roadmap | `project_docs/archive/multiple_data_sources_implementation_plan_completed.md` only when historical context is needed |
 | Review completed AI Chat rollout history | `project_docs/archive/ai_chat_decision_output_unification_rollout_completed.md` only when historical context is needed |
 | Work on backend/frontend contracts | `project_docs/active/contracts/decision_objects.md` |
@@ -38,12 +40,14 @@ AI Chat is a BI-first NLP workspace. Existing grounded answers, semantic-model r
 
 Decision Intelligence output has been removed from the AI Chat product path. Isolated backend services remain for compatibility only and must not be treated as active UI scope.
 
+Phase 13 establishes ML Studio as a first-class AI Tool destination. Backend evaluation integrity, durable contracts, and identity-first execution must be verified before frontend implementation begins.
+
 ## Ownership
 
 | Agent | Owns |
 | --- | --- |
 | Codex | Lead Orchestrator. Owns roadmap, active gates, backend truth and implementation, contracts, tests, architecture, documentation, handoff scope, integration review, and next-owner decisions. |
-| Antigravity | Primary UI implementer. Owns scoped React/CSS and browser-visible behavior assigned by a Codex-authored handoff, with bounded creative freedom inside the verified contract and product design system. |
+| Antigravity | Primary UI implementer by default, working from one bounded Codex-authored handoff at a time. |
 | User | Owns product direction and final browser-level acceptance. |
 
 Codex must not edit frontend files unless the user explicitly authorizes Codex frontend edits in the current session.

@@ -10,7 +10,7 @@ Antigravity owns bounded frontend implementation, React/CSS, UI rendering, and f
 
 ## Active Handoffs And Goal Prompts
 
-There is no active frontend handoff. Current ownership and the next action are recorded in `project_docs/active/status/project_execution_status.md`.
+There is no active backend-agent or frontend-agent handoff. Codex owns the backend-only ML Studio gate through `project_docs/active/active_gate/README.md`. Antigravity must not begin ML Studio frontend work until Codex verifies the required backend contract and creates one bounded handoff.
 
 Completed handoffs belong outside this active folder.
 
