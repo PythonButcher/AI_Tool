@@ -2,27 +2,27 @@
 
 This file is the concise current truth for AI_Tool delivery.
 
-## Current Gate: ML Studio Durable Experiments And Runs
+## Current Gate: ML Studio Identity-First API Authorization
 
-- **Current Gate**: ML Studio Durable Experiments And Runs
+- **Current Gate**: ML Studio Identity-First API Authorization
 - **Roadmap Phase**: Phase 13 — Machine Learning Studio Foundation
 - **Phase Identity**: `phase-13-ml-studio-foundation`
 - **Phase State**: `IN PROGRESS`
-- **What This State Means**: Phase 13 is authorized and Codex is implementing durable experiment, run, and managed-artifact state.
-- **Current Milestone**: Step 1: Define durable schemas and managed artifact boundaries
-- **Automatic Continuation**: `CONTINUE`
-- **Current Owner**: Codex
-- **Backend Readiness**: `implementation_required`
+- **What This State Means**: The durable experiment, run, and managed-artifact foundation is verified. Gate 3 source scope awaits explicit user direction.
+- **Current Milestone**: Step 1: Confirm identity-first API authorization
+- **Automatic Continuation**: `WAIT_FOR_USER`
+- **Current Owner**: User
+- **Backend Readiness**: `backend_not_ready`
 - **Frontend Readiness**: `blocked_contract_and_api_first`
 - **Implementation Delegate**: None
-- **Next Action**: Execute the current step in `project_docs/active/active_gate/README.md` and continue through the durable-experiments backend acceptance boundary.
-- **Required Action**: Define and test the persistence schemas, lifecycle rules, idempotency boundary, and managed artifact safety contract.
+- **Next Action**: Explicitly authorize Gate 3 implementation or revise its scope through `project_docs/active/active_gate/README.md`.
+- **Required Action**: Confirm whether Codex should begin the identity-first ML Studio API gate.
 - **Active Gate**: `project_docs/active/active_gate/README.md`
 - **Authorization Record**: `project_docs/active/status/phase_authorization.json`
 - **Roadmap**: `project_docs/active/ml_studio/README.md`
 - **Active Handoff**: None
-- **Latest Verification**: The ML Studio contract-and-evaluation core passed 25 focused tests, 8 governance/readiness regressions, Python compilation, 16 harness tests, the provider-neutral CI runner, both active-gate validators, dependency-boundary inspection, and diff checks on 2026-09-14.
+- **Latest Verification**: The durable foundation passed the 17-test persistence and artifact suite with one Windows symlink-permission skip, the combined 42-test ML Studio suite with the same skip, 8 governance/readiness regressions, Python compilation, 20 harness-policy tests, the provider-neutral CI runner, both active-gate validators, and diff checks on 2026-09-14.
 
 ## Completion Rule
 
-This gate completes only after Codex satisfies every persistence, artifact-integrity, isolation, idempotency, recovery, regression, compilation, harness, and diff check in the active gate. No frontend or browser acceptance is part of this backend gate.
+This authorization gate completes when the user explicitly authorizes or revises Gate 3 and Codex records an exact allowed implementation boundary. No frontend or browser acceptance is part of this gate.

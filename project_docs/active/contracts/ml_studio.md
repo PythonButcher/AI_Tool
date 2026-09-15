@@ -2,7 +2,7 @@
 
 ## Status
 
-Phase 13 Gate 1 backend contract. This document defines framework-independent, versioned objects and evidence boundaries. It does not authorize routes, persistence, asynchronous execution, model serving, frontend behavior, or deployment claims.
+Phase 13 backend contract through Gate 2. This document defines framework-independent, versioned objects, evidence boundaries, durable experiment and run state, and managed artifact integrity. It does not authorize routes, asynchronous execution, model serving, frontend behavior, or deployment claims.
 
 ## Contract Version
 
@@ -23,6 +23,26 @@ Supported tasks are `regression` and `classification`. Regression candidates are
 ## Run Specification
 
 `RunSpecification` binds one run identity to an experiment specification version and full dataset snapshot identity. It also contains submission time, JSON-safe parameters, runtime environment strings, and a code revision. It is an execution request and reproducibility receipt, not a persisted lifecycle record or serialized estimator.
+
+## Durable Experiment And Run Records
+
+SQLite stores immutable experiment specifications under the composite identity `(experiment_id, specification_version)`. The first version is `1`; each later version must increase by exactly one. Existing versions cannot be replaced. Canonical JSON and its SHA-256 digest establish deterministic stored content.
+
+A durable run stores the complete `RunSpecification`, submission fingerprint, lifecycle state, progress stage, timestamps, bounded warnings, structured failure, final evaluation result, and artifact metadata. Public repository responses expose the immutable run specification and lifecycle data but never the idempotency hash, database path, artifact path, or artifact bytes.
+
+Every submission requires one explicit idempotency key. Only its SHA-256 digest is stored. Reusing a key for the identical canonical run specification returns the existing run; reusing it across a different run, experiment version, or snapshot is a conflict. Run creation and idempotency enforcement occur in one immediate SQLite transaction.
+
+Valid states are `queued`, `running`, `cancel_requested`, `completed`, `failed`, `cancelled`, and `interrupted`. Queued cancellation is immediately terminal. Running cancellation is cooperative through `cancel_requested`, followed by `cancelled`. A completed run requires matching `EvaluationResult` evidence, and a failed run requires `StructuredError`. Terminal records cannot transition again. Startup recovery moves every non-terminal run to `interrupted` and records `restart_recovery`; it never claims that interrupted work succeeded.
+
+Repository JSON is finite and size-bounded. Warnings are bounded strings, event reads are capped, and SQLite foreign keys isolate runs from missing experiment versions. Repository errors cross the boundary only as stable `StructuredError` fields.
+
+## Managed Artifact Boundary
+
+`ManagedArtifactStore` owns one configured server directory. It accepts only explicit `server_created: true` byte content, provides no deserialization API, and rejects client-originated content at the storage boundary. Artifact size and media type are validated before writing.
+
+Run identities and artifact names are bounded. Absolute paths, separators, traversal, unsafe managed entries, root symlinks, and run-directory symlink escapes are rejected. Cleanup validates the run identity, refuses links and nested entries, and cannot traverse outside the managed root.
+
+Each artifact and its metadata sidecar are written through flushed temporary files while an exclusive lock is held. Artifacts are write-once. Metadata contains only `run_id`, name, `sha256`, byte size, media type, and timezone-aware creation time. Verification re-hashes stored bytes and rejects missing, malformed, size-mismatched, identity-mismatched, or tampered artifacts. SQLite stores the same path-free metadata under `(run_id, name)` and never stores artifact bytes.
 
 ## Evaluation Result
 
@@ -52,4 +72,4 @@ Random and stratified policies are deterministic. Time-ordered folds never train
 
 ## Dependency Boundary
 
-`backend/ml_studio/` must not import Flask, `backend/utils/global_state.py`, persistence repositories, Context Ledger, frontend code, filesystem dataset paths, or model-serving code. Dataset rows arrive only after a trusted server-side resolver has validated the snapshot identity and governance state.
+`backend/ml_studio/contracts.py` and `backend/ml_studio/evaluation.py` must not import Flask, persistence code, `backend/utils/global_state.py`, Context Ledger, frontend code, filesystem dataset paths, or model-serving code. The ML Studio repository and artifact modules remain framework-independent and must not import application repositories or dataset storage. Dataset rows arrive only after a trusted server-side resolver has validated the snapshot identity and governance state.

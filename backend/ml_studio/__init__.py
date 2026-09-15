@@ -1,4 +1,6 @@
-"""Framework-independent contracts and evaluation services for ML Studio."""
+"""Framework-independent contracts, evaluation, and durability for ML Studio."""
+
+from .artifacts import ArtifactMetadata, ArtifactStoreError, ManagedArtifactStore
 
 from .contracts import (
     CONTRACT_VERSION,
@@ -24,8 +26,11 @@ from .contracts import (
     StructuredError,
     TruthBoundary,
 )
+from .repository import MLStudioRepository, PersistenceError
 
 __all__ = [
+    "ArtifactMetadata",
+    "ArtifactStoreError",
     "CONTRACT_VERSION",
     "CandidateSelectionEvidence",
     "ColumnProfile",
@@ -38,6 +43,9 @@ __all__ = [
     "FoldEvidence",
     "LeakageFinding",
     "MetricPolicy",
+    "MLStudioRepository",
+    "ManagedArtifactStore",
+    "PersistenceError",
     "RandomSeedPolicy",
     "ResourceLimits",
     "ReviewedCandidateReference",
