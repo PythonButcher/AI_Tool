@@ -47,3 +47,16 @@ Withdrawn Decision Intelligence comparison planning is preserved as:
 - `project_docs/archive/withdrawn_decision_comparison_preparation_plan.md`
 - `project_docs/archive/withdrawn_codex_decision_comparison_goal.md`
 
+## Retired Product Directions
+
+The stopped standalone Document Studio direction, its prototype decision record, roadmap, and outgoing ingestion-API gate are preserved under:
+
+`project_docs/archive/document_studio/`
+
+## Promoted Planning Records
+
+The user-approved ML Studio proposal and the broader data-foundation sequence that preceded its promotion are preserved as:
+
+- `project_docs/archive/machine_learning_studio_outline_approved_2026_09_13.md`
+- `project_docs/archive/data_foundation_cycle_plan_promoted_2026_09_13.md`
+
