@@ -12,6 +12,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from harness_validation import run_repository_checks
+
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -209,13 +211,7 @@ def _check_critical_source_sizes(errors: list[str]) -> None:
 
 
 def main() -> int:
-    errors: list[str] = []
-    _check_required_paths(errors)
-    _check_python_parse(errors)
-    _check_gemini_not_modified(errors)
-    _check_project_doc_links(errors)
-    _check_active_doc_state(errors)
-    _check_critical_source_sizes(errors)
+    errors = run_repository_checks(ROOT)
 
     if errors:
         print("Agent harness check failed:")

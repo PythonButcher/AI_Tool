@@ -1,45 +1,14 @@
 ---
 name: status-tracker-skill
-description: Automatically updates the project execution status in project_docs/active/status/decision_intelligence_execution_status.md. Use this skill immediately after completing a phase, task, or bug fix to fulfill mandatory reporting requirements.
+description: Validate AI Tool handoff readiness and return bounded Antigravity evidence to Codex without changing gate, readiness, authorization, or acceptance authority.
 ---
 
-# Project Execution Tracker
+# AI Tool Status Return
 
-This skill automates the mandatory reporting requirements defined in `GEMINI.md`. It ensures that the `decision_intelligence_execution_status.md` file accurately reflects the current state of implementation.
+Before frontend work, read execution status, phase authorization, the handoff map, the single active handoff, and the frontend guardrail. Run `python .gemini/skills/status-tracker-skill/scripts/update_status.py check` and stop without source changes if it rejects ownership, readiness, or handoff count.
 
-## Mandatory Workflow
+After completing the handoff's tests and build, run `python .gemini/skills/status-tracker-skill/scripts/update_status.py return --handoff HANDOFF_FILE --summary "CONCISE EVIDENCE"`.
 
-1.  **Completion**: Finish a code change (Implementation -> Test -> Validate).
-2.  **Trigger**: Use this skill to mark the task as complete.
-3.  **Audit**: Ensure the "What Is Actually Implemented Today" section is updated for major features.
+The script may update only `Phase State`, `What This State Means`, `Current Owner`, `Automatic Continuation`, `Required Action`, and `Active Handoff`. It cannot change the phase heading or identity, current milestone, backend or frontend readiness, active gate, roadmap, authorization record, completion rule, handoff content, or any `GEMINI.md` file.
 
-## Tools
-
-### Update Script
-The script `scripts/update_status.py` can be used to toggle checkboxes in the status file.
-
-**Usage:**
-```bash
-python .gemini/skills/status-tracker-skill/scripts/update_status.py "Task Name" [x|~| ]
-```
-
-### Reference
-See [references/status_schema.md](references/status_schema.md) for the allowed status labels and formatting conventions.
-
-## Examples
-
-### Marking a task as complete
-If you finished the "Workspace Analysis Wiring", run:
-```bash
-python .gemini/skills/status-tracker-skill/scripts/update_status.py "Workspace Analysis Wiring" x
-```
-
-### Marking a task as in-progress
-```bash
-python .gemini/skills/status-tracker-skill/scripts/update_status.py "Phase 4 Chat Contract" ~
-```
-
-## Best Practices
-- **Atomic Updates**: Update the status file for each sub-task as you finish it.
-- **Truthfulness**: Only mark tasks as `[x]` after empirical verification (tests passed).
-- **Consistency**: Use the exact task names as they appear in the markdown file.
+Returning control does not accept the implementation. Codex reviews source and build evidence, and the user retains browser acceptance. Read `references/status_schema.md` for the exact boundary.

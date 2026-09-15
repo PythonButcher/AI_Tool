@@ -1,13 +1,14 @@
 ---
 name: auto-handoff-execution
-description: Triggers whenever the user asks to read, take over, or execute a codex handoff file, or mentions reading a handoff markdown file.
+description: Validate and execute AI Tool's current bounded Antigravity handoff when the user asks to read, take over, resume, or execute a handoff Markdown file.
 ---
 
 # Auto Handoff Execution
 
-When the user asks you to read a handoff markdown file from Codex (which usually contains a `Goal:` prompt):
-
-1. **Extract the Goal**: Read the specified handoff file (or check `project_docs/active/ai_hand_off/README.md` to find the active handoff) and locate the `Goal:` prompt.
-2. **Auto-Execute as a Goal**: You do not need the user to manually copy-paste the prompt or use the `/goal` slash command. You must automatically adopt a "goal-oriented" mode. 
-3. **Thorough Execution**: Treat the extracted `Goal:` prompt as your immediate task. Work autonomously and thoroughly step-by-step.
-4. **Do Not Stop**: Continue working until the goal is fully achieved, including running verification and acceptance checks. Only pause to ask the user questions if you are entirely blocked or if explicit user action is required.
+1. Read `AGENTS.md`, `project_docs/active/status/project_execution_status.md`, `project_docs/active/status/phase_authorization.json`, `project_docs/active/ai_hand_off/README.md`, and `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md`.
+2. Run `python .gemini/skills/status-tracker-skill/scripts/update_status.py check`.
+3. Do not edit frontend source unless the check confirms Antigravity ownership, Frontend Readiness of `backend_contract_ready` or `frontend_repair_only`, and exactly one non-README active handoff.
+4. Read that handoff and adopt its `Goal:` as the complete task. Treat target files, proven API contracts, fixtures, UI states, state ownership, non-negotiables, acceptance checks, and stop point as authoritative.
+5. Implement only the bounded React slice. Do not invent backend behavior, broaden scope, alter authorization or gate files, or modify any `GEMINI.md` file.
+6. Run the handoff's focused verification and build. Browser acceptance remains with the user.
+7. Return control with the governed status tracker and stop after reporting changed files, exact command results, and any contract mismatch.

@@ -12,6 +12,8 @@ import re
 import sys
 from typing import Any
 
+from mutation_policy import main as enforced_main
+
 
 DESTRUCTIVE_PATTERNS: tuple[tuple[str, str], ...] = (
     (r"\bgit\s+reset\s+--hard\b", "git reset --hard is destructive and requires explicit user intent."),
@@ -155,8 +157,8 @@ def main() -> int:
         )
         return 0
 
-    # Frontend source is Gemini-owned for Decision Intelligence unless the user
-    # explicitly authorizes Codex frontend edits in the current session.
+    # Frontend source is Antigravity-owned unless canonical authorization grants
+    # Codex frontend edits for the current phase.
     if _matches(FRONTEND_SOURCE_PATTERN, command):
         _context(
             "PreToolUse",
@@ -168,4 +170,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(enforced_main())

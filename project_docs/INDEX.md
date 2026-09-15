@@ -17,6 +17,7 @@ This is the top-level routing file. Use it to find the smallest current document
 | Need | Read |
 | --- | --- |
 | Check concise current status | `project_docs/active/status/project_execution_status.md` |
+| Check implementation authorization | `project_docs/active/status/phase_authorization.json` |
 | Work on the current project gate | `project_docs/active/active_gate/README.md` |
 | Review the active ML Studio roadmap | `project_docs/active/ml_studio/README.md` |
 | Review retired product and roadmap decisions | `project_docs/archive/README.md`, only when historical context is needed |
@@ -31,6 +32,7 @@ This is the top-level routing file. Use it to find the smallest current document
 | Review deferred planning | `project_docs/active/future/README.md` |
 | Keep Codex runs efficient | `project_docs/active/codex_harness_engineering.md` |
 | Improve or reuse the agent harness | `project_docs/active/agent_harness/README.md` |
+| Review documentation authority and lifecycle rules | `project_docs/active/rules/DOCUMENTATION_GOVERNANCE.md` |
 | Run Agent Council workflow | `project_docs/active/agent_council/README.md` |
 | Find old status or superseded plans | `project_docs/archive/superseded_active_2026_05_24/` |
 

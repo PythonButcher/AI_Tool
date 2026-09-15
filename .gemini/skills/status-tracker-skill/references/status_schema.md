@@ -1,29 +1,17 @@
-# Status Tracker Schema & Conventions
+# AI Tool Status Return Schema
 
-This reference defines the expected format for status updates in `project_docs/active/status/decision_intelligence_execution_status.md`.
+The authoritative status file is `project_docs/active/status/project_execution_status.md`.
 
-## Status Labels
+## Start Conditions
 
-Use the following bolded labels for Phase status:
-- **PLANNING artifact** (Phase is defined but no code exists)
-- **IMPLEMENTATION active** (Code is being written)
-- **HARDENING active** (Code exists but needs bug fixes/refinement)
-- **COMPLETE** (Phase objectives met, verified by tests)
-- **CLOSED AS-IS** (Frozen historical baseline)
+Current Owner must be `Antigravity`. Frontend Readiness must be `backend_contract_ready` or `frontend_repair_only`. The active handoff directory must contain its README and exactly one additional Markdown handoff. The status `Active Handoff` field must name that file.
 
-## Task Checkboxes
+## Permitted Return Changes
 
-- `[ ]` : Not started
-- `[~]` : In progress / Partially implemented
-- `[x]` : Completed
+The governed script may set Phase State to `IN PROGRESS`, Current Owner to `Codex`, Automatic Continuation to `CONTINUE`, and describe the returned handoff in What This State Means, Required Action, and Active Handoff.
 
-## Summary Section Rules
+It must preserve Phase Identity, Current Milestone, Backend Readiness, Frontend Readiness, Active Gate, Authorization Record, Roadmap, Latest Verification, Completion Rule, and the authorization JSON byte-for-byte. It does not edit the active gate or handoff and cannot claim Codex review or browser acceptance.
 
-When a task marked with `[x]` is a major UI component or feature, it should be summarized under the `## What Is Actually Implemented Today` section.
-- Keep descriptions concise and technical.
-- Use sub-bullets for technical details (e.g., "Updated dark theme with pure black middle `#000000`").
-- Maintain the "Premium Neutral Aesthetic" tone in all summaries.
+## Blocked Work
 
-## File Header
-
-Every status update must preserve the mandatory "Codex Guardrail" notice at the top of the file.
+If source work is blocked by a contract mismatch, return the exact evidence in chat without inventing a schema or changing backend truth. Codex decides the next gate or repair handoff.

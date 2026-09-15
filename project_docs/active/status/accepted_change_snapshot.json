@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "accepted_at": "2026-09-14",
+  "accepted_by": "User",
+  "purpose": "Freeze the accepted harness-hardening work while Phase 13 remains review-only.",
+  "sha256": {
+    ".agents/skills/auto-handoff-execution/SKILL.md": "382b6a836f7bf0f5e0e6de778b9aca514c3ac2add320a25ad6a063aff484ddb7",
+    ".agents/skills/project-phase-transition/SKILL.md": "185eeedcf7db4d1180e3ef2b9c264bb9e6e0826d68977c4a1d328f185fa6e853",
+    ".codex/hooks/agent_harness_check.py": "bf82f334f9c7ab5d4b26e5280b38d448be599f7d2deb8fa6f05bac5cfb97b6c2",
+    ".codex/hooks/check_active_gate.py": "bbcc652b52370e9bdbaab54cf225667236f4223f4fed9650ab332eca82205cea",
+    ".codex/hooks/ci_harness_check.py": "ca360a9396569df238adcb7097168ded6f33a88e9ee46c74d808b45b8c4d863d",
+    ".codex/hooks/harness_validation.py": "822cb788b6a87480f8358550bf5ec23cf4d6219b920c8434460196c0e6066ded",
+    ".codex/hooks/mutation_policy.py": "73aa2a68cf68466032ff3b153b995918725fb1f8d94fee6ceef13184e12627a3",
+    ".codex/hooks/pre_tool_use_policy.py": "1af05c79086e179b38e3be23976f42bd2cdf0605b4bb7dad0bfc1b5424490878",
+    ".codex/hooks/README.md": "87431acba04d899886c7afa2a69f2770f4a0a123d2c1bafa088046d2d109f5be",
+    ".codex/hooks/tests/test_harness_enforcement.py": "8062943b47fa4f8bda5d37d2c9f6c1b2044297ecc174b3e7a8ac65c3dd933185",
+    ".gemini/skills/status-tracker-skill/references/status_schema.md": "9bc8b34556675dd88171d4138d971725f2b5b85c20176ffa8b20ea9f1cce12bf",
+    ".gemini/skills/status-tracker-skill/scripts/update_status.py": "7a17c8ee2a92d888735857fb1812952a3102e5bd25522af34f5b95bc134cd591",
+    ".gemini/skills/status-tracker-skill/SKILL.md": "7f43319da729c82648d991d5e66794e8498d64e60bc295bd37fe81ada27ef1f2",
+    "AGENTS.md": "c1400c86bdcc81cc1b7e2074eb1c0347b7a724cca85c0d76e3ebee3e53b14b93",
+    "project_docs/active/active_gate/README.md": "330758313ff138839d164757d5edd9b307bf76fa046fe964f8dff58de7fc8ac8",
+    "project_docs/active/agent_harness/hooks.md": "f3c1dba28612a63878c98ae5aa2951f81c164d213f06d4f989fe0750a51dca92",
+    "project_docs/active/agent_harness/README.md": "1599ca707855b8a63a1d42bde3916b098825b34fb9801854e2126decd9714acd",
+    "project_docs/active/agent_harness/templates/ANTIGRAVITY_FRONTEND_HANDOFF_TEMPLATE.md": "7359cb1a4523e58a0a1d7aaab355de79ebfac918400b09a2719e03687a122b31",
+    "project_docs/active/ai_hand_off/README.md": "2bc1bef8e60bdcbf176504fd58b32375eef9a18e1221d1458a65273e4a0f052f",
+    "project_docs/active/README.md": "f3d29ed66ceb61e21bb2e901425b31c47365ae38dead0c0f97ad97fa8a5b63dd",
+    "project_docs/active/rules/DOCUMENTATION_GOVERNANCE.md": "6f9d3e80a60738a67b76f04493aa6985828cf0a5b88d7fdcc6e8e6823f738c1a",
+    "project_docs/active/status/phase_authorization.json": "d20c3c6c054b3d0dc912058f64858f9e04bef14087237515dda72d274b95f229",
+    "project_docs/active/status/project_execution_status.md": "567843c7461dad1f737cd0d9a507c026bf6a907ac305d212dad606c21a1ca08b",
+    "project_docs/active/status/README.md": "f0e5c2fae67d1d0ae1942f786a871d3fb2b5f80e20c52a76bb67d3b3ec1beb18",
+    "project_docs/INDEX.md": "16979aa492cd953cd5d66a11dbfb75f509ef1242c385242c83647ff416626805"
+  }
+}

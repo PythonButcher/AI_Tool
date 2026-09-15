@@ -9,7 +9,9 @@ This file is the active navigation hub. If this file conflicts with an archived 
 | Step | Read | Why |
 | --- | --- | --- |
 | 1 | `project_docs/active/status/project_execution_status.md` | Short current truth |
-| 2 | `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md` | Ownership boundary |
+| 2 | `project_docs/active/status/phase_authorization.json` | Canonical implementation authority |
+| 3 | `project_docs/active/rules/DOCUMENTATION_GOVERNANCE.md` | Authority and lifecycle boundaries |
+| 4 | `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md` | Ownership boundary |
 | 3 | `project_docs/active/contracts/decision_objects.md` | Contract reference when touching payloads |
 | 4 | `project_docs/active/codex_harness_engineering.md` | Run efficiency for substantial Codex work |
 | 5 | `project_docs/active/agent_harness/README.md` | Reusable harness, hooks, and future-project template |
@@ -22,7 +24,7 @@ Decision Intelligence workspaces, decision frames, readiness and capability pane
 
 Dataset identity and semantic truth remain required for every BI answer and chart.
 
-ML Studio is the active Phase 13 product direction. It will reuse governed workspace data, Power Query transformations, semantic roles, and relationship truth inside AI Tool while keeping its backend contracts modular. The current gate is backend-only; no ML Studio frontend work is authorized yet.
+ML Studio Phase 13 is the restored product direction. Its contract-and-evaluation gate is available for review, but implementation remains unauthorized until the user explicitly asks Codex to begin. No frontend work is authorized.
 
 ## Active Areas
 
@@ -30,6 +32,8 @@ ML Studio is the active Phase 13 product direction. It will reuse governed works
 | --- | --- | --- |
 | Status | `project_docs/active/status/` | Keep short; archive long history |
 | Current status | `project_docs/active/status/project_execution_status.md` | Single current source of truth |
+| Phase authorization | `project_docs/active/status/phase_authorization.json` | Machine-readable authority and allowed path boundary |
+| Documentation governance | `project_docs/active/rules/DOCUMENTATION_GOVERNANCE.md` | Authority, lifecycle, status, and handoff rules |
 | Completed rollout history | `project_docs/archive/ai_chat_decision_output_unification_rollout_completed.md` | Historical reference only; do not use as the current plan |
 | Completed AI Chat milestones | `project_docs/archive/ai_chat_completed_milestones/` | Historical reference only |
 | Contracts | `project_docs/active/contracts/` | Backend/frontend payload truth |

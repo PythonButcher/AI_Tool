@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "canonical_phase": {
+    "id": "phase-13-ml-studio-foundation",
+    "name": "Machine Learning Studio Foundation"
+  },
+  "authorization_state": "REVIEW_ONLY",
+  "lifecycle_state": "NOT STARTED",
+  "diff_baseline": "f50ca30a5d64c6fef96adfcd6b0d11607d7a18e3",
+  "authority_kind": "accepted_phase_transition",
+  "user_implementation_authorization": null,
+  "allowed_paths": [
+    "backend/ml_studio/**",
+    "tests/test_ml_studio_contracts.py",
+    "tests/test_ml_studio_evaluation.py",
+    "project_docs/active/contracts/ml_studio.md",
+    "project_docs/active/active_gate/README.md",
+    "project_docs/active/status/**"
+  ],
+  "review_only_allowed_paths": [
+    "project_docs/active/reviews/**"
+  ],
+  "accepted_change_snapshot": "project_docs/active/status/accepted_change_snapshot.json",
+  "codex_frontend_edits_allowed": false
+}
