@@ -1,47 +1,47 @@
-Goal: Obtain explicit user approval before creating the first bounded ML Studio UI shell handoff.
+Goal: Deliver a verified, native ML Studio destination and non-training shell through one bounded Antigravity handoff.
 
 ## User Outcome
 
-The first visible ML Studio work begins with a clear, limited assignment for navigation and shell states, without silently expanding into experiment controls, execution, comparison, candidate review, or unrelated frontend changes.
+Let a user enter ML Studio from the existing application rail and understand the current dataset identity, shell stages, evidence area, and durable run-list state without exposing training controls or implying unsupported readiness.
 
 ## Scope
 
 **Phase Identity**: `phase-13-ml-studio-foundation`
 
-**Current Step**: Step 1: Confirm ML Studio UI shell authorization
+**Current Step**: Step 1: Implement the bounded ML Studio shell handoff
 
-**Target Files**: `project_docs/active/status/phase_authorization.json`, `project_docs/active/status/project_execution_status.md`, `project_docs/active/active_gate/README.md`, and one bounded handoff under `project_docs/active/ai_hand_off/`
+**Target Files**: `frontend/frontend/src/components/layout/SideBar.jsx`, `frontend/frontend/src/components/layout/CanvasContainer.jsx`, `frontend/frontend/src/features/ml_studio/MLStudioShell.jsx`, `frontend/frontend/src/features/ml_studio/MLStudioShell.css`, `frontend/frontend/src/features/ml_studio/MLStudioShell.test.jsx`, and the active documentation files named by the authorization record.
 
-**Step Acceptance**: The user explicitly authorizes the first ML Studio UI shell assignment or revises its visible scope, and Codex records the exact frontend paths before activating a handoff.
+**Step Acceptance**: Antigravity returns only the authorized frontend changes, with focused tests and a successful production build proving the rail destination and all required shell states.
 
-**Step Verification**: `python .codex/hooks/check_active_gate.py project_docs/active/active_gate .`
+**Step Verification**: `npm --prefix frontend/frontend test -- --watchAll=false --runInBand MLStudioShell.test.jsx` and `npm --prefix frontend/frontend run build`
 
-**Next Step**: Step 2: Create the bounded Antigravity shell handoff
+**Next Step**: Step 2: Review the returned implementation evidence
 
-**Continuation Rule**: Wait for explicit user direction. After authorization, Codex creates one bounded handoff and waits for Antigravity to return implementation evidence.
+**Continuation Rule**: Antigravity executes `project_docs/active/ai_hand_off/ml_studio_shell.md`, returns evidence through the governed status command, and stops. Codex then reviews the source and verification evidence.
 
-**Stop Condition**: Stop for missing frontend authorization, a concrete blocker, a returned handoff requiring Codex review, a user-requested pause, or the UI shell acceptance boundary.
+**Stop Condition**: Stop for a contract mismatch, work outside the exact file boundary, a returned handoff requiring Codex review, a user-requested pause, or the user browser-acceptance boundary.
 
-- [ ] **Step 1: Confirm ML Studio UI shell authorization** — [IN PROGRESS]
-- [ ] **Step 2: Create the bounded Antigravity shell handoff** — [PENDING]
-- [ ] **Step 3: Review returned shell implementation evidence** — [PENDING]
-- [ ] **Step 4: Return the verified shell for user browser acceptance** — [PENDING]
+- [ ] **Step 1: Implement the bounded ML Studio shell handoff** — [IN PROGRESS]
+- [ ] **Step 2: Review the returned implementation evidence** — [PENDING]
+- [ ] **Step 3: Return the verified shell for user browser acceptance** — [PENDING]
 
-No frontend source mutation is authorized yet. Do not add training controls, run execution, comparison, candidate review, export behavior, legacy ML integration, deployment, or Context Ledger behavior.
+The only authorized frontend mutation is the exact path set in `project_docs/active/ai_hand_off/ml_studio_shell.md`. Do not add training controls, snapshot creation, run submission, comparison, candidate review, export behavior, legacy ML integration, deployment, or Context Ledger behavior.
 
 ## Contracts
 
-Use `project_docs/active/contracts/ml_studio.md` for the verified versioned API and identity fields the shell may display without inventing backend behavior.
+Use `project_docs/active/contracts/ml_studio.md` for the verified versioned API and identity fields the shell may display without inventing backend behavior. The shell may call only `GET /api/ml-studio/v1/runs?limit=20`.
 
 Use `project_docs/active/ml_studio/README.md` only for the Phase 13 ML Studio Shell architecture and acceptance boundary.
 
 ## Acceptance
 
-- The user explicitly authorizes the first bounded UI shell assignment or supplies a revised boundary.
-- The authorization record names the exact frontend files allowed for Antigravity implementation.
-- Codex creates exactly one handoff covering navigation, shell regions, and native empty, no-dataset, blocked, ready, loading, and error states.
-- The handoff excludes experiment controls, training execution, comparison, candidate review, exports, and broad application redesign.
-- Codex remains the backend and integration-review owner; Antigravity owns only the authorized React/CSS assignment.
+- ML Studio is a keyboard-accessible first-class destination in the existing rail.
+- The shell presents the Run Ribbon, Asset Rail, blank Experiment Canvas, Evidence Inspector, and Run Dock with native light/dark styling.
+- No-dataset, blocked, identity-ready, run-list loading, empty, error, and populated states are distinct and tested.
+- The shell uses existing workspace identity plus the proven run-list response and does not claim that training is authorized or available.
+- Workspace, Data Model, Explore, Dashboards, and AI Suite behavior remains unchanged.
+- Experiment controls, training execution, comparison, candidate review, exports, and broad application redesign remain excluded.
 
 ## Verification
 
@@ -53,4 +53,4 @@ Use `project_docs/active/ml_studio/README.md` only for the Phase 13 ML Studio Sh
 
 ## Owner And Control Return
 
-The user owns the UI authorization decision. After explicit approval, Codex records the frontend boundary and creates one bounded Antigravity handoff. Control then passes to Antigravity for that assignment and returns to Codex for source-level integration review.
+Antigravity owns only the active bounded React/CSS handoff. It returns control to Codex after its focused test and build. Codex owns source-level integration review, and the user owns browser acceptance.

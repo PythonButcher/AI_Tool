@@ -10,7 +10,7 @@ Antigravity owns bounded frontend implementation, React/CSS, UI rendering, and f
 
 ## Active Handoffs And Goal Prompts
 
-There is no active backend-agent or frontend-agent handoff. The user owns the ML Studio UI shell authorization decision through `project_docs/active/active_gate/README.md`. Antigravity must not begin frontend work until Codex records that authorization and creates one bounded handoff.
+The sole active frontend handoff is `project_docs/active/ai_hand_off/ml_studio_shell.md`. Antigravity owns that bounded destination-and-shell assignment and must return it to Codex review before beginning adjacent work.
 
 Completed handoffs belong outside this active folder.
 

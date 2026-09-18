@@ -12,7 +12,7 @@
     "approved_by": "User",
     "approved_at": "2026-09-17",
     "evidence": "direct_user_instruction",
-    "instruction": "ok just start"
+    "instruction": "I am going to give antigravity the hand off file, we are good"
   },
   "allowed_paths": [
     ".gitignore",
@@ -27,8 +27,14 @@
     "project_docs/active/active_gate/README.md",
     "project_docs/active/README.md",
     "project_docs/active/ai_hand_off/README.md",
+    "project_docs/active/ai_hand_off/ml_studio_shell.md",
     "project_docs/active/ml_studio/README.md",
-    "project_docs/active/status/**"
+    "project_docs/active/status/**",
+    "frontend/frontend/src/components/layout/SideBar.jsx",
+    "frontend/frontend/src/components/layout/CanvasContainer.jsx",
+    "frontend/frontend/src/features/ml_studio/MLStudioShell.jsx",
+    "frontend/frontend/src/features/ml_studio/MLStudioShell.css",
+    "frontend/frontend/src/features/ml_studio/MLStudioShell.test.jsx"
   ],
   "review_only_allowed_paths": [
     "project_docs/active/reviews/**"

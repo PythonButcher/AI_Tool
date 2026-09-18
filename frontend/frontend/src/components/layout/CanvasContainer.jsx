@@ -27,6 +27,7 @@ import KpiCardWindow from '../../features/dashboard/KpiCardWindow';
 import { WINDOW_SIZING } from '../../utils/windowSizing';
 import DestinationHome from './DestinationHome';
 import SourceModelCanvas from '../../features/data-model/SourceModelCanvas';
+import MLStudioShell from '../../features/ml_studio/MLStudioShell';
 import {
   FaSave,
   FaUndo,
@@ -46,6 +47,7 @@ const DESTINATIONS = {
   EXPLORE: 'explore',
   DATA_MODEL: 'data_model',
   DASHBOARDS: 'dashboards',
+  ML_STUDIO: 'ml_studio',
   AI: 'ai',
 };
 
@@ -118,6 +120,7 @@ function CanvasContainer({
   const isExploreDest = activeDestination === DESTINATIONS.EXPLORE;
   const isWorkspaceDest = activeDestination === DESTINATIONS.WORKSPACE;
   const isDataModelDest = activeDestination === DESTINATIONS.DATA_MODEL;
+  const isMlStudioDest = activeDestination === DESTINATIONS.ML_STUDIO;
   const isAiDest = activeDestination === DESTINATIONS.AI;
 
   const handleDestinationHomeAction = useCallback((action) => {
@@ -924,6 +927,7 @@ function CanvasContainer({
   const shouldShowHome = useMemo(() => {
     if (isWorkspaceDest) return !showDataPreview && !showRawViewer && !showMachineLearning;
     if (isDataModelDest) return false; // Data model has its own canvas UI
+    if (isMlStudioDest) return false; // ML Studio has its own full-canvas shell
     if (isExploreDest) return charts.length === 0 && !showDataPreview;
     if (isDashboardDest) return dashboardItems.length === 0;
     if (isAiDest) {
@@ -936,6 +940,7 @@ function CanvasContainer({
     isDataModelDest,
     isExploreDest,
     isDashboardDest,
+    isMlStudioDest,
     isAiDest,
     showDataPreview,
     showRawViewer,
@@ -985,6 +990,11 @@ function CanvasContainer({
         {isDataModelDest && (
           <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1, backgroundColor: 'var(--bg-canvas, #f8f9fa)' }}>
             <SourceModelCanvas workspaceId={activeWorkspace?.workspace_id} />
+          </div>
+        )}
+        {isMlStudioDest && (
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1, backgroundColor: 'var(--bg-canvas, #f8f9fa)' }}>
+            <MLStudioShell />
           </div>
         )}
       </div>
