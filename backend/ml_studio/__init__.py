@@ -27,6 +27,7 @@ from .contracts import (
     TruthBoundary,
 )
 from .repository import MLStudioRepository, PersistenceError
+from .service import MLStudioService, MLStudioServiceError
 
 __all__ = [
     "ArtifactMetadata",
@@ -44,6 +45,8 @@ __all__ = [
     "LeakageFinding",
     "MetricPolicy",
     "MLStudioRepository",
+    "MLStudioService",
+    "MLStudioServiceError",
     "ManagedArtifactStore",
     "PersistenceError",
     "RandomSeedPolicy",

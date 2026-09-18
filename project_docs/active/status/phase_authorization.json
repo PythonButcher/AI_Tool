@@ -10,15 +10,19 @@
   "authority_kind": "direct_user_instruction",
   "user_implementation_authorization": {
     "approved_by": "User",
-    "approved_at": "2026-09-14",
+    "approved_at": "2026-09-17",
     "evidence": "direct_user_instruction",
-    "instruction": "Authorizing the work for phase 13 to start: project_docs/active/active_gate"
+    "instruction": "ok just start"
   },
   "allowed_paths": [
+    ".gitignore",
     "backend/ml_studio/**",
+    "backend/routes/ml_studio.py",
+    "backend/app.py",
     "tests/test_ml_studio_contracts.py",
     "tests/test_ml_studio_evaluation.py",
     "tests/test_ml_studio_persistence.py",
+    "tests/test_ml_studio_api.py",
     "project_docs/active/contracts/ml_studio.md",
     "project_docs/active/active_gate/README.md",
     "project_docs/active/README.md",

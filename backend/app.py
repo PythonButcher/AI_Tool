@@ -23,6 +23,7 @@ from backend.routes.datahub_routes import datahub_bp
 from backend.routes.data_workspaces import data_workspaces_bp
 from backend.routes.source_relationships import source_relationships_bp
 from backend.routes.ml_prep import ml_prep_bp
+from backend.routes.ml_studio import get_ml_studio_service, ml_studio_bp
 from backend.routes.automl import automl_bp
 from backend.routes.semantic_model import semantic_model_bp
 from backend.routes.semantic_metrics import semantic_metrics_bp
@@ -74,6 +75,7 @@ def create_app(config=None):
     app.register_blueprint(data_workspaces_bp)
     app.register_blueprint(source_relationships_bp)
     app.register_blueprint(ml_prep_bp)
+    app.register_blueprint(ml_studio_bp)
     app.register_blueprint(automl_bp)
     app.register_blueprint(semantic_model_bp)
     app.register_blueprint(semantic_metrics_bp)
@@ -94,6 +96,10 @@ def create_app(config=None):
         interrupted = recover_incomplete_runs()
         if interrupted:
             print(f"Workflow recovery: marked {len(interrupted)} in-progress run(s) as interrupted.")
+        if not app.config.get("TESTING", False):
+            ml_interrupted = get_ml_studio_service().recover_incomplete_runs()
+            if ml_interrupted:
+                print(f"ML Studio recovery: marked {len(ml_interrupted)} in-progress run(s) as interrupted.")
 
     @app.route('/', methods=['GET'])
     def home():

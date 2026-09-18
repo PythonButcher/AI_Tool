@@ -24,7 +24,7 @@ Decision Intelligence workspaces, decision frames, readiness and capability pane
 
 Dataset identity and semantic truth remain required for every BI answer and chart.
 
-ML Studio Phase 13 is the active product direction. Its durable experiment and artifact foundation is verified; the identity-first API gate awaits explicit user direction. No frontend work is authorized.
+ML Studio Phase 13 is the active product direction. Its identity-first backend API is verified; the first bounded UI shell assignment awaits explicit user authorization. No frontend work is authorized yet.
 
 ## Active Areas
 

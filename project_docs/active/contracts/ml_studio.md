@@ -2,7 +2,7 @@
 
 ## Status
 
-Phase 13 backend contract through Gate 2. This document defines framework-independent, versioned objects, evidence boundaries, durable experiment and run state, and managed artifact integrity. It does not authorize routes, asynchronous execution, model serving, frontend behavior, or deployment claims.
+Phase 13 backend contract through Gate 3. This document defines framework-independent, versioned objects, evidence boundaries, durable experiment and run state, managed artifact integrity, and the identity-first API. It does not authorize asynchronous execution, model serving, frontend behavior, or deployment claims.
 
 ## Contract Version
 
@@ -43,6 +43,30 @@ Repository JSON is finite and size-bounded. Warnings are bounded strings, event 
 Run identities and artifact names are bounded. Absolute paths, separators, traversal, unsafe managed entries, root symlinks, and run-directory symlink escapes are rejected. Cleanup validates the run identity, refuses links and nested entries, and cannot traverse outside the managed root.
 
 Each artifact and its metadata sidecar are written through flushed temporary files while an exclusive lock is held. Artifacts are write-once. Metadata contains only `run_id`, name, `sha256`, byte size, media type, and timezone-aware creation time. Verification re-hashes stored bytes and rejects missing, malformed, size-mismatched, identity-mismatched, or tampered artifacts. SQLite stores the same path-free metadata under `(run_id, name)` and never stores artifact bytes.
+
+## Identity-First API
+
+The versioned API root is `/api/ml-studio/v1`. Every response uses one named object or collection. Public errors contain exactly `code`, `message`, and `remediation`. Unknown failures return the stable `ml_studio_internal_error` boundary without a traceback or implementation detail.
+
+| Method and path | Request identity | Response |
+| --- | --- | --- |
+| `POST /snapshots` | `workspace_id`, `workspace_version`, ordered `source_ids`, ordered `relationship_ids` | Server-resolved `snapshot` |
+| `GET /snapshots/{snapshot_id}` | Server-issued snapshot identity | Immutable `snapshot` |
+| `POST /experiments` | Complete `ExperimentSpecification` | Immutable `experiment` version |
+| `GET /experiments/{experiment_id}/versions` | Experiment identity | Ordered `experiments` |
+| `POST /runs` | Experiment/version, `snapshot_id`, parameters, environment, code revision, and `Idempotency-Key` header | Durable `run` and `created` flag |
+| `GET /runs` | Optional bounded `limit` | Durable `runs` |
+| `GET /runs/{run_id}` | Run identity | Durable `run` with path-free artifact metadata |
+| `GET /runs/{run_id}/events` | Run identity and optional bounded `limit` | Ordered lifecycle `events` |
+| `POST /runs/{run_id}/cancel` | Run identity | Updated durable `run` |
+| `GET /runs/{run_id}/evaluation` | Completed run identity | Immutable `evaluation` |
+| `POST /runs/compare` | Two to four ordered `run_ids` | Compatible evidence-only `comparison` |
+| `POST /candidates` | Completed `run_id`, registered artifact hash, review decision, reviewer, and use boundaries | Server-issued immutable `candidate` |
+| `GET /candidates/{candidate_id}` | Candidate identity | Immutable `candidate` |
+
+Snapshot creation never accepts rows, fingerprints, schema, governance evidence, semantic-model content, transformation recipes, relationship definitions, or paths from the client. An injected trusted resolver derives those fields from the current server-owned workspace and active Data Model. Snapshot creation rejects a mismatched workspace version or ordered source/relationship identity, blocked governance, and empty datasets. Run submission reloads the stored snapshot and re-resolves current server truth; a changed workspace version, source fingerprint, relationship order, semantic-model hash, transformation-recipe hash, or governance state makes the snapshot stale.
+
+The server issues snapshot, run, and candidate identities. Run retries are idempotent on caller-controlled intent, excluding the server-issued run ID and submission timestamp. The raw idempotency key is never stored or returned. Comparisons require completed runs from the same experiment version, snapshot, and task type. Candidate review requires a completed evaluated run, registered path-free artifact metadata, and a fresh managed-storage hash verification.
 
 ## Evaluation Result
 

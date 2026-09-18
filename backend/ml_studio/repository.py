@@ -14,7 +14,14 @@ from pathlib import Path
 from typing import Any, Final
 
 from .artifacts import ArtifactMetadata
-from .contracts import EvaluationResult, ExperimentSpecification, RunSpecification, StructuredError
+from .contracts import (
+    DatasetSnapshotIdentity,
+    EvaluationResult,
+    ExperimentSpecification,
+    ReviewedCandidateReference,
+    RunSpecification,
+    StructuredError,
+)
 
 
 TERMINAL_RUN_STATES: Final = frozenset({"completed", "failed", "cancelled", "interrupted"})
@@ -81,6 +88,18 @@ def _idempotency_hash(key: str) -> str:
     return hashlib.sha256(key.encode("utf-8")).hexdigest()
 
 
+def _run_submission_fingerprint(payload: Mapping[str, Any]) -> str:
+    """Hash caller-controlled run intent, excluding server identity and time."""
+    intent = {
+        key: value
+        for key, value in payload.items()
+        if key not in {"run_id", "submitted_at"}
+    }
+    return _payload_hash(
+        _canonical_json(intent, limit=MAX_RUN_JSON_BYTES, label="run submission")
+    )
+
+
 class MLStudioRepository:
     """Framework-independent repository with transactionally validated state."""
 
@@ -116,6 +135,14 @@ class MLStudioRepository:
             specification_hash TEXT NOT NULL,
             created_at TEXT NOT NULL,
             PRIMARY KEY (experiment_id, specification_version)
+        );
+        CREATE TABLE IF NOT EXISTS ml_dataset_snapshots (
+            snapshot_id TEXT PRIMARY KEY,
+            workspace_id TEXT NOT NULL,
+            workspace_version INTEGER NOT NULL CHECK (workspace_version > 0),
+            snapshot_json TEXT NOT NULL,
+            snapshot_hash TEXT NOT NULL,
+            created_at TEXT NOT NULL
         );
         CREATE TABLE IF NOT EXISTS ml_runs (
             run_id TEXT PRIMARY KEY,
@@ -156,6 +183,13 @@ class MLStudioRepository:
             media_type TEXT NOT NULL,
             created_at TEXT NOT NULL,
             PRIMARY KEY (run_id, name),
+            FOREIGN KEY (run_id) REFERENCES ml_runs (run_id) ON DELETE RESTRICT
+        );
+        CREATE TABLE IF NOT EXISTS ml_reviewed_candidates (
+            candidate_id TEXT PRIMARY KEY,
+            run_id TEXT NOT NULL,
+            candidate_json TEXT NOT NULL,
+            created_at TEXT NOT NULL,
             FOREIGN KEY (run_id) REFERENCES ml_runs (run_id) ON DELETE RESTRICT
         );
         """
@@ -230,6 +264,49 @@ class MLStudioRepository:
             ) from exc
         return payload
 
+    def create_snapshot(self, snapshot: DatasetSnapshotIdentity) -> dict[str, Any]:
+        """Persist one immutable server-resolved dataset snapshot."""
+        if not isinstance(snapshot, DatasetSnapshotIdentity):
+            raise TypeError("snapshot must be a DatasetSnapshotIdentity")
+        payload = snapshot.to_dict()
+        encoded = _canonical_json(payload, limit=MAX_RUN_JSON_BYTES, label="dataset snapshot")
+        try:
+            with self._lock, self._connection() as connection:
+                connection.execute("BEGIN IMMEDIATE")
+                connection.execute(
+                    "INSERT INTO ml_dataset_snapshots VALUES (?, ?, ?, ?, ?, ?)",
+                    (
+                        snapshot.snapshot_id,
+                        snapshot.workspace_id,
+                        snapshot.workspace_version,
+                        encoded,
+                        _payload_hash(encoded),
+                        snapshot.created_at.isoformat(),
+                    ),
+                )
+                connection.commit()
+        except sqlite3.IntegrityError as exc:
+            raise PersistenceError(
+                "snapshot_identity_conflict",
+                "The dataset snapshot identity is already in use.",
+                "Use the existing immutable snapshot or create a new server-issued identity.",
+            ) from exc
+        except sqlite3.Error as exc:
+            raise PersistenceError(
+                "snapshot_persistence_failed",
+                "The dataset snapshot could not be persisted.",
+                "Retry the operation or inspect the server persistence health.",
+            ) from exc
+        return payload
+
+    def get_snapshot(self, snapshot_id: str) -> dict[str, Any] | None:
+        with self._connection() as connection:
+            row = connection.execute(
+                "SELECT snapshot_json FROM ml_dataset_snapshots WHERE snapshot_id = ?",
+                (snapshot_id,),
+            ).fetchone()
+        return None if row is None else json.loads(row["snapshot_json"])
+
     def get_experiment(self, experiment_id: str, specification_version: int) -> dict[str, Any] | None:
         with self._connection() as connection:
             row = connection.execute(
@@ -258,7 +335,7 @@ class MLStudioRepository:
         key_hash = _idempotency_hash(idempotency_key.strip())
         payload = run.to_dict()
         encoded = _canonical_json(payload, limit=MAX_RUN_JSON_BYTES, label="run specification")
-        fingerprint = _payload_hash(encoded)
+        fingerprint = _run_submission_fingerprint(payload)
         submitted_at = run.submitted_at.isoformat()
         now = _now()
         try:
@@ -338,6 +415,25 @@ class MLStudioRepository:
         with self._connection() as connection:
             row = connection.execute("SELECT * FROM ml_runs WHERE run_id = ?", (run_id,)).fetchone()
         return None if row is None else self._public_run(row)
+
+    def list_runs(self, *, run_ids: Sequence[str] | None = None, limit: int = 100) -> list[dict[str, Any]]:
+        safe_limit = min(max(int(limit), 1), 500)
+        with self._connection() as connection:
+            if run_ids is None:
+                rows = connection.execute(
+                    "SELECT * FROM ml_runs ORDER BY submitted_at DESC, run_id LIMIT ?",
+                    (safe_limit,),
+                ).fetchall()
+            else:
+                normalized = tuple(dict.fromkeys(str(item) for item in run_ids))
+                if not normalized:
+                    return []
+                placeholders = ",".join("?" for _ in normalized)
+                rows = connection.execute(
+                    f"SELECT * FROM ml_runs WHERE run_id IN ({placeholders}) ORDER BY submitted_at, run_id",
+                    normalized,
+                ).fetchall()
+        return [self._public_run(row) for row in rows]
 
     def transition_run(
         self,
@@ -532,3 +628,33 @@ class MLStudioRepository:
                 (run_id,),
             ).fetchall()
         return [dict(row) for row in rows]
+
+    def create_candidate(self, candidate: ReviewedCandidateReference) -> dict[str, Any]:
+        """Persist one immutable review decision for a verified run artifact."""
+        if not isinstance(candidate, ReviewedCandidateReference):
+            raise TypeError("candidate must be a ReviewedCandidateReference")
+        payload = candidate.to_dict()
+        encoded = _canonical_json(payload, limit=MAX_RUN_JSON_BYTES, label="reviewed candidate")
+        try:
+            with self._lock, self._connection() as connection:
+                connection.execute("BEGIN IMMEDIATE")
+                connection.execute(
+                    "INSERT INTO ml_reviewed_candidates VALUES (?, ?, ?, ?)",
+                    (candidate.candidate_id, candidate.run_id, encoded, candidate.reviewed_at.isoformat()),
+                )
+                connection.commit()
+        except sqlite3.IntegrityError as exc:
+            raise PersistenceError(
+                "candidate_identity_conflict",
+                "The reviewed candidate identity is already in use.",
+                "Use the existing immutable review record or a new server-issued identity.",
+            ) from exc
+        return payload
+
+    def get_candidate(self, candidate_id: str) -> dict[str, Any] | None:
+        with self._connection() as connection:
+            row = connection.execute(
+                "SELECT candidate_json FROM ml_reviewed_candidates WHERE candidate_id = ?",
+                (candidate_id,),
+            ).fetchone()
+        return None if row is None else json.loads(row["candidate_json"])
