@@ -24,7 +24,7 @@ Decision Intelligence workspaces, decision frames, readiness and capability pane
 
 Dataset identity and semantic truth remain required for every BI answer and chart.
 
-ML Studio Phase 13 is the active product direction. Its identity-first backend API is verified, and Antigravity owns the single bounded destination-and-shell handoff at `project_docs/active/ai_hand_off/ml_studio_shell.md`.
+ML Studio Phase 13 is the active product direction. Roadmap Gate 5 is prepared as a Codex-owned backend contract step at `project_docs/active/active_gate/README.md`; implementation awaits an explicit user start instruction.
 
 ## Active Areas
 

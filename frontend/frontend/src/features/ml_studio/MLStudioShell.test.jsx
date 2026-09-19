@@ -157,4 +157,79 @@ describe('MLStudioShell', () => {
       expect(screen.getByText('No durable runs exist. Run creation arrives later.')).toBeInTheDocument();
     });
   });
+
+  it('ignores response from old identity after identity transition', async () => {
+    let resolveFirstRequest;
+    const firstRequestPromise = new Promise(resolve => resolveFirstRequest = resolve);
+
+    global.fetch
+      .mockReturnValueOnce(firstRequestPromise)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ runs: [{ run_id: 'run-new', experiment_id: 'exp-new', status: 'completed' }] })
+      });
+
+    useDatasetMeta.mockReturnValue({ numRows: 100, numCols: 5 });
+    const { rerender } = render(
+      <DataContext.Provider value={{
+        activeWorkspace: { workspace_id: 'ws-1', version: 1 },
+        analysisContext: { workspace_id: 'ws-1', workspace_version: 1, source_ids: ['s1'] }
+      }}>
+        <MLStudioShell />
+      </DataContext.Provider>
+    );
+
+    // Identity transition
+    rerender(
+      <DataContext.Provider value={{
+        activeWorkspace: { workspace_id: 'ws-2', version: 1 },
+        analysisContext: { workspace_id: 'ws-2', workspace_version: 1, source_ids: ['s2'] }
+      }}>
+        <MLStudioShell />
+      </DataContext.Provider>
+    );
+
+    // Resolve the first request with data for the old identity
+    resolveFirstRequest({
+      ok: true,
+      json: async () => ({ runs: [{ run_id: 'run-old', experiment_id: 'exp-old', status: 'completed' }] })
+    });
+
+    // We should eventually see run-new, but not run-old
+    await waitFor(() => {
+      expect(screen.getByText('run-new')).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText('run-old')).not.toBeInTheDocument();
+    expect(global.fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('ignores completion after component unmounts', async () => {
+    let resolveRequest;
+    const requestPromise = new Promise(resolve => resolveRequest = resolve);
+
+    global.fetch.mockReturnValueOnce(requestPromise);
+
+    const { unmount } = renderWithContext({
+      activeWorkspace: { workspace_id: 'ws-1', version: 1 },
+      analysisContext: { workspace_id: 'ws-1', workspace_version: 1, source_ids: ['s1'] },
+    });
+
+    // Unmount before the fetch resolves
+    unmount();
+
+    const mockJson = jest.fn().mockResolvedValue({ runs: [] });
+
+    resolveRequest({
+      ok: true,
+      json: mockJson
+    });
+
+    // Wait a microtask to let promise resolution run
+    await new Promise(resolve => setTimeout(resolve, 0));
+
+    // The component should check the fetch sequence and return early
+    // before attempting to parse the response body.
+    expect(mockJson).not.toHaveBeenCalled();
+  });
 });

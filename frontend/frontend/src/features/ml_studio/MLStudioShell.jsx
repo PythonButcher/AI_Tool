@@ -41,6 +41,10 @@ function MLStudioShell() {
 
   const isIdentityAvailable = hasRequiredIdentity && !hasBlockedIdentity;
 
+  const identityKey = isIdentityAvailable
+    ? `${activeWorkspace?.workspace_id}-${analysisContext?.workspace_version}`
+    : null;
+
   const fetchRuns = useCallback(async () => {
     if (!isIdentityAvailable) return;
     
@@ -59,6 +63,8 @@ function MLStudioShell() {
           errorData = { error: { code: 'unknown_error', message: 'An unexpected error occurred.', remediation: 'Please try again.' } };
         }
         
+        if (fetchId !== fetchIdRef.current) return;
+
         if (errorData?.error) {
            const err = new Error(errorData.error.message);
            err.code = errorData.error.code;
@@ -91,10 +97,18 @@ function MLStudioShell() {
   }, [isIdentityAvailable]);
 
   useEffect(() => {
-    if (isIdentityAvailable && runsState.status === 'idle') {
-      fetchRuns();
+    if (!isIdentityAvailable) {
+      fetchIdRef.current += 1;
+      setRunsState({ status: 'idle', data: null, error: null });
+      return;
     }
-  }, [isIdentityAvailable, runsState.status, fetchRuns]);
+
+    fetchRuns();
+
+    return () => {
+      fetchIdRef.current += 1;
+    };
+  }, [identityKey, isIdentityAvailable, fetchRuns]);
 
   return (
     <div className="ml-studio-shell">

@@ -2,27 +2,27 @@
 
 This file is the concise current truth for AI_Tool delivery.
 
-## Current Gate: ML Studio Shell
+## Current Gate: ML Studio Preparation Contracts
 
-- **Current Gate**: ML Studio Shell
+- **Current Gate**: ML Studio Preparation Contracts
 - **Roadmap Phase**: Phase 13 — Machine Learning Studio Foundation
 - **Phase Identity**: `phase-13-ml-studio-foundation`
-- **Phase State**: `IN PROGRESS`
-- **What This State Means**: The frontend handoff returned and requires Codex source and build review.
-- **Current Milestone**: Step 1: Implement the bounded ML Studio shell handoff
-- **Automatic Continuation**: `CONTINUE`
-- **Current Owner**: Codex
-- **Backend Readiness**: `backend_contract_ready`
-- **Frontend Readiness**: `backend_contract_ready`
-- **Implementation Delegate**: Antigravity
-- **Next Action**: Execute the single active frontend handoff and return changed-file, test, and build evidence to Codex.
-- **Required Action**: Review `project_docs/active/ai_hand_off/ml_studio_shell.md` and its returned evidence.
+- **Phase State**: `AWAITING USER ACCEPTANCE`
+- **What This State Means**: Roadmap Gate 5 is narrowed to a Codex-owned backend contract step and is prepared for explicit user start authorization.
+- **Current Milestone**: Step 1: Define preparation assessment and recipe lineage contracts
+- **Automatic Continuation**: `WAIT_FOR_USER`
+- **Current Owner**: User
+- **Backend Readiness**: `implementation_required`
+- **Frontend Readiness**: `blocked_contract_and_api_first`
+- **Implementation Delegate**: Codex after explicit start authorization
+- **Next Action**: The user may tell Codex to start the prepared contract gate.
+- **Required Action**: Do not implement the prepared gate until the user explicitly starts it.
 - **Active Gate**: `project_docs/active/active_gate/README.md`
 - **Authorization Record**: `project_docs/active/status/phase_authorization.json`
-- **Roadmap**: `project_docs/active/ml_studio/README.md`
-- **Active Handoff**: `project_docs/active/ai_hand_off/ml_studio_shell.md` — returned for Codex review: ML Studio shell implemented; focused tests and build returned for Codex review.
-- **Latest Verification**: The identity-first API passed 56 ML Studio tests with one Windows symlink-permission skip, 50 governance/workspace/relationship regressions, 30 application-startup/workflow regressions, Python compilation, 20 harness-policy tests, the provider-neutral CI runner, both active-gate validators, and diff checks on 2026-09-17.
+- **Roadmap**: `project_docs/active/ml_studio/README.md` — Gate 5: Power Query Gateway And Guided Experiment Builder
+- **Active Handoff**: None.
+- **Latest Verification**: Codex accepted the identity-transition and post-unmount request guards from source; the returned focused ML Studio shell tests and production build passed, and the post-unmount regression now proves response-body processing stops after unmount on 2026-09-18.
 
 ## Completion Rule
 
-This gate completes when Codex verifies the returned source and build evidence against the handoff and returns the shell to the user for browser acceptance. Browser acceptance remains with the user.
+This gate completes when Codex verifies the preparation and recipe-lineage contracts, the server-issued assessment boundary, and the resulting bounded frontend integration before returning control to the user.

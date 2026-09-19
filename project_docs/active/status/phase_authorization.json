@@ -5,7 +5,7 @@
     "name": "Machine Learning Studio Foundation"
   },
   "authorization_state": "AUTHORIZED",
-  "lifecycle_state": "IN PROGRESS",
+  "lifecycle_state": "AWAITING USER ACCEPTANCE",
   "diff_baseline": "aeaf00fc0f3ad869aea3af663d28c1286c20bcdc",
   "authority_kind": "direct_user_instruction",
   "user_implementation_authorization": {
