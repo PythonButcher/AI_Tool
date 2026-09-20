@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import re
+from statistics import fmean, pstdev
 from collections.abc import Callable, Mapping, Sequence
 from datetime import UTC, datetime
 from typing import Any
@@ -34,6 +35,15 @@ from .repository import MLStudioRepository, PersistenceError
 
 SnapshotResolver = Callable[[str], Mapping[str, Any]]
 ArtifactVerifier = Callable[[Mapping[str, Any]], None]
+RunDataResolver = Callable[[DatasetSnapshotIdentity], tuple[Any, int, Mapping[str, tuple[str, int]]]]
+RunScheduler = Callable[[str], bool]
+
+
+def _default_run_evaluator(*args: Any, **kwargs: Any) -> Any:
+    """Load scientific dependencies only when a worker actually evaluates a run."""
+    from .evaluation import evaluate_supervised
+
+    return evaluate_supervised(*args, **kwargs)
 _FORBIDDEN_RUN_KEYS = {
     "artifact_bytes",
     "data",
@@ -172,6 +182,16 @@ def _experiment_from_dict(payload: Mapping[str, Any]) -> ExperimentSpecification
     return ExperimentSpecification(**value)
 
 
+def _run_from_dict(payload: Mapping[str, Any]) -> RunSpecification:
+    value = dict(payload)
+    if value.get("contract_version", CONTRACT_VERSION) != CONTRACT_VERSION:
+        raise ValueError("contract_version is unsupported")
+    value.pop("contract_version", None)
+    value["dataset_snapshot"] = _snapshot_from_dict(value["dataset_snapshot"])
+    value["submitted_at"] = _parse_datetime(value["submitted_at"], label="run submission")
+    return RunSpecification(**value)
+
+
 def _recipe_from_dict(payload: Mapping[str, Any]) -> TransformationRecipeLineage:
     value = dict(payload)
     if value.get("contract_version", CONTRACT_VERSION) != CONTRACT_VERSION:
@@ -250,11 +270,20 @@ class MLStudioService:
         artifact_verifier: ArtifactVerifier,
         *,
         clock: Callable[[], datetime] = _utc_now,
+        run_data_resolver: RunDataResolver | None = None,
+        run_evaluator: Callable[..., Any] = _default_run_evaluator,
     ) -> None:
         self._repository = repository
         self._snapshot_resolver = snapshot_resolver
         self._artifact_verifier = artifact_verifier
         self._clock = clock
+        self._run_data_resolver = run_data_resolver
+        self._run_evaluator = run_evaluator
+        self._run_scheduler: RunScheduler | None = None
+
+    def set_run_scheduler(self, scheduler: RunScheduler) -> None:
+        """Attach the process-local scheduler after constructing its worker callback."""
+        self._run_scheduler = scheduler
 
     @staticmethod
     def _translate_persistence(exc: PersistenceError) -> MLStudioServiceError:
@@ -647,7 +676,28 @@ class MLStudioService:
                 environment=dict(payload["environment"]),
                 code_revision=str(payload["code_revision"]),
             )
-            return self._repository.submit_run(run, idempotency_key=idempotency_key)
+            stored, created = self._repository.submit_run(run, idempotency_key=idempotency_key)
+            if created and self._run_scheduler is not None:
+                try:
+                    self._run_scheduler(stored["run_id"])
+                except Exception as exc:
+                    self._repository.transition_run(
+                        stored["run_id"],
+                        "failed",
+                        progress_stage="scheduling_failed",
+                        failure=StructuredError(
+                            code="run_scheduling_failed",
+                            message="The run could not be scheduled for background execution.",
+                            remediation="Inspect worker capacity and submit a new run with a new idempotency key.",
+                        ),
+                    )
+                    raise MLStudioServiceError(
+                        "run_scheduling_failed",
+                        "The run could not be scheduled for background execution.",
+                        "Inspect worker capacity and submit a new run with a new idempotency key.",
+                        status_code=503,
+                    ) from exc
+            return stored, created
         except PersistenceError as exc:
             raise self._translate_persistence(exc) from exc
         except MLStudioServiceError:
@@ -664,6 +714,108 @@ class MLStudioService:
         if run is None:
             raise MLStudioServiceError("run_not_found", "The requested run does not exist.", "Reload the run list.", status_code=404)
         return {**run, "artifacts": self._repository.list_artifacts(run_id)}
+
+    def execute_run(self, run_id: str) -> None:
+        """Execute one queued run and persist only safe lifecycle evidence."""
+        current = self._repository.get_run(run_id)
+        if current is None or current["status"] != "queued":
+            return
+        try:
+            self._repository.transition_run(run_id, "running", progress_stage="resolving_dataset")
+        except PersistenceError:
+            return
+
+        try:
+            if self._run_data_resolver is None:
+                raise MLStudioServiceError(
+                    "run_executor_unavailable",
+                    "The server has no trusted dataset resolver for run execution.",
+                    "Configure the ML Studio run data resolver and submit a new run.",
+                    status_code=503,
+                )
+            stored_run = self._repository.get_run(run_id)
+            if stored_run is None:
+                return
+            run = _run_from_dict(stored_run["run_specification"])
+            experiment_payload = self._repository.get_experiment(run.experiment_id, run.specification_version)
+            if experiment_payload is None:
+                raise MLStudioServiceError(
+                    "experiment_version_missing",
+                    "The run's immutable experiment version is unavailable.",
+                    "Restore the experiment metadata before retrying with a new run.",
+                    status_code=409,
+                )
+            specification = _experiment_from_dict(experiment_payload)
+            data, workspace_version, source_fingerprints = self._run_data_resolver(run.dataset_snapshot)
+            if self._finish_cancellation(run_id):
+                return
+            self._repository.update_run_progress(run_id, "validating_snapshot")
+            self._assert_snapshot_current(run.dataset_snapshot)
+            if self._finish_cancellation(run_id):
+                return
+            self._repository.update_run_progress(run_id, "evaluating_candidates")
+            result = self._run_evaluator(
+                data,
+                run,
+                specification,
+                current_workspace_version=workspace_version,
+                current_source_fingerprints=source_fingerprints,
+            )
+            if self._finish_cancellation(run_id):
+                return
+            self._repository.transition_run(
+                run_id,
+                "completed",
+                progress_stage="completed",
+                evaluation_result=result,
+                warnings=result.warnings,
+            )
+        except MLStudioServiceError as exc:
+            self._fail_active_run(run_id, exc.error)
+        except (PersistenceError, KeyError, TypeError):
+            self._fail_active_run(
+                run_id,
+                StructuredError(
+                    code="run_execution_failed",
+                    message="The run could not complete its governed evaluation.",
+                    remediation="Review the experiment inputs and run events, then submit a new run.",
+                ),
+            )
+        except Exception as exc:
+            safe_error = getattr(exc, "error", None)
+            self._fail_active_run(
+                run_id,
+                safe_error
+                if isinstance(safe_error, StructuredError)
+                else StructuredError(
+                    code="run_execution_failed",
+                    message="The run could not complete its governed evaluation.",
+                    remediation="Inspect server health and submit a new run without changing the original record.",
+                ),
+            )
+
+    def _finish_cancellation(self, run_id: str) -> bool:
+        current = self._repository.get_run(run_id)
+        if current is None:
+            return True
+        if current["status"] == "cancel_requested":
+            self._repository.transition_run(run_id, "cancelled", progress_stage=current["progress_stage"])
+            return True
+        return current["status"] in {"cancelled", "completed", "failed", "interrupted"}
+
+    def _fail_active_run(self, run_id: str, failure: StructuredError) -> None:
+        current = self._repository.get_run(run_id)
+        if current is None or current["status"] in {"completed", "failed", "cancelled", "interrupted"}:
+            return
+        if current["status"] == "cancel_requested":
+            self._repository.transition_run(run_id, "cancelled", progress_stage=current["progress_stage"])
+            return
+        self._repository.transition_run(
+            run_id,
+            "failed",
+            progress_stage="failed",
+            failure=failure,
+        )
 
     def list_runs(self, *, limit: int = 100) -> list[dict[str, Any]]:
         return self._repository.list_runs(limit=limit)
@@ -691,6 +843,136 @@ class MLStudioService:
                 status_code=409,
             )
         return run["evaluation_result"]
+
+    def get_run_evidence(self, run_id: str) -> dict[str, Any]:
+        """Project immutable evaluation truth into a UI-ready evidence view."""
+        run = self.get_run(run_id)
+        if run["status"] != "completed" or "evaluation_result" not in run:
+            raise MLStudioServiceError(
+                "evaluation_unavailable",
+                "Evaluation evidence is not available for this run.",
+                "Wait for a successful completed run.",
+                status_code=409,
+            )
+        experiment = self._repository.get_experiment(run["experiment_id"], run["specification_version"])
+        if experiment is None:
+            raise MLStudioServiceError(
+                "experiment_version_missing",
+                "The run's immutable experiment version is unavailable.",
+                "Restore the experiment metadata before requesting evidence.",
+                status_code=409,
+            )
+        result = run["evaluation_result"]
+        selection = result["selection_evidence"]
+        final = result["final_holdout_evidence"]
+        selected = next(
+            item for item in selection["candidates"] if item["candidate_family"] == selection["selected_candidate"]
+        )
+        metric_policy = experiment["metric_policy"]
+        directions = {
+            "rmse": "minimize",
+            "mae": "minimize",
+            "r2": "maximize",
+            "balanced_accuracy": "maximize",
+            "f1_weighted": "maximize",
+            "accuracy": "maximize",
+        }
+
+        def favorable_delta(candidate: float, baseline: float, direction: str) -> float:
+            return baseline - candidate if direction == "minimize" else candidate - baseline
+
+        metric_landscape = []
+        for metric in metric_policy["reported_metrics"]:
+            baseline_folds = [item[metric] for item in selection["baseline_fold_metrics"] if metric in item]
+            candidate_folds = [item[metric] for item in selected["fold_metrics"] if metric in item]
+            direction = directions.get(metric, metric_policy["optimization"])
+            final_candidate = final["candidate_metrics"].get(metric)
+            final_baseline = final["baseline_metrics"].get(metric)
+            complete = bool(baseline_folds and candidate_folds and final_candidate is not None and final_baseline is not None)
+            metric_landscape.append(
+                {
+                    "metric": metric,
+                    "direction": direction,
+                    "available": complete,
+                    "development": {
+                        "baseline_folds": baseline_folds,
+                        "candidate_folds": candidate_folds,
+                        "candidate_mean": fmean(candidate_folds) if candidate_folds else None,
+                        "candidate_standard_deviation": pstdev(candidate_folds) if len(candidate_folds) > 1 else None,
+                        "baseline_relative_delta": (
+                            favorable_delta(fmean(candidate_folds), fmean(baseline_folds), direction)
+                            if baseline_folds and candidate_folds
+                            else None
+                        ),
+                    },
+                    "final_holdout": {
+                        "candidate": final_candidate,
+                        "baseline": final_baseline,
+                        "baseline_relative_delta": (
+                            favorable_delta(final_candidate, final_baseline, direction)
+                            if final_candidate is not None and final_baseline is not None
+                            else None
+                        ),
+                    },
+                }
+            )
+
+        weak_reasons: list[str] = []
+        if selection["development_row_count"] < 100:
+            weak_reasons.append("development_sample_below_100")
+        if final["holdout_row_count"] < 30:
+            weak_reasons.append("final_holdout_below_30")
+        if len(selection["baseline_fold_metrics"]) < 3:
+            weak_reasons.append("fewer_than_three_development_folds")
+        if any(not item["available"] for item in metric_landscape):
+            weak_reasons.append("reported_metric_evidence_missing")
+        if result["warnings"]:
+            weak_reasons.append("evaluation_warnings_present")
+
+        primary = next(
+            (item for item in metric_landscape if item["metric"] == metric_policy["primary_metric"]),
+            None,
+        )
+        influences = sorted(
+            result["feature_influence"]["values"].items(),
+            key=lambda item: (-abs(item[1]), item[0]),
+        )[:5]
+        slices = result.get("failure_slices") or []
+        return {
+            "run_id": run_id,
+            "task_type": result["task_type"],
+            "selected_candidate": selection["selected_candidate"],
+            "metric_landscape": metric_landscape,
+            "evidence_strength": {
+                "status": "weak" if weak_reasons else "adequate",
+                "reasons": weak_reasons,
+                "development_row_count": selection["development_row_count"],
+                "final_holdout_row_count": final["holdout_row_count"],
+                "development_fold_count": len(selection["baseline_fold_metrics"]),
+            },
+            "failure_atlas": {
+                "available": bool(slices),
+                "slices": slices,
+                "unavailable_reason": None if slices else "no_privacy_bounded_failure_slices",
+            },
+            "why_this_candidate": {
+                "candidate_family": selection["selected_candidate"],
+                "primary_metric": metric_policy["primary_metric"],
+                "optimization": metric_policy["optimization"],
+                "development_baseline_relative_delta": (
+                    primary["development"]["baseline_relative_delta"] if primary else None
+                ),
+                "final_holdout_baseline_relative_delta": (
+                    primary["final_holdout"]["baseline_relative_delta"] if primary else None
+                ),
+                "top_feature_influences": [
+                    {"field": field, "influence": value, "causal": False} for field, value in influences
+                ],
+                "warnings": result["warnings"],
+                "limitations": result["limitations"],
+                "truth_boundary": result["truth_boundary"],
+            },
+        }
 
     def compare_runs(self, request: Any) -> dict[str, Any]:
         payload = _require_object(request, label="run comparison")
@@ -721,6 +1003,8 @@ class MLStudioService:
                 "Compare runs created from the same immutable inputs.",
                 status_code=409,
             )
+        evidence_by_run = {item["run_id"]: self.get_run_evidence(item["run_id"]) for item in runs}
+        metric_names = [item["metric"] for item in evidence_by_run[run_ids[0]]["metric_landscape"]]
         return {
             "experiment_id": runs[0]["experiment_id"],
             "specification_version": runs[0]["specification_version"],
@@ -732,9 +1016,40 @@ class MLStudioService:
                     "selection_evidence": item["evaluation_result"]["selection_evidence"],
                     "final_holdout_evidence": item["evaluation_result"]["final_holdout_evidence"],
                     "warnings": item["warnings"],
+                    "evidence_strength": evidence_by_run[item["run_id"]]["evidence_strength"],
+                    "metric_landscape": evidence_by_run[item["run_id"]]["metric_landscape"],
+                    "failure_atlas": evidence_by_run[item["run_id"]]["failure_atlas"],
+                    "why_this_candidate": evidence_by_run[item["run_id"]]["why_this_candidate"],
                 }
                 for item in runs
             ],
+            "metric_matrix": [
+                {
+                    "metric": metric,
+                    "runs": [
+                        {
+                            "run_id": run_id,
+                            "development": next(
+                                item for item in evidence_by_run[run_id]["metric_landscape"] if item["metric"] == metric
+                            )["development"],
+                            "final_holdout": next(
+                                item for item in evidence_by_run[run_id]["metric_landscape"] if item["metric"] == metric
+                            )["final_holdout"],
+                        }
+                        for run_id in run_ids
+                    ],
+                }
+                for metric in metric_names
+            ],
+            "decision_boundary": {
+                "winner_selected": False,
+                "reason": "Final-holdout evidence is shown for comparison but cannot be reused to select a winning candidate.",
+                "allowed_claim": "These runs are evaluated experiments on one immutable snapshot and experiment version.",
+                "prohibited_claims": [
+                    "Production readiness or deployment approval.",
+                    "A final winner selected by repeatedly comparing holdout results.",
+                ],
+            },
         }
 
     def review_candidate(self, request: Any) -> dict[str, Any]:

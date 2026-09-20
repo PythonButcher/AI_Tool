@@ -73,6 +73,7 @@ The versioned API root is `/api/ml-studio/v1`. Every response uses one named obj
 | `GET /runs/{run_id}/events` | Run identity and optional bounded `limit` | Ordered lifecycle `events` |
 | `POST /runs/{run_id}/cancel` | Run identity | Updated durable `run` |
 | `GET /runs/{run_id}/evaluation` | Completed run identity | Immutable `evaluation` |
+| `GET /runs/{run_id}/evidence` | Completed run identity | UI-ready `evidence` with metric landscape, strength reasons, aggregate failure atlas, and Why This Candidate truth |
 | `POST /runs/compare` | Two to four ordered `run_ids` | Compatible evidence-only `comparison` |
 | `POST /candidates` | Completed `run_id`, registered artifact hash, review decision, reviewer, and use boundaries | Server-issued immutable `candidate` |
 | `GET /candidates/{candidate_id}` | Candidate identity | Immutable `candidate` |
@@ -82,6 +83,8 @@ Snapshot creation never accepts rows, fingerprints, schema, governance evidence,
 Preparation assessment creation accepts exactly a stored `snapshot_id`, stored experiment identity and version, and validated transformation-recipe lineage. The service reloads both immutable stored contracts, re-resolves current server snapshot truth, validates that the recipe starts from that snapshot and its recipe hash, derives ordered issues and fixes from the server-owned column profile, and issues the assessment identity, time, state, and input fingerprint. Browser rows, paths, local readiness, client issue lists, and client assessment state are rejected.
 
 The server issues snapshot, run, and candidate identities. Run retries are idempotent on caller-controlled intent, excluding the server-issued run ID and submission timestamp. The raw idempotency key is never stored or returned. Comparisons require completed runs from the same experiment version, snapshot, and task type. Candidate review requires a completed evaluated run, registered path-free artifact metadata, and a fresh managed-storage hash verification.
+
+Run comparison preserves the caller's order and projects each run through the same metric landscape, evidence-strength, aggregate Failure Atlas, and Why This Candidate view. Its metric matrix aligns development distributions and final-holdout evidence by metric. Comparison is evidence-only: it never names a winner from repeated final-holdout observations, and its decision boundary explicitly prohibits treating that comparison as deployment approval or a new candidate-selection step.
 
 ## Evaluation Result
 
@@ -94,6 +97,10 @@ The server issues snapshot, run, and candidate identities. Run retries are idemp
 Every result also carries task type, dataset snapshot identity, experiment/specification identity, warnings, limitations, structural leakage findings, feature influence, runtime versions, seeds, and a truth boundary. Feature influence is always `causal: false` and must state limitations. The truth boundary is `evaluated_experiment`; it cannot claim production readiness, deployment, or causality.
 
 `split_evidence` carries row-identity hashes and counts for the development/final boundary and every cross-validation fold. It records zero row overlap plus the applicable temporal-order or group-isolation invariant without exposing raw row values.
+
+`failure_slices` contains bounded aggregate holdout error cohorts for the Failure Atlas. Numeric features use quartile or missingness labels; categorical features use frequency-relative or missingness labels. Slice identities, counts, task-appropriate error values, overall error, and delta are returned without raw rows, observed values, category labels, or row identities.
+
+The evidence view derives a task-appropriate metric landscape from immutable selection and final-holdout evidence. Favorable baseline-relative deltas are positive for both minimized and maximized metrics. It reports explicit weak-evidence reason codes for small development samples, small holdouts, fewer than three folds, missing reported metrics, and evaluation warnings. Why This Candidate names the selected family, primary metric, development and final baseline deltas, non-causal feature influence, limitations, warnings, and the truth boundary. Missing evidence remains unavailable; it is never synthesized.
 
 ## Reviewed Candidate Reference
 

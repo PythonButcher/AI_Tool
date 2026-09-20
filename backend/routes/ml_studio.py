@@ -16,6 +16,7 @@ from pandas.api.types import (
 )
 
 from backend.ml_studio.artifacts import ManagedArtifactStore
+from backend.ml_studio.execution import AsyncRunExecutor
 from backend.ml_studio.repository import MLStudioRepository
 from backend.ml_studio.service import MLStudioService, MLStudioServiceError
 from backend.repositories.source_workspace_repository import get_source
@@ -47,8 +48,8 @@ def _logical_type(series) -> str:
     return "text"
 
 
-def _resolve_snapshot_truth(workspace_id: str) -> dict[str, Any]:
-    """Adapt authoritative workspace execution into path-free snapshot metadata."""
+def _resolve_workspace_state(workspace_id: str) -> tuple[Any, dict[str, Any]]:
+    """Resolve trusted rows and path-free identity from one workspace execution."""
     try:
         context = resolve_active_model_analysis_context(workspace_id)
         bundle = execute_analysis_context(context)
@@ -101,7 +102,7 @@ def _resolve_snapshot_truth(workspace_id: str) -> dict[str, Any]:
         "relationships": lineage.get("relationships") or [],
         "field_origins": lineage.get("field_origins") or {},
     }
-    return {
+    truth = {
         "workspace_id": context["workspace_id"],
         "workspace_version": context["workspace_version"],
         "source_ids": list(context["source_ids"]),
@@ -122,6 +123,23 @@ def _resolve_snapshot_truth(workspace_id: str) -> dict[str, Any]:
             for column in dataframe.columns
         ],
     }
+    return dataframe, truth
+
+
+def _resolve_snapshot_truth(workspace_id: str) -> dict[str, Any]:
+    """Adapt authoritative workspace execution into path-free snapshot metadata."""
+    _, truth = _resolve_workspace_state(workspace_id)
+    return truth
+
+
+def _resolve_run_data(snapshot) -> tuple[Any, int, dict[str, tuple[str, int]]]:
+    """Resolve server-owned rows plus the identity evidence required by evaluation."""
+    dataframe, truth = _resolve_workspace_state(snapshot.workspace_id)
+    fingerprints = {
+        item["source_id"]: (item["content_fingerprint"], int(item["schema_version"]))
+        for item in truth["source_fingerprints"]
+    }
+    return dataframe, int(truth["workspace_version"]), fingerprints
 
 
 def get_ml_studio_service() -> MLStudioService:
@@ -136,13 +154,21 @@ def get_ml_studio_service() -> MLStudioService:
     repository = MLStudioRepository(current_app.config.get("ML_STUDIO_DATABASE_PATH", default_database))
     artifact_store = ManagedArtifactStore(current_app.config.get("ML_STUDIO_ARTIFACT_ROOT", default_artifacts))
     resolver = current_app.config.get("ML_STUDIO_SNAPSHOT_RESOLVER", _resolve_snapshot_truth)
+    run_data_resolver = current_app.config.get("ML_STUDIO_RUN_DATA_RESOLVER", _resolve_run_data)
 
     def verify_artifact(metadata):
         verified = artifact_store.verify(metadata["run_id"], metadata["name"])
         if verified.sha256 != metadata["sha256"] or verified.size_bytes != metadata["size_bytes"]:
             raise ValueError("artifact metadata mismatch")
 
-    service = MLStudioService(repository, resolver, verify_artifact)
+    service = MLStudioService(repository, resolver, verify_artifact, run_data_resolver=run_data_resolver)
+    service.recover_incomplete_runs()
+    executor = AsyncRunExecutor(
+        service.execute_run,
+        max_workers=int(current_app.config.get("ML_STUDIO_MAX_WORKERS", 2)),
+    )
+    service.set_run_scheduler(executor.schedule)
+    current_app.extensions["ml_studio_run_executor"] = executor
     current_app.extensions["ml_studio_service"] = service
     return service
 
@@ -274,6 +300,16 @@ def cancel_run(run_id):
 def get_run_evaluation(run_id):
     try:
         return jsonify({"evaluation": get_ml_studio_service().get_evaluation(run_id)}), 200
+    except MLStudioServiceError as exc:
+        return _error_response(exc)
+    except Exception:
+        return _unexpected_error()
+
+
+@ml_studio_bp.route("/runs/<run_id>/evidence", methods=["GET"])
+def get_run_evidence(run_id):
+    try:
+        return jsonify({"evidence": get_ml_studio_service().get_run_evidence(run_id)}), 200
     except MLStudioServiceError as exc:
         return _error_response(exc)
     except Exception:

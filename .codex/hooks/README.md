@@ -14,4 +14,6 @@ Manual validation:
 
 `python .codex/hooks/ci_harness_check.py`
 
+Antigravity frontend returns are additionally checked by the governed status tracker, which calls the shared handoff-integrity validator before changing ownership back to Codex.
+
 The scripts are intentionally conservative. They enforce project rules that should not depend on an agent remembering every instruction in a long conversation.

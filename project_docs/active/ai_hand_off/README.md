@@ -10,7 +10,7 @@ Antigravity owns bounded frontend implementation, React/CSS, UI rendering, and f
 
 ## Active Handoffs And Goal Prompts
 
-There is no active frontend handoff. Gate 6 implementation awaits direct user authorization, and Codex must verify its backend boundary before assigning any frontend work.
+One active frontend repair handoff exists: `project_docs/active/ai_hand_off/ml_studio_shell.md`. It assigns only the polished Start Run action and immediate Run Dock refresh to Antigravity. Polling, cancellation, evidence, and comparison UI remain unassigned.
 
 Completed handoffs belong outside this active folder.
 

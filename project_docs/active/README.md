@@ -24,7 +24,7 @@ Decision Intelligence workspaces, decision frames, readiness and capability pane
 
 Dataset identity and semantic truth remain required for every BI answer and chart.
 
-ML Studio Phase 13 is the active product direction. Roadmap Gate 5 is prepared as a Codex-owned backend contract step at `project_docs/active/active_gate/README.md`; implementation awaits an explicit user start instruction.
+ML Studio Phase 13 is the active product direction. Gate 6 backend contracts are verified, and the current guarded frontend repair is the Start Run action defined by `project_docs/active/active_gate/README.md`.
 
 ## Active Areas
 

@@ -17,7 +17,8 @@ from mutation_policy import main as enforced_main
 
 DESTRUCTIVE_PATTERNS: tuple[tuple[str, str], ...] = (
     (r"\bgit\s+reset\s+--hard\b", "git reset --hard is destructive and requires explicit user intent."),
-    (r"\bgit\s+checkout\s+--\b", "git checkout -- can discard user changes and is blocked by project policy."),
+    (r"\bgit\s+checkout\b[^\r\n]*\s--\s", "git checkout with path restoration can discard user changes and is blocked by project policy."),
+    (r"\bgit\s+restore\b", "git restore can discard user changes and is blocked by project policy."),
     (r"\brm\s+-[^\n]*r[^\n]*f\b", "recursive forced removal is blocked by the harness policy."),
     (r"\bRemove-Item\b(?=.*\b-Recurse\b)(?=.*\b-Force\b)", "recursive forced removal is blocked by the harness policy."),
 )
@@ -41,6 +42,7 @@ DIRECT_FRONTEND_WRITE_PATTERN = (
     r"\b(?:Set-Content|Add-Content|Out-File)\b[\s\S]*"
     r"frontend[\\/]+frontend[\\/]+src"
 )
+DIRECT_SOURCE_REDIRECTION = r"(?:>|>>)\s*['\"]?(?:frontend[\\/]+frontend[\\/]+src|backend|tests)[\\/]"
 
 MUTATING_GEMINI_PATTERNS: tuple[str, ...] = (
     r"\bGEMINI\.md\b",
@@ -154,6 +156,13 @@ def main() -> int:
         _deny(
             "PreToolUse",
             "Direct shell writes to frontend source are blocked. Use apply_patch so the change is reviewable and cannot silently truncate a component.",
+        )
+        return 0
+
+    if _matches(DIRECT_SOURCE_REDIRECTION, command):
+        _deny(
+            "PreToolUse",
+            "Shell redirection into source or tests is blocked. Use apply_patch so the edit remains reviewable.",
         )
         return 0
 

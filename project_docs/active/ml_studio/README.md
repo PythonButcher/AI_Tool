@@ -196,7 +196,7 @@ Do not add dozens of estimators, arbitrary Python execution, uploaded pickles, G
 
 ## Activation And Sequencing
 
-**Phase 13 — Machine Learning Studio Foundation** is at the authorization boundary for Gate 6 — Run Observatory And Comparison. Gate 6 implementation has not been authorized, and no frontend handoff is active. Codex must record a direct user start instruction before beginning the first bounded backend step.
+**Phase 13 — Machine Learning Studio Foundation** is implementing Gate 6 — Run Observatory And Comparison under the direct user authorization recorded on 2026-09-19. Codex owns the ordered backend execution, evidence, and comparison steps; no frontend handoff is active until that boundary is verified.
 
 Later gates remain roadmap context only. Finishing one gate does not authorize the next; Codex must review the evidence, update current status, and replace the sole active gate before work continues.
 

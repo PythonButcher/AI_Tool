@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -185,6 +186,74 @@ class StatusAndHandoffTests(unittest.TestCase):
             errors: list[str] = []
             harness_validation.check_handoffs(root, "Antigravity", "frontend_repair_only", errors)
         self.assertTrue(any("REPAIR REQUIRED" in error for error in errors))
+
+
+class FrontendHandoffIntegrityTests(unittest.TestCase):
+    def _repository(self) -> tuple[tempfile.TemporaryDirectory[str], Path, Path]:
+        temporary = tempfile.TemporaryDirectory()
+        root = Path(temporary.name)
+        source = root / "frontend/frontend/src/Feature.jsx"
+        style = root / "frontend/frontend/src/Feature.css"
+        source.parent.mkdir(parents=True)
+        source.write_text("export default function Feature() {\n  return <div>Ready</div>;\n}\n", encoding="utf-8")
+        style.write_text(".feature {\n  color: blue;\n}\n", encoding="utf-8")
+        subprocess.run(["git", "init", "-q"], cwd=root, check=True)
+        subprocess.run(["git", "add", "."], cwd=root, check=True)
+        subprocess.run(
+            ["git", "-c", "user.name=Harness", "-c", "user.email=harness@example.test", "commit", "-qm", "baseline"],
+            cwd=root,
+            check=True,
+        )
+        handoff = root / "handoff.md"
+        handoff.write_text(
+            "Target files:\n\n"
+            "- `frontend/frontend/src/Feature.jsx`\n"
+            "- `frontend/frontend/src/Feature.css`\n\n"
+            "**Required Change Coverage**: all target files\n\n"
+            "**Inline Styles**: forbidden\n",
+            encoding="utf-8",
+        )
+        return temporary, root, handoff
+
+    def test_return_requires_durable_changes_to_required_targets(self) -> None:
+        temporary, root, handoff = self._repository()
+        with temporary:
+            errors = harness_validation.validate_frontend_handoff_worktree(root, handoff, require_changes=True)
+        self.assertTrue(any("no durable source diff" in error for error in errors))
+
+    def test_valid_bounded_changes_pass(self) -> None:
+        temporary, root, handoff = self._repository()
+        with temporary:
+            (root / "frontend/frontend/src/Feature.jsx").write_text(
+                "export default function Feature() {\n  return <div className=\"feature\">Ready</div>;\n}\n",
+                encoding="utf-8",
+            )
+            (root / "frontend/frontend/src/Feature.css").write_text(
+                ".feature {\n  color: blue;\n  font-weight: 600;\n}\n",
+                encoding="utf-8",
+            )
+            errors = harness_validation.validate_frontend_handoff_worktree(root, handoff, require_changes=True)
+        self.assertEqual(errors, [])
+
+    def test_empty_target_is_rejected_before_return(self) -> None:
+        temporary, root, handoff = self._repository()
+        with temporary:
+            (root / "frontend/frontend/src/Feature.jsx").write_text("", encoding="utf-8")
+            errors = harness_validation.validate_frontend_handoff_worktree(root, handoff, require_changes=True)
+        self.assertTrue(any("missing or empty" in error for error in errors))
+
+    def test_scope_coverage_and_inline_style_are_rejected(self) -> None:
+        temporary, root, handoff = self._repository()
+        with temporary:
+            (root / "frontend/frontend/src/Feature.jsx").write_text(
+                "export default () => <div style={{ color: 'red' }}>X</div>;\n",
+                encoding="utf-8",
+            )
+            (root / "frontend/frontend/src/Other.jsx").write_text("export default null;\n", encoding="utf-8")
+            errors = harness_validation.validate_frontend_handoff_worktree(root, handoff, require_changes=True)
+        self.assertTrue(any("Required frontend target changes are missing" in error for error in errors))
+        self.assertTrue(any("exceed the active handoff targets" in error for error in errors))
+        self.assertTrue(any("forbids newly added inline style" in error for error in errors))
 
 
 class MutationPolicyTests(unittest.TestCase):

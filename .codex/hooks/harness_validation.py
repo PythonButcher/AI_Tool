@@ -94,6 +94,7 @@ CRITICAL_SOURCE_MIN_LINES = {
     "frontend/frontend/src/components/data_management/AutoMLPanel.jsx": 100,
     "frontend/frontend/src/components/data_management/FileExport.jsx": 20,
 }
+FRONTEND_SOURCE_PREFIX = "frontend/frontend/src/"
 
 
 def _read(root: Path, relative: str) -> str:
@@ -333,6 +334,98 @@ def check_handoffs(root: Path, owner: str, frontend_readiness: str, errors: list
         text = handoffs[0].read_text(encoding="utf-8", errors="replace")
         if "REPAIR REQUIRED" not in text or not re.search(r"^## Repair Blocker\s*$", text, flags=re.MULTILINE):
             errors.append("frontend_repair_only requires REPAIR REQUIRED and a Repair Blocker section.")
+    if len(handoffs) == 1 and owner.casefold() == "antigravity":
+        errors.extend(validate_frontend_handoff_worktree(root, handoffs[0], require_changes=False))
+    elif len(handoffs) == 1 and "returned for Codex review" in active_handoff:
+        errors.extend(validate_frontend_handoff_worktree(root, handoffs[0], require_changes=True))
+
+
+def _git_lines(root: Path, command: list[str]) -> list[str]:
+    result = subprocess.run(command, cwd=root, text=True, capture_output=True, check=False)
+    return [line.strip().replace("\\", "/") for line in result.stdout.splitlines() if line.strip()]
+
+
+def _handoff_frontend_targets(handoff: Path) -> list[str]:
+    text = handoff.read_text(encoding="utf-8", errors="replace")
+    return sorted(
+        {
+            value.replace("\\", "/")
+            for value in re.findall(r"`([^`]+)`", text)
+            if value.replace("\\", "/").startswith(FRONTEND_SOURCE_PREFIX)
+        }
+    )
+
+
+def validate_frontend_handoff_worktree(
+    root: Path,
+    handoff: Path,
+    *,
+    require_changes: bool,
+) -> list[str]:
+    """Verify bounded frontend work without editing or restoring any file."""
+    errors: list[str] = []
+    text = handoff.read_text(encoding="utf-8", errors="replace")
+    targets = _handoff_frontend_targets(handoff)
+    if not targets:
+        return ["Active frontend handoff must name at least one frontend source target."]
+    if len(targets) > 5:
+        errors.append("Active frontend handoff is too broad; limit frontend source targets to five files.")
+
+    for relative in targets:
+        path = root / relative
+        if not path.is_file() or path.stat().st_size == 0:
+            errors.append(f"Frontend handoff target is missing or empty: {relative}")
+            continue
+        baseline = subprocess.run(
+            ["git", "show", f"HEAD:{relative}"],
+            cwd=root,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            check=False,
+        )
+        if baseline.returncode == 0 and len(baseline.stdout) and path.stat().st_size < len(baseline.stdout) // 2:
+            errors.append(f"Frontend handoff target shrank by more than 50% from HEAD: {relative}")
+
+    changed_frontend = set(_git_lines(root, ["git", "diff", "HEAD", "--name-only", "--", FRONTEND_SOURCE_PREFIX]))
+    changed_frontend.update(
+        _git_lines(root, ["git", "ls-files", "--others", "--exclude-standard", "--", FRONTEND_SOURCE_PREFIX])
+    )
+    outside = sorted(changed_frontend.difference(targets))
+    if outside:
+        errors.append("Frontend changes exceed the active handoff targets: " + ", ".join(outside))
+    changed_targets = sorted(changed_frontend.intersection(targets))
+    if require_changes and not changed_targets:
+        errors.append("Frontend handoff return has no durable source diff; completion cannot be claimed.")
+    if require_changes and "**Required Change Coverage**: all target files" in text:
+        missing = sorted(set(targets).difference(changed_targets))
+        if missing:
+            errors.append("Required frontend target changes are missing: " + ", ".join(missing))
+
+    if "**Inline Styles**: forbidden" in text and changed_targets:
+        diff = subprocess.run(
+            ["git", "diff", "HEAD", "--unified=0", "--", *changed_targets],
+            cwd=root,
+            text=True,
+            capture_output=True,
+            check=False,
+        ).stdout
+        if any(
+            line.startswith("+") and not line.startswith("+++") and re.search(r"\bstyle\s*=\s*\{\{", line)
+            for line in diff.splitlines()
+        ):
+            errors.append("Active frontend handoff forbids newly added inline style objects; use the target stylesheet.")
+
+    if require_changes and changed_targets:
+        whitespace = subprocess.run(
+            ["git", "diff", "HEAD", "--check", "--", *changed_targets],
+            cwd=root,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        if whitespace.returncode:
+            errors.append("Frontend handoff diff has whitespace errors; repair them with reviewable edits, never bulk rewrites.")
+    return errors
 
 
 def check_required_paths(root: Path, errors: list[str]) -> None:

@@ -51,6 +51,7 @@ from .contracts import (
     CandidateSelectionEvidence,
     EvaluationResult,
     ExperimentSpecification,
+    FailureSlice,
     FeatureInfluence,
     FinalHoldoutEvidence,
     FoldEvidence,
@@ -434,6 +435,82 @@ def _feature_influence(
     )
 
 
+def _failure_slices(
+    features: pd.DataFrame,
+    truth: pd.Series,
+    predictions: np.ndarray,
+    specification: ExperimentSpecification,
+) -> tuple[FailureSlice, ...]:
+    """Summarize holdout failures without exposing row values or category labels."""
+    if specification.task_type == "regression":
+        row_error = np.abs(truth.to_numpy(dtype=float) - np.asarray(predictions, dtype=float))
+        metric_name = "mae"
+    else:
+        row_error = (truth.astype(str).to_numpy() != np.asarray(predictions).astype(str)).astype(float)
+        metric_name = "error_rate"
+    overall = float(np.mean(row_error))
+    slices: list[FailureSlice] = []
+
+    def add(field: str, cohort: str, mask: np.ndarray) -> None:
+        row_count = int(mask.sum())
+        if row_count < 2:
+            return
+        metric_value = float(np.mean(row_error[mask]))
+        digest = hashlib.sha256(f"{field}\0{cohort}".encode("utf-8")).hexdigest()[:16]
+        slices.append(
+            FailureSlice(
+                slice_id=f"slice-{digest}",
+                field=field,
+                cohort=cohort,
+                row_count=row_count,
+                metric_name=metric_name,
+                metric_value=metric_value,
+                overall_metric_value=overall,
+                delta_from_overall=metric_value - overall,
+            )
+        )
+
+    quartile_labels = (
+        "lowest_quartile",
+        "lower_middle_quartile",
+        "upper_middle_quartile",
+        "highest_quartile",
+    )
+    for field in specification.feature_roles.numeric:
+        values = pd.to_numeric(features[field], errors="coerce").reset_index(drop=True)
+        missing = values.isna().to_numpy()
+        add(field, "missing", missing)
+        present = ~missing
+        if int(present.sum()) < 4 or values[present].nunique() < 2:
+            continue
+        percentile = values[present].rank(method="average", pct=True)
+        bucket = np.minimum((percentile.to_numpy() * 4).astype(int), 3)
+        present_positions = np.flatnonzero(present)
+        for index, label in enumerate(quartile_labels):
+            mask = np.zeros(len(values), dtype=bool)
+            mask[present_positions[bucket == index]] = True
+            add(field, label, mask)
+
+    for field in specification.feature_roles.categorical:
+        values = features[field].reset_index(drop=True)
+        missing = values.isna().to_numpy()
+        add(field, "missing", missing)
+        present_values = values[~values.isna()]
+        if present_values.empty:
+            continue
+        most_frequent = present_values.value_counts(dropna=True).index[0]
+        frequent_mask = values.eq(most_frequent).fillna(False).to_numpy(dtype=bool)
+        add(field, "most_frequent_category", frequent_mask)
+        add(field, "other_categories", (~missing) & (~frequent_mask))
+
+    return tuple(
+        sorted(
+            slices,
+            key=lambda item: (-item.delta_from_overall, -item.row_count, item.slice_id),
+        )[:12]
+    )
+
+
 def evaluate_supervised(
     data: pd.DataFrame,
     run: RunSpecification,
@@ -597,7 +674,8 @@ def evaluate_supervised(
     selected_pipeline.fit(development_features, development_target)
     baseline = _baseline(specification.task_type)
     baseline.fit(development_features, development_target)
-    final_candidate_metrics = _measure(specification.task_type, final_target, selected_pipeline.predict(final_features))
+    final_predictions = selected_pipeline.predict(final_features)
+    final_candidate_metrics = _measure(specification.task_type, final_target, final_predictions)
     final_baseline_metrics = _measure(specification.task_type, final_target, baseline.predict(final_features))
 
     return EvaluationResult(
@@ -645,5 +723,11 @@ def evaluate_supervised(
                 "Future performance outside the governed snapshot.",
                 "Causal effect of any feature.",
             ),
+        ),
+        failure_slices=_failure_slices(
+            final_features,
+            final_target,
+            final_predictions,
+            specification,
         ),
     )

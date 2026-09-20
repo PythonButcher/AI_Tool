@@ -340,10 +340,36 @@ class MLStudioApiTests(unittest.TestCase):
         self._complete_run(first, snapshot)
         self._complete_run(second, snapshot)
         response = self.client.post(
-            "/api/ml-studio/v1/runs/compare", json={"run_ids": [first["run_id"], second["run_id"]]}
+            "/api/ml-studio/v1/runs/compare", json={"run_ids": [second["run_id"], first["run_id"]]}
         )
         self.assertEqual(response.status_code, 200, response.get_json())
-        self.assertEqual(len(response.get_json()["comparison"]["runs"]), 2)
+        comparison = response.get_json()["comparison"]
+        expected_order = [second["run_id"], first["run_id"]]
+        self.assertEqual([item["run_id"] for item in comparison["runs"]], expected_order)
+        self.assertEqual([item["run_id"] for item in comparison["metric_matrix"][0]["runs"]], expected_order)
+        self.assertFalse(comparison["decision_boundary"]["winner_selected"])
+        self.assertTrue(all(item["evidence_strength"]["status"] == "weak" for item in comparison["runs"]))
+
+    def test_run_evidence_exposes_metric_truth_and_weakness_without_raw_rows(self) -> None:
+        snapshot = self._create_snapshot()
+        self._create_experiment()
+        run = self._submit_run(snapshot["snapshot_id"], key="evidence-1")
+        self._complete_run(run, snapshot)
+
+        response = self.client.get(f"/api/ml-studio/v1/runs/{run['run_id']}/evidence")
+
+        self.assertEqual(response.status_code, 200, response.get_json())
+        evidence = response.get_json()["evidence"]
+        self.assertEqual(evidence["selected_candidate"], "regularized_linear")
+        self.assertEqual(evidence["evidence_strength"]["status"], "weak")
+        self.assertIn("reported_metric_evidence_missing", evidence["evidence_strength"]["reasons"])
+        rmse = next(item for item in evidence["metric_landscape"] if item["metric"] == "rmse")
+        self.assertGreater(rmse["final_holdout"]["baseline_relative_delta"], 0)
+        self.assertFalse(evidence["failure_atlas"]["available"])
+        self.assertFalse(evidence["why_this_candidate"]["top_feature_influences"][0]["causal"])
+        serialized = str(evidence).casefold()
+        self.assertNotIn("raw_data", serialized)
+        self.assertNotIn("traceback", serialized)
 
     def test_comparison_rejects_incomplete_runs(self) -> None:
         snapshot = self._create_snapshot()

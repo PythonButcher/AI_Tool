@@ -4,10 +4,15 @@ from __future__ import annotations
 
 import argparse
 import re
+import sys
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[4]
+HOOKS = ROOT / ".codex" / "hooks"
+sys.path.insert(0, str(HOOKS))
+
+from harness_validation import validate_frontend_handoff_worktree
 STATUS_PATH = ROOT / "project_docs/active/status/project_execution_status.md"
 AUTHORIZATION_PATH = ROOT / "project_docs/active/status/phase_authorization.json"
 HANDOFF_DIRECTORY = ROOT / "project_docs/active/ai_hand_off"
@@ -66,6 +71,9 @@ def _replace_field(text: str, name: str, value: str) -> str:
 
 def check_status() -> None:
     handoff = _validate_start(STATUS_PATH.read_text(encoding="utf-8"))
+    errors = validate_frontend_handoff_worktree(ROOT, handoff, require_changes=False)
+    if errors:
+        raise ValueError(" ".join(errors))
     print(f"Antigravity handoff is ready: {handoff.relative_to(ROOT)}")
 
 
@@ -75,6 +83,9 @@ def return_control(handoff_name: str, summary: str) -> None:
     active_handoff = _validate_start(original)
     if active_handoff.name != Path(handoff_name).name:
         raise ValueError(f"Requested handoff does not match active handoff '{active_handoff.name}'.")
+    integrity_errors = validate_frontend_handoff_worktree(ROOT, active_handoff, require_changes=True)
+    if integrity_errors:
+        raise ValueError(" ".join(integrity_errors))
     clean_summary = " ".join(summary.split())
     if not 1 <= len(clean_summary) <= 240:
         raise ValueError("Summary must contain 1 to 240 non-whitespace characters.")

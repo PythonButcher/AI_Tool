@@ -28,6 +28,10 @@ Target files:
 - `[exact React source path]`
 - `[exact focused test path]`
 
+**Required Change Coverage**: `[all target files | only the named required subset]`
+
+**Inline Styles**: `[forbidden | allowed only for named dynamic values]`
+
 Excluded files and behavior:
 
 - `[adjacent UI or API work]`
@@ -76,6 +80,7 @@ Asynchronous job state: name polling, cancellation, terminal states, stale-respo
 - Render all required states with accessible names, keyboard behavior, visible focus, pending protection, and announced errors.
 - Never infer authorization, identity, permissions, or hidden records on the client.
 - Do not modify backend, active gate, authorization, readiness, contracts, or any `GEMINI.md` file.
+- Use reviewable editor operations only. Never bulk-rewrite source or use Git restore/reset commands. If a target becomes empty or unexpectedly smaller, stop and return the incident without attempting reconstruction.
 - Preserve existing AI Chat and data-workspace behavior outside the slice.
 
 ## Creative Latitude
@@ -98,5 +103,6 @@ Run:
 - `npm --prefix frontend/frontend run build`
 - `git diff --check`
 - `git diff --name-only`
+- `python .gemini/skills/status-tracker-skill/scripts/update_status.py return --handoff HANDOFF_FILE --summary "CONCISE EVIDENCE"`
 
-Return the exact changed-file list, each command and exit result, a concise evidence summary, and any contract mismatch. Then run the governed status-return command and stop for Codex review. Do not begin adjacent work or claim browser acceptance.
+The governed return command rejects missing or empty targets, suspicious shrinkage, out-of-scope frontend files, missing required changes, forbidden inline styles, whitespace errors, and a return with no durable source diff. Return the exact changed-file list, each command and exit result, a concise evidence summary, and any contract mismatch, then stop for Codex review. Do not begin adjacent work or claim browser acceptance.

@@ -1,8 +1,8 @@
-Goal: Obtain explicit user authorization before beginning the Run Observatory and Comparison gate.
+Goal: Add a polished Start Run action to the ready ML Studio assessment state through one guarded frontend repair handoff.
 
 ## User Outcome
 
-Give the user a clean decision boundary before AI_Tool begins asynchronous ML runs, live progress, evidence, and comparison work.
+Let a developer submit one prepared experiment and see its server-issued queued record appear in the existing Run Dock.
 
 ## Scope
 
@@ -10,39 +10,45 @@ Give the user a clean decision boundary before AI_Tool begins asynchronous ML ru
 
 **Roadmap Gate**: Gate 6 — Run Observatory And Comparison
 
-**Current Step**: Step 1: Await explicit user authorization for Run Observatory and Comparison
+**Current Step**: Step 1: Implement the polished Start Run action and immediate Run Dock refresh
 
-**Target Files**: No implementation files. After a direct user start instruction, Codex may update the authorization record, execution status, and this sole active gate before any source mutation.
+**Target Files**: `frontend/frontend/src/features/ml_studio/MLStudioShell.jsx`, `frontend/frontend/src/features/ml_studio/MLStudioShell.css`, and `frontend/frontend/src/features/ml_studio/MLStudioShell.test.jsx` through `project_docs/active/ai_hand_off/ml_studio_shell.md`.
 
-**Step Acceptance**: The user directly instructs Codex to begin, start, resume, or implement Gate 6, and Codex records that authority before implementation.
+**Step Acceptance**: The ready state submits one idempotent run, protects duplicate clicks, renders safe pending and error states, awaits the existing Run Dock refresh, and produces a durable guarded diff in all three target files.
 
-**Step Verification**: Confirm the direct instruction in `project_docs/active/status/phase_authorization.json`, then run the repository documentation and active-gate validators.
+**Step Verification**: Antigravity returns the exact changed files and successful focused test, frontend build, and diff checks required by the handoff; Codex then performs targeted source acceptance review.
 
-**Next Step**: Replace this authorization boundary with the first bounded Codex-owned Gate 6 backend contract and implementation step.
+**Next Step**: After Codex accepts this repair, issue a separate bounded handoff for live polling and cancellation.
 
-**Continuation Rule**: `WAIT_FOR_USER`.
+**Continuation Rule**: `WAIT_FOR_AGENT`.
 
-**Stop Condition**: Do not inspect or mutate Gate 6 implementation surfaces without direct user authorization.
+**Stop Condition**: Antigravity stops after the assigned Start Run repair. Codex stops at any contract mismatch or source-level acceptance blocker.
 
-- [ ] **Step 1: Await explicit user authorization for Run Observatory and Comparison** — [IN PROGRESS]
+- [ ] **Step 1: Implement the polished Start Run action and immediate Run Dock refresh** — [IN PROGRESS]
+- [ ] **Step 2: Review the returned Start Run repair against the backend contract and guarded diff** — [PENDING]
+- [ ] **Step 3: Issue the bounded live polling and cancellation handoff** — [PENDING]
 
 ## Contracts
 
-- `project_docs/active/ml_studio/README.md` — Gate 6 outcome, ownership, and acceptance boundary.
-- `project_docs/active/status/phase_authorization.json` — canonical implementation authority.
+- `project_docs/active/ai_hand_off/ml_studio_shell.md` — exact frontend scope, API shapes, fixtures, state rules, and acceptance evidence.
+- `project_docs/active/contracts/ml_studio.md` — durable run lifecycle and identity-first API truth.
+- `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md` — frontend ownership boundary.
 
 ## Acceptance
 
-- Gate 6 implementation does not begin from roadmap sequence alone.
-- A direct user instruction is recorded before source, contract, test, or frontend-handoff mutation.
-- The next executable gate begins with a bounded Codex-owned backend step.
+- Frontend behavior submits the exact stored snapshot and experiment identities and uses the server response.
+- Pending, retry, refresh, identity change, and unmount behavior remain race-safe.
+- The slice adds no polling, cancellation, evidence, comparison, backend, or contract work.
+- Codex accepts source and verification evidence before another frontend slice begins.
 
 ## Verification
 
+- `npm --prefix frontend/frontend test -- --watchAll=false MLStudioShell.test.jsx`
+- `npm --prefix frontend/frontend run build`
 - `python .codex/hooks/agent_harness_check.py`
 - `python C:/Users/18022/.codex/skills/active-gate-governance/scripts/check_active_gate.py project_docs/active/active_gate .`
 - `git diff --check`
 
 ## Owner And Control Return
 
-The user owns the authorization decision. Control returns to Codex only after a direct Gate 6 start instruction.
+Antigravity owns the bounded implementation in `project_docs/active/ai_hand_off/ml_studio_shell.md`. Control returns to Codex for targeted acceptance review; the user retains final browser acceptance.

@@ -560,6 +560,55 @@ class MLStudioRepository:
         target = "cancelled" if current["status"] == "queued" else "cancel_requested"
         return self.transition_run(run_id, target, progress_stage=current["progress_stage"])
 
+    def update_run_progress(
+        self,
+        run_id: str,
+        progress_stage: str,
+        *,
+        clock: Callable[[], str] = _now,
+    ) -> dict[str, Any]:
+        """Persist a bounded progress stage without inventing a lifecycle transition."""
+        if not isinstance(progress_stage, str) or not progress_stage or len(progress_stage) > 100:
+            raise PersistenceError(
+                "run_progress_invalid",
+                "The requested run progress stage is invalid.",
+                "Use a bounded non-empty progress stage.",
+            )
+        try:
+            with self._lock, self._connection() as connection:
+                connection.execute("BEGIN IMMEDIATE")
+                current = connection.execute("SELECT * FROM ml_runs WHERE run_id = ?", (run_id,)).fetchone()
+                if current is None:
+                    raise PersistenceError(
+                        "run_not_found", "The requested run does not exist.", "Reload the run list and retry."
+                    )
+                if current["status"] != "running":
+                    raise PersistenceError(
+                        "run_progress_conflict",
+                        "Progress can be updated only while a run is running.",
+                        "Reload the run and update progress only for an active run.",
+                    )
+                timestamp = clock()
+                connection.execute(
+                    "UPDATE ml_runs SET progress_stage = ?, updated_at = ? WHERE run_id = ?",
+                    (progress_stage, timestamp, run_id),
+                )
+                connection.execute(
+                    "INSERT INTO ml_run_events (run_id, event_type, status, progress_stage, occurred_at) VALUES (?, 'progress_updated', 'running', ?, ?)",
+                    (run_id, progress_stage, timestamp),
+                )
+                row = connection.execute("SELECT * FROM ml_runs WHERE run_id = ?", (run_id,)).fetchone()
+                connection.commit()
+        except PersistenceError:
+            raise
+        except sqlite3.Error as exc:
+            raise PersistenceError(
+                "run_persistence_failed",
+                "The run progress update could not be persisted.",
+                "Retry the operation or inspect the server persistence health.",
+            ) from exc
+        return self._public_run(row)
+
     def recover_incomplete_runs(self) -> list[str]:
         with self._connection() as connection:
             run_ids = [

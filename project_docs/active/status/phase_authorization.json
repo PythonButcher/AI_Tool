@@ -12,7 +12,7 @@
     "approved_by": "User",
     "approved_at": "2026-09-19",
     "evidence": "direct_user_instruction",
-    "instruction": "Start the prepared Phase 13 Gate 5 work and continue through the Codex-owned backend steps until backend verification, a concrete blocker, or the frontend handoff boundary."
+    "instruction": "Authorize Phase 13 Gate 6 implementation, then audit the failed Antigravity return, harden the agent harness against destructive or unverifiable frontend work, and issue a smaller evidence-backed retry handoff."
   },
   "latest_user_acceptance": {
     "accepted_by": "User",
@@ -22,14 +22,20 @@
   },
   "allowed_paths": [
     ".gitignore",
+    ".agents/skills/auto-handoff-execution/SKILL.md",
+    ".codex/hooks/**",
+    ".gemini/skills/status-tracker-skill/**",
     "backend/ml_studio/**",
     "backend/routes/ml_studio.py",
     "backend/app.py",
     "tests/test_ml_studio_contracts.py",
     "tests/test_ml_studio_evaluation.py",
+    "tests/test_ml_studio_execution.py",
     "tests/test_ml_studio_persistence.py",
     "tests/test_ml_studio_api.py",
+    "tests/test_agent_harness_policy.py",
     "project_docs/active/contracts/ml_studio.md",
+    "project_docs/active/agent_harness/**",
     "project_docs/active/active_gate/README.md",
     "project_docs/active/README.md",
     "project_docs/active/ai_hand_off/README.md",

@@ -32,6 +32,8 @@ The active gate keeps WIP at one through exact current-step fields and an ordere
 
 Handoffs use `templates/ANTIGRAVITY_FRONTEND_HANDOFF_TEMPLATE.md`. The template requires a proven contract, copy-ready types, representative fixtures, all core UI states, explicit server/local/URL/asynchronous state ownership, evidence, and a stop-and-return boundary.
 
+Frontend returns are guarded by the status tracker. It refuses completion without a durable in-scope target diff and rejects empty files, major shrinkage, missing required target changes, forbidden inline styles, and whitespace errors. A source-loss incident stops the run; the implementer must not restore or reconstruct files before Codex audits the worktree.
+
 ## When To Use This Folder
 
 Use it to answer questions such as:

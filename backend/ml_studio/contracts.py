@@ -764,6 +764,46 @@ class FeatureInfluence:
 
 
 @dataclass(frozen=True, slots=True)
+class FailureSlice:
+    """Aggregate holdout error for a privacy-bounded feature cohort."""
+
+    slice_id: str
+    field: str
+    cohort: str
+    row_count: int
+    metric_name: Literal["mae", "error_rate"]
+    metric_value: float
+    overall_metric_value: float
+    delta_from_overall: float
+
+    def __post_init__(self) -> None:
+        _identity(self.slice_id, label="failure slice identity")
+        _safe_text(self.field, label="failure slice field")
+        if self.cohort not in {
+            "lowest_quartile",
+            "lower_middle_quartile",
+            "upper_middle_quartile",
+            "highest_quartile",
+            "missing",
+            "most_frequent_category",
+            "other_categories",
+        }:
+            raise ValueError("failure slice cohort is unsupported")
+        if not isinstance(self.row_count, int) or self.row_count < 1:
+            raise ValueError("failure slice row_count must be positive")
+        if self.metric_name not in {"mae", "error_rate"}:
+            raise ValueError("failure slice metric is unsupported")
+        _finite_values(
+            {
+                "metric_value": self.metric_value,
+                "overall_metric_value": self.overall_metric_value,
+                "delta_from_overall": self.delta_from_overall,
+            },
+            label="failure slice metrics",
+        )
+
+
+@dataclass(frozen=True, slots=True)
 class TruthBoundary:
     claims: tuple[str, ...]
     prohibited_claims: tuple[str, ...]
@@ -791,6 +831,7 @@ class EvaluationResult(ContractObject):
     runtime_versions: dict[str, str]
     random_seeds: RandomSeedPolicy
     truth_boundary: TruthBoundary
+    failure_slices: tuple[FailureSlice, ...] = ()
 
     def __post_init__(self) -> None:
         _identity(self.run_id, label="run_id")
@@ -808,6 +849,8 @@ class EvaluationResult(ContractObject):
         evaluated_rows = self.selection_evidence.development_row_count + self.final_holdout_evidence.holdout_row_count
         if evaluated_rows > self.dataset_snapshot.row_count:
             raise ValueError("evaluation row counts exceed the dataset snapshot")
+        slice_ids = tuple(item.slice_id for item in self.failure_slices)
+        _unique(slice_ids, label="failure slice identities")
         object.__setattr__(self, "runtime_versions", _freeze_json(self.runtime_versions))
         _json_safe(self.to_dict(), label="EvaluationResult")
 

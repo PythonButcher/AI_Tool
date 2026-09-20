@@ -159,6 +159,9 @@ class EvaluationFlowTests(unittest.TestCase):
         )
         self.assertIn("feature", result.feature_influence.values)
         self.assertFalse(result.feature_influence.causal)
+        self.assertTrue(result.failure_slices)
+        self.assertTrue(all(item.field in {"feature", "category"} for item in result.failure_slices))
+        self.assertTrue(all(item.cohort not in {"positive", "negative"} for item in result.failure_slices))
 
     def test_classification_uses_task_metrics_and_majority_baseline(self) -> None:
         rng = np.random.default_rng(11)
@@ -189,6 +192,7 @@ class EvaluationFlowTests(unittest.TestCase):
         )
         self.assertEqual(result.split_evidence.strategy, "stratified")
         self.assertEqual(result.truth_boundary.status, "evaluated_experiment")
+        self.assertTrue(all(item.metric_name == "error_rate" for item in result.failure_slices))
 
     def test_same_seeds_produce_identical_split_and_metrics(self) -> None:
         x = np.arange(90, dtype=float)
