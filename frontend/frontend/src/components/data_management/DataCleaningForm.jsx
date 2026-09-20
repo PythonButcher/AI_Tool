@@ -2,13 +2,12 @@ import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import './DataCleaningForm.css';
 import CloseButton from '../buttons/CloseButton';
-import MLPrepPanel from './MLPrepPanel';
 import { DataContext } from '../../context/DataContext';
 import { useHelpOverlay } from '../../context/HelpOverlayContext';
-import { 
-  TRANSFORM_LIBRARY, 
-  transformLookup, 
-  buildDefaultValues 
+import {
+  TRANSFORM_LIBRARY,
+  transformLookup,
+  buildDefaultValues
 } from './cleaning_components/CleaningConstants';
 import CleaningRibbon from './cleaning_components/CleaningRibbon';
 import AppliedStepsList from './cleaning_components/AppliedStepsList';
@@ -39,7 +38,7 @@ const columnListFromData = (dataset) => {
   return [];
 };
 
-function DataCleaningForm({ closeForm, setShowDataPreview, onProceedToTraining }) {
+function DataCleaningForm({ closeForm, setShowDataPreview, initialSteps = [], onApplyComplete }) {
   const {
     uploadedData,
     fullData,
@@ -48,11 +47,10 @@ function DataCleaningForm({ closeForm, setShowDataPreview, onProceedToTraining }
     setSemanticModel,
     refreshSemanticModelFromDataset,
   } = React.useContext(DataContext);
-  const [activePanel, setActivePanel] = useState('cleaning');
   const [selectedCategory, setSelectedCategory] = useState(TRANSFORM_LIBRARY[0]?.category);
   const [selectedTransform, setSelectedTransform] = useState(null); // No default selected initially
   const [formValues, setFormValues] = useState({});
-  const [steps, setSteps] = useState([]);
+  const [steps, setSteps] = useState(initialSteps);
   const [previewRows, setPreviewRows] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -491,6 +489,7 @@ function DataCleaningForm({ closeForm, setShowDataPreview, onProceedToTraining }
         }
         setSuccess('Cleaning applied and dataset updated.');
         if (setShowDataPreview) setShowDataPreview(true);
+        if (onApplyComplete) onApplyComplete();
       } else {
         setSuccess('Preview updated');
       }
@@ -503,31 +502,6 @@ function DataCleaningForm({ closeForm, setShowDataPreview, onProceedToTraining }
 
   const activeTransform = transformLookup[selectedTransform];
 
-  const addMlPrepFix = (suggestion) => {
-    const transform = transformLookup[suggestion.action_type];
-    if (!transform) {
-      setError(`Unsupported ML Prep action: ${suggestion.action_type}`);
-      return;
-    }
-
-    const params = { ...(suggestion.params || {}) };
-    if (suggestion.columns && suggestion.columns.length > 0 && !params.columns) {
-      params.columns = suggestion.columns;
-    }
-
-    setSteps((prev) => [
-      ...prev,
-      {
-        id: `${Date.now()}-${Math.random()}`,
-        type: suggestion.action_type,
-        label: transform.label,
-        params,
-      },
-    ]);
-    setError(null);
-    setSuccess('ML Prep fix added to Applied Steps.');
-  };
-
   return (
     <div className="cleaning-form-overlay">
       <div className="manual-cleaning-shell">
@@ -537,117 +511,88 @@ function DataCleaningForm({ closeForm, setShowDataPreview, onProceedToTraining }
               <h2>Power Query Editor</h2>
               <p className="subtitle">Visual Data Transformation Interface</p>
             </div>
-            <div className="header-tabs">
-              <button
-                type="button"
-                className={`header-tab ${activePanel === 'cleaning' ? 'active' : ''}`}
-                onClick={() => setActivePanel('cleaning')}
-              >
-                Data Cleaning
-              </button>
-              <button
-                type="button"
-                className={`header-tab ${activePanel === 'ml_prep' ? 'active' : ''}`}
-                onClick={() => setActivePanel('ml_prep')}
-              >
-                ML Prep
-              </button>
-            </div>
           </div>
           <div className="header-actions">
-             {activePanel === 'cleaning' && (
-               <>
-                 <button className="preview-trigger" onClick={() => runCleaning(true)} disabled={steps.length === 0 || loading}>
-                   Run Preview
-                 </button>
-                 <button className="apply-trigger" onClick={() => runCleaning(false)} disabled={steps.length === 0 || loading}>
-                   Apply All
-                 </button>
-               </>
-             )}
-             <button
-          type="button"
-          className="help-overlay-trigger"
-          onClick={() => toggleHelp(helpId)}
-        >
-          ❓
-        </button>
-             <CloseButton onClick={closeForm} />
+            <button className="preview-trigger" onClick={() => runCleaning(true)} disabled={steps.length === 0 || loading}>
+              Run Preview
+            </button>
+            <button className="apply-trigger" onClick={() => runCleaning(false)} disabled={steps.length === 0 || loading}>
+              Apply All
+            </button>
+            <button
+              type="button"
+              className="help-overlay-trigger"
+              onClick={() => toggleHelp(helpId)}
+            >
+              ❓
+            </button>
+            <CloseButton onClick={closeForm} />
           </div>
         </div>
 
         <div className="manual-cleaning-body">
-          {activePanel === 'cleaning' ? (
-            <>
-              {/* Top Ribbon */}
-              <CleaningRibbon 
-                selectedCategory={selectedCategory}
-                onSelectCategory={setSelectedCategory}
-                selectedTransform={selectedTransform}
-                onSelectTransform={(type) => {
-                  setSelectedTransform(type);
-                  setSuccess(null);
-                  setError(null);
-                }}
-              />
+          {/* Top Ribbon */}
+          <CleaningRibbon
+            selectedCategory={selectedCategory}
+            onSelectCategory={setSelectedCategory}
+            selectedTransform={selectedTransform}
+            onSelectTransform={(type) => {
+              setSelectedTransform(type);
+              setSuccess(null);
+              setError(null);
+            }}
+          />
 
-              {/* Configuration Panel (Collapsible/Conditional) */}
-              {activeTransform && (
-                 <div className="config-panel">
-                   <div className="config-header">
-                     <h3>Configure: {activeTransform.label}</h3>
-                     <button className="close-config" onClick={() => { setSelectedTransform(null); setEditingId(null); }}>×</button>
-                   </div>
-                   <div className="config-content">
-                      <p className="config-desc">{activeTransform.description}</p>
-                      <div className="config-form-grid">
-                        {(activeTransform.fields || []).map((field) => (
-                          <label key={field.name} className="config-field">
-                            <span>{field.label}</span>
-                            {renderField(field)}
-                          </label>
-                        ))}
-                      </div>
-                   </div>
-                   <div className="config-footer">
-                      <button type="button" onClick={addStep} className="add-step-btn">
-                        {editingId ? 'Update Step' : 'Add Step'}
-                      </button>
-                   </div>
-                 </div>
-              )}
-
-              {/* Messages */}
-              {(error || success) && (
-                <div className={`status-bar ${error ? 'error' : 'success'}`}>
-                  {error || success}
-                </div>
-              )}
-
-              {/* Main Workspace: applied steps (left/right) + preview (center/bottom) */}
-              <div className="workspace-area">
-                 {/* Preview Container */}
-                 <DataCleaningPreview previewRows={previewRows} />
-
-                 {/* Right Panel: Applied Steps */}
-                 <div className="sidebar-right">
-                    <AppliedStepsList 
-                      steps={steps}
-                      editingId={editingId}
-                      onEditStep={editStep}
-                      onDeleteStep={deleteStep}
-                      onMoveStep={moveStep}
-                    />
-                 </div>          
-              </div>                     
-            </>
-          ) : (          
-            <MLPrepPanel
-              onSwitchToCleaning={() => setActivePanel('cleaning')}
-              onAddFix={addMlPrepFix}
-              onProceedToTraining={onProceedToTraining}
-            />           
+          {/* Configuration Panel (Collapsible/Conditional) */}
+          {activeTransform && (
+             <div className="config-panel">
+               <div className="config-header">
+                 <h3>Configure: {activeTransform.label}</h3>
+                 <button className="close-config" onClick={() => { setSelectedTransform(null); setEditingId(null); }}>×</button>
+               </div>
+               <div className="config-content">
+                  <p className="config-desc">{activeTransform.description}</p>
+                  <div className="config-form-grid">
+                    {(activeTransform.fields || []).map((field) => (
+                      <label key={field.name} className="config-field">
+                        <span>{field.label}</span>
+                        {renderField(field)}
+                      </label>
+                    ))}
+                  </div>
+               </div>
+               <div className="config-footer">
+                  <button type="button" onClick={addStep} className="add-step-btn">
+                    {editingId ? 'Update Step' : 'Add Step'}
+                  </button>
+               </div>
+             </div>
           )}
+
+          {/* Messages */}
+          {(error || success) && (
+            <div className={`status-bar ${error ? 'error' : 'success'}`}>
+              {error || success}
+            </div>
+          )}
+
+          {/* Main Workspace: applied steps (left/right) + preview (center/bottom) */}
+          <div className="workspace-area">
+             {/* Preview Container */}
+             <DataCleaningPreview previewRows={previewRows} />
+
+             {/* Right Panel: Applied Steps */}
+             <div className="sidebar-right">
+                <AppliedStepsList
+                  steps={steps}
+                  editingId={editingId}
+                  onEditStep={editStep}
+                  onDeleteStep={deleteStep}
+                  onMoveStep={moveStep}
+                />
+             </div>
+          </div>
+
           {/* ✅ Help Overlay */}
           {isHelpVisible(helpId) && (
             <div className="help-overlay visible">
@@ -663,22 +608,13 @@ function DataCleaningForm({ closeForm, setShowDataPreview, onProceedToTraining }
                     <li>Use the Data Cleaning tools to fix structural issues in your dataset, such as missing values, incorrect data types, duplicate rows, or malformed columns.</li>
                     <li>Cleaning steps are added incrementally and can be previewed before being applied, allowing you to safely refine your data without permanent changes.</li>
                   </ul>
-
-                  <h3>ML Prep</h3>
-                  <ul>
-                    <li>The ML Prep section analyzes your current dataset to determine whether it is suitable for specific machine learning models.</li>
-                    <li>When issues are found, ML Prep suggests concrete cleaning actions that you can add directly to your cleaning workflow.</li>
-                  </ul>
-
               </div>
             </div>
           )}
         </div>
-      </div>   
+      </div>
     </div>
-    
   );
 }
 
 export default DataCleaningForm;
-

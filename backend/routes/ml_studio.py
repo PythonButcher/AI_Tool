@@ -201,6 +201,17 @@ def list_experiment_versions(experiment_id):
         return _unexpected_error()
 
 
+@ml_studio_bp.route("/preparation-assessments", methods=["POST"])
+def create_preparation_assessment():
+    try:
+        assessment = get_ml_studio_service().create_preparation_assessment(request.get_json(silent=True))
+        return jsonify({"assessment": assessment}), 201
+    except MLStudioServiceError as exc:
+        return _error_response(exc)
+    except Exception:
+        return _unexpected_error()
+
+
 @ml_studio_bp.route("/runs", methods=["POST"])
 def submit_run():
     try:

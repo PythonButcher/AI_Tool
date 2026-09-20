@@ -15,6 +15,8 @@ from .contracts import (
     FoldEvidence,
     LeakageFinding,
     MetricPolicy,
+    PreparationAssessment,
+    PreparationIssue,
     RandomSeedPolicy,
     ResourceLimits,
     ReviewedCandidateReference,
@@ -24,6 +26,9 @@ from .contracts import (
     SplitPolicy,
     SplitEvidence,
     StructuredError,
+    SuggestedPreparationFix,
+    TransformationRecipeLineage,
+    TransformationStep,
     TruthBoundary,
 )
 from .repository import MLStudioRepository, PersistenceError
@@ -44,6 +49,8 @@ __all__ = [
     "FoldEvidence",
     "LeakageFinding",
     "MetricPolicy",
+    "PreparationAssessment",
+    "PreparationIssue",
     "MLStudioRepository",
     "MLStudioService",
     "MLStudioServiceError",
@@ -58,5 +65,8 @@ __all__ = [
     "SplitPolicy",
     "SplitEvidence",
     "StructuredError",
+    "SuggestedPreparationFix",
+    "TransformationRecipeLineage",
+    "TransformationStep",
     "TruthBoundary",
 ]

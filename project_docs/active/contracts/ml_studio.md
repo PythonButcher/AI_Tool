@@ -2,7 +2,7 @@
 
 ## Status
 
-Phase 13 backend contract through Gate 3. This document defines framework-independent, versioned objects, evidence boundaries, durable experiment and run state, managed artifact integrity, and the identity-first API. It does not authorize asynchronous execution, model serving, frontend behavior, or deployment claims.
+Phase 13 backend contract through the Gate 5 preparation boundary. This document defines framework-independent, versioned objects, preparation truth, evidence boundaries, durable experiment and run state, managed artifact integrity, and the identity-first API. It does not authorize asynchronous execution, model serving, frontend behavior, or deployment claims.
 
 ## Contract Version
 
@@ -19,6 +19,18 @@ The source-fingerprint order must exactly match `source_ids`. The application se
 `ExperimentSpecification` contains `experiment_id`, `specification_version`, user-confirmed `task_type`, target, numeric and categorical feature roles, excluded columns, split policy, candidate families, metric policy, resource limits, and three explicit random seeds.
 
 Supported tasks are `regression` and `classification`. Regression candidates are `regularized_linear`, `random_forest`, and `hist_gradient_boosting`; classification candidates are `logistic`, `random_forest`, and `hist_gradient_boosting`. Candidate families cannot contradict the user-selected task. The target and excluded fields cannot enter the feature set. Stratification is classification-only. Time-ordered and grouped policies require their respective split column and reject unrelated split columns.
+
+## Preparation Assessment And Transformation Recipe
+
+`PreparationAssessment` is immutable server-issued readiness truth for one full `DatasetSnapshotIdentity`, one exact `ExperimentSpecification`, and one `TransformationRecipeLineage`. It contains `assessment_id`, timezone-aware `assessed_at`, `ready` or `blocked` state, ordered issues, ordered suggested fixes, and a deterministic `input_fingerprint`. The fingerprint covers the complete bound snapshot, specification, and recipe lineage, so changing any identity or content makes an earlier assessment stale.
+
+`PreparationIssue` contains a stable `issue_id`, machine-readable code, `blocking`, `warning`, or `info` severity, a safe message, an optional affected field, and safe remediation. Assessment state must agree with its issues: any blocking issue produces `blocked`, and an assessment without blocking issues produces `ready`.
+
+`SuggestedPreparationFix` contains a stable `fix_id`, an action type from the existing `ManualCleaningEngine`, ordered affected columns, finite JSON parameters, a safe reason, explicit `supported` or `unsupported` status, and an explanation. Unsupported fixes remain in the response and cannot be treated as applicable. These contracts describe proposed steps; they do not execute or duplicate cleaning behavior.
+
+`TransformationRecipeLineage` contains `recipe_id`, `workspace_id`, `base_snapshot_id`, the base snapshot's transformation recipe hash, a positive recipe version, ordered `TransformationStep` objects, a canonical recipe hash, timezone-aware creation time, and an optional creating actor. Each step has a stable identity, an existing Power Query action type, ordered affected columns, and finite JSON parameters. The canonical hash covers the recipe identity, workspace, base snapshot and hash, version, and ordered steps. A supplied hash that does not match this content is rejected.
+
+Preparation validation rejects unknown fields, duplicate issue, fix, or step identities, unsupported state or severity values, contradictory workspace/snapshot/recipe identities, specification columns absent from the snapshot schema, stale fingerprints, non-finite values, unsafe error text, raw dataset rows, and client filesystem paths. The preparation boundary never accepts browser rows, a browser-owned readiness flag, mutable Power Query state, or a path as readiness evidence.
 
 ## Run Specification
 
@@ -52,6 +64,7 @@ The versioned API root is `/api/ml-studio/v1`. Every response uses one named obj
 | --- | --- | --- |
 | `POST /snapshots` | `workspace_id`, `workspace_version`, ordered `source_ids`, ordered `relationship_ids` | Server-resolved `snapshot` |
 | `GET /snapshots/{snapshot_id}` | Server-issued snapshot identity | Immutable `snapshot` |
+| `POST /preparation-assessments` | Stored `snapshot_id`, stored experiment identity/version, and validated transformation-recipe lineage | Server-issued immutable `assessment` |
 | `POST /experiments` | Complete `ExperimentSpecification` | Immutable `experiment` version |
 | `GET /experiments/{experiment_id}/versions` | Experiment identity | Ordered `experiments` |
 | `POST /runs` | Experiment/version, `snapshot_id`, parameters, environment, code revision, and `Idempotency-Key` header | Durable `run` and `created` flag |
@@ -65,6 +78,8 @@ The versioned API root is `/api/ml-studio/v1`. Every response uses one named obj
 | `GET /candidates/{candidate_id}` | Candidate identity | Immutable `candidate` |
 
 Snapshot creation never accepts rows, fingerprints, schema, governance evidence, semantic-model content, transformation recipes, relationship definitions, or paths from the client. An injected trusted resolver derives those fields from the current server-owned workspace and active Data Model. Snapshot creation rejects a mismatched workspace version or ordered source/relationship identity, blocked governance, and empty datasets. Run submission reloads the stored snapshot and re-resolves current server truth; a changed workspace version, source fingerprint, relationship order, semantic-model hash, transformation-recipe hash, or governance state makes the snapshot stale.
+
+Preparation assessment creation accepts exactly a stored `snapshot_id`, stored experiment identity and version, and validated transformation-recipe lineage. The service reloads both immutable stored contracts, re-resolves current server snapshot truth, validates that the recipe starts from that snapshot and its recipe hash, derives ordered issues and fixes from the server-owned column profile, and issues the assessment identity, time, state, and input fingerprint. Browser rows, paths, local readiness, client issue lists, and client assessment state are rejected.
 
 The server issues snapshot, run, and candidate identities. Run retries are idempotent on caller-controlled intent, excluding the server-issued run ID and submission timestamp. The raw idempotency key is never stored or returned. Comparisons require completed runs from the same experiment version, snapshot, and task type. Candidate review requires a completed evaluated run, registered path-free artifact metadata, and a fresh managed-storage hash verification.
 

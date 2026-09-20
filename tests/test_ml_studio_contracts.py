@@ -19,6 +19,8 @@ from backend.ml_studio.contracts import (
     FoldEvidence,
     LeakageFinding,
     MetricPolicy,
+    PreparationAssessment,
+    PreparationIssue,
     RandomSeedPolicy,
     ResourceLimits,
     ReviewedCandidateReference,
@@ -28,6 +30,9 @@ from backend.ml_studio.contracts import (
     SplitPolicy,
     SplitEvidence,
     StructuredError,
+    SuggestedPreparationFix,
+    TransformationRecipeLineage,
+    TransformationStep,
     TruthBoundary,
 )
 
@@ -54,6 +59,7 @@ def snapshot() -> DatasetSnapshotIdentity:
         column_profile=(
             ColumnProfile(name="feature", logical_type="numeric", null_count=0, distinct_count=100),
             ColumnProfile(name="target", logical_type="numeric", null_count=0, distinct_count=92),
+            ColumnProfile(name="row_id", logical_type="text", null_count=0, distinct_count=100),
         ),
         created_at=NOW,
     )
@@ -85,6 +91,49 @@ def experiment(**overrides: object) -> ExperimentSpecification:
     }
     values.update(overrides)
     return ExperimentSpecification(**values)
+
+
+def recipe(**overrides: object) -> TransformationRecipeLineage:
+    step = TransformationStep(
+        step_id="step-1",
+        action_type="replace_nulls",
+        affected_columns=("feature",),
+        parameters={"columns": ["feature"], "strategy": "median"},
+    )
+    values: dict[str, object] = {
+        "recipe_id": "recipe-1",
+        "workspace_id": "workspace-1",
+        "base_snapshot_id": "snapshot-1",
+        "base_recipe_hash": f"sha256:{SHA}",
+        "recipe_version": 1,
+        "steps": (step,),
+        "created_at": NOW,
+        "created_by": "developer-1",
+    }
+    values.update(overrides)
+    values.setdefault(
+        "canonical_recipe_hash",
+        TransformationRecipeLineage.calculate_hash(
+            recipe_id=values["recipe_id"],
+            workspace_id=values["workspace_id"],
+            base_snapshot_id=values["base_snapshot_id"],
+            base_recipe_hash=values["base_recipe_hash"],
+            recipe_version=values["recipe_version"],
+            steps=values["steps"],
+        ),
+    )
+    return TransformationRecipeLineage(**values)
+
+
+def blocking_issue() -> PreparationIssue:
+    return PreparationIssue(
+        issue_id="issue-1",
+        code="missing_values",
+        severity="blocking",
+        message="The feature column contains missing values.",
+        affected_field="feature",
+        remediation="Replace or remove missing values before training.",
+    )
 
 
 class DatasetSnapshotContractTests(unittest.TestCase):
@@ -143,6 +192,172 @@ class ExperimentContractTests(unittest.TestCase):
                 )
             )
 
+
+class PreparationContractTests(unittest.TestCase):
+    def test_recipe_and_assessment_are_versioned_immutable_and_json_safe(self) -> None:
+        lineage = recipe()
+        issue = blocking_issue()
+        fix = SuggestedPreparationFix(
+            fix_id="fix-1",
+            action_type="replace_nulls",
+            affected_columns=("feature",),
+            parameters={"columns": ["feature"], "strategy": "median"},
+            reason="Missing values block training.",
+            status="supported",
+            explanation="The existing cleaning executor supports median replacement.",
+        )
+        fingerprint = PreparationAssessment.calculate_input_fingerprint(
+            dataset_snapshot=snapshot(),
+            experiment_specification=experiment(),
+            transformation_recipe=lineage,
+        )
+        assessment = PreparationAssessment(
+            assessment_id="assessment-1",
+            assessed_at=NOW,
+            state="blocked",
+            dataset_snapshot=snapshot(),
+            experiment_specification=experiment(),
+            transformation_recipe=lineage,
+            issues=(issue,),
+            suggested_fixes=(fix,),
+            input_fingerprint=fingerprint,
+        )
+
+        payload = assessment.to_dict()
+        self.assertEqual(payload["contract_version"], "ml_studio_contract_v1")
+        self.assertEqual(payload["dataset_snapshot"]["snapshot_id"], "snapshot-1")
+        self.assertEqual(payload["experiment_specification"]["specification_version"], 1)
+        self.assertEqual(payload["transformation_recipe"]["steps"][0]["step_id"], "step-1")
+        self.assertEqual(payload["suggested_fixes"][0]["status"], "supported")
+        self.assertNotIn("path", str(payload).lower())
+        with self.assertRaises(TypeError):
+            assessment.suggested_fixes[0].parameters["strategy"] = "mean"
+
+    def test_assessment_rejects_stale_and_contradictory_identity(self) -> None:
+        lineage = recipe()
+        expected = PreparationAssessment.calculate_input_fingerprint(
+            dataset_snapshot=snapshot(),
+            experiment_specification=experiment(),
+            transformation_recipe=lineage,
+        )
+        with self.assertRaisesRegex(ValueError, "input_fingerprint"):
+            PreparationAssessment(
+                assessment_id="assessment-1",
+                assessed_at=NOW,
+                state="ready",
+                dataset_snapshot=snapshot(),
+                experiment_specification=experiment(specification_version=2),
+                transformation_recipe=lineage,
+                issues=(),
+                suggested_fixes=(),
+                input_fingerprint=expected,
+            )
+        with self.assertRaisesRegex(ValueError, "workspace contradicts"):
+            bad_lineage = recipe(workspace_id="workspace-2")
+            PreparationAssessment(
+                assessment_id="assessment-1",
+                assessed_at=NOW,
+                state="ready",
+                dataset_snapshot=snapshot(),
+                experiment_specification=experiment(),
+                transformation_recipe=bad_lineage,
+                issues=(),
+                suggested_fixes=(),
+                input_fingerprint=PreparationAssessment.calculate_input_fingerprint(
+                    dataset_snapshot=snapshot(),
+                    experiment_specification=experiment(),
+                    transformation_recipe=bad_lineage,
+                ),
+            )
+
+    def test_recipe_rejects_hash_mismatch_duplicate_steps_and_unknown_fields(self) -> None:
+        with self.assertRaisesRegex(ValueError, "canonical_recipe_hash"):
+            replace(recipe(), canonical_recipe_hash=f"sha256:{'b' * 64}")
+        with self.assertRaisesRegex(ValueError, "must not contain duplicates"):
+            recipe(steps=(recipe().steps[0], recipe().steps[0]))
+        payload = recipe().to_dict()
+        payload.pop("contract_version")
+        payload["browser_path"] = "C:\\private\\dataset.csv"
+        with self.assertRaises(TypeError):
+            TransformationRecipeLineage(**payload)
+        with self.assertRaisesRegex(ValueError, "filesystem paths"):
+            TransformationStep(
+                step_id="step-path",
+                action_type="replace_values",
+                affected_columns=("feature",),
+                parameters={"file_path": "C:\\private\\values.json"},
+            )
+
+    def test_assessment_rejects_duplicate_ids_and_contradictory_state(self) -> None:
+        lineage = recipe()
+        issue = blocking_issue()
+        fingerprint = PreparationAssessment.calculate_input_fingerprint(
+            dataset_snapshot=snapshot(),
+            experiment_specification=experiment(),
+            transformation_recipe=lineage,
+        )
+        with self.assertRaisesRegex(ValueError, "duplicates"):
+            PreparationAssessment(
+                assessment_id="assessment-1",
+                assessed_at=NOW,
+                state="blocked",
+                dataset_snapshot=snapshot(),
+                experiment_specification=experiment(),
+                transformation_recipe=lineage,
+                issues=(issue, issue),
+                suggested_fixes=(),
+                input_fingerprint=fingerprint,
+            )
+        with self.assertRaisesRegex(ValueError, "contradicts its issues"):
+            PreparationAssessment(
+                assessment_id="assessment-1",
+                assessed_at=NOW,
+                state="ready",
+                dataset_snapshot=snapshot(),
+                experiment_specification=experiment(),
+                transformation_recipe=lineage,
+                issues=(issue,),
+                suggested_fixes=(),
+                input_fingerprint=fingerprint,
+            )
+
+    def test_unsupported_fix_remains_visible_and_bad_content_is_rejected(self) -> None:
+        fix = SuggestedPreparationFix(
+            fix_id="fix-unsupported",
+            action_type="convert_type",
+            affected_columns=("feature",),
+            parameters={"columns": ["feature"], "target": "numeric"},
+            reason="Some values need manual review before conversion.",
+            status="unsupported",
+            explanation="Automatic conversion could discard non-numeric values.",
+        )
+        self.assertEqual(fix.to_dict()["status"], "unsupported")
+        with self.assertRaises(ValueError):
+            replace(fix, parameters={"threshold": math.inf})
+        with self.assertRaises(ValueError):
+            replace(fix, reason="Read C:\\private\\dataset.csv before applying this fix.")
+
+    def test_assessment_rejects_specification_columns_outside_snapshot(self) -> None:
+        lineage = recipe()
+        bad_specification = experiment(feature_roles=FeatureRoles(numeric=("missing_feature",)))
+        with self.assertRaisesRegex(ValueError, "outside the dataset snapshot"):
+            PreparationAssessment(
+                assessment_id="assessment-1",
+                assessed_at=NOW,
+                state="ready",
+                dataset_snapshot=snapshot(),
+                experiment_specification=bad_specification,
+                transformation_recipe=lineage,
+                issues=(),
+                suggested_fixes=(),
+                input_fingerprint=PreparationAssessment.calculate_input_fingerprint(
+                    dataset_snapshot=snapshot(),
+                    experiment_specification=bad_specification,
+                    transformation_recipe=lineage,
+                ),
+            )
+
+class ExperimentValidationContractTests(unittest.TestCase):
     def test_split_specific_columns_are_required_and_exclusive(self) -> None:
         with self.assertRaises(ValueError):
             SplitPolicy(strategy="time_ordered", final_holdout_fraction=0.2, cross_validation_folds=3)

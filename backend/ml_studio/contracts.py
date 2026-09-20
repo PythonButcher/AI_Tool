@@ -7,6 +7,7 @@ portable and independent of Flask, persistence, and process-global state.
 from __future__ import annotations
 
 import json
+import hashlib
 import math
 import re
 from dataclasses import dataclass, fields, is_dataclass
@@ -25,6 +26,33 @@ _SAFE_ERROR_FORBIDDEN = (
     "-----begin private key-----",
 )
 _PATH_PATTERN = re.compile(r"(?:[A-Za-z]:\\|/(?:home|users|var|tmp)/)", re.IGNORECASE)
+SUPPORTED_POWER_QUERY_ACTIONS = frozenset(
+    {
+        "change_case",
+        "convert_type",
+        "extract_date_component",
+        "filter_rows",
+        "group_by",
+        "keep_bottom_rows",
+        "keep_columns",
+        "keep_top_rows",
+        "merge_columns",
+        "pivot",
+        "remove_bottom_rows",
+        "remove_columns",
+        "remove_duplicates",
+        "remove_nulls",
+        "remove_top_rows",
+        "rename_columns",
+        "reorder_columns",
+        "replace_nulls",
+        "replace_values",
+        "sort_rows",
+        "split_column",
+        "trim_whitespace",
+        "unpivot",
+    }
+)
 
 
 def _json_value(value: Any) -> Any:
@@ -72,6 +100,40 @@ def _identity(value: str, *, label: str) -> None:
 def _sha256(value: str, *, label: str) -> None:
     if not isinstance(value, str) or not _HASH_PATTERN.fullmatch(value):
         raise ValueError(f"{label} must be a SHA-256 digest")
+
+
+def _canonical_sha256(value: Any) -> str:
+    payload = json.dumps(_json_value(value), allow_nan=False, separators=(",", ":"), sort_keys=True)
+    return f"sha256:{hashlib.sha256(payload.encode('utf-8')).hexdigest()}"
+
+
+def _aware_timestamp(value: datetime, *, label: str) -> None:
+    if not isinstance(value, datetime) or value.tzinfo is None or value.utcoffset() is None:
+        raise ValueError(f"{label} must include a timezone")
+
+
+def _safe_text(value: str, *, label: str) -> None:
+    if not isinstance(value, str):
+        raise ValueError(f"{label} must be a string")
+    lowered = value.casefold()
+    if not value.strip() or len(value) > 1000:
+        raise ValueError(f"{label} must be a non-empty bounded string")
+    if any(marker in lowered for marker in _SAFE_ERROR_FORBIDDEN) or _PATH_PATTERN.search(value):
+        raise ValueError(f"{label} contains unsafe implementation detail")
+
+
+def _reject_raw_data_and_paths(value: Any, *, label: str) -> None:
+    forbidden_keys = {"dataframe", "dataset", "dataset_path", "file_path", "filesystem_path", "path", "raw_rows", "rows"}
+    if isinstance(value, Mapping):
+        for key, item in value.items():
+            if key.casefold() in forbidden_keys:
+                raise ValueError(f"{label} cannot contain raw dataset rows or filesystem paths")
+            _reject_raw_data_and_paths(item, label=label)
+    elif isinstance(value, (tuple, list)):
+        for item in value:
+            _reject_raw_data_and_paths(item, label=label)
+    elif isinstance(value, str) and _PATH_PATTERN.search(value):
+        raise ValueError(f"{label} cannot contain raw dataset rows or filesystem paths")
 
 
 def _unique(values: tuple[str, ...], *, label: str, allow_empty: bool = True) -> None:
@@ -329,6 +391,210 @@ class ExperimentSpecification(ContractObject):
         if self.task_type == "regression" and self.metric_policy.primary_metric == "r2":
             raise ValueError("fit alone cannot be the regression selection metric")
         _json_safe(self.to_dict(), label="ExperimentSpecification")
+
+
+@dataclass(frozen=True, slots=True)
+class TransformationStep(ContractObject):
+    step_id: str
+    action_type: str
+    affected_columns: tuple[str, ...]
+    parameters: dict[str, Any]
+
+    def __post_init__(self) -> None:
+        _identity(self.step_id, label="step_id")
+        if self.action_type not in SUPPORTED_POWER_QUERY_ACTIONS:
+            raise ValueError("action_type is not supported by the existing Power Query executor")
+        _unique(self.affected_columns, label="affected_columns")
+        _json_safe(self.parameters, label="transformation step parameters")
+        _reject_raw_data_and_paths(self.parameters, label="transformation step parameters")
+        object.__setattr__(self, "parameters", _freeze_json(self.parameters))
+        _json_safe(self.to_dict(), label="TransformationStep")
+
+
+@dataclass(frozen=True, slots=True)
+class TransformationRecipeLineage(ContractObject):
+    recipe_id: str
+    workspace_id: str
+    base_snapshot_id: str
+    base_recipe_hash: str
+    recipe_version: int
+    steps: tuple[TransformationStep, ...]
+    canonical_recipe_hash: str
+    created_at: datetime
+    created_by: str | None = None
+
+    @staticmethod
+    def calculate_hash(
+        *,
+        recipe_id: str,
+        workspace_id: str,
+        base_snapshot_id: str,
+        base_recipe_hash: str,
+        recipe_version: int,
+        steps: tuple[TransformationStep, ...],
+    ) -> str:
+        return _canonical_sha256(
+            {
+                "recipe_id": recipe_id,
+                "workspace_id": workspace_id,
+                "base_snapshot_id": base_snapshot_id,
+                "base_recipe_hash": base_recipe_hash.lower(),
+                "recipe_version": recipe_version,
+                "steps": steps,
+            }
+        )
+
+    def __post_init__(self) -> None:
+        for label, value in (
+            ("recipe_id", self.recipe_id),
+            ("workspace_id", self.workspace_id),
+            ("base_snapshot_id", self.base_snapshot_id),
+        ):
+            _identity(value, label=label)
+        _sha256(self.base_recipe_hash, label="base_recipe_hash")
+        _sha256(self.canonical_recipe_hash, label="canonical_recipe_hash")
+        object.__setattr__(self, "base_recipe_hash", self.base_recipe_hash.lower())
+        object.__setattr__(self, "canonical_recipe_hash", self.canonical_recipe_hash.lower())
+        if not isinstance(self.recipe_version, int) or isinstance(self.recipe_version, bool) or self.recipe_version < 1:
+            raise ValueError("recipe_version must be a positive integer")
+        step_ids = tuple(step.step_id for step in self.steps)
+        _unique(step_ids, label="transformation step identities")
+        _aware_timestamp(self.created_at, label="created_at")
+        if self.created_by is not None:
+            _identity(self.created_by, label="created_by")
+        expected_hash = self.calculate_hash(
+            recipe_id=self.recipe_id,
+            workspace_id=self.workspace_id,
+            base_snapshot_id=self.base_snapshot_id,
+            base_recipe_hash=self.base_recipe_hash,
+            recipe_version=self.recipe_version,
+            steps=self.steps,
+        )
+        if self.canonical_recipe_hash != expected_hash:
+            raise ValueError("canonical_recipe_hash does not match the ordered recipe content")
+        _json_safe(self.to_dict(), label="TransformationRecipeLineage")
+
+
+@dataclass(frozen=True, slots=True)
+class PreparationIssue(ContractObject):
+    issue_id: str
+    code: str
+    severity: Literal["blocking", "warning", "info"]
+    message: str
+    affected_field: str | None
+    remediation: str
+
+    def __post_init__(self) -> None:
+        _identity(self.issue_id, label="issue_id")
+        if not re.fullmatch(r"[a-z][a-z0-9_]{0,63}", self.code):
+            raise ValueError("preparation issue code has an invalid format")
+        if self.severity not in {"blocking", "warning", "info"}:
+            raise ValueError("preparation issue severity is unsupported")
+        _safe_text(self.message, label="preparation issue message")
+        _safe_text(self.remediation, label="preparation issue remediation")
+        if self.affected_field is not None and (
+            not isinstance(self.affected_field, str) or not self.affected_field.strip()
+        ):
+            raise ValueError("affected_field must be a non-empty string when provided")
+        _json_safe(self.to_dict(), label="PreparationIssue")
+
+
+@dataclass(frozen=True, slots=True)
+class SuggestedPreparationFix(ContractObject):
+    fix_id: str
+    action_type: str
+    affected_columns: tuple[str, ...]
+    parameters: dict[str, Any]
+    reason: str
+    status: Literal["supported", "unsupported"]
+    explanation: str
+
+    def __post_init__(self) -> None:
+        _identity(self.fix_id, label="fix_id")
+        if self.action_type not in SUPPORTED_POWER_QUERY_ACTIONS:
+            raise ValueError("action_type is not supported by the existing Power Query executor")
+        _unique(self.affected_columns, label="suggested fix affected_columns")
+        _json_safe(self.parameters, label="suggested fix parameters")
+        _reject_raw_data_and_paths(self.parameters, label="suggested fix parameters")
+        object.__setattr__(self, "parameters", _freeze_json(self.parameters))
+        _safe_text(self.reason, label="suggested fix reason")
+        if self.status not in {"supported", "unsupported"}:
+            raise ValueError("suggested fix status is unsupported")
+        _safe_text(self.explanation, label="suggested fix explanation")
+        _json_safe(self.to_dict(), label="SuggestedPreparationFix")
+
+
+@dataclass(frozen=True, slots=True)
+class PreparationAssessment(ContractObject):
+    assessment_id: str
+    assessed_at: datetime
+    state: Literal["ready", "blocked"]
+    dataset_snapshot: DatasetSnapshotIdentity
+    experiment_specification: ExperimentSpecification
+    transformation_recipe: TransformationRecipeLineage
+    issues: tuple[PreparationIssue, ...]
+    suggested_fixes: tuple[SuggestedPreparationFix, ...]
+    input_fingerprint: str
+
+    @staticmethod
+    def calculate_input_fingerprint(
+        *,
+        dataset_snapshot: DatasetSnapshotIdentity,
+        experiment_specification: ExperimentSpecification,
+        transformation_recipe: TransformationRecipeLineage,
+    ) -> str:
+        return _canonical_sha256(
+            {
+                "dataset_snapshot": dataset_snapshot,
+                "experiment_specification": experiment_specification,
+                "transformation_recipe": transformation_recipe,
+            }
+        )
+
+    def __post_init__(self) -> None:
+        _identity(self.assessment_id, label="assessment_id")
+        _aware_timestamp(self.assessed_at, label="assessed_at")
+        if self.state not in {"ready", "blocked"}:
+            raise ValueError("preparation assessment state is unsupported")
+        if self.transformation_recipe.workspace_id != self.dataset_snapshot.workspace_id:
+            raise ValueError("transformation recipe workspace contradicts the dataset snapshot")
+        if self.transformation_recipe.base_snapshot_id != self.dataset_snapshot.snapshot_id:
+            raise ValueError("transformation recipe base snapshot contradicts the dataset snapshot")
+        if self.transformation_recipe.base_recipe_hash != self.dataset_snapshot.transformation_recipe_hash:
+            raise ValueError("transformation recipe base hash contradicts the dataset snapshot")
+        snapshot_columns = {column.name for column in self.dataset_snapshot.column_profile}
+        referenced_columns = {
+            self.experiment_specification.target,
+            *self.experiment_specification.feature_roles.all_features,
+            *self.experiment_specification.excluded_columns,
+        }
+        referenced_columns.update(
+            column
+            for column in (
+                self.experiment_specification.split_policy.time_column,
+                self.experiment_specification.split_policy.group_column,
+            )
+            if column is not None
+        )
+        if not referenced_columns.issubset(snapshot_columns):
+            raise ValueError("experiment specification references columns outside the dataset snapshot")
+        issue_ids = tuple(issue.issue_id for issue in self.issues)
+        fix_ids = tuple(fix.fix_id for fix in self.suggested_fixes)
+        _unique(issue_ids, label="preparation issue identities")
+        _unique(fix_ids, label="suggested fix identities")
+        has_blocker = any(issue.severity == "blocking" for issue in self.issues)
+        if (self.state == "blocked") != has_blocker:
+            raise ValueError("preparation assessment state contradicts its issues")
+        _sha256(self.input_fingerprint, label="input_fingerprint")
+        object.__setattr__(self, "input_fingerprint", self.input_fingerprint.lower())
+        expected_fingerprint = self.calculate_input_fingerprint(
+            dataset_snapshot=self.dataset_snapshot,
+            experiment_specification=self.experiment_specification,
+            transformation_recipe=self.transformation_recipe,
+        )
+        if self.input_fingerprint != expected_fingerprint:
+            raise ValueError("input_fingerprint does not match the bound snapshot, recipe, and specification")
+        _json_safe(self.to_dict(), label="PreparationAssessment")
 
 
 @dataclass(frozen=True, slots=True)

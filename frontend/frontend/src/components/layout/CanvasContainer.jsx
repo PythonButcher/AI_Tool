@@ -94,6 +94,7 @@ function CanvasContainer({
   onDestinationSelect,
   setShowDataVisual,
   setIsDataPaneOpen,
+  onOpenCleaningForm,
 }) {
   const {
     minimizedWindows,
@@ -994,7 +995,7 @@ function CanvasContainer({
         )}
         {isMlStudioDest && (
           <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1, backgroundColor: 'var(--bg-canvas, #f8f9fa)' }}>
-            <MLStudioShell />
+            <MLStudioShell onOpenCleaningForm={onOpenCleaningForm} />
           </div>
         )}
       </div>

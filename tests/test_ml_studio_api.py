@@ -11,6 +11,7 @@ from pathlib import Path
 from flask import Flask
 
 from backend.ml_studio.artifacts import ArtifactMetadata
+from backend.ml_studio.contracts import TransformationRecipeLineage
 from backend.ml_studio.repository import MLStudioRepository
 from backend.ml_studio.service import MLStudioService, _snapshot_from_dict
 from backend.routes.ml_studio import ml_studio_bp
@@ -41,6 +42,7 @@ def resolved_truth(*, workspace_version: int = 3, governance_status: str = "read
         "column_profile": [
             {"name": "feature", "logical_type": "numeric", "null_count": 0, "distinct_count": 100},
             {"name": "target", "logical_type": "numeric", "null_count": 0, "distinct_count": 92},
+            {"name": "row_id", "logical_type": "text", "null_count": 0, "distinct_count": 100},
         ],
     }
 
@@ -64,6 +66,30 @@ def run_request(snapshot_id: str, **overrides: object) -> dict:
         "parameters": {"alpha": 0.5},
         "environment": {"python": "3.11"},
         "code_revision": "abcdef1",
+    }
+    value.update(overrides)
+    return value
+
+
+def preparation_request(snapshot: dict, **overrides: object) -> dict:
+    recipe_values = {
+        "recipe_id": "recipe-1",
+        "workspace_id": snapshot["workspace_id"],
+        "base_snapshot_id": snapshot["snapshot_id"],
+        "base_recipe_hash": snapshot["transformation_recipe_hash"],
+        "recipe_version": 1,
+        "steps": (),
+    }
+    recipe = TransformationRecipeLineage(
+        **recipe_values,
+        canonical_recipe_hash=TransformationRecipeLineage.calculate_hash(**recipe_values),
+        created_at=NOW,
+    )
+    value = {
+        "snapshot_id": snapshot["snapshot_id"],
+        "experiment_id": "experiment-1",
+        "specification_version": 1,
+        "transformation_recipe": recipe.to_dict(),
     }
     value.update(overrides)
     return value
@@ -163,6 +189,71 @@ class MLStudioApiTests(unittest.TestCase):
         self.assertEqual(conflict.status_code, 409)
         unsupported = {**experiment().to_dict(), "contract_version": "ml_studio_contract_v999"}
         self.assertEqual(self.client.post("/api/ml-studio/v1/experiments", json=unsupported).status_code, 400)
+
+    def test_preparation_assessment_is_server_issued_and_identity_bound(self) -> None:
+        snapshot = self._create_snapshot()
+        self._create_experiment()
+        response = self.client.post(
+            "/api/ml-studio/v1/preparation-assessments",
+            json=preparation_request(snapshot),
+        )
+        self.assertEqual(response.status_code, 201, response.get_json())
+        assessment = response.get_json()["assessment"]
+        self.assertEqual(assessment["state"], "ready")
+        self.assertEqual(assessment["dataset_snapshot"]["snapshot_id"], snapshot["snapshot_id"])
+        self.assertEqual(assessment["experiment_specification"]["experiment_id"], "experiment-1")
+        self.assertTrue(assessment["assessment_id"].startswith("assessment-"))
+        self.assertTrue(assessment["input_fingerprint"].startswith("sha256:"))
+        self.assertNotIn("ready", preparation_request(snapshot))
+
+    def test_preparation_assessment_returns_supported_and_unsupported_fixes(self) -> None:
+        self.truth["column_profile"][0].update(logical_type="text", null_count=4)
+        snapshot = self._create_snapshot()
+        self._create_experiment()
+        response = self.client.post(
+            "/api/ml-studio/v1/preparation-assessments",
+            json=preparation_request(snapshot),
+        )
+        self.assertEqual(response.status_code, 201, response.get_json())
+        assessment = response.get_json()["assessment"]
+        self.assertEqual(assessment["state"], "blocked")
+        self.assertEqual(
+            [(item["action_type"], item["status"]) for item in assessment["suggested_fixes"]],
+            [("replace_nulls", "supported"), ("convert_type", "unsupported")],
+        )
+
+    def test_preparation_assessment_revalidates_snapshot_and_rejects_browser_truth(self) -> None:
+        snapshot = self._create_snapshot()
+        self._create_experiment()
+        self.truth["workspace_version"] = 4
+        stale = self.client.post(
+            "/api/ml-studio/v1/preparation-assessments",
+            json=preparation_request(snapshot),
+        )
+        self.assertEqual(stale.status_code, 409)
+        self.assertEqual(stale.get_json()["error"]["code"], "snapshot_identity_stale")
+
+        browser_truth = preparation_request(snapshot)
+        browser_truth["ready"] = True
+        browser_truth["rows"] = [{"feature": 1}]
+        rejected = self.client.post(
+            "/api/ml-studio/v1/preparation-assessments",
+            json=browser_truth,
+        )
+        self.assertEqual(rejected.status_code, 400)
+        self.assertEqual(rejected.get_json()["error"]["code"], "invalid_request_fields")
+
+    def test_preparation_assessment_rejects_tampered_recipe_hash(self) -> None:
+        snapshot = self._create_snapshot()
+        self._create_experiment()
+        request_body = preparation_request(snapshot)
+        request_body["transformation_recipe"]["canonical_recipe_hash"] = f"sha256:{'d' * 64}"
+        response = self.client.post(
+            "/api/ml-studio/v1/preparation-assessments",
+            json=request_body,
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.get_json()["error"]["code"], "preparation_request_invalid")
 
     def test_run_submission_requires_idempotency_and_reuses_identical_request(self) -> None:
         snapshot = self._create_snapshot()

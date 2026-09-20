@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import re
 from collections.abc import Callable, Mapping, Sequence
 from datetime import UTC, datetime
@@ -15,6 +16,8 @@ from .contracts import (
     ExperimentSpecification,
     FeatureRoles,
     MetricPolicy,
+    PreparationAssessment,
+    PreparationIssue,
     RandomSeedPolicy,
     ResourceLimits,
     ReviewedCandidateReference,
@@ -22,6 +25,9 @@ from .contracts import (
     SourceFingerprint,
     SplitPolicy,
     StructuredError,
+    SuggestedPreparationFix,
+    TransformationRecipeLineage,
+    TransformationStep,
 )
 from .repository import MLStudioRepository, PersistenceError
 
@@ -164,6 +170,46 @@ def _experiment_from_dict(payload: Mapping[str, Any]) -> ExperimentSpecification
     value["resource_limits"] = ResourceLimits(**value["resource_limits"])
     value["random_seed_policy"] = RandomSeedPolicy(**value["random_seed_policy"])
     return ExperimentSpecification(**value)
+
+
+def _recipe_from_dict(payload: Mapping[str, Any]) -> TransformationRecipeLineage:
+    value = dict(payload)
+    if value.get("contract_version", CONTRACT_VERSION) != CONTRACT_VERSION:
+        raise ValueError("contract_version is unsupported")
+    value.pop("contract_version", None)
+    allowed = {
+        "recipe_id",
+        "workspace_id",
+        "base_snapshot_id",
+        "base_recipe_hash",
+        "recipe_version",
+        "steps",
+        "canonical_recipe_hash",
+        "created_at",
+        "created_by",
+    }
+    required = allowed - {"created_by"}
+    if set(value).difference(allowed) or not required.issubset(value):
+        raise ValueError("transformation recipe fields are invalid")
+    value.setdefault("created_by", None)
+    steps = []
+    for item in value["steps"]:
+        step = dict(item)
+        if step.get("contract_version", CONTRACT_VERSION) != CONTRACT_VERSION:
+            raise ValueError("step contract_version is unsupported")
+        step.pop("contract_version", None)
+        if set(step) != {"step_id", "action_type", "affected_columns", "parameters"}:
+            raise ValueError("transformation step fields are invalid")
+        step["affected_columns"] = tuple(step["affected_columns"])
+        steps.append(TransformationStep(**step))
+    value["steps"] = tuple(steps)
+    value["created_at"] = datetime.fromisoformat(str(value["created_at"]))
+    return TransformationRecipeLineage(**value)
+
+
+def _stable_preparation_id(prefix: str, code: str, field: str | None) -> str:
+    digest = hashlib.sha256(f"{code}\0{field or ''}".encode("utf-8")).hexdigest()[:12]
+    return f"{prefix}-{code}-{digest}"
 
 
 def _reject_unsafe_run_metadata(value: Any, *, depth: int = 0) -> None:
@@ -336,6 +382,201 @@ class MLStudioService:
                 "experiment_not_found", "The requested experiment does not exist.", "Create or select a valid experiment.", status_code=404
             )
         return versions
+
+    def create_preparation_assessment(self, request: Any) -> dict[str, Any]:
+        payload = _require_object(request, label="preparation assessment request")
+        allowed = {"snapshot_id", "experiment_id", "specification_version", "transformation_recipe"}
+        _exact_fields(payload, allowed, allowed)
+        try:
+            specification_version = int(payload["specification_version"])
+        except (TypeError, ValueError) as exc:
+            raise MLStudioServiceError(
+                "preparation_request_invalid",
+                "The experiment specification version is invalid.",
+                "Use an existing positive experiment specification version.",
+            ) from exc
+
+        snapshot_payload = self.get_snapshot(str(payload["snapshot_id"]))
+        experiment_payload = self._repository.get_experiment(
+            str(payload["experiment_id"]), specification_version
+        )
+        if experiment_payload is None:
+            raise MLStudioServiceError(
+                "experiment_version_missing",
+                "The preparation assessment references an experiment version that does not exist.",
+                "Create or select the exact immutable experiment version.",
+                status_code=404,
+            )
+
+        try:
+            snapshot = _snapshot_from_dict(snapshot_payload)
+            self._assert_snapshot_current(snapshot)
+            specification = _experiment_from_dict(experiment_payload)
+            recipe_payload = _require_object(payload["transformation_recipe"], label="transformation_recipe")
+            recipe = _recipe_from_dict(recipe_payload)
+
+            profiles = {profile.name: profile for profile in snapshot.column_profile}
+            issues: list[PreparationIssue] = []
+            fixes: list[SuggestedPreparationFix] = []
+
+            def add_issue(
+                code: str,
+                severity: str,
+                message: str,
+                remediation: str,
+                *,
+                field: str | None = None,
+            ) -> None:
+                issues.append(
+                    PreparationIssue(
+                        issue_id=_stable_preparation_id("issue", code, field),
+                        code=code,
+                        severity=severity,
+                        message=message,
+                        affected_field=field,
+                        remediation=remediation,
+                    )
+                )
+
+            def add_fix(
+                code: str,
+                action_type: str,
+                columns: tuple[str, ...],
+                parameters: dict[str, Any],
+                reason: str,
+                status: str,
+                explanation: str,
+            ) -> None:
+                fixes.append(
+                    SuggestedPreparationFix(
+                        fix_id=_stable_preparation_id("fix", code, "\0".join(columns)),
+                        action_type=action_type,
+                        affected_columns=columns,
+                        parameters=parameters,
+                        reason=reason,
+                        status=status,
+                        explanation=explanation,
+                    )
+                )
+
+            target_profile = profiles[specification.target]
+            if target_profile.null_count:
+                add_issue(
+                    "target_missing_values",
+                    "blocking",
+                    "The selected target contains missing values.",
+                    "Remove rows with a missing target before training.",
+                    field=specification.target,
+                )
+                add_fix(
+                    "target_missing_values",
+                    "remove_nulls",
+                    (specification.target,),
+                    {"columns": [specification.target]},
+                    "Training cannot use rows with a missing target.",
+                    "supported",
+                    "The existing cleaning executor can remove rows with a missing target.",
+                )
+            if specification.task_type == "regression" and target_profile.logical_type != "numeric":
+                add_issue(
+                    "regression_target_not_numeric",
+                    "blocking",
+                    "Regression requires a numeric target.",
+                    "Choose a numeric target or explicitly review a type conversion in Power Query.",
+                    field=specification.target,
+                )
+                add_fix(
+                    "regression_target_not_numeric",
+                    "convert_type",
+                    (specification.target,),
+                    {"columns": [specification.target], "target": "numeric"},
+                    "The regression target must be numeric.",
+                    "unsupported",
+                    "Automatic conversion may coerce values, so a user must review and confirm it.",
+                )
+            if specification.task_type == "classification" and target_profile.distinct_count < 2:
+                add_issue(
+                    "classification_target_single_class",
+                    "blocking",
+                    "Classification requires at least two target classes.",
+                    "Choose a target with at least two observed classes.",
+                    field=specification.target,
+                )
+
+            for column in specification.feature_roles.all_features:
+                profile = profiles[column]
+                if profile.null_count:
+                    strategy = "median" if profile.logical_type == "numeric" else "mode"
+                    add_issue(
+                        "feature_missing_values",
+                        "blocking",
+                        "A selected feature contains missing values.",
+                        "Replace or remove missing feature values before training.",
+                        field=column,
+                    )
+                    add_fix(
+                        "feature_missing_values",
+                        "replace_nulls",
+                        (column,),
+                        {"columns": [column], "strategy": strategy},
+                        "Selected features cannot contain missing values at training time.",
+                        "supported",
+                        f"The existing cleaning executor supports the {strategy} replacement strategy.",
+                    )
+            for column in specification.feature_roles.numeric:
+                if profiles[column].logical_type != "numeric":
+                    add_issue(
+                        "numeric_feature_type_mismatch",
+                        "blocking",
+                        "A numeric feature role is assigned to a non-numeric column.",
+                        "Change the feature role or review a numeric conversion in Power Query.",
+                        field=column,
+                    )
+                    add_fix(
+                        "numeric_feature_type_mismatch",
+                        "convert_type",
+                        (column,),
+                        {"columns": [column], "target": "numeric"},
+                        "The selected numeric feature role requires numeric values.",
+                        "unsupported",
+                        "Automatic conversion may discard non-numeric values and requires user review.",
+                    )
+
+            feature_count = len(specification.feature_roles.all_features)
+            if snapshot.row_count < feature_count * 5:
+                add_issue(
+                    "low_row_feature_ratio",
+                    "info",
+                    "The dataset has few rows relative to the selected feature count.",
+                    "Consider reducing features or collecting more observations before comparing candidates.",
+                )
+
+            state = "blocked" if any(issue.severity == "blocking" for issue in issues) else "ready"
+            fingerprint = PreparationAssessment.calculate_input_fingerprint(
+                dataset_snapshot=snapshot,
+                experiment_specification=specification,
+                transformation_recipe=recipe,
+            )
+            assessment = PreparationAssessment(
+                assessment_id=f"assessment-{uuid4().hex}",
+                assessed_at=self._clock(),
+                state=state,
+                dataset_snapshot=snapshot,
+                experiment_specification=specification,
+                transformation_recipe=recipe,
+                issues=tuple(issues),
+                suggested_fixes=tuple(fixes),
+                input_fingerprint=fingerprint,
+            )
+            return assessment.to_dict()
+        except MLStudioServiceError:
+            raise
+        except (KeyError, TypeError, ValueError) as exc:
+            raise MLStudioServiceError(
+                "preparation_request_invalid",
+                "The preparation assessment request is invalid.",
+                "Use stored snapshot and experiment identities with valid transformation-recipe lineage.",
+            ) from exc
 
     def _assert_snapshot_current(self, snapshot: DatasetSnapshotIdentity) -> None:
         truth = self._resolve_truth(snapshot.workspace_id)

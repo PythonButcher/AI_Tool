@@ -10,7 +10,7 @@ Antigravity owns bounded frontend implementation, React/CSS, UI rendering, and f
 
 ## Active Handoffs And Goal Prompts
 
-There is no active frontend handoff. New frontend work requires a direct user instruction and a new bounded Codex-authored handoff.
+There is no active frontend handoff. Gate 6 implementation awaits direct user authorization, and Codex must verify its backend boundary before assigning any frontend work.
 
 Completed handoffs belong outside this active folder.
 

@@ -5,14 +5,20 @@
     "name": "Machine Learning Studio Foundation"
   },
   "authorization_state": "AUTHORIZED",
-  "lifecycle_state": "AWAITING USER ACCEPTANCE",
-  "diff_baseline": "aeaf00fc0f3ad869aea3af663d28c1286c20bcdc",
+  "lifecycle_state": "IN PROGRESS",
+  "diff_baseline": "dcde271251d69adb2447a92211381d038790e61c",
   "authority_kind": "direct_user_instruction",
   "user_implementation_authorization": {
     "approved_by": "User",
-    "approved_at": "2026-09-17",
+    "approved_at": "2026-09-19",
     "evidence": "direct_user_instruction",
-    "instruction": "I am going to give antigravity the hand off file, we are good"
+    "instruction": "Start the prepared Phase 13 Gate 5 work and continue through the Codex-owned backend steps until backend verification, a concrete blocker, or the frontend handoff boundary."
+  },
+  "latest_user_acceptance": {
+    "accepted_by": "User",
+    "accepted_at": "2026-09-19",
+    "gate": "Gate 5 — Power Query Gateway And Guided Experiment Builder",
+    "instruction": "denied, overruling, this is done"
   },
   "allowed_paths": [
     ".gitignore",
@@ -30,6 +36,9 @@
     "project_docs/active/ai_hand_off/ml_studio_shell.md",
     "project_docs/active/ml_studio/README.md",
     "project_docs/active/status/**",
+    "frontend/frontend/src/App.jsx",
+    "frontend/frontend/src/components/data_management/DataCleaningForm.jsx",
+    "frontend/frontend/src/components/data_management/DataCleaningForm.test.jsx",
     "frontend/frontend/src/components/layout/SideBar.jsx",
     "frontend/frontend/src/components/layout/CanvasContainer.jsx",
     "frontend/frontend/src/features/ml_studio/MLStudioShell.jsx",

@@ -196,7 +196,7 @@ Do not add dozens of estimators, arbitrary Python execution, uploaded pickles, G
 
 ## Activation And Sequencing
 
-**Phase 13 — Machine Learning Studio Foundation** has Gate 5 prepared as the next bounded gate. Its first step is the Codex-owned preparation-assessment and transformation-recipe contract boundary. No frontend handoff exists, and Antigravity must not begin until Codex verifies the Gate 5 backend boundary and creates one bounded frontend handoff.
+**Phase 13 — Machine Learning Studio Foundation** is at the authorization boundary for Gate 6 — Run Observatory And Comparison. Gate 6 implementation has not been authorized, and no frontend handoff is active. Codex must record a direct user start instruction before beginning the first bounded backend step.
 
 Later gates remain roadmap context only. Finishing one gate does not authorize the next; Codex must review the evidence, update current status, and replace the sole active gate before work continues.
 
