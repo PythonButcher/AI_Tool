@@ -12,7 +12,7 @@ The governed script may set Phase State to `IN PROGRESS`, Current Owner to `Code
 
 It must preserve Phase Identity, Current Milestone, Backend Readiness, Frontend Readiness, Active Gate, Authorization Record, Roadmap, Latest Verification, Completion Rule, and the authorization JSON byte-for-byte. It does not edit the active gate or handoff and cannot claim Codex review or browser acceptance.
 
-Before those status changes, the script validates the active handoff's frontend target files and durable Git diff. A failed integrity check leaves status unchanged and returns control through an explicit blocker report.
+Before those status changes, the script validates the active handoff's frontend targets, durable Git diff, declared diff budget, and the full repository harness. A failed integrity or authorization check leaves status unchanged and returns an explicit blocker report.
 
 ## Blocked Work
 

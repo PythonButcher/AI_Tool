@@ -210,6 +210,7 @@ class FrontendHandoffIntegrityTests(unittest.TestCase):
             "- `frontend/frontend/src/Feature.jsx`\n"
             "- `frontend/frontend/src/Feature.css`\n\n"
             "**Required Change Coverage**: all target files\n\n"
+            "**Maximum Diff Lines**: 40\n\n"
             "**Inline Styles**: forbidden\n",
             encoding="utf-8",
         )
@@ -242,6 +243,16 @@ class FrontendHandoffIntegrityTests(unittest.TestCase):
             errors = harness_validation.validate_frontend_handoff_worktree(root, handoff, require_changes=True)
         self.assertTrue(any("missing or empty" in error for error in errors))
 
+    def test_planned_new_target_may_be_absent_before_work_but_not_on_return(self) -> None:
+        temporary, root, handoff = self._repository()
+        with temporary:
+            with handoff.open("a", encoding="utf-8") as stream:
+                stream.write("- `frontend/frontend/src/NewFeature.jsx`\n")
+            start_errors = harness_validation.validate_frontend_handoff_worktree(root, handoff, require_changes=False)
+            return_errors = harness_validation.validate_frontend_handoff_worktree(root, handoff, require_changes=True)
+        self.assertFalse(any("NewFeature.jsx" in error for error in start_errors))
+        self.assertTrue(any("NewFeature.jsx" in error and "missing or empty" in error for error in return_errors))
+
     def test_scope_coverage_and_inline_style_are_rejected(self) -> None:
         temporary, root, handoff = self._repository()
         with temporary:
@@ -254,6 +265,16 @@ class FrontendHandoffIntegrityTests(unittest.TestCase):
         self.assertTrue(any("Required frontend target changes are missing" in error for error in errors))
         self.assertTrue(any("exceed the active handoff targets" in error for error in errors))
         self.assertTrue(any("forbids newly added inline style" in error for error in errors))
+
+    def test_oversized_diff_is_rejected(self) -> None:
+        temporary, root, handoff = self._repository()
+        with temporary:
+            (root / "frontend/frontend/src/Feature.jsx").write_text(
+                "\n".join(f"export const value{i} = {i};" for i in range(45)) + "\n",
+                encoding="utf-8",
+            )
+            errors = harness_validation.validate_frontend_handoff_worktree(root, handoff, require_changes=True)
+        self.assertTrue(any("exceeding its 40-line budget" in error for error in errors))
 
 
 class MutationPolicyTests(unittest.TestCase):

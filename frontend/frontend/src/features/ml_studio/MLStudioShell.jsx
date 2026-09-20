@@ -1,6 +1,6 @@
 
 import React, { useContext, useEffect, useState, useRef, useCallback, useMemo } from 'react';
-import { DataContext, useDatasetMeta } from '../../context/DataContext';
+import { DataContext, useDatasetMeta, normalizeDatasetRows } from '../../context/DataContext';
 import {
   FaDatabase, FaCrosshairs, FaLayerGroup, FaCheckDouble,
   FaUsers, FaSearch, FaRobot, FaInfoCircle, FaExclamationTriangle,
@@ -110,7 +110,9 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
     return () => { fetchIdRef.current += 1; };
   }, [identityKey, isIdentityAvailable, fetchRuns]);
 
-  const activeDataset = cleanedData ?? fullData ?? uploadedData;
+  const activeDatasetSource = cleanedData ?? fullData ?? uploadedData;
+  const activeDataset = useMemo(() => normalizeDatasetRows(activeDatasetSource), [activeDatasetSource]);
+
   const columns = useMemo(() => {
     if (!Array.isArray(activeDataset) || activeDataset.length === 0) return [];
     const sample = activeDataset[0];
@@ -129,16 +131,19 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
             numCols={numCols}
          />
          <div className="ml-studio-center-column">
-            <ExperimentCanvas
-               hasRequiredIdentity={hasRequiredIdentity}
-               hasBlockedIdentity={hasBlockedIdentity}
-               workspaceRefreshError={workspaceRefreshError}
-               workspaceVersionConflict={workspaceVersionConflict}
-               activeWorkspace={activeWorkspace}
-               analysisContext={analysisContext}
-               columns={columns}
-               onOpenCleaningForm={onOpenCleaningForm}
-            />
+             <ExperimentCanvas
+                hasRequiredIdentity={hasRequiredIdentity}
+                hasBlockedIdentity={hasBlockedIdentity}
+                workspaceRefreshError={workspaceRefreshError}
+                workspaceVersionConflict={workspaceVersionConflict}
+                activeWorkspace={activeWorkspace}
+                analysisContext={analysisContext}
+                numRows={numRows}
+                numCols={numCols}
+                columns={columns}
+                onOpenCleaningForm={onOpenCleaningForm}
+                onRunStarted={fetchRuns}
+             />
             <RunDock
                runsState={runsState}
                onRetry={fetchRuns}
@@ -216,7 +221,7 @@ function AssetRail({ activeWorkspace, analysisContext, numRows, numCols }) {
 
 function ExperimentCanvas({
   hasRequiredIdentity, hasBlockedIdentity, workspaceRefreshError, workspaceVersionConflict,
-  activeWorkspace, analysisContext, columns, onOpenCleaningForm
+  activeWorkspace, analysisContext, numRows, numCols, columns, onOpenCleaningForm, onRunStarted
 }) {
   const [taskType, setTaskType] = useState('regression');
   const [target, setTarget] = useState('');
@@ -235,6 +240,10 @@ function ExperimentCanvas({
   const [snapshotData, setSnapshotData] = useState(null);
   const [experimentData, setExperimentData] = useState(null);
 
+  const [runSubmitStatus, setRunSubmitStatus] = useState('idle');
+  const [runSubmitError, setRunSubmitError] = useState(null);
+  const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID());
+
   const reqIdRef = useRef(0);
 
   // Clear prep state when identity changes or navigation
@@ -244,8 +253,61 @@ function ExperimentCanvas({
     setAssessment(null);
     setSnapshotData(null);
     setExperimentData(null);
+    setRunSubmitStatus('idle');
+    setRunSubmitError(null);
+    setIdempotencyKey(crypto.randomUUID());
     reqIdRef.current += 1;
   }, [activeWorkspace?.workspace_id, analysisContext?.workspace_version]);
+
+  const guidanceState = useMemo(() => {
+    if (!target) return { status: 'incomplete', text: 'Choose a target', icon: <FaInfoCircle /> };
+    if (numericFeatures.length === 0 && categoricalFeatures.length === 0) return { status: 'incomplete', text: 'Choose at least one feature', icon: <FaInfoCircle /> };
+    if (!isConfirmed) return { status: 'incomplete', text: 'Confirm the roles', icon: <FaInfoCircle /> };
+
+    if (prepStatus === 'loading') return { status: 'incomplete', text: 'Assessing...', icon: <FaSyncAlt className="spin-icon" /> };
+    if (prepStatus === 'blocked') return { status: 'error', text: 'Resolve readiness issues', icon: <FaExclamationTriangle /> };
+    if (prepStatus === 'ready') return { status: 'ready', text: 'Ready to start run', icon: <FaCheckCircle /> };
+
+    return { status: 'ready', text: 'Ready to assess', icon: <FaCheckCircle /> };
+  }, [target, numericFeatures, categoricalFeatures, isConfirmed, prepStatus]);
+
+  const handleTargetChange = (val) => {
+    setTarget(val);
+    setPrepStatus('idle');
+    setExperimentData(null);
+    if (val) {
+      setNumericFeatures(prev => prev.filter(f => f !== val));
+      setCategoricalFeatures(prev => prev.filter(f => f !== val));
+      setExcludedColumns(prev => prev.filter(f => f !== val));
+    }
+  };
+
+  const handleNumericFeaturesChange = (vals) => {
+    const valid = vals.filter(f => f !== target);
+    setNumericFeatures(valid);
+    setPrepStatus('idle');
+    setExperimentData(null);
+    setCategoricalFeatures(prev => prev.filter(f => !valid.includes(f)));
+    setExcludedColumns(prev => prev.filter(f => !valid.includes(f)));
+  };
+
+  const handleCategoricalFeaturesChange = (vals) => {
+    const valid = vals.filter(f => f !== target);
+    setCategoricalFeatures(valid);
+    setPrepStatus('idle');
+    setExperimentData(null);
+    setNumericFeatures(prev => prev.filter(f => !valid.includes(f)));
+    setExcludedColumns(prev => prev.filter(f => !valid.includes(f)));
+  };
+
+  const handleExcludedColumnsChange = (vals) => {
+    const valid = vals.filter(f => f !== target);
+    setExcludedColumns(valid);
+    setPrepStatus('idle');
+    setExperimentData(null);
+    setNumericFeatures(prev => prev.filter(f => !valid.includes(f)));
+    setCategoricalFeatures(prev => prev.filter(f => !valid.includes(f)));
+  };
 
   const validateForm = () => {
     if (!target) return 'Please select a target column.';
@@ -280,6 +342,9 @@ function ExperimentCanvas({
     const reqId = ++reqIdRef.current;
     setPrepStatus('loading');
     setPrepError(null);
+    setRunSubmitStatus('idle');
+    setRunSubmitError(null);
+    setIdempotencyKey(crypto.randomUUID());
 
     try {
       // 1. Create Snapshot
@@ -420,6 +485,49 @@ function ExperimentCanvas({
     }
   };
 
+  const handleStartRun = async () => {
+    setRunSubmitStatus('loading');
+    setRunSubmitError(null);
+
+    const revision = process.env.REACT_APP_GIT_SHA?.length >= 7 && process.env.REACT_APP_GIT_SHA?.length <= 64
+      ? process.env.REACT_APP_GIT_SHA
+      : 'web-ui-unknown';
+
+    try {
+      const response = await fetch(`${API_URL}/api/ml-studio/v1/runs`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Idempotency-Key': idempotencyKey
+        },
+        body: JSON.stringify({
+          experiment_id: experimentData.experiment_id,
+          specification_version: experimentData.specification_version,
+          snapshot_id: snapshotData.snapshot_id,
+          parameters: {},
+          environment: { client: 'ai_tool_web' },
+          code_revision: revision
+        })
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw data.error || { code: 'unknown', message: 'Failed to start run.' };
+      }
+
+      await onRunStarted();
+      setRunSubmitStatus('idle');
+      setIdempotencyKey(crypto.randomUUID());
+    } catch (err) {
+      setRunSubmitStatus('error');
+      setRunSubmitError({
+        code: err.code || 'ml_studio_internal_error',
+        message: err.message || 'An unexpected error occurred.',
+        remediation: err.remediation || 'Please try again.'
+      });
+    }
+  };
+
   if (hasBlockedIdentity) {
     return (
       <main className="ml-studio-canvas" aria-label="Experiment Canvas">
@@ -449,6 +557,21 @@ function ExperimentCanvas({
   return (
     <main className="ml-studio-canvas" aria-label="Experiment Canvas">
       <div className="prep-form-container">
+        <div className="connected-dataset-panel">
+          <div className="dataset-label">
+            <FaDatabase className="inline-icon" />
+            <strong>{activeWorkspace?.workspace_name || activeWorkspace?.workspace_id || 'Active Dataset'}</strong>
+          </div>
+          <div className="dataset-stats">
+            {numRows.toLocaleString()} rows • {numCols.toLocaleString()} cols
+          </div>
+        </div>
+
+        <div className={`guidance-panel ${guidanceState.status}`}>
+          <span className="guidance-icon">{guidanceState.icon}</span>
+          <span><strong>Next Step:</strong> {guidanceState.text}</span>
+        </div>
+
         <h2 className="prep-form-title">Experiment Configuration</h2>
 
         {prepError && (
@@ -481,7 +604,7 @@ function ExperimentCanvas({
 
           <label className="prep-field">
             <span>Target Column</span>
-            <select value={target} onChange={e => { setTarget(e.target.value); setPrepStatus('idle'); setExperimentData(null); }} disabled={prepStatus === 'loading'}>
+            <select value={target} onChange={e => handleTargetChange(e.target.value)} disabled={prepStatus === 'loading'}>
               <option value="">Select target</option>
               {columns.map(col => <option key={col} value={col}>{col}</option>)}
             </select>
@@ -489,21 +612,21 @@ function ExperimentCanvas({
 
           <label className="prep-field">
             <span>Numeric Features</span>
-            <select multiple value={numericFeatures} onChange={e => { setNumericFeatures(Array.from(e.target.selectedOptions || []).map(o => o.value)); setPrepStatus('idle'); setExperimentData(null); }} disabled={prepStatus === 'loading'} className="multi-select">
+            <select multiple value={numericFeatures} onChange={e => handleNumericFeaturesChange(Array.from(e.target.selectedOptions || []).map(o => o.value))} disabled={prepStatus === 'loading'} className="multi-select">
               {columns.map(col => <option key={col} value={col}>{col}</option>)}
             </select>
           </label>
 
           <label className="prep-field">
             <span>Categorical Features</span>
-            <select multiple value={categoricalFeatures} onChange={e => { setCategoricalFeatures(Array.from(e.target.selectedOptions || []).map(o => o.value)); setPrepStatus('idle'); setExperimentData(null); }} disabled={prepStatus === 'loading'} className="multi-select">
+            <select multiple value={categoricalFeatures} onChange={e => handleCategoricalFeaturesChange(Array.from(e.target.selectedOptions || []).map(o => o.value))} disabled={prepStatus === 'loading'} className="multi-select">
               {columns.map(col => <option key={col} value={col}>{col}</option>)}
             </select>
           </label>
 
           <label className="prep-field">
             <span>Excluded Columns</span>
-            <select multiple value={excludedColumns} onChange={e => { setExcludedColumns(Array.from(e.target.selectedOptions || []).map(o => o.value)); setPrepStatus('idle'); setExperimentData(null); }} disabled={prepStatus === 'loading'} className="multi-select">
+            <select multiple value={excludedColumns} onChange={e => handleExcludedColumnsChange(Array.from(e.target.selectedOptions || []).map(o => o.value))} disabled={prepStatus === 'loading'} className="multi-select">
               {columns.map(col => <option key={col} value={col}>{col}</option>)}
             </select>
           </label>
@@ -540,6 +663,22 @@ function ExperimentCanvas({
               <strong>Dataset is Ready!</strong>
               <p>Assessment ID: {assessment.assessment_id}</p>
               <p>Fingerprint: {assessment.input_fingerprint}</p>
+              <div className="start-run-container">
+                <button
+                  type="button"
+                  className="start-run-button"
+                  onClick={handleStartRun}
+                  disabled={runSubmitStatus === 'loading'}
+                >
+                  {runSubmitStatus === 'loading' ? 'Starting Run…' : 'Start Run'}
+                </button>
+                {runSubmitStatus === 'error' && runSubmitError && (
+                  <div className="run-submit-error" role="alert">
+                    <FaExclamationTriangle className="inline-icon error-text" />
+                    <span className="error-text"><strong>{runSubmitError.message}</strong> {runSubmitError.remediation}</span>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}

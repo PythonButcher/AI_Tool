@@ -371,11 +371,15 @@ def validate_frontend_handoff_worktree(
     if len(targets) > 5:
         errors.append("Active frontend handoff is too broad; limit frontend source targets to five files.")
 
+    diff_budget_match = re.search(r"^\*\*Maximum Diff Lines\*\*:\s*(\d+)\s*$", text, flags=re.MULTILINE)
+    diff_budget = int(diff_budget_match.group(1)) if diff_budget_match else None
+    if diff_budget is None:
+        errors.append("Active frontend handoff must declare a **Maximum Diff Lines** budget.")
+    elif not 25 <= diff_budget <= 1000:
+        errors.append("Active frontend handoff Maximum Diff Lines must be between 25 and 1000.")
+
     for relative in targets:
         path = root / relative
-        if not path.is_file() or path.stat().st_size == 0:
-            errors.append(f"Frontend handoff target is missing or empty: {relative}")
-            continue
         baseline = subprocess.run(
             ["git", "show", f"HEAD:{relative}"],
             cwd=root,
@@ -383,6 +387,11 @@ def validate_frontend_handoff_worktree(
             stderr=subprocess.DEVNULL,
             check=False,
         )
+        if not path.is_file() or path.stat().st_size == 0:
+            is_empty_file = path.is_file() and path.stat().st_size == 0
+            if require_changes or baseline.returncode == 0 or is_empty_file:
+                errors.append(f"Frontend handoff target is missing or empty: {relative}")
+            continue
         if baseline.returncode == 0 and len(baseline.stdout) and path.stat().st_size < len(baseline.stdout) // 2:
             errors.append(f"Frontend handoff target shrank by more than 50% from HEAD: {relative}")
 
@@ -400,6 +409,24 @@ def validate_frontend_handoff_worktree(
         missing = sorted(set(targets).difference(changed_targets))
         if missing:
             errors.append("Required frontend target changes are missing: " + ", ".join(missing))
+
+    if changed_targets and diff_budget is not None:
+        numstat = subprocess.run(
+            ["git", "diff", "HEAD", "--numstat", "--", *changed_targets],
+            cwd=root,
+            text=True,
+            capture_output=True,
+            check=False,
+        ).stdout
+        changed_lines = 0
+        for line in numstat.splitlines():
+            parts = line.split("\t", 2)
+            if len(parts) >= 2 and parts[0].isdigit() and parts[1].isdigit():
+                changed_lines += int(parts[0]) + int(parts[1])
+        if changed_lines > diff_budget:
+            errors.append(
+                f"Frontend handoff diff changes {changed_lines} lines, exceeding its {diff_budget}-line budget."
+            )
 
     if "**Inline Styles**: forbidden" in text and changed_targets:
         diff = subprocess.run(

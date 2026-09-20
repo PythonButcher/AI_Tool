@@ -1,8 +1,8 @@
-Goal: Add a polished Start Run action to the ready ML Studio assessment state through one guarded frontend repair handoff.
+Goal: Deliver the ML Studio Aggressive Overhaul through small, independently reviewed frontend checkpoints.
 
 ## User Outcome
 
-Let a developer submit one prepared experiment and see its server-issued queued record appear in the existing Run Dock.
+A user can move from an active dataset to a started run through an understandable, polished workflow that prevents conflicting column roles instead of reporting avoidable errors afterward.
 
 ## Scope
 
@@ -10,45 +10,48 @@ Let a developer submit one prepared experiment and see its server-issued queued 
 
 **Roadmap Gate**: Gate 6 — Run Observatory And Comparison
 
-**Current Step**: Step 1: Implement the polished Start Run action and immediate Run Dock refresh
+**Current Step**: Step 1: Make the current configuration visibly usable and role-safe
 
-**Target Files**: `frontend/frontend/src/features/ml_studio/MLStudioShell.jsx`, `frontend/frontend/src/features/ml_studio/MLStudioShell.css`, and `frontend/frontend/src/features/ml_studio/MLStudioShell.test.jsx` through `project_docs/active/ai_hand_off/ml_studio_shell.md`.
+**Target Files**: The three existing ML Studio shell targets named in `project_docs/active/ai_hand_off/ml_studio_shell.md`.
 
-**Step Acceptance**: The ready state submits one idempotent run, protects duplicate clicks, renders safe pending and error states, awaits the existing Run Dock refresh, and produces a durable guarded diff in all three target files.
+**Step Acceptance**: The UI identifies the connected dataset and size, supported dataset shapes populate selectors, role conflicts reconcile immediately, and guidance moves forward from configuration through ready-to-assess, assessing, blocked, or ready-to-start states.
 
-**Step Verification**: Antigravity returns the exact changed files and successful focused test, frontend build, and diff checks required by the handoff; Codex then performs targeted source acceptance review.
+**Step Verification**: Antigravity returns after the focused shell tests, diff check, and guarded status command; Codex reviews this checkpoint before authorizing Step 2.
 
-**Next Step**: After Codex accepts this repair, issue a separate bounded handoff for live polling and cancellation.
+**Next Step**: After Codex accepts the visible Step 1 improvement, replace the native multi-selects with a focused searchable role-editor component under a new bounded handoff.
 
 **Continuation Rule**: `WAIT_FOR_AGENT`.
 
-**Stop Condition**: Antigravity stops after the assigned Start Run repair. Codex stops at any contract mismatch or source-level acceptance blocker.
+**Stop Condition**: Antigravity stops after each checkpoint. Codex must accept the returned source and evidence before replacing the handoff and advancing the single in-progress checklist item.
 
-- [ ] **Step 1: Implement the polished Start Run action and immediate Run Dock refresh** — [IN PROGRESS]
-- [ ] **Step 2: Review the returned Start Run repair against the backend contract and guarded diff** — [PENDING]
-- [ ] **Step 3: Issue the bounded live polling and cancellation handoff** — [PENDING]
+- [ ] **Step 1: Make the current configuration visibly usable and role-safe** — [IN PROGRESS]
+- [ ] **Step 2: Replace native multi-selects with a visible searchable single-role editor** — [PENDING]
+- [ ] **Step 3: Add a visible four-stage journey, review summary, and responsive polish** — [PENDING]
+- [ ] **Step 4: Deliver a visible, safe Start Run and live Run Dock refresh** — [PENDING]
+- [ ] **Step 5: Perform Codex integration review and prepare user browser acceptance** — [PENDING]
 
 ## Contracts
 
-- `project_docs/active/ai_hand_off/ml_studio_shell.md` — exact frontend scope, API shapes, fixtures, state rules, and acceptance evidence.
-- `project_docs/active/contracts/ml_studio.md` — durable run lifecycle and identity-first API truth.
+- `project_docs/active/ai_hand_off/ml_studio_shell.md` — the only executable frontend checkpoint.
+- `project_docs/active/contracts/ml_studio.md` — durable preparation and run lifecycle truth.
 - `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md` — frontend ownership boundary.
 
 ## Acceptance
 
-- Frontend behavior submits the exact stored snapshot and experiment identities and uses the server response.
-- Pending, retry, refresh, identity change, and unmount behavior remain race-safe.
-- The slice adds no polling, cancellation, evidence, comparison, backend, or contract work.
-- Codex accepts source and verification evidence before another frontend slice begins.
+- Only one checklist step and one bounded Antigravity handoff are active at a time.
+- Every Antigravity checkpoint returns to Codex and stops before the next step.
+- Every checkpoint ends in a distinct UI change the user can inspect; invisible refactors alone do not clear a step.
+- Dataset usability, role editing, guided polish, and Start Run behavior are reviewed independently.
+- Step 1 evidence explicitly covers object-shaped data, connected-dataset rendering, every role-reconciliation direction, disjoint request payloads, forward guidance states, and warning-free awaited updates.
+- No checkpoint expands its named file, behavior, diff, or contract boundary.
+- Repository harness, active-gate validator, and diff checks pass whenever the gate advances.
 
 ## Verification
 
-- `npm --prefix frontend/frontend test -- --watchAll=false MLStudioShell.test.jsx`
-- `npm --prefix frontend/frontend run build`
 - `python .codex/hooks/agent_harness_check.py`
 - `python C:/Users/18022/.codex/skills/active-gate-governance/scripts/check_active_gate.py project_docs/active/active_gate .`
 - `git diff --check`
 
 ## Owner And Control Return
 
-Antigravity owns the bounded implementation in `project_docs/active/ai_hand_off/ml_studio_shell.md`. Control returns to Codex for targeted acceptance review; the user retains final browser acceptance.
+Antigravity owns only Step 1 through `project_docs/active/ai_hand_off/ml_studio_shell.md`. Control returns to Codex after its mandatory check-in. Codex alone advances the gate and issues the next handoff; the user retains final browser acceptance.

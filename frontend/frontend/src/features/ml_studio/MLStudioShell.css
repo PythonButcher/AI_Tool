@@ -727,3 +727,123 @@
 .power-query-btn:hover {
   background-color: #059669;
 }
+
+/* Start Run Action */
+.start-run-container {
+  margin-top: 16px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.start-run-button {
+  padding: 10px 20px;
+  background-color: var(--primary-color, #2563eb);
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s, opacity 0.2s;
+}
+
+.start-run-button:hover:not(:disabled) {
+  background-color: var(--primary-hover, #1d4ed8);
+}
+
+.start-run-button:focus-visible {
+  outline: 2px solid var(--primary-color, #2563eb);
+  outline-offset: 2px;
+}
+
+.start-run-button:disabled {
+  background-color: var(--text-secondary, #9ca3af);
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.run-submit-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  color: #b91c1c;
+  font-size: 13px;
+  background: #fef2f2;
+  padding: 8px 12px;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  max-width: 400px;
+}
+
+.run-submit-error .error-text {
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* Connected Dataset & Guidance */
+.connected-dataset-panel {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+}
+
+.dataset-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #1e293b;
+}
+
+.dataset-stats {
+  font-size: 13px;
+  color: #64748b;
+  font-family: 'SFMono-Regular', Consolas, monospace;
+}
+
+.guidance-panel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-radius: 6px;
+  margin-bottom: 24px;
+  font-size: 14px;
+}
+
+.guidance-panel.incomplete {
+  background-color: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #92400e;
+}
+
+.guidance-panel.ready {
+  background-color: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+}
+
+.guidance-panel.error {
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+}
+
+.guidance-icon {
+  font-size: 16px;
+}
+
+@media (max-width: 640px) {
+  .connected-dataset-panel {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+}

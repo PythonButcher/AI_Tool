@@ -10,7 +10,7 @@ Antigravity owns bounded frontend implementation, React/CSS, UI rendering, and f
 
 ## Active Handoffs And Goal Prompts
 
-One active frontend repair handoff exists: `project_docs/active/ai_hand_off/ml_studio_shell.md`. It assigns only the polished Start Run action and immediate Run Dock refresh to Antigravity. Polling, cancellation, evidence, and comparison UI remain unassigned.
+One active frontend repair handoff exists: `project_docs/active/ai_hand_off/ml_studio_shell.md`. It assigns only Aggressive Overhaul Step 1: visibly identify the connected dataset, provide live next-action guidance, normalize supported dataset shapes, and enforce mutually exclusive roles in the existing form. Antigravity must return and stop after this inspectable UI checkpoint. Codex will issue the role-editor, guided-polish, and Start Run checkpoints separately after accepting each preceding return.
 
 Completed handoffs belong outside this active folder.
 
@@ -47,3 +47,4 @@ Frontend agents should review this checklist to prevent common handoff failures:
 - **State Reconciliation**: When updating props to reconcile server version conflicts after an error, use a `useRef` to track the active ID so you don't accidentally reset the user's unsaved draft form values or hide the actionable error message.
 - **Cleanliness Evidence**: Always check for trailing whitespace. If `git show --check HEAD` or `git diff --check` complains, you must strictly strip those trailing whitespaces from your working copy.
 - **Strict Evidence Matching**: If the handoff specifies displaying exact server fields (like `version` or `validated_at`) or validating specific constraints (like rejecting duplicate fields), implement them exactly. Never skip a requirement.
+- **Return Is Fail-Closed**: The governed return runs the full repository harness and rejects out-of-scope files, missing target changes, unsafe shrinkage, forbidden inline styles, whitespace errors, and a diff larger than the handoff budget.

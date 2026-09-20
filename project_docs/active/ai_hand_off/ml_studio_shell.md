@@ -1,68 +1,55 @@
-# ML Studio Start Run — Antigravity Repair Handoff
+# ML Studio Aggressive Overhaul — Step 1
 
 REPAIR REQUIRED
 
-Goal: Add one polished Start Run action to the ready ML Studio assessment state and refresh the existing Run Dock from the server after submission.
+Goal: Repair Step 1 so its visible guidance advances in the correct direction and its tests prove every required dataset and role-reconciliation behavior without React update warnings.
 
 ## Repair Blocker
 
-The returned implementation is not present. `MLStudioShell.jsx`, `MLStudioShell.css`, and `MLStudioShell.test.jsx` exactly match `HEAD`, so there is no durable frontend diff to review. The retry must produce reviewable changes in all three target files and must pass the governed return guard.
+The returned guidance state is backward: it displays “Assess readiness” while the form is ready to assess, then displays “Ready to Assess” only after the assessment is already ready and Start Run is the next action. The focused suite also omits the required object-shaped dataset, visible dataset-summary, all-direction role reconciliation, and disjoint experiment-payload tests, while emitting multiple “not wrapped in act” warnings.
 
-## Readiness Evidence
+## Visible Checkpoint Outcome
 
-**Frontend Readiness**: `frontend_repair_only`
+When this checkpoint returns, the existing visible dataset and role-safe controls remain, and the guidance moves forward correctly: choose target, choose features, confirm roles, ready to assess, assessing, resolve readiness issues when blocked, or ready to start a run after a successful assessment.
 
-`POST /api/ml-studio/v1/runs` and `GET /api/ml-studio/v1/runs?limit=20` are implemented and covered by `tests/test_ml_studio_execution.py` and `tests/test_ml_studio_api.py`. The existing shell already retains `snapshotData`, `experimentData`, an assessment-ready state, and a guarded run-list refresh callback.
-
-## Scope And Integrity
+## This Checkpoint Only
 
 Target files:
 
 - `frontend/frontend/src/features/ml_studio/MLStudioShell.jsx`
-- `frontend/frontend/src/features/ml_studio/MLStudioShell.css`
 - `frontend/frontend/src/features/ml_studio/MLStudioShell.test.jsx`
+- `frontend/frontend/src/features/ml_studio/MLStudioShell.css`
+
+Use the stylesheet for the connected-dataset treatment, live guidance, and clear valid/incomplete states. Do not redesign the entire form or introduce the future role-editor component in this checkpoint.
 
 **Required Change Coverage**: all target files
 
+**Maximum Diff Lines**: 520
+
 **Inline Styles**: forbidden
 
-Implement only the Start Run action, its local pending/error state, and the immediate server refresh. Do not add polling, cancellation, evidence, comparison, new components, backend changes, project-doc changes, or edits outside the three targets.
+Do not create the future role-editor component, replace controls, remove confirmation, redesign the form, expand Start Run, add polling or cancellation, or edit outside these three targets. Do not create scratch files. Never use bulk rewrite scripts, shell redirection, `git checkout`, `git restore`, or reset.
 
-Use reviewable editor operations only. Never use Python, PowerShell, shell redirection, bulk rewrites, `git checkout`, `git restore`, or reset to edit or recover source. If a target becomes empty or unexpectedly smaller, stop immediately and return the incident without attempting reconstruction.
+## Required Behavior
 
-## Proven API Contract
+1. Replace the current `unmetRequirements` shortcut with an explicit presentation state derived from configuration and preparation status.
+2. Before assessment, show “Ready to assess” only when target, at least one feature, and confirmation are complete.
+3. During assessment, show an assessing state. After a ready assessment, show that the dataset is ready and Start Run is next. After a blocked assessment, direct the user to the rendered readiness issues. Do not send the user backward.
+4. Preserve normalized columns, connected-dataset summary, mutually exclusive roles, preparation behavior, and Start Run behavior without expanding their scope.
+5. Add the missing evidence tests. Use accessible queries and properly await asynchronous UI updates so the focused command emits no “not wrapped in act” warnings.
 
-Submit `POST /api/ml-studio/v1/runs` with `Content-Type: application/json` and one `Idempotency-Key` generated when the user begins the attempt. Reuse that key only when retrying the same failed attempt.
+## Acceptance Evidence
 
-The exact request is `{ "experiment_id": experimentData.experiment_id, "specification_version": experimentData.specification_version, "snapshot_id": snapshotData.snapshot_id, "parameters": {}, "environment": { "client": "ai_tool_web" }, "code_revision": revision }`, where `revision` is `process.env.REACT_APP_GIT_SHA` only when its length is 7–64, otherwise `web-ui-unknown`.
+- A JSON `data_preview` test proves real columns appear and the connected dataset label plus row/column counts render.
+- Focused tests prove target, numeric, categorical, and excluded changes reconcile in every direction.
+- The experiment request test asserts that Target, Numeric, Categorical, and Excluded values are pairwise disjoint.
+- Guidance tests cover each forward state: choose target, choose features, confirm, ready to assess, assessing, blocked, and ready to start.
+- The focused suite passes with zero “not wrapped in act” warnings. The existing dependency-level ReactDOMTestUtils deprecation is not part of this repair.
 
-Success is `201 { run: RunRecord, created: true }` or idempotent `200 { run: RunRecord, created: false }`. Public failure is `{ error: { code, message, remediation } }`. After success, await the existing parent run refresh before clearing pending state. Do not infer or synthesize run state locally.
-
-Representative queued response: `{ "run": { "run_id": "run-01", "experiment_id": "exp-01", "specification_version": 1, "snapshot_id": "snapshot-01", "status": "queued", "progress_stage": null, "submitted_at": "2026-09-19T18:00:00+00:00", "started_at": null, "finished_at": null, "updated_at": "2026-09-19T18:00:00+00:00", "warnings": [], "run_specification": {} }, "created": true }`.
-
-Representative conflict: `{ "error": { "code": "snapshot_identity_stale", "message": "The dataset snapshot no longer matches authoritative server state.", "remediation": "Create a new snapshot from the current governed Data Model." } }`.
-
-## Required UI Behavior
-
-- Place a clear `Start Run` button inside the existing successful readiness card.
-- The action exists only while the exact assessment, snapshot, and experiment remain ready and current.
-- While submitting, disable the action and show `Starting Run…` with an accessible busy state.
-- On failure, show the safe server message and remediation in an announced error treatment next to the action; keep the same idempotency key for retry.
-- On success, await the Run Dock refresh, clear the attempt state, and leave lifecycle truth to the refreshed server record.
-- Style the action and error treatment in `MLStudioShell.css` using the existing visual language, tokens, focus treatment, spacing, and light/dark behavior. No inline style object is allowed.
-
-## Acceptance
-
-- Focused tests prove the exact request, stable retry key, duplicate-submit protection, safe error rendering, awaited refresh, and stale identity/unmount protection.
-- The CSS change provides an intentional default, hover, focus-visible, disabled/pending, and error treatment without unrelated restyling.
-- The existing preparation and Run Dock tests continue to pass.
-- The governed return command accepts the durable diff.
-
-## Verification And Stop Point
+## Verification And Mandatory Check-In
 
 - `npm --prefix frontend/frontend test -- --watchAll=false MLStudioShell.test.jsx`
-- `npm --prefix frontend/frontend run build`
 - `git diff --check`
-- `python .gemini/skills/status-tracker-skill/scripts/update_status.py return --handoff ml_studio_shell.md --summary "Start Run repair implemented and verified"`
+- `python .gemini/skills/status-tracker-skill/scripts/update_status.py return --handoff ml_studio_shell.md --summary "Aggressive Overhaul Step 1 guidance and evidence repair verified"`
 
-Return the exact changed files and command results, then stop for Codex review. Do not begin polling, cancellation, or evidence UI.
+Return the exact changed files and command results, then stop. Do not begin Step 2. Codex must review and issue the next handoff.

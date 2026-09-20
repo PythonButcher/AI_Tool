@@ -41,6 +41,7 @@ describe('MLStudioShell', () => {
     global.crypto.subtle = {
       digest: jest.fn().mockResolvedValue(new ArrayBuffer(32))
     };
+    global.crypto.randomUUID = jest.fn().mockReturnValue('mock-uuid-1234');
   });
 
   afterEach(() => {
@@ -70,7 +71,7 @@ describe('MLStudioShell', () => {
     expect(global.fetch).not.toHaveBeenCalled();
   });
 
-  it('validates form before submission', async () => {
+  it('validates form before submission and automatically reconciles conflicts', async () => {
     const mockContext = {
       activeWorkspace: { workspace_id: 'ws-1', workspace_name: 'Sales', version: 1 },
       analysisContext: { workspace_id: 'ws-1', workspace_version: 1, source_ids: ['s1'] },
@@ -84,34 +85,41 @@ describe('MLStudioShell', () => {
 
     renderWithContext(mockContext);
 
-    // Initial run fetch
-    await waitFor(() => expect(global.fetch).toHaveBeenCalled());
+    await screen.findByText(/No durable runs exist/i);
 
     // Try submitting without target
     const assessBtn = screen.getByRole('button', { name: 'Assess Preparation Readiness' });
     fireEvent.click(assessBtn);
 
-    expect(screen.getByText('Please select a target column.')).toBeInTheDocument();
+    expect(screen.getByText(/Choose a target/i)).toBeInTheDocument();
 
     // Select target
     const targetSelect = screen.getByText('Target Column').nextElementSibling;
     fireEvent.change(targetSelect, { target: { value: 'A' } });
 
-    // Submit without features
-    fireEvent.click(assessBtn);
-    expect(screen.getByText('Please select at least one feature column.')).toBeInTheDocument();
+    // Verify next unmet requirement
+    expect(screen.getByText(/Choose at least one feature/i)).toBeInTheDocument();
 
-    // Select feature overlapping target
+    // Select valid features
     const numFeaturesSelect = screen.getByText('Numeric Features').nextElementSibling;
+    numFeaturesSelect.querySelector('option[value="B"]').selected = true; fireEvent.change(numFeaturesSelect);
+
+    // Verify next unmet requirement
+    expect(screen.getByText(/Confirm the roles/i)).toBeInTheDocument();
+
+    // Now reproduce the screenshot conflict (selecting target as feature)
     numFeaturesSelect.querySelector('option[value="A"]').selected = true; fireEvent.change(numFeaturesSelect);
 
-    fireEvent.click(assessBtn);
-    expect(screen.getByText('Target cannot be a feature.')).toBeInTheDocument();
+    // It should automatically reconcile and NOT add 'A' to numeric features because it's the target
+    const selectedOptions = Array.from(numFeaturesSelect.selectedOptions).map(o => o.value);
+    expect(selectedOptions).not.toContain('A');
 
-    // Select valid features but don't confirm
-    Array.from(numFeaturesSelect.options).forEach(o => o.selected = false); numFeaturesSelect.querySelector('option[value="B"]').selected = true; fireEvent.change(numFeaturesSelect);
-    fireEvent.click(assessBtn);
-    expect(screen.getByText('You must explicitly confirm the target and feature roles.')).toBeInTheDocument();
+    // Confirm roles
+    const confirmCheckbox = screen.getByText(/I explicitly confirm/i).previousElementSibling;
+    fireEvent.click(confirmCheckbox);
+
+    // Verify next unmet requirement
+    expect(screen.getByText(/Ready to assess/i)).toBeInTheDocument();
   });
 
   it('handles assessment flow and renders fixes', async () => {
@@ -152,7 +160,7 @@ describe('MLStudioShell', () => {
     const mockOpenCleaning = jest.fn();
     renderWithContext(mockContext, undefined, { onOpenCleaningForm: mockOpenCleaning });
 
-    await waitFor(() => expect(global.fetch).toHaveBeenCalled());
+    await screen.findByText(/No durable runs exist/i);
 
     // Configure valid form
     const targetSelect = screen.getByText('Target Column').nextElementSibling;
@@ -161,12 +169,17 @@ describe('MLStudioShell', () => {
     const numFeaturesSelect = screen.getByText('Numeric Features').nextElementSibling;
     Array.from(numFeaturesSelect.options).forEach(o => o.selected = false); numFeaturesSelect.querySelector('option[value="B"]').selected = true; fireEvent.change(numFeaturesSelect);
 
-    const confirmCheckbox = screen.getByText('I explicitly confirm the target and feature roles are correct.').previousElementSibling;
+    const catFeaturesSelect = screen.getByText('Categorical Features').nextElementSibling;
+    Array.from(catFeaturesSelect.options).forEach(o => o.selected = false); catFeaturesSelect.querySelector('option[value="C"]').selected = true; fireEvent.change(catFeaturesSelect);
+
+    const confirmCheckbox = screen.getByText(/I explicitly confirm/i).previousElementSibling;
     fireEvent.click(confirmCheckbox);
 
     // Assess
     const assessBtn = screen.getByRole('button', { name: 'Assess Preparation Readiness' });
     fireEvent.click(assessBtn);
+
+    expect(screen.getAllByText(/Assessing\.\.\./i).length).toBeGreaterThan(0);
 
     // Verify request bodies
     await waitFor(() => {
@@ -180,6 +193,16 @@ describe('MLStudioShell', () => {
       const expBody = JSON.parse(experimentsCall[1].body);
       expect(expBody.resource_limits.max_candidates).toBeLessThanOrEqual(3);
 
+      // Assert Pairwise Disjoint
+      expect(expBody.target).toBe('A');
+      expect(expBody.feature_roles.numeric).toEqual(['B']);
+      expect(expBody.feature_roles.categorical).toEqual(['C']);
+      expect(expBody.excluded_columns).toEqual([]);
+
+      const allRoles = [expBody.target, ...expBody.feature_roles.numeric, ...expBody.feature_roles.categorical, ...expBody.excluded_columns];
+      const uniqueRoles = new Set(allRoles);
+      expect(allRoles.length).toBe(uniqueRoles.size);
+
       const assessmentCall = global.fetch.mock.calls.find(call => call[0].includes('/preparation-assessments') && call[1]?.method === 'POST');
       expect(assessmentCall).toBeDefined();
       const assessmentBody = JSON.parse(assessmentCall[1].body);
@@ -188,15 +211,14 @@ describe('MLStudioShell', () => {
     });
 
     // Wait for blocked state
-    await waitFor(() => {
-      expect(screen.getByText('Readiness Blocked')).toBeInTheDocument();
-    });
+    await screen.findByText(/Readiness Blocked/i);
+    expect(screen.getByText(/Resolve readiness issues/i)).toBeInTheDocument();
 
     // Check issues and fixes
-    expect(screen.getByText('BLOCKING: Missing values in B')).toBeInTheDocument();
-    expect(screen.getByText('Impute missing values.')).toBeInTheDocument();
-    expect(screen.getByText('Action: fill_missing')).toBeInTheDocument();
-    expect(screen.getByText('Action: drop_column')).toBeInTheDocument();
+    expect(screen.getByText(/Missing values in B/i)).toBeInTheDocument();
+    expect(screen.getByText(/Impute missing values/i)).toBeInTheDocument();
+    expect(screen.getByText(/Action: fill_missing/i)).toBeInTheDocument();
+    expect(screen.getByText(/Action: drop_column/i)).toBeInTheDocument();
 
     // Open in Power Query
     const pqBtn = screen.getByRole('button', { name: 'Open in Power Query' });
@@ -218,10 +240,11 @@ describe('MLStudioShell', () => {
       activeWorkspace: { workspace_id: 'ws-1', workspace_name: 'Sales', version: 1 },
       analysisContext: { workspace_id: 'ws-1', workspace_version: 1, source_ids: ['s1'] },
     });
-    
+
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining('/api/ml-studio/v1/runs?limit=20'));
     });
+    await screen.findByText(/No durable runs exist/i);
   });
 
   it('renders populated run list', async () => {
@@ -264,7 +287,7 @@ describe('MLStudioShell', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText('No durable runs exist. Run creation arrives later.')).toBeInTheDocument();
+      expect(screen.getByText(/No durable runs exist/i)).toBeInTheDocument();
     });
   });
 
@@ -286,7 +309,7 @@ describe('MLStudioShell', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText('Invalid request')).toBeInTheDocument();
+      expect(screen.getByText(/Invalid request/i)).toBeInTheDocument();
     });
 
     const retryButton = screen.getByRole('button', { name: 'Retry' });
@@ -295,6 +318,7 @@ describe('MLStudioShell', () => {
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledTimes(2);
     });
+    await screen.findByText(/No durable runs exist/i);
   });
 
   it('ignores response from old identity after identity transition', async () => {
@@ -338,6 +362,8 @@ describe('MLStudioShell', () => {
     });
 
     expect(screen.queryByText('run-old')).not.toBeInTheDocument();
+    // Allow old request promise chain to resolve
+    await new Promise(resolve => setTimeout(resolve, 0));
   });
 
   it('ignores completion after component unmounts', async () => {
@@ -362,5 +388,152 @@ describe('MLStudioShell', () => {
 
     await new Promise(resolve => setTimeout(resolve, 0));
     expect(mockJson).not.toHaveBeenCalled();
+  });
+
+  it("handles start run success and refresh", async () => {
+    const mockContext = {
+      activeWorkspace: { workspace_id: "ws-1", workspace_name: "Sales", version: 1 },
+      analysisContext: { workspace_id: "ws-1", workspace_version: 1, source_ids: ["s1"] },
+      cleanedData: [{ A: 1, B: 2, C: 3 }]
+    };
+
+    let fetchRunsCount = 0;
+
+    global.fetch.mockImplementation((url, init) => {
+      if (url.includes("/runs") && (!init || init.method === "GET")) {
+        fetchRunsCount++;
+        return Promise.resolve({ ok: true, json: async () => ({ runs: fetchRunsCount > 1 ? [{ run_id: "run-new" }] : [] }) });
+      }
+      if (url.includes("/snapshots")) {
+        return Promise.resolve({ ok: true, json: async () => ({ snapshot: { snapshot_id: "snap-1", transformation_recipe_hash: "hash-123" } }) });
+      }
+      if (url.includes("/experiments")) {
+        return Promise.resolve({ ok: true, json: async () => ({ experiment: { experiment_id: "exp-1", specification_version: 1 } }) });
+      }
+      if (url.includes("/preparation-assessments")) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            assessment: {
+              assessment_id: "assess-1",
+              state: "ready",
+              input_fingerprint: "fp-1"
+            }
+          })
+        });
+      }
+      if (url.includes("/runs") && init?.method === "POST") {
+        const body = JSON.parse(init.body);
+        expect(body.experiment_id).toBe("exp-1");
+        expect(body.snapshot_id).toBe("snap-1");
+        expect(init.headers["Idempotency-Key"]).toBeDefined();
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ run: { run_id: "run-new" }, created: true })
+        });
+      }
+    });
+
+    renderWithContext(mockContext);
+
+    await screen.findByText(/No durable runs exist/i);
+
+    const targetSelect = screen.getByText("Target Column").nextElementSibling;
+    fireEvent.change(targetSelect, { target: { value: "A" } });
+
+    const numFeaturesSelect = screen.getByText("Numeric Features").nextElementSibling;
+    Array.from(numFeaturesSelect.options).forEach(o => o.selected = false); numFeaturesSelect.querySelector("option[value='B']").selected = true; fireEvent.change(numFeaturesSelect);
+
+    const confirmCheckbox = screen.getByText(/I explicitly confirm/i).previousElementSibling;
+    fireEvent.click(confirmCheckbox);
+
+    const assessBtn = screen.getByRole("button", { name: "Assess Preparation Readiness" });
+    fireEvent.click(assessBtn);
+
+    await screen.findByText(/Dataset is Ready!/i);
+    expect(screen.getByText(/Ready to start run/i)).toBeInTheDocument();
+
+    const startRunBtn = screen.getByRole("button", { name: "Start Run" });
+    fireEvent.click(startRunBtn);
+
+    await screen.findByText("run-new");
+    await waitFor(() => expect(screen.getByRole("button", { name: "Start Run" })).toBeEnabled());
+  });
+
+  it("handles start run failure and retry with same idempotency key", async () => {
+    const mockContext = {
+      activeWorkspace: { workspace_id: "ws-1", workspace_name: "Sales", version: 1 },
+      analysisContext: { workspace_id: "ws-1", workspace_version: 1, source_ids: ["s1"] },
+      cleanedData: [{ A: 1, B: 2, C: 3 }]
+    };
+
+    let idempotencyKeyUsed = null;
+    let postCallCount = 0;
+
+    global.fetch.mockImplementation((url, init) => {
+      if (url.includes("/runs") && (!init || init.method === "GET")) {
+        return Promise.resolve({ ok: true, json: async () => ({ runs: postCallCount > 1 ? [{ run_id: "run-retry" }] : [] }) });
+      }
+      if (url.includes("/snapshots")) {
+        return Promise.resolve({ ok: true, json: async () => ({ snapshot: { snapshot_id: "snap-1", transformation_recipe_hash: "hash-123" } }) });
+      }
+      if (url.includes("/experiments")) {
+        return Promise.resolve({ ok: true, json: async () => ({ experiment: { experiment_id: "exp-1", specification_version: 1 } }) });
+      }
+      if (url.includes("/preparation-assessments")) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            assessment: { assessment_id: "assess-1", state: "ready", input_fingerprint: "fp-1" }
+          })
+        });
+      }
+      if (url.includes("/runs") && init?.method === "POST") {
+        postCallCount++;
+        idempotencyKeyUsed = init.headers["Idempotency-Key"];
+
+        if (postCallCount === 1) {
+          return Promise.resolve({
+            ok: false,
+            status: 400,
+            json: async () => ({ error: { code: "conflict", message: "Failed to start", remediation: "Try again." } })
+          });
+        } else {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({ run: { run_id: "run-retry" }, created: true })
+          });
+        }
+      }
+    });
+
+    renderWithContext(mockContext);
+    await screen.findByText(/No durable runs exist/i);
+
+    fireEvent.change(screen.getByText("Target Column").nextElementSibling, { target: { value: "A" } });
+    const numFeaturesSelect = screen.getByText("Numeric Features").nextElementSibling;
+    Array.from(numFeaturesSelect.options).forEach(o => o.selected = false); numFeaturesSelect.querySelector("option[value='B']").selected = true; fireEvent.change(numFeaturesSelect);
+    fireEvent.click(screen.getByText(/I explicitly confirm/i).previousElementSibling);
+    fireEvent.click(screen.getByRole("button", { name: "Assess Preparation Readiness" }));
+
+    await screen.findByText(/Dataset is Ready!/i);
+
+    fireEvent.click(screen.getByRole("button", { name: "Start Run" }));
+
+    await screen.findByText(/Failed to start/i);
+
+    const firstKey = idempotencyKeyUsed;
+    expect(firstKey).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Start Run" }));
+
+    // Wait until the run is in the list
+    await waitFor(() => {
+       if (postCallCount < 2) throw new Error("waiting for second post");
+       expect(idempotencyKeyUsed).toEqual(firstKey);
+    });
+
+    // Wait for submitting state to reset to prevent act() warnings
+    await waitFor(() => expect(screen.getByRole("button", { name: "Start Run" })).toBeEnabled());
   });
 });

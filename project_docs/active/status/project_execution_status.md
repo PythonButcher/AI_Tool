@@ -2,26 +2,26 @@
 
 This file is the concise current truth for AI_Tool delivery.
 
-## Current Gate: Start Run UI Repair
+## Current Gate: ML Studio Aggressive Overhaul
 
-- **Current Gate**: Start Run UI Repair
+- **Current Gate**: ML Studio Aggressive Overhaul
 - **Roadmap Phase**: Phase 13 — Machine Learning Studio Foundation
 - **Phase Identity**: `phase-13-ml-studio-foundation`
 - **Phase State**: `IN PROGRESS`
-- **What This State Means**: The returned frontend work has no durable source diff. Antigravity owns a smaller repair limited to the polished Start Run action and immediate Run Dock refresh.
-- **Current Milestone**: Step 1: Implement the polished Start Run action and immediate Run Dock refresh
-- **Automatic Continuation**: `WAIT_FOR_AGENT`
-- **Current Owner**: Antigravity
+- **What This State Means**: The frontend handoff returned and requires Codex source and build review.
+- **Current Milestone**: Step 1: Make the current configuration visibly usable and role-safe
+- **Automatic Continuation**: `CONTINUE`
+- **Current Owner**: Codex
 - **Backend Readiness**: `backend_contract_ready`
 - **Frontend Readiness**: `frontend_repair_only`
-- **Next Action**: Antigravity executes the smaller repair handoff and returns through the guarded status command.
-- **Required Action**: Produce a durable diff in all three targets without destructive recovery, polling, cancellation, or evidence scope.
+- **Next Action**: Antigravity repairs Step 1 guidance and missing evidence only, then checks in and stops.
+- **Required Action**: Review `project_docs/active/ai_hand_off/ml_studio_shell.md` and its returned evidence.
 - **Active Gate**: `project_docs/active/active_gate/README.md`
 - **Authorization Record**: `project_docs/active/status/phase_authorization.json`
 - **Roadmap**: `project_docs/active/ml_studio/README.md` — Gate 6: Run Observatory And Comparison
-- **Active Handoff**: `project_docs/active/ai_hand_off/ml_studio_shell.md`
-- **Latest Verification**: Worktree audit confirmed all three frontend targets exactly match `HEAD`; the first return is not complete. Harness integrity tests pass after adding guarded handoff-return enforcement.
+- **Active Handoff**: `project_docs/active/ai_hand_off/ml_studio_shell.md` — returned for Codex review: Aggressive Overhaul Step 1 guidance and evidence repair verified
+- **Latest Verification**: Focused Codex review found backward guidance at `MLStudioShell.jsx:262-268` and `:566-575`; the test file contains no JSON `data_preview`, connected-summary, all-direction reconciliation, or disjoint-payload coverage, and the focused suite emits multiple unwrapped React update warnings despite 12 passing tests.
 
 ## Completion Rule
 
-This gate advances when Antigravity returns the bounded Start Run repair and Codex accepts its source and verification evidence.
+This gate advances one visible checkpoint at a time. Antigravity must return and stop after each UI increment; Codex must accept it before issuing the next handoff.

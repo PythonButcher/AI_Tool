@@ -12,7 +12,7 @@
     "approved_by": "User",
     "approved_at": "2026-09-19",
     "evidence": "direct_user_instruction",
-    "instruction": "Authorize Phase 13 Gate 6 implementation, then audit the failed Antigravity return, harden the agent harness against destructive or unverifiable frontend work, and issue a smaller evidence-backed retry handoff."
+    "instruction": "Authorize Phase 13 Gate 6 implementation, aggressively overhaul the broken ML Studio Experiment Configuration experience, harden the agent harness against destructive or unverifiable frontend work, and issue a bounded evidence-backed Antigravity handoff."
   },
   "latest_user_acceptance": {
     "accepted_by": "User",
@@ -49,7 +49,9 @@
     "frontend/frontend/src/components/layout/CanvasContainer.jsx",
     "frontend/frontend/src/features/ml_studio/MLStudioShell.jsx",
     "frontend/frontend/src/features/ml_studio/MLStudioShell.css",
-    "frontend/frontend/src/features/ml_studio/MLStudioShell.test.jsx"
+    "frontend/frontend/src/features/ml_studio/MLStudioShell.test.jsx",
+    "frontend/frontend/src/features/ml_studio/ExperimentConfiguration.jsx",
+    "frontend/frontend/src/features/ml_studio/ExperimentConfiguration.test.jsx"
   ],
   "review_only_allowed_paths": [
     "project_docs/active/reviews/**"

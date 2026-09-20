@@ -30,6 +30,8 @@ Target files:
 
 **Required Change Coverage**: `[all target files | only the named required subset]`
 
+**Maximum Diff Lines**: `[25-1000, sized to the bounded task]`
+
 **Inline Styles**: `[forbidden | allowed only for named dynamic values]`
 
 Excluded files and behavior:

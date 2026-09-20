@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import argparse
+import os
 import re
 import sys
+import tempfile
 from pathlib import Path
 
 
@@ -12,7 +14,7 @@ ROOT = Path(__file__).resolve().parents[4]
 HOOKS = ROOT / ".codex" / "hooks"
 sys.path.insert(0, str(HOOKS))
 
-from harness_validation import validate_frontend_handoff_worktree
+from harness_validation import run_repository_checks, validate_frontend_handoff_worktree
 STATUS_PATH = ROOT / "project_docs/active/status/project_execution_status.md"
 AUTHORIZATION_PATH = ROOT / "project_docs/active/status/phase_authorization.json"
 HANDOFF_DIRECTORY = ROOT / "project_docs/active/ai_hand_off"
@@ -69,6 +71,29 @@ def _replace_field(text: str, name: str, value: str) -> str:
     return updated
 
 
+def _atomic_replace(path: Path, text: str) -> None:
+    """Replace a status document without exposing a truncated intermediate file."""
+    temporary_name = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            newline="",
+            dir=path.parent,
+            prefix=f".{path.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as temporary:
+            temporary.write(text)
+            temporary.flush()
+            os.fsync(temporary.fileno())
+            temporary_name = temporary.name
+        os.replace(temporary_name, path)
+    finally:
+        if temporary_name and os.path.exists(temporary_name):
+            os.unlink(temporary_name)
+
+
 def check_status() -> None:
     handoff = _validate_start(STATUS_PATH.read_text(encoding="utf-8"))
     errors = validate_frontend_handoff_worktree(ROOT, handoff, require_changes=False)
@@ -86,6 +111,9 @@ def return_control(handoff_name: str, summary: str) -> None:
     integrity_errors = validate_frontend_handoff_worktree(ROOT, active_handoff, require_changes=True)
     if integrity_errors:
         raise ValueError(" ".join(integrity_errors))
+    repository_errors = run_repository_checks(ROOT)
+    if repository_errors:
+        raise ValueError("Repository harness failed before return: " + " ".join(repository_errors))
     clean_summary = " ".join(summary.split())
     if not 1 <= len(clean_summary) <= 240:
         raise ValueError("Summary must contain 1 to 240 non-whitespace characters.")
@@ -97,7 +125,7 @@ def return_control(handoff_name: str, summary: str) -> None:
     updated = _replace_field(updated, "Required Action", f"Review `{active_handoff.relative_to(ROOT).as_posix()}` and its returned evidence.")
     updated = _replace_field(updated, "Active Handoff", f"`{active_handoff.relative_to(ROOT).as_posix()}` — returned for Codex review: {clean_summary}")
 
-    STATUS_PATH.write_text(updated, encoding="utf-8")
+    _atomic_replace(STATUS_PATH, updated)
     if AUTHORIZATION_PATH.read_bytes() != authorization_before:
         raise RuntimeError("Authorization record changed during status return.")
     print(f"Returned {active_handoff.name} to Codex review.")
