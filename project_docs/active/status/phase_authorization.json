@@ -12,7 +12,7 @@
     "approved_by": "User",
     "approved_at": "2026-09-19",
     "evidence": "direct_user_instruction",
-    "instruction": "Authorize Phase 13 Gate 6 implementation, aggressively overhaul the broken ML Studio Experiment Configuration experience, harden the agent harness against destructive or unverifiable frontend work, and issue a bounded evidence-backed Antigravity handoff."
+    "instruction": "Create an aggressive ML Studio Experiment Configuration recovery plan; Codex performs planning and backend work only, and Antigravity receives later frontend checkpoints one at a time."
   },
   "latest_user_acceptance": {
     "accepted_by": "User",

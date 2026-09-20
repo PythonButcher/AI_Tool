@@ -1,55 +1,51 @@
-# ML Studio Aggressive Overhaul — Step 1
+Goal: Replace the overflowing Experiment Configuration frame with a contained, responsive, polished workspace shell while preserving its current field behavior for the next checkpoint.
 
 REPAIR REQUIRED
 
-Goal: Repair Step 1 so its visible guidance advances in the correct direction and its tests prove every required dataset and role-reconciliation behavior without React update warnings.
-
 ## Repair Blocker
 
-The returned guidance state is backward: it displays “Assess readiness” while the form is ready to assess, then displays “Ready to Assess” only after the assessment is already ready and Start Run is the next action. The focused suite also omits the required object-shaped dataset, visible dataset-summary, all-direction role reconciliation, and disjoint experiment-payload tests, while emitting multiple “not wrapped in act” warnings.
+The current canvas vertically centers an expanding form inside an overflow-hidden application body. At shorter viewports the configuration and assessment results extend off screen, while the oversized white card and repeated identity information make the surface feel unfinished.
 
 ## Visible Checkpoint Outcome
 
-When this checkpoint returns, the existing visible dataset and role-safe controls remain, and the guidance moves forward correctly: choose target, choose features, confirm roles, ready to assess, assessing, resolve readiness issues when blocked, or ready to start a run after a successful assessment.
+Opening ML Studio shows a deliberate configuration workspace that starts at the top of the available canvas, stays within its width, scrolls internally when necessary, keeps the main action reachable, and remains readable at narrow widths. This checkpoint changes the frame and layout only; the role controls are replaced in the next handoff.
 
-## This Checkpoint Only
+## Exact Scope
 
 Target files:
 
 - `frontend/frontend/src/features/ml_studio/MLStudioShell.jsx`
-- `frontend/frontend/src/features/ml_studio/MLStudioShell.test.jsx`
 - `frontend/frontend/src/features/ml_studio/MLStudioShell.css`
-
-Use the stylesheet for the connected-dataset treatment, live guidance, and clear valid/incomplete states. Do not redesign the entire form or introduce the future role-editor component in this checkpoint.
+- `frontend/frontend/src/features/ml_studio/MLStudioShell.test.jsx`
 
 **Required Change Coverage**: all target files
 
-**Maximum Diff Lines**: 520
+**Maximum Diff Lines**: 650
 
 **Inline Styles**: forbidden
 
-Do not create the future role-editor component, replace controls, remove confirmation, redesign the form, expand Start Run, add polling or cancellation, or edit outside these three targets. Do not create scratch files. Never use bulk rewrite scripts, shell redirection, `git checkout`, `git restore`, or reset.
+Do not replace the multi-select controls, remove confirmation, change preparation payloads, change Start Run behavior, add polling or cancellation, create new components, edit backend files, or touch project documentation. Do not create scratch files or use bulk rewrites, shell redirection, `git checkout`, `git restore`, or reset.
 
-## Required Behavior
+## Required Layout
 
-1. Replace the current `unmetRequirements` shortcut with an explicit presentation state derived from configuration and preparation status.
-2. Before assessment, show “Ready to assess” only when target, at least one feature, and confirmation are complete.
-3. During assessment, show an assessing state. After a ready assessment, show that the dataset is ready and Start Run is next. After a blocked assessment, direct the user to the rendered readiness issues. Do not send the user backward.
-4. Preserve normalized columns, connected-dataset summary, mutually exclusive roles, preparation behavior, and Start Run behavior without expanding their scope.
-5. Add the missing evidence tests. Use accessible queries and properly await asynchronous UI updates so the focused command emits no “not wrapped in act” warnings.
+- Make the center column and experiment canvas establish a bounded height and internal vertical scroll instead of pushing content outside the application surface.
+- Top-align the workspace. Remove viewport-dependent vertical centering for the active configuration form.
+- Replace the generic floating card treatment with a clear configuration workspace header, compact dataset context, and a distinct content body. Avoid repeating raw workspace IDs as the dominant title.
+- Keep configuration actions and assessment results inside the same scrollable surface. The Assess action must remain reachable without the entire application moving off screen.
+- At narrow widths, use one readable column with no horizontal scrolling or clipped controls. At wide widths, constrain line length and use available space without creating a tiny centered card.
+- Use the existing theme variables, visible keyboard focus, reduced-motion behavior, and no inline styles.
 
 ## Acceptance Evidence
 
-- A JSON `data_preview` test proves real columns appear and the connected dataset label plus row/column counts render.
-- Focused tests prove target, numeric, categorical, and excluded changes reconcile in every direction.
-- The experiment request test asserts that Target, Numeric, Categorical, and Excluded values are pairwise disjoint.
-- Guidance tests cover each forward state: choose target, choose features, confirm, ready to assess, assessing, blocked, and ready to start.
-- The focused suite passes with zero “not wrapped in act” warnings. The existing dependency-level ReactDOMTestUtils deprecation is not part of this repair.
+- Focused tests prove the configuration workspace renders one named header, dataset context, content region, action region, and assessment-results region without duplicating internal identity as the main heading.
+- Existing dataset normalization, role reconciliation, guidance, preparation, and Start Run tests continue to pass.
+- The production build passes and the diff remains inside the three targets and declared budget.
 
 ## Verification And Mandatory Check-In
 
 - `npm --prefix frontend/frontend test -- --watchAll=false MLStudioShell.test.jsx`
+- `npm --prefix frontend/frontend run build`
 - `git diff --check`
-- `python .gemini/skills/status-tracker-skill/scripts/update_status.py return --handoff ml_studio_shell.md --summary "Aggressive Overhaul Step 1 guidance and evidence repair verified"`
+- `python .gemini/skills/status-tracker-skill/scripts/update_status.py return --handoff ml_studio_shell.md --summary "Configuration shell containment and responsive layout verified"`
 
-Return the exact changed files and command results, then stop. Do not begin Step 2. Codex must review and issue the next handoff.
+Return exact changed files and command results, then stop. Do not begin the role-editor checkpoint.

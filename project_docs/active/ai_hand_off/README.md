@@ -10,7 +10,7 @@ Antigravity owns bounded frontend implementation, React/CSS, UI rendering, and f
 
 ## Active Handoffs And Goal Prompts
 
-One active frontend repair handoff exists: `project_docs/active/ai_hand_off/ml_studio_shell.md`. It assigns only Aggressive Overhaul Step 1: visibly identify the connected dataset, provide live next-action guidance, normalize supported dataset shapes, and enforce mutually exclusive roles in the existing form. Antigravity must return and stop after this inspectable UI checkpoint. Codex will issue the role-editor, guided-polish, and Start Run checkpoints separately after accepting each preceding return.
+One frontend implementation handoff is active: `project_docs/active/ai_hand_off/ml_studio_shell.md`. It assigns only viewport containment and the new responsive configuration shell. Antigravity must return and stop before replacing role controls.
 
 Completed handoffs belong outside this active folder.
 

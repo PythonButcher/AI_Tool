@@ -24,7 +24,7 @@ Decision Intelligence workspaces, decision frames, readiness and capability pane
 
 Dataset identity and semantic truth remain required for every BI answer and chart.
 
-ML Studio Phase 13 is the active product direction. Gate 6 backend contracts are verified, and the ML Studio Aggressive Overhaul now proceeds through one visible Antigravity UI checkpoint at a time. Only the connected-dataset, live-guidance, and exclusive-role checkpoint is currently assigned.
+ML Studio Phase 13 is the active product direction. Preparation-assessment backend truth is verified, and Configuration Recovery now proceeds through one visible Antigravity UI checkpoint at a time. The active checkpoint fixes viewport containment and establishes the responsive configuration shell.
 
 ## Active Areas
 

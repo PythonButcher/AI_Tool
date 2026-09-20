@@ -156,6 +156,19 @@ Execute asynchronous runs and render live stage progress, the metric landscape, 
 
 Acceptance requires truthful live status, cancellation, failure recovery, two-to-four-run comparison, task-appropriate metrics, accessible charts plus tabular equivalents, and clear handling of missing or statistically weak evidence.
 
+#### Experiment Configuration Recovery
+
+The Experiment Configuration surface is rebuilt before Run Observatory expands. Recovery uses six strict checkpoints, with only one active at a time:
+
+1. **Backend assessment proof — Codex.** Verify snapshot creation, experiment persistence, and preparation assessment with representative array and supported object-shaped selected datasets. Safe error code, message, and remediation remain mandatory.
+2. **Contained configuration shell — Antigravity.** Make the center canvas internally scrollable at narrow and short viewports. Establish a compact dataset header and configuration workspace that never pushes actions or results outside the usable surface.
+3. **Single-role column editor — Antigravity.** Remove Numeric Features, Categorical Features, and Excluded Columns native multi-select boxes. Replace them with one searchable list where every column is exactly Target, Numeric, Categorical, or Ignore. Selecting a target cannot leave it in another role.
+4. **Guided assessment — Antigravity.** Remove the confirmation checkbox. Show task, target, feature counts, split policy, and metric in a review summary. Disable Assess until valid, explain the exact unmet requirement, show deterministic pending state, and render ready, blocked, and safe API failure outcomes without exposing internal identifiers as the primary message.
+5. **Run launch — Antigravity.** Expose Start Run only from a current ready assessment, prevent duplicate submissions, refresh the Run Dock from server truth, and present visible queued, running, completed, cancelled, and failed states.
+6. **Integration acceptance — Codex, then user.** Codex reviews each returned diff, focused evidence, build, and contract behavior. The user performs final browser acceptance only after all five implementation checkpoints are accepted.
+
+Every frontend checkpoint must create a distinct visible improvement, stay inside its named files and diff budget, return through the guarded status command, and stop. A green test count is insufficient when required scenarios are missing or React update warnings indicate unawaited behavior.
+
 ### Gate 7 — Reviewed Candidates And Developer Export
 
 **Owners:** Codex for registry/export contracts, then Antigravity for the review UI.
