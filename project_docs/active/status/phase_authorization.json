@@ -1,17 +1,17 @@
 {
   "schema_version": 1,
   "authorized_work": {
-    "name": "Machine Learning Studio Foundation"
+    "name": "ML Studio Whole-Product Rebuild Planning"
   },
   "authorization_state": "AUTHORIZED",
-  "lifecycle_state": "IN PROGRESS",
+  "lifecycle_state": "AWAITING USER ACCEPTANCE",
   "diff_baseline": "dcde271251d69adb2447a92211381d038790e61c",
   "authority_kind": "direct_user_instruction",
   "user_implementation_authorization": {
     "approved_by": "User",
-    "approved_at": "2026-09-19",
+    "approved_at": "2026-09-20",
     "evidence": "direct_user_instruction",
-    "instruction": "Create an aggressive ML Studio Experiment Configuration recovery plan; Codex performs planning and backend work only, and Antigravity receives later frontend checkpoints one at a time."
+    "instruction": "Start the new whole-product ML Studio plan using the completed discovery discussion. This authorizes replacement planning and documentation alignment, not frontend implementation. Implementation activation follows plan review."
   },
   "latest_user_acceptance": {
     "accepted_by": "User",
