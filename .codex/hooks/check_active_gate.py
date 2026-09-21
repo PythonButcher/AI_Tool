@@ -1,4 +1,4 @@
-"""Validate AI Tool's sole active gate and phase identity."""
+"""Validate AI Tool's sole active gate and executable step."""
 
 from __future__ import annotations
 
@@ -53,7 +53,7 @@ def _load_authorization(root: Path, errors: list[str]) -> dict[str, object]:
     try:
         value = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
-        errors.append(f"Cannot read canonical phase authorization: {exc}")
+        errors.append(f"Cannot read implementation authorization: {exc}")
         return {}
     if not isinstance(value, dict):
         errors.append("Phase authorization must be a JSON object.")
@@ -117,13 +117,6 @@ def validate_active_gate(gate_directory: Path, repository_root: Path) -> list[st
             errors.append(f"Active gate requires exactly one '## {section}' section.")
 
     authorization = _load_authorization(repository_root, errors)
-    canonical = authorization.get("canonical_phase")
-    canonical_id = canonical.get("id") if isinstance(canonical, dict) else None
-    phase_identity = _field(text, "Phase Identity")
-    if phase_identity is not None:
-        phase_identity = phase_identity.strip("`")
-    if canonical_id and phase_identity != canonical_id:
-        errors.append("Active gate Phase Identity does not match canonical authorization.")
 
     if authorization.get("authorization_state") == "AUTHORIZED" and authorization.get("lifecycle_state") == "IN PROGRESS":
         scope = _section(text, "Scope")

@@ -6,8 +6,6 @@ The Experiment Configuration surface stays on screen, scrolls within ML Studio, 
 
 ## Scope
 
-**Phase Identity**: `phase-13-ml-studio-foundation`
-
 **Roadmap Gate**: Gate 6 — Experiment Configuration Recovery
 
 **Current Step**: Step 2: Contain the ML Studio canvas and establish the new configuration shell

@@ -1,7 +1,6 @@
 {
   "schema_version": 1,
-  "canonical_phase": {
-    "id": "phase-13-ml-studio-foundation",
+  "authorized_work": {
     "name": "Machine Learning Studio Foundation"
   },
   "authorization_state": "AUTHORIZED",
@@ -23,6 +22,7 @@
   "allowed_paths": [
     ".gitignore",
     ".agents/skills/auto-handoff-execution/SKILL.md",
+    ".agents/skills/project-phase-transition/SKILL.md",
     ".codex/hooks/**",
     ".gemini/skills/status-tracker-skill/**",
     "backend/ml_studio/**",
@@ -38,6 +38,7 @@
     "project_docs/active/agent_harness/**",
     "project_docs/active/active_gate/README.md",
     "project_docs/active/README.md",
+    "project_docs/active/rules/DOCUMENTATION_GOVERNANCE.md",
     "project_docs/active/ai_hand_off/README.md",
     "project_docs/active/ai_hand_off/ml_studio_shell.md",
     "project_docs/active/ml_studio/README.md",

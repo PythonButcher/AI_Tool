@@ -26,7 +26,7 @@ Harness changes must preserve the project-wide active-gate model: one `active_ga
 
 Authority flows from `AGENTS.md` through navigation, documentation governance, execution status, `phase_authorization.json`, the sole active gate, durable roadmaps and contracts, handoffs, future work, and archive material. A roadmap can propose work but cannot authorize it.
 
-The authorization record distinguishes `REVIEW_ONLY` from `AUTHORIZED`, records direct user authority, limits changed paths, preserves paused resumable work, and explicitly controls Codex frontend edits. The status and gate must use the same phase identity and lifecycle state.
+The authorization record distinguishes `REVIEW_ONLY` from `AUTHORIZED`, records direct user authority, limits changed paths, preserves paused resumable work, and explicitly controls Codex frontend edits. Status and authorization must use the same lifecycle state.
 
 The active gate keeps WIP at one through exact current-step fields and an ordered checklist. When authorized work is in progress and Codex owns it, `Automatic Continuation` is `CONTINUE`. Antigravity and user states use `WAIT_FOR_AGENT` and `WAIT_FOR_USER`.
 

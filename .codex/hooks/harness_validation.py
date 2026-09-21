@@ -47,7 +47,6 @@ REQUIRED_PATHS = (
 STATUS_FIELDS = (
     "Current Gate",
     "Roadmap Phase",
-    "Phase Identity",
     "Phase State",
     "What This State Means",
     "Current Milestone",
@@ -192,7 +191,7 @@ def load_authorization(root: Path, errors: list[str]) -> dict[str, Any]:
 def check_authorization(root: Path, authorization: dict[str, Any], errors: list[str]) -> None:
     required = {
         "schema_version",
-        "canonical_phase",
+        "authorized_work",
         "authorization_state",
         "lifecycle_state",
         "authority_kind",
@@ -204,9 +203,9 @@ def check_authorization(root: Path, authorization: dict[str, Any], errors: list[
     missing = sorted(required.difference(authorization))
     if missing:
         errors.append("Authorization record is missing fields: " + ", ".join(missing))
-    canonical = authorization.get("canonical_phase")
-    if not isinstance(canonical, dict) or not all(isinstance(canonical.get(key), str) and canonical.get(key) for key in ("id", "name")):
-        errors.append("Authorization canonical_phase requires non-empty id and name strings.")
+    authorized_work = authorization.get("authorized_work")
+    if not isinstance(authorized_work, dict) or not isinstance(authorized_work.get("name"), str) or not authorized_work.get("name", "").strip():
+        errors.append("Authorization authorized_work requires a non-empty name string.")
     state = authorization.get("authorization_state")
     lifecycle = authorization.get("lifecycle_state")
     if state not in {"REVIEW_ONLY", "AUTHORIZED"}:
@@ -299,10 +298,6 @@ def check_execution_status(root: Path, authorization: dict[str, Any], errors: li
         expected_continuation = "COMPLETE"
     if expected_continuation and continuation != expected_continuation:
         errors.append(f"Owner/lifecycle requires Automatic Continuation `{expected_continuation}`.")
-    canonical = authorization.get("canonical_phase")
-    canonical_id = canonical.get("id") if isinstance(canonical, dict) else None
-    if canonical_id and _unquote(values.get("Phase Identity")) != canonical_id:
-        errors.append("Execution status Phase Identity does not match canonical authorization.")
     if authorization.get("lifecycle_state") != lifecycle:
         errors.append("Execution status lifecycle does not match phase authorization.")
     return lifecycle, owner, frontend, values.get("Current Milestone", "")

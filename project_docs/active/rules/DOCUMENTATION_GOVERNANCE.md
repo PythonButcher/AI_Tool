@@ -24,7 +24,7 @@ When Codex owns an authorized phase in progress, it must continue through execut
 
 ## Status Boundary
 
-Execution status contains one current phase identity and the required lifecycle, state meaning, milestone, automatic continuation, ownership, readiness, required action, and completion rule. It does not preview a later phase; the roadmap owns future sequence.
+Execution status contains one roadmap phase and the required lifecycle, state meaning, milestone, automatic continuation, ownership, readiness, required action, and completion rule. It does not preview a later phase; the roadmap owns future sequence.
 
 Codex-owned work in progress uses `CONTINUE`. Antigravity-owned work uses `WAIT_FOR_AGENT`. User authorization or acceptance uses `WAIT_FOR_USER`. Blocked and complete states use `BLOCKED` and `COMPLETE` respectively.
 

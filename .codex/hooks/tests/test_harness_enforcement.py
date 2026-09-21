@@ -22,7 +22,7 @@ import mutation_policy  # noqa: E402
 def valid_authorization() -> dict[str, object]:
     return {
         "schema_version": 1,
-        "canonical_phase": {"id": "phase-test", "name": "Test Phase"},
+        "authorized_work": {"name": "Test Work"},
         "authorization_state": "AUTHORIZED",
         "lifecycle_state": "IN PROGRESS",
         "authority_kind": "direct_user_instruction",
@@ -43,7 +43,6 @@ def status_text(**overrides: str) -> str:
     values = {
         "Current Gate": "Test Gate",
         "Roadmap Phase": "Phase 0 — Test Phase",
-        "Phase Identity": "`phase-test`",
         "Phase State": "`IN PROGRESS`",
         "What This State Means": "Work is active.",
         "Current Milestone": "Step 1: Test enforcement",
@@ -67,7 +66,6 @@ def gate_text(current: str = "Step 1: Test enforcement", second_state: str = "PE
     second_checkbox = "x" if second_state == "COMPLETED" else " "
     return (
         "Goal: Exercise one test phase.\n\n## User Outcome\nSafe work.\n\n## Scope\n\n"
-        "**Phase Identity**: `phase-test`\n\n"
         f"**Current Step**: {current}\n\n"
         "**Target Files**: `backend/test.py`\n\n**Step Acceptance**: Tests pass.\n\n"
         "**Step Verification**: `python -m unittest`\n\n**Next Step**: Step 2: Finish checks\n\n"
@@ -137,17 +135,17 @@ class ActiveGateTests(unittest.TestCase):
         check_active_gate._validate_step_checklist(gate_text(second_state="IN PROGRESS"), errors)
         self.assertTrue(any("WIP=1" in error for error in errors))
 
-    def test_phase_identity_must_match_authorization(self) -> None:
+    def test_gate_does_not_require_branch_or_phase_identifier(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             gate = root / "project_docs/active/active_gate"
             status = root / "project_docs/active/status"
             gate.mkdir(parents=True)
             status.mkdir(parents=True)
-            gate.joinpath("README.md").write_text(gate_text().replace("phase-test", "wrong"), encoding="utf-8")
+            gate.joinpath("README.md").write_text(gate_text(), encoding="utf-8")
             status.joinpath("phase_authorization.json").write_text(json.dumps(valid_authorization()), encoding="utf-8")
             errors = check_active_gate.validate_active_gate(gate, root)
-        self.assertTrue(any("Phase Identity" in error for error in errors))
+        self.assertEqual(errors, [])
 
 
 class StatusAndHandoffTests(unittest.TestCase):

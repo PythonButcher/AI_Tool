@@ -6,7 +6,6 @@ This file is the concise current truth for AI_Tool delivery.
 
 - **Current Gate**: ML Studio Configuration Recovery
 - **Roadmap Phase**: Phase 13 — Machine Learning Studio Foundation
-- **Phase Identity**: `phase-13-ml-studio-foundation`
 - **Phase State**: `IN PROGRESS`
 - **What This State Means**: Backend assessment truth is verified; the first bounded redesign checkpoint now fixes viewport containment and the configuration shell.
 - **Current Milestone**: Step 2: Contain the ML Studio canvas and establish the new configuration shell
