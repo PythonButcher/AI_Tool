@@ -24,7 +24,7 @@ Decision Intelligence workspaces, decision frames, readiness and capability pane
 
 Dataset identity and semantic truth remain required for every BI answer and chart.
 
-ML Studio's whole-product replacement plan is ready for review. It covers six functional stages, five problem types, seamless Guidance, Power Query integration, and ordered delivery checkpoints. No implementation handoff is active; existing backend tests do not establish that the new workflow is implemented.
+ML Studio's whole-product replacement plan is ready for review. Open the [build order](ml_studio/README.md#build-order) or go directly to [Step 1 — Design the complete workflow](ml_studio/README.md#step-1--design-the-complete-workflow). The [active gate](active_gate/README.md) states the current authorized action. No implementation handoff is active; the plan does not claim the new workflow already works.
 
 ## Active Areas
 

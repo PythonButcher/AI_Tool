@@ -1,5 +1,9 @@
 Goal: Review the complete ML Studio replacement plan before activating implementation.
 
+## Start Here
+
+**Current action: review the plan. Implementation has not started.** Read the [build order](../ml_studio/README.md#build-order), beginning with [Step 1 — Design the complete workflow](../ml_studio/README.md#step-1--design-the-complete-workflow). The roadmap explains the sequence; this file authorizes only the current action.
+
 ## User Outcome
 
 Establish one clear whole-product plan for a guided or hands-on local ML workflow, covering all six stages and all five task types instead of only repairing Experiment Configuration.
@@ -33,4 +37,4 @@ The user reviews the product direction before a new implementation gate is activ
 
 Current owner: User for plan review; Codex for requested plan corrections. Frontend implementation is unassigned and no handoff is active.
 
-Control return: WAIT_FOR_USER. Stop after presenting the replacement plan. Once reviewed, Codex prepares checkpoint 1, the whole-product state/design and backend-contract blueprint; a frontend owner receives only a subsequent bounded, backend-ready assignment.
+Control return: WAIT_FOR_USER. Stop after presenting the replacement plan. Once approved, Codex activates Step 1 — Design the complete workflow — in this file. A frontend owner receives only a subsequent bounded, backend-ready assignment.
