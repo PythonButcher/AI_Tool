@@ -38,6 +38,7 @@ Do not modify production JSX or CSS, backend files, contracts, status, authoriza
 - The same cases prove every explicit server-returned progress-stage string is rendered exactly as returned.
 - Use a different progress-stage string for each case so the progress assertion cannot pass by matching status text or another row field.
 - Scope both assertions to the same rendered run row so unrelated page text cannot satisfy the test.
+- Use exact-text assertions for the returned status and progress stage; do not rely on broad case-insensitive regular expressions.
 - Existing production behavior and API calls remain unchanged.
 
 ## Verification And Return

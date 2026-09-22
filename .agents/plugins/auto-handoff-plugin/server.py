@@ -8,7 +8,6 @@ import logging
 import threading
 
 def run_mcp_server():
-    # Read initialization request
     try:
         init_req = sys.stdin.readline()
         if not init_req:
@@ -20,7 +19,6 @@ def run_mcp_server():
         except Exception:
             req_id = 1
             
-        # Send initialization response
         sys.stdout.write(json.dumps({
             "jsonrpc": "2.0",
             "id": req_id,
@@ -35,7 +33,6 @@ def run_mcp_server():
         }) + '\n')
         sys.stdout.flush()
         
-        # Read initialized notification
         sys.stdin.readline()
     except Exception:
         pass
@@ -100,6 +97,10 @@ def run_mcp_server():
                         with open(root / "watcher.log", "a") as f:
                             f.write(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] Triggering: {cmd_to_run}\n")
                             
+                        # Set environment variable to prevent nested watchers
+                        env = os.environ.copy()
+                        env["HANDOFF_WATCHER_DISABLED"] = "1"
+                        
                         p_sub = subprocess.Popen(
                             cmd_to_run,
                             cwd=str(root),
@@ -107,7 +108,8 @@ def run_mcp_server():
                             close_fds=True,
                             shell=True if os.name == 'nt' else False,
                             stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE
+                            stderr=subprocess.PIPE,
+                            env=env
                         )
                         
                         with open(root / "watcher.log", "a") as f:
@@ -116,8 +118,13 @@ def run_mcp_server():
                         with open(root / "watcher.log", "a") as f:
                             f.write(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] Exception: {str(e)}\n")
 
-    t = threading.Thread(target=watcher_thread, daemon=True)
-    t.start()
+    # Only start the watcher thread if we are not a background spawned agent
+    if os.environ.get("HANDOFF_WATCHER_DISABLED") != "1":
+        t = threading.Thread(target=watcher_thread, daemon=True)
+        t.start()
+    else:
+        with open(Path(__file__).resolve().parent.parent.parent.parent / "watcher.log", "a") as f:
+            f.write(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] Watcher thread disabled due to environment variable\n")
 
     while True:
         line = sys.stdin.readline()

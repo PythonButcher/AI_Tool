@@ -637,11 +637,13 @@ describe('MLStudioShell', () => {
       analysisContext: { workspace_id: 'ws-1', workspace_version: 1, source_ids: ['s1'] },
     });
 
-    const runElement = await screen.findByText(new RegExp(expectedText, 'i'));
-    expect(runElement).toBeInTheDocument();
+    // Wait for the row to render and locate it by run ID
+    const rowElement = await screen.findByText('run-1');
+    const rowContainer = rowElement.closest('tr');
 
-    const progressElement = await screen.findByText(new RegExp(expectedProgress, 'i'));
-    expect(progressElement).toBeInTheDocument();
+    // Assert exact text within the same row container
+    expect(rowContainer).toHaveTextContent(expectedText);
+    expect(rowContainer).toHaveTextContent(expectedProgress);
   });
 
 });
