@@ -76,23 +76,30 @@ def run_mcp_server():
                     agy_cmd = shutil.which("agy") or "agy"
                     cmd_list = [agy_cmd, "--continue", "--print-timeout", "30m", f"--print={msg}"]
                     
-                    # On Windows with shell=True, pass a string. Otherwise pass list.
                     if os.name == 'nt':
-                        # subprocess.list2cmdline properly quotes arguments on Windows
                         cmd_to_run = subprocess.list2cmdline(cmd_list)
                     else:
                         cmd_to_run = cmd_list
                         
-                    # Use --continue to automatically target the active session in the project
-                    subprocess.Popen(
+                    with open(root / "watcher.log", "a") as f:
+                        f.write(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] Triggering: {cmd_to_run}\n")
+                        
+                    p = subprocess.Popen(
                         cmd_to_run,
                         cwd=str(root),
                         creationflags=subprocess.DETACHED_PROCESS | subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0,
                         close_fds=True,
-                        shell=True if os.name == 'nt' else False
+                        shell=True if os.name == 'nt' else False,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE
                     )
-                except Exception:
-                    pass
+                    
+                    # We shouldn't communicate() because it blocks, but we can write that we started it
+                    with open(root / "watcher.log", "a") as f:
+                        f.write(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] Popen successful, PID={p.pid}\n")
+                except Exception as e:
+                    with open(root / "watcher.log", "a") as f:
+                        f.write(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] Exception: {str(e)}\n")
 
 if __name__ == "__main__":
     # MCP servers communicate over stdio, so we redirect logging to stderr
