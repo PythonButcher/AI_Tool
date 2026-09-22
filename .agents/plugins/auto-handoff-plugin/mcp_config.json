@@ -3,7 +3,7 @@
     "handoff-watcher": {
       "command": "python",
       "args": [
-        ".agents/plugins/auto-handoff-plugin/server.py"
+        "C:/Users/18022/Desktop/AI_Tool/.agents/plugins/auto-handoff-plugin/server.py"
       ]
     }
   }
