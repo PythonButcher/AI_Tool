@@ -71,13 +71,28 @@ def run_mcp_server():
                 relative_path = p.relative_to(root).as_posix()
                 msg = f"Codex has provided a new handoff or repair file: {relative_path}. Please review and implement it automatically."
                 
-                # Use --continue to automatically target the active session in the project
-                subprocess.Popen(
-                    ["agy", "--continue", "--print-timeout", "30m", f"--print={msg}"],
-                    cwd=str(root),
-                    creationflags=subprocess.DETACHED_PROCESS | subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0,
-                    close_fds=True
-                )
+                try:
+                    import shutil
+                    agy_cmd = shutil.which("agy") or "agy"
+                    cmd_list = [agy_cmd, "--continue", "--print-timeout", "30m", f"--print={msg}"]
+                    
+                    # On Windows with shell=True, pass a string. Otherwise pass list.
+                    if os.name == 'nt':
+                        # subprocess.list2cmdline properly quotes arguments on Windows
+                        cmd_to_run = subprocess.list2cmdline(cmd_list)
+                    else:
+                        cmd_to_run = cmd_list
+                        
+                    # Use --continue to automatically target the active session in the project
+                    subprocess.Popen(
+                        cmd_to_run,
+                        cwd=str(root),
+                        creationflags=subprocess.DETACHED_PROCESS | subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0,
+                        close_fds=True,
+                        shell=True if os.name == 'nt' else False
+                    )
+                except Exception:
+                    pass
 
 if __name__ == "__main__":
     # MCP servers communicate over stdio, so we redirect logging to stderr
