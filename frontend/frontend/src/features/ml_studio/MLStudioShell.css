@@ -847,3 +847,150 @@
     gap: 8px;
   }
 }
+
+/* Appended by AI */
+.ribbon-top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 24px;
+  border-bottom: 1px solid var(--border-color, #e5e7eb);
+}
+
+.experiment-info {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.experiment-name {
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.save-status {
+  font-size: 12px;
+  color: var(--text-secondary, #6b7280);
+}
+
+.semantic-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.semantic-btn:focus-visible {
+  outline: 2px solid var(--primary-color, #2563eb);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.ribbon-stage.semantic-btn {
+  padding: 16px 8px;
+}
+
+.dock-toggle-btn {
+  display: flex;
+  align-items: center;
+}
+
+.ml-studio-dock.collapsed {
+  height: auto;
+}
+
+.raw-identifiers {
+  margin-top: 12px;
+  font-size: 12px;
+  background: #f9fafb;
+  padding: 12px;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+}
+
+.raw-id-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  word-break: break-all;
+}
+.raw-id-item:last-child {
+  margin-bottom: 0;
+}
+
+.raw-id-item code {
+  background: #fff;
+  padding: 2px 6px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+}
+
+.copy-btn {
+  color: var(--text-secondary, #6b7280);
+  padding: 4px;
+}
+.copy-btn:hover {
+  color: var(--text-primary, #111827);
+}
+
+.expand-raw-btn {
+  font-size: 13px;
+  color: var(--primary-color, #2563eb);
+  font-weight: 500;
+}
+.expand-raw-btn:hover {
+  text-decoration: underline;
+}
+
+/* Show guidance panel as a drawer on mobile */
+@media (max-width: 768px) {
+  .ml-studio-inspector {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    max-height: 50vh;
+    overflow-y: auto;
+    background: var(--bg-surface, #ffffff);
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.15);
+    border-top: 1px solid var(--border-color, #e5e7eb);
+    border-bottom: none;
+  }
+}
+
+.hidden-stage {
+  display: none;
+}
+
+
+/* Rail Mobile Toggle */
+.mobile-rail-toggle {
+  display: none;
+  width: 100%;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text-primary, #111827);
+  padding: 0;
+}
+
+@media (max-width: 768px) {
+  .mobile-rail-toggle {
+    display: flex;
+  }
+  .desktop-rail-title {
+    display: none;
+  }
+  .ml-studio-rail .rail-content {
+    display: none;
+    margin-top: 16px;
+  }
+  .ml-studio-rail.is-mobile-expanded .rail-content {
+    display: block;
+  }
+}

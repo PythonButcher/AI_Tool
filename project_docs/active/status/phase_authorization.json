@@ -1,58 +1,36 @@
 {
   "schema_version": 1,
   "authorized_work": {
-    "name": "ML Studio Whole-Product Rebuild Planning"
+    "name": "ML Studio Step 2 — Build the Shared Workspace"
   },
   "authorization_state": "AUTHORIZED",
-  "lifecycle_state": "AWAITING USER ACCEPTANCE",
-  "diff_baseline": "dcde271251d69adb2447a92211381d038790e61c",
+  "lifecycle_state": "IN PROGRESS",
+  "diff_baseline": "d7728599ed5079b28ba21374d358f19e91e0336f",
   "authority_kind": "direct_user_instruction",
   "user_implementation_authorization": {
     "approved_by": "User",
-    "approved_at": "2026-09-20",
+    "approved_at": "2026-09-21",
     "evidence": "direct_user_instruction",
-    "instruction": "Start the new whole-product ML Studio plan using the completed discovery discussion. This authorizes replacement planning and documentation alignment, not frontend implementation. Implementation activation follows plan review."
+    "instruction": "Accepted, prepare for next step. This accepts the Step 1 design and authorizes preparation and execution of the bounded Step 2 shared-workspace frontend handoff only."
   },
   "latest_user_acceptance": {
     "accepted_by": "User",
-    "accepted_at": "2026-09-19",
-    "gate": "Gate 5 — Power Query Gateway And Guided Experiment Builder",
-    "instruction": "denied, overruling, this is done"
+    "accepted_at": "2026-09-21",
+    "gate": "Step 1 — Design the complete workflow",
+    "instruction": "accepted, prepare for next step"
   },
   "allowed_paths": [
-    ".gitignore",
-    ".agents/skills/auto-handoff-execution/SKILL.md",
-    ".agents/skills/project-phase-transition/SKILL.md",
-    ".codex/hooks/**",
-    ".gemini/skills/status-tracker-skill/**",
-    "backend/ml_studio/**",
-    "backend/routes/ml_studio.py",
-    "backend/app.py",
-    "tests/test_ml_studio_contracts.py",
-    "tests/test_ml_studio_evaluation.py",
-    "tests/test_ml_studio_execution.py",
-    "tests/test_ml_studio_persistence.py",
-    "tests/test_ml_studio_api.py",
-    "tests/test_agent_harness_policy.py",
     "project_docs/active/contracts/ml_studio.md",
-    "project_docs/active/agent_harness/**",
     "project_docs/active/active_gate/README.md",
     "project_docs/active/README.md",
-    "project_docs/active/rules/DOCUMENTATION_GOVERNANCE.md",
     "project_docs/active/ai_hand_off/README.md",
-    "project_docs/active/ai_hand_off/ml_studio_shell.md",
+    "project_docs/active/ai_hand_off/ml_studio_shared_workspace.md",
     "project_docs/active/ml_studio/README.md",
-    "project_docs/active/status/**",
-    "frontend/frontend/src/App.jsx",
-    "frontend/frontend/src/components/data_management/DataCleaningForm.jsx",
-    "frontend/frontend/src/components/data_management/DataCleaningForm.test.jsx",
-    "frontend/frontend/src/components/layout/SideBar.jsx",
-    "frontend/frontend/src/components/layout/CanvasContainer.jsx",
+    "project_docs/active/status/project_execution_status.md",
+    "project_docs/active/status/phase_authorization.json",
     "frontend/frontend/src/features/ml_studio/MLStudioShell.jsx",
     "frontend/frontend/src/features/ml_studio/MLStudioShell.css",
-    "frontend/frontend/src/features/ml_studio/MLStudioShell.test.jsx",
-    "frontend/frontend/src/features/ml_studio/ExperimentConfiguration.jsx",
-    "frontend/frontend/src/features/ml_studio/ExperimentConfiguration.test.jsx"
+    "frontend/frontend/src/features/ml_studio/MLStudioShell.test.jsx"
   ],
   "review_only_allowed_paths": [
     "project_docs/active/reviews/**"

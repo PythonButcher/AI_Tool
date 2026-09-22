@@ -24,7 +24,7 @@ Decision Intelligence workspaces, decision frames, readiness and capability pane
 
 Dataset identity and semantic truth remain required for every BI answer and chart.
 
-ML Studio's whole-product replacement plan is ready for review. Open the [build order](ml_studio/README.md#build-order) or go directly to [Step 1 — Design the complete workflow](ml_studio/README.md#step-1--design-the-complete-workflow). The [active gate](active_gate/README.md) states the current authorized action. No implementation handoff is active; the plan does not claim the new workflow already works.
+ML Studio's shared-workspace build is active. Open the [active gate](active_gate/README.md), the [bounded frontend handoff](ai_hand_off/ml_studio_shared_workspace.md), or the [six-stage contract](ml_studio/README.md#six-stage-contract). Only the shared frame is authorized; planned persistence and later workflow behavior must not be represented as working product behavior.
 
 ## Active Areas
 

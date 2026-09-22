@@ -10,7 +10,7 @@ Antigravity owns bounded frontend implementation, React/CSS, UI rendering, and f
 
 ## Active Handoffs And Goal Prompts
 
-No implementation handoff is active during whole-product replacement-plan review. The configuration-shell assignment is retired. The next frontend owner will receive one bounded assignment after Codex establishes the required design, state, and backend contracts. Claude Code is an option raised by the user, not an assigned owner.
+One implementation handoff is active: `project_docs/active/ai_hand_off/ml_studio_shared_workspace.md`. Antigravity owns only the shared frame, six-stage navigation, compact dataset context, Guidance presentation, run dock, and honest unconnected-stage states named there. Codex reviews the returned source and verification evidence before any next assignment.
 
 Completed handoffs belong outside this active folder.
 

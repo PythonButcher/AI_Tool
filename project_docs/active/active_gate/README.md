@@ -1,40 +1,48 @@
-Goal: Review the complete ML Studio replacement plan before activating implementation.
-
-## Start Here
-
-**Current action: review the plan. Implementation has not started.** Read the [build order](../ml_studio/README.md#build-order), beginning with [Step 1 — Design the complete workflow](../ml_studio/README.md#step-1--design-the-complete-workflow). The roadmap explains the sequence; this file authorizes only the current action.
+Goal: Prove that ML Studio preserves durable run status and progress-stage truth in focused frontend coverage.
 
 ## User Outcome
 
-Establish one clear whole-product plan for a guided or hands-on local ML workflow, covering all six stages and all five task types instead of only repairing Experiment Configuration.
+Developers can rely on the shared-workspace tests to catch any UI change that drops or invents backend run progress.
 
 ## Scope
 
-Review project_docs/active/ml_studio/README.md as the replacement product direction. Codex may correct planning, status, and navigation documents only. No backend or frontend implementation is activated by this review gate.
+**Current Step**: Step 1: Prove returned run progress across every durable status
 
-The plan must preserve seamless Guidance, developer-controlled data preparation, the Power Query round trip, resumable drafts, safe backward edits, locked forward stages, real local training, deliberate candidate selection, usable outputs, and the deferred Context Ledger/AI Chat boundary.
+**Target Files**: `frontend/frontend/src/features/ml_studio/MLStudioShell.test.jsx`.
+
+**Step Acceptance**: One parameterized test asserts the exact status and exact server-returned progress-stage text for all seven durable states.
+
+**Step Verification**: Run the focused ML Studio shell test, frontend build, repository harness, and `git diff --check`.
+
+**Next Step**: Step 2: Return focused verification evidence
+
+**Continuation Rule**: `WAIT_FOR_AGENT` while Antigravity owns the bounded repair; Codex reviews the returned evidence.
+
+**Stop Condition**: Stop on a contract mismatch, failed governed return, or successful return to Codex. Do not change production UI or begin another ML Studio stage.
+
+- [ ] **Step 1: Prove returned run progress across every durable status** — [IN PROGRESS]
+- [ ] **Step 2: Return focused verification evidence** — [PENDING]
 
 ## Contracts
 
-- project_docs/active/ml_studio/README.md — proposed product scope and delivery sequence.
-- project_docs/active/contracts/ml_studio.md — existing contract, to be reconciled before implementation.
-- project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md — ownership boundary.
-- project_docs/active/status/phase_authorization.json — planning authority.
+- `project_docs/active/ai_hand_off/ml_studio_shared_workspace.md` — executable one-file repair.
+- `project_docs/active/contracts/ml_studio.md` — durable run-status and progress-stage truth.
+- `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md` — frontend ownership boundary.
 
 ## Acceptance
 
-The replacement plan covers the entire workspace and all product stages; separates confirmed choices from provisional defaults; identifies existing source and contract gaps; orders bounded backend and frontend work; and does not claim planned behavior is implemented.
-
-The user reviews the product direction before a new implementation gate is activated. This is plan review, not a browser-acceptance assignment.
+Tests cover `queued`, `running`, `cancel_requested`, `completed`, `failed`, `cancelled`, and `interrupted`. Every case asserts the exact returned `status` and `progress_stage`. Production React, CSS, API calls, payloads, polling behavior, and backend files remain unchanged.
 
 ## Verification
 
-- python .codex/hooks/agent_harness_check.py
-- python C:/Users/18022/.codex/skills/active-gate-governance/scripts/check_active_gate.py project_docs/active/active_gate .
-- git diff --check
+- `python .codex/hooks/agent_harness_check.py`
+- `python C:/Users/18022/.codex/skills/active-gate-governance/scripts/check_active_gate.py project_docs/active/active_gate .`
+- `npm --prefix frontend/frontend test -- --watchAll=false --runInBand MLStudioShell.test.jsx`
+- `npm --prefix frontend/frontend run build`
+- `git diff --check`
 
 ## Owner And Control Return
 
-Current owner: User for plan review; Codex for requested plan corrections. Frontend implementation is unassigned and no handoff is active.
+Current owner: Antigravity for the bounded frontend test repair.
 
-Control return: WAIT_FOR_USER. Stop after presenting the replacement plan. Once approved, Codex activates Step 1 — Design the complete workflow — in this file. A frontend owner receives only a subsequent bounded, backend-ready assignment.
+Control return: `WAIT_FOR_AGENT`. Antigravity returns changed-file and verification evidence through the governed return command, then stops for Codex review.

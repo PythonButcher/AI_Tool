@@ -28,15 +28,72 @@ Do one bounded assignment at a time. Each step can contain a backend assignment 
 
 ## Step 1 — Design the complete workflow
 
-**What changes:** Define the six-stage layout, navigation rules, saved state, task differences, and when edits make results outdated. Audit reusable code, reconcile API contracts, and investigate the actual assessment request failure.
+**Status:** Complete as a design and contract gate. No application behavior was implemented.
 
-**What you will see:** A readable workspace/layout brief and stage-by-stage behavior description. This is design and contract work, not a changed application yet.
+Step 1 is the implementation-neutral blueprint. It describes the whole product; it does not claim these behaviors exist in the application.
 
-**Who does it:** Codex, after plan approval. No frontend implementation.
+### Shared Workspace Layout
 
-**Done when:** Every stage has inputs, actions, outputs, locked/error states, and a backend dependency. The first frontend assignment has clear boundaries and verified prerequisites.
+1. A fixed workspace header contains the experiment name, save state, Guidance toggle, and six-stage navigator. Guidance changes explanatory content only.
+2. A collapsible context rail shows friendly dataset, version, size, and lineage summaries. Raw identifiers appear only in details with copy actions.
+3. The main workspace owns the current stage. Evidence and guidance sit beside the relevant control or collapse below it on narrow screens; no permanently empty inspector is reserved.
+4. A compact run dock remains available while a run is queued, running, cancelling, failed, interrupted, or complete. It shows backend states and events, never invented progress.
+5. At 1440×900 and 1024×768 the stage workspace keeps the primary action visible without page-level horizontal scrolling. At 390×844 the rail and secondary panels collapse into labeled drawers; tables scroll inside their region. Keyboard order follows header → stages → main content → supporting panels → run dock.
+
+### Workflow State Rules
+
+- The server owns experiment identity, draft revision, data identity, immutable submitted configurations, run truth, evaluations, candidates, and artifacts. The browser owns only unsaved edits and presentation state.
+- A stage is `locked`, `available`, `active`, `complete`, or `stale`. Locked stages expose missing prerequisites and a route to fix them. A stale stage preserves historical evidence and names the change that invalidated current progression.
+- The persisted `active_stage` is the last developer-selected stage that is not locked. Reopening restores it; returning to an earlier stage does not invalidate anything until a dependency-bearing edit is saved.
+- Draft autosave uses visible `saving`, `saved`, `save_error`, and `conflict` states. Navigation and training flush pending saves. A conflict preserves local edits and requires reload or duplicate; it never silently overwrites a newer revision.
+- Guidance, experiment name, panel layout, and the viewed stage do not affect readiness. Data identity or recipe changes stale Prepare Data and everything after it. Task changes stale task-dependent preparation, configuration, and all later evidence. Role, split, metric, model, seed, or resource changes stale the assessment and later work. Submitted runs remain immutable and labeled historical.
+- An active run keeps its submitted configuration and snapshot. Dependency-bearing edits warn that they affect only a later run; they never mutate or erase the active run.
+- Candidate selection completes the ML cycle. Use & Share actions are optional. Duplication copies draft settings and lineage references but starts with no completed stages, runs, or selected candidate.
+
+### Six-Stage Contract
+
+| Stage | Inputs and primary actions | Output and unlock rule | Locked, stale, and failure behavior | Backend dependency |
+| --- | --- | --- | --- | --- |
+| 1. Data & Goal | Name the experiment; select a governed dataset; inspect schema/preview; choose predict a number, classify, forecast, find groups, or detect anomalies. | Saved draft with a current data reference and explicit task unlocks Prepare Data. | No usable governed data locks progression. A stale or changed dataset is shown before task configuration. | Required draft CRUD/list/duplicate plus existing server-resolved snapshot identity. Preview remains server-owned and bounded. |
+| 2. Prepare Data | Review quality issues and task-relevant impact; choose Stay or open Power Query with experiment, issue, and return-stage context. | Current recipe lineage and preparation checks unlock Configure; warnings remain visible. | Apply refreshes data identity and reconciles columns; cancel preserves the draft. Blocking issues identify the resolving action. | Existing snapshot and preparation-assessment foundations; required persisted return context and server-issued recipe lineage. |
+| 3. Configure | Assign exclusive column roles; choose task-aware validation, metric, candidates, seeds, and local limits; request assessment. | A ready assessment bound to the exact draft revision, snapshot, recipe, and immutable configuration unlocks Train. | Any bound-field change makes the assessment stale. Server errors retain edits and expose code, message, and remediation. | Existing immutable experiment version and assessment services, extended for all five tasks and server-owned recipe hashing. |
+| 4. Train | Explicitly submit, observe events and limits, cancel, retry idempotently, or recover after restart. | A completed development-comparison run with usable evidence unlocks Review Results. | Queued/running/cancel-requested/completed/failed/cancelled/interrupted remain distinct. Failure and interruption retain configuration and offer a valid next action. | Existing durable run, event, cancellation, idempotency, executor, and restart-recovery foundations; required experiment-scoped queries and development-only run mode. |
+| 5. Review Results | Compare candidates with baselines and limitations; nominate one from development evidence; run its one-time final evaluation; deliberately select the candidate. | Selected-candidate receipt bound to configuration, data, final evidence, limitations, and verified artifacts completes the cycle and unlocks Use & Share. | Incompatible runs cannot compare. Final evidence cannot rank alternatives. Stale drafts do not rewrite historical evaluations. | Existing evaluation/evidence/comparison and candidate records; required nomination and one-time final-evaluation boundary before selection. |
+| 6. Use & Share | Inspect completion receipt; export supported artifacts/report/card/manifest/example; validate and run batch prediction; preview/export cycle summary. | Each optional action returns its own receipt or actionable schema error. | Unsupported uncertainty, assignment, or publishing controls are absent. Artifact verification failure blocks export/inference without changing cycle completion. | Required reloadable bundle, export, prediction, and summary contracts. Context Ledger and AI Chat publishing remain deferred. |
+
+### Task Differences Across The Same Stages
+
+| Task | Goal and configuration | Evaluation and outputs |
+| --- | --- | --- |
+| Regression | Numeric target; random, time, or group-aware validation as justified. | Mean baseline, RMSE/MAE/R² and residual evidence; numeric predictions. |
+| Classification | Class target; stratification where feasible; imbalance-aware metric choice. | Majority baseline, balanced accuracy/weighted F1/accuracy, confusion evidence; probabilities only when calibrated and supported. |
+| Forecasting | Numeric target, time column, frequency, horizon, optional series keys, and future-available inputs. | Chronological or rolling validation, naive/seasonal baseline, horizon-indexed forecast; never random split by default. |
+| Clustering | No target; feature roles, scaling, distance assumptions, and cluster-count/model controls. | Cluster profiles, separation and stability evidence; no supervised accuracy; new-row assignment only when supported. |
+| Anomaly detection | Feature roles, detector, threshold, and optional label solely for labeled evaluation. | Scores, threshold behavior, stability, and labeled metrics only when labels exist; flags mean unusual, not erroneous. |
+
+### Backend Contract Boundary
+
+The exact design-only additions are recorded in [the ML Studio contract](../contracts/ml_studio.md#workflow-application-contract--proposed). Existing source remains authoritative until each proposed contract is implemented and tested.
+
+| Boundary | Reuse now | Required before its build step |
+| --- | --- | --- |
+| Identity and readiness | `DatasetSnapshotIdentity`, immutable experiment versions, `PreparationAssessment`, `/snapshots`, `/experiments`, `/preparation-assessments`. | Persisted `ExperimentDraft` and server-computed `WorkflowState`; server issues recipe hash and lineage from accepted steps. |
+| Execution | Durable run repository, idempotent submission, executor, events, cancellation, restart recovery. | Draft/config binding, experiment-scoped listing, bounded limits in public state, and development-only comparison runs. |
+| Evaluation and selection | Leakage-aware supervised evaluation, evidence, comparison, managed artifact metadata, reviewed candidate reference. | Explicit `CandidateNomination`, one-time `FinalEvaluation`, and `CandidateSelection`; current automatic winner plus immediate holdout evaluation must be split. |
+| Outputs | Write-once verified artifact bytes and path-free metadata. | Reloadable model/preprocessor bundle, schema contract, export receipts, batch prediction, cycle summary, and task-specific output types. |
+| Task coverage | Regression and classification only. | Forecasting, clustering, and anomaly contracts, evaluation, baselines, artifacts, and inference behavior. |
+
+### Assessment Request Finding
+
+The current React shell posts snapshot creation, an immutable experiment, and an assessment from one transient component. It calculates `canonical_recipe_hash` in the browser even though the backend re-computes it, and its component test mocks both Web Crypto and all three API responses. The Python API tests prove the backend accepts a correctly constructed recipe; the React test proves only request shape. No existing test submits the browser-generated recipe to the real Flask boundary or waits for refreshed dataset identity after Power Query. Therefore the reported assessment failure is not safely attributable to one backend rule from current evidence. The implementation contract removes the avoidable ambiguity: the client submits ordered steps and the server issues canonical recipe lineage, while an integration test must exercise the real request and stale-data error path before Step 5.
+
+### Step 1 Acceptance And Handoff
+
+Step 1 is complete when this blueprint and the proposed contract agree with current source, documentation checks pass, and no application code has changed. Step 2 remains separately authorized work. Its first eligible owner is the frontend owner for only the shared frame—header, six-stage navigation, context rail, Guidance region, and run dock—using existing identity/run reads and honest locked placeholders. Draft persistence, Power Query integration, configuration replacement, training changes, results, and outputs stay out of that first assignment.
 
 ## Step 2 — Build the workspace
+
+**Status:** Authorized through the bounded shared-workspace frontend handoff. Later steps remain inactive.
 
 **What changes:** Implement the shared layout, stage navigation, compact dataset context, Guidance area, and expandable training dock.
 

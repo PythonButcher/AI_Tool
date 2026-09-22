@@ -2,7 +2,52 @@
 
 ## Status
 
-Phase 13 backend contract through the Gate 5 preparation boundary. This document defines framework-independent, versioned objects, preparation truth, evidence boundaries, durable experiment and run state, managed artifact integrity, and the identity-first API. It does not authorize asynchronous execution, model serving, frontend behavior, or deployment claims.
+Phase 13 source-backed contract. The `ml_studio_contract_v1` objects, identity-first routes, asynchronous local execution, evaluation, comparison, candidate review, persistence, and managed artifact integrity described below exist for regression and classification. They do not provide resumable workflow drafts, all five task types, explicit nomination before final evaluation, reloadable model export, prediction, or publishing.
+
+The proposed workflow application contract below is Step 1 design truth, not an implemented API. Each addition becomes current backend truth only after its build step supplies source and focused tests.
+
+## Workflow Application Contract — Proposed
+
+### Draft And Workflow Objects
+
+`ExperimentDraft` uses `contract_version: "ml_studio_workflow_v1"` and contains server-issued `experiment_id`, positive `draft_revision`, opaque `etag`, `name`, `guidance_enabled`, `active_stage`, `workspace_id`, nullable `snapshot_id`, nullable `task_type`, nullable `goal`, nullable recipe identity/version, exclusive `roles`, task-specific `validation`, `metric`, `candidate`, and `resource` settings, nullable latest assessment identity/fingerprint, and `updated_at`. The five task values are `regression`, `classification`, `forecasting`, `clustering`, and `anomaly_detection`. Incomplete drafts are valid; submitted configurations are separate immutable objects.
+
+`roles` has nullable `target` plus ordered `numeric`, `categorical`, `ignored`, `time`, and `group` column lists. A column has at most one role. Target is required only for supervised and forecasting tasks; clustering has none; anomaly labels are optional evaluation truth and are not model inputs.
+
+`WorkflowState` contains `experiment_id`, `draft_revision`, the effective `active_stage`, and six ordered stage records. Each record contains the stage key, one state from `locked`, `available`, `active`, `complete`, or `stale`, ordered blocker codes, ordered stale-reason codes, and only the immutable snapshot, recipe, assessment, configuration, run, evaluation, or selection references that justify that state. It may include one active run summary. The server derives this object; the browser cannot mark stages complete or current evidence fresh.
+
+Draft updates require `If-Match: <etag>`. A mismatch returns `draft_revision_conflict` with safe remediation and does not overwrite either revision. Save responses return the new revision, `etag`, save time, and recomputed workflow state. No draft accepts raw rows, filesystem paths, client-issued readiness, run status, or candidate-selection truth.
+
+### Evaluation And Selection Objects
+
+`CandidateNomination` binds one completed development-comparison run, candidate family, immutable configuration version, snapshot, nominator, intended-use notes, and timestamp. It contains no final-holdout result.
+
+`FinalEvaluation` binds one nomination to one server-enforced, single-use final holdout. It contains the candidate and baseline metrics, split evidence, limitations, warnings, and `evaluated_once: true`; it cannot compare or rank other candidates.
+
+`CandidateSelection` binds the nomination, final evaluation, exact configuration and data identity, reviewer decision, intended and prohibited uses, verified reloadable artifact set, and selection time. It is the cycle-completion receipt, not deployment approval.
+
+`InferenceSchema` defines ordered required and optional input fields, logical types, category handling, null policy, and task-specific output fields. `BatchPredictionReceipt` binds a selected candidate, artifact hashes, input-schema version, row count, output artifact, warnings, and time. Invalid rows return bounded field-level issue counts and examples of rules, never raw values.
+
+`MLCycleSummary` contains the problem statement, lineage references, immutable configuration, selected candidate, development and final evidence, limitations, artifact references, and creation time. Initial behavior is local preview/export only; it has no Context Ledger or AI Chat publish state.
+
+### Proposed Route Additions
+
+| Method and path | Contract |
+| --- | --- |
+| `POST /drafts`, `GET /drafts?workspace_id=...` | Create an incomplete draft; list resumable draft summaries for one authorized workspace. |
+| `GET /drafts/{experiment_id}`, `PATCH /drafts/{experiment_id}` | Return or conditionally update a draft plus server-derived workflow state. |
+| `POST /drafts/{experiment_id}/duplicate` | Copy editable settings and lineage references into a new identity without copying runs, completion, or selection. |
+| `POST /recipes` | Accept snapshot identity and ordered supported steps; return server-issued, canonically hashed `TransformationRecipeLineage`. |
+| `GET /drafts/{experiment_id}/workflow` | Return `WorkflowState`; useful after run events, Power Query return, or conflict recovery. |
+| `POST /runs` extension | Add immutable draft/config binding and `run_purpose: "development_comparison"`; preserve idempotency and existing lifecycle semantics. |
+| `POST /runs/{run_id}/nominations` | Create one nomination from development evidence without touching final holdout. |
+| `POST /nominations/{nomination_id}/final-evaluations` | Perform or idempotently return the nomination's one final evaluation. |
+| `POST /candidate-selections` | Deliberately select a candidate only when final evidence and the required verified artifacts exist. |
+| `GET /candidate-selections/{selection_id}/exports` | List supported path-free export descriptors and integrity receipts. |
+| `POST /candidate-selections/{selection_id}/batch-predictions` | Validate against `InferenceSchema`, run server-owned reloadable artifacts, and return a receipt. |
+| `GET /candidate-selections/{selection_id}/cycle-summary` | Return the local summary; export uses the same content contract. |
+
+All proposed errors keep the existing public `{code, message, remediation}` shape. All list endpoints are bounded, identity-scoped, and stable-order. Artifact and prediction routes never accept serialized estimators or client filesystem paths.
 
 ## Contract Version
 

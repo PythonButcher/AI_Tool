@@ -2,11 +2,11 @@
 import React, { useContext, useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { DataContext, useDatasetMeta, normalizeDatasetRows } from '../../context/DataContext';
 import {
-  FaDatabase, FaCrosshairs, FaLayerGroup, FaCheckDouble,
+  FaDatabase, FaCrosshairs, FaLayerGroup, FaChevronDown, FaChevronUp, FaCheckDouble,
   FaUsers, FaSearch, FaRobot, FaInfoCircle, FaExclamationTriangle,
   FaTable, FaPlayCircle, FaCheckCircle, FaTimesCircle, FaSyncAlt,
   FaBoxOpen, FaCodeBranch, FaCheck, FaWrench, FaTools,
-  FaBrain, FaCog, FaPlay, FaBan
+  FaBrain, FaCog, FaPlay, FaBan, FaCopy
 } from 'react-icons/fa';
 import './MLStudioShell.css';
 
@@ -32,6 +32,8 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
   const { numRows, numCols } = useDatasetMeta();
 
   const [runsState, setRunsState] = useState({ status: 'idle', data: null, error: null });
+  const [activeStage, setActiveStage] = useState('Configure');
+  const [showGuidance, setShowGuidance] = useState(true);
   const fetchIdRef = useRef(0);
 
   const hasRequiredIdentity = Boolean(
@@ -122,7 +124,7 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
 
   return (
     <div className="ml-studio-shell">
-      <TopRibbon />
+      <TopRibbon activeStage={activeStage} onStageSelect={setActiveStage} showGuidance={showGuidance} onToggleGuidance={() => setShowGuidance(!showGuidance)} />
       <div className="ml-studio-body">
          <AssetRail
             activeWorkspace={activeWorkspace}
@@ -131,96 +133,171 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
             numCols={numCols}
          />
          <div className="ml-studio-center-column">
-             <ExperimentCanvas
-                hasRequiredIdentity={hasRequiredIdentity}
-                hasBlockedIdentity={hasBlockedIdentity}
-                workspaceRefreshError={workspaceRefreshError}
-                workspaceVersionConflict={workspaceVersionConflict}
-                activeWorkspace={activeWorkspace}
-                analysisContext={analysisContext}
-                numRows={numRows}
-                numCols={numCols}
-                columns={columns}
-                onOpenCleaningForm={onOpenCleaningForm}
-                onRunStarted={fetchRuns}
-             />
+             {hasBlockedIdentity ? (
+                 <main className="ml-studio-canvas" aria-label="Experiment Canvas">
+                    <div className="canvas-state-message blocked-identity">
+                       <FaExclamationTriangle className="canvas-icon error-icon" />
+                       <h2>Identity Conflict</h2>
+                       <p>Workspace identity must be reconciled before continuing.</p>
+                       {workspaceVersionConflict && <div className="error-details">{workspaceVersionConflict.message}</div>}
+                       {workspaceRefreshError && <div className="error-details">{workspaceRefreshError.message}</div>}
+                    </div>
+                 </main>
+             ) : !hasRequiredIdentity ? (
+                 <main className="ml-studio-canvas" aria-label="Experiment Canvas">
+                    <div className="canvas-state-message no-dataset">
+                       <FaDatabase className="canvas-icon neutral-icon" />
+                       <h2>No Dataset Selected</h2>
+                       <p>A governed workspace dataset must be selected to proceed.</p>
+                    </div>
+                 </main>
+             ) : (
+                 <>
+                     <div className={activeStage === 'Configure' ? '' : 'hidden-stage'}>
+                         <ExperimentCanvas
+                            activeWorkspace={activeWorkspace}
+                            analysisContext={analysisContext}
+                            numRows={numRows}
+                            numCols={numCols}
+                            columns={columns}
+                            onOpenCleaningForm={onOpenCleaningForm}
+                            onRunStarted={fetchRuns}
+                         />
+                     </div>
+                     {activeStage !== 'Configure' && (
+                         <UnconnectedStage activeStage={activeStage} />
+                     )}
+                 </>
+             )}
             <RunDock
                runsState={runsState}
                onRetry={fetchRuns}
                isIdentityAvailable={isIdentityAvailable}
             />
          </div>
-         <EvidenceInspector />
+         {showGuidance && <GuidanceSidebar activeStage={activeStage} />}
       </div>
     </div>
   );
 }
 
-function TopRibbon() {
+function TopRibbon({ activeStage, onStageSelect, showGuidance, onToggleGuidance }) {
   const STAGES = [
-    { label: 'Data Snapshot', icon: <FaDatabase /> },
-    { label: 'Goal', icon: <FaCrosshairs /> },
-    { label: 'Features', icon: <FaLayerGroup /> },
-    { label: 'Validation', icon: <FaCheckDouble /> },
-    { label: 'Candidates', icon: <FaUsers /> },
-    { label: 'Evidence', icon: <FaSearch /> },
-    { label: 'Candidate', icon: <FaRobot /> },
+    { id: 'Data & Goal', label: 'Data & Goal', icon: <FaDatabase /> },
+    { id: 'Prepare Data', label: 'Prepare Data', icon: <FaWrench /> },
+    { id: 'Configure', label: 'Configure', icon: <FaCog /> },
+    { id: 'Train', label: 'Train', icon: <FaBrain /> },
+    { id: 'Review Results', label: 'Review Results', icon: <FaSearch /> },
+    { id: 'Use & Share', label: 'Use & Share', icon: <FaBoxOpen /> },
   ];
 
   return (
     <header className="ml-studio-ribbon" aria-label="Run Ribbon">
+      <div className="ribbon-top-bar">
+         <div className="experiment-info">
+            <span className="experiment-name">Untitled Experiment</span>
+            <span className="save-status">Not saved yet</span>
+         </div>
+         <div className="guidance-toggle">
+            <label className="checkbox-wrapper semantic-btn">
+              <input type="checkbox" checked={showGuidance} onChange={onToggleGuidance} />
+              <span>Guidance</span>
+            </label>
+         </div>
+      </div>
       <div className="ribbon-container">
-        {STAGES.map((stage, i) => (
-          <div key={stage.label} className={`ribbon-stage ${i === 0 ? 'is-current' : 'is-inactive'}`} aria-current={i === 0 ? 'step' : undefined}>
-            <span className="ribbon-icon">{stage.icon}</span>
-            <span className="ribbon-label">{stage.label}</span>
-            {i < STAGES.length - 1 && <div className="ribbon-connector"></div>}
-          </div>
-        ))}
+        {STAGES.map((stage, i) => {
+          const isCurrent = activeStage === stage.id;
+          return (
+            <React.Fragment key={stage.id}>
+              <button
+                className={`ribbon-stage semantic-btn ${isCurrent ? 'is-current' : 'is-inactive'}`}
+                aria-current={isCurrent ? 'step' : undefined}
+                onClick={() => onStageSelect(stage.id)}
+              >
+                <span className="ribbon-icon">{stage.icon}</span>
+                <span className="ribbon-label">{stage.label}</span>
+              </button>
+              {i < STAGES.length - 1 && <div className="ribbon-connector"></div>}
+            </React.Fragment>
+          );
+        })}
       </div>
     </header>
   );
 }
 
 function AssetRail({ activeWorkspace, analysisContext, numRows, numCols }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [isMobileExpanded, setIsMobileExpanded] = useState(false);
+  const copyId = (id) => navigator.clipboard.writeText(id).catch(()=>{});
+
   return (
-    <aside className="ml-studio-rail" aria-label="Asset Rail">
-       <h3 className="panel-title"><FaBoxOpen className="panel-icon"/> Asset Identity</h3>
+    <aside className={`ml-studio-rail ${isMobileExpanded ? 'is-mobile-expanded' : ''}`} aria-label="Asset Rail">
+       <button
+         className="semantic-btn mobile-rail-toggle"
+         aria-expanded={isMobileExpanded}
+         onClick={() => setIsMobileExpanded(!isMobileExpanded)}
+       >
+         <span><FaBoxOpen className="panel-icon"/> Asset Identity</span>
+         {isMobileExpanded ? <FaChevronUp className="toggle-icon"/> : <FaChevronDown className="toggle-icon"/>}
+       </button>
+       <h3 className="panel-title desktop-rail-title"><FaBoxOpen className="panel-icon"/> Asset Identity</h3>
 
-       <div className="rail-section">
-         <div className="rail-item">
-           <strong>Workspace</strong>
-           <span className="rail-value badge-primary">{activeWorkspace?.workspace_name || activeWorkspace?.workspace_id || 'None'}</span>
+       <div className="rail-content">
+         <div className="rail-section">
+           <div className="rail-item">
+             <strong>Workspace</strong>
+             <span className="rail-value badge-primary">{activeWorkspace?.workspace_name || activeWorkspace?.workspace_id || 'None'}</span>
+           </div>
+           <div className="rail-item">
+             <strong>Version</strong>
+             <span className="rail-value badge-secondary"><FaCodeBranch className="inline-icon"/> {analysisContext?.workspace_version || 'None'}</span>
+           </div>
+           <div className="rail-item">
+             <strong>Active Data</strong>
+             <span className="rail-value badge-neutral"><FaTable className="inline-icon"/> {numRows.toLocaleString()} rows, {numCols.toLocaleString()} cols</span>
+           </div>
          </div>
-         <div className="rail-item">
-           <strong>Version</strong>
-           <span className="rail-value badge-secondary"><FaCodeBranch className="inline-icon"/> {analysisContext?.workspace_version || 'None'}</span>
-         </div>
-         <div className="rail-item">
-           <strong>Active Data</strong>
-           <span className="rail-value badge-neutral"><FaTable className="inline-icon"/> {numRows.toLocaleString()} rows, {numCols.toLocaleString()} cols</span>
-         </div>
-       </div>
 
-       <div className="rail-section">
-         <strong>Sources</strong>
-         {analysisContext?.source_ids?.length > 0 ? (
-           <ul className="rail-list">{analysisContext.source_ids.map(id => <li key={id} className="rail-list-item">{id}</li>)}</ul>
-         ) : <span className="rail-empty">None</span>}
-       </div>
+         <div className="rail-section">
+           <div className="rail-item">
+              <strong>Sources</strong>
+              <span className="rail-value">{analysisContext?.source_ids?.length || 0} connected</span>
+           </div>
+           <div className="rail-item">
+              <strong>Relationships</strong>
+              <span className="rail-value">{analysisContext?.relationship_ids?.length || 0} defined</span>
+           </div>
+         </div>
 
-       <div className="rail-section">
-         <strong>Relationships</strong>
-         {analysisContext?.relationship_ids?.length > 0 ? (
-           <ul className="rail-list">{analysisContext.relationship_ids.map(id => <li key={id} className="rail-list-item">{id}</li>)}</ul>
-         ) : <span className="rail-empty">None</span>}
+         <div className="rail-section">
+           <button className="semantic-btn expand-raw-btn" aria-expanded={isExpanded} onClick={() => setIsExpanded(!isExpanded)}>
+             {isExpanded ? 'Hide Identifiers' : 'Show Identifiers'}
+           </button>
+           {isExpanded && (
+             <div className="raw-identifiers">
+               <div className="raw-id-item">
+                 <span>Workspace ID:</span>
+                 <code>{activeWorkspace?.workspace_id}</code>
+                 {activeWorkspace?.workspace_id && <button className="semantic-btn copy-btn" aria-label="Copy workspace ID" onClick={() => copyId(activeWorkspace?.workspace_id)}><FaCopy /></button>}
+               </div>
+               {analysisContext?.source_ids?.map((id, idx) => (
+                  <div className="raw-id-item" key={idx}>
+                    <span>Source ID:</span>
+                    <code>{id}</code>
+                    <button className="semantic-btn copy-btn" aria-label="Copy source ID" onClick={() => copyId(id)}><FaCopy /></button>
+                  </div>
+               ))}
+             </div>
+           )}
+         </div>
        </div>
     </aside>
   );
 }
 
 function ExperimentCanvas({
-  hasRequiredIdentity, hasBlockedIdentity, workspaceRefreshError, workspaceVersionConflict,
   activeWorkspace, analysisContext, numRows, numCols, columns, onOpenCleaningForm, onRunStarted
 }) {
   const [taskType, setTaskType] = useState('regression');
@@ -528,31 +605,7 @@ function ExperimentCanvas({
     }
   };
 
-  if (hasBlockedIdentity) {
-    return (
-      <main className="ml-studio-canvas" aria-label="Experiment Canvas">
-         <div className="canvas-state-message blocked-identity">
-            <FaExclamationTriangle className="canvas-icon error-icon" />
-            <h2>Identity Conflict</h2>
-            <p>Workspace identity must be reconciled before continuing.</p>
-            {workspaceVersionConflict && <div className="error-details">{workspaceVersionConflict.message}</div>}
-            {workspaceRefreshError && <div className="error-details">{workspaceRefreshError.message}</div>}
-         </div>
-      </main>
-    );
-  }
 
-  if (!hasRequiredIdentity) {
-    return (
-      <main className="ml-studio-canvas" aria-label="Experiment Canvas">
-         <div className="canvas-state-message no-dataset">
-            <FaDatabase className="canvas-icon neutral-icon" />
-            <h2>No Dataset Selected</h2>
-            <p>A governed workspace dataset must be selected to proceed.</p>
-         </div>
-      </main>
-    );
-  }
 
   return (
     <main className="ml-studio-canvas" aria-label="Experiment Canvas">
@@ -728,16 +781,47 @@ function ExperimentCanvas({
   );
 }
 
-function EvidenceInspector() {
+function UnconnectedStage({ activeStage }) {
+  const unconnectedInfo = {
+    'Data & Goal': { purpose: 'Define the business goal and metrics.', prerequisite: 'None', providedBy: 'Dataset Selection' },
+    'Prepare Data': { purpose: 'Clean and transform data.', prerequisite: 'Goal definition', providedBy: 'Data & Goal' },
+    'Train': { purpose: 'Train models.', prerequisite: 'Prepared data and configuration', providedBy: 'Configure' },
+    'Review Results': { purpose: 'Evaluate model performance.', prerequisite: 'Completed run', providedBy: 'Train' },
+    'Use & Share': { purpose: 'Deploy and share model.', prerequisite: 'Selected candidate', providedBy: 'Review Results' }
+  };
+  const info = unconnectedInfo[activeStage];
+
+  if (!info) return null;
+
   return (
-    <aside className="ml-studio-inspector" aria-label="Evidence Inspector">
-       <h3 className="panel-title"><FaSearch className="panel-icon"/> Evidence Inspector</h3>
+    <main className="ml-studio-canvas" aria-label="Experiment Canvas">
+      <div className="canvas-state-message">
+         <FaInfoCircle className="canvas-icon neutral-icon" />
+         <h2>Not connected yet</h2>
+         <p><strong>Purpose:</strong> {info.purpose}</p>
+         <p><strong>Missing Prerequisite:</strong> {info.prerequisite}</p>
+         <p><strong>Provided By:</strong> {info.providedBy}</p>
+      </div>
+    </main>
+  );
+}
+
+function GuidanceSidebar({ activeStage }) {
+  const guidanceContent = {
+    'Data & Goal': 'Define the business goal and metrics. (Currently unconnected)',
+    'Prepare Data': 'Clean and transform data. (Currently unconnected)',
+    'Configure': 'Configure the machine learning experiment. Select task type, target, and features. Ensure all roles are disjoint and explicitly confirmed.',
+    'Train': 'Train models based on the configuration. (Currently unconnected)',
+    'Review Results': 'Evaluate model performance and compare candidates. (Currently unconnected)',
+    'Use & Share': 'Deploy and share the selected model. (Currently unconnected)'
+  };
+
+  return (
+    <aside className="ml-studio-inspector" aria-label="Guidance">
+       <h3 className="panel-title"><FaInfoCircle className="panel-icon"/> Guidance</h3>
        <div className="inspector-card">
-         <FaInfoCircle className="inspector-card-icon" />
          <div className="inspector-card-content">
-           <p><strong>Truth Boundary</strong></p>
-           <p>Current boundaries are restricted to local experimentation.</p>
-           <p>Models displayed here are not evaluated for external use.</p>
+           <p>{guidanceContent[activeStage]}</p>
          </div>
        </div>
     </aside>
@@ -762,19 +846,24 @@ function StatusPill({ status }) {
 }
 
 function RunDock({ runsState, onRetry, isIdentityAvailable }) {
+  const [isExpanded, setIsExpanded] = useState(true);
+
   if (!isIdentityAvailable) {
-     return <section className="ml-studio-dock empty-dock" aria-label="Run Dock"></section>;
+     return <section className="ml-studio-dock empty-dock" aria-label="Recent local runs"></section>;
   }
 
   return (
-    <section className="ml-studio-dock" aria-label="Run Dock" aria-busy={runsState.status === 'loading'}>
+    <section className={`ml-studio-dock ${isExpanded ? '' : 'collapsed'}`} aria-label="Recent local runs" aria-busy={runsState.status === 'loading'}>
        <div className="dock-header">
-         <h3><FaLayerGroup className="panel-icon"/> Run Dock</h3>
+         <button className="semantic-btn dock-toggle-btn" aria-expanded={isExpanded} onClick={() => setIsExpanded(!isExpanded)}>
+           <h3><FaLayerGroup className="panel-icon"/> Recent local runs</h3>
+         </button>
          {runsState.status === 'success' && runsState.data && (
            <span className="run-count">{runsState.data.length} durable runs</span>
          )}
        </div>
 
+       {isExpanded && (
        <div className="dock-content">
          {runsState.status === 'loading' && (
            <div className="run-dock-skeleton">
@@ -833,6 +922,7 @@ function RunDock({ runsState, onRetry, isIdentityAvailable }) {
            </div>
          )}
        </div>
+       )}
     </section>
   );
 }

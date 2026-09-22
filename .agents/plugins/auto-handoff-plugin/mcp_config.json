@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "handoff-watcher": {
+      "command": "python",
+      "args": [
+        ".agents/plugins/auto-handoff-plugin/server.py"
+      ]
+    }
+  }
+}

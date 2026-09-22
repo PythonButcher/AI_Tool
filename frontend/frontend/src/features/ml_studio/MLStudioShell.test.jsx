@@ -536,4 +536,109 @@ describe('MLStudioShell', () => {
     // Wait for submitting state to reset to prevent act() warnings
     await waitFor(() => expect(screen.getByRole("button", { name: "Start Run" })).toBeEnabled());
   });
+
+  it('preserves Configure state on stage navigation and Guidance toggle', async () => {
+    const mockContext = {
+      activeWorkspace: { workspace_id: 'ws-1', workspace_name: 'Sales', version: 1 },
+      analysisContext: { workspace_id: 'ws-1', workspace_version: 1, source_ids: ['s1'] },
+      cleanedData: [{ A: 1, B: 2, C: 3 }]
+    };
+
+    global.fetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({ runs: [] })
+    });
+
+    renderWithContext(mockContext);
+    await screen.findByText(/No durable runs exist/i);
+
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+
+    const targetSelect = screen.getByText('Target Column').nextElementSibling;
+    fireEvent.change(targetSelect, { target: { value: 'A' } });
+
+    const numFeaturesSelect = screen.getByText('Numeric Features').nextElementSibling;
+    Array.from(numFeaturesSelect.options).forEach(o => o.selected = false);
+    numFeaturesSelect.querySelector('option[value="B"]').selected = true;
+    fireEvent.change(numFeaturesSelect);
+
+    expect(targetSelect.value).toBe('A');
+    expect(numFeaturesSelect.selectedOptions[0].value).toBe('B');
+
+    const trainStageBtn = screen.getByRole('button', { name: /Train/i });
+    fireEvent.click(trainStageBtn);
+
+    expect(screen.getByText('Not connected yet')).toBeInTheDocument();
+
+    const configStageBtn = screen.getByRole('button', { name: /Configure/i });
+    fireEvent.click(configStageBtn);
+
+    const newTargetSelect = screen.getByText('Target Column').nextElementSibling;
+    expect(newTargetSelect.value).toBe('A');
+    const newNumFeaturesSelect = screen.getByText('Numeric Features').nextElementSibling;
+    expect(newNumFeaturesSelect.selectedOptions[0].value).toBe('B');
+
+    const guidanceToggle = screen.getByRole('checkbox', { name: /Guidance/i });
+    fireEvent.click(guidanceToggle);
+
+    expect(newTargetSelect.value).toBe('A');
+
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('exposes Guidance disclosure state and mounts panel correctly', () => {
+    const mockContext = {
+      activeWorkspace: { workspace_id: 'ws-1', version: 1 },
+      analysisContext: { workspace_id: 'ws-1', workspace_version: 1, source_ids: ['s1'] },
+    };
+    renderWithContext(mockContext);
+
+    const guidanceToggle = screen.getByRole('checkbox', { name: /Guidance/i });
+    expect(guidanceToggle).toBeChecked();
+
+    const panelHeadings = screen.getAllByRole('heading', { name: /Guidance/i });
+    expect(panelHeadings.length).toBeGreaterThan(0);
+
+    fireEvent.click(guidanceToggle);
+    expect(guidanceToggle).not.toBeChecked();
+
+    const panelsAfterClose = screen.queryAllByRole('heading', { name: /Guidance/i });
+    expect(panelsAfterClose.length).toBe(0);
+  });
+
+  it.each([
+    ['queued', 'queued'],
+    ['running', 'running'],
+    ['cancel_requested', 'cancel_requested'],
+    ['completed', 'completed'],
+    ['failed', 'failed'],
+    ['cancelled', 'cancelled'],
+    ['interrupted', 'interrupted']
+  ])('renders run status %s correctly', async (status, expectedText) => {
+    const mockRuns = [
+      {
+        run_id: 'run-1',
+        experiment_id: 'exp-1',
+        specification_version: 1,
+        snapshot_id: 'snap-1',
+        status: status,
+        progress_stage: status === 'running' ? 'processing' : null,
+        submitted_at: '2026-09-17T14:20:00+00:00'
+      }
+    ];
+
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ runs: mockRuns })
+    });
+
+    renderWithContext({
+      activeWorkspace: { workspace_id: 'ws-1', version: 1 },
+      analysisContext: { workspace_id: 'ws-1', workspace_version: 1, source_ids: ['s1'] },
+    });
+
+    const runElement = await screen.findByText(new RegExp(expectedText, 'i'));
+    expect(runElement).toBeInTheDocument();
+  });
+
 });
