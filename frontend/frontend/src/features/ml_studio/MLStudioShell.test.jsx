@@ -607,14 +607,14 @@ describe('MLStudioShell', () => {
   });
 
   it.each([
-    ['queued', 'queued'],
-    ['running', 'running'],
-    ['cancel_requested', 'cancel_requested'],
-    ['completed', 'completed'],
-    ['failed', 'failed'],
-    ['cancelled', 'cancelled'],
-    ['interrupted', 'interrupted']
-  ])('renders run status %s correctly', async (status, expectedText) => {
+    ['queued', 'queued', 'progress_stage_alpha'],
+    ['running', 'running', 'progress_stage_beta'],
+    ['cancel_requested', 'cancel_requested', 'progress_stage_gamma'],
+    ['completed', 'completed', 'progress_stage_delta'],
+    ['failed', 'failed', 'progress_stage_epsilon'],
+    ['cancelled', 'cancelled', 'progress_stage_zeta'],
+    ['interrupted', 'interrupted', 'progress_stage_eta']
+  ])('renders run status %s correctly with explicit progress text', async (status, expectedText, expectedProgress) => {
     const mockRuns = [
       {
         run_id: 'run-1',
@@ -622,7 +622,7 @@ describe('MLStudioShell', () => {
         specification_version: 1,
         snapshot_id: 'snap-1',
         status: status,
-        progress_stage: status === 'running' ? 'processing' : null,
+        progress_stage: expectedProgress,
         submitted_at: '2026-09-17T14:20:00+00:00'
       }
     ];
@@ -639,6 +639,9 @@ describe('MLStudioShell', () => {
 
     const runElement = await screen.findByText(new RegExp(expectedText, 'i'));
     expect(runElement).toBeInTheDocument();
+
+    const progressElement = await screen.findByText(new RegExp(expectedProgress, 'i'));
+    expect(progressElement).toBeInTheDocument();
   });
 
 });

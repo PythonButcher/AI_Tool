@@ -37,6 +37,7 @@ Do not modify production JSX or CSS, backend files, contracts, status, authoriza
 - One focused parameterized test proves all seven status strings are rendered exactly as returned.
 - The same cases prove every explicit server-returned progress-stage string is rendered exactly as returned.
 - Use a different progress-stage string for each case so the progress assertion cannot pass by matching status text or another row field.
+- Scope both assertions to the same rendered run row so unrelated page text cannot satisfy the test.
 - Existing production behavior and API calls remain unchanged.
 
 ## Verification And Return
