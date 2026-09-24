@@ -4,7 +4,7 @@
     "name": "ML Studio Step 2 — Build the Shared Workspace"
   },
   "authorization_state": "AUTHORIZED",
-  "lifecycle_state": "IN PROGRESS",
+  "lifecycle_state": "AWAITING USER ACCEPTANCE",
   "diff_baseline": "d7728599ed5079b28ba21374d358f19e91e0336f",
   "authority_kind": "direct_user_instruction",
   "user_implementation_authorization": {

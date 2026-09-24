@@ -1,48 +1,45 @@
-Goal: Prove that ML Studio preserves durable run status and progress-stage truth in focused frontend coverage.
+Goal: Hold the ML Studio shared workspace at the Step 2 decision boundary.
 
 ## User Outcome
 
-Developers can rely on the shared-workspace tests to catch any UI change that drops or invents backend run progress.
+The shared frame has verified source, focused test, and production build evidence for a product decision.
 
 ## Scope
 
-**Current Step**: Step 1: Prove returned run progress across every durable status
+**Current Step**: Step 1: Receive the user's Step 2 product decision
 
-**Target Files**: `frontend/frontend/src/features/ml_studio/MLStudioShell.test.jsx`.
+**Target Files**: `project_docs/active/status/project_execution_status.md` and `project_docs/active/status/phase_authorization.json` after the user decides.
 
-**Step Acceptance**: One parameterized test asserts the exact status and exact server-returned progress-stage text for all seven durable states.
+**Step Acceptance**: The user states whether the shared workspace is accepted or identifies a specific issue to repair.
 
-**Step Verification**: Run the focused ML Studio shell test, frontend build, repository harness, and `git diff --check`.
+**Step Verification**: Reconcile the decision with the current authorization record and source before changing the next implementation gate.
 
-**Next Step**: Step 2: Return focused verification evidence
+**Next Step**: Step 2: Set the next authorized gate or bounded repair
 
-**Continuation Rule**: `WAIT_FOR_AGENT` while Antigravity owns the bounded repair; Codex reviews the returned evidence.
+**Continuation Rule**: `WAIT_FOR_USER` at the Step 2 product decision boundary.
 
-**Stop Condition**: Stop on a contract mismatch, failed governed return, or successful return to Codex. Do not change production UI or begin another ML Studio stage.
+**Stop Condition**: Do not begin Step 3 implementation or assign another frontend task without a user decision and matching authorization.
 
-- [ ] **Step 1: Prove returned run progress across every durable status** — [IN PROGRESS]
-- [ ] **Step 2: Return focused verification evidence** — [PENDING]
+- [ ] **Step 1: Receive the user's Step 2 product decision** — [IN PROGRESS]
+- [ ] **Step 2: Set the next authorized gate or bounded repair** — [PENDING]
 
 ## Contracts
 
-- `project_docs/active/ai_hand_off/ml_studio_shared_workspace.md` — executable one-file repair.
-- `project_docs/active/contracts/ml_studio.md` — durable run-status and progress-stage truth.
-- `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md` — frontend ownership boundary.
+- `project_docs/active/ml_studio/README.md` — Step 2 scope and build order.
+- `project_docs/active/status/phase_authorization.json` — current authorization boundary.
 
 ## Acceptance
 
-Tests cover `queued`, `running`, `cancel_requested`, `completed`, `failed`, `cancelled`, and `interrupted`. Every case asserts the exact returned `status` and `progress_stage`. Production React, CSS, API calls, payloads, polling behavior, and backend files remain unchanged.
+The next action reflects the user's product decision. No later workflow stage is described as implemented by the shared frame.
 
 ## Verification
 
 - `python .codex/hooks/agent_harness_check.py`
 - `python C:/Users/18022/.codex/skills/active-gate-governance/scripts/check_active_gate.py project_docs/active/active_gate .`
-- `npm --prefix frontend/frontend test -- --watchAll=false --runInBand MLStudioShell.test.jsx`
-- `npm --prefix frontend/frontend run build`
 - `git diff --check`
 
 ## Owner And Control Return
 
-Current owner: Antigravity for the bounded frontend test repair.
+Current owner: User for the Step 2 product decision.
 
-Control return: `WAIT_FOR_AGENT`. Antigravity returns changed-file and verification evidence through the governed return command, then stops for Codex review.
+Control return: `WAIT_FOR_USER`. Codex updates the authorization, status, and next gate after the decision.

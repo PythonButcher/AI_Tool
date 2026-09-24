@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 import MLStudioShell from './MLStudioShell';
@@ -641,9 +641,11 @@ describe('MLStudioShell', () => {
     const rowElement = await screen.findByText('run-1');
     const rowContainer = rowElement.closest('tr');
 
-    // Assert exact text within the same row container
-    expect(rowContainer).toHaveTextContent(expectedText);
-    expect(rowContainer).toHaveTextContent(expectedProgress);
+    const cells = within(rowContainer).getAllByRole('cell');
+
+    // Status is column index 4, Stage is column index 5
+    expect(cells[4].textContent.trim()).toBe(expectedText);
+    expect(cells[5].textContent.trim()).toBe(expectedProgress);
   });
 
 });
