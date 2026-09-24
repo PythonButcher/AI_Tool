@@ -10,7 +10,7 @@ Antigravity owns bounded frontend implementation, React/CSS, UI rendering, and f
 
 ## Active Handoffs And Goal Prompts
 
-No implementation handoff is active. The shared workspace return has passed Codex source, focused test, and build review. The user owns the Step 2 product decision before any next assignment.
+One implementation handoff is active: `project_docs/active/ai_hand_off/ml_studio_draft_home.md`. Antigravity owns only the workspace-scoped create-and-reopen frontend slice named there. Codex reviews the returned evidence before another assignment.
 
 Completed handoffs belong outside this active folder.
 

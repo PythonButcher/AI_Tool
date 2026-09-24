@@ -1,45 +1,46 @@
-Goal: Hold the ML Studio shared workspace at the Step 2 decision boundary.
+Goal: Let developers create and reopen ML Studio drafts in the shared workspace.
 
 ## User Outcome
 
-The shared frame has verified source, focused test, and production build evidence for a product decision.
+A developer can see experiments in the current workspace, create an incomplete draft, and reopen one without losing workspace identity.
 
 ## Scope
 
-**Current Step**: Step 1: Receive the user's Step 2 product decision
+**Current Step**: Step 1: Build the workspace-scoped draft home
 
-**Target Files**: `project_docs/active/status/project_execution_status.md` and `project_docs/active/status/phase_authorization.json` after the user decides.
+**Target Files**: `frontend/frontend/src/features/ml_studio/MLStudioShell.jsx`, `MLStudioShell.css`, and `MLStudioShell.test.jsx`.
 
-**Step Acceptance**: The user states whether the shared workspace is accepted or identifies a specific issue to repair.
+**Step Acceptance**: The home lists drafts for the active workspace, creates an incomplete draft, and reopens one with server-returned name, Guidance setting, and effective stage.
 
-**Step Verification**: Reconcile the decision with the current authorization record and source before changing the next implementation gate.
+**Step Verification**: Run the focused ML Studio shell test, frontend build, and `git diff --check`.
 
-**Next Step**: Step 2: Set the next authorized gate or bounded repair
+**Next Step**: Step 2: Return focused frontend evidence for Codex review
 
-**Continuation Rule**: `WAIT_FOR_USER` at the Step 2 product decision boundary.
+**Continuation Rule**: `WAIT_FOR_AGENT` while Antigravity implements only the bounded handoff.
 
-**Stop Condition**: Do not begin Step 3 implementation or assign another frontend task without a user decision and matching authorization.
+**Stop Condition**: Stop after the governed frontend return; do not add autosave, duplication, or later ML Studio stages in this slice.
 
-- [ ] **Step 1: Receive the user's Step 2 product decision** — [IN PROGRESS]
-- [ ] **Step 2: Set the next authorized gate or bounded repair** — [PENDING]
+- [ ] **Step 1: Build the workspace-scoped draft home** — [IN PROGRESS]
+- [ ] **Step 2: Return focused frontend evidence for Codex review** — [PENDING]
 
 ## Contracts
 
-- `project_docs/active/ml_studio/README.md` — Step 2 scope and build order.
-- `project_docs/active/status/phase_authorization.json` — current authorization boundary.
+- `project_docs/active/ai_hand_off/ml_studio_draft_home.md` — bounded frontend assignment.
+- `project_docs/active/contracts/ml_studio.md` — current draft API fields and route behavior.
+- `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md` — frontend ownership.
 
 ## Acceptance
 
-The next action reflects the user's product decision. No later workflow stage is described as implemented by the shared frame.
+The first frontend slice creates and reopens server drafts for one workspace. It preserves existing Configure and run-dock behavior and does not claim autosave or duplication is connected.
 
 ## Verification
 
-- `python .codex/hooks/agent_harness_check.py`
-- `python C:/Users/18022/.codex/skills/active-gate-governance/scripts/check_active_gate.py project_docs/active/active_gate .`
+- `npm --prefix frontend/frontend test -- --watchAll=false --runInBand MLStudioShell.test.jsx`
+- `npm --prefix frontend/frontend run build`
 - `git diff --check`
 
 ## Owner And Control Return
 
-Current owner: User for the Step 2 product decision.
+Current owner: Antigravity for the bounded draft-home frontend slice.
 
-Control return: `WAIT_FOR_USER`. Codex updates the authorization, status, and next gate after the decision.
+Control return: `WAIT_FOR_AGENT`. Antigravity returns changed-file and verification evidence, then Codex reviews before another assignment.

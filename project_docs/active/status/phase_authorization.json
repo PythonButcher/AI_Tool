@@ -1,23 +1,29 @@
 {
   "schema_version": 1,
   "authorized_work": {
-    "name": "ML Studio Step 2 — Build the Shared Workspace"
+    "name": "ML Studio Step 3 — Save and Resume Experiments"
   },
   "authorization_state": "AUTHORIZED",
-  "lifecycle_state": "AWAITING USER ACCEPTANCE",
+  "lifecycle_state": "IN PROGRESS",
   "diff_baseline": "d7728599ed5079b28ba21374d358f19e91e0336f",
   "authority_kind": "direct_user_instruction",
   "user_implementation_authorization": {
     "approved_by": "User",
-    "approved_at": "2026-09-21",
+    "approved_at": "2026-09-23",
     "evidence": "direct_user_instruction",
-    "instruction": "Accepted, prepare for next step. This accepts the Step 1 design and authorizes preparation and execution of the bounded Step 2 shared-workspace frontend handoff only."
+    "instruction": "sure lets move on — accepts the Step 2 shared workspace and authorizes Step 3 save-and-resume work in the current roadmap context."
   },
   "latest_user_acceptance": {
     "accepted_by": "User",
-    "accepted_at": "2026-09-21",
-    "gate": "Step 1 — Design the complete workflow",
-    "instruction": "accepted, prepare for next step"
+    "accepted_at": "2026-09-23",
+    "gate": "Step 2 — Build the workspace",
+    "instruction": "sure lets move on"
+  },
+  "accepted_parallel_work": {
+    "accepted_by": "User",
+    "accepted_at": "2026-09-23",
+    "instruction": "I'm accepting the separate Gemini shell facelift CSS changes; move on.",
+    "codex_frontend_implementation_authorized": false
   },
   "allowed_paths": [
     "project_docs/active/contracts/ml_studio.md",
@@ -25,12 +31,26 @@
     "project_docs/active/README.md",
     "project_docs/active/ai_hand_off/README.md",
     "project_docs/active/ai_hand_off/ml_studio_shared_workspace.md",
+    "project_docs/active/ai_hand_off/ml_studio_draft_home.md",
     "project_docs/active/ml_studio/README.md",
     "project_docs/active/status/project_execution_status.md",
     "project_docs/active/status/phase_authorization.json",
     "frontend/frontend/src/features/ml_studio/MLStudioShell.jsx",
     "frontend/frontend/src/features/ml_studio/MLStudioShell.css",
-    "frontend/frontend/src/features/ml_studio/MLStudioShell.test.jsx"
+    "frontend/frontend/src/features/ml_studio/MLStudioShell.test.jsx",
+    "frontend/frontend/src/App.css",
+    "frontend/frontend/src/components/layout/DataPane.css",
+    "frontend/frontend/src/components/layout/DestinationHome.css",
+    "frontend/frontend/src/components/layout/MenuBar.css",
+    "frontend/frontend/src/components/layout/SideBar.css",
+    "frontend/frontend/src/components/layout/WindowFrame.css",
+    "frontend/frontend/src/index.css",
+    "backend/ml_studio/repository.py",
+    "backend/ml_studio/service.py",
+    "backend/ml_studio/contracts.py",
+    "backend/routes/ml_studio.py",
+    "tests/test_ml_studio_drafts.py",
+    "tests/test_ml_studio_api.py"
   ],
   "review_only_allowed_paths": [
     "project_docs/active/reviews/**"

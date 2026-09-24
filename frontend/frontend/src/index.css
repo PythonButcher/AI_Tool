@@ -22,7 +22,8 @@
   --bg-primary-soft: #fcfcfd;
   --bg-secondary: #f8fafc;
   --bg-secondary-soft: #f1f5f9;
-  --menu-bar-surface: #ffffff;
+  --menu-bar-surface: rgba(255, 255, 255, 0.85);
+  --sidebar-surface: rgba(248, 250, 252, 0.85);
   --text-primary: #0f172a;
   --text-secondary: #475569;
   --text-tertiary: #94a3b8;
@@ -67,7 +68,8 @@
   --bg-primary-soft: #050505;
   --bg-secondary: #0f172a; /* Slate 900 - Bluish Grey Sidebars */
   --bg-secondary-soft: #1e293b;
-  --menu-bar-surface: #0f172a;
+  --menu-bar-surface: rgba(15, 23, 42, 0.85);
+  --sidebar-surface: rgba(15, 23, 42, 0.85);
   --text-primary: #f8fafc; /* Slate 50 */
   --text-secondary: #94a3b8; /* Slate 400 */
   --text-tertiary: #64748b;

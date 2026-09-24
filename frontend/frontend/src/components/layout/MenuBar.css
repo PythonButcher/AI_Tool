@@ -4,8 +4,10 @@
   display: flex;
   flex-direction: column;
   background: var(--menu-bar-surface);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border-bottom: 1px solid var(--border-color);
-  box-shadow: 0 2px 8px var(--shadow-color-soft);
+  box-shadow: 0 4px 20px var(--shadow-color-soft);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -98,7 +100,9 @@
 
 .menu-ribbon {
   padding: 8px 16px;
-  background: var(--bg-primary);
+  background: var(--menu-bar-surface);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border-top: 1px solid var(--border-color);
   animation: slideDown 0.2s ease-out;
 }
@@ -158,13 +162,17 @@
 }
 
 .ribbon-command:hover:not(:disabled) {
-  background: var(--bg-secondary);
+  background: color-mix(in srgb, var(--bg-secondary) 80%, transparent);
   border-color: var(--border-color);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px var(--shadow-color-soft);
 }
 
 .ribbon-command.is-active {
-  background: var(--bg-secondary);
+  background: color-mix(in srgb, var(--bg-secondary) 80%, transparent);
   border-color: var(--text-primary);
+  transform: translateY(1px);
+  box-shadow: inset 0 2px 4px var(--shadow-color-soft);
 }
 
 .ribbon-command__icon {
@@ -201,7 +209,9 @@
 .ribbon-inline-panel {
   margin-top: 12px;
   border-radius: 8px;
-  background: var(--bg-primary);
+  background: var(--menu-bar-surface);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--border-color);
   box-shadow: var(--shadow-xl);
   overflow: hidden;

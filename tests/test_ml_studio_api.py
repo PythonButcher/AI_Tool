@@ -121,6 +121,39 @@ class MLStudioApiTests(unittest.TestCase):
     def tearDown(self) -> None:
         self.temporary.cleanup()
 
+    def test_draft_save_reopen_conflict_and_duplicate(self) -> None:
+        created = self.client.post("/api/ml-studio/v1/drafts", json={"workspace_id": "workspace-1", "name": "Model idea"})
+        self.assertEqual(created.status_code, 201)
+        draft = created.get_json()["draft"]
+        self.assertEqual(created.get_json()["workflow_state"]["active_stage"], "Data & Goal")
+        url = f"/api/ml-studio/v1/drafts/{draft['experiment_id']}?workspace_id=workspace-1"
+        saved_response = self.client.patch(url, headers={"If-Match": draft["etag"]}, json={"name": "Saved model", "guidance_enabled": False})
+        self.assertEqual(saved_response.status_code, 200)
+        saved = saved_response.get_json()["draft"]
+        self.assertEqual(saved["draft_revision"], 2)
+        self.assertEqual(self.client.get(url).get_json()["draft"], saved)
+        self.assertEqual(self.client.get("/api/ml-studio/v1/drafts?workspace_id=workspace-1").get_json()["drafts"][0]["name"], "Saved model")
+        conflict = self.client.patch(url, headers={"If-Match": draft["etag"]}, json={"name": "Stale edit"})
+        self.assertEqual(conflict.status_code, 409)
+        self.assertEqual(conflict.get_json()["error"]["code"], "draft_revision_conflict")
+        self.assertEqual(self.client.get(url).get_json()["draft"], saved)
+        duplicate = self.client.post(f"/api/ml-studio/v1/drafts/{draft['experiment_id']}/duplicate?workspace_id=workspace-1")
+        self.assertEqual(duplicate.status_code, 201)
+        self.assertNotEqual(duplicate.get_json()["draft"]["experiment_id"], draft["experiment_id"])
+        self.assertEqual(duplicate.get_json()["draft"]["draft_revision"], 1)
+
+    def test_draft_routes_require_workspace_and_reject_unsafe_edits(self) -> None:
+        created = self.client.post("/api/ml-studio/v1/drafts", json={"workspace_id": "workspace-1"}).get_json()["draft"]
+        draft_id = created["experiment_id"]
+        self.assertEqual(self.client.get(f"/api/ml-studio/v1/drafts/{draft_id}").status_code, 400)
+        self.assertEqual(self.client.get(f"/api/ml-studio/v1/drafts/{draft_id}?workspace_id=other").status_code, 404)
+        unsafe = self.client.patch(
+            f"/api/ml-studio/v1/drafts/{draft_id}?workspace_id=workspace-1",
+            headers={"If-Match": created["etag"]}, json={"validation": {"rows": [{"secret": "raw"}]}}
+        )
+        self.assertEqual(unsafe.status_code, 400)
+        self.assertEqual(self.client.get(f"/api/ml-studio/v1/drafts/{draft_id}/workflow?workspace_id=workspace-1").status_code, 200)
+
     def _create_snapshot(self) -> dict:
         response = self.client.post("/api/ml-studio/v1/snapshots", json=snapshot_request())
         self.assertEqual(response.status_code, 201, response.get_json())

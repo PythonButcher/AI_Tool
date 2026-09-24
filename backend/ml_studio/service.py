@@ -37,6 +37,7 @@ SnapshotResolver = Callable[[str], Mapping[str, Any]]
 ArtifactVerifier = Callable[[Mapping[str, Any]], None]
 RunDataResolver = Callable[[DatasetSnapshotIdentity], tuple[Any, int, Mapping[str, tuple[str, int]]]]
 RunScheduler = Callable[[str], bool]
+WorkspaceResolver = Callable[[str], Mapping[str, Any] | None]
 
 
 def _default_run_evaluator(*args: Any, **kwargs: Any) -> Any:
@@ -272,6 +273,7 @@ class MLStudioService:
         clock: Callable[[], datetime] = _utc_now,
         run_data_resolver: RunDataResolver | None = None,
         run_evaluator: Callable[..., Any] = _default_run_evaluator,
+        workspace_resolver: WorkspaceResolver | None = None,
     ) -> None:
         self._repository = repository
         self._snapshot_resolver = snapshot_resolver
@@ -280,6 +282,7 @@ class MLStudioService:
         self._run_data_resolver = run_data_resolver
         self._run_evaluator = run_evaluator
         self._run_scheduler: RunScheduler | None = None
+        self._workspace_resolver = workspace_resolver
 
     def set_run_scheduler(self, scheduler: RunScheduler) -> None:
         """Attach the process-local scheduler after constructing its worker callback."""
@@ -317,6 +320,91 @@ class MLStudioService:
                 status_code=500,
             )
         return resolved
+
+    def _require_draft_workspace(self, workspace_id: Any) -> str:
+        if not isinstance(workspace_id, str) or not workspace_id.strip():
+            raise MLStudioServiceError("invalid_identity", "workspace_id is required.", "Select a governed workspace.")
+        if self._workspace_resolver is not None and self._workspace_resolver(workspace_id) is None:
+            raise MLStudioServiceError("workspace_not_found", "The workspace is unavailable.", "Select an existing workspace.", status_code=404)
+        return workspace_id
+
+    @staticmethod
+    def _draft_workflow(draft: Mapping[str, Any]) -> dict[str, Any]:
+        """Derive only currently justified stages; later workflow steps remain locked."""
+        stages = ("Data & Goal", "Prepare Data", "Configure", "Train", "Review Results", "Use & Share")
+        has_data_goal = bool(draft["snapshot_id"] and draft["task_type"])
+        available = {"Data & Goal"}
+        if has_data_goal:
+            available.add("Prepare Data")
+        effective = draft["active_stage"] if isinstance(draft["active_stage"], str) and draft["active_stage"] in available else "Data & Goal"
+        records = []
+        for stage in stages:
+            state = "active" if stage == effective else "available" if stage in available else "locked"
+            blockers = [] if stage in available else ["data_goal_required" if not has_data_goal else "preparation_required"]
+            records.append({"stage": stage, "state": state, "blocker_codes": blockers, "stale_reason_codes": []})
+        return {
+            "experiment_id": draft["experiment_id"], "draft_revision": draft["draft_revision"],
+            "active_stage": effective, "stages": records,
+        }
+
+    def _validate_draft_references(self, draft: Mapping[str, Any]) -> None:
+        snapshot_id = draft.get("snapshot_id")
+        if snapshot_id is not None:
+            if not isinstance(snapshot_id, str):
+                raise MLStudioServiceError("draft_invalid", "The snapshot identity is invalid.", "Use a server-issued snapshot identity.")
+            snapshot = self._repository.get_snapshot(snapshot_id)
+            if snapshot is None or snapshot["workspace_id"] != draft["workspace_id"]:
+                raise MLStudioServiceError("snapshot_not_found", "The dataset snapshot is unavailable in this workspace.", "Select a current workspace snapshot.", status_code=404)
+        workflow = self._draft_workflow(draft)
+        if draft["active_stage"] != workflow["active_stage"]:
+            raise MLStudioServiceError("draft_stage_locked", "The selected stage is locked.", "Complete its prerequisites before selecting it.")
+
+    def create_draft(self, request: Any) -> dict[str, Any]:
+        payload = _require_object(request, label="experiment draft")
+        self._require_draft_workspace(payload.get("workspace_id"))
+        self._validate_draft_references({"snapshot_id": payload.get("snapshot_id"), "workspace_id": payload["workspace_id"], "task_type": payload.get("task_type"), "active_stage": payload.get("active_stage", "Data & Goal"), "experiment_id": "", "draft_revision": 0})
+        try:
+            draft = self._repository.create_draft(payload)
+        except PersistenceError as exc:
+            raise self._translate_persistence(exc) from exc
+        return {"draft": draft, "workflow_state": self._draft_workflow(draft)}
+
+    def list_drafts(self, workspace_id: str) -> list[dict[str, Any]]:
+        self._require_draft_workspace(workspace_id)
+        try:
+            drafts = self._repository.list_drafts(workspace_id)
+        except PersistenceError as exc:
+            raise self._translate_persistence(exc) from exc
+        return [
+            {key: draft[key] for key in ("experiment_id", "workspace_id", "draft_revision", "name", "active_stage", "task_type", "updated_at")}
+            for draft in drafts
+        ]
+
+    def get_draft(self, experiment_id: str, workspace_id: str) -> dict[str, Any]:
+        self._require_draft_workspace(workspace_id)
+        draft = self._repository.get_draft(experiment_id, workspace_id)
+        if draft is None:
+            raise MLStudioServiceError("draft_not_found", "The draft is unavailable in this workspace.", "Select a draft from the current workspace.", status_code=404)
+        return {"draft": draft, "workflow_state": self._draft_workflow(draft)}
+
+    def update_draft(self, experiment_id: str, workspace_id: str, etag: str, request: Any) -> dict[str, Any]:
+        self._require_draft_workspace(workspace_id)
+        payload = _require_object(request, label="experiment draft edit")
+        current = self.get_draft(experiment_id, workspace_id)["draft"]
+        self._validate_draft_references({**current, **payload})
+        try:
+            draft = self._repository.update_draft(experiment_id, workspace_id, etag, payload)
+        except PersistenceError as exc:
+            raise self._translate_persistence(exc) from exc
+        return {"draft": draft, "workflow_state": self._draft_workflow(draft)}
+
+    def duplicate_draft(self, experiment_id: str, workspace_id: str) -> dict[str, Any]:
+        self._require_draft_workspace(workspace_id)
+        try:
+            draft = self._repository.duplicate_draft(experiment_id, workspace_id)
+        except PersistenceError as exc:
+            raise self._translate_persistence(exc) from exc
+        return {"draft": draft, "workflow_state": self._draft_workflow(draft)}
 
     def create_snapshot(self, request: Any) -> dict[str, Any]:
         payload = _require_object(request, label="snapshot request")

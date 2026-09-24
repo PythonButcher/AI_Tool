@@ -19,6 +19,7 @@ from backend.ml_studio.artifacts import ManagedArtifactStore
 from backend.ml_studio.execution import AsyncRunExecutor
 from backend.ml_studio.repository import MLStudioRepository
 from backend.ml_studio.service import MLStudioService, MLStudioServiceError
+from backend.repositories.source_workspace_repository import get_workspace
 from backend.repositories.source_workspace_repository import get_source
 from backend.services.relationship_execution import (
     RelationshipExecutionError,
@@ -161,7 +162,7 @@ def get_ml_studio_service() -> MLStudioService:
         if verified.sha256 != metadata["sha256"] or verified.size_bytes != metadata["size_bytes"]:
             raise ValueError("artifact metadata mismatch")
 
-    service = MLStudioService(repository, resolver, verify_artifact, run_data_resolver=run_data_resolver)
+    service = MLStudioService(repository, resolver, verify_artifact, run_data_resolver=run_data_resolver, workspace_resolver=get_workspace)
     service.recover_incomplete_runs()
     executor = AsyncRunExecutor(
         service.execute_run,
@@ -185,6 +186,53 @@ def _unexpected_error():
             "remediation": "Retry the request or inspect server health.",
         }
     }), 500
+
+
+@ml_studio_bp.route("/drafts", methods=["POST", "GET"])
+def drafts():
+    try:
+        service = get_ml_studio_service()
+        if request.method == "POST":
+            return jsonify(service.create_draft(request.get_json(silent=True))), 201
+        return jsonify({"drafts": service.list_drafts(request.args.get("workspace_id"))}), 200
+    except MLStudioServiceError as exc:
+        return _error_response(exc)
+    except Exception:
+        return _unexpected_error()
+
+
+@ml_studio_bp.route("/drafts/<experiment_id>", methods=["GET", "PATCH"])
+def draft(experiment_id):
+    try:
+        service = get_ml_studio_service()
+        workspace_id = request.args.get("workspace_id")
+        if request.method == "GET":
+            return jsonify(service.get_draft(experiment_id, workspace_id)), 200
+        return jsonify(service.update_draft(experiment_id, workspace_id, request.headers.get("If-Match"), request.get_json(silent=True))), 200
+    except MLStudioServiceError as exc:
+        return _error_response(exc)
+    except Exception:
+        return _unexpected_error()
+
+
+@ml_studio_bp.route("/drafts/<experiment_id>/duplicate", methods=["POST"])
+def duplicate_draft(experiment_id):
+    try:
+        return jsonify(get_ml_studio_service().duplicate_draft(experiment_id, request.args.get("workspace_id"))), 201
+    except MLStudioServiceError as exc:
+        return _error_response(exc)
+    except Exception:
+        return _unexpected_error()
+
+
+@ml_studio_bp.route("/drafts/<experiment_id>/workflow", methods=["GET"])
+def draft_workflow(experiment_id):
+    try:
+        return jsonify({"workflow_state": get_ml_studio_service().get_draft(experiment_id, request.args.get("workspace_id"))["workflow_state"]}), 200
+    except MLStudioServiceError as exc:
+        return _error_response(exc)
+    except Exception:
+        return _unexpected_error()
 
 
 @ml_studio_bp.route("/snapshots", methods=["POST"])

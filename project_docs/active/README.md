@@ -24,7 +24,7 @@ Decision Intelligence workspaces, decision frames, readiness and capability pane
 
 Dataset identity and semantic truth remain required for every BI answer and chart.
 
-ML Studio's shared workspace is at the Step 2 product decision boundary. Open the [active gate](active_gate/README.md) or the [six-stage contract](ml_studio/README.md#six-stage-contract). Only the shared frame was authorized; planned persistence and later workflow behavior must not be represented as working product behavior.
+ML Studio Step 3 save-and-resume work is active. Open the [active gate](active_gate/README.md) or the [six-stage contract](ml_studio/README.md#six-stage-contract). Draft persistence must be verified before frontend integration; later workflow behavior must not be represented as working product behavior.
 
 ## Active Areas
 

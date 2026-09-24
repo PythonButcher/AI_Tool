@@ -78,39 +78,54 @@ describe('MLStudioShell', () => {
       cleanedData: [{ A: 1, B: 2, C: 3 }]
     };
 
-    global.fetch.mockResolvedValue({
-      ok: true,
-      json: async () => ({ runs: [] })
+    global.fetch.mockImplementation((url, init) => {
+      if (url.includes('/drafts') && init?.method === 'POST') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ draft: { experiment_id: 'exp-1', name: 'New Draft' }, workflow_state: { active_stage: 'Configure' } })
+        });
+      }
+      if (url.includes('/drafts')) {
+        return Promise.resolve({ ok: true, json: async () => ({ drafts: [] }) });
+      }
+      if (url.includes('/runs')) {
+        return Promise.resolve({ ok: true, json: async () => ({ runs: [] }) });
+      }
     });
 
     renderWithContext(mockContext);
 
     await screen.findByText(/No durable runs exist/i);
 
-    // Try submitting without target
+    // Create a new draft firs
+    const createBtn = await screen.findByRole('button', { name: 'New Experiment' });
+    fireEvent.click(createBtn);
+    await screen.findByText('Target Column');
+
+    // Try submitting without targe
     const assessBtn = screen.getByRole('button', { name: 'Assess Preparation Readiness' });
     fireEvent.click(assessBtn);
 
     expect(screen.getByText(/Choose a target/i)).toBeInTheDocument();
 
-    // Select target
+    // Select targe
     const targetSelect = screen.getByText('Target Column').nextElementSibling;
     fireEvent.change(targetSelect, { target: { value: 'A' } });
 
-    // Verify next unmet requirement
+    // Verify next unmet requiremen
     expect(screen.getByText(/Choose at least one feature/i)).toBeInTheDocument();
 
     // Select valid features
     const numFeaturesSelect = screen.getByText('Numeric Features').nextElementSibling;
     numFeaturesSelect.querySelector('option[value="B"]').selected = true; fireEvent.change(numFeaturesSelect);
 
-    // Verify next unmet requirement
+    // Verify next unmet requiremen
     expect(screen.getByText(/Confirm the roles/i)).toBeInTheDocument();
 
     // Now reproduce the screenshot conflict (selecting target as feature)
     numFeaturesSelect.querySelector('option[value="A"]').selected = true; fireEvent.change(numFeaturesSelect);
 
-    // It should automatically reconcile and NOT add 'A' to numeric features because it's the target
+    // It should automatically reconcile and NOT add 'A' to numeric features because it's the targe
     const selectedOptions = Array.from(numFeaturesSelect.selectedOptions).map(o => o.value);
     expect(selectedOptions).not.toContain('A');
 
@@ -118,7 +133,7 @@ describe('MLStudioShell', () => {
     const confirmCheckbox = screen.getByText(/I explicitly confirm/i).previousElementSibling;
     fireEvent.click(confirmCheckbox);
 
-    // Verify next unmet requirement
+    // Verify next unmet requiremen
     expect(screen.getByText(/Ready to assess/i)).toBeInTheDocument();
   });
 
@@ -129,7 +144,13 @@ describe('MLStudioShell', () => {
       cleanedData: [{ A: 1, B: 2, C: 3 }]
     };
 
-    global.fetch.mockImplementation((url) => {
+    global.fetch.mockImplementation((url, init) => {
+      if (url.includes('/drafts') && init?.method === 'POST') {
+        return Promise.resolve({ ok: true, json: async () => ({ draft: { experiment_id: 'exp-1', name: 'New Draft' }, workflow_state: { active_stage: 'Configure' } }) });
+      }
+      if (url.includes('/drafts')) {
+        return Promise.resolve({ ok: true, json: async () => ({ drafts: [] }) });
+      }
       if (url.includes('/runs')) {
         return Promise.resolve({ ok: true, json: async () => ({ runs: [] }) });
       }
@@ -162,6 +183,10 @@ describe('MLStudioShell', () => {
 
     await screen.findByText(/No durable runs exist/i);
 
+    const createBtn = await screen.findByRole('button', { name: 'New Experiment' });
+    fireEvent.click(createBtn);
+    await screen.findByText('Target Column');
+
     // Configure valid form
     const targetSelect = screen.getByText('Target Column').nextElementSibling;
     fireEvent.change(targetSelect, { target: { value: 'A' } });
@@ -193,7 +218,7 @@ describe('MLStudioShell', () => {
       const expBody = JSON.parse(experimentsCall[1].body);
       expect(expBody.resource_limits.max_candidates).toBeLessThanOrEqual(3);
 
-      // Assert Pairwise Disjoint
+      // Assert Pairwise Disjoin
       expect(expBody.target).toBe('A');
       expect(expBody.feature_roles.numeric).toEqual(['B']);
       expect(expBody.feature_roles.categorical).toEqual(['C']);
@@ -231,9 +256,9 @@ describe('MLStudioShell', () => {
   });
 
   it('renders loading state and fetches run list when identity is available', async () => {
-    global.fetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ runs: [] })
+    global.fetch.mockImplementation((url) => {
+      if (url.includes('/drafts')) return Promise.resolve({ ok: true, json: async () => ({ drafts: [] }) });
+      if (url.includes('/runs')) return Promise.resolve({ ok: true, json: async () => ({ runs: [] }) });
     });
 
     renderWithContext({
@@ -260,9 +285,9 @@ describe('MLStudioShell', () => {
       }
     ];
 
-    global.fetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ runs: mockRuns })
+    global.fetch.mockImplementation((url) => {
+      if (url.includes('/drafts')) return Promise.resolve({ ok: true, json: async () => ({ drafts: [] }) });
+      if (url.includes('/runs')) return Promise.resolve({ ok: true, json: async () => ({ runs: mockRuns }) });
     });
 
     renderWithContext({
@@ -276,9 +301,9 @@ describe('MLStudioShell', () => {
   });
 
   it('renders empty run list message', async () => {
-    global.fetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ runs: [] })
+    global.fetch.mockImplementation((url) => {
+      if (url.includes('/drafts')) return Promise.resolve({ ok: true, json: async () => ({ drafts: [] }) });
+      if (url.includes('/runs')) return Promise.resolve({ ok: true, json: async () => ({ runs: [] }) });
     });
 
     renderWithContext({
@@ -292,16 +317,15 @@ describe('MLStudioShell', () => {
   });
 
   it('renders error state and handles retry', async () => {
-    global.fetch
-      .mockResolvedValueOnce({
-        ok: false,
-        status: 400,
-        json: async () => ({ error: { message: 'Invalid request', remediation: 'Fix it' } })
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ runs: [] })
-      });
+    let runCount = 0;
+    global.fetch.mockImplementation((url) => {
+      if (url.includes('/drafts')) return Promise.resolve({ ok: true, json: async () => ({ drafts: [] }) });
+      if (url.includes('/runs')) {
+        runCount++;
+        if (runCount === 1) return Promise.resolve({ ok: false, status: 400, json: async () => ({ error: { message: 'Invalid request', remediation: 'Fix it' } }) });
+        return Promise.resolve({ ok: true, json: async () => ({ runs: [] }) });
+      }
+    });
 
     renderWithContext({
       activeWorkspace: { workspace_id: 'ws-1', version: 1 },
@@ -316,7 +340,7 @@ describe('MLStudioShell', () => {
     fireEvent.click(retryButton);
 
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledTimes(2);
+      expect(global.fetch).toHaveBeenCalledTimes(3);
     });
     await screen.findByText(/No durable runs exist/i);
   });
@@ -325,12 +349,15 @@ describe('MLStudioShell', () => {
     let resolveFirstRequest;
     const firstRequestPromise = new Promise(resolve => resolveFirstRequest = resolve);
 
-    global.fetch
-      .mockReturnValueOnce(firstRequestPromise)
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ runs: [{ run_id: 'run-new', experiment_id: 'exp-new', status: 'completed' }] })
-      });
+    let runCallCount = 0;
+    global.fetch.mockImplementation((url) => {
+      if (url.includes('/drafts')) return Promise.resolve({ ok: true, json: async () => ({ drafts: [] }) });
+      if (url.includes('/runs')) {
+        runCallCount++;
+        if (runCallCount === 1) return firstRequestPromise;
+        return Promise.resolve({ ok: true, json: async () => ({ runs: [{ run_id: 'run-new', experiment_id: 'exp-new', status: 'completed' }] }) });
+      }
+    });
 
     useDatasetMeta.mockReturnValue({ numRows: 100, numCols: 5 });
     const { rerender } = render(
@@ -370,7 +397,10 @@ describe('MLStudioShell', () => {
     let resolveRequest;
     const requestPromise = new Promise(resolve => resolveRequest = resolve);
 
-    global.fetch.mockReturnValueOnce(requestPromise);
+    global.fetch.mockImplementation((url) => {
+      if (url.includes('/drafts')) return Promise.resolve({ ok: true, json: async () => ({ drafts: [] }) });
+      if (url.includes('/runs')) return requestPromise;
+    });
 
     const { unmount } = renderWithContext({
       activeWorkspace: { workspace_id: 'ws-1', version: 1 },
@@ -400,6 +430,12 @@ describe('MLStudioShell', () => {
     let fetchRunsCount = 0;
 
     global.fetch.mockImplementation((url, init) => {
+      if (url.includes('/drafts') && init?.method === 'POST') {
+        return Promise.resolve({ ok: true, json: async () => ({ draft: { experiment_id: 'exp-1', name: 'New Draft' }, workflow_state: { active_stage: 'Configure' } }) });
+      }
+      if (url.includes('/drafts')) {
+        return Promise.resolve({ ok: true, json: async () => ({ drafts: [] }) });
+      }
       if (url.includes("/runs") && (!init || init.method === "GET")) {
         fetchRunsCount++;
         return Promise.resolve({ ok: true, json: async () => ({ runs: fetchRunsCount > 1 ? [{ run_id: "run-new" }] : [] }) });
@@ -437,6 +473,9 @@ describe('MLStudioShell', () => {
     renderWithContext(mockContext);
 
     await screen.findByText(/No durable runs exist/i);
+    const createBtn = await screen.findByRole('button', { name: 'New Experiment' });
+    fireEvent.click(createBtn);
+    await screen.findByText('Target Column');
 
     const targetSelect = screen.getByText("Target Column").nextElementSibling;
     fireEvent.change(targetSelect, { target: { value: "A" } });
@@ -471,6 +510,12 @@ describe('MLStudioShell', () => {
     let postCallCount = 0;
 
     global.fetch.mockImplementation((url, init) => {
+      if (url.includes('/drafts') && init?.method === 'POST') {
+        return Promise.resolve({ ok: true, json: async () => ({ draft: { experiment_id: 'exp-1', name: 'New Draft' }, workflow_state: { active_stage: 'Configure' } }) });
+      }
+      if (url.includes('/drafts')) {
+        return Promise.resolve({ ok: true, json: async () => ({ drafts: [] }) });
+      }
       if (url.includes("/runs") && (!init || init.method === "GET")) {
         return Promise.resolve({ ok: true, json: async () => ({ runs: postCallCount > 1 ? [{ run_id: "run-retry" }] : [] }) });
       }
@@ -510,6 +555,10 @@ describe('MLStudioShell', () => {
     renderWithContext(mockContext);
     await screen.findByText(/No durable runs exist/i);
 
+    const createBtn = await screen.findByRole('button', { name: 'New Experiment' });
+    fireEvent.click(createBtn);
+    await screen.findByText('Target Column');
+
     fireEvent.change(screen.getByText("Target Column").nextElementSibling, { target: { value: "A" } });
     const numFeaturesSelect = screen.getByText("Numeric Features").nextElementSibling;
     Array.from(numFeaturesSelect.options).forEach(o => o.selected = false); numFeaturesSelect.querySelector("option[value='B']").selected = true; fireEvent.change(numFeaturesSelect);
@@ -527,7 +576,7 @@ describe('MLStudioShell', () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Start Run" }));
 
-    // Wait until the run is in the list
+    // Wait until the run is in the lis
     await waitFor(() => {
        if (postCallCount < 2) throw new Error("waiting for second post");
        expect(idempotencyKeyUsed).toEqual(firstKey);
@@ -544,15 +593,26 @@ describe('MLStudioShell', () => {
       cleanedData: [{ A: 1, B: 2, C: 3 }]
     };
 
-    global.fetch.mockResolvedValue({
-      ok: true,
-      json: async () => ({ runs: [] })
+    global.fetch.mockImplementation((url, init) => {
+      if (url.includes('/drafts') && init?.method === 'POST') {
+        return Promise.resolve({ ok: true, json: async () => ({ draft: { experiment_id: 'exp-1', name: 'New Draft' }, workflow_state: { active_stage: 'Configure' } }) });
+      }
+      if (url.includes('/drafts')) {
+        return Promise.resolve({ ok: true, json: async () => ({ drafts: [] }) });
+      }
+      if (url.includes('/runs')) {
+        return Promise.resolve({ ok: true, json: async () => ({ runs: [] }) });
+      }
     });
 
     renderWithContext(mockContext);
     await screen.findByText(/No durable runs exist/i);
 
-    expect(global.fetch).toHaveBeenCalledTimes(1);
+    const createBtn = await screen.findByRole('button', { name: 'New Experiment' });
+    fireEvent.click(createBtn);
+    await screen.findByText('Target Column');
+
+    expect(global.fetch).toHaveBeenCalledTimes(3);
 
     const targetSelect = screen.getByText('Target Column').nextElementSibling;
     fireEvent.change(targetSelect, { target: { value: 'A' } });
@@ -583,15 +643,28 @@ describe('MLStudioShell', () => {
 
     expect(newTargetSelect.value).toBe('A');
 
-    expect(global.fetch).toHaveBeenCalledTimes(1);
+    expect(global.fetch).toHaveBeenCalledTimes(3);
   });
 
-  it('exposes Guidance disclosure state and mounts panel correctly', () => {
+  it('exposes Guidance disclosure state and mounts panel correctly', async () => {
     const mockContext = {
       activeWorkspace: { workspace_id: 'ws-1', version: 1 },
       analysisContext: { workspace_id: 'ws-1', workspace_version: 1, source_ids: ['s1'] },
     };
+
+    global.fetch.mockImplementation((url, init) => {
+      if (url.includes('/drafts') && init?.method === 'POST') {
+        return Promise.resolve({ ok: true, json: async () => ({ draft: { experiment_id: 'exp-1', name: 'New Draft' }, workflow_state: { active_stage: 'Configure' } }) });
+      }
+      if (url.includes('/drafts')) return Promise.resolve({ ok: true, json: async () => ({ drafts: [] }) });
+      if (url.includes('/runs')) return Promise.resolve({ ok: true, json: async () => ({ runs: [] }) });
+    });
+
     renderWithContext(mockContext);
+
+    const createBtn = await screen.findByRole('button', { name: 'New Experiment' });
+    fireEvent.click(createBtn);
+    await screen.findByText('Target Column');
 
     const guidanceToggle = screen.getByRole('checkbox', { name: /Guidance/i });
     expect(guidanceToggle).toBeChecked();
@@ -627,9 +700,9 @@ describe('MLStudioShell', () => {
       }
     ];
 
-    global.fetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ runs: mockRuns })
+    global.fetch.mockImplementation((url) => {
+      if (url.includes('/drafts')) return Promise.resolve({ ok: true, json: async () => ({ drafts: [] }) });
+      if (url.includes('/runs')) return Promise.resolve({ ok: true, json: async () => ({ runs: mockRuns }) });
     });
 
     renderWithContext({

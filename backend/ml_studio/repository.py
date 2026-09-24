@@ -5,8 +5,11 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
+import secrets
 import sqlite3
 import threading
+from uuid import uuid4
 from collections.abc import Callable, Mapping, Sequence
 from contextlib import contextmanager
 from datetime import UTC, datetime
@@ -41,6 +44,73 @@ MAX_EXPERIMENT_JSON_BYTES: Final = 256 * 1024
 MAX_RUN_JSON_BYTES: Final = 512 * 1024
 MAX_EVALUATION_JSON_BYTES: Final = 4 * 1024 * 1024
 MAX_EVENTS_PER_RUN: Final = 1000
+MAX_DRAFT_JSON_BYTES: Final = 128 * 1024
+_DRAFT_STAGES: Final = ("Data & Goal", "Prepare Data", "Configure", "Train", "Review Results", "Use & Share")
+_DRAFT_TASKS: Final = frozenset({"regression", "classification", "forecasting", "clustering", "anomaly_detection"})
+_DRAFT_FIELDS: Final = frozenset({
+    "workspace_id", "name", "guidance_enabled", "active_stage", "snapshot_id", "task_type", "goal",
+    "roles", "validation", "metric", "candidate", "resource",
+})
+_DRAFT_ROLE_FIELDS: Final = frozenset({"target", "numeric", "categorical", "ignored", "time", "group"})
+_DRAFT_FORBIDDEN_KEYS: Final = frozenset({
+    "rows", "raw_rows", "records", "uploaded_data", "full_data", "model_bytes",
+    "data", "dataset", "file_path", "path", "storage_path", "readiness",
+    "workflow_state", "run_status", "candidate_selection", "selection_id", "assessment_state",
+})
+_DRAFT_PATH = re.compile(r"(?:^[A-Za-z]:[\\/]|^[\\/]{2}|^/(?:home|users|var|tmp)/)", re.IGNORECASE)
+
+
+def _validate_draft_value(value: Any, *, depth: int = 0) -> None:
+    """Reject client-supplied data and paths even when hidden in settings."""
+    if depth > 8:
+        raise PersistenceError("draft_invalid", "The draft settings are too deeply nested.", "Use a bounded settings object.")
+    if isinstance(value, dict):
+        for key, child in value.items():
+            if not isinstance(key, str) or key.casefold() in _DRAFT_FORBIDDEN_KEYS:
+                raise PersistenceError("draft_invalid", "The draft contains an unsupported field.", "Remove raw data, paths, or server-owned state.")
+            _validate_draft_value(child, depth=depth + 1)
+    elif isinstance(value, list):
+        for child in value:
+            _validate_draft_value(child, depth=depth + 1)
+    elif isinstance(value, str) and _DRAFT_PATH.search(value):
+        raise PersistenceError("draft_invalid", "The draft contains a filesystem path.", "Use server-issued identities instead of paths.")
+
+
+def _validated_draft_edit(edit: Mapping[str, Any], *, creating: bool) -> dict[str, Any]:
+    if not isinstance(edit, dict) or set(edit) - _DRAFT_FIELDS or (not creating and "workspace_id" in edit):
+        raise PersistenceError("draft_invalid", "The draft contains unsupported or immutable fields.", "Submit only editable draft fields.")
+    if creating and (not isinstance(edit.get("workspace_id"), str) or not edit["workspace_id"].strip()):
+        raise PersistenceError("draft_invalid", "A workspace identity is required.", "Select a governed workspace.")
+    value = dict(edit)
+    _validate_draft_value(value)
+    for key in ("workspace_id", "name", "goal", "snapshot_id", "recipe_id"):
+        if key in value and value[key] is not None and (not isinstance(value[key], str) or len(value[key]) > 500):
+            raise PersistenceError("draft_invalid", f"The {key} field is invalid.", "Use a bounded text value or null where allowed.")
+    if "guidance_enabled" in value and not isinstance(value["guidance_enabled"], bool):
+        raise PersistenceError("draft_invalid", "Guidance must be a boolean.", "Use true or false.")
+    if "active_stage" in value and value["active_stage"] not in _DRAFT_STAGES:
+        raise PersistenceError("draft_invalid", "The active stage is unknown.", "Select one of the six workflow stages.")
+    if "task_type" in value and value["task_type"] is not None and (not isinstance(value["task_type"], str) or value["task_type"] not in _DRAFT_TASKS):
+        raise PersistenceError("draft_invalid", "The task type is unknown.", "Select a supported ML task.")
+    if "recipe_version" in value and value["recipe_version"] is not None and (type(value["recipe_version"]) is not int or value["recipe_version"] < 1):
+        raise PersistenceError("draft_invalid", "The recipe version is invalid.", "Use a positive recipe version.")
+    for key in ("validation", "metric", "candidate", "resource"):
+        if key in value and not isinstance(value[key], dict):
+            raise PersistenceError("draft_invalid", f"The {key} settings must be an object.", "Submit a JSON object.")
+    if "roles" in value:
+        roles = value["roles"]
+        if not isinstance(roles, dict) or set(roles) - _DRAFT_ROLE_FIELDS:
+            raise PersistenceError("draft_invalid", "The column roles are invalid.", "Use the documented role names.")
+        seen: set[str] = set()
+        for role, columns in roles.items():
+            items = [columns] if role == "target" and columns is not None else ([] if role == "target" else columns)
+            if not isinstance(items, list) or any(not isinstance(item, str) or not item for item in items):
+                raise PersistenceError("draft_invalid", "A column role has invalid members.", "Use column-name lists and a nullable target.")
+            if len(items) != len(set(items)) or seen.intersection(items):
+                raise PersistenceError("draft_roles_conflict", "A column has more than one role.", "Assign each column to only one role.")
+            seen.update(items)
+    _canonical_json(value, limit=MAX_DRAFT_JSON_BYTES, label="experiment draft")
+    return value
 
 
 class PersistenceError(ValueError):
@@ -192,6 +262,16 @@ class MLStudioRepository:
             created_at TEXT NOT NULL,
             FOREIGN KEY (run_id) REFERENCES ml_runs (run_id) ON DELETE RESTRICT
         );
+        CREATE TABLE IF NOT EXISTS ml_experiment_drafts (
+            experiment_id TEXT PRIMARY KEY,
+            workspace_id TEXT NOT NULL,
+            draft_revision INTEGER NOT NULL CHECK (draft_revision > 0),
+            etag TEXT NOT NULL,
+            draft_json TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS ml_experiment_drafts_workspace_index
+          ON ml_experiment_drafts (workspace_id, updated_at DESC, experiment_id);
         """
         with self._lock, self._connection() as connection:
             connection.execute("PRAGMA journal_mode = WAL")
@@ -200,6 +280,94 @@ class MLStudioRepository:
     @staticmethod
     def _public_experiment(row: sqlite3.Row) -> dict[str, Any]:
         return json.loads(row["specification_json"])
+
+    def create_draft(self, edit: dict[str, Any]) -> dict[str, Any]:
+        fields = _validated_draft_edit(edit, creating=True)
+        now = _now()
+        draft = {
+            "contract_version": "ml_studio_workflow_v1",
+            "experiment_id": str(uuid4()),
+            "draft_revision": 1,
+            "etag": secrets.token_urlsafe(24),
+            "name": "Untitled Experiment",
+            "guidance_enabled": True,
+            "active_stage": "Data & Goal",
+            "workspace_id": fields["workspace_id"],
+            "snapshot_id": None,
+            "task_type": None,
+            "goal": None,
+            "recipe_id": None,
+            "recipe_version": None,
+            "roles": {"target": None, "numeric": [], "categorical": [], "ignored": [], "time": [], "group": []},
+            "validation": {}, "metric": {}, "candidate": {}, "resource": {},
+            "latest_assessment_id": None,
+            "latest_assessment_fingerprint": None,
+            "updated_at": now,
+        }
+        draft.update(fields)
+        encoded = _canonical_json(draft, limit=MAX_DRAFT_JSON_BYTES, label="experiment draft")
+        with self._lock, self._connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            connection.execute(
+                "INSERT INTO ml_experiment_drafts VALUES (?, ?, ?, ?, ?, ?)",
+                (draft["experiment_id"], draft["workspace_id"], 1, draft["etag"], encoded, now),
+            )
+            connection.commit()
+        return draft
+
+    def get_draft(self, experiment_id: str, workspace_id: str) -> dict[str, Any] | None:
+        with self._connection() as connection:
+            row = connection.execute(
+                "SELECT draft_json FROM ml_experiment_drafts WHERE experiment_id = ? AND workspace_id = ?",
+                (experiment_id, workspace_id),
+            ).fetchone()
+        return None if row is None else json.loads(row["draft_json"])
+
+    def list_drafts(self, workspace_id: str, *, limit: int = 100) -> list[dict[str, Any]]:
+        if not isinstance(workspace_id, str) or not workspace_id.strip() or type(limit) is not int or not 1 <= limit <= 100:
+            raise PersistenceError("draft_invalid", "The draft query is invalid.", "Provide a workspace identity and a limit from 1 to 100.")
+        with self._connection() as connection:
+            rows = connection.execute(
+                "SELECT draft_json FROM ml_experiment_drafts WHERE workspace_id = ? ORDER BY updated_at DESC, experiment_id LIMIT ?",
+                (workspace_id, limit),
+            ).fetchall()
+        return [json.loads(row["draft_json"]) for row in rows]
+
+    def update_draft(self, experiment_id: str, workspace_id: str, etag: str, edit: dict[str, Any]) -> dict[str, Any]:
+        fields = _validated_draft_edit(edit, creating=False)
+        if not isinstance(etag, str) or not etag:
+            raise PersistenceError("draft_revision_conflict", "The draft revision is missing.", "Reload the draft and retry with its current ETag.")
+        with self._lock, self._connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            row = connection.execute(
+                "SELECT draft_json, etag FROM ml_experiment_drafts WHERE experiment_id = ? AND workspace_id = ?",
+                (experiment_id, workspace_id),
+            ).fetchone()
+            if row is None:
+                raise PersistenceError("draft_not_found", "The draft is unavailable in this workspace.", "Select a draft from the current workspace.")
+            if row["etag"] != etag:
+                raise PersistenceError("draft_revision_conflict", "The draft changed since it was loaded.", "Reload or duplicate the draft to preserve local edits.")
+            draft = json.loads(row["draft_json"])
+            draft.update(fields)
+            draft["draft_revision"] += 1
+            draft["etag"] = secrets.token_urlsafe(24)
+            draft["updated_at"] = _now()
+            encoded = _canonical_json(draft, limit=MAX_DRAFT_JSON_BYTES, label="experiment draft")
+            connection.execute(
+                "UPDATE ml_experiment_drafts SET draft_revision = ?, etag = ?, draft_json = ?, updated_at = ? WHERE experiment_id = ? AND workspace_id = ?",
+                (draft["draft_revision"], draft["etag"], encoded, draft["updated_at"], experiment_id, workspace_id),
+            )
+            connection.commit()
+        return draft
+
+    def duplicate_draft(self, experiment_id: str, workspace_id: str) -> dict[str, Any]:
+        original = self.get_draft(experiment_id, workspace_id)
+        if original is None:
+            raise PersistenceError("draft_not_found", "The draft is unavailable in this workspace.", "Select a draft from the current workspace.")
+        edit = {key: original[key] for key in _DRAFT_FIELDS if key in original}
+        edit["name"] = f"Copy of {original['name']}"[:500]
+        edit["active_stage"] = "Data & Goal"
+        return self.create_draft(edit)
 
     @staticmethod
     def _public_run(row: sqlite3.Row) -> dict[str, Any]:
