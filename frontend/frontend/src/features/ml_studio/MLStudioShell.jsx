@@ -31,15 +31,6 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
   } = useContext(DataContext);
   const { numRows, numCols } = useDatasetMeta();
 
-  const [runsState, setRunsState] = useState({ status: 'idle', data: null, error: null });
-  const [activeStage, setActiveStage] = useState('Configure');
-  const [showGuidance, setShowGuidance] = useState(true);
-  const [draftsState, setDraftsState] = useState({ status: 'idle', data: null, error: null });
-  const [activeDraft, setActiveDraft] = useState(null);
-  const [pendingDraftAction, setPendingDraftAction] = useState(null);
-  const runsFetchIdRef = useRef(0);
-  const draftsFetchIdRef = useRef(0);
-
   const hasRequiredIdentity = Boolean(
     activeWorkspace?.workspace_id &&
     analysisContext?.workspace_version &&
@@ -62,6 +53,23 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
     ? `${activeWorkspace?.workspace_id}-${analysisContext?.workspace_version}`
     : null;
 
+  const identityRef = useRef(identityKey);
+  useEffect(() => { identityRef.current = identityKey; }, [identityKey]);
+
+
+  const [runsState, setRunsState] = useState({ status: 'idle', data: null, error: null });
+  const [activeStage, setActiveStage] = useState('Configure');
+  const [showGuidance, setShowGuidance] = useState(true);
+  const [draftsState, setDraftsState] = useState({ status: 'idle', data: null, error: null });
+  const [activeDraft, setActiveDraft] = useState(null);
+  const [pendingDraftAction, setPendingDraftAction] = useState(null);
+  const runsFetchIdRef = useRef(0);
+  const draftsFetchIdRef = useRef(0);
+
+
+
+
+
   const fetchDrafts = useCallback(async () => {
     if (!isIdentityAvailable) return;
     const fetchId = ++draftsFetchIdRef.current;
@@ -70,6 +78,7 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
       const response = await fetch(`${API_URL}/api/ml-studio/v1/drafts?workspace_id=${activeWorkspace.workspace_id}`);
       if (fetchId !== draftsFetchIdRef.current) return;
       const data = await response.json();
+      if (fetchId !== draftsFetchIdRef.current) return;
       if (!response.ok) throw data.error || new Error('Failed to fetch drafts');
       setDraftsState({ status: 'success', data: data.drafts, error: null });
     } catch (err) {
@@ -83,6 +92,7 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
 
   const handleCreateDraft = async () => {
     if (pendingDraftAction) return;
+    const currentIdentity = identityKey;
     setPendingDraftAction('creating');
     try {
       const res = await fetch(`${API_URL}/api/ml-studio/v1/drafts`, {
@@ -91,37 +101,45 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
         body: JSON.stringify({ workspace_id: activeWorkspace.workspace_id })
       });
       const data = await res.json();
+      if (identityRef.current !== currentIdentity) return;
       if (!res.ok) throw data.error || new Error('Failed to create draft');
       setActiveDraft(data.draft);
+      setWorkflowState(data.workflow_state);
       setActiveStage(data.workflow_state.active_stage);
       setShowGuidance(data.draft.guidance_enabled !== false);
+      fetchDrafts();
     } catch (err) {
+      if (identityRef.current !== currentIdentity) return;
       setDraftsState({
         status: 'error', data: null,
         error: { message: err.message || 'Failed to create draft.', code: err.code || 'error', remediation: err.remediation || 'Please try again.' }
       });
     } finally {
-      setPendingDraftAction(null);
+      if (identityRef.current === currentIdentity) setPendingDraftAction(null);
     }
   };
 
   const handleReopenDraft = async (experiment_id) => {
     if (pendingDraftAction) return;
+    const currentIdentity = identityKey;
     setPendingDraftAction(`reopening-${experiment_id}`);
     try {
       const res = await fetch(`${API_URL}/api/ml-studio/v1/drafts/${experiment_id}?workspace_id=${activeWorkspace.workspace_id}`);
       const data = await res.json();
+      if (identityRef.current !== currentIdentity) return;
       if (!res.ok) throw data.error || new Error('Failed to reopen draft');
       setActiveDraft(data.draft);
+      setWorkflowState(data.workflow_state);
       setActiveStage(data.workflow_state.active_stage);
       setShowGuidance(data.draft.guidance_enabled !== false);
     } catch (err) {
+      if (identityRef.current !== currentIdentity) return;
       setDraftsState({
         status: 'error', data: null,
         error: { message: err.message || 'Failed to open draft.', code: err.code || 'error', remediation: err.remediation || 'Please try again.' }
       });
     } finally {
-      setPendingDraftAction(null);
+      if (identityRef.current === currentIdentity) setPendingDraftAction(null);
     }
   };
 
@@ -170,17 +188,188 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
   }, [isIdentityAvailable]);
 
   useEffect(() => {
+    runsFetchIdRef.current += 1; draftsFetchIdRef.current += 1;
+    setRunsState({ status: 'idle', data: null, error: null });
+    setDraftsState({ status: 'idle', data: null, error: null });
+    setActiveDraft(null);
+    setWorkflowState(null);
+    setSaveState('saved');
+    setSaveError(null);
+    setPendingDraftAction(null);
+
     if (!isIdentityAvailable) {
-      runsFetchIdRef.current += 1; draftsFetchIdRef.current += 1;
-      setRunsState({ status: 'idle', data: null, error: null });
-      setDraftsState({ status: 'idle', data: null, error: null });
-      setActiveDraft(null);
       return;
     }
     fetchRuns();
     fetchDrafts();
-    return () => { runsFetchIdRef.current += 1; draftsFetchIdRef.current += 1; };
+    return () => { runsFetchIdRef.current += 1; draftsFetchIdRef.current += 1; identityRef.current = null; };
   }, [identityKey, isIdentityAvailable, fetchRuns, fetchDrafts]);
+
+
+  const [workflowState, setWorkflowState] = useState(null);
+  const [saveState, setSaveState] = useState('saved');
+  const [saveError, setSaveError] = useState(null);
+  const [localName, setLocalName] = useState('');
+
+  const saveTimerRef = useRef(null);
+  const pendingEditsRef = useRef({});
+  const isSavingRef = useRef(false);
+  const etagRef = useRef(null);
+  const activeDraftRef = useRef(activeDraft);
+
+  useEffect(() => { activeDraftRef.current = activeDraft; }, [activeDraft]);
+
+  useEffect(() => {
+    if (activeDraft && saveState !== 'conflict') {
+      setLocalName(activeDraft.name || '');
+      etagRef.current = activeDraft.etag;
+    }
+  }, [activeDraft, saveState]);
+
+  useEffect(() => {
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      pendingEditsRef.current = {};
+      isSavingRef.current = false;
+    };
+  }, [identityKey, activeDraft?.experiment_id]);
+
+  const flushSave = useCallback(async () => {
+    const draft = activeDraftRef.current;
+    if (!draft || isSavingRef.current || saveState === 'conflict') return true;
+
+    const patch = { ...pendingEditsRef.current };
+    if (Object.keys(patch).length === 0) return true;
+
+    pendingEditsRef.current = {};
+    isSavingRef.current = true;
+    setSaveState('saving');
+
+    const currentIdentity = identityRef.current;
+    try {
+      const res = await fetch(`${API_URL}/api/ml-studio/v1/drafts/${draft.experiment_id}?workspace_id=${activeWorkspace.workspace_id}`, {
+         method: 'PATCH',
+         headers: { 'Content-Type': 'application/json', 'If-Match': etagRef.current },
+         body: JSON.stringify(patch)
+      });
+      const data = await res.json();
+
+      if (identityRef.current !== currentIdentity || activeDraftRef.current?.experiment_id !== draft.experiment_id) return false;
+
+      if (!res.ok) {
+         pendingEditsRef.current = { ...patch, ...pendingEditsRef.current };
+         if (res.status === 409 || data.error?.code === 'draft_revision_conflict') {
+            setSaveState('conflict');
+            setSaveError(data.error);
+         } else {
+            setSaveState('save_error');
+            setSaveError(data.error || { message: 'Failed to save.', remediation: 'Try again.' });
+         }
+         return false;
+      } else {
+         if (!data.draft) console.log('MISSING DRAFT', data);
+         etagRef.current = data.draft.etag;
+         setActiveDraft(data.draft);
+         setWorkflowState(data.workflow_state);
+         setWorkflowState(data.workflow_state);
+      setActiveStage(data.workflow_state.active_stage);
+         setSaveState('saved');
+         setSaveError(null);
+         if (patch.name !== undefined) fetchDrafts();
+         return true;
+      }
+    } catch (err) {
+      if (identityRef.current !== currentIdentity || activeDraftRef.current?.experiment_id !== draft.experiment_id) return false;
+      pendingEditsRef.current = { ...patch, ...pendingEditsRef.current };
+      setSaveState('save_error');
+      setSaveError({ message: err.message || 'Network error.', code: 'error', remediation: 'Please try again.' });
+      return false;
+    } finally {
+      if (identityRef.current === currentIdentity && activeDraftRef.current?.experiment_id === draft.experiment_id) {
+        isSavingRef.current = false;
+        if (Object.keys(pendingEditsRef.current).length > 0) {
+           saveTimerRef.current = setTimeout(flushSave, 100);
+        }
+      }
+    }
+  }, [activeWorkspace?.workspace_id, saveState, fetchDrafts]);
+
+  const scheduleSave = useCallback((edits) => {
+    if (saveState === 'conflict') return;
+    pendingEditsRef.current = { ...pendingEditsRef.current, ...edits };
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(flushSave, 500);
+  }, [flushSave, saveState]);
+
+  const handleReloadDraft = async () => {
+    if (!activeDraft) return;
+    const currentIdentity = identityRef.current;
+    try {
+      setSaveState('saving');
+      const res = await fetch(`${API_URL}/api/ml-studio/v1/drafts/${activeDraft.experiment_id}?workspace_id=${activeWorkspace.workspace_id}`);
+      const data = await res.json();
+      if (identityRef.current !== currentIdentity) return;
+      if (!res.ok) throw new Error('Failed to reload draft');
+
+      if (!data.draft) console.log('MISSING DRAFT', data);
+         etagRef.current = data.draft.etag;
+      setActiveDraft(data.draft);
+      setWorkflowState(data.workflow_state);
+      setWorkflowState(data.workflow_state);
+      setActiveStage(data.workflow_state.active_stage);
+      setShowGuidance(data.draft.guidance_enabled !== false);
+      setLocalName(data.draft.name || '');
+      pendingEditsRef.current = {};
+      setSaveState('saved');
+      setSaveError(null);
+    } catch (err) {
+      if (identityRef.current !== currentIdentity) return;
+      setSaveState('save_error');
+      setSaveError({ message: 'Failed to reload.', remediation: 'Try again.' });
+    }
+  };
+
+  const handleNameChange = (e) => {
+    const val = e.target.value;
+    if (val.length > 500) return;
+    setLocalName(val);
+    if (val.trim() !== '') {
+      scheduleSave({ name: val.trim() });
+    }
+  };
+
+  const handleToggleGuidance = () => {
+    const newVal = !showGuidance;
+    setShowGuidance(newVal);
+    scheduleSave({ guidance_enabled: newVal });
+  };
+
+  const handleStageSelect = async (stageId) => {
+    if (saveState === 'conflict') return;
+    if (workflowState) {
+       const stageInfo = workflowState.stages?.find(s => s.stage === stageId);
+       if (workflowState.stages && (!stageInfo || stageInfo.state === 'locked')) return;
+    }
+
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    pendingEditsRef.current = { ...pendingEditsRef.current, active_stage: stageId };
+
+    const ok = await flushSave();
+    if (ok) {
+       // activeStage updated by flushSave via workflow_state
+    }
+  };
+
+  const handleGoHome = async () => {
+     if (saveState === 'conflict') return;
+     if (Object.keys(pendingEditsRef.current).length > 0) {
+        if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+        const ok = await flushSave();
+        if (!ok) return; // remain on draft if save fails
+     }
+     setActiveDraft(null);
+     setWorkflowState(null);
+  };
 
   const activeDatasetSource = cleanedData ?? fullData ?? uploadedData;
   const activeDataset = useMemo(() => normalizeDatasetRows(activeDatasetSource), [activeDatasetSource]);
@@ -196,11 +385,18 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
     <div className="ml-studio-shell">
       <TopRibbon
         activeStage={activeStage}
-        onStageSelect={setActiveStage}
+        onStageSelect={handleStageSelect}
         showGuidance={showGuidance}
-        onToggleGuidance={() => setShowGuidance(!showGuidance)}
+        onToggleGuidance={handleToggleGuidance}
         activeDraft={activeDraft}
-        onGoHome={() => setActiveDraft(null)}
+        onGoHome={handleGoHome}
+        saveState={saveState}
+        saveError={saveError}
+        localName={localName}
+        onNameChange={handleNameChange}
+        onReloadDraft={handleReloadDraft}
+        onRetrySave={flushSave}
+        workflowState={workflowState}
       />
       <div className="ml-studio-body">
          <AssetRail
@@ -266,7 +462,7 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
   );
 }
 
-function TopRibbon({ activeStage, onStageSelect, showGuidance, onToggleGuidance, activeDraft, onGoHome }) {
+function TopRibbon({ activeStage, onStageSelect, showGuidance, onToggleGuidance, activeDraft, onGoHome, saveState, saveError, localName, onNameChange, onReloadDraft, onRetrySave, workflowState }) {
   const STAGES = [
     { id: 'Data & Goal', label: 'Data & Goal', icon: <FaDatabase /> },
     { id: 'Prepare Data', label: 'Prepare Data', icon: <FaWrench /> },
@@ -287,8 +483,27 @@ function TopRibbon({ activeStage, onStageSelect, showGuidance, onToggleGuidance,
                  <FaChevronDown className="inline-icon" /> Home
                </button>
             )}
-            <span className="experiment-name">{isHome ? 'Experiments' : (activeDraft.name || 'Untitled Experiment')}</span>
-            {!isHome && <span className="save-status">Not saved yet</span>}
+            <span className="experiment-name">
+              {isHome ? 'Experiments' : (
+                 <input
+                   type="text"
+                   className="experiment-name-input"
+                   value={localName}
+                   onChange={onNameChange}
+                   aria-label="Experiment Name"
+                   maxLength={500}
+                   disabled={saveState === 'conflict'}
+                 />
+              )}
+            </span>
+            {!isHome && (
+              <span className={`save-status status-${saveState}`}>
+                 {saveState === 'saving' && 'Saving...'}
+                 {saveState === 'saved' && 'Saved'}
+                 {saveState === 'save_error' && 'Save Error'}
+                 {saveState === 'conflict' && 'Conflict'}
+              </span>
+            )}
          </div>
          {!isHome && (
             <div className="guidance-toggle">
@@ -298,17 +513,41 @@ function TopRibbon({ activeStage, onStageSelect, showGuidance, onToggleGuidance,
                </label>
             </div>
          )}
+
       </div>
+      {!isHome && saveState === 'conflict' && (
+         <div className="conflict-warning">
+            <FaExclamationTriangle className="inline-icon" />
+            <span className="conflict-message">{saveError?.message} {saveError?.remediation}</span>
+            <button className="semantic-btn reload-btn" onClick={() => {
+               if (window.confirm("Reloading will replace your local edits. Continue?")) {
+                  onReloadDraft();
+               }
+            }}>Reload saved version</button>
+         </div>
+      )}
+      {!isHome && saveState === 'save_error' && saveError && (
+         <div className="save-error-warning">
+            <FaExclamationTriangle className="inline-icon" />
+            <span className="error-message">{saveError?.message} {saveError?.remediation}</span>
+            <button className="semantic-btn retry-btn" onClick={onRetrySave}>Retry Save</button>
+         </div>
+      )}
       {!isHome && (
+
          <div className="ribbon-container">
-           {STAGES.map((stage, i) => {
+                      {STAGES.map((stage, i) => {
              const isCurrent = activeStage === stage.id;
+             const stageInfo = workflowState?.stages?.find(s => s.stage === stage.id);
+             const isLocked = workflowState?.stages && (!stageInfo || stageInfo.state === 'locked');
              return (
                <React.Fragment key={stage.id}>
                  <button
-                   className={`ribbon-stage semantic-btn ${isCurrent ? 'is-current' : 'is-inactive'}`}
+                   className={`ribbon-stage semantic-btn ${isCurrent ? 'is-current' : 'is-inactive'} ${isLocked ? 'is-locked' : ''}`}
                    aria-current={isCurrent ? 'step' : undefined}
                    onClick={() => onStageSelect(stage.id)}
+                   disabled={isLocked || saveState === 'conflict'}
+                   title={isLocked ? "Stage locked" : ""}
                  >
                    <span className="ribbon-icon">{stage.icon}</span>
                    <span className="ribbon-label">{stage.label}</span>
@@ -349,7 +588,7 @@ function ExperimentHome({ draftsState, onCreate, onReopen, pendingAction, onRetr
         <div className="canvas-state-message no-dataset">
           <FaDatabase className="canvas-icon neutral-icon" />
           <h2>No Experiments Found</h2>
-          <p style={{ marginBottom: '24px' }}>Create a new experiment to get started.</p>
+          <p className="empty-state-text">Create a new experiment to get started.</p>
           <button
             className="start-run-button"
             onClick={onCreate}

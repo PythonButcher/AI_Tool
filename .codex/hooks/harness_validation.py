@@ -77,6 +77,13 @@ FRONTEND_READINESS = {
     "frontend_repair_only",
     "not_applicable",
 }
+ASYNC_MUTATION_SCENARIOS = (
+    "In-Flight Navigation",
+    "Concurrent Edits",
+    "Failure Retry",
+    "Conflict Or Duplicate",
+    "Identity And Unmount",
+)
 GENERATED_ARTIFACT_PATTERNS = (
     ".codex_tmp_py/**",
     "**/__pycache__/**",
@@ -351,6 +358,40 @@ def _handoff_frontend_targets(handoff: Path) -> list[str]:
     )
 
 
+def validate_async_mutation_handoff(text: str) -> list[str]:
+    """Require observable race and failure cases before an async UI handoff starts."""
+    errors: list[str] = []
+    preserved = re.findall(r"^\*\*Preserved Controls\*\*:\s*(.+?)\s*$", text, flags=re.MULTILINE)
+    if len(preserved) != 1 or len(preserved[0]) < 25 or "Test:" not in preserved[0] or re.search(r"\b(TODO|TBD)\b|\[.+?\]", preserved[0]):
+        errors.append("Frontend handoff needs one concrete **Preserved Controls** statement and Test: assertion.")
+    declarations = re.findall(r"^\*\*Async Mutation\*\*:\s*(yes|no)\s*$", text, flags=re.MULTILINE)
+    if len(declarations) != 1:
+        errors.append("Frontend handoff must declare exactly one **Async Mutation**: yes or no.")
+        return errors
+    if declarations[0] == "no":
+        return errors
+
+    section = re.search(
+        r"^## Async Mutation Acceptance\s*$\n(?P<body>.*?)(?=^## |\Z)",
+        text,
+        flags=re.MULTILINE | re.DOTALL,
+    )
+    if section is None:
+        return ["Async mutation handoff requires an ## Async Mutation Acceptance section."]
+    body = section.group("body")
+    for label in ASYNC_MUTATION_SCENARIOS:
+        matches = re.findall(
+            rf"^\*\*{re.escape(label)}\*\*:\s*(.+?)\s*$",
+            body,
+            flags=re.MULTILINE,
+        )
+        if len(matches) != 1 or len(matches[0]) < 25 or "Test:" not in matches[0] or re.search(r"\b(TODO|TBD)\b|\[.+?\]", matches[0]):
+            errors.append(
+                f"Async mutation handoff needs one concrete **{label}** outcome and Test: assertion."
+            )
+    return errors
+
+
 def validate_frontend_handoff_worktree(
     root: Path,
     handoff: Path,
@@ -360,6 +401,7 @@ def validate_frontend_handoff_worktree(
     """Verify bounded frontend work without editing or restoring any file."""
     errors: list[str] = []
     text = handoff.read_text(encoding="utf-8", errors="replace")
+    errors.extend(validate_async_mutation_handoff(text))
     targets = _handoff_frontend_targets(handoff)
     if not targets:
         return ["Active frontend handoff must name at least one frontend source target."]

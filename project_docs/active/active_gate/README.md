@@ -1,37 +1,38 @@
-Goal: Let developers create and reopen ML Studio drafts in the shared workspace.
+Goal: Duplicate a saved ML Studio draft inside its governed workspace.
 
 ## User Outcome
 
-A developer can see experiments in the current workspace, create an incomplete draft, and reopen one without losing workspace identity.
+A developer can make a separate copy of an experiment draft without treating copied work as completed.
 
 ## Scope
 
-**Current Step**: Step 1: Build the workspace-scoped draft home
+**Current Step**: Step 1: Implement workspace-scoped draft duplication
 
 **Target Files**: `frontend/frontend/src/features/ml_studio/MLStudioShell.jsx`, `MLStudioShell.css`, and `MLStudioShell.test.jsx`.
 
-**Step Acceptance**: The home lists drafts for the active workspace, creates an incomplete draft, and reopens one with server-returned name, Guidance setting, and effective stage.
+**Step Acceptance**: The home list duplicates one saved draft through the server, shows a new draft identity and revision 1, and does not fabricate completed stages or runs.
 
 **Step Verification**: Run the focused ML Studio shell test, frontend build, and `git diff --check`.
 
-**Next Step**: Step 2: Return focused frontend evidence for Codex review
+**Next Step**: Return changed-file and verification evidence for Codex review.
 
-**Continuation Rule**: `WAIT_FOR_AGENT` while Antigravity implements only the bounded handoff.
+**Continuation Rule**: `WAIT_FOR_AGENT` while Antigravity implements the bounded handoff.
 
-**Stop Condition**: Stop after the governed frontend return; do not add autosave, duplication, or later ML Studio stages in this slice.
+**Stop Condition**: Stop after the duplication frontend return; do not implement later ML Studio stages.
 
-- [ ] **Step 1: Build the workspace-scoped draft home** — [IN PROGRESS]
+- [ ] **Step 1: Implement workspace-scoped draft duplication** — [IN PROGRESS]
 - [ ] **Step 2: Return focused frontend evidence for Codex review** — [PENDING]
 
 ## Contracts
 
-- `project_docs/active/ai_hand_off/ml_studio_draft_home.md` — bounded frontend assignment.
-- `project_docs/active/contracts/ml_studio.md` — current draft API fields and route behavior.
+- `project_docs/active/contracts/ml_studio.md` — draft duplication contract.
+- `project_docs/active/ml_studio/README.md` — Step 3 save and resume outcome.
+- `project_docs/active/ai_hand_off/ml_studio_duplicate_draft.md` — bounded frontend assignment.
 - `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md` — frontend ownership.
 
 ## Acceptance
 
-The first frontend slice creates and reopens server drafts for one workspace. It preserves existing Configure and run-dock behavior and does not claim autosave or duplication is connected.
+A current-workspace source draft produces one separate server draft with a new identity, revision 1, reset stage, and no copied completion or run evidence.
 
 ## Verification
 
@@ -41,6 +42,6 @@ The first frontend slice creates and reopens server drafts for one workspace. It
 
 ## Owner And Control Return
 
-Current owner: Antigravity for the bounded draft-home frontend slice.
+Current owner: Antigravity for the bounded draft-duplication slice.
 
-Control return: `WAIT_FOR_AGENT`. Antigravity returns changed-file and verification evidence, then Codex reviews before another assignment.
+Control return: `WAIT_FOR_AGENT`. Antigravity returns focused source and verification evidence; Codex reviews before another assignment.

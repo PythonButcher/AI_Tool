@@ -10,7 +10,7 @@ Antigravity owns bounded frontend implementation, React/CSS, UI rendering, and f
 
 ## Active Handoffs And Goal Prompts
 
-One implementation handoff is active: `project_docs/active/ai_hand_off/ml_studio_draft_home.md`. Antigravity owns only the workspace-scoped create-and-reopen frontend slice named there. Codex reviews the returned evidence before another assignment.
+One implementation handoff is active: `project_docs/active/ai_hand_off/ml_studio_duplicate_draft.md`. Antigravity owns only the workspace-scoped draft duplication slice named there.
 
 Completed handoffs belong outside this active folder.
 

@@ -209,7 +209,9 @@ class FrontendHandoffIntegrityTests(unittest.TestCase):
             "- `frontend/frontend/src/Feature.css`\n\n"
             "**Required Change Coverage**: all target files\n\n"
             "**Maximum Diff Lines**: 40\n\n"
-            "**Inline Styles**: forbidden\n",
+            "**Inline Styles**: forbidden\n\n"
+            "**Async Mutation**: no\n\n"
+            "**Preserved Controls**: Keep the existing feature control available. Test: assert it remains visible after rendering.\n",
             encoding="utf-8",
         )
         return temporary, root, handoff
@@ -219,6 +221,28 @@ class FrontendHandoffIntegrityTests(unittest.TestCase):
         with temporary:
             errors = harness_validation.validate_frontend_handoff_worktree(root, handoff, require_changes=True)
         self.assertTrue(any("no durable source diff" in error for error in errors))
+
+    def test_async_handoff_requires_failure_and_regression_scenarios(self) -> None:
+        temporary, root, handoff = self._repository()
+        with temporary:
+            handoff.write_text(
+                handoff.read_text(encoding="utf-8").replace("**Async Mutation**: no", "**Async Mutation**: yes"),
+                encoding="utf-8",
+            )
+            errors = harness_validation.validate_frontend_handoff_worktree(root, handoff, require_changes=False)
+        self.assertTrue(any("Async Mutation Acceptance" in error for error in errors))
+
+    def test_async_handoff_accepts_concrete_scenarios(self) -> None:
+        scenarios = "\n".join(
+            f"**{label}**: Keep state safe while the request settles. Test: assert the expected state after a deferred response."
+            for label in harness_validation.ASYNC_MUTATION_SCENARIOS
+        )
+        errors = harness_validation.validate_async_mutation_handoff(
+            "**Async Mutation**: yes\n"
+            "**Preserved Controls**: Keep the existing feature control visible. Test: assert it remains visible.\n"
+            "## Async Mutation Acceptance\n\n" + scenarios + "\n"
+        )
+        self.assertEqual(errors, [])
 
     def test_valid_bounded_changes_pass(self) -> None:
         temporary, root, handoff = self._repository()

@@ -1,5 +1,18 @@
 Goal: Let a developer create an incomplete ML Studio experiment and reopen an existing one from a small workspace-scoped experiment home.
 
+REPAIR REQUIRED
+
+## Repair Blocker
+
+The unmount guard and deferred reopen test are present, and the literal source artifacts are gone. `MLStudioShell.css` still adds the same `.empty-state-text` rule twice (lines 1125 and 1130), and `git diff --check` fails on a new blank line at EOF (line 1133). The required diff check therefore has not passed.
+
+## Required Repair
+
+- Keep one `.empty-state-text` rule and remove the extra blank line at EOF in `MLStudioShell.css`.
+- Preserve the unmount guard, deferred create/reopen tests, workspace-switch tests, backend-shaped fixtures, Configure, and run-dock behavior.
+
+Change only the three target frontend files below. Run the focused test, build, and `git diff --check`, then return the changed-file list and command results for Codex review.
+
 ## Readiness Evidence
 
 **Frontend Readiness**: `backend_contract_ready`. `tests/test_ml_studio_drafts.py` and `tests/test_ml_studio_api.py` passed the focused draft/API suite (25 tests before the added concurrency case); the concurrency case passed separately. Source truth is `backend/ml_studio/repository.py`, `backend/ml_studio/service.py`, `backend/routes/ml_studio.py`, and `project_docs/active/contracts/ml_studio.md#step-3-draft-api--current-backend-truth`.
@@ -14,11 +27,12 @@ Goal: Let a developer create an incomplete ML Studio experiment and reopen an ex
 
 ## Scope And Target Files
 
-Edit only `frontend/frontend/src/features/ml_studio/MLStudioShell.jsx`, `MLStudioShell.css`, and `MLStudioShell.test.jsx`. Preserve the user-accepted shell CSS changes already in the worktree. Add a compact experiment-home entry in the existing ML Studio shell, list drafts for the active governed workspace, create an incomplete draft, and reopen one selected draft. When opened, show its server-returned name, Guidance setting, and effective `workflow_state.active_stage` in the existing frame. Do not autosave edits, duplicate, implement later stage behavior, or change backend files. A later handoff will cover save/conflict recovery and another will cover duplication.
+Edit only `frontend/frontend/src/features/ml_studio/MLStudioShell.jsx`, `frontend/frontend/src/features/ml_studio/MLStudioShell.css`, `frontend/frontend/src/features/ml_studio/MLStudioShell.test.jsx`, and `project_docs/active/ai_hand_off/ml_studio_draft_home_completion.md`. Preserve the user-accepted shell CSS changes already in the worktree. Add a compact experiment-home entry in the existing ML Studio shell, list drafts for the active governed workspace, create an incomplete draft, and reopen one selected draft. When opened, show its server-returned name, Guidance setting, and effective `workflow_state.active_stage` in the existing frame. Do not autosave edits, duplicate, implement later stage behavior, or change backend files. A later handoff will cover save/conflict recovery and another will cover duplication.
 
 **Required Change Coverage**: JSX and focused test; CSS only if needed for the home view.
 
-**Maximum Diff Lines**: 700. **Inline Styles**: forbidden.
+**Maximum Diff Lines**: 700
+**Inline Styles**: forbidden.
 
 ## Proven API Contract
 

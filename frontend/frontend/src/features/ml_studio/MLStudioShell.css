@@ -1121,3 +1121,62 @@
     display: block;
   }
 }
+
+.empty-state-text {
+  margin-bottom: 24px;
+}
+
+.experiment-name-input {
+  background: transparent;
+  border: 1px solid transparent;
+  color: inherit;
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  padding: 2px 4px;
+  width: 300px;
+}
+.experiment-name-input:focus {
+  border-color: #007bff;
+  outline: none;
+  background: #fff;
+  color: #333;
+}
+.experiment-name-input:disabled {
+  opacity: 0.7;
+}
+
+.save-status {
+  margin-left: 12px;
+  font-size: 12px;
+  opacity: 0.8;
+}
+.status-saving { color: #888; }
+.status-saved { color: #28a745; }
+.status-save_error { color: #dc3545; }
+.status-conflict { color: #dc3545; font-weight: bold; }
+
+.conflict-warning, .save-error-warning {
+  background: #f8d7da;
+  color: #721c24;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  border-bottom: 1px solid #f5c6cb;
+}
+.conflict-message, .error-message {
+  flex: 1;
+}
+.reload-btn, .retry-btn {
+  background: #dc3545;
+  color: #fff;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.reload-btn:hover, .retry-btn:hover {
+  background: #c82333;
+}

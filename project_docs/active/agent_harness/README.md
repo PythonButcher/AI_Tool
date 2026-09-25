@@ -32,6 +32,8 @@ The active gate keeps WIP at one through exact current-step fields and an ordere
 
 Handoffs use `templates/ANTIGRAVITY_FRONTEND_HANDOFF_TEMPLATE.md`. The template requires a proven contract, copy-ready types, representative fixtures, all core UI states, explicit server/local/URL/asynchronous state ownership, evidence, and a stop-and-return boundary.
 
+Every frontend handoff declares whether it contains an async mutation and names preserved controls. Async mutation handoffs must specify an outcome and focused test assertion for in-flight navigation, concurrent edits, failure retry, conflict or duplicate submission, and identity change or unmount. The repository validator rejects missing cases. Codex acceptance reviews must inspect the assertions and source behavior; the validator checks handoff completeness, not runtime correctness.
+
 Frontend returns are guarded by the status tracker. It refuses completion without a durable in-scope target diff and rejects empty files, major shrinkage, missing required target changes, forbidden inline styles, and whitespace errors. A source-loss incident stops the run; the implementer must not restore or reconstruct files before Codex audits the worktree.
 
 ## When To Use This Folder

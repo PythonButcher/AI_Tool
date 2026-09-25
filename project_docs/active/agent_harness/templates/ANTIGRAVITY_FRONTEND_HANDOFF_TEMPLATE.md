@@ -34,6 +34,12 @@ Target files:
 
 **Inline Styles**: `[forbidden | allowed only for named dynamic values]`
 
+**Async Mutation**: `[yes | no]`
+
+**Preserved Controls**: [Name the existing controls this slice must keep visible and functional, including relevant widths or states. Test: name the focused render or interaction assertion.]
+
+Declare yes whenever this slice starts, saves, deletes, submits, or retries a request. For yes, complete every field in Async Mutation Acceptance with an expected user-visible outcome and a named focused test assertion. If a case cannot occur, say why and name a test proving the control or state makes it impossible. The repository harness rejects omitted or placeholder fields.
+
 Excluded files and behavior:
 
 - `[adjacent UI or API work]`
@@ -76,6 +82,20 @@ URL state: name bookmarkable filters, tabs, or pagination parameters plus defaul
 
 Asynchronous job state: name polling, cancellation, terminal states, stale-response guards, and which server fields remain authoritative.
 
+## Async Mutation Acceptance
+
+Include this section when **Async Mutation** is yes. Use one line per field, each containing `Test:` and the exact assertion the focused test will make.
+
+**In-Flight Navigation**: [What happens when the user leaves or changes stage while a request is unresolved. Test: deferred response and navigation assertion.]
+
+**Concurrent Edits**: [How a second edit or action waits for the first response and uses current server identity or revision. Test: order and payload assertion.]
+
+**Failure Retry**: [What remains visible after network/server failure and whether retry requires user action. Test: advance timers and assert request count, local state, and retry.]
+
+**Conflict Or Duplicate**: [How 409, stale revision, or duplicate submission is handled without silent overwrite. Test: controlled response and request count.]
+
+**Identity And Unmount**: [What happens to timers and late responses after identity change or unmount. Test: deferred response and no stale update/request.]
+
 ## Non-Negotiables
 
 - Use the exact API contract, fixtures, state boundaries, and target files.
@@ -96,6 +116,8 @@ Antigravity may choose component composition, spacing, typography, restrained mo
 - [ ] Server, local, URL, and asynchronous state remain explicitly separated.
 - [ ] Accessible names, keyboard interaction, focus, duplicate-submit prevention, and error announcements are verified.
 - [ ] No excluded path or undocumented backend assumption was added.
+- [ ] For async mutations, every Async Mutation Acceptance scenario has a focused test with the stated assertion; a passing suite alone does not prove coverage.
+- [ ] Every Preserved Controls assertion passes; check visibility and interaction after the new state transitions.
 
 ## Verification And Stop Point
 

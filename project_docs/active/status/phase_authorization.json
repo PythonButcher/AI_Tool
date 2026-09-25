@@ -15,15 +15,20 @@
   },
   "latest_user_acceptance": {
     "accepted_by": "User",
-    "accepted_at": "2026-09-23",
-    "gate": "Step 2 — Build the workspace",
-    "instruction": "sure lets move on"
+    "accepted_at": "2026-09-24",
+    "gate": "Step 3 — Draft autosave and conflict recovery slice",
+    "instruction": "I'm overruling; this step is done. Prepare the docs for the next step."
   },
   "accepted_parallel_work": {
     "accepted_by": "User",
     "accepted_at": "2026-09-23",
     "instruction": "I'm accepting the separate Gemini shell facelift CSS changes; move on.",
     "codex_frontend_implementation_authorized": false
+  },
+  "harness_improvement_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-09-24",
+    "instruction": "Improve the overall cross-session Codex-to-Gemini handoff and review harness after repeated missed async save cases."
   },
   "allowed_paths": [
     "project_docs/active/contracts/ml_studio.md",
@@ -50,7 +55,19 @@
     "backend/ml_studio/contracts.py",
     "backend/routes/ml_studio.py",
     "tests/test_ml_studio_drafts.py",
-    "tests/test_ml_studio_api.py"
+    "tests/test_ml_studio_api.py",
+    "project_docs/active/ai_hand_off/ml_studio_draft_home_completion.md",
+    "project_docs/archive/ml_studio_draft_home_handoff_completed.md",
+    "project_docs/active/ai_hand_off/ml_studio_autosave_conflict.md",
+    "project_docs/archive/ml_studio_autosave_conflict_return_2026_09_24.md",
+    ".codex/hooks/harness_validation.py",
+    ".codex/hooks/tests/test_harness_enforcement.py",
+    ".agents/skills/auto-handoff-execution/SKILL.md",
+    "project_docs/active/agent_harness/templates/ANTIGRAVITY_FRONTEND_HANDOFF_TEMPLATE.md",
+    "project_docs/active/agent_harness/README.md",
+    "project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md",
+    "project_docs/active/ai_hand_off/ml_studio_duplicate_draft.md",
+    "project_docs/archive/ml_studio_autosave_conflict_handoff_user_accepted_2026_09_24.md"
   ],
   "review_only_allowed_paths": [
     "project_docs/active/reviews/**"
