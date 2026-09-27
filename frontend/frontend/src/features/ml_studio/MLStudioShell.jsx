@@ -63,6 +63,7 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
   const [draftsState, setDraftsState] = useState({ status: 'idle', data: null, error: null });
   const [activeDraft, setActiveDraft] = useState(null);
   const [pendingDraftAction, setPendingDraftAction] = useState(null);
+  const [duplicateError, setDuplicateError] = useState(null);
   const runsFetchIdRef = useRef(0);
   const draftsFetchIdRef = useRef(0);
 
@@ -143,6 +144,34 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
     }
   };
 
+  const handleDuplicateDraft = async (experiment_id) => {
+    if (pendingDraftAction) return;
+    const currentIdentity = identityKey;
+    setPendingDraftAction(`duplicating-${experiment_id}`);
+    setDuplicateError(null);
+    try {
+      const res = await fetch(`${API_URL}/api/ml-studio/v1/drafts/${experiment_id}/duplicate?workspace_id=${activeWorkspace.workspace_id}`, {
+        method: 'POST'
+      });
+      const data = await res.json();
+      if (identityRef.current !== currentIdentity) return;
+      if (!res.ok) throw data.error || new Error('Failed to duplicate draft');
+      fetchDrafts();
+    } catch (err) {
+      if (identityRef.current !== currentIdentity) return;
+      setDuplicateError({
+        experiment_id,
+        error: {
+          message: err.message || 'Failed to duplicate draft.',
+          code: err.code || 'error',
+          remediation: err.remediation || 'Please try again.'
+        }
+      });
+    } finally {
+      if (identityRef.current === currentIdentity) setPendingDraftAction(null);
+    }
+  };
+
   const fetchRuns = useCallback(async () => {
     if (!isIdentityAvailable) return;
 
@@ -196,6 +225,7 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
     setSaveState('saved');
     setSaveError(null);
     setPendingDraftAction(null);
+    setDuplicateError(null);
 
     if (!isIdentityAvailable) {
       return;
@@ -429,8 +459,10 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
                    draftsState={draftsState}
                    onCreate={handleCreateDraft}
                    onReopen={handleReopenDraft}
+                   onDuplicate={handleDuplicateDraft}
                    pendingAction={pendingDraftAction}
                    onRetry={fetchDrafts}
+                   duplicateError={duplicateError}
                  />
              ) : (
                  <>
@@ -562,7 +594,7 @@ function TopRibbon({ activeStage, onStageSelect, showGuidance, onToggleGuidance,
   );
 }
 
-function ExperimentHome({ draftsState, onCreate, onReopen, pendingAction, onRetry }) {
+function ExperimentHome({ draftsState, onCreate, onReopen, onDuplicate, pendingAction, onRetry, duplicateError }) {
   if (draftsState.status === 'loading' || draftsState.status === 'idle') {
     return <main className="ml-studio-canvas" aria-label="Experiment Home"><div className="canvas-state-message"><FaSyncAlt className="canvas-icon neutral-icon spin-icon" /><h2>Loading experiments...</h2></div></main>;
   }
@@ -617,19 +649,42 @@ function ExperimentHome({ draftsState, onCreate, onReopen, pendingAction, onRetr
 
         <div className="drafts-list">
           {drafts.map(draft => (
-            <div key={draft.experiment_id} className="draft-card">
-              <div className="draft-info">
-                <h4>{draft.name}</h4>
-                <span className="draft-stage">Stage: {draft.active_stage}</span>
-                <span className="draft-updated">Updated: {new Date(draft.updated_at).toLocaleString()}</span>
+            <div key={draft.experiment_id} className="draft-item-container">
+              <div className="draft-card">
+                <div className="draft-info">
+                  <h4>{draft.name}</h4>
+                  <div className="draft-identity-meta">
+                    <span className="draft-id" aria-label="Experiment ID">ID: {draft.experiment_id}</span>
+                    <span className="draft-rev" aria-label="Revision">Rev: {draft.draft_revision}</span>
+                  </div>
+                  <span className="draft-stage">Stage: {draft.active_stage}</span>
+                  <span className="draft-updated">Updated: {new Date(draft.updated_at).toLocaleString()}</span>
+                </div>
+                <div className="draft-actions">
+                  <button
+                    className="semantic-btn duplicate-btn"
+                    onClick={() => onDuplicate(draft.experiment_id)}
+                    aria-label={`Duplicate ${draft.name}`}
+                    disabled={pendingAction !== null}
+                  >
+                    {pendingAction === `duplicating-${draft.experiment_id}` ? 'Duplicating...' : 'Duplicate'}
+                  </button>
+                  <button
+                    className="semantic-btn reopen-btn"
+                    onClick={() => onReopen(draft.experiment_id)}
+                    disabled={pendingAction !== null}
+                  >
+                    {pendingAction === `reopening-${draft.experiment_id}` ? 'Opening...' : 'Open'}
+                  </button>
+                </div>
               </div>
-              <button
-                className="semantic-btn reopen-btn"
-                onClick={() => onReopen(draft.experiment_id)}
-                disabled={pendingAction !== null}
-              >
-                {pendingAction === `reopening-${draft.experiment_id}` ? 'Opening...' : 'Open'}
-              </button>
+              {duplicateError && duplicateError.experiment_id === draft.experiment_id && (
+                <div className="draft-row-error">
+                  <FaExclamationTriangle className="inline-icon error-icon" />
+                  <span className="error-message">{duplicateError.error.message} {duplicateError.error.remediation}</span>
+                  <button className="semantic-btn retry-btn" onClick={() => onDuplicate(draft.experiment_id)}>Retry</button>
+                </div>
+              )}
             </div>
           ))}
         </div>

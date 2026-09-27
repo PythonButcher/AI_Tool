@@ -785,4 +785,202 @@ describe('MLStudioShell', () => {
     expect(cells[5].textContent.trim()).toBe(expectedProgress);
   });
 
+  describe('Duplicate Draft', () => {
+    it('defers POST, prevents multiple actions, then updates list on success', async () => {
+      let resolveDuplicate;
+      const duplicatePromise = new Promise(resolve => resolveDuplicate = resolve);
+
+      global.fetch.mockImplementation((url, init) => {
+        if (url.includes('/drafts') && url.includes('/duplicate') && init?.method === 'POST') {
+          return duplicatePromise;
+        }
+        if (url.includes('/drafts') && !init) {
+          return Promise.resolve({ ok: true, json: async () => ({ drafts: [{ experiment_id: 'exp-1', workspace_id: 'ws-1', draft_revision: 3, name: 'Original', active_stage: 'Configure', updated_at: '2026-01-01' }] }) });
+        }
+        if (url.includes('/runs')) {
+          return Promise.resolve({ ok: true, json: async () => ({ runs: [] }) });
+        }
+      });
+
+      renderWithContext({
+        activeWorkspace: { workspace_id: 'ws-1', version: 1 },
+        analysisContext: { workspace_id: 'ws-1', workspace_version: 1, source_ids: ['s1'] },
+      });
+
+      const duplicateBtn = await screen.findByRole('button', { name: 'Duplicate Original' });
+      fireEvent.click(duplicateBtn);
+
+      expect(screen.getByText('Duplicating...')).toBeInTheDocument();
+      expect(duplicateBtn).toBeDisabled();
+
+      // Ensure open is also disabled or not causing actions
+      const openBtn = screen.getByRole('button', { name: 'Open' });
+      expect(openBtn).toBeDisabled();
+
+      // Trigger a second row action (double click)
+      fireEvent.click(duplicateBtn);
+
+      const duplicateCalls = global.fetch.mock.calls.filter(call => call[0].includes('/duplicate'));
+      expect(duplicateCalls.length).toBe(1);
+
+      // Resolve duplicate
+      global.fetch.mockImplementation((url, init) => {
+        if (url.includes('/drafts') && !init) {
+          return Promise.resolve({ ok: true, json: async () => ({ drafts: [
+            { experiment_id: 'exp-1', workspace_id: 'ws-1', draft_revision: 3, name: 'Original', active_stage: 'Configure', updated_at: '2026-01-01' },
+            { experiment_id: 'copy-1', workspace_id: 'ws-1', draft_revision: 1, name: 'Copy of Original', active_stage: 'Data & Goal', updated_at: '2026-01-02' }
+          ] }) });
+        }
+        if (url.includes('/runs')) return Promise.resolve({ ok: true, json: async () => ({ runs: [] }) });
+      });
+
+      resolveDuplicate({ ok: true, json: async () => ({ draft: { experiment_id: 'copy-1', workspace_id: 'ws-1', draft_revision: 1, name: 'Copy of Original', active_stage: 'Data & Goal' }, workflow_state: { active_stage: 'Data & Goal' } }) });
+
+      await screen.findByText('Copy of Original');
+      expect(screen.queryByText('Duplicating...')).not.toBeInTheDocument();
+
+      // Assert displayed copy identity and revision
+      const rowContainer = screen.getByText('Copy of Original').closest('.draft-info');
+      expect(within(rowContainer).getByText('ID: copy-1')).toBeInTheDocument();
+      expect(within(rowContainer).getByText('Rev: 1')).toBeInTheDocument();
+      expect(within(rowContainer).getByText('Stage: Data & Goal')).toBeInTheDocument();
+
+      // Home preserved controls
+      expect(screen.getByRole('button', { name: 'New Experiment' })).toBeEnabled();
+      const openBtns = screen.getAllByRole('button', { name: 'Open' });
+      expect(openBtns.length).toBe(2);
+      expect(openBtns[0]).toBeEnabled();
+
+      // Ensure recent-runs dock is preserved on Home
+      expect(screen.getByRole('button', { name: /Recent local runs/ })).toBeInTheDocument();
+
+      // Open the copy to verify draft controls
+      global.fetch.mockImplementation((url, init) => {
+        if (url.includes('/drafts/copy-1') && (!init || init.method === 'GET')) {
+          return Promise.resolve({ ok: true, json: async () => ({ draft: { experiment_id: 'copy-1', name: 'Copy of Original' }, workflow_state: { active_stage: 'Configure' } }) });
+        }
+        if (url.includes('/runs')) return Promise.resolve({ ok: true, json: async () => ({ runs: [] }) });
+        if (url.includes('/drafts')) return Promise.resolve({ ok: true, json: async () => ({ drafts: [] }) });
+      });
+
+      fireEvent.click(openBtns[1]); // open the copy
+
+      await screen.findByDisplayValue('Copy of Original');
+
+      // Draft preserved controls
+      const guidanceToggle = screen.getByRole('checkbox', { name: /Guidance/i });
+      expect(guidanceToggle).toBeVisible();
+      expect(guidanceToggle).toBeEnabled();
+
+      // Configure form state (just check stage is Configure)
+      expect(screen.getByRole('button', { name: /Configure/i })).toHaveAttribute('aria-current', 'step');
+
+      // Recent-runs dock in draft
+      expect(screen.getByRole('button', { name: /Recent local runs/ })).toBeInTheDocument();
+    });
+
+    it('leaves original visible, shows error, and allows retry on failure', async () => {
+      jest.useFakeTimers();
+      try {
+        let failCount = 0;
+        global.fetch.mockImplementation((url, init) => {
+          if (url.includes('/drafts') && url.includes('/duplicate') && init?.method === 'POST') {
+            failCount++;
+            if (failCount === 1) {
+              return Promise.resolve({ ok: false, status: 400, json: async () => ({ error: { message: 'Failed to duplicate', remediation: 'Try again' } }) });
+            } else {
+              return Promise.resolve({ ok: true, json: async () => ({ draft: { experiment_id: 'copy-1' }, workflow_state: {} }) });
+            }
+          }
+          if (url.includes('/drafts') && !init) {
+            if (failCount === 0 || failCount === 1) {
+              return Promise.resolve({ ok: true, json: async () => ({ drafts: [{ experiment_id: 'exp-1', workspace_id: 'ws-1', name: 'Original', active_stage: 'Data & Goal', updated_at: '2026-01-01' }] }) });
+            } else {
+              return Promise.resolve({ ok: true, json: async () => ({ drafts: [
+                { experiment_id: 'exp-1', workspace_id: 'ws-1', name: 'Original', active_stage: 'Data & Goal', updated_at: '2026-01-01' },
+                { experiment_id: 'copy-1', workspace_id: 'ws-1', name: 'Copy of Original', active_stage: 'Data & Goal', updated_at: '2026-01-01' }
+              ] }) });
+            }
+          }
+          if (url.includes('/runs')) {
+            return Promise.resolve({ ok: true, json: async () => ({ runs: [] }) });
+          }
+        });
+
+        renderWithContext({
+          activeWorkspace: { workspace_id: 'ws-1', version: 1 },
+          analysisContext: { workspace_id: 'ws-1', workspace_version: 1, source_ids: ['s1'] },
+        });
+
+        const duplicateBtn = await screen.findByRole('button', { name: 'Duplicate Original' });
+        fireEvent.click(duplicateBtn);
+
+        await screen.findByText(/Failed to duplicate/);
+        expect(screen.getByText(/Try again/)).toBeInTheDocument();
+
+        // No timer retry
+        jest.advanceTimersByTime(10000);
+        const duplicateCalls = global.fetch.mock.calls.filter(call => call[0].includes('/duplicate'));
+        expect(duplicateCalls.length).toBe(1);
+
+        // Preserved controls check on Home after failure
+        expect(screen.getByRole('button', { name: 'New Experiment' })).toBeEnabled();
+        expect(screen.getByRole('button', { name: 'Open' })).toBeEnabled();
+
+        const retryBtn = screen.getByRole('button', { name: 'Retry' });
+        fireEvent.click(retryBtn);
+
+        await screen.findByText('Copy of Original');
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it('invalidates pending duplicate on unmount or identity change', async () => {
+      let resolveDuplicate;
+      const duplicatePromise = new Promise(resolve => resolveDuplicate = resolve);
+
+      global.fetch.mockImplementation((url, init) => {
+        if (url.includes('/drafts') && url.includes('/duplicate') && init?.method === 'POST') {
+          return duplicatePromise;
+        }
+        if (url.includes('/drafts') && !init) {
+          if (url.includes('ws-1')) {
+            return Promise.resolve({ ok: true, json: async () => ({ drafts: [{ experiment_id: 'exp-1', workspace_id: 'ws-1', name: 'Original', active_stage: 'Data & Goal', updated_at: '2026-01-01' }] }) });
+          } else {
+            return Promise.resolve({ ok: true, json: async () => ({ drafts: [] }) });
+          }
+        }
+        if (url.includes('/runs')) {
+          return Promise.resolve({ ok: true, json: async () => ({ runs: [] }) });
+        }
+      });
+
+      const { rerender } = renderWithContext({
+        activeWorkspace: { workspace_id: 'ws-1', version: 1 },
+        analysisContext: { workspace_id: 'ws-1', workspace_version: 1, source_ids: ['s1'] },
+      });
+
+      const duplicateBtn = await screen.findByRole('button', { name: 'Duplicate Original' });
+      fireEvent.click(duplicateBtn);
+
+      rerender(
+        <DataContext.Provider value={{
+          activeWorkspace: { workspace_id: 'ws-2', version: 1 },
+          analysisContext: { workspace_id: 'ws-2', workspace_version: 1, source_ids: ['s2'] },
+        }}>
+          <MLStudioShell />
+        </DataContext.Provider>
+      );
+
+      resolveDuplicate({ ok: true, json: async () => ({ draft: { experiment_id: 'copy-1' }, workflow_state: {} }) });
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      const getDraftsCalls = global.fetch.mock.calls.filter(call => call[0].includes('/drafts') && !call[1]);
+      // Should not have a call to refresh ws-1 drafts after identity change
+      const refreshCall = getDraftsCalls.find(call => call[0].includes('ws-1') && getDraftsCalls.indexOf(call) > 0);
+      expect(refreshCall).toBeUndefined();
+    });
+  });
+
 });

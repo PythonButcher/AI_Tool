@@ -1,4 +1,26 @@
-Goal: Let a developer duplicate a saved ML Studio draft from its current workspace experiment list without copying completed work.
+# ML Studio Draft Duplication — Reviewed Handoff
+
+Completed reference only. This file is not an active assignment.
+
+User acceptance on 2026-09-26: "ok approved whats next?" The duplication slice is accepted.
+
+Codex acceptance review on 2026-09-26: `Complete` for the bounded duplication implementation. The copy displays the server-issued identity, revision 1, and reset stage. The focused shell suite passed 24 tests; the production build passed with lint and bundle-size warnings; the repository harness and `git diff --check` passed. User browser acceptance remains unclaimed.
+
+The assignment and repair context below are retained as a historical record.
+
+Goal: Show the server-issued identity and revision of a duplicated ML Studio draft on Experiment Home and return focused acceptance evidence.
+
+**REPAIR REQUIRED**
+
+## Repair Blocker
+
+Codex's latest review is `Not complete`. In `frontend/frontend/src/features/ml_studio/MLStudioShell.jsx:654`, draft rows render the name, active stage, and timestamp but never render the server-issued `experiment_id` or `draft_revision`. The active gate requires the new copy's identity and revision 1 to be shown. Using the identity only as a React key or request parameter does not meet that display requirement.
+
+The production build now passes with lint and bundle-size warnings; the file-access blocker is cleared. The remaining blocker is the missing identity/revision display and its focused acceptance assertion.
+
+Antigravity owns the next action. In the three target files below, add an accessible display or labeled details disclosure for each draft's server-issued identity and revision. Preserve the current Home behavior, pending-action guards, safe errors, and explicit retry. Do not fabricate a revision or open the copy automatically.
+
+In `frontend/frontend/src/features/ml_studio/MLStudioShell.test.jsx:832`, replace the incomplete success fixtures with server-shaped draft and summary records containing distinct source/copy identities, a source revision greater than 1, copy revision 1, and the reset `Data & Goal` stage. Assert the displayed copy identity and revision after success, with no invented completion evidence. Run the focused shell test, production build, repository harness, and `git diff --check`; return exact outcomes and the changed-file list for Codex review. The earlier 24-test pass does not prove this missing assertion.
 
 ## Readiness Evidence
 

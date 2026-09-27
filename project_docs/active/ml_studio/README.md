@@ -115,6 +115,29 @@ Step 1 is complete when this blueprint and the proposed contract agree with curr
 
 ## Step 4 — Connect data preparation and Power Query
 
+**Authorization:** Preparation only. The user requested preparation on 2026-09-26 and explicitly prohibited implementation. Backend and frontend changes require a new direct instruction.
+
+### Source-backed prerequisites
+
+`backend/routes/ml_studio.py` already provides server-resolved snapshots and preparation-assessment routes. `backend/ml_studio/service.py` checks snapshot identity and governance; its assessment endpoint still requires an immutable experiment specification and a caller-supplied, hash-validated transformation recipe. Its draft workflow currently unlocks only Data & Goal and Prepare Data. These are foundations, not a draft-bound preparation workflow.
+
+`backend/routes/manual_cleaning.py:19` exposes `/api/manual_cleaning`, which uses global uploaded/cleaned data rather than an explicit workspace identity. It returns both a bounded preview and full cleaned rows. This route does not prove that cleaning updates the same governed workspace used by an ML Studio draft. That identity and commit boundary must be established before the ML Studio UI consumes it.
+
+`frontend/frontend/src/features/ml_studio/MLStudioShell.jsx:1010` passes initial cleaning steps and an in-memory apply callback; `frontend/frontend/src/App.jsx:477` opens the cleaning form. The callback creates a fresh snapshot/assessment but carries no durable experiment, issue, or return-stage context. The configuration form constructs recipe identity and its hash in the browser. The proposed server-issued recipe route and persisted return context in the contract are not implemented.
+
+### Ordered bounded work
+
+1. **Workspace-safe cleaning boundary — Codex.** Specify and then, only after authorization, implement explicit workspace/version validation, a server-owned commit receipt, and bounded preview behavior using the existing cleaning engine. Determine the canonical workspace update path before choosing an endpoint. Preserve existing callers. Prove wrong-workspace and stale-version rejection, no commit during preview or cancellation, and a receipt matching the committed workspace/schema. Primary source: `backend/routes/manual_cleaning.py`, the workspace resolver used by `backend/routes/ml_studio.py`, and the existing workspace services. This is the first backend gate.
+2. **Draft preparation and return state — Codex.** Bind server-issued recipe lineage and persisted return context to the current experiment, workspace, draft revision, snapshot, selected issue/fix, and return stage. Define conditional-update and retry behavior before implementation. Apply must refresh governed identity/schema, reconcile removed role columns, and invalidate incompatible assessment evidence. Cancel must preserve the saved draft. Do not treat a browser callback, local hash, or unsaved form as server truth.
+3. **Data & Goal — Antigravity after backend review.** One handoff for governed dataset/schema/preview, explicit problem selection, and saving the draft's data/goal fields. Regression and classification have execution foundations; forecasting, clustering, and anomaly detection must be labeled unavailable until their execution prerequisites exist. No training or configuration replacement in this handoff.
+4. **Prepare Data — Antigravity after backend review.** One handoff for server-issued issues and supported fixes, Stay/Open Power Query, and the apply/cancel return path. Use the exact verified fields from the backend contract. Keep workspace switches, stale responses, failed saves, retry, and unmount behavior in the acceptance tests.
+
+No frontend handoff is active. Each backend assignment must return focused contract, source, and test evidence before a UI handoff is issued. Proposed fields and endpoints must be labeled proposed until implemented; compatibility services must retain their existing contracts.
+
+### Verification plan
+
+For the first backend assignment, use `tests/test_ml_studio_api.py`, `tests/test_source_workspace_context.py`, and focused cleaning-boundary tests selected when the workspace commit contract is fixed. Verify stale identity, cross-workspace isolation, bounded preview, apply receipts, and cancellation separately. Run Python compilation for changed modules and `git diff --check`. Frontend assignments each require their focused tests and production build. Preparation itself runs documentation validators only and does not claim runtime verification.
+
 **What changes:** Build Data & Goal and Prepare Data: dataset preview, five understandable problem choices, quality issues, and the Power Query round trip.
 
 **What you will see:** Useful data context and issue explanations. Clicking an issue offers Open Power Query or Stay, with a clear return to ML Studio.

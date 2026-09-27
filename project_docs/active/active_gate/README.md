@@ -1,47 +1,46 @@
-Goal: Duplicate a saved ML Studio draft inside its governed workspace.
+Goal: Establish workspace-safe data cleaning contracts for ML Studio preparation.
 
 ## User Outcome
 
-A developer can make a separate copy of an experiment draft without treating copied work as completed.
+A developer can preview and apply preparation changes to the governed workspace bound to an experiment, with a server-issued receipt identifying the resulting data state.
 
 ## Scope
 
-**Current Step**: Step 1: Implement workspace-scoped draft duplication
+**Current Step**: Step 1: Authorize the workspace-safe cleaning boundary
 
-**Target Files**: `frontend/frontend/src/features/ml_studio/MLStudioShell.jsx`, `MLStudioShell.css`, and `MLStudioShell.test.jsx`.
+**Target Files**: Preparation edits only the gate, status, authorization record, active navigation, and `project_docs/active/ml_studio/README.md`. After explicit implementation authorization, Codex may propose changes to `backend/routes/manual_cleaning.py`, the workspace resolver in `backend/routes/ml_studio.py`, their directly required workspace services, `project_docs/active/contracts/ml_studio.md`, and focused backend tests. Record the exact allowed source paths before mutation.
 
-**Step Acceptance**: The home list duplicates one saved draft through the server, shows a new draft identity and revision 1, and does not fabricate completed stages or runs.
+**Step Acceptance**: A direct user instruction authorizes the first backend assignment. Codex records the exact mutation boundary and specifies workspace/version validation, bounded preview, the canonical workspace commit path, and a server-issued apply receipt before source implementation.
 
-**Step Verification**: Run the focused ML Studio shell test, frontend build, and `git diff --check`.
+**Step Verification**: Preparation runs the repository harness, active-gate validator, and `git diff --check`. After authorization, focused tests must prove stale-version and cross-workspace rejection, no commit during preview/cancellation, and receipt/schema identity after apply.
 
-**Next Step**: Return changed-file and verification evidence for Codex review.
+**Next Step**: Codex defines and implements the bounded workspace-safe cleaning contract, verifies it, then prepares the draft recipe/return-context assignment. No UI handoff precedes backend readiness.
 
-**Continuation Rule**: `WAIT_FOR_AGENT` while Antigravity implements the bounded handoff.
+**Continuation Rule**: `WAIT_FOR_USER`. Authority is `REVIEW_ONLY`; the user requested preparation without implementation.
 
-**Stop Condition**: Stop after the duplication frontend return; do not implement later ML Studio stages.
+**Stop Condition**: Do not implement backend or frontend changes, execute cleaning requests, or issue an active frontend handoff until implementation is explicitly authorized.
 
-- [ ] **Step 1: Implement workspace-scoped draft duplication** — [IN PROGRESS]
-- [ ] **Step 2: Return focused frontend evidence for Codex review** — [PENDING]
+- [ ] **Step 1: Authorize the workspace-safe cleaning boundary** — [IN PROGRESS]
+- [ ] **Step 2: Implement and verify workspace-safe preview/apply receipts** — [PENDING]
 
 ## Contracts
 
-- `project_docs/active/contracts/ml_studio.md` — draft duplication contract.
-- `project_docs/active/ml_studio/README.md` — Step 3 save and resume outcome.
-- `project_docs/active/ai_hand_off/ml_studio_duplicate_draft.md` — bounded frontend assignment.
-- `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md` — frontend ownership.
+- `project_docs/active/ml_studio/README.md` — Step 4 prerequisites and assignment order.
+- `project_docs/active/contracts/ml_studio.md` — implemented and proposed contract boundaries.
+- `project_docs/active/status/phase_authorization.json` — implementation authority.
 
 ## Acceptance
 
-A current-workspace source draft produces one separate server draft with a new identity, revision 1, reset stage, and no copied completion or run evidence.
+The proposed backend contract scopes every preparation mutation to an existing workspace and expected version, uses server-resolved data, and returns bounded preview or an authoritative commit receipt. Preview/cancellation preserve data; applying to stale or wrong identities is rejected. Preserve the existing cleaning engine and compatibility callers. Proposed routes/fields remain labeled proposed until verified in source and tests.
 
 ## Verification
 
-- `npm --prefix frontend/frontend test -- --watchAll=false --runInBand MLStudioShell.test.jsx`
-- `npm --prefix frontend/frontend run build`
+- `python .codex/hooks/agent_harness_check.py`
+- `python C:/Users/18022/.codex/skills/active-gate-governance/scripts/check_active_gate.py project_docs/active/active_gate .`
 - `git diff --check`
 
 ## Owner And Control Return
 
-Current owner: Antigravity for the bounded draft-duplication slice.
+Current owner: User for implementation authorization; Codex owns the first backend assignment once authorized.
 
-Control return: `WAIT_FOR_AGENT`. Antigravity returns focused source and verification evidence; Codex reviews before another assignment.
+Control return: `WAIT_FOR_USER`. After authorization Codex records `AUTHORIZED`, the exact allowed paths, and one atomic backend step. Antigravity receives a bounded handoff only after the relevant backend gate passes.

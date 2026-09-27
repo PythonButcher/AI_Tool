@@ -1,23 +1,24 @@
 {
   "schema_version": 1,
   "authorized_work": {
-    "name": "ML Studio Step 3 — Save and Resume Experiments"
+    "name": "ML Studio Step 4 — Connect Data Preparation and Power Query"
   },
-  "authorization_state": "AUTHORIZED",
-  "lifecycle_state": "IN PROGRESS",
-  "diff_baseline": "d7728599ed5079b28ba21374d358f19e91e0336f",
+  "authorization_state": "REVIEW_ONLY",
+  "lifecycle_state": "NOT STARTED",
+  "diff_baseline": "e2896c2eced5511144c3151e34cae473e992af5a",
   "authority_kind": "direct_user_instruction",
-  "user_implementation_authorization": {
+  "user_implementation_authorization": null,
+  "preparation_authorization": {
     "approved_by": "User",
-    "approved_at": "2026-09-23",
-    "evidence": "direct_user_instruction",
-    "instruction": "sure lets move on — accepts the Step 2 shared workspace and authorizes Step 3 save-and-resume work in the current roadmap context."
+    "approved_at": "2026-09-26",
+    "instruction": "ok prepare for that step by do not implement yet",
+    "scope": "Source inspection and documentation preparation only; no backend or frontend implementation."
   },
   "latest_user_acceptance": {
     "accepted_by": "User",
-    "accepted_at": "2026-09-24",
-    "gate": "Step 3 — Draft autosave and conflict recovery slice",
-    "instruction": "I'm overruling; this step is done. Prepare the docs for the next step."
+    "accepted_at": "2026-09-26",
+    "gate": "Step 3 — Draft duplication slice",
+    "instruction": "ok approved whats next?"
   },
   "accepted_parallel_work": {
     "accepted_by": "User",
@@ -67,10 +68,20 @@
     "project_docs/active/agent_harness/README.md",
     "project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md",
     "project_docs/active/ai_hand_off/ml_studio_duplicate_draft.md",
+    "project_docs/archive/ml_studio_duplicate_draft_reviewed_2026_09_26.md",
     "project_docs/archive/ml_studio_autosave_conflict_handoff_user_accepted_2026_09_24.md"
   ],
   "review_only_allowed_paths": [
-    "project_docs/active/reviews/**"
+    "project_docs/active/reviews/**",
+    "project_docs/active/active_gate/README.md",
+    "project_docs/active/status/project_execution_status.md",
+    "project_docs/active/status/phase_authorization.json",
+    "project_docs/active/ml_studio/README.md",
+    "project_docs/active/status/accepted_change_snapshot.json",
+    "project_docs/active/ai_hand_off/ml_studio_duplicate_draft.md",
+    "project_docs/active/README.md",
+    "project_docs/active/ai_hand_off/README.md",
+    "project_docs/archive/ml_studio_duplicate_draft_reviewed_2026_09_26.md"
   ],
   "accepted_change_snapshot": "project_docs/active/status/accepted_change_snapshot.json",
   "codex_frontend_edits_allowed": false
