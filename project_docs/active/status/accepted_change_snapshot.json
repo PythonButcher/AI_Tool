@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "accepted_at": "2026-09-26",
+  "accepted_by": "User",
+  "purpose": "Freeze the reviewed and user-approved draft duplication source while Step 4 is prepared without implementation. Committed work is measured from phase_authorization.diff_baseline; preparation documents remain governed by review_only_allowed_paths.",
+  "sha256": {
+    "frontend/frontend/src/features/ml_studio/MLStudioShell.test.jsx": "f080c2d7bd7a2a7d30d4e7471ece86e46817cb99bebc0057e19412c584dc2bb6",
+    "frontend/frontend/src/features/ml_studio/MLStudioShell.jsx": "14c2b6da1d65e64ceb70c902bc09d0dc62d8cc31937e1b55a84a8f8a7ff8689c",
+    "frontend/frontend/src/features/ml_studio/MLStudioShell.css": "d81f8836ef4da06140cea7a5391b5a69843eeeaa9e56968134a5ad2613dd32e7"
+  }
+}

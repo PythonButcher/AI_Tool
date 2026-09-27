@@ -139,6 +139,7 @@ drive_export/
 /database.db
 /backend/database.db
 /backend/db/database.db
+/backend/storage/ml_studio/
 /generated_docs/
 /python
 

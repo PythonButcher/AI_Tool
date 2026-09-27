@@ -1,0 +1,1199 @@
+"""Framework-independent application service for the ML Studio v1 API."""
+
+from __future__ import annotations
+
+import hashlib
+import re
+from statistics import fmean, pstdev
+from collections.abc import Callable, Mapping, Sequence
+from datetime import UTC, datetime
+from typing import Any
+from uuid import uuid4
+
+from .contracts import (
+    CONTRACT_VERSION,
+    ColumnProfile,
+    DatasetSnapshotIdentity,
+    ExperimentSpecification,
+    FeatureRoles,
+    MetricPolicy,
+    PreparationAssessment,
+    PreparationIssue,
+    RandomSeedPolicy,
+    ResourceLimits,
+    ReviewedCandidateReference,
+    RunSpecification,
+    SourceFingerprint,
+    SplitPolicy,
+    StructuredError,
+    SuggestedPreparationFix,
+    TransformationRecipeLineage,
+    TransformationStep,
+)
+from .repository import MLStudioRepository, PersistenceError
+
+
+SnapshotResolver = Callable[[str], Mapping[str, Any]]
+ArtifactVerifier = Callable[[Mapping[str, Any]], None]
+RunDataResolver = Callable[[DatasetSnapshotIdentity], tuple[Any, int, Mapping[str, tuple[str, int]]]]
+RunScheduler = Callable[[str], bool]
+WorkspaceResolver = Callable[[str], Mapping[str, Any] | None]
+
+
+def _default_run_evaluator(*args: Any, **kwargs: Any) -> Any:
+    """Load scientific dependencies only when a worker actually evaluates a run."""
+    from .evaluation import evaluate_supervised
+
+    return evaluate_supervised(*args, **kwargs)
+_FORBIDDEN_RUN_KEYS = {
+    "artifact_bytes",
+    "data",
+    "dataset",
+    "estimator",
+    "file_path",
+    "full_data",
+    "model",
+    "model_bytes",
+    "path",
+    "raw_data",
+    "records",
+    "rows",
+    "storage_path",
+    "uploaded_data",
+}
+_SECRET_KEY_PARTS = ("api_key", "authorization", "credential", "password", "secret", "token")
+_FILESYSTEM_PATH = re.compile(r"(?:^[A-Za-z]:[\\/]|^/(?:home|users|var|tmp)/)", re.IGNORECASE)
+
+
+class MLStudioServiceError(ValueError):
+    """Stable application error suitable for a public JSON response."""
+
+    def __init__(self, code: str, message: str, remediation: str, *, status_code: int = 400) -> None:
+        super().__init__(message)
+        self.error = StructuredError(code=code, message=message, remediation=remediation)
+        self.status_code = status_code
+
+    @property
+    def code(self) -> str:
+        return self.error.code
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "code": self.error.code,
+            "message": self.error.message,
+            "remediation": self.error.remediation,
+        }
+
+
+def _utc_now() -> datetime:
+    return datetime.now(UTC)
+
+
+def _require_object(value: Any, *, label: str) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        raise MLStudioServiceError(
+            "invalid_request",
+            f"{label} must be a JSON object.",
+            "Send the documented versioned JSON request body.",
+        )
+    return value
+
+
+def _exact_fields(payload: Mapping[str, Any], allowed: set[str], required: set[str]) -> None:
+    unknown = sorted(set(payload).difference(allowed))
+    missing = sorted(field for field in required if payload.get(field) is None)
+    if unknown or missing:
+        raise MLStudioServiceError(
+            "invalid_request_fields",
+            "The request contains unknown fields or omits required fields.",
+            "Send only the documented fields and include every required identity.",
+        )
+
+
+def _ordered_ids(value: Any, *, label: str, allow_empty: bool) -> tuple[str, ...]:
+    if not isinstance(value, list):
+        raise MLStudioServiceError(
+            "invalid_identity",
+            f"{label} must be an ordered array.",
+            "Send the exact ordered server identity list.",
+        )
+    normalized = tuple(str(item).strip() for item in value)
+    if (not allow_empty and not normalized) or any(not item for item in normalized) or len(set(normalized)) != len(normalized):
+        raise MLStudioServiceError(
+            "invalid_identity",
+            f"{label} must contain unique non-empty identities.",
+            "Send the exact ordered server identity list.",
+        )
+    return normalized
+
+
+def _parse_datetime(value: Any, *, label: str) -> datetime:
+    try:
+        parsed = datetime.fromisoformat(str(value))
+    except (TypeError, ValueError) as exc:
+        raise MLStudioServiceError(
+            "stored_contract_invalid",
+            f"The stored {label} timestamp is invalid.",
+            "Inspect the server-owned ML Studio metadata.",
+            status_code=500,
+        ) from exc
+    if parsed.tzinfo is None:
+        raise MLStudioServiceError(
+            "stored_contract_invalid",
+            f"The stored {label} timestamp has no timezone.",
+            "Inspect the server-owned ML Studio metadata.",
+            status_code=500,
+        )
+    return parsed
+
+
+def _snapshot_from_dict(payload: Mapping[str, Any]) -> DatasetSnapshotIdentity:
+    value = dict(payload)
+    value.pop("contract_version", None)
+    value["source_ids"] = tuple(value["source_ids"])
+    value["relationship_ids"] = tuple(value["relationship_ids"])
+    value["source_fingerprints"] = tuple(
+        SourceFingerprint(**item) for item in value["source_fingerprints"]
+    )
+    value["column_profile"] = tuple(ColumnProfile(**item) for item in value["column_profile"])
+    value["created_at"] = _parse_datetime(value["created_at"], label="snapshot creation")
+    return DatasetSnapshotIdentity(**value)
+
+
+def _experiment_from_dict(payload: Mapping[str, Any]) -> ExperimentSpecification:
+    value = dict(payload)
+    if value.get("contract_version", CONTRACT_VERSION) != CONTRACT_VERSION:
+        raise ValueError("contract_version is unsupported")
+    value.pop("contract_version", None)
+    value["feature_roles"] = FeatureRoles(
+        numeric=tuple(value["feature_roles"].get("numeric") or ()),
+        categorical=tuple(value["feature_roles"].get("categorical") or ()),
+    )
+    value["excluded_columns"] = tuple(value.get("excluded_columns") or ())
+    value["split_policy"] = SplitPolicy(**value["split_policy"])
+    value["candidate_families"] = tuple(value["candidate_families"])
+    metric = value["metric_policy"]
+    value["metric_policy"] = MetricPolicy(
+        primary_metric=metric["primary_metric"],
+        optimization=metric["optimization"],
+        reported_metrics=tuple(metric["reported_metrics"]),
+    )
+    value["resource_limits"] = ResourceLimits(**value["resource_limits"])
+    value["random_seed_policy"] = RandomSeedPolicy(**value["random_seed_policy"])
+    return ExperimentSpecification(**value)
+
+
+def _run_from_dict(payload: Mapping[str, Any]) -> RunSpecification:
+    value = dict(payload)
+    if value.get("contract_version", CONTRACT_VERSION) != CONTRACT_VERSION:
+        raise ValueError("contract_version is unsupported")
+    value.pop("contract_version", None)
+    value["dataset_snapshot"] = _snapshot_from_dict(value["dataset_snapshot"])
+    value["submitted_at"] = _parse_datetime(value["submitted_at"], label="run submission")
+    return RunSpecification(**value)
+
+
+def _recipe_from_dict(payload: Mapping[str, Any]) -> TransformationRecipeLineage:
+    value = dict(payload)
+    if value.get("contract_version", CONTRACT_VERSION) != CONTRACT_VERSION:
+        raise ValueError("contract_version is unsupported")
+    value.pop("contract_version", None)
+    allowed = {
+        "recipe_id",
+        "workspace_id",
+        "base_snapshot_id",
+        "base_recipe_hash",
+        "recipe_version",
+        "steps",
+        "canonical_recipe_hash",
+        "created_at",
+        "created_by",
+    }
+    required = allowed - {"created_by"}
+    if set(value).difference(allowed) or not required.issubset(value):
+        raise ValueError("transformation recipe fields are invalid")
+    value.setdefault("created_by", None)
+    steps = []
+    for item in value["steps"]:
+        step = dict(item)
+        if step.get("contract_version", CONTRACT_VERSION) != CONTRACT_VERSION:
+            raise ValueError("step contract_version is unsupported")
+        step.pop("contract_version", None)
+        if set(step) != {"step_id", "action_type", "affected_columns", "parameters"}:
+            raise ValueError("transformation step fields are invalid")
+        step["affected_columns"] = tuple(step["affected_columns"])
+        steps.append(TransformationStep(**step))
+    value["steps"] = tuple(steps)
+    value["created_at"] = datetime.fromisoformat(str(value["created_at"]))
+    return TransformationRecipeLineage(**value)
+
+
+def _stable_preparation_id(prefix: str, code: str, field: str | None) -> str:
+    digest = hashlib.sha256(f"{code}\0{field or ''}".encode("utf-8")).hexdigest()[:12]
+    return f"{prefix}-{code}-{digest}"
+
+
+def _reject_unsafe_run_metadata(value: Any, *, depth: int = 0) -> None:
+    if depth > 8:
+        raise MLStudioServiceError(
+            "run_submission_unsafe",
+            "Run metadata exceeds the supported nesting depth.",
+            "Send bounded JSON-safe hyperparameters and version strings only.",
+        )
+    if isinstance(value, Mapping):
+        for key, child in value.items():
+            normalized = str(key).strip().casefold()
+            if normalized in _FORBIDDEN_RUN_KEYS or any(part in normalized for part in _SECRET_KEY_PARTS):
+                raise MLStudioServiceError(
+                    "run_submission_unsafe",
+                    "Run metadata contains a prohibited data, path, estimator, artifact, or secret field.",
+                    "Send only bounded model hyperparameters and public runtime version strings.",
+                )
+            _reject_unsafe_run_metadata(child, depth=depth + 1)
+    elif isinstance(value, (list, tuple)):
+        for child in value:
+            _reject_unsafe_run_metadata(child, depth=depth + 1)
+    elif isinstance(value, str) and _FILESYSTEM_PATH.search(value):
+        raise MLStudioServiceError(
+            "run_submission_unsafe",
+            "Run metadata contains a client filesystem path.",
+            "Use server-owned identities instead of filesystem locations.",
+        )
+
+
+class MLStudioService:
+    """Own API behavior while keeping HTTP and trusted resolution injected."""
+
+    def __init__(
+        self,
+        repository: MLStudioRepository,
+        snapshot_resolver: SnapshotResolver,
+        artifact_verifier: ArtifactVerifier,
+        *,
+        clock: Callable[[], datetime] = _utc_now,
+        run_data_resolver: RunDataResolver | None = None,
+        run_evaluator: Callable[..., Any] = _default_run_evaluator,
+        workspace_resolver: WorkspaceResolver | None = None,
+    ) -> None:
+        self._repository = repository
+        self._snapshot_resolver = snapshot_resolver
+        self._artifact_verifier = artifact_verifier
+        self._clock = clock
+        self._run_data_resolver = run_data_resolver
+        self._run_evaluator = run_evaluator
+        self._run_scheduler: RunScheduler | None = None
+        self._workspace_resolver = workspace_resolver
+
+    def set_run_scheduler(self, scheduler: RunScheduler) -> None:
+        """Attach the process-local scheduler after constructing its worker callback."""
+        self._run_scheduler = scheduler
+
+    @staticmethod
+    def _translate_persistence(exc: PersistenceError) -> MLStudioServiceError:
+        status = 404 if exc.code.endswith("not_found") or exc.code.endswith("missing") else 409
+        if exc.code.endswith("invalid") or exc.code.endswith("too_large"):
+            status = 400
+        return MLStudioServiceError(
+            exc.error.code,
+            exc.error.message,
+            exc.error.remediation,
+            status_code=status,
+        )
+
+    def _resolve_truth(self, workspace_id: str) -> Mapping[str, Any]:
+        try:
+            resolved = self._snapshot_resolver(workspace_id)
+        except MLStudioServiceError:
+            raise
+        except Exception as exc:
+            raise MLStudioServiceError(
+                "snapshot_resolution_failed",
+                "The server could not resolve the governed dataset snapshot.",
+                "Verify the workspace data model and managed sources, then retry.",
+                status_code=409,
+            ) from exc
+        if not isinstance(resolved, Mapping):
+            raise MLStudioServiceError(
+                "snapshot_resolution_failed",
+                "The server returned invalid snapshot metadata.",
+                "Inspect the trusted dataset resolver.",
+                status_code=500,
+            )
+        return resolved
+
+    def _require_draft_workspace(self, workspace_id: Any) -> str:
+        if not isinstance(workspace_id, str) or not workspace_id.strip():
+            raise MLStudioServiceError("invalid_identity", "workspace_id is required.", "Select a governed workspace.")
+        if self._workspace_resolver is not None and self._workspace_resolver(workspace_id) is None:
+            raise MLStudioServiceError("workspace_not_found", "The workspace is unavailable.", "Select an existing workspace.", status_code=404)
+        return workspace_id
+
+    @staticmethod
+    def _draft_workflow(draft: Mapping[str, Any]) -> dict[str, Any]:
+        """Derive only currently justified stages; later workflow steps remain locked."""
+        stages = ("Data & Goal", "Prepare Data", "Configure", "Train", "Review Results", "Use & Share")
+        has_data_goal = bool(draft["snapshot_id"] and draft["task_type"])
+        available = {"Data & Goal"}
+        if has_data_goal:
+            available.add("Prepare Data")
+        effective = draft["active_stage"] if isinstance(draft["active_stage"], str) and draft["active_stage"] in available else "Data & Goal"
+        records = []
+        for stage in stages:
+            state = "active" if stage == effective else "available" if stage in available else "locked"
+            blockers = [] if stage in available else ["data_goal_required" if not has_data_goal else "preparation_required"]
+            records.append({"stage": stage, "state": state, "blocker_codes": blockers, "stale_reason_codes": []})
+        return {
+            "experiment_id": draft["experiment_id"], "draft_revision": draft["draft_revision"],
+            "active_stage": effective, "stages": records,
+        }
+
+    def _validate_draft_references(self, draft: Mapping[str, Any]) -> None:
+        snapshot_id = draft.get("snapshot_id")
+        if snapshot_id is not None:
+            if not isinstance(snapshot_id, str):
+                raise MLStudioServiceError("draft_invalid", "The snapshot identity is invalid.", "Use a server-issued snapshot identity.")
+            snapshot = self._repository.get_snapshot(snapshot_id)
+            if snapshot is None or snapshot["workspace_id"] != draft["workspace_id"]:
+                raise MLStudioServiceError("snapshot_not_found", "The dataset snapshot is unavailable in this workspace.", "Select a current workspace snapshot.", status_code=404)
+        workflow = self._draft_workflow(draft)
+        if draft["active_stage"] != workflow["active_stage"]:
+            raise MLStudioServiceError("draft_stage_locked", "The selected stage is locked.", "Complete its prerequisites before selecting it.")
+
+    def create_draft(self, request: Any) -> dict[str, Any]:
+        payload = _require_object(request, label="experiment draft")
+        self._require_draft_workspace(payload.get("workspace_id"))
+        self._validate_draft_references({"snapshot_id": payload.get("snapshot_id"), "workspace_id": payload["workspace_id"], "task_type": payload.get("task_type"), "active_stage": payload.get("active_stage", "Data & Goal"), "experiment_id": "", "draft_revision": 0})
+        try:
+            draft = self._repository.create_draft(payload)
+        except PersistenceError as exc:
+            raise self._translate_persistence(exc) from exc
+        return {"draft": draft, "workflow_state": self._draft_workflow(draft)}
+
+    def list_drafts(self, workspace_id: str) -> list[dict[str, Any]]:
+        self._require_draft_workspace(workspace_id)
+        try:
+            drafts = self._repository.list_drafts(workspace_id)
+        except PersistenceError as exc:
+            raise self._translate_persistence(exc) from exc
+        return [
+            {key: draft[key] for key in ("experiment_id", "workspace_id", "draft_revision", "name", "active_stage", "task_type", "updated_at")}
+            for draft in drafts
+        ]
+
+    def get_draft(self, experiment_id: str, workspace_id: str) -> dict[str, Any]:
+        self._require_draft_workspace(workspace_id)
+        draft = self._repository.get_draft(experiment_id, workspace_id)
+        if draft is None:
+            raise MLStudioServiceError("draft_not_found", "The draft is unavailable in this workspace.", "Select a draft from the current workspace.", status_code=404)
+        return {"draft": draft, "workflow_state": self._draft_workflow(draft)}
+
+    def update_draft(self, experiment_id: str, workspace_id: str, etag: str, request: Any) -> dict[str, Any]:
+        self._require_draft_workspace(workspace_id)
+        payload = _require_object(request, label="experiment draft edit")
+        current = self.get_draft(experiment_id, workspace_id)["draft"]
+        self._validate_draft_references({**current, **payload})
+        try:
+            draft = self._repository.update_draft(experiment_id, workspace_id, etag, payload)
+        except PersistenceError as exc:
+            raise self._translate_persistence(exc) from exc
+        return {"draft": draft, "workflow_state": self._draft_workflow(draft)}
+
+    def duplicate_draft(self, experiment_id: str, workspace_id: str) -> dict[str, Any]:
+        self._require_draft_workspace(workspace_id)
+        try:
+            draft = self._repository.duplicate_draft(experiment_id, workspace_id)
+        except PersistenceError as exc:
+            raise self._translate_persistence(exc) from exc
+        return {"draft": draft, "workflow_state": self._draft_workflow(draft)}
+
+    def create_snapshot(self, request: Any) -> dict[str, Any]:
+        payload = _require_object(request, label="snapshot request")
+        allowed = {"workspace_id", "workspace_version", "source_ids", "relationship_ids"}
+        _exact_fields(payload, allowed, allowed)
+        workspace_id = str(payload["workspace_id"]).strip()
+        if not workspace_id:
+            raise MLStudioServiceError("invalid_identity", "workspace_id is required.", "Use a server workspace identity.")
+        source_ids = _ordered_ids(payload["source_ids"], label="source_ids", allow_empty=False)
+        relationship_ids = _ordered_ids(payload["relationship_ids"], label="relationship_ids", allow_empty=True)
+        try:
+            workspace_version = int(payload["workspace_version"])
+        except (TypeError, ValueError) as exc:
+            raise MLStudioServiceError(
+                "invalid_identity", "workspace_version must be a positive integer.", "Use the current server workspace version."
+            ) from exc
+        truth = self._resolve_truth(workspace_id)
+        if (
+            truth.get("workspace_id") != workspace_id
+            or truth.get("workspace_version") != workspace_version
+            or tuple(truth.get("source_ids") or ()) != source_ids
+            or tuple(truth.get("relationship_ids") or ()) != relationship_ids
+        ):
+            raise MLStudioServiceError(
+                "snapshot_identity_stale",
+                "The requested workspace, source, or relationship identity is stale.",
+                "Reload the current Data Model identities and create a new snapshot.",
+                status_code=409,
+            )
+        if (truth.get("governance_result") or {}).get("status") not in {"ready", "warning"}:
+            raise MLStudioServiceError(
+                "snapshot_governance_blocked",
+                "Dataset governance blocks this ML Studio snapshot.",
+                "Resolve the governance findings and create a new snapshot.",
+                status_code=422,
+            )
+        if int(truth.get("row_count") or 0) < 1 or not truth.get("column_profile"):
+            raise MLStudioServiceError(
+                "snapshot_dataset_empty",
+                "The governed dataset has no rows or columns available for ML Studio.",
+                "Select a non-empty governed dataset and retry.",
+                status_code=422,
+            )
+        now = self._clock()
+        snapshot = DatasetSnapshotIdentity(
+            snapshot_id=f"snapshot-{uuid4().hex}",
+            workspace_id=workspace_id,
+            workspace_version=workspace_version,
+            source_ids=source_ids,
+            relationship_ids=relationship_ids,
+            source_fingerprints=tuple(SourceFingerprint(**item) for item in truth["source_fingerprints"]),
+            schema_version=int(truth["schema_version"]),
+            semantic_model_version=str(truth["semantic_model_version"]),
+            governance_result=dict(truth["governance_result"]),
+            transformation_recipe_hash=str(truth["transformation_recipe_hash"]),
+            row_count=int(truth["row_count"]),
+            column_profile=tuple(ColumnProfile(**item) for item in truth["column_profile"]),
+            created_at=now,
+            created_by=str(truth["created_by"]) if truth.get("created_by") else None,
+        )
+        try:
+            return self._repository.create_snapshot(snapshot)
+        except PersistenceError as exc:
+            raise self._translate_persistence(exc) from exc
+
+    def get_snapshot(self, snapshot_id: str) -> dict[str, Any]:
+        snapshot = self._repository.get_snapshot(snapshot_id)
+        if snapshot is None:
+            raise MLStudioServiceError(
+                "snapshot_not_found", "The requested dataset snapshot does not exist.", "Create or select a valid snapshot.", status_code=404
+            )
+        return snapshot
+
+    def create_experiment(self, request: Any) -> dict[str, Any]:
+        payload = _require_object(request, label="experiment specification")
+        try:
+            specification = _experiment_from_dict(payload)
+            return self._repository.create_experiment(specification)
+        except PersistenceError as exc:
+            raise self._translate_persistence(exc) from exc
+        except (KeyError, TypeError, ValueError) as exc:
+            raise MLStudioServiceError(
+                "experiment_specification_invalid",
+                "The experiment specification is invalid.",
+                "Correct the documented task, feature, split, metric, resource, and seed fields.",
+            ) from exc
+
+    def list_experiment_versions(self, experiment_id: str) -> list[dict[str, Any]]:
+        versions = self._repository.list_experiment_versions(experiment_id)
+        if not versions:
+            raise MLStudioServiceError(
+                "experiment_not_found", "The requested experiment does not exist.", "Create or select a valid experiment.", status_code=404
+            )
+        return versions
+
+    def create_preparation_assessment(self, request: Any) -> dict[str, Any]:
+        payload = _require_object(request, label="preparation assessment request")
+        allowed = {"snapshot_id", "experiment_id", "specification_version", "transformation_recipe"}
+        _exact_fields(payload, allowed, allowed)
+        try:
+            specification_version = int(payload["specification_version"])
+        except (TypeError, ValueError) as exc:
+            raise MLStudioServiceError(
+                "preparation_request_invalid",
+                "The experiment specification version is invalid.",
+                "Use an existing positive experiment specification version.",
+            ) from exc
+
+        snapshot_payload = self.get_snapshot(str(payload["snapshot_id"]))
+        experiment_payload = self._repository.get_experiment(
+            str(payload["experiment_id"]), specification_version
+        )
+        if experiment_payload is None:
+            raise MLStudioServiceError(
+                "experiment_version_missing",
+                "The preparation assessment references an experiment version that does not exist.",
+                "Create or select the exact immutable experiment version.",
+                status_code=404,
+            )
+
+        try:
+            snapshot = _snapshot_from_dict(snapshot_payload)
+            self._assert_snapshot_current(snapshot)
+            specification = _experiment_from_dict(experiment_payload)
+            recipe_payload = _require_object(payload["transformation_recipe"], label="transformation_recipe")
+            recipe = _recipe_from_dict(recipe_payload)
+
+            profiles = {profile.name: profile for profile in snapshot.column_profile}
+            issues: list[PreparationIssue] = []
+            fixes: list[SuggestedPreparationFix] = []
+
+            def add_issue(
+                code: str,
+                severity: str,
+                message: str,
+                remediation: str,
+                *,
+                field: str | None = None,
+            ) -> None:
+                issues.append(
+                    PreparationIssue(
+                        issue_id=_stable_preparation_id("issue", code, field),
+                        code=code,
+                        severity=severity,
+                        message=message,
+                        affected_field=field,
+                        remediation=remediation,
+                    )
+                )
+
+            def add_fix(
+                code: str,
+                action_type: str,
+                columns: tuple[str, ...],
+                parameters: dict[str, Any],
+                reason: str,
+                status: str,
+                explanation: str,
+            ) -> None:
+                fixes.append(
+                    SuggestedPreparationFix(
+                        fix_id=_stable_preparation_id("fix", code, "\0".join(columns)),
+                        action_type=action_type,
+                        affected_columns=columns,
+                        parameters=parameters,
+                        reason=reason,
+                        status=status,
+                        explanation=explanation,
+                    )
+                )
+
+            target_profile = profiles[specification.target]
+            if target_profile.null_count:
+                add_issue(
+                    "target_missing_values",
+                    "blocking",
+                    "The selected target contains missing values.",
+                    "Remove rows with a missing target before training.",
+                    field=specification.target,
+                )
+                add_fix(
+                    "target_missing_values",
+                    "remove_nulls",
+                    (specification.target,),
+                    {"columns": [specification.target]},
+                    "Training cannot use rows with a missing target.",
+                    "supported",
+                    "The existing cleaning executor can remove rows with a missing target.",
+                )
+            if specification.task_type == "regression" and target_profile.logical_type != "numeric":
+                add_issue(
+                    "regression_target_not_numeric",
+                    "blocking",
+                    "Regression requires a numeric target.",
+                    "Choose a numeric target or explicitly review a type conversion in Power Query.",
+                    field=specification.target,
+                )
+                add_fix(
+                    "regression_target_not_numeric",
+                    "convert_type",
+                    (specification.target,),
+                    {"columns": [specification.target], "target": "numeric"},
+                    "The regression target must be numeric.",
+                    "unsupported",
+                    "Automatic conversion may coerce values, so a user must review and confirm it.",
+                )
+            if specification.task_type == "classification" and target_profile.distinct_count < 2:
+                add_issue(
+                    "classification_target_single_class",
+                    "blocking",
+                    "Classification requires at least two target classes.",
+                    "Choose a target with at least two observed classes.",
+                    field=specification.target,
+                )
+
+            for column in specification.feature_roles.all_features:
+                profile = profiles[column]
+                if profile.null_count:
+                    strategy = "median" if profile.logical_type == "numeric" else "mode"
+                    add_issue(
+                        "feature_missing_values",
+                        "blocking",
+                        "A selected feature contains missing values.",
+                        "Replace or remove missing feature values before training.",
+                        field=column,
+                    )
+                    add_fix(
+                        "feature_missing_values",
+                        "replace_nulls",
+                        (column,),
+                        {"columns": [column], "strategy": strategy},
+                        "Selected features cannot contain missing values at training time.",
+                        "supported",
+                        f"The existing cleaning executor supports the {strategy} replacement strategy.",
+                    )
+            for column in specification.feature_roles.numeric:
+                if profiles[column].logical_type != "numeric":
+                    add_issue(
+                        "numeric_feature_type_mismatch",
+                        "blocking",
+                        "A numeric feature role is assigned to a non-numeric column.",
+                        "Change the feature role or review a numeric conversion in Power Query.",
+                        field=column,
+                    )
+                    add_fix(
+                        "numeric_feature_type_mismatch",
+                        "convert_type",
+                        (column,),
+                        {"columns": [column], "target": "numeric"},
+                        "The selected numeric feature role requires numeric values.",
+                        "unsupported",
+                        "Automatic conversion may discard non-numeric values and requires user review.",
+                    )
+
+            feature_count = len(specification.feature_roles.all_features)
+            if snapshot.row_count < feature_count * 5:
+                add_issue(
+                    "low_row_feature_ratio",
+                    "info",
+                    "The dataset has few rows relative to the selected feature count.",
+                    "Consider reducing features or collecting more observations before comparing candidates.",
+                )
+
+            state = "blocked" if any(issue.severity == "blocking" for issue in issues) else "ready"
+            fingerprint = PreparationAssessment.calculate_input_fingerprint(
+                dataset_snapshot=snapshot,
+                experiment_specification=specification,
+                transformation_recipe=recipe,
+            )
+            assessment = PreparationAssessment(
+                assessment_id=f"assessment-{uuid4().hex}",
+                assessed_at=self._clock(),
+                state=state,
+                dataset_snapshot=snapshot,
+                experiment_specification=specification,
+                transformation_recipe=recipe,
+                issues=tuple(issues),
+                suggested_fixes=tuple(fixes),
+                input_fingerprint=fingerprint,
+            )
+            return assessment.to_dict()
+        except MLStudioServiceError:
+            raise
+        except (KeyError, TypeError, ValueError) as exc:
+            raise MLStudioServiceError(
+                "preparation_request_invalid",
+                "The preparation assessment request is invalid.",
+                "Use stored snapshot and experiment identities with valid transformation-recipe lineage.",
+            ) from exc
+
+    def _assert_snapshot_current(self, snapshot: DatasetSnapshotIdentity) -> None:
+        truth = self._resolve_truth(snapshot.workspace_id)
+        current_fingerprints = tuple(
+            (item["source_id"], item["content_fingerprint"].lower(), int(item["schema_version"]))
+            for item in truth["source_fingerprints"]
+        )
+        stored_fingerprints = tuple(
+            (item.source_id, item.content_fingerprint.lower(), item.schema_version)
+            for item in snapshot.source_fingerprints
+        )
+        if (
+            truth.get("workspace_version") != snapshot.workspace_version
+            or tuple(truth.get("source_ids") or ()) != snapshot.source_ids
+            or tuple(truth.get("relationship_ids") or ()) != snapshot.relationship_ids
+            or current_fingerprints != stored_fingerprints
+            or str(truth.get("semantic_model_version")) != snapshot.semantic_model_version
+            or str(truth.get("transformation_recipe_hash")).lower() != snapshot.transformation_recipe_hash.lower()
+            or (truth.get("governance_result") or {}).get("status") not in {"ready", "warning"}
+        ):
+            raise MLStudioServiceError(
+                "snapshot_identity_stale",
+                "The dataset snapshot no longer matches authoritative server state.",
+                "Create a new snapshot from the current governed Data Model.",
+                status_code=409,
+            )
+
+    def submit_run(self, request: Any, *, idempotency_key: str | None) -> tuple[dict[str, Any], bool]:
+        payload = _require_object(request, label="run submission")
+        allowed = {"experiment_id", "specification_version", "snapshot_id", "parameters", "environment", "code_revision"}
+        _exact_fields(payload, allowed, allowed)
+        if not idempotency_key:
+            raise MLStudioServiceError(
+                "idempotency_key_required",
+                "An Idempotency-Key header is required.",
+                "Send one stable key for this exact run submission.",
+            )
+        try:
+            experiment_id = str(payload["experiment_id"])
+            specification_version = int(payload["specification_version"])
+        except (TypeError, ValueError) as exc:
+            raise MLStudioServiceError(
+                "run_submission_invalid",
+                "The experiment identity or specification version is invalid.",
+                "Use an existing experiment identity and positive integer version.",
+            ) from exc
+        experiment = self._repository.get_experiment(experiment_id, specification_version)
+        if experiment is None:
+            raise MLStudioServiceError(
+                "experiment_version_missing",
+                "The run references an experiment specification that does not exist.",
+                "Create or select the exact immutable experiment version.",
+                status_code=404,
+            )
+        snapshot_payload = self.get_snapshot(str(payload["snapshot_id"]))
+        try:
+            _reject_unsafe_run_metadata(payload["parameters"])
+            _reject_unsafe_run_metadata(payload["environment"])
+            snapshot = _snapshot_from_dict(snapshot_payload)
+            self._assert_snapshot_current(snapshot)
+            run = RunSpecification(
+                run_id=f"run-{uuid4().hex}",
+                experiment_id=experiment_id,
+                specification_version=specification_version,
+                dataset_snapshot=snapshot,
+                submitted_at=self._clock(),
+                parameters=dict(payload["parameters"]),
+                environment=dict(payload["environment"]),
+                code_revision=str(payload["code_revision"]),
+            )
+            stored, created = self._repository.submit_run(run, idempotency_key=idempotency_key)
+            if created and self._run_scheduler is not None:
+                try:
+                    self._run_scheduler(stored["run_id"])
+                except Exception as exc:
+                    self._repository.transition_run(
+                        stored["run_id"],
+                        "failed",
+                        progress_stage="scheduling_failed",
+                        failure=StructuredError(
+                            code="run_scheduling_failed",
+                            message="The run could not be scheduled for background execution.",
+                            remediation="Inspect worker capacity and submit a new run with a new idempotency key.",
+                        ),
+                    )
+                    raise MLStudioServiceError(
+                        "run_scheduling_failed",
+                        "The run could not be scheduled for background execution.",
+                        "Inspect worker capacity and submit a new run with a new idempotency key.",
+                        status_code=503,
+                    ) from exc
+            return stored, created
+        except PersistenceError as exc:
+            raise self._translate_persistence(exc) from exc
+        except MLStudioServiceError:
+            raise
+        except (TypeError, ValueError) as exc:
+            raise MLStudioServiceError(
+                "run_submission_invalid",
+                "The run submission is invalid.",
+                "Correct the experiment, snapshot, parameters, environment, and code revision fields.",
+            ) from exc
+
+    def get_run(self, run_id: str) -> dict[str, Any]:
+        run = self._repository.get_run(run_id)
+        if run is None:
+            raise MLStudioServiceError("run_not_found", "The requested run does not exist.", "Reload the run list.", status_code=404)
+        return {**run, "artifacts": self._repository.list_artifacts(run_id)}
+
+    def execute_run(self, run_id: str) -> None:
+        """Execute one queued run and persist only safe lifecycle evidence."""
+        current = self._repository.get_run(run_id)
+        if current is None or current["status"] != "queued":
+            return
+        try:
+            self._repository.transition_run(run_id, "running", progress_stage="resolving_dataset")
+        except PersistenceError:
+            return
+
+        try:
+            if self._run_data_resolver is None:
+                raise MLStudioServiceError(
+                    "run_executor_unavailable",
+                    "The server has no trusted dataset resolver for run execution.",
+                    "Configure the ML Studio run data resolver and submit a new run.",
+                    status_code=503,
+                )
+            stored_run = self._repository.get_run(run_id)
+            if stored_run is None:
+                return
+            run = _run_from_dict(stored_run["run_specification"])
+            experiment_payload = self._repository.get_experiment(run.experiment_id, run.specification_version)
+            if experiment_payload is None:
+                raise MLStudioServiceError(
+                    "experiment_version_missing",
+                    "The run's immutable experiment version is unavailable.",
+                    "Restore the experiment metadata before retrying with a new run.",
+                    status_code=409,
+                )
+            specification = _experiment_from_dict(experiment_payload)
+            data, workspace_version, source_fingerprints = self._run_data_resolver(run.dataset_snapshot)
+            if self._finish_cancellation(run_id):
+                return
+            self._repository.update_run_progress(run_id, "validating_snapshot")
+            self._assert_snapshot_current(run.dataset_snapshot)
+            if self._finish_cancellation(run_id):
+                return
+            self._repository.update_run_progress(run_id, "evaluating_candidates")
+            result = self._run_evaluator(
+                data,
+                run,
+                specification,
+                current_workspace_version=workspace_version,
+                current_source_fingerprints=source_fingerprints,
+            )
+            if self._finish_cancellation(run_id):
+                return
+            self._repository.transition_run(
+                run_id,
+                "completed",
+                progress_stage="completed",
+                evaluation_result=result,
+                warnings=result.warnings,
+            )
+        except MLStudioServiceError as exc:
+            self._fail_active_run(run_id, exc.error)
+        except (PersistenceError, KeyError, TypeError):
+            self._fail_active_run(
+                run_id,
+                StructuredError(
+                    code="run_execution_failed",
+                    message="The run could not complete its governed evaluation.",
+                    remediation="Review the experiment inputs and run events, then submit a new run.",
+                ),
+            )
+        except Exception as exc:
+            safe_error = getattr(exc, "error", None)
+            self._fail_active_run(
+                run_id,
+                safe_error
+                if isinstance(safe_error, StructuredError)
+                else StructuredError(
+                    code="run_execution_failed",
+                    message="The run could not complete its governed evaluation.",
+                    remediation="Inspect server health and submit a new run without changing the original record.",
+                ),
+            )
+
+    def _finish_cancellation(self, run_id: str) -> bool:
+        current = self._repository.get_run(run_id)
+        if current is None:
+            return True
+        if current["status"] == "cancel_requested":
+            self._repository.transition_run(run_id, "cancelled", progress_stage=current["progress_stage"])
+            return True
+        return current["status"] in {"cancelled", "completed", "failed", "interrupted"}
+
+    def _fail_active_run(self, run_id: str, failure: StructuredError) -> None:
+        current = self._repository.get_run(run_id)
+        if current is None or current["status"] in {"completed", "failed", "cancelled", "interrupted"}:
+            return
+        if current["status"] == "cancel_requested":
+            self._repository.transition_run(run_id, "cancelled", progress_stage=current["progress_stage"])
+            return
+        self._repository.transition_run(
+            run_id,
+            "failed",
+            progress_stage="failed",
+            failure=failure,
+        )
+
+    def list_runs(self, *, limit: int = 100) -> list[dict[str, Any]]:
+        return self._repository.list_runs(limit=limit)
+
+    def recover_incomplete_runs(self) -> list[str]:
+        return self._repository.recover_incomplete_runs()
+
+    def get_events(self, run_id: str, *, limit: int = 100) -> list[dict[str, Any]]:
+        self.get_run(run_id)
+        return self._repository.list_events(run_id, limit=limit)
+
+    def cancel_run(self, run_id: str) -> dict[str, Any]:
+        try:
+            return self._repository.request_cancellation(run_id)
+        except PersistenceError as exc:
+            raise self._translate_persistence(exc) from exc
+
+    def get_evaluation(self, run_id: str) -> dict[str, Any]:
+        run = self.get_run(run_id)
+        if run["status"] != "completed" or "evaluation_result" not in run:
+            raise MLStudioServiceError(
+                "evaluation_unavailable",
+                "Evaluation evidence is not available for this run.",
+                "Wait for a successful completed run.",
+                status_code=409,
+            )
+        return run["evaluation_result"]
+
+    def get_run_evidence(self, run_id: str) -> dict[str, Any]:
+        """Project immutable evaluation truth into a UI-ready evidence view."""
+        run = self.get_run(run_id)
+        if run["status"] != "completed" or "evaluation_result" not in run:
+            raise MLStudioServiceError(
+                "evaluation_unavailable",
+                "Evaluation evidence is not available for this run.",
+                "Wait for a successful completed run.",
+                status_code=409,
+            )
+        experiment = self._repository.get_experiment(run["experiment_id"], run["specification_version"])
+        if experiment is None:
+            raise MLStudioServiceError(
+                "experiment_version_missing",
+                "The run's immutable experiment version is unavailable.",
+                "Restore the experiment metadata before requesting evidence.",
+                status_code=409,
+            )
+        result = run["evaluation_result"]
+        selection = result["selection_evidence"]
+        final = result["final_holdout_evidence"]
+        selected = next(
+            item for item in selection["candidates"] if item["candidate_family"] == selection["selected_candidate"]
+        )
+        metric_policy = experiment["metric_policy"]
+        directions = {
+            "rmse": "minimize",
+            "mae": "minimize",
+            "r2": "maximize",
+            "balanced_accuracy": "maximize",
+            "f1_weighted": "maximize",
+            "accuracy": "maximize",
+        }
+
+        def favorable_delta(candidate: float, baseline: float, direction: str) -> float:
+            return baseline - candidate if direction == "minimize" else candidate - baseline
+
+        metric_landscape = []
+        for metric in metric_policy["reported_metrics"]:
+            baseline_folds = [item[metric] for item in selection["baseline_fold_metrics"] if metric in item]
+            candidate_folds = [item[metric] for item in selected["fold_metrics"] if metric in item]
+            direction = directions.get(metric, metric_policy["optimization"])
+            final_candidate = final["candidate_metrics"].get(metric)
+            final_baseline = final["baseline_metrics"].get(metric)
+            complete = bool(baseline_folds and candidate_folds and final_candidate is not None and final_baseline is not None)
+            metric_landscape.append(
+                {
+                    "metric": metric,
+                    "direction": direction,
+                    "available": complete,
+                    "development": {
+                        "baseline_folds": baseline_folds,
+                        "candidate_folds": candidate_folds,
+                        "candidate_mean": fmean(candidate_folds) if candidate_folds else None,
+                        "candidate_standard_deviation": pstdev(candidate_folds) if len(candidate_folds) > 1 else None,
+                        "baseline_relative_delta": (
+                            favorable_delta(fmean(candidate_folds), fmean(baseline_folds), direction)
+                            if baseline_folds and candidate_folds
+                            else None
+                        ),
+                    },
+                    "final_holdout": {
+                        "candidate": final_candidate,
+                        "baseline": final_baseline,
+                        "baseline_relative_delta": (
+                            favorable_delta(final_candidate, final_baseline, direction)
+                            if final_candidate is not None and final_baseline is not None
+                            else None
+                        ),
+                    },
+                }
+            )
+
+        weak_reasons: list[str] = []
+        if selection["development_row_count"] < 100:
+            weak_reasons.append("development_sample_below_100")
+        if final["holdout_row_count"] < 30:
+            weak_reasons.append("final_holdout_below_30")
+        if len(selection["baseline_fold_metrics"]) < 3:
+            weak_reasons.append("fewer_than_three_development_folds")
+        if any(not item["available"] for item in metric_landscape):
+            weak_reasons.append("reported_metric_evidence_missing")
+        if result["warnings"]:
+            weak_reasons.append("evaluation_warnings_present")
+
+        primary = next(
+            (item for item in metric_landscape if item["metric"] == metric_policy["primary_metric"]),
+            None,
+        )
+        influences = sorted(
+            result["feature_influence"]["values"].items(),
+            key=lambda item: (-abs(item[1]), item[0]),
+        )[:5]
+        slices = result.get("failure_slices") or []
+        return {
+            "run_id": run_id,
+            "task_type": result["task_type"],
+            "selected_candidate": selection["selected_candidate"],
+            "metric_landscape": metric_landscape,
+            "evidence_strength": {
+                "status": "weak" if weak_reasons else "adequate",
+                "reasons": weak_reasons,
+                "development_row_count": selection["development_row_count"],
+                "final_holdout_row_count": final["holdout_row_count"],
+                "development_fold_count": len(selection["baseline_fold_metrics"]),
+            },
+            "failure_atlas": {
+                "available": bool(slices),
+                "slices": slices,
+                "unavailable_reason": None if slices else "no_privacy_bounded_failure_slices",
+            },
+            "why_this_candidate": {
+                "candidate_family": selection["selected_candidate"],
+                "primary_metric": metric_policy["primary_metric"],
+                "optimization": metric_policy["optimization"],
+                "development_baseline_relative_delta": (
+                    primary["development"]["baseline_relative_delta"] if primary else None
+                ),
+                "final_holdout_baseline_relative_delta": (
+                    primary["final_holdout"]["baseline_relative_delta"] if primary else None
+                ),
+                "top_feature_influences": [
+                    {"field": field, "influence": value, "causal": False} for field, value in influences
+                ],
+                "warnings": result["warnings"],
+                "limitations": result["limitations"],
+                "truth_boundary": result["truth_boundary"],
+            },
+        }
+
+    def compare_runs(self, request: Any) -> dict[str, Any]:
+        payload = _require_object(request, label="run comparison")
+        _exact_fields(payload, {"run_ids"}, {"run_ids"})
+        run_ids = _ordered_ids(payload["run_ids"], label="run_ids", allow_empty=False)
+        if not 2 <= len(run_ids) <= 4:
+            raise MLStudioServiceError(
+                "comparison_size_invalid", "Run comparison requires two to four runs.", "Select two to four compatible completed runs."
+            )
+        runs_by_id = {item["run_id"]: item for item in self._repository.list_runs(run_ids=run_ids, limit=4)}
+        if set(runs_by_id) != set(run_ids):
+            raise MLStudioServiceError(
+                "run_not_found", "One or more comparison runs do not exist.", "Reload the run list and retry.", status_code=404
+            )
+        runs = [runs_by_id[item] for item in run_ids]
+        if any(item["status"] != "completed" or "evaluation_result" not in item for item in runs):
+            raise MLStudioServiceError(
+                "comparison_run_incomplete", "Only completed runs with evaluation evidence can be compared.", "Select completed runs.", status_code=409
+            )
+        identity = {
+            (item["experiment_id"], item["specification_version"], item["snapshot_id"], item["evaluation_result"]["task_type"])
+            for item in runs
+        }
+        if len(identity) != 1:
+            raise MLStudioServiceError(
+                "comparison_identity_mismatch",
+                "The selected runs do not share one experiment version, snapshot, and task type.",
+                "Compare runs created from the same immutable inputs.",
+                status_code=409,
+            )
+        evidence_by_run = {item["run_id"]: self.get_run_evidence(item["run_id"]) for item in runs}
+        metric_names = [item["metric"] for item in evidence_by_run[run_ids[0]]["metric_landscape"]]
+        return {
+            "experiment_id": runs[0]["experiment_id"],
+            "specification_version": runs[0]["specification_version"],
+            "snapshot_id": runs[0]["snapshot_id"],
+            "task_type": runs[0]["evaluation_result"]["task_type"],
+            "runs": [
+                {
+                    "run_id": item["run_id"],
+                    "selection_evidence": item["evaluation_result"]["selection_evidence"],
+                    "final_holdout_evidence": item["evaluation_result"]["final_holdout_evidence"],
+                    "warnings": item["warnings"],
+                    "evidence_strength": evidence_by_run[item["run_id"]]["evidence_strength"],
+                    "metric_landscape": evidence_by_run[item["run_id"]]["metric_landscape"],
+                    "failure_atlas": evidence_by_run[item["run_id"]]["failure_atlas"],
+                    "why_this_candidate": evidence_by_run[item["run_id"]]["why_this_candidate"],
+                }
+                for item in runs
+            ],
+            "metric_matrix": [
+                {
+                    "metric": metric,
+                    "runs": [
+                        {
+                            "run_id": run_id,
+                            "development": next(
+                                item for item in evidence_by_run[run_id]["metric_landscape"] if item["metric"] == metric
+                            )["development"],
+                            "final_holdout": next(
+                                item for item in evidence_by_run[run_id]["metric_landscape"] if item["metric"] == metric
+                            )["final_holdout"],
+                        }
+                        for run_id in run_ids
+                    ],
+                }
+                for metric in metric_names
+            ],
+            "decision_boundary": {
+                "winner_selected": False,
+                "reason": "Final-holdout evidence is shown for comparison but cannot be reused to select a winning candidate.",
+                "allowed_claim": "These runs are evaluated experiments on one immutable snapshot and experiment version.",
+                "prohibited_claims": [
+                    "Production readiness or deployment approval.",
+                    "A final winner selected by repeatedly comparing holdout results.",
+                ],
+            },
+        }
+
+    def review_candidate(self, request: Any) -> dict[str, Any]:
+        payload = _require_object(request, label="candidate review")
+        allowed = {"run_id", "artifact_hash", "review_status", "reviewed_by", "intended_use", "prohibited_use"}
+        _exact_fields(payload, allowed, allowed)
+        run = self.get_run(str(payload["run_id"]))
+        if run["status"] != "completed" or "evaluation_result" not in run:
+            raise MLStudioServiceError(
+                "candidate_run_incomplete", "Only a completed evaluated run can be reviewed.", "Select a completed run.", status_code=409
+            )
+        artifact_hash = str(payload["artifact_hash"]).lower()
+        artifacts = self._repository.list_artifacts(run["run_id"])
+        artifact = next((item for item in artifacts if item["sha256"].lower() == artifact_hash), None)
+        if artifact is None:
+            raise MLStudioServiceError(
+                "candidate_artifact_unverified",
+                "The candidate artifact hash is not registered for this run.",
+                "Verify and register the server-created artifact before review.",
+                status_code=409,
+            )
+        try:
+            self._artifact_verifier(artifact)
+        except Exception as exc:
+            raise MLStudioServiceError(
+                "candidate_artifact_unverified",
+                "The candidate artifact failed managed-storage verification.",
+                "Recreate and verify the server-created artifact before review.",
+                status_code=409,
+            ) from exc
+        try:
+            candidate = ReviewedCandidateReference(
+                candidate_id=f"candidate-{uuid4().hex}",
+                run_id=run["run_id"],
+                experiment_id=run["experiment_id"],
+                specification_version=run["specification_version"],
+                snapshot_id=run["snapshot_id"],
+                model_artifact_hash=artifact_hash,
+                review_status=str(payload["review_status"]),
+                reviewed_at=self._clock(),
+                reviewed_by=str(payload["reviewed_by"]),
+                intended_use=str(payload["intended_use"]),
+                prohibited_use=tuple(payload["prohibited_use"]),
+            )
+            return self._repository.create_candidate(candidate)
+        except PersistenceError as exc:
+            raise self._translate_persistence(exc) from exc
+        except (TypeError, ValueError) as exc:
+            raise MLStudioServiceError(
+                "candidate_review_invalid", "The candidate review is invalid.", "Correct the review identity and use boundaries."
+            ) from exc
+
+    def get_candidate(self, candidate_id: str) -> dict[str, Any]:
+        candidate = self._repository.get_candidate(candidate_id)
+        if candidate is None:
+            raise MLStudioServiceError(
+                "candidate_not_found", "The reviewed candidate does not exist.", "Use a valid candidate identity.", status_code=404
+            )
+        return candidate

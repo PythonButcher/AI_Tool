@@ -9,7 +9,9 @@ This file is the active navigation hub. If this file conflicts with an archived 
 | Step | Read | Why |
 | --- | --- | --- |
 | 1 | `project_docs/active/status/project_execution_status.md` | Short current truth |
-| 2 | `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md` | Ownership boundary |
+| 2 | `project_docs/active/status/phase_authorization.json` | Canonical implementation authority |
+| 3 | `project_docs/active/rules/DOCUMENTATION_GOVERNANCE.md` | Authority and lifecycle boundaries |
+| 4 | `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md` | Ownership boundary |
 | 3 | `project_docs/active/contracts/decision_objects.md` | Contract reference when touching payloads |
 | 4 | `project_docs/active/codex_harness_engineering.md` | Run efficiency for substantial Codex work |
 | 5 | `project_docs/active/agent_harness/README.md` | Reusable harness, hooks, and future-project template |
@@ -22,7 +24,7 @@ Decision Intelligence workspaces, decision frames, readiness and capability pane
 
 Dataset identity and semantic truth remain required for every BI answer and chart.
 
-ML Studio is the active Phase 13 product direction. It will reuse governed workspace data, Power Query transformations, semantic roles, and relationship truth inside AI Tool while keeping its backend contracts modular. The current gate is backend-only; no ML Studio frontend work is authorized yet.
+ML Studio Step 4 is prepared under review-only authority. The [active gate](active_gate/README.md) waits for implementation authorization for the workspace-safe cleaning boundary. The [Step 4 roadmap](ml_studio/README.md#step-4--connect-data-preparation-and-power-query) orders backend prerequisites before bounded UI handoffs. Later workflow behavior must not be represented as working product behavior.
 
 ## Active Areas
 
@@ -30,6 +32,8 @@ ML Studio is the active Phase 13 product direction. It will reuse governed works
 | --- | --- | --- |
 | Status | `project_docs/active/status/` | Keep short; archive long history |
 | Current status | `project_docs/active/status/project_execution_status.md` | Single current source of truth |
+| Phase authorization | `project_docs/active/status/phase_authorization.json` | Machine-readable authority and allowed path boundary |
+| Documentation governance | `project_docs/active/rules/DOCUMENTATION_GOVERNANCE.md` | Authority, lifecycle, status, and handoff rules |
 | Completed rollout history | `project_docs/archive/ai_chat_decision_output_unification_rollout_completed.md` | Historical reference only; do not use as the current plan |
 | Completed AI Chat milestones | `project_docs/archive/ai_chat_completed_milestones/` | Historical reference only |
 | Contracts | `project_docs/active/contracts/` | Backend/frontend payload truth |
@@ -38,7 +42,7 @@ ML Studio is the active Phase 13 product direction. It will reuse governed works
 | Multiple-source workspace contract | `project_docs/active/contracts/multiple_data_source_workspace.md` | Source, workspace membership, and analysis-context truth |
 | Multiple-source relationship contract | `project_docs/active/contracts/multiple_data_source_relationships.md` | Relationship persistence, validation, diagnostics, and activation truth |
 | Project active gate | `project_docs/active/active_gate/README.md` | The only active work workspace |
-| ML Studio roadmap | `project_docs/active/ml_studio/README.md` | Approved Phase 13 architecture, experience, delivery order, and acceptance boundaries |
+| ML Studio roadmap | `project_docs/active/ml_studio/README.md` | Replacement whole-product plan, proposed experience, delivery order, and acceptance boundaries |
 | Completed data and backend roadmap | `project_docs/archive/multiple_data_sources_implementation_plan_completed.md` | Historical delivery record; not active scope |
 | Deferred planning | `project_docs/active/future/README.md` | The one home for all deferred active-folder plans; not active until promoted |
 | Agent harness | `project_docs/active/agent_harness/` | Reusable agent backbone, hooks, and validation |
