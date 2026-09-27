@@ -108,6 +108,7 @@ function AppContent() {
   
   // Panel states moved from Sidebar
   const [showCleaningForm, setShowCleaningForm] = useState(false);
+  const [cleaningFormProps, setCleaningFormProps] = useState(null);
   const [showExportPanel, setShowExportPanel] = useState(false);
 
   // AI State
@@ -402,12 +403,16 @@ function AppContent() {
 
           {showCleaningForm && (
             <DataCleaningForm
-              closeForm={() => setShowCleaningForm(false)}
+              closeForm={() => {
+                setShowCleaningForm(false);
+                setCleaningFormProps(null);
+              }}
               setShowDataPreview={setShowDataPreview}
               onProceedToTraining={() => {
                 setShowMachineLearning(true);
                 setShowCleaningForm(false);
               }}
+              {...(cleaningFormProps || {})}
             />
           )}
 
@@ -469,6 +474,10 @@ function AppContent() {
               setShowAiChat={setShowAiChat}
               activeWorkflow={activeWorkflow}
               setActiveWorkflow={setActiveWorkflow}
+              onOpenCleaningForm={(props) => {
+                setCleaningFormProps(props);
+                setShowCleaningForm(true);
+              }}
 
               onDestinationSelect={handleDestinationSelect}
               setShowDataVisual={setShowDataVisual}

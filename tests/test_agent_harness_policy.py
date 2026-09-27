@@ -42,6 +42,18 @@ class AgentHarnessPolicyTests(unittest.TestCase):
         result = run_hook("python -c \"open('frontend/frontend/src/App.jsx', 'w').write(content)\"")
         self.assertEqual(result["hookSpecificOutput"]["permissionDecision"], "deny")
 
+    def test_blocks_git_restore(self):
+        result = run_hook("git restore frontend/frontend/src/App.jsx")
+        self.assertEqual(result["hookSpecificOutput"]["permissionDecision"], "deny")
+
+    def test_blocks_checkout_with_explicit_treeish(self):
+        result = run_hook("git checkout HEAD -- frontend/frontend/src/App.jsx")
+        self.assertEqual(result["hookSpecificOutput"]["permissionDecision"], "deny")
+
+    def test_blocks_shell_redirection_into_source(self):
+        result = run_hook("echo replacement > frontend/frontend/src/App.jsx")
+        self.assertEqual(result["hookSpecificOutput"]["permissionDecision"], "deny")
+
     def test_allows_read_only_command(self):
         self.assertEqual(run_hook("git status --short"), {})
 

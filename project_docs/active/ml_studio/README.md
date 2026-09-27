@@ -1,210 +1,336 @@
-# Phase 13 — AI Tool ML Studio
+# ML Studio Rebuild Plan
 
-Status: Approved active roadmap. Only the gate named by `project_docs/active/active_gate/README.md` is authorized for implementation.
+## Start Here
 
-## Product Outcome
+This file explains **what we will build and in what order**. It covers the whole ML Studio, not just Experiment Configuration.
 
-Create a first-class ML Studio inside AI Tool where developers can turn a governed workspace dataset into a reproducible machine-learning experiment, understand why a result is trustworthy or limited, compare runs, and preserve a reviewed candidate without needing to assemble a notebook or external MLOps stack.
+For the current authorized action and owner, open the [active gate](../active_gate/README.md). For the first planned build step, go directly to [Step 1 — Design the complete workflow](#step-1--design-the-complete-workflow).
 
-The first release is intentionally focused on useful tabular machine learning: predict a number, predict a category, and discover segments. Forecasting, deep learning, production serving, automatic retraining, and Context Ledger integration remain outside the initial phase.
+The numbered steps below are the build order. The six stages inside the finished app are a different thing: Data & Goal → Prepare Data → Configure → Train → Review Results → Use & Share.
 
-## Architecture Recommendation
+## Build Order
 
-Build ML Studio into the existing AI Tool application as a first-class destination, not as a standalone sub-application.
+Do one bounded assignment at a time. Each step can contain a backend assignment followed by a frontend assignment; it is not one large agent prompt. Review and check in after each meaningful visible result before advancing.
 
-Machine learning depends directly on AI Tool's governed source identity, workspace version, active relationship model, semantic field roles, Power Query transformations, dataset readiness, and later Context Ledger lineage. A separate application would either duplicate those contracts or force an integration boundary through nearly every step of the workflow.
+1. [Design the complete workflow](#step-1--design-the-complete-workflow)
+2. [Build the workspace](#step-2--build-the-workspace)
+3. [Save and resume experiments](#step-3--save-and-resume-experiments)
+4. [Connect data preparation and Power Query](#step-4--connect-data-preparation-and-power-query)
+5. [Replace Experiment Configuration](#step-5--replace-experiment-configuration)
+6. [Make training work end to end](#step-6--make-training-work-end-to-end)
+7. [Review results and choose a candidate](#step-7--review-results-and-choose-a-candidate)
+8. [Export models and make predictions](#step-8--export-models-and-make-predictions)
+9. [Complete forecasting](#step-9--complete-forecasting)
+10. [Complete clustering](#step-10--complete-clustering)
+11. [Complete anomaly detection](#step-11--complete-anomaly-detection)
+12. [Prepare the cycle summary](#step-12--prepare-the-cycle-summary)
+13. [Verify the whole ML Studio](#step-13--verify-the-whole-ml-studio)
 
-Keep implementation modular inside the existing backend. ML Studio should have its own route, application-service, domain-contract, repository, and artifact-storage boundaries, while consuming authoritative AI Tool dataset and workspace resolvers. This preserves portability without creating a second product shell.
+## Step 1 — Design the complete workflow
 
-Context Ledger must remain behind a future adapter boundary. The initial system records enough immutable identity and lineage to integrate later, but it must not import Context Ledger code, write Context Ledger records, or assume its schema without a separate architecture decision.
+**Status:** Complete as a design and contract gate. No application behavior was implemented.
 
-## Existing Foundation Worth Keeping
+Step 1 is the implementation-neutral blueprint. It describes the whole product; it does not claim these behaviors exist in the application.
 
-- `backend/routes/ml_prep.py` already exposes model definitions, readiness checks, structured issues, and cleaning suggestions.
-- `frontend/frontend/src/components/data_management/MLPrepPanel.jsx` already turns readiness findings into Power Query fixes and provides the transition to training.
-- `backend/services/model_training.py` already uses scikit-learn pipelines for imputation, scaling, one-hot encoding, regression, classification, and clustering.
-- `backend/services/automl_logic.py` already compares a small, understandable candidate set, computes baselines and feature importance, creates a run ID, and labels evaluation limits.
-- `backend/routes/automl.py` already enforces the dataset-governance gate before its training service is imported.
-- `backend/services/ml_logic.py` provides anomaly detection with a deterministic fallback.
-- The app already has durable data-source, workspace, relationship, semantic-model, governance, and workflow-run foundations that ML Studio can reuse.
-- The frontend already has light and dark theme tokens, a destination rail, a canvas workspace, inspector-style panes, and draggable semantic objects.
+### Shared Workspace Layout
 
-These are prototype assets, not an approved production contract. They should be consolidated behind the new ML Studio boundary rather than extended independently.
+1. A fixed workspace header contains the experiment name, save state, Guidance toggle, and six-stage navigator. Guidance changes explanatory content only.
+2. A collapsible context rail shows friendly dataset, version, size, and lineage summaries. Raw identifiers appear only in details with copy actions.
+3. The main workspace owns the current stage. Evidence and guidance sit beside the relevant control or collapse below it on narrow screens; no permanently empty inspector is reserved.
+4. A compact run dock remains available while a run is queued, running, cancelling, failed, interrupted, or complete. It shows backend states and events, never invented progress.
+5. At 1440×900 and 1024×768 the stage workspace keeps the primary action visible without page-level horizontal scrolling. At 390×844 the rail and secondary panels collapse into labeled drawers; tables scroll inside their region. Keyboard order follows header → stages → main content → supporting panels → run dock.
 
-## Findings That Block Promotion As-Is
+### Workflow State Rules
 
-### Evaluation integrity
+- The server owns experiment identity, draft revision, data identity, immutable submitted configurations, run truth, evaluations, candidates, and artifacts. The browser owns only unsaved edits and presentation state.
+- A stage is `locked`, `available`, `active`, `complete`, or `stale`. Locked stages expose missing prerequisites and a route to fix them. A stale stage preserves historical evidence and names the change that invalidated current progression.
+- The persisted `active_stage` is the last developer-selected stage that is not locked. Reopening restores it; returning to an earlier stage does not invalidate anything until a dependency-bearing edit is saved.
+- Draft autosave uses visible `saving`, `saved`, `save_error`, and `conflict` states. Navigation and training flush pending saves. A conflict preserves local edits and requires reload or duplicate; it never silently overwrites a newer revision.
+- Guidance, experiment name, panel layout, and the viewed stage do not affect readiness. Data identity or recipe changes stale Prepare Data and everything after it. Task changes stale task-dependent preparation, configuration, and all later evidence. Role, split, metric, model, seed, or resource changes stale the assessment and later work. Submitted runs remain immutable and labeled historical.
+- An active run keeps its submitted configuration and snapshot. Dependency-bearing edits warn that they affect only a later run; they never mutate or erase the active run.
+- Candidate selection completes the ML cycle. Use & Share actions are optional. Duplication copies draft settings and lineage references but starts with no completed stages, runs, or selected candidate.
 
-- The custom supervised path fits and predicts on the same rows in `backend/services/model_training.py`, so its displayed regression and classification scores are training scores rather than evidence of generalization.
-- AutoML chooses the winning candidate using the same holdout set whose metrics it reports. That makes the final comparison optimistic because the holdout participates in model selection.
-- The ten-row runtime minimum is a technical floor, not an enterprise reliability standard. Readiness must account for task type, class counts, feature count, split feasibility, and confidence width.
-- Random holdout is the only evaluation strategy. Time-ordered, grouped, and entity-aware data need explicit split policies to prevent leakage.
+### Six-Stage Contract
 
-### Contract and governance integrity
+| Stage | Inputs and primary actions | Output and unlock rule | Locked, stale, and failure behavior | Backend dependency |
+| --- | --- | --- | --- | --- |
+| 1. Data & Goal | Name the experiment; select a governed dataset; inspect schema/preview; choose predict a number, classify, forecast, find groups, or detect anomalies. | Saved draft with a current data reference and explicit task unlocks Prepare Data. | No usable governed data locks progression. A stale or changed dataset is shown before task configuration. | Required draft CRUD/list/duplicate plus existing server-resolved snapshot identity. Preview remains server-owned and bounded. |
+| 2. Prepare Data | Review quality issues and task-relevant impact; choose Stay or open Power Query with experiment, issue, and return-stage context. | Current recipe lineage and preparation checks unlock Configure; warnings remain visible. | Apply refreshes data identity and reconciles columns; cancel preserves the draft. Blocking issues identify the resolving action. | Existing snapshot and preparation-assessment foundations; required persisted return context and server-issued recipe lineage. |
+| 3. Configure | Assign exclusive column roles; choose task-aware validation, metric, candidates, seeds, and local limits; request assessment. | A ready assessment bound to the exact draft revision, snapshot, recipe, and immutable configuration unlocks Train. | Any bound-field change makes the assessment stale. Server errors retain edits and expose code, message, and remediation. | Existing immutable experiment version and assessment services, extended for all five tasks and server-owned recipe hashing. |
+| 4. Train | Explicitly submit, observe events and limits, cancel, retry idempotently, or recover after restart. | A completed development-comparison run with usable evidence unlocks Review Results. | Queued/running/cancel-requested/completed/failed/cancelled/interrupted remain distinct. Failure and interruption retain configuration and offer a valid next action. | Existing durable run, event, cancellation, idempotency, executor, and restart-recovery foundations; required experiment-scoped queries and development-only run mode. |
+| 5. Review Results | Compare candidates with baselines and limitations; nominate one from development evidence; run its one-time final evaluation; deliberately select the candidate. | Selected-candidate receipt bound to configuration, data, final evidence, limitations, and verified artifacts completes the cycle and unlocks Use & Share. | Incompatible runs cannot compare. Final evidence cannot rank alternatives. Stale drafts do not rewrite historical evaluations. | Existing evaluation/evidence/comparison and candidate records; required nomination and one-time final-evaluation boundary before selection. |
+| 6. Use & Share | Inspect completion receipt; export supported artifacts/report/card/manifest/example; validate and run batch prediction; preview/export cycle summary. | Each optional action returns its own receipt or actionable schema error. | Unsupported uncertainty, assignment, or publishing controls are absent. Artifact verification failure blocks export/inference without changing cycle completion. | Required reloadable bundle, export, prediction, and summary contracts. Context Ledger and AI Chat publishing remain deferred. |
 
-- `POST /api/ml_prep/train` can be called without the server-side governance check enforced by `POST /api/automl/train`.
-- The readiness rules reject categorical supervised features even though the training pipeline can one-hot encode them. The preparation contract and execution contract therefore disagree.
-- Both routes accept full datasets from browser state. Canonical training should resolve server-owned source and workspace identities, versions, relationships, and transformation snapshots.
-- Frontend ML readiness resets when uploaded or full data changes, but not when cleaned data changes, so a previously ready state can outlive a cleaning mutation.
+### Task Differences Across The Same Stages
 
-### Lifecycle and operational integrity
+| Task | Goal and configuration | Evaluation and outputs |
+| --- | --- | --- |
+| Regression | Numeric target; random, time, or group-aware validation as justified. | Mean baseline, RMSE/MAE/R² and residual evidence; numeric predictions. |
+| Classification | Class target; stratification where feasible; imbalance-aware metric choice. | Majority baseline, balanced accuracy/weighted F1/accuracy, confusion evidence; probabilities only when calibrated and supported. |
+| Forecasting | Numeric target, time column, frequency, horizon, optional series keys, and future-available inputs. | Chronological or rolling validation, naive/seasonal baseline, horizon-indexed forecast; never random split by default. |
+| Clustering | No target; feature roles, scaling, distance assumptions, and cluster-count/model controls. | Cluster profiles, separation and stability evidence; no supervised accuracy; new-row assignment only when supported. |
+| Anomaly detection | Feature roles, detector, threshold, and optional label solely for labeled evaluation. | Scores, threshold behavior, stability, and labeled metrics only when labels exist; flags mean unusual, not erroneous. |
 
-- The selected model is held only in process-global memory. It disappears on restart, has no durable run record, and is not safe for concurrent users.
-- No consumer uses `get_trained_model`; there is no stable prediction, model-version, archive, or promotion contract.
-- The custom and AutoML services duplicate problem definitions, preprocessing, metrics, and response concepts.
-- Direct ML test coverage is effectively absent. Current tests prove governance blocking and readiness messaging, not model correctness, leakage protection, run persistence, or API contracts.
-- The ML window is not a navigation destination. It becomes visible only after the user enters Power Query, runs ML Prep, and selects Train Model, which explains why the capability appears unavailable.
+### Backend Contract Boundary
 
-## Experience Concept — Experiment Workbench
+The exact design-only additions are recorded in [the ML Studio contract](../contracts/ml_studio.md#workflow-application-contract--proposed). Existing source remains authoritative until each proposed contract is implemented and tested.
 
-The product label should be **ML Studio**, with **Experiment Workbench** as the primary working surface. It should look native to AI Tool: black or white canvas, slate structural surfaces, electric-blue focus, restrained green/amber/red evidence states, and the existing typography and spacing tokens. Avoid a disconnected purple-gradient AI aesthetic.
+| Boundary | Reuse now | Required before its build step |
+| --- | --- | --- |
+| Identity and readiness | `DatasetSnapshotIdentity`, immutable experiment versions, `PreparationAssessment`, `/snapshots`, `/experiments`, `/preparation-assessments`. | Persisted `ExperimentDraft` and server-computed `WorkflowState`; server issues recipe hash and lineage from accepted steps. |
+| Execution | Durable run repository, idempotent submission, executor, events, cancellation, restart recovery. | Draft/config binding, experiment-scoped listing, bounded limits in public state, and development-only comparison runs. |
+| Evaluation and selection | Leakage-aware supervised evaluation, evidence, comparison, managed artifact metadata, reviewed candidate reference. | Explicit `CandidateNomination`, one-time `FinalEvaluation`, and `CandidateSelection`; current automatic winner plus immediate holdout evaluation must be split. |
+| Outputs | Write-once verified artifact bytes and path-free metadata. | Reloadable model/preprocessor bundle, schema contract, export receipts, batch prediction, cycle summary, and task-specific output types. |
+| Task coverage | Regression and classification only. | Forecasting, clustering, and anomaly contracts, evaluation, baselines, artifacts, and inference behavior. |
 
-The experience uses five coordinated regions:
+### Assessment Request Finding
 
-1. **Run Ribbon** — a persistent, ordered path across the top: Data Snapshot → Goal → Features → Validation → Candidates → Evidence → Candidate. It communicates progress without becoming a free-form node graph.
-2. **Asset Rail** — the left pane shows the authoritative workspace, selected source graph, Power Query recipe, target, feature roles, row count, schema version, and readiness. Dataset identity stays visible throughout the experiment.
-3. **Experiment Canvas** — the center combines guided cards with direct manipulation. Developers choose an intent such as Predict a Number, Predict a Category, or Discover Segments, then configure only the decisions that materially affect validity.
-4. **Evidence Inspector** — the right pane explains the selected stage or result: leakage findings, split rationale, warnings, metric definitions, baseline delta, feature influence, error slices, and limitations.
-5. **Run Dock** — a bottom strip shows queued, running, failed, and completed runs and allows two to four runs to be pinned for comparison without leaving the workspace.
+The current React shell posts snapshot creation, an immutable experiment, and an assessment from one transient component. It calculates `canonical_recipe_hash` in the browser even though the backend re-computes it, and its component test mocks both Web Crypto and all three API responses. The Python API tests prove the backend accepts a correctly constructed recipe; the React test proves only request shape. No existing test submits the browser-generated recipe to the real Flask boundary or waits for refreshed dataset identity after Power Query. Therefore the reported assessment failure is not safely attributable to one backend rule from current evidence. The implementation contract removes the avoidable ambiguity: the client submits ordered steps and the server issues canonical recipe lineage, while an integration test must exercise the real request and stale-data error path before Step 5.
 
-### Distinctive interactions
+### Step 1 Acceptance And Handoff
 
-- **Metric landscape, not a leaderboard:** show baseline-relative performance, cross-validation distribution, final holdout result, and uncertainty together. A model cannot win from one large number.
-- **Failure atlas:** let users select poor-performing cohorts or confusion-matrix cells and immediately inspect the affected rows and feature distributions.
-- **Why this candidate:** summarize performance, stability, complexity, latency estimate, and known failure slices in one evidence-backed panel.
-- **Reproducibility receipt:** every run exposes its dataset fingerprint, workspace version, transformation recipe hash, feature schema, split policy, random seed, library versions, parameters, code revision, and artifact hashes.
-- **Guided and developer views:** the same experiment can switch between guided controls and a read-only generated Python/API recipe. The recipe is an export of the governed configuration, not a second source of truth.
-- **Visible truth boundary:** use explicit states such as Draft, Evaluated, Reviewed Candidate, and Rejected. Do not label a model Production or Deployed during this phase.
+Step 1 is complete when this blueprint and the proposed contract agree with current source, documentation checks pass, and no application code has changed. Step 2 remains separately authorized work. Its first eligible owner is the frontend owner for only the shared frame—header, six-stage navigation, context rail, Guidance region, and run dock—using existing identity/run reads and honest locked placeholders. Draft persistence, Power Query integration, configuration replacement, training changes, results, and outputs stay out of that first assignment.
 
-## Core Contracts To Define Before UI Implementation
+## Step 2 — Build the workspace
 
-### Dataset snapshot
+**Status:** Authorized through the bounded shared-workspace frontend handoff. Later steps remain inactive.
 
-An immutable training input containing `snapshot_id`, `workspace_id`, `workspace_version`, ordered `source_ids`, ordered `relationship_ids`, source fingerprints, schema version, semantic-model version, governance result, Power Query recipe and hash, row count, column profile, created time, and creating actor when identity becomes available.
+**What changes:** Implement the shared layout, stage navigation, compact dataset context, Guidance area, and expandable training dock.
 
-The server resolves rows from these identities. Raw browser-supplied rows remain a temporary compatibility path only and cannot produce a reviewable candidate.
+**What you will see:** A consistent, responsive ML Studio frame with clear locked and empty states—not an oversized configuration window.
 
-### Experiment specification
+**Who does it:** Frontend owner after Step 1; Codex reviews.
 
-An immutable versioned configuration containing `experiment_id`, `task_type`, optional target, feature roles, excluded columns, split strategy, group or time column when applicable, candidate families, metric policy, resource limits, and random-seed policy.
+**Done when:** The shared layout meets the sizing, keyboard, theme, and overflow requirements below. Unconnected stages are honestly labeled; the frame is not called a working ML cycle.
 
-Task type is proposed from data but confirmed by the user. The system must not silently reinterpret a numeric category as regression or a continuous target as classification.
+## Step 3 — Save and resume experiments
 
-### Run
+**What changes:** Add experiment creation, autosave, reopen, duplication, and save-error recovery. Connect Guidance on/off to the same experiment state.
 
-A durable asynchronous execution containing `run_id`, experiment/specification version, snapshot identity, lifecycle status, timestamps, progress stages, cancellation state, parameters, environment manifest, warning and failure codes, evaluation result, and artifact references.
+**What you will see:** An experiment home and clear saving/saved/error feedback. Switching Guidance does not reset your work.
 
-### Evaluation result
+**Who does it:** Codex builds and verifies persistence/API behavior, then the frontend owner connects it.
 
-A task-aware record containing baseline metrics, cross-validation fold results, untouched final-holdout metrics, confidence intervals where supportable, class or target profile, calibration when relevant, confusion matrix or residual summaries, subgroup and error slices, feature influence with method and limitations, leakage findings, and an explicit truth boundary.
+**Done when:** Reopening restores the draft and stage; duplication does not copy completed status; save conflicts and failures preserve work.
 
-### Candidate record
+## Step 4 — Connect data preparation and Power Query
 
-A reviewed reference to one immutable run and model artifact. It records review status, reviewer, notes, intended use, prohibited use, training-data lineage, evaluation summary, compatibility schema, and artifact hash. Candidate status does not authorize deployment.
+**Authorization:** Preparation only. The user requested preparation on 2026-09-26 and explicitly prohibited implementation. Backend and frontend changes require a new direct instruction.
 
-### Errors
+### Source-backed prerequisites
 
-Use structured errors with stable codes, clear developer messages, safe details, and remediation actions. Never return estimator tracebacks, filesystem paths, serialized objects, secrets, or raw data samples in an error.
+`backend/routes/ml_studio.py` already provides server-resolved snapshots and preparation-assessment routes. `backend/ml_studio/service.py` checks snapshot identity and governance; its assessment endpoint still requires an immutable experiment specification and a caller-supplied, hash-validated transformation recipe. Its draft workflow currently unlocks only Data & Goal and Prepare Data. These are foundations, not a draft-bound preparation workflow.
 
-## Proposed Delivery Order
+`backend/routes/manual_cleaning.py:19` exposes `/api/manual_cleaning`, which uses global uploaded/cleaned data rather than an explicit workspace identity. It returns both a bounded preview and full cleaned rows. This route does not prove that cleaning updates the same governed workspace used by an ML Studio draft. That identity and commit boundary must be established before the ML Studio UI consumes it.
 
-### Gate 1 — Contract And Evaluation Integrity
+`frontend/frontend/src/features/ml_studio/MLStudioShell.jsx:1010` passes initial cleaning steps and an in-memory apply callback; `frontend/frontend/src/App.jsx:477` opens the cleaning form. The callback creates a fresh snapshot/assessment but carries no durable experiment, issue, or return-stage context. The configuration form constructs recipe identity and its hash in the browser. The proposed server-issued recipe route and persisted return context in the contract are not implemented.
 
-**Owner:** Codex.
+### Ordered bounded work
 
-Define the five contracts above, add a single ML Studio application service, consolidate duplicated training behavior, and establish leakage-safe evaluation. Support regression and classification first. Use preprocessing pipelines fit only on training folds, inner cross-validation for candidate selection, and one untouched final holdout for reporting. Add random/stratified, time-ordered, and grouped split policies with deterministic tests.
+1. **Workspace-safe cleaning boundary — Codex.** Specify and then, only after authorization, implement explicit workspace/version validation, a server-owned commit receipt, and bounded preview behavior using the existing cleaning engine. Determine the canonical workspace update path before choosing an endpoint. Preserve existing callers. Prove wrong-workspace and stale-version rejection, no commit during preview or cancellation, and a receipt matching the committed workspace/schema. Primary source: `backend/routes/manual_cleaning.py`, the workspace resolver used by `backend/routes/ml_studio.py`, and the existing workspace services. This is the first backend gate.
+2. **Draft preparation and return state — Codex.** Bind server-issued recipe lineage and persisted return context to the current experiment, workspace, draft revision, snapshot, selected issue/fix, and return stage. Define conditional-update and retry behavior before implementation. Apply must refresh governed identity/schema, reconcile removed role columns, and invalidate incompatible assessment evidence. Cancel must preserve the saved draft. Do not treat a browser callback, local hash, or unsaved form as server truth.
+3. **Data & Goal — Antigravity after backend review.** One handoff for governed dataset/schema/preview, explicit problem selection, and saving the draft's data/goal fields. Regression and classification have execution foundations; forecasting, clustering, and anomaly detection must be labeled unavailable until their execution prerequisites exist. No training or configuration replacement in this handoff.
+4. **Prepare Data — Antigravity after backend review.** One handoff for server-issued issues and supported fixes, Stay/Open Power Query, and the apply/cancel return path. Use the exact verified fields from the backend contract. Keep workspace switches, stale responses, failed saves, retry, and unmount behavior in the acceptance tests.
 
-Acceptance requires direct tests proving that test rows never influence preprocessing or selection, the final holdout is untouched until candidate selection finishes, baselines are present, invalid task/split configurations fail safely, and existing dataset governance remains enforced.
+No frontend handoff is active. Each backend assignment must return focused contract, source, and test evidence before a UI handoff is issued. Proposed fields and endpoints must be labeled proposed until implemented; compatibility services must retain their existing contracts.
 
-### Gate 2 — Durable Experiments And Runs
+### Verification plan
 
-**Owner:** Codex.
+For the first backend assignment, use `tests/test_ml_studio_api.py`, `tests/test_source_workspace_context.py`, and focused cleaning-boundary tests selected when the workspace commit contract is fixed. Verify stale identity, cross-workspace isolation, bounded preview, apply receipts, and cancellation separately. Run Python compilation for changed modules and `git diff --check`. Frontend assignments each require their focused tests and production build. Preparation itself runs documentation validators only and does not claim runtime verification.
 
-Add local SQLite metadata persistence plus a managed, server-owned artifact directory. Store experiment versions, immutable run manifests, metrics, warnings, and hashes. Persist model artifacts only from trusted server-created pipelines; never deserialize a client upload. Reuse the existing workflow-run lifecycle patterns for status, events, cancellation, atomic writes, and restart recovery where practical.
+**What changes:** Build Data & Goal and Prepare Data: dataset preview, five understandable problem choices, quality issues, and the Power Query round trip.
 
-Acceptance requires concurrent-run isolation, restart-safe status, immutable completed runs, idempotent submissions, bounded resources, safe artifact paths, and deterministic serialization.
+**What you will see:** Useful data context and issue explanations. Clicking an issue offers Open Power Query or Stay, with a clear return to ML Studio.
 
-### Gate 3 — Identity-First ML Studio API
+**Who does it:** Codex verifies data and return-context contracts, then the frontend owner implements the interaction.
 
-**Owner:** Codex.
+**Done when:** Applying changes refreshes schema and readiness; cancellation preserves the draft. Removed columns are reconciled. Tasks awaiting execution support are labeled unavailable.
 
-Expose versioned routes for dataset snapshots, experiments, runs, run events, cancellation, comparisons, evaluation details, and candidate review. Canonical requests carry workspace/source identity and version fields rather than full datasets. Keep legacy ML routes available only through a documented compatibility boundary until the new UI no longer depends on them.
+## Step 5 — Replace Experiment Configuration
 
-Acceptance requires endpoint contract tests, stale-workspace rejection, governance blocking, source-lineage retention, stable errors, no client filesystem paths, and no process-global model ownership.
+**What changes:** Build exclusive column roles, task-aware splits and metrics, editable model choices, resource limits, and server readiness assessment.
 
-### Gate 4 — ML Studio Shell
+**What you will see:** A searchable role editor and a clear configuration summary instead of conflicting multiple-select lists and a confirmation checkbox.
 
-**Owner:** Antigravity after Codex verifies Gate 3 and creates one bounded handoff.
+**Who does it:** Codex verifies readiness rules and payloads, then the frontend owner replaces the form.
 
-Add ML Studio as a first-class destination in the existing application rail. Build the native empty, no-dataset, blocked, ready, loading, and error states; the Run Ribbon; Asset Rail; blank Experiment Canvas; Evidence Inspector; and Run Dock. Do not implement training controls in this gate.
+**Done when:** A target cannot also be an input. Valid current settings assess successfully; invalid or stale settings show actionable errors. Progression unlocks only for the assessed version.
 
-Acceptance requires native light/dark theming, keyboard navigation, reduced-motion support, responsive minimum sizing, clear dataset identity, and no regression to Workspace, Data Model, Explore, Dashboards, or AI Suite.
+## Step 6 — Make training work end to end
 
-### Gate 5 — Power Query Gateway And Guided Experiment Builder
+**What changes:** Connect explicit launch, actual progress, cancellation, retry, and restart recovery to local execution.
 
-**Owners:** Codex for snapshot/recipe contracts, then Antigravity for one bounded UI handoff.
+**What you will see:** Training that visibly runs, finishes, fails, or cancels—with an understandable next action.
 
-Replace the fragile readiness flag with a server-issued preparation assessment bound to the exact dataset snapshot and experiment specification. Power Query can apply a suggested fix, preview it, save the resulting transformation recipe, and choose **Use in ML Studio**. ML Studio can return to Power Query without losing experiment intent.
+**Who does it:** Codex proves execution behavior first, then the frontend owner builds the controls.
 
-Acceptance requires stale-readiness invalidation, recipe lineage, reversible navigation, unsupported-fix handling, user confirmation of target and feature roles, and no duplicated cleaning engine.
+**Done when:** Run state matches the backend, limits are enforced, failures are recoverable, and progress is never fabricated.
 
-### Gate 6 — Run Observatory And Comparison
+## Step 7 — Review results and choose a candidate
 
-**Owners:** Codex for comparison/evidence APIs, then Antigravity for the UI.
+**What changes:** Connect baselines, development comparisons, candidate nomination, separate final evaluation, and deliberate selection.
 
-Execute asynchronous runs and render live stage progress, the metric landscape, baseline comparison, failure atlas, run comparison, and Why This Candidate evidence. Add clustering only after its validation contract is defined separately from supervised metrics.
+**What you will see:** Understandable results, limitations, and a receipt identifying the model you selected.
 
-Acceptance requires truthful live status, cancellation, failure recovery, two-to-four-run comparison, task-appropriate metrics, accessible charts plus tabular equivalents, and clear handling of missing or statistically weak evidence.
+**Who does it:** Codex verifies evaluation and selection integrity, then the frontend owner builds results.
 
-### Gate 7 — Reviewed Candidates And Developer Export
+**Done when:** Complete regression and classification journeys reach candidate selection with traceable evidence. Final holdout data is not reused to tune the winner.
 
-**Owners:** Codex for registry/export contracts, then Antigravity for the review UI.
+## Step 8 — Export models and make predictions
 
-Allow a user to mark an evaluated run as a Reviewed Candidate, reject it, or leave it experimental. Produce a model card and reproducibility bundle containing the run manifest, metrics, limitations, schema, environment, and generated Python/API recipe. Do not add online serving or automatic deployment.
+**What changes:** Add reloadable model/preprocessing artifacts, schema-checked batch predictions, reports, and an inference example.
 
-Acceptance requires immutable candidate lineage, audit-ready review metadata, artifact-integrity checks, safe export, and exact replay against the preserved snapshot where the local data remains available.
+**What you will see:** Useful downloads and predictions, with explanations when inputs are incompatible.
 
-### Gate 8 — Enterprise Hardening And Context Ledger Port
+**Who does it:** Codex proves artifact reload and inference, then the frontend owner connects outputs.
 
-**Owner:** Codex, with frontend work only if a verified UI gap remains.
+**Done when:** An exported artifact can actually run inference; invalid inputs receive actionable errors. Uncertainty is shown only when supported and valid.
 
-Add authorization hooks, quotas, concurrency and memory limits, retention policy, dependency and artifact scanning, structured audit events, observability, migration tests, accessibility verification, and performance benchmarks. Define—but do not connect—a Context Ledger port for future run, lineage, review, and candidate events.
+## Step 9 — Complete forecasting
 
-Acceptance requires threat modeling, failure-injection tests, multi-user isolation tests once identity exists, bounded large-dataset behavior, dependency audit evidence, and a separate user-approved architecture decision before any Context Ledger adapter is implemented.
+**What changes:** Extend all six stages for time columns, frequency, horizon, series, chronological validation, and forecast outputs.
 
-## Initial Algorithm Boundary
+**What you will see:** A forecasting workflow—not regression relabeled as forecasting.
 
-The first release should deliberately use a compact, explainable candidate library:
+**Who does it:** Codex builds task-specific contracts and execution, then the frontend owner integrates them.
 
-- Regression: regularized linear baseline, random forest, and histogram gradient boosting.
-- Classification: logistic baseline, random forest, and histogram gradient boosting.
-- Clustering, after the supervised flow is sound: K-means plus explicit scaling, stability checks, and silhouette diagnostics.
+**Done when:** A forecast cycle compares against a suitable baseline using time-aware evaluation and produces horizon-specific outputs.
 
-Do not add dozens of estimators, arbitrary Python execution, uploaded pickles, GPU training, neural networks, or opaque hyperparameter searches. Better evaluation and evidence are more valuable than a larger algorithm menu.
+## Step 10 — Complete clustering
 
-## Quality And Safety Policy
+**What changes:** Extend all six stages for targetless grouping, scaling, distance assumptions, cluster profiles, and stability.
 
-- Every result compares against a simple baseline.
-- Preprocessing, feature selection, and tuning occur inside training folds.
-- Candidate selection and final evaluation use separate evidence.
-- Time and entity structure are explicit split inputs, never inferred and ignored.
-- Class imbalance, missing targets, duplicate rows, high-cardinality identifiers, target leakage, and post-outcome fields produce visible findings.
-- Feature importance is labeled as model influence, never causal importance.
-- Sensitive-attribute analysis is opt-in and explicit; the system never guesses protected classes from names or values.
-- Reproducibility metadata is required for every completed run.
-- A successful run is an evaluated experiment, not a deployment recommendation.
+**What you will see:** A grouping workflow with understandable cluster evidence instead of supervised accuracy.
 
-## Activation And Sequencing
+**Who does it:** Codex builds task-specific contracts and execution, then the frontend owner integrates them.
 
-**Phase 13 — Machine Learning Studio Foundation** is active with Gate 1 as the sole executable gate and Codex as the owner. No frontend handoff exists. Antigravity must not begin until Codex verifies the backend contracts and representative evaluation behavior required by the first frontend surface.
+**Done when:** A clustering cycle reaches selection and supported outputs; new-row assignment is offered only when the model supports it.
 
-Later gates remain roadmap context only. Finishing one gate does not authorize the next; Codex must review the evidence, update current status, and replace the sole active gate before work continues.
+## Step 11 — Complete anomaly detection
 
-## External Design Evidence
+**What changes:** Extend all six stages for detector choices, scores, thresholds, and optional labeled evaluation.
 
-- Scikit-learn's official guidance recommends pipelines and strict train/test separation to prevent inconsistent preprocessing and data leakage: https://scikit-learn.org/stable/common_pitfalls.html
-- MLflow organizes work as experiments, runs, models, parameters, metrics, artifacts, and dataset inputs, providing a useful vocabulary for a portable internal contract: https://mlflow.org/docs/latest/ml/tracking
-- Azure Machine Learning Designer demonstrates the value of reusable pipeline components, visible inputs and outputs, drafts, jobs, and experiment history: https://learn.microsoft.com/en-us/azure/machine-learning/concept-designer?view=azureml-api-2
-- Vertex ML Metadata emphasizes parameters, artifacts, lineage, repeatability, debugging, and downstream governance: https://cloud.google.com/vertex-ai/docs/ml-metadata/introduction
-- NIST AI RMF frames trustworthy lifecycle work through Govern, Map, Measure, and Manage; ML Studio should make those concerns continuous rather than a final checklist: https://airc.nist.gov/airmf-resources/airmf/5-sec-core/
+**What you will see:** An unusual-observation workflow with clear threshold and score interpretation.
+
+**Who does it:** Codex builds task-specific contracts and execution, then the frontend owner integrates them.
+
+**Done when:** An anomaly cycle reaches selection and outputs. Flags are not presented as confirmed errors, and labeled metrics require actual labels.
+
+## Step 12 — Prepare the cycle summary
+
+**What changes:** Add local summary preview/export and define the future Context Ledger and AI Chat integration boundary.
+
+**What you will see:** A reusable account of the goal, data, selected model, evidence, limitations, and artifacts.
+
+**Who does it:** Codex defines the summary contract, then the frontend owner builds preview/export.
+
+**Done when:** The summary matches the completed cycle. External publishing stays deferred until separately approved and implemented; no pretend-connected buttons.
+
+## Step 13 — Verify the whole ML Studio
+
+**What changes:** Check all five task journeys together, including resumption, backward edits, stale results, Power Query, failures, and consistent layout. Remove obsolete reachable UI only after replacement proof.
+
+**What you will see:** One coherent product whose stages lead somewhere, not a collection of isolated panels.
+
+**Who does it:** Codex leads integration review; the user retains final browser acceptance in chat.
+
+**Done when:** End-to-end evidence covers all five tasks and required recovery states. Builds and backend tests are not passed off as visual or product acceptance.
+
+## Product Requirements
+
+The following requirements apply throughout the build. They explain the details behind the steps, not additional assignments.
+
+### Product Promise
+
+Give developers a clear, capable local machine-learning workspace that takes a real problem from data to a deliberately selected model and usable outputs. Developers retain responsibility for cleaning data, choosing assumptions, and judging evidence. Rebuild the experience and its workflow; audit existing backend code for reuse rather than deleting working foundations.
+
+### Agreed Direction
+
+- One full developer control panel with a seamless Guidance on/off switch. Guidance changes explanations and assistance, never experiment state, available controls, or validation rules. No embedded AI assistant; AI Chat remains separate.
+- Five problem types: predict a number, classify, forecast, find groups, and detect anomalies. Use plain-language labels alongside technical names.
+- ML Studio and Power Query behave like connected parts of one workflow. Clicking a data issue offers “Would you like to open Power Query?” with Open and Stay actions, not automatic cleanup.
+- Autosaved, resumable experiments with duplication. Local-machine execution only for this release.
+- A cycle finishes with deliberate candidate selection. Exporting or sharing is useful but is not compulsory to finish.
+- Match the app's visual language, with the information organization of Databricks and the crispness of Azure tools. No raw-ID-dominated sidebar, uneven panels, offscreen forms, unexplained locks, or empty decorative stages.
+- Forward movement is gated by real prerequisites. Earlier stages stay accessible; changes clearly mark affected later work stale without erasing historical evidence.
+
+Provisional decisions, subject to later refinement: start with a small suggested, editable model set; require an explicit Train action; offer reusable artifacts and batch predictions; prepare a locally reviewable ML Cycle Summary for eventual Context Ledger and AI Chat integration. These are useful defaults, not invented user approvals of detailed APIs or integrations.
+
+### The Six Product Stages
+
+These are product navigation stages, not implementation assignments.
+
+| Stage | What the developer does | What unlocks the next stage |
+| --- | --- | --- |
+| 1. Data & Goal | Name the experiment, select data, inspect a readable preview, describe the problem, and choose the task type. | A valid data reference and explicit task choice. |
+| 2. Prepare Data | Inspect quality issues, understand their impact, and optionally open Power Query to fix them. | Required data checks pass; unresolved warnings remain visible. Configuration-specific checks happen in Configure. |
+| 3. Configure | Set task-appropriate column roles, validation strategy, success metric, model choices, and local resource limits. | Server assessment accepts the exact current configuration and data version. |
+| 4. Train | Start training, see actual progress and resource limits, cancel, or recover from failures. | A completed run supplies usable evaluation evidence. Failed or cancelled work offers a clear recovery path. |
+| 5. Review Results | Compare development results to baselines, inspect limitations, nominate a candidate, review final evaluation, and deliberately select it. | A valid candidate is selected with its evidence and intended-use notes. |
+| 6. Use & Share | View the completion receipt, export supported artifacts, make validated predictions, and prepare a cycle summary. | The cycle is complete at candidate selection; outputs are explicit optional actions, not hidden completion requirements. |
+
+Navigation reflects persisted workflow state, not a hard-coded active tab. Every locked stage explains what is missing and links back to the action that resolves it. Returning to a completed stage does not itself invalidate anything.
+
+### Workspace And Interaction Design
+
+Use a stable top area for experiment name, save state, stages, and Guidance toggle. A compact collapsible context rail shows friendly dataset names, versions, dimensions, and lineage; technical IDs belong in details with copy actions. The main workspace gives the current stage most of the width. Guidance is contextual explanation beside the relevant control or in a collapsible panel, not a chatbot. Evidence appears where it is useful instead of occupying a permanent empty column. A compact expandable run dock keeps real running work visible while the developer inspects other stages.
+
+Define shared spacing, typography, button hierarchy, form widths, table behavior, focus treatment, loading, empty, failure, and success states before polishing individual stages. Check layout at 1440×900, 1024×768, and 390×844, as well as keyboard navigation and zoom. Wide data tables may scroll within their own region; the page must not shove core controls offscreen. Keep the app's supported theme behavior consistent.
+
+Replace the old multiple-select configuration form with a searchable column-role editor. Each column has one exclusive role: task-appropriate target, numeric input, categorical input, ignored, time, or group. Suggested roles are clearly labeled and editable. Choosing a target removes it from inputs automatically. Show types, relevant issues, and a readable configuration summary. Do not use a confirmation checkbox as a substitute for correct role validation.
+
+### Persistence, Power Query, And Safe Changes
+
+Separate an editable, possibly incomplete draft from immutable configurations submitted for training. Autosave needs visible saving/saved/error states, conflict handling, and a flush before navigation or training. Reopening restores the experiment and stage; duplication copies settings and lineage but does not pretend copied runs are newly completed.
+
+The Power Query round trip carries experiment, data, issue, and return-stage context. The developer decides whether to apply transformations. On return, refresh server-owned data identity and schema, reconcile changed or removed columns, rerun affected checks, and return to the same experiment. Cancelling preserves the draft. Do not silently substitute a new dataset into an old result.
+
+Define an explicit dependency map before implementation: changes to data, recipe, or task invalidate affected readiness and later results; changes to roles, split, models, or training limits invalidate the relevant run configuration. Changing names, panel sizes, or Guidance does not. Preserve old runs and candidate evidence against their original immutable versions, labeled as historical. Warn before edits that affect an active run and never mutate its submitted configuration.
+
+### Task-Specific Behavior
+
+All five tasks are part of the complete rebuild. Deliver the supervised end-to-end path first, then integrate the remaining tasks through the same six stages.
+
+| Task | Required distinctions |
+| --- | --- |
+| Regression | Numeric target, suitable split, simple baseline, error metrics and residual evidence; numeric predictions. |
+| Classification | Class target, suitable stratification, imbalance-aware metrics, confusion evidence, and probabilities only when supported and validated. |
+| Forecasting | Time column, frequency, horizon, optional series keys, and inputs available at prediction time; chronological/rolling validation and naive or seasonal baseline. Never default to random splitting. |
+| Clustering | No target; explicit scaling and distance assumptions, cluster profiles and stability evidence. Do not present supervised accuracy; new-row assignment only when supported. |
+| Anomaly detection | Detector and threshold controls, score distribution and stability, optional labels for labeled evaluation. Flags mean unusual observations, not confirmed errors. |
+
+### Training, Candidate Selection, And Outputs
+
+Local training must expose bounded concurrency, resource/time limits, meaningful backend stages, cancellation, retry behavior, and restart recovery. Do not invent percentage progress or conceal a failed run behind a generic spinner.
+
+Use development validation for comparison and nomination. Keep final holdout evidence separate so repeated model selection does not leak test information. Resolve the existing backend's automatic CV-based selection with the requested explicit nomination and final candidate-selection flow before frontend implementation. A selected candidate must reference its exact configuration, data, usable artifacts, evaluation, and limitations; selection is not a deployment claim.
+
+Provisional outputs are the fitted model and preprocessing pipeline, input schema, evaluation report, model card, reproducibility manifest, and a Python inference example. Prove artifacts can be reloaded for inference before promising export. Batch prediction must validate schema and show actionable errors. Confidence or uncertainty is task/model dependent and must not be fabricated.
+
+Prepare a local ML Cycle Summary containing the problem, lineage, configuration, chosen candidate, metrics, limitations, and artifact references. Preview and export are useful initially. Context Ledger and AI Chat publishing need explicit adapter contracts and user action in a later approved integration; do not show dead or pretend-connected publish controls.
+
+### Existing Source: Reuse And Gaps
+
+Source inspection informs this plan; it does not certify the current UI.
+
+| Existing surface | Planning consequence |
+| --- | --- |
+| backend/ml_studio contracts, service, repository, execution, evaluation, and artifacts modules | Audit and reuse applicable foundations. Current task support is regression/classification; other tasks need new contracts and evaluation paths. |
+| /api/ml-studio/v1 snapshot, experiment version, assessment, run/event/cancel, evaluation/evidence, comparison, and candidate routes | Useful foundations exist. Draft CRUD/list/duplicate and batch prediction/export were not found in this route surface; design and verify them before UI assignment. |
+| Immutable versions, runs, candidates, and artifact metadata | These are not proof of resumable drafts or reloadable fitted-model exports. Verify persistence and artifact contents independently. |
+| Current evaluation/comparison rules | Reconcile automatic winner selection, compatible comparisons, explicit nomination, and untouched final evaluation. |
+| TopRibbon static stage array/active index and EvidenceInspector static truth presentation | A visible stage ribbon is not a functional workflow. Replace static stage selection with actual state and task-specific evidence. |
+| Existing ML Studio contract introduction and later execution sections | Reconcile stale introductory scope with implemented asynchronous execution before extending the contract. |
+
+Earlier backend test results do not establish that browser assessment submits the right payload, handles returned errors, or stays onscreen. Reproduce the actual request/state boundary during Step 1 and add focused regression coverage.
+
+## Delivery Control And Definition Of Done
+
+One active gate and one implementation handoff at a time. Frontend owner is not reassigned by this plan: Claude Code is an option the user raised, not an agent already dispatched. Codex owns backend, contracts, planning, and integration review; the chosen frontend owner owns React/CSS. No frontend edits by Codex are authorized here.
+
+At each meaningful visible step, return changed files and focused verification evidence, then have Codex review before continuing. Check in with the user with what visibly changed and what remains. Do not batch the full rebuild into one frontend task. Follow repository restrictions on browser operation; browser acceptance remains in chat and belongs to the user.
+
+Tests must cover successful transitions and blocked, stale, empty, cancelled, failed, and resumed states. Frontend evidence must distinguish source tests/builds from actual visual inspection. Backend readiness never equals frontend completion. Preserve user work, use safe patch edits, and stop on unexpected file shrinkage; never discard changes to make verification pass.
+
+The rebuild is finished only when these stages form working, coherent journeys for all five supported tasks. A restyled canvas, passing build, or functioning configuration form alone is not completion.
 

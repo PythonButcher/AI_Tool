@@ -4,11 +4,15 @@ Hooks are optional automation around the agent lifecycle. In this repo they shou
 
 ## Current Scripts
 
-`.codex/hooks/pre_tool_use_policy.py` reads Codex hook JSON from stdin. It can deny destructive shell commands, deny attempted `GEMINI.md` edits, and add context when a command appears to touch frontend-agent-owned source.
+`.codex/hooks/pre_tool_use_policy.py` reads Codex hook JSON from stdin. It distinguishes read-only inspection from mutation, loads canonical phase authorization, and denies destructive commands, `GEMINI.md` changes, truncating script writes, unauthorized frontend edits, and writes outside the active path boundary.
 
 It also denies dynamic-path Python writes such as `open(f, "w")`, dynamic `Path.write_text`, and direct PowerShell writes to frontend source. These patterns can truncate a file before its contents are read. Source edits must use `apply_patch`.
 
-`.codex/hooks/agent_harness_check.py` is a manual validation command. It checks that harness navigation exists, hook scripts are parseable, active docs point to existing paths, `GEMINI.md` is not modified in the current git diff, completed plans are not left in the active current path, status declares one roadmap phase separately from a descriptive current gate, and the active gate contains only its authoritative `README.md`.
+`.codex/hooks/agent_harness_check.py` is the authoritative repository validator. It checks required paths and syntax, canonical authorization, allowed diffs, lifecycle/readiness/ownership/continuation alignment, gate identity and WIP=1, handoff state, navigation, local skill manifests, stale status paths, `GEMINI.md` protection, and critical source sizes.
+
+The shared handoff integrity check runs both during repository validation and before Antigravity can return control. It checks the active frontend target list, current file integrity, scope, required changed-file coverage, inline-style policy, whitespace, and presence of a durable diff. It never edits or restores source.
+
+`.codex/hooks/check_active_gate.py` is the repository-local gate validator. `.codex/hooks/ci_harness_check.py` is the provider-neutral CI entrypoint; it configures no external provider.
 
 `.codex/hooks/codex_hooks.example.toml` is a sample hook configuration. It is not active by itself. Review it before copying entries into a real Codex config.
 
@@ -34,6 +38,6 @@ Hooks must not modify, restore, delete, or rewrite any `GEMINI.md` file.
 
 Hooks that block commands must explain the exact project rule being protected.
 
-Before reporting frontend work complete, run `python .codex/hooks/agent_harness_check.py`. The check rejects missing or unexpectedly small core components, including AI Chat, AutoML, and export source files.
+Before reporting frontend work complete, run the handoff's governed status-return command. It blocks a no-diff return and unsafe target changes. Also run `python .codex/hooks/agent_harness_check.py`; it rejects missing or unexpectedly small core components and invalid active handoffs.
 
 If a hook becomes noisy, disable it and revise the matcher or policy before relying on it again.

@@ -1,13 +1,16 @@
 ---
 name: auto-handoff-execution
-description: Triggers whenever the user asks to read, take over, or execute a codex handoff file, or mentions reading a handoff markdown file.
+description: Validate and execute AI Tool's current bounded Antigravity handoff when the user asks to read, take over, resume, or execute a handoff Markdown file.
 ---
 
 # Auto Handoff Execution
 
-When the user asks you to read a handoff markdown file from Codex (which usually contains a `Goal:` prompt):
-
-1. **Extract the Goal**: Read the specified handoff file (or check `project_docs/active/ai_hand_off/README.md` to find the active handoff) and locate the `Goal:` prompt.
-2. **Auto-Execute as a Goal**: You do not need the user to manually copy-paste the prompt or use the `/goal` slash command. You must automatically adopt a "goal-oriented" mode. 
-3. **Thorough Execution**: Treat the extracted `Goal:` prompt as your immediate task. Work autonomously and thoroughly step-by-step.
-4. **Do Not Stop**: Continue working until the goal is fully achieved, including running verification and acceptance checks. Only pause to ask the user questions if you are entirely blocked or if explicit user action is required.
+1. Read `AGENTS.md`, `project_docs/active/status/project_execution_status.md`, `project_docs/active/status/phase_authorization.json`, `project_docs/active/ai_hand_off/README.md`, and `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md`.
+2. Run `python .gemini/skills/status-tracker-skill/scripts/update_status.py check`.
+3. Do not edit frontend source unless the check confirms Antigravity ownership, Frontend Readiness of `backend_contract_ready` or `frontend_repair_only`, and exactly one non-README active handoff.
+4. Read that handoff and adopt its `Goal:` as the complete task. Treat target files, proven API contracts, fixtures, UI states, state ownership, non-negotiables, acceptance checks, and stop point as authoritative.
+   For **Async Mutation**: yes, implement and test every Async Mutation Acceptance case with controlled pending and failed responses. Prove the **Preserved Controls** assertion after the new states. Do not return a passing suite that lacks these assertions.
+5. Implement only the bounded React slice with reviewable editor operations. Never use Python, PowerShell, shell redirection, or bulk-rewrite commands to edit source. Never use `git checkout`, `git restore`, or reset to recover a file. If any target becomes empty or unexpectedly smaller, stop immediately, preserve the worktree, report the incident, and return control without attempting reconstruction.
+6. Run the handoff's focused verification and build. Browser acceptance remains with the user. Tests and builds do not replace the required source diff and visual-quality evidence.
+7. Return control with the governed status tracker. Its return command verifies target scope, non-empty files, suspicious shrinkage, required changed files, forbidden inline styles, a durable source diff, and whitespace. If it rejects, stop and report the exact rejection; do not bypass or rewrite files in bulk.
+8. Stop after reporting changed files, exact command results, and any contract mismatch.

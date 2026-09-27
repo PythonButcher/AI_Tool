@@ -62,6 +62,8 @@ If Antigravity reports that the requested scope is too large or ambiguous, Codex
 
 When the user asks Codex to review Antigravity frontend work, Codex should do an acceptance review, not a fresh implementation audit.
 
+For a handoff with **Async Mutation**: yes, Codex must read each Async Mutation Acceptance assertion and its focused test before acceptance. Check the source path for in-flight navigation, queued edits, failure retry, conflict or duplicate submission, and identity change or unmount. A passing test suite without those assertions is insufficient. Also verify the handoff's **Preserved Controls** assertion in source and focused tests; if the user reports a visible regression, treat it as review evidence even when a control still exists in JSX.
+
 Default review budget:
 
 - Read only `project_docs/INDEX.md`, `project_docs/active/README.md`, this guardrail, the active status file, and the active frontend-agent handoff.

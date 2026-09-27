@@ -12,10 +12,13 @@ import re
 import sys
 from typing import Any
 
+from mutation_policy import main as enforced_main
+
 
 DESTRUCTIVE_PATTERNS: tuple[tuple[str, str], ...] = (
     (r"\bgit\s+reset\s+--hard\b", "git reset --hard is destructive and requires explicit user intent."),
-    (r"\bgit\s+checkout\s+--\b", "git checkout -- can discard user changes and is blocked by project policy."),
+    (r"\bgit\s+checkout\b[^\r\n]*\s--\s", "git checkout with path restoration can discard user changes and is blocked by project policy."),
+    (r"\bgit\s+restore\b", "git restore can discard user changes and is blocked by project policy."),
     (r"\brm\s+-[^\n]*r[^\n]*f\b", "recursive forced removal is blocked by the harness policy."),
     (r"\bRemove-Item\b(?=.*\b-Recurse\b)(?=.*\b-Force\b)", "recursive forced removal is blocked by the harness policy."),
 )
@@ -39,6 +42,7 @@ DIRECT_FRONTEND_WRITE_PATTERN = (
     r"\b(?:Set-Content|Add-Content|Out-File)\b[\s\S]*"
     r"frontend[\\/]+frontend[\\/]+src"
 )
+DIRECT_SOURCE_REDIRECTION = r"(?:>|>>)\s*['\"]?(?:frontend[\\/]+frontend[\\/]+src|backend|tests)[\\/]"
 
 MUTATING_GEMINI_PATTERNS: tuple[str, ...] = (
     r"\bGEMINI\.md\b",
@@ -155,8 +159,15 @@ def main() -> int:
         )
         return 0
 
-    # Frontend source is Gemini-owned for Decision Intelligence unless the user
-    # explicitly authorizes Codex frontend edits in the current session.
+    if _matches(DIRECT_SOURCE_REDIRECTION, command):
+        _deny(
+            "PreToolUse",
+            "Shell redirection into source or tests is blocked. Use apply_patch so the edit remains reviewable.",
+        )
+        return 0
+
+    # Frontend source is Antigravity-owned unless canonical authorization grants
+    # Codex frontend edits for the current phase.
     if _matches(FRONTEND_SOURCE_PATTERN, command):
         _context(
             "PreToolUse",
@@ -168,4 +179,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(enforced_main())

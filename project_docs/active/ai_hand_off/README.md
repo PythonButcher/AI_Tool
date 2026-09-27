@@ -10,11 +10,13 @@ Antigravity owns bounded frontend implementation, React/CSS, UI rendering, and f
 
 ## Active Handoffs And Goal Prompts
 
-There is no active backend-agent or frontend-agent handoff. Codex owns the backend-only ML Studio gate through `project_docs/active/active_gate/README.md`. Antigravity must not begin ML Studio frontend work until Codex verifies the required backend contract and creates one bounded handoff.
+No implementation handoff is active. The reviewed duplication handoff is preserved in `project_docs/archive/ml_studio_duplicate_draft_reviewed_2026_09_26.md`. Use the sole active gate for the next authorized outcome.
 
 Completed handoffs belong outside this active folder.
 
 ## Handoff Rule
+
+Start from `project_docs/active/agent_harness/templates/ANTIGRAVITY_FRONTEND_HANDOFF_TEMPLATE.md` and remove every placeholder before activating a handoff.
 
 When frontend work is needed, Codex must write a focused frontend-agent handoff that names the files to inspect, the backend truth, the acceptance behavior, the constraints, and the status-doc requirement.
 
@@ -45,3 +47,4 @@ Frontend agents should review this checklist to prevent common handoff failures:
 - **State Reconciliation**: When updating props to reconcile server version conflicts after an error, use a `useRef` to track the active ID so you don't accidentally reset the user's unsaved draft form values or hide the actionable error message.
 - **Cleanliness Evidence**: Always check for trailing whitespace. If `git show --check HEAD` or `git diff --check` complains, you must strictly strip those trailing whitespaces from your working copy.
 - **Strict Evidence Matching**: If the handoff specifies displaying exact server fields (like `version` or `validated_at`) or validating specific constraints (like rejecting duplicate fields), implement them exactly. Never skip a requirement.
+- **Return Is Fail-Closed**: The governed return runs the full repository harness and rejects out-of-scope files, missing target changes, unsafe shrinkage, forbidden inline styles, whitespace errors, and a diff larger than the handoff budget.

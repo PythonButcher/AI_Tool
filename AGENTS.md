@@ -23,9 +23,12 @@ Read the smallest relevant path. Do not bulk-scan Markdown, active product folde
 
 - The user controls product direction and final browser acceptance.
 - Codex is lead orchestrator and owns backend implementation, contracts, tests, architecture, project documentation, integration review, and next-owner decisions.
-- The status file states what is true now. The sole active gate states what work is authorized now.
+- Authority flows from this file through `project_docs/INDEX.md`, documentation governance, execution status, the machine-readable phase authorization record, the sole active gate, durable roadmaps and contracts, handoffs, future work, and archive material, in that order.
+- The status file states what is true now. `project_docs/active/status/phase_authorization.json` records whether work is review-only or authorized. The sole active gate states the executable work authorized now.
 - If status, the active gate, a roadmap, a handoff, and source disagree, stop implementation and repair the active documentation before continuing.
 - Archived, completed, future, and unreferenced handoff files are never active instructions.
+
+A direct user instruction to begin, start, resume, or implement a named phase is implementation authorization for that phase. Record it in the phase authorization file before mutation. Never infer authorization from a roadmap, review, handoff, or stale status statement.
 
 ## One Active Gate
 
@@ -35,6 +38,7 @@ Read the smallest relevant path. Do not bulk-scan Markdown, active product folde
 - Do not place completion history, work diaries, prior phase names, or supporting plans in the active gate.
 - Status uses one `Roadmap Phase` value and a plain-language gate name. Never combine phase and slice numbering.
 - Before starting, handing off, or closing a numbered roadmap phase, use the `project-doc-governance` skill and run the repository documentation checks.
+- An authorized Codex-owned phase in progress must expose one current atomic step and use `CONTINUE`; Codex proceeds through executable steps until a blocker, ownership handoff, user pause, or the gate acceptance boundary.
 
 ## Ownership And Handoffs
 
