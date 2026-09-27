@@ -1,46 +1,47 @@
-Goal: Establish workspace-safe data cleaning contracts for ML Studio preparation.
+Goal: Connect ML Studio Data & Goal to governed data and conditionally saved experiment intent.
 
 ## User Outcome
 
-A developer can preview and apply preparation changes to the governed workspace bound to an experiment, with a server-issued receipt identifying the resulting data state.
+A developer can inspect the selected governed dataset's schema and bounded preview, choose a supported problem type, save a goal, and continue using server-derived workflow state.
 
 ## Scope
 
-**Current Step**: Step 1: Authorize the workspace-safe cleaning boundary
+**Current Step**: Step 1: Implement the bounded Data & Goal frontend handoff
 
-**Target Files**: Preparation edits only the gate, status, authorization record, active navigation, and `project_docs/active/ml_studio/README.md`. After explicit implementation authorization, Codex may propose changes to `backend/routes/manual_cleaning.py`, the workspace resolver in `backend/routes/ml_studio.py`, their directly required workspace services, `project_docs/active/contracts/ml_studio.md`, and focused backend tests. Record the exact allowed source paths before mutation.
+**Target Files**: `frontend/frontend/src/features/ml_studio/MLStudioShell.jsx`, `frontend/frontend/src/features/ml_studio/MLStudioShell.test.jsx`, and stage-specific rules in `frontend/frontend/src/features/ml_studio/MLStudioShell.css`.
 
-**Step Acceptance**: A direct user instruction authorizes the first backend assignment. Codex records the exact mutation boundary and specifies workspace/version validation, bounded preview, the canonical workspace commit path, and a server-issued apply receipt before source implementation.
+**Step Acceptance**: Implement `project_docs/active/ai_hand_off/ml_studio_data_goal.md` using verified snapshot, bounded preview, and conditional draft-save contracts. Preserve controls and prove every named asynchronous acceptance assertion.
 
-**Step Verification**: Preparation runs the repository harness, active-gate validator, and `git diff --check`. After authorization, focused tests must prove stale-version and cross-workspace rejection, no commit during preview/cancellation, and receipt/schema identity after apply.
+**Step Verification**: Focused shell tests, production build, whitespace check, and the governed handoff return command.
 
-**Next Step**: Codex defines and implements the bounded workspace-safe cleaning contract, verifies it, then prepares the draft recipe/return-context assignment. No UI handoff precedes backend readiness.
+**Next Step**: Codex reviews the returned source and named assertion evidence before selecting the next bounded assignment.
 
-**Continuation Rule**: `WAIT_FOR_USER`. Authority is `REVIEW_ONLY`; the user requested preparation without implementation.
+**Continuation Rule**: `WAIT_FOR_AGENT`.
 
-**Stop Condition**: Do not implement backend or frontend changes, execute cleaning requests, or issue an active frontend handoff until implementation is explicitly authorized.
+**Stop Condition**: Antigravity returns after this handoff. Do not implement preparation/Power Query, training, configuration replacement, or general autosave changes.
 
-- [ ] **Step 1: Authorize the workspace-safe cleaning boundary** — [IN PROGRESS]
-- [ ] **Step 2: Implement and verify workspace-safe preview/apply receipts** — [PENDING]
+- [ ] **Step 1: Implement the bounded Data & Goal frontend handoff** — [IN PROGRESS]
+- [ ] **Step 2: Review Data & Goal source and acceptance evidence** — [PENDING]
 
 ## Contracts
 
-- `project_docs/active/ml_studio/README.md` — Step 4 prerequisites and assignment order.
-- `project_docs/active/contracts/ml_studio.md` — implemented and proposed contract boundaries.
-- `project_docs/active/status/phase_authorization.json` — implementation authority.
+- `project_docs/active/ai_hand_off/ml_studio_data_goal.md`
+- `project_docs/active/contracts/ml_studio.md` — Snapshot, Draft API, and Workspace-Safe Cleaning
+- `project_docs/active/ml_studio/README.md` — Step 4 assignment order
 
 ## Acceptance
 
-The proposed backend contract scopes every preparation mutation to an existing workspace and expected version, uses server-resolved data, and returns bounded preview or an authoritative commit receipt. Preview/cancellation preserve data; applying to stale or wrong identities is rejected. Preserve the existing cleaning engine and compatibility callers. Proposed routes/fields remain labeled proposed until verified in source and tests.
+The stage uses server-owned schema/preview and exact governed identity. Saving persists snapshot, supported task, and goal with the current ETag. Only a successful response advances workflow. Show all five problem choices with truthful execution availability. Preserve errors/local edits and suppress stale responses across workspace/version/experiment changes. Open preparation operations prevent ordinary draft edits. Relationship-backed previews remain explicitly unavailable.
 
 ## Verification
 
-- `python .codex/hooks/agent_harness_check.py`
+- `npm --prefix frontend/frontend test -- --watchAll=false --runInBand --runTestsByPath src/features/ml_studio/MLStudioShell.test.jsx`
+- `npm --prefix frontend/frontend run build`
+- `python .gemini/skills/status-tracker-skill/scripts/update_status.py return --handoff project_docs/active/ai_hand_off/ml_studio_data_goal.md --summary "Report named assertions, changed files, and test/build results"`
+- `python .codex/hooks/ci_harness_check.py`
 - `python C:/Users/18022/.codex/skills/active-gate-governance/scripts/check_active_gate.py project_docs/active/active_gate .`
 - `git diff --check`
 
 ## Owner And Control Return
 
-Current owner: User for implementation authorization; Codex owns the first backend assignment once authorized.
-
-Control return: `WAIT_FOR_USER`. After authorization Codex records `AUTHORIZED`, the exact allowed paths, and one atomic backend step. Antigravity receives a bounded handoff only after the relevant backend gate passes.
+Current owner: Antigravity. Control return: `WAIT_FOR_AGENT` under the bounded handoff, then Codex integration review. Codex owns backend/contracts/documentation and may not implement frontend in this session.

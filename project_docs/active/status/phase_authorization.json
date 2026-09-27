@@ -3,11 +3,17 @@
   "authorized_work": {
     "name": "ML Studio Step 4 — Connect Data Preparation and Power Query"
   },
-  "authorization_state": "REVIEW_ONLY",
-  "lifecycle_state": "NOT STARTED",
+  "authorization_state": "AUTHORIZED",
+  "lifecycle_state": "IN PROGRESS",
   "diff_baseline": "e2896c2eced5511144c3151e34cae473e992af5a",
   "authority_kind": "direct_user_instruction",
-  "user_implementation_authorization": null,
+  "user_implementation_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-09-27",
+    "evidence": "Direct user message in this Codex session referencing the sole active gate.",
+    "instruction": "accepted, proceed to the step step",
+    "scope": "Implement and verify draft-bound preparation recipes and durable return context under the current active gate. Frontend implementation remains excluded."
+  },
   "preparation_authorization": {
     "approved_by": "User",
     "approved_at": "2026-09-26",
@@ -16,9 +22,9 @@
   },
   "latest_user_acceptance": {
     "accepted_by": "User",
-    "accepted_at": "2026-09-26",
-    "gate": "Step 3 — Draft duplication slice",
-    "instruction": "ok approved whats next?"
+    "accepted_at": "2026-09-27",
+    "gate": "Workspace-safe cleaning backend boundary",
+    "instruction": "accepted, proceed to the step step"
   },
   "accepted_parallel_work": {
     "accepted_by": "User",
@@ -32,6 +38,17 @@
     "instruction": "Improve the overall cross-session Codex-to-Gemini handoff and review harness after repeated missed async save cases."
   },
   "allowed_paths": [
+    "project_docs/active/ai_hand_off/ml_studio_data_goal.md",
+    "backend/db/backend_db.py",
+    "backend/ml_studio/preparation.py",
+    "tests/test_ml_studio_preparation.py",
+    "backend/services/dataset_context.py",
+    "project_docs/active/status/accepted_change_snapshot.json",
+    "backend/routes/manual_cleaning.py",
+    "backend/services/workspace_cleaning.py",
+    "backend/services/workspace_context.py",
+    "backend/repositories/source_workspace_repository.py",
+    "tests/test_workspace_cleaning.py",
     "project_docs/active/contracts/ml_studio.md",
     "project_docs/active/active_gate/README.md",
     "project_docs/active/README.md",

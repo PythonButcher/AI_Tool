@@ -18,6 +18,7 @@ from pandas.api.types import (
 from backend.ml_studio.artifacts import ManagedArtifactStore
 from backend.ml_studio.execution import AsyncRunExecutor
 from backend.ml_studio.repository import MLStudioRepository
+from backend.ml_studio.preparation import DraftPreparationService
 from backend.ml_studio.service import MLStudioService, MLStudioServiceError
 from backend.repositories.source_workspace_repository import get_workspace
 from backend.repositories.source_workspace_repository import get_source
@@ -176,6 +177,56 @@ def get_ml_studio_service() -> MLStudioService:
 
 def _error_response(error: MLStudioServiceError):
     return jsonify({"error": error.to_dict()}), error.status_code
+
+
+def get_draft_preparation_service() -> DraftPreparationService:
+    """Inject the catalog boundary into framework-independent ML orchestration."""
+    from backend.repositories.source_workspace_repository import get_preparation_commit
+    from backend.services.workspace_cleaning import clean_workspace
+    from backend.services.workspace_context import WorkspaceContextError
+
+    def cleaner(*args, **kwargs):
+        try:
+            return clean_workspace(*args, **kwargs)
+        except WorkspaceContextError as exc:
+            status = 409 if exc.code in {"workspace_version_conflict", "source_version_conflict", "source_not_in_workspace", "preparation_relationships_unsupported"} else 404 if exc.code == "workspace_not_found" else 422 if exc.code == "governance_blocked" else 400
+            raise MLStudioServiceError(exc.code, str(exc), "Reload the governed workspace and preparation context.", status_code=status) from exc
+
+    service = get_ml_studio_service()
+    return DraftPreparationService(service, service._repository, cleaner, get_preparation_commit)
+
+
+@ml_studio_bp.route("/drafts/<experiment_id>/preparation", methods=["GET", "POST"])
+def draft_preparation(experiment_id):
+    try:
+        service = get_draft_preparation_service()
+        workspace_id = request.args.get("workspace_id")
+        if request.method == "GET":
+            return jsonify(service.options(experiment_id, workspace_id)), 200
+        return jsonify(service.begin(experiment_id, workspace_id, request.headers.get("If-Match"), request.headers.get("Idempotency-Key"), request.get_json(silent=True))), 200
+    except MLStudioServiceError as exc:
+        return _error_response(exc)
+    except Exception:
+        return _unexpected_error()
+
+
+@ml_studio_bp.route("/drafts/<experiment_id>/preparation/<operation_id>", methods=["GET", "POST"])
+def draft_preparation_operation(experiment_id, operation_id):
+    try:
+        service = get_draft_preparation_service()
+        workspace_id = request.args.get("workspace_id")
+        if request.method == "GET":
+            return jsonify({"preparation": service._operation(operation_id, experiment_id, workspace_id)}), 200
+        payload = request.get_json(silent=True)
+        if not isinstance(payload, dict) or set(payload) != {"action"} or not isinstance(payload["action"], str):
+            raise service._invalid("Supply exactly one action: preview, apply, or cancel.")
+        if payload["action"] == "preview":
+            return jsonify(service.preview(operation_id, experiment_id, workspace_id)), 200
+        return jsonify(service.finish(operation_id, experiment_id, workspace_id, request.headers.get("If-Match"), payload["action"])), 200
+    except MLStudioServiceError as exc:
+        return _error_response(exc)
+    except Exception:
+        return _unexpected_error()
 
 
 def _unexpected_error():

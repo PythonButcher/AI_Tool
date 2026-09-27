@@ -385,7 +385,24 @@ class MLStudioService:
         draft = self._repository.get_draft(experiment_id, workspace_id)
         if draft is None:
             raise MLStudioServiceError("draft_not_found", "The draft is unavailable in this workspace.", "Select a draft from the current workspace.", status_code=404)
-        return {"draft": draft, "workflow_state": self._draft_workflow(draft)}
+        return {"draft": draft, "workflow_state": self._draft_workflow(draft),
+                "preparation_context": self._repository.open_preparation(experiment_id, workspace_id)}
+
+    def resolve_preparation_snapshot(self, workspace_id: str) -> DatasetSnapshotIdentity:
+        """Build validated current identity without opening a persistence transaction."""
+        truth = self._resolve_truth(workspace_id)
+        if truth.get("workspace_id") != workspace_id or (truth.get("governance_result") or {}).get("status") not in {"ready", "warning"}:
+            raise MLStudioServiceError("snapshot_governance_blocked", "The workspace identity or governance is unavailable.", "Reload the governed workspace.", status_code=409)
+        return DatasetSnapshotIdentity(
+            snapshot_id=f"snapshot-{uuid4().hex}", workspace_id=workspace_id,
+            workspace_version=int(truth["workspace_version"]), source_ids=tuple(truth["source_ids"]),
+            relationship_ids=tuple(truth["relationship_ids"]),
+            source_fingerprints=tuple(SourceFingerprint(**item) for item in truth["source_fingerprints"]),
+            schema_version=int(truth["schema_version"]), semantic_model_version=str(truth["semantic_model_version"]),
+            governance_result=dict(truth["governance_result"]), transformation_recipe_hash=str(truth["transformation_recipe_hash"]),
+            row_count=int(truth["row_count"]), column_profile=tuple(ColumnProfile(**item) for item in truth["column_profile"]),
+            created_at=self._clock(),
+        )
 
     def update_draft(self, experiment_id: str, workspace_id: str, etag: str, request: Any) -> dict[str, Any]:
         self._require_draft_workspace(workspace_id)

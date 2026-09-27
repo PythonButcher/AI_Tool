@@ -9,9 +9,7 @@ import {
   FaBrain, FaCog, FaPlay, FaBan, FaCopy
 } from 'react-icons/fa';
 import './MLStudioShell.css';
-
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
-
 async function digestMessage(message) {
   const msgUint8 = new TextEncoder().encode(message);
   const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
@@ -19,7 +17,6 @@ async function digestMessage(message) {
   const hashHex = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
   return `sha256:${hashHex}`;
 }
-
 export default function MLStudioShell({ onOpenCleaningForm }) {
   const {
     activeWorkspace,
@@ -30,14 +27,12 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
     uploadedData, fullData, cleanedData
   } = useContext(DataContext);
   const { numRows, numCols } = useDatasetMeta();
-
   const hasRequiredIdentity = Boolean(
     activeWorkspace?.workspace_id &&
     analysisContext?.workspace_version &&
     analysisContext?.source_ids?.length > 0 &&
     numRows > 0
   );
-
   const hasBlockedIdentity = Boolean(
     workspaceVersionConflict ||
     workspaceRefreshStatus === 'error' ||
@@ -46,17 +41,12 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
       activeWorkspace.version !== analysisContext.workspace_version
     ))
   );
-
   const isIdentityAvailable = hasRequiredIdentity && !hasBlockedIdentity;
-
   const identityKey = isIdentityAvailable
     ? `${activeWorkspace?.workspace_id}-${analysisContext?.workspace_version}`
     : null;
-
   const identityRef = useRef(identityKey);
   useEffect(() => { identityRef.current = identityKey; }, [identityKey]);
-
-
   const [runsState, setRunsState] = useState({ status: 'idle', data: null, error: null });
   const [activeStage, setActiveStage] = useState('Configure');
   const [showGuidance, setShowGuidance] = useState(true);
@@ -66,11 +56,6 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
   const [duplicateError, setDuplicateError] = useState(null);
   const runsFetchIdRef = useRef(0);
   const draftsFetchIdRef = useRef(0);
-
-
-
-
-
   const fetchDrafts = useCallback(async () => {
     if (!isIdentityAvailable) return;
     const fetchId = ++draftsFetchIdRef.current;
@@ -90,7 +75,6 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
       });
     }
   }, [isIdentityAvailable, activeWorkspace?.workspace_id]);
-
   const handleCreateDraft = async () => {
     if (pendingDraftAction) return;
     const currentIdentity = identityKey;
@@ -119,7 +103,6 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
       if (identityRef.current === currentIdentity) setPendingDraftAction(null);
     }
   };
-
   const handleReopenDraft = async (experiment_id) => {
     if (pendingDraftAction) return;
     const currentIdentity = identityKey;
@@ -143,7 +126,6 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
       if (identityRef.current === currentIdentity) setPendingDraftAction(null);
     }
   };
-
   const handleDuplicateDraft = async (experiment_id) => {
     if (pendingDraftAction) return;
     const currentIdentity = identityKey;
@@ -171,17 +153,13 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
       if (identityRef.current === currentIdentity) setPendingDraftAction(null);
     }
   };
-
   const fetchRuns = useCallback(async () => {
     if (!isIdentityAvailable) return;
-
     const fetchId = ++runsFetchIdRef.current;
     setRunsState({ status: 'loading', data: null, error: null });
-
     try {
       const response = await fetch(`${API_URL}/api/ml-studio/v1/runs?limit=20`);
       if (fetchId !== runsFetchIdRef.current) return;
-
       if (!response.ok) {
         let errorData;
         try { errorData = await response.json(); } catch (e) {}
@@ -198,7 +176,6 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
            throw err;
         }
       }
-
       const data = await response.json();
       if (fetchId !== runsFetchIdRef.current) return;
       setRunsState({ status: 'success', data: data.runs, error: null });
@@ -215,7 +192,6 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
       });
     }
   }, [isIdentityAvailable]);
-
   useEffect(() => {
     runsFetchIdRef.current += 1; draftsFetchIdRef.current += 1;
     setRunsState({ status: 'idle', data: null, error: null });
@@ -226,7 +202,6 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
     setSaveError(null);
     setPendingDraftAction(null);
     setDuplicateError(null);
-
     if (!isIdentityAvailable) {
       return;
     }
@@ -234,28 +209,22 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
     fetchDrafts();
     return () => { runsFetchIdRef.current += 1; draftsFetchIdRef.current += 1; identityRef.current = null; };
   }, [identityKey, isIdentityAvailable, fetchRuns, fetchDrafts]);
-
-
   const [workflowState, setWorkflowState] = useState(null);
   const [saveState, setSaveState] = useState('saved');
   const [saveError, setSaveError] = useState(null);
   const [localName, setLocalName] = useState('');
-
   const saveTimerRef = useRef(null);
   const pendingEditsRef = useRef({});
   const isSavingRef = useRef(false);
   const etagRef = useRef(null);
   const activeDraftRef = useRef(activeDraft);
-
   useEffect(() => { activeDraftRef.current = activeDraft; }, [activeDraft]);
-
   useEffect(() => {
     if (activeDraft && saveState !== 'conflict') {
       setLocalName(activeDraft.name || '');
       etagRef.current = activeDraft.etag;
     }
   }, [activeDraft, saveState]);
-
   useEffect(() => {
     return () => {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
@@ -263,18 +232,14 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
       isSavingRef.current = false;
     };
   }, [identityKey, activeDraft?.experiment_id]);
-
   const flushSave = useCallback(async () => {
     const draft = activeDraftRef.current;
     if (!draft || isSavingRef.current || saveState === 'conflict') return true;
-
     const patch = { ...pendingEditsRef.current };
     if (Object.keys(patch).length === 0) return true;
-
     pendingEditsRef.current = {};
     isSavingRef.current = true;
     setSaveState('saving');
-
     const currentIdentity = identityRef.current;
     try {
       const res = await fetch(`${API_URL}/api/ml-studio/v1/drafts/${draft.experiment_id}?workspace_id=${activeWorkspace.workspace_id}`, {
@@ -283,9 +248,7 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
          body: JSON.stringify(patch)
       });
       const data = await res.json();
-
       if (identityRef.current !== currentIdentity || activeDraftRef.current?.experiment_id !== draft.experiment_id) return false;
-
       if (!res.ok) {
          pendingEditsRef.current = { ...patch, ...pendingEditsRef.current };
          if (res.status === 409 || data.error?.code === 'draft_revision_conflict') {
@@ -323,14 +286,12 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
       }
     }
   }, [activeWorkspace?.workspace_id, saveState, fetchDrafts]);
-
   const scheduleSave = useCallback((edits) => {
     if (saveState === 'conflict') return;
     pendingEditsRef.current = { ...pendingEditsRef.current, ...edits };
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(flushSave, 500);
   }, [flushSave, saveState]);
-
   const handleReloadDraft = async () => {
     if (!activeDraft) return;
     const currentIdentity = identityRef.current;
@@ -340,7 +301,6 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
       const data = await res.json();
       if (identityRef.current !== currentIdentity) return;
       if (!res.ok) throw new Error('Failed to reload draft');
-
       if (!data.draft) console.log('MISSING DRAFT', data);
          etagRef.current = data.draft.etag;
       setActiveDraft(data.draft);
@@ -358,7 +318,6 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
       setSaveError({ message: 'Failed to reload.', remediation: 'Try again.' });
     }
   };
-
   const handleNameChange = (e) => {
     const val = e.target.value;
     if (val.length > 500) return;
@@ -367,29 +326,24 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
       scheduleSave({ name: val.trim() });
     }
   };
-
   const handleToggleGuidance = () => {
     const newVal = !showGuidance;
     setShowGuidance(newVal);
     scheduleSave({ guidance_enabled: newVal });
   };
-
   const handleStageSelect = async (stageId) => {
     if (saveState === 'conflict') return;
     if (workflowState) {
        const stageInfo = workflowState.stages?.find(s => s.stage === stageId);
        if (workflowState.stages && (!stageInfo || stageInfo.state === 'locked')) return;
     }
-
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     pendingEditsRef.current = { ...pendingEditsRef.current, active_stage: stageId };
-
     const ok = await flushSave();
     if (ok) {
        // activeStage updated by flushSave via workflow_state
     }
   };
-
   const handleGoHome = async () => {
      if (saveState === 'conflict') return;
      if (Object.keys(pendingEditsRef.current).length > 0) {
@@ -400,17 +354,59 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
      setActiveDraft(null);
      setWorkflowState(null);
   };
-
+  const handleExplicitStageSave = async (payload) => {
+    // 1. Flush any pending header edits
+    if (Object.keys(pendingEditsRef.current).length > 0) {
+        if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+        const ok = await flushSave();
+        if (!ok) {
+           return { success: false, error: { message: 'Failed to flush pending edits.' } };
+        }
+    }
+    // Wait for in-flight save to resolve
+    if (isSavingRef.current) {
+       let attempts = 0;
+       while (isSavingRef.current && attempts < 50) {
+          await new Promise(r => setTimeout(r, 100));
+          attempts++;
+       }
+       if (isSavingRef.current) {
+          return { success: false, error: { message: 'Timeout waiting for header save to complete.' } };
+       }
+    }
+    if (saveState === 'conflict') {
+       return { success: false, error: saveError || { message: 'Conflict state prevents saving.' } };
+    }
+    // 2. Perform the explicit PATCH using the latest ETag
+    const currentIdentity = identityRef.current;
+    try {
+       const res = await fetch(`${API_URL}/api/ml-studio/v1/drafts/${activeDraftRef.current.experiment_id}?workspace_id=${activeWorkspace.workspace_id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', 'If-Match': etagRef.current },
+          body: JSON.stringify(payload)
+       });
+       const data = await res.json();
+       if (identityRef.current !== currentIdentity) return { success: false, error: { message: 'Identity changed during save.' } };
+       if (!res.ok) {
+          return { success: false, error: data.error || { message: 'Failed to save stage.' } };
+       }
+       etagRef.current = data.draft.etag;
+       setActiveDraft(data.draft);
+       setWorkflowState(data.workflow_state);
+       setActiveStage(data.workflow_state.active_stage);
+       return { success: true };
+    } catch (err) {
+       return { success: false, error: { message: err.message || 'Network error.' } };
+    }
+  };
   const activeDatasetSource = cleanedData ?? fullData ?? uploadedData;
   const activeDataset = useMemo(() => normalizeDatasetRows(activeDatasetSource), [activeDatasetSource]);
-
   const columns = useMemo(() => {
     if (!Array.isArray(activeDataset) || activeDataset.length === 0) return [];
     const sample = activeDataset[0];
     if (!sample || typeof sample !== 'object') return [];
     return Object.keys(sample);
   }, [activeDataset]);
-
   return (
     <div className="ml-studio-shell">
       <TopRibbon
@@ -466,7 +462,7 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
                  />
              ) : (
                  <>
-                     <div className={activeStage === 'Configure' ? '' : 'hidden-stage'}>
+                                          <div className={activeStage === 'Configure' ? '' : 'hidden-stage'}>
                          <ExperimentCanvas
                             activeWorkspace={activeWorkspace}
                             analysisContext={analysisContext}
@@ -477,7 +473,15 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
                             onRunStarted={fetchRuns}
                          />
                      </div>
-                     {activeStage !== 'Configure' && (
+                                          {activeStage === 'Data & Goal' && (
+                         <DataGoalStage
+                            activeWorkspace={activeWorkspace}
+                            analysisContext={analysisContext}
+                            activeDraft={activeDraft}
+                            onSaveRequest={handleExplicitStageSave}
+                         />
+                     )}
+                     {activeStage !== 'Configure' && activeStage !== 'Data & Goal' && (
                          <UnconnectedStage activeStage={activeStage} />
                      )}
                  </>
@@ -493,7 +497,6 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
     </div>
   );
 }
-
 function TopRibbon({ activeStage, onStageSelect, showGuidance, onToggleGuidance, activeDraft, onGoHome, saveState, saveError, localName, onNameChange, onReloadDraft, onRetrySave, workflowState }) {
   const STAGES = [
     { id: 'Data & Goal', label: 'Data & Goal', icon: <FaDatabase /> },
@@ -503,9 +506,7 @@ function TopRibbon({ activeStage, onStageSelect, showGuidance, onToggleGuidance,
     { id: 'Review Results', label: 'Review Results', icon: <FaSearch /> },
     { id: 'Use & Share', label: 'Use & Share', icon: <FaBoxOpen /> },
   ];
-
   const isHome = !activeDraft;
-
   return (
     <header className="ml-studio-ribbon" aria-label="Run Ribbon">
       <div className="ribbon-top-bar">
@@ -545,7 +546,6 @@ function TopRibbon({ activeStage, onStageSelect, showGuidance, onToggleGuidance,
                </label>
             </div>
          )}
-
       </div>
       {!isHome && saveState === 'conflict' && (
          <div className="conflict-warning">
@@ -566,7 +566,6 @@ function TopRibbon({ activeStage, onStageSelect, showGuidance, onToggleGuidance,
          </div>
       )}
       {!isHome && (
-
          <div className="ribbon-container">
                       {STAGES.map((stage, i) => {
              const isCurrent = activeStage === stage.id;
@@ -593,12 +592,10 @@ function TopRibbon({ activeStage, onStageSelect, showGuidance, onToggleGuidance,
     </header>
   );
 }
-
 function ExperimentHome({ draftsState, onCreate, onReopen, onDuplicate, pendingAction, onRetry, duplicateError }) {
   if (draftsState.status === 'loading' || draftsState.status === 'idle') {
     return <main className="ml-studio-canvas" aria-label="Experiment Home"><div className="canvas-state-message"><FaSyncAlt className="canvas-icon neutral-icon spin-icon" /><h2>Loading experiments...</h2></div></main>;
   }
-
   if (draftsState.status === 'error') {
     return (
       <main className="ml-studio-canvas" aria-label="Experiment Home">
@@ -611,9 +608,7 @@ function ExperimentHome({ draftsState, onCreate, onReopen, onDuplicate, pendingA
       </main>
     );
   }
-
   const drafts = draftsState.data || [];
-
   if (drafts.length === 0) {
     return (
       <main className="ml-studio-canvas" aria-label="Experiment Home">
@@ -632,7 +627,6 @@ function ExperimentHome({ draftsState, onCreate, onReopen, onDuplicate, pendingA
       </main>
     );
   }
-
   return (
     <main className="ml-studio-canvas align-top" aria-label="Experiment Home">
       <div className="experiment-home-container">
@@ -646,7 +640,6 @@ function ExperimentHome({ draftsState, onCreate, onReopen, onDuplicate, pendingA
             {pendingAction === 'creating' ? 'Creating...' : 'New Experiment'}
           </button>
         </div>
-
         <div className="drafts-list">
           {drafts.map(draft => (
             <div key={draft.experiment_id} className="draft-item-container">
@@ -692,12 +685,10 @@ function ExperimentHome({ draftsState, onCreate, onReopen, onDuplicate, pendingA
     </main>
   );
 }
-
 function AssetRail({ activeWorkspace, analysisContext, numRows, numCols }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isMobileExpanded, setIsMobileExpanded] = useState(false);
   const copyId = (id) => navigator.clipboard.writeText(id).catch(()=>{});
-
   return (
     <aside className={`ml-studio-rail ${isMobileExpanded ? 'is-mobile-expanded' : ''}`} aria-label="Asset Rail">
        <button
@@ -709,7 +700,6 @@ function AssetRail({ activeWorkspace, analysisContext, numRows, numCols }) {
          {isMobileExpanded ? <FaChevronUp className="toggle-icon"/> : <FaChevronDown className="toggle-icon"/>}
        </button>
        <h3 className="panel-title desktop-rail-title"><FaBoxOpen className="panel-icon"/> Asset Identity</h3>
-
        <div className="rail-content">
          <div className="rail-section">
            <div className="rail-item">
@@ -725,7 +715,6 @@ function AssetRail({ activeWorkspace, analysisContext, numRows, numCols }) {
              <span className="rail-value badge-neutral"><FaTable className="inline-icon"/> {numRows.toLocaleString()} rows, {numCols.toLocaleString()} cols</span>
            </div>
          </div>
-
          <div className="rail-section">
            <div className="rail-item">
               <strong>Sources</strong>
@@ -736,7 +725,6 @@ function AssetRail({ activeWorkspace, analysisContext, numRows, numCols }) {
               <span className="rail-value">{analysisContext?.relationship_ids?.length || 0} defined</span>
            </div>
          </div>
-
          <div className="rail-section">
            <button className="semantic-btn expand-raw-btn" aria-expanded={isExpanded} onClick={() => setIsExpanded(!isExpanded)}>
              {isExpanded ? 'Hide Identifiers' : 'Show Identifiers'}
@@ -762,7 +750,6 @@ function AssetRail({ activeWorkspace, analysisContext, numRows, numCols }) {
     </aside>
   );
 }
-
 function ExperimentCanvas({
   activeWorkspace, analysisContext, numRows, numCols, columns, onOpenCleaningForm, onRunStarted
 }) {
@@ -771,24 +758,17 @@ function ExperimentCanvas({
   const [numericFeatures, setNumericFeatures] = useState([]);
   const [categoricalFeatures, setCategoricalFeatures] = useState([]);
   const [excludedColumns, setExcludedColumns] = useState([]);
-
   const [splitStrategy, setSplitStrategy] = useState('random');
-
   const [isConfirmed, setIsConfirmed] = useState(false);
-
   const [prepStatus, setPrepStatus] = useState('idle'); // idle, loading, ready, blocked, error
   const [prepError, setPrepError] = useState(null);
   const [assessment, setAssessment] = useState(null);
-
   const [snapshotData, setSnapshotData] = useState(null);
   const [experimentData, setExperimentData] = useState(null);
-
   const [runSubmitStatus, setRunSubmitStatus] = useState('idle');
   const [runSubmitError, setRunSubmitError] = useState(null);
   const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID());
-
   const reqIdRef = useRef(0);
-
   // Clear prep state when identity changes or navigation
   useEffect(() => {
     setPrepStatus('idle');
@@ -801,19 +781,15 @@ function ExperimentCanvas({
     setIdempotencyKey(crypto.randomUUID());
     reqIdRef.current += 1;
   }, [activeWorkspace?.workspace_id, analysisContext?.workspace_version]);
-
   const guidanceState = useMemo(() => {
     if (!target) return { status: 'incomplete', text: 'Choose a target', icon: <FaInfoCircle /> };
     if (numericFeatures.length === 0 && categoricalFeatures.length === 0) return { status: 'incomplete', text: 'Choose at least one feature', icon: <FaInfoCircle /> };
     if (!isConfirmed) return { status: 'incomplete', text: 'Confirm the roles', icon: <FaInfoCircle /> };
-
     if (prepStatus === 'loading') return { status: 'incomplete', text: 'Assessing...', icon: <FaSyncAlt className="spin-icon" /> };
     if (prepStatus === 'blocked') return { status: 'error', text: 'Resolve readiness issues', icon: <FaExclamationTriangle /> };
     if (prepStatus === 'ready') return { status: 'ready', text: 'Ready to start run', icon: <FaCheckCircle /> };
-
     return { status: 'ready', text: 'Ready to assess', icon: <FaCheckCircle /> };
   }, [target, numericFeatures, categoricalFeatures, isConfirmed, prepStatus]);
-
   const handleTargetChange = (val) => {
     setTarget(val);
     setPrepStatus('idle');
@@ -824,7 +800,6 @@ function ExperimentCanvas({
       setExcludedColumns(prev => prev.filter(f => f !== val));
     }
   };
-
   const handleNumericFeaturesChange = (vals) => {
     const valid = vals.filter(f => f !== target);
     setNumericFeatures(valid);
@@ -833,7 +808,6 @@ function ExperimentCanvas({
     setCategoricalFeatures(prev => prev.filter(f => !valid.includes(f)));
     setExcludedColumns(prev => prev.filter(f => !valid.includes(f)));
   };
-
   const handleCategoricalFeaturesChange = (vals) => {
     const valid = vals.filter(f => f !== target);
     setCategoricalFeatures(valid);
@@ -842,7 +816,6 @@ function ExperimentCanvas({
     setNumericFeatures(prev => prev.filter(f => !valid.includes(f)));
     setExcludedColumns(prev => prev.filter(f => !valid.includes(f)));
   };
-
   const handleExcludedColumnsChange = (vals) => {
     const valid = vals.filter(f => f !== target);
     setExcludedColumns(valid);
@@ -851,44 +824,36 @@ function ExperimentCanvas({
     setNumericFeatures(prev => prev.filter(f => !valid.includes(f)));
     setCategoricalFeatures(prev => prev.filter(f => !valid.includes(f)));
   };
-
   const validateForm = () => {
     if (!target) return 'Please select a target column.';
     if (numericFeatures.length === 0 && categoricalFeatures.length === 0) return 'Please select at least one feature column.';
-
     // Check disjoin
     const allFeatures = [...numericFeatures, ...categoricalFeatures];
     if (allFeatures.includes(target)) return 'Target cannot be a feature.';
     if (excludedColumns.includes(target)) return 'Target cannot be excluded.';
-
     for (const f of allFeatures) {
       if (excludedColumns.includes(f)) return 'A feature cannot be excluded.';
     }
     const hasDuplicates = new Set(allFeatures).size !== allFeatures.length;
     if (hasDuplicates) return 'Features must be unique across numeric and categorical roles.';
-
     return null;
   };
-
   const handleAssess = async (forceNewSnapshot = false, forceNewExperiment = false) => {
     const errorMsg = validateForm();
     if (errorMsg) {
       setPrepError({ code: 'validation_error', message: errorMsg, remediation: 'Fix the configuration and try again.' });
       return;
     }
-
     if (!isConfirmed) {
       setPrepError({ code: 'confirmation_required', message: 'You must explicitly confirm the target and feature roles.', remediation: 'Check the confirmation box.' });
       return;
     }
-
     const reqId = ++reqIdRef.current;
     setPrepStatus('loading');
     setPrepError(null);
     setRunSubmitStatus('idle');
     setRunSubmitError(null);
     setIdempotencyKey(crypto.randomUUID());
-
     try {
       // 1. Create Snapsho
       let currentSnapshot = forceNewSnapshot ? null : snapshotData;
@@ -909,7 +874,6 @@ function ExperimentCanvas({
         currentSnapshot = snapData.snapshot;
         setSnapshotData(currentSnapshot);
       }
-
       // 2. Create Experimen
       let currentExperiment = forceNewExperiment ? null : experimentData;
       if (!currentExperiment) {
@@ -942,7 +906,6 @@ function ExperimentCanvas({
           resource_limits: { max_rows: 100000, max_features: 100, max_candidates: 3, timeout_seconds: 3600 },
           random_seed_policy: { final_holdout_seed: 42, cross_validation_seed: 42, estimator_seed: 42 }
         };
-
         const expRes = await fetch(`${API_URL}/api/ml-studio/v1/experiments`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -954,7 +917,6 @@ function ExperimentCanvas({
         currentExperiment = expResData.experiment;
         setExperimentData(currentExperiment);
       }
-
       // 3. Assess
       const recipeSteps = [];
       const recipePayload = {
@@ -966,7 +928,6 @@ function ExperimentCanvas({
         recipe_version: 1,
         steps: recipeSteps,
       };
-
       const canonicalString = JSON.stringify({
         base_recipe_hash: recipePayload.base_recipe_hash,
         base_snapshot_id: recipePayload.base_snapshot_id,
@@ -978,7 +939,6 @@ function ExperimentCanvas({
       recipePayload.canonical_recipe_hash = await digestMessage(canonicalString);
       recipePayload.created_at = new Date().toISOString();
       recipePayload.created_by = null;
-
       const assessRes = await fetch(`${API_URL}/api/ml-studio/v1/preparation-assessments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -992,10 +952,8 @@ function ExperimentCanvas({
       if (reqId !== reqIdRef.current) return;
       const assessData = await assessRes.json();
       if (!assessRes.ok) throw assessData.error || { code: 'unknown', message: 'Failed to assess preparation.' };
-
       setAssessment(assessData.assessment);
       setPrepStatus(assessData.assessment.state === 'ready' ? 'ready' : 'blocked');
-
     } catch (err) {
       if (reqId !== reqIdRef.current) return;
       setPrepError({
@@ -1006,7 +964,6 @@ function ExperimentCanvas({
       setPrepStatus('error');
     }
   };
-
   const openFixInPowerQuery = (fix) => {
     const step = {
       type: fix.action_type,
@@ -1027,15 +984,12 @@ function ExperimentCanvas({
       });
     }
   };
-
   const handleStartRun = async () => {
     setRunSubmitStatus('loading');
     setRunSubmitError(null);
-
     const revision = process.env.REACT_APP_GIT_SHA?.length >= 7 && process.env.REACT_APP_GIT_SHA?.length <= 64
       ? process.env.REACT_APP_GIT_SHA
       : 'web-ui-unknown';
-
     try {
       const response = await fetch(`${API_URL}/api/ml-studio/v1/runs`, {
         method: 'POST',
@@ -1052,12 +1006,10 @@ function ExperimentCanvas({
           code_revision: revision
         })
       });
-
       const data = await response.json();
       if (!response.ok) {
         throw data.error || { code: 'unknown', message: 'Failed to start run.' };
       }
-
       await onRunStarted();
       setRunSubmitStatus('idle');
       setIdempotencyKey(crypto.randomUUID());
@@ -1070,9 +1022,6 @@ function ExperimentCanvas({
       });
     }
   };
-
-
-
   return (
     <main className="ml-studio-canvas" aria-label="Experiment Canvas">
       <div className="prep-form-container">
@@ -1085,14 +1034,11 @@ function ExperimentCanvas({
             {numRows.toLocaleString()} rows • {numCols.toLocaleString()} cols
           </div>
         </div>
-
         <div className={`guidance-panel ${guidanceState.status}`}>
           <span className="guidance-icon">{guidanceState.icon}</span>
           <span><strong>Next Step:</strong> {guidanceState.text}</span>
         </div>
-
         <h2 className="prep-form-title">Experiment Configuration</h2>
-
         {prepError && (
           <div className="prep-alert error">
             <FaExclamationTriangle className="alert-icon" />
@@ -1111,7 +1057,6 @@ function ExperimentCanvas({
             </div>
           </div>
         )}
-
         <div className="prep-form-grid" aria-busy={prepStatus === 'loading'}>
           <label className="prep-field">
             <span>Task Type</span>
@@ -1120,7 +1065,6 @@ function ExperimentCanvas({
               <option value="classification">Classification</option>
             </select>
           </label>
-
           <label className="prep-field">
             <span>Target Column</span>
             <select value={target} onChange={e => handleTargetChange(e.target.value)} disabled={prepStatus === 'loading'}>
@@ -1128,28 +1072,24 @@ function ExperimentCanvas({
               {columns.map(col => <option key={col} value={col}>{col}</option>)}
             </select>
           </label>
-
           <label className="prep-field">
             <span>Numeric Features</span>
             <select multiple value={numericFeatures} onChange={e => handleNumericFeaturesChange(Array.from(e.target.selectedOptions || []).map(o => o.value))} disabled={prepStatus === 'loading'} className="multi-select">
               {columns.map(col => <option key={col} value={col}>{col}</option>)}
             </select>
           </label>
-
           <label className="prep-field">
             <span>Categorical Features</span>
             <select multiple value={categoricalFeatures} onChange={e => handleCategoricalFeaturesChange(Array.from(e.target.selectedOptions || []).map(o => o.value))} disabled={prepStatus === 'loading'} className="multi-select">
               {columns.map(col => <option key={col} value={col}>{col}</option>)}
             </select>
           </label>
-
           <label className="prep-field">
             <span>Excluded Columns</span>
             <select multiple value={excludedColumns} onChange={e => handleExcludedColumnsChange(Array.from(e.target.selectedOptions || []).map(o => o.value))} disabled={prepStatus === 'loading'} className="multi-select">
               {columns.map(col => <option key={col} value={col}>{col}</option>)}
             </select>
           </label>
-
           <label className="prep-field">
             <span>Split Strategy</span>
             <select value={splitStrategy} onChange={e => { setSplitStrategy(e.target.value); setPrepStatus('idle'); setExperimentData(null); }} disabled={prepStatus === 'loading'}>
@@ -1157,14 +1097,12 @@ function ExperimentCanvas({
               {taskType === 'classification' && <option value="stratified">Stratified</option>}
             </select>
           </label>
-
           <div className="prep-field confirmation-field">
             <label className="checkbox-wrapper">
               <input type="checkbox" checked={isConfirmed} onChange={e => setIsConfirmed(e.target.checked)} disabled={prepStatus === 'loading'} />
               <span>I explicitly confirm the target and feature roles are correct.</span>
             </label>
           </div>
-
           <button
             type="button"
             className="assess-button"
@@ -1174,7 +1112,6 @@ function ExperimentCanvas({
             {prepStatus === 'loading' ? 'Assessing...' : 'Assess Preparation Readiness'}
           </button>
         </div>
-
         {prepStatus === 'ready' && assessment && (
           <div className="prep-alert success">
             <FaCheck className="alert-icon" />
@@ -1201,12 +1138,10 @@ function ExperimentCanvas({
             </div>
           </div>
         )}
-
         {prepStatus === 'blocked' && assessment && (
           <div className="assessment-results">
             <h3 className="results-title"><FaBan /> Readiness Blocked</h3>
             <p>Please resolve the following issues before proceeding.</p>
-
             {assessment.issues?.map(issue => (
               <div key={issue.issue_id} className={`issue-card ${issue.severity}`}>
                 <div className="issue-header">
@@ -1215,7 +1150,6 @@ function ExperimentCanvas({
                 <p>{issue.remediation}</p>
               </div>
             ))}
-
             {assessment.suggested_fixes?.length > 0 && (
               <div className="suggested-fixes">
                 <h4>Suggested Fixes</h4>
@@ -1246,7 +1180,273 @@ function ExperimentCanvas({
     </main>
   );
 }
-
+function DataGoalStage({ activeWorkspace, analysisContext, activeDraft, workflowState, onSaveSuccess }) {
+  const [snapshotState, setSnapshotState] = useState({ status: 'loading', data: null, error: null, stale: false });
+  const [previewState, setPreviewState] = useState({ status: 'loading', data: null, error: null });
+  const [taskType, setTaskType] = useState(activeDraft?.task_type || 'regression');
+  const [goal, setGoal] = useState(activeDraft?.goal || '');
+  const [saveStatus, setSaveStatus] = useState({ status: 'idle', error: null });
+  const identityKey = `${activeWorkspace?.workspace_id}-${analysisContext?.workspace_version}`;
+  const reqIdRef = useRef(0);
+  // We must track if there's an open preparation context in the draft.
+  const isOpenPreparation = activeDraft?.preparation_context?.status === 'open';
+  useEffect(() => {
+    // Sync local state when activeDraft changes, but preserve local edits if not saving successfully
+    if (saveStatus.status !== 'error') {
+       if (activeDraft?.task_type) setTaskType(activeDraft.task_type);
+       if (activeDraft?.goal !== null && activeDraft?.goal !== undefined) setGoal(activeDraft.goal);
+    }
+  }, [activeDraft]);
+  const loadDataAndGoal = useCallback(async (forceReload = false) => {
+    const reqId = ++reqIdRef.current;
+    setSnapshotState(prev => ({ ...prev, status: 'loading', error: null }));
+    setPreviewState(prev => ({ ...prev, status: 'loading', error: null }));
+    setSaveStatus({ status: 'idle', error: null });
+    const currentIdentity = {
+      workspace_id: activeWorkspace.workspace_id,
+      workspace_version: analysisContext.workspace_version,
+      source_ids: analysisContext.source_ids || [],
+      relationship_ids: analysisContext.relationship_ids || []
+    };
+    // 1. Snapshot Loading
+    try {
+      let snapshotData = null;
+      let isStale = false;
+      if (!forceReload && activeDraft?.snapshot_id) {
+         const snapRes = await fetch(`${API_URL}/api/ml-studio/v1/snapshots/${activeDraft.snapshot_id}`);
+         if (reqId !== reqIdRef.current) return;
+         const data = await snapRes.json();
+         if (!snapRes.ok) throw data.error || { message: 'Failed to load snapshot' };
+         snapshotData = data.snapshot;
+         const arraysMatch = (a, b) => a.length === b.length && a.every((val, i) => val === b[i]);
+         if (snapshotData.workspace_id !== currentIdentity.workspace_id ||
+             snapshotData.workspace_version !== currentIdentity.workspace_version ||
+             !arraysMatch(snapshotData.source_ids || [], currentIdentity.source_ids) ||
+             !arraysMatch(snapshotData.relationship_ids || [], currentIdentity.relationship_ids)) {
+            isStale = true;
+         }
+      }
+      if ((!snapshotData || forceReload) && !isOpenPreparation) {
+         // Create new snapshot for current identity
+         const snapRes = await fetch(`${API_URL}/api/ml-studio/v1/snapshots`, {
+           method: 'POST',
+           headers: { 'Content-Type': 'application/json' },
+           body: JSON.stringify(currentIdentity)
+         });
+         if (reqId !== reqIdRef.current) return;
+         const data = await snapRes.json();
+         if (!snapRes.ok) throw data.error || { message: 'Failed to create snapshot' };
+         snapshotData = data.snapshot;
+         isStale = false;
+      }
+      if (reqId === reqIdRef.current) {
+        setSnapshotState({ status: 'success', data: snapshotData, stale: isStale, error: null });
+      }
+    } catch (err) {
+      if (reqId === reqIdRef.current) {
+        setSnapshotState({ status: 'error', data: null, stale: false, error: err });
+      }
+    }
+    // 2. Preview Loading
+    try {
+      const prevRes = await fetch(`${API_URL}/api/data-workspaces/${activeWorkspace.workspace_id}/manual-cleaning`, {
+         method: 'POST',
+         headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify({
+            workspace_version: currentIdentity.workspace_version,
+            source_id: currentIdentity.source_ids[0] || '', // Using first source as primary
+            steps: [],
+            preview_only: true
+         })
+      });
+      if (reqId !== reqIdRef.current) return;
+      const data = await prevRes.json();
+      if (!prevRes.ok) throw data.error || { message: 'Failed to load preview' };
+      setPreviewState({ status: 'success', data: data, error: null });
+    } catch (err) {
+      if (reqId === reqIdRef.current) {
+        setPreviewState({ status: 'error', data: null, error: err });
+      }
+    }
+  }, [activeWorkspace, analysisContext, activeDraft?.snapshot_id, isOpenPreparation]);
+  useEffect(() => {
+    loadDataAndGoal();
+    return () => { reqIdRef.current += 1; };
+  }, [identityKey]);
+  const handleSave = async (doContinue = false) => {
+     if (snapshotState.stale) return; // Do not save stale snapshot
+     if (isOpenPreparation) return;
+     setSaveStatus({ status: 'loading', error: null });
+     const reqId = ++reqIdRef.current;
+     try {
+       const payload = {
+          snapshot_id: snapshotState.data.snapshot_id,
+          task_type: taskType,
+          goal: goal || null
+       };
+       if (doContinue) payload.active_stage = 'Prepare Data';
+       const res = await fetch(`${API_URL}/api/ml-studio/v1/drafts/${activeDraft.experiment_id}?workspace_id=${activeWorkspace.workspace_id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', 'If-Match': activeDraft.etag },
+          body: JSON.stringify(payload)
+       });
+       if (reqId !== reqIdRef.current) return;
+       const data = await res.json();
+       if (!res.ok) {
+          throw data.error || { message: 'Failed to save Data & Goal' };
+       }
+       setSaveStatus({ status: 'success', error: null });
+       onSaveSuccess(data.draft, data.workflow_state);
+     } catch (err) {
+       if (reqId === reqIdRef.current) {
+          setSaveStatus({ status: 'error', error: err });
+       }
+     }
+  };
+  const isFormDisabled = snapshotState.status === 'loading' || previewState.status === 'loading' || isOpenPreparation || saveStatus.status === 'loading' || snapshotState.stale || snapshotState.status === 'error';
+  return (
+    <main className="ml-studio-canvas" aria-label="Data and Goal Canvas">
+      <div className="prep-form-container">
+        <h2 className="prep-form-title">Data & Goal</h2>
+        {isOpenPreparation && (
+          <div className="prep-alert error">
+             <FaExclamationTriangle className="alert-icon" />
+             <div className="alert-content">
+                <strong>Preparation is open for this draft.</strong>
+                <p>Apply or cancel preparation before editing the draft.</p>
+             </div>
+          </div>
+        )}
+        {snapshotState.stale && !isOpenPreparation && (
+          <div className="prep-alert warning">
+             <FaExclamationTriangle className="alert-icon" />
+             <div className="alert-content">
+                <strong>The workspace identity has changed.</strong>
+                <p>The saved dataset snapshot does not match your current workspace version or relationships.</p>
+                <button className="retry-button" onClick={() => loadDataAndGoal(true)} type="button">
+                  <FaSyncAlt /> Reload current Data Model identities
+                </button>
+             </div>
+          </div>
+        )}
+        {snapshotState.status === 'error' && (
+           <div className="prep-alert error">
+             <FaExclamationTriangle className="alert-icon" />
+             <div className="alert-content">
+                <strong>{snapshotState.error.message}</strong>
+                <p>{snapshotState.error.remediation}</p>
+                <button className="retry-button" onClick={() => loadDataAndGoal()} type="button">
+                  <FaSyncAlt /> Retry Snapshot
+                </button>
+             </div>
+          </div>
+        )}
+        <div className="connected-dataset-panel">
+          <div className="dataset-label">
+            <FaDatabase className="inline-icon" />
+            <strong>Dataset: {activeWorkspace?.workspace_name || activeWorkspace?.workspace_id || 'Unknown'}</strong>
+          </div>
+          <div className="dataset-stats">
+            {previewState.data?.row_count !== undefined ? previewState.data.row_count.toLocaleString() : '---'} rows • {previewState.data?.schema?.length || '---'} cols
+          </div>
+        </div>
+        <div className="data-preview-section">
+           <h3>Server Schema & Preview</h3>
+           {previewState.status === 'loading' ? (
+             <div className="canvas-state-message"><FaSyncAlt className="canvas-icon neutral-icon spin-icon" /> Loading schema...</div>
+           ) : previewState.status === 'error' ? (
+             <div className="prep-alert error">
+                <FaExclamationTriangle className="alert-icon" />
+                <div className="alert-content">
+                   <strong>{previewState.error.message}</strong>
+                   <p>{previewState.error.remediation}</p>
+                </div>
+             </div>
+           ) : (
+             <div className="schema-table-container">
+                <table className="schema-table">
+                  <thead>
+                    <tr>
+                      <th>Column</th>
+                      <th>Type</th>
+                      <th>Sample Data</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {previewState.data?.schema?.map((col, idx) => (
+                      <tr key={idx}>
+                        <td>{col.name}</td>
+                        <td>{col.data_type}</td>
+                        <td>
+                          {previewState.data.preview && previewState.data.preview.length > 0
+                            ? String(previewState.data.preview[0][col.name] ?? 'null')
+                            : '---'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+             </div>
+           )}
+        </div>
+        <div className="prep-form-grid" >
+          <label className="prep-field">
+            <span>Problem Choice</span>
+            <select
+               value={taskType}
+               onChange={e => setTaskType(e.target.value)}
+               disabled={isFormDisabled}
+            >
+              <option value="regression">Predict a number (regression)</option>
+              <option value="classification">Classify (classification)</option>
+              <option value="forecasting" disabled>Forecast (forecasting) - Unavailable</option>
+              <option value="clustering" disabled>Find groups (clustering) - Unavailable</option>
+              <option value="anomaly_detection" disabled>Detect anomalies (anomaly_detection) - Unavailable</option>
+            </select>
+          </label>
+          <label className="prep-field">
+            <span>Goal (Optional)</span>
+            <textarea
+               value={goal}
+               onChange={e => setGoal(e.target.value)}
+               disabled={isFormDisabled}
+               placeholder="Describe the business goal for this model"
+               rows={3}
+            />
+          </label>
+        </div>
+        {saveStatus.status === 'error' && (
+           <div className="prep-alert error">
+             <FaExclamationTriangle className="alert-icon" />
+             <div className="alert-content">
+                <strong>{saveStatus.error.message}</strong>
+                <p>{saveStatus.error.remediation}</p>
+                <button className="retry-button" onClick={() => handleSave(false)} type="button">
+                  <FaSyncAlt /> Retry Save
+                </button>
+             </div>
+          </div>
+        )}
+        <div className="start-run-container" >
+           <button
+             className="semantic-btn save-data-goal-btn"
+             onClick={() => handleSave(false)}
+             disabled={isFormDisabled}
+           >
+             Save Data & Goal
+           </button>
+           <button
+             className="start-run-button"
+             onClick={() => handleSave(true)}
+             disabled={isFormDisabled}
+           >
+             {saveStatus.status === 'loading' ? 'Saving...' : 'Save and continue'}
+           </button>
+        </div>
+      </div>
+    </main>
+  );
+}
 function UnconnectedStage({ activeStage }) {
   const unconnectedInfo = {
     'Data & Goal': { purpose: 'Define the business goal and metrics.', prerequisite: 'None', providedBy: 'Dataset Selection' },
@@ -1256,9 +1456,7 @@ function UnconnectedStage({ activeStage }) {
     'Use & Share': { purpose: 'Deploy and share model.', prerequisite: 'Selected candidate', providedBy: 'Review Results' }
   };
   const info = unconnectedInfo[activeStage];
-
   if (!info) return null;
-
   return (
     <main className="ml-studio-canvas" aria-label="Experiment Canvas">
       <div className="canvas-state-message">
@@ -1271,7 +1469,6 @@ function UnconnectedStage({ activeStage }) {
     </main>
   );
 }
-
 function GuidanceSidebar({ activeStage }) {
   const guidanceContent = {
     'Data & Goal': 'Define the business goal and metrics. (Currently unconnected)',
@@ -1281,7 +1478,6 @@ function GuidanceSidebar({ activeStage }) {
     'Review Results': 'Evaluate model performance and compare candidates. (Currently unconnected)',
     'Use & Share': 'Deploy and share the selected model. (Currently unconnected)'
   };
-
   return (
     <aside className="ml-studio-inspector" aria-label="Guidance">
        <h3 className="panel-title"><FaInfoCircle className="panel-icon"/> Guidance</h3>
@@ -1293,7 +1489,6 @@ function GuidanceSidebar({ activeStage }) {
     </aside>
   );
 }
-
 function StatusPill({ status }) {
   const statusMap = {
     'completed': { icon: <FaCheckCircle />, className: 'status-success' },
@@ -1301,23 +1496,18 @@ function StatusPill({ status }) {
     'failed': { icon: <FaTimesCircle />, className: 'status-error' },
     'queued': { icon: <FaPlayCircle />, className: 'status-neutral' },
   };
-
   const mapped = statusMap[status?.toLowerCase()] || { icon: <FaInfoCircle />, className: 'status-neutral' };
-
   return (
     <span className={`status-pill ${mapped.className}`}>
       {mapped.icon} {status}
     </span>
   );
 }
-
 function RunDock({ runsState, onRetry, isIdentityAvailable }) {
   const [isExpanded, setIsExpanded] = useState(true);
-
   if (!isIdentityAvailable) {
      return <section className="ml-studio-dock empty-dock" aria-label="Recent local runs"></section>;
   }
-
   return (
     <section className={`ml-studio-dock ${isExpanded ? '' : 'collapsed'}`} aria-label="Recent local runs" aria-busy={runsState.status === 'loading'}>
        <div className="dock-header">
@@ -1328,7 +1518,6 @@ function RunDock({ runsState, onRetry, isIdentityAvailable }) {
            <span className="run-count">{runsState.data.length} durable runs</span>
          )}
        </div>
-
        {isExpanded && (
        <div className="dock-content">
          {runsState.status === 'loading' && (

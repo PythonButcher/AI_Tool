@@ -16,6 +16,24 @@ from backend.utils.global_state import (
 manual_cleaning_bp = Blueprint('manual_cleaning_bp', __name__, url_prefix='/api')
 
 
+@manual_cleaning_bp.route('/data-workspaces/<workspace_id>/manual-cleaning', methods=['POST'])
+def workspace_manual_cleaning(workspace_id):
+    """Keep governed preparation separate from the legacy global-state adapter."""
+    from backend.services.workspace_cleaning import clean_workspace
+    from backend.services.workspace_context import WorkspaceContextError
+
+    try:
+        return jsonify(clean_workspace(workspace_id, request.get_json(silent=True))), 200
+    except WorkspaceContextError as exc:
+        status = 404 if exc.code == 'workspace_not_found' else 409 if exc.code in {
+            'workspace_version_conflict', 'source_version_conflict', 'source_not_in_workspace',
+            'preparation_relationships_unsupported',
+        } else 422 if exc.code == 'governance_blocked' else 400
+        return jsonify({'error': {'code': exc.code, 'message': str(exc)}}), status
+    except Exception:
+        return jsonify({'error': {'code': 'preparation_unavailable', 'message': 'Preparation could not be committed. Reload before retrying.'}}), 500
+
+
 @manual_cleaning_bp.route('/manual_cleaning', methods=['POST'])
 def manual_cleaning():
     cleaned = get_cleaned_data()

@@ -10,7 +10,7 @@ Antigravity owns bounded frontend implementation, React/CSS, UI rendering, and f
 
 ## Active Handoffs And Goal Prompts
 
-No implementation handoff is active. The reviewed duplication handoff is preserved in `project_docs/archive/ml_studio_duplicate_draft_reviewed_2026_09_26.md`. Use the sole active gate for the next authorized outcome.
+The one active implementation handoff is [ML Studio Data & Goal](ml_studio_data_goal.md), owned by Antigravity. It connects governed snapshot/schema/preview and conditional draft data/task/goal saves. The Prepare Data/Power Query return UI is outside that assignment. Codex reviews returned source and named test assertions before any next handoff.
 
 Completed handoffs belong outside this active folder.
 

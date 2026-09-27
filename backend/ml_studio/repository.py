@@ -272,6 +272,19 @@ class MLStudioRepository:
         );
         CREATE INDEX IF NOT EXISTS ml_experiment_drafts_workspace_index
           ON ml_experiment_drafts (workspace_id, updated_at DESC, experiment_id);
+        CREATE TABLE IF NOT EXISTS ml_preparation_operations (
+            operation_id TEXT PRIMARY KEY,
+            experiment_id TEXT NOT NULL REFERENCES ml_experiment_drafts(experiment_id),
+            workspace_id TEXT NOT NULL,
+            start_key_hash TEXT NOT NULL,
+            intent_hash TEXT NOT NULL,
+            context_json TEXT NOT NULL,
+            status TEXT NOT NULL CHECK (status IN ('open', 'applied', 'cancelled')),
+            result_json TEXT,
+            UNIQUE (experiment_id, start_key_hash)
+        );
+        CREATE UNIQUE INDEX IF NOT EXISTS ml_preparation_open_draft
+          ON ml_preparation_operations(experiment_id) WHERE status = 'open';
         """
         with self._lock, self._connection() as connection:
             connection.execute("PRAGMA journal_mode = WAL")
@@ -347,6 +360,8 @@ class MLStudioRepository:
                 raise PersistenceError("draft_not_found", "The draft is unavailable in this workspace.", "Select a draft from the current workspace.")
             if row["etag"] != etag:
                 raise PersistenceError("draft_revision_conflict", "The draft changed since it was loaded.", "Reload or duplicate the draft to preserve local edits.")
+            if connection.execute("SELECT 1 FROM ml_preparation_operations WHERE experiment_id = ? AND status = 'open'", (experiment_id,)).fetchone():
+                raise PersistenceError("draft_preparation_pending", "Preparation is open for this draft.", "Apply or cancel preparation before editing the draft.")
             draft = json.loads(row["draft_json"])
             draft.update(fields)
             draft["draft_revision"] += 1
@@ -359,6 +374,105 @@ class MLStudioRepository:
             )
             connection.commit()
         return draft
+
+    @staticmethod
+    def _public_preparation(row: sqlite3.Row) -> dict[str, Any]:
+        return {**json.loads(row["context_json"]), "status": row["status"],
+                "result": json.loads(row["result_json"]) if row["result_json"] else None}
+
+    def get_preparation(self, operation_id: str, experiment_id: str, workspace_id: str) -> dict[str, Any] | None:
+        with self._connection() as connection:
+            row = connection.execute("SELECT * FROM ml_preparation_operations WHERE operation_id = ? AND experiment_id = ? AND workspace_id = ?",
+                                     (operation_id, experiment_id, workspace_id)).fetchone()
+        return self._public_preparation(row) if row else None
+
+    def open_preparation(self, experiment_id: str, workspace_id: str) -> dict[str, Any] | None:
+        with self._connection() as connection:
+            row = connection.execute("SELECT * FROM ml_preparation_operations WHERE experiment_id = ? AND workspace_id = ? AND status = 'open'",
+                                     (experiment_id, workspace_id)).fetchone()
+        return self._public_preparation(row) if row else None
+
+    def find_preparation_start(self, experiment_id: str, workspace_id: str, key: str, intent_hash: str) -> dict[str, Any] | None:
+        with self._connection() as connection:
+            row = connection.execute("SELECT * FROM ml_preparation_operations WHERE experiment_id = ? AND workspace_id = ? AND start_key_hash = ?",
+                                     (experiment_id, workspace_id, _idempotency_hash(key))).fetchone()
+        if row is not None and row["intent_hash"] != intent_hash:
+            raise PersistenceError("preparation_intent_conflict", "This start key belongs to different preparation intent.", "Reuse the original intent or choose a new key.")
+        return self._public_preparation(row) if row else None
+
+    def begin_preparation(self, context: dict[str, Any], *, key: str, intent_hash: str) -> dict[str, Any]:
+        """Reserve one draft revision without changing its saved fields."""
+        encoded = _canonical_json(context, limit=MAX_DRAFT_JSON_BYTES, label="preparation context")
+        with self._lock, self._connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            existing = connection.execute("SELECT * FROM ml_preparation_operations WHERE experiment_id = ? AND start_key_hash = ?",
+                                          (context["experiment_id"], _idempotency_hash(key))).fetchone()
+            if existing:
+                if existing["workspace_id"] != context["workspace_id"] or existing["intent_hash"] != intent_hash:
+                    raise PersistenceError("preparation_intent_conflict", "Preparation intent changed.", "Use the original start intent.")
+                return self._public_preparation(existing)
+            draft = connection.execute("SELECT etag FROM ml_experiment_drafts WHERE experiment_id = ? AND workspace_id = ?",
+                                       (context["experiment_id"], context["workspace_id"])).fetchone()
+            if draft is None or draft["etag"] != context["base_etag"]:
+                raise PersistenceError("draft_revision_conflict", "The draft revision changed.", "Reload the saved draft before preparing data.")
+            if connection.execute("SELECT 1 FROM ml_preparation_operations WHERE experiment_id = ? AND status = 'open'", (context["experiment_id"],)).fetchone():
+                raise PersistenceError("draft_preparation_pending", "A preparation operation is already open.", "Resume or cancel the open preparation operation.")
+            connection.execute("INSERT INTO ml_preparation_operations VALUES (?, ?, ?, ?, ?, ?, 'open', NULL)",
+                               (context["operation_id"], context["experiment_id"], context["workspace_id"], _idempotency_hash(key), intent_hash, encoded))
+            connection.commit()
+        return {**context, "status": "open", "result": None}
+
+    def finish_preparation(self, operation_id: str, experiment_id: str, workspace_id: str,
+                           etag: str, action: str, execute: Callable[[dict[str, Any]], dict[str, Any] | None]) -> dict[str, Any]:
+        """Serialize draft saves and recover the data commit before reconciling.
+
+        The trusted callback may commit catalog data. A failed ML transaction
+        leaves the open operation durable so its catalog receipt can be recovered.
+        """
+        with self._lock, self._connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            row = connection.execute("SELECT * FROM ml_preparation_operations WHERE operation_id = ? AND experiment_id = ? AND workspace_id = ?",
+                                     (operation_id, experiment_id, workspace_id)).fetchone()
+            if row is None:
+                raise PersistenceError("preparation_not_found", "Preparation is unavailable in this draft.", "Select the current draft preparation operation.")
+            operation = self._public_preparation(row)
+            if etag != operation["base_etag"]:
+                raise PersistenceError("draft_revision_conflict", "The preparation revision is incorrect.", "Use the base ETag from the saved preparation context.")
+            if operation["status"] != "open":
+                if (action == "apply") != (operation["status"] == "applied"):
+                    raise PersistenceError("preparation_terminal_conflict", "Preparation has a different terminal outcome.", "Reload the operation outcome.")
+                return operation
+            draft_row = connection.execute("SELECT draft_json FROM ml_experiment_drafts WHERE experiment_id = ? AND workspace_id = ?",
+                                           (experiment_id, workspace_id)).fetchone()
+            draft = json.loads(draft_row["draft_json"])
+            if draft["etag"] != etag:
+                raise PersistenceError("draft_revision_conflict", "The draft changed during preparation.", "Reload the saved draft.")
+            evidence = execute(operation)
+            if action == "apply":
+                snapshot = evidence["snapshot"]
+                snapshot_json = _canonical_json(snapshot.to_dict(), limit=MAX_RUN_JSON_BYTES, label="preparation snapshot")
+                connection.execute("INSERT INTO ml_dataset_snapshots VALUES (?, ?, ?, ?, ?, ?)",
+                                   (snapshot.snapshot_id, workspace_id, snapshot.workspace_version, snapshot_json, _payload_hash(snapshot_json), snapshot.created_at.isoformat()))
+                columns = {column.name for column in snapshot.column_profile}
+                roles = draft["roles"]
+                reconciled = {role: (values if values in columns else None) if role == "target"
+                              else [column for column in values if column in columns] for role, values in roles.items()}
+                draft.update(snapshot_id=snapshot.snapshot_id, roles=reconciled,
+                             recipe_id=operation["recipe"]["recipe_id"], recipe_version=operation["recipe"]["recipe_version"],
+                             latest_assessment_id=None, latest_assessment_fingerprint=None,
+                             active_stage=operation["return_stage"], draft_revision=draft["draft_revision"] + 1,
+                             etag=secrets.token_urlsafe(24), updated_at=_now())
+                draft_json = _canonical_json(draft, limit=MAX_DRAFT_JSON_BYTES, label="prepared draft")
+                connection.execute("UPDATE ml_experiment_drafts SET draft_revision = ?, etag = ?, draft_json = ?, updated_at = ? WHERE experiment_id = ?",
+                                   (draft["draft_revision"], draft["etag"], draft_json, draft["updated_at"], experiment_id))
+                result = {"snapshot_id": snapshot.snapshot_id, "receipt": evidence["receipt"], "draft_revision": draft["draft_revision"]}
+            else:
+                result = None
+            status = "applied" if action == "apply" else "cancelled"
+            encoded = _canonical_json(result, limit=MAX_DRAFT_JSON_BYTES, label="preparation result") if result else None
+            connection.execute("UPDATE ml_preparation_operations SET status = ?, result_json = ? WHERE operation_id = ?", (status, encoded, operation_id))
+            connection.commit()
+        return {**operation, "status": status, "result": result}
 
     def duplicate_draft(self, experiment_id: str, workspace_id: str) -> dict[str, Any]:
         original = self.get_draft(experiment_id, workspace_id)

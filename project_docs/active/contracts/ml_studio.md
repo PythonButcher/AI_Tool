@@ -4,7 +4,7 @@
 
 Phase 13 source-backed contract. The `ml_studio_contract_v1` objects, identity-first routes, asynchronous local execution, evaluation, comparison, candidate review, persistence, and managed artifact integrity described below exist for regression and classification. They do not provide resumable workflow drafts, all five task types, explicit nomination before final evaluation, reloadable model export, prediction, or publishing.
 
-The workflow application contract below is a staged design. Step 3 draft persistence and routes are implemented and tested as specified in the current-backend section below. Recipe issuance, later workflow transitions, run binding, nomination, final evaluation, export, and prediction remain proposed.
+The workflow application contract below is a staged design. Draft persistence, conditional saves, and draft preparation recipe/return operations are implemented and tested in their source-backed sections. Later workflow transitions, run binding, nomination, final evaluation, export, and prediction remain proposed. Standalone `/recipes` is not implemented; recipe issuance currently belongs to a draft preparation operation.
 
 ## Step 3 Draft API — Current Backend Truth
 
@@ -13,6 +13,36 @@ The workflow application contract below is a staged design. Step 3 draft persist
 `PATCH /api/ml-studio/v1/drafts/{experiment_id}?workspace_id=...` requires the raw opaque `etag` in `If-Match`; a successful save returns `draft` with incremented `draft_revision`, new `etag`, and `updated_at`, plus `workflow_state`. A stale or missing tag returns HTTP 409 with `draft_revision_conflict` and leaves the stored draft unchanged. `POST /api/ml-studio/v1/drafts/{experiment_id}/duplicate?workspace_id=...` returns a new draft identity with copied editable settings, reset active stage, and no copied assessment, run, completion, or selection. `GET /api/ml-studio/v1/drafts/{experiment_id}/workflow?workspace_id=...` returns `workflow_state`.
 
 Only an existing workspace can be used in the application route. Drafts are scoped by `workspace_id`; a draft from another workspace returns 404. The server validates a referenced snapshot against the same workspace. Client recipe identity, assessment evidence, run status, raw rows, filesystem paths, and completion claims are rejected. In this step, Data & Goal and Prepare Data are the only stages that can become active; later stages remain locked until their backend prerequisites are implemented.
+
+## Draft Preparation Operations — Implemented Backend Boundary
+
+Preparation options derive missing-value warnings and supported `remove_nulls` fixes from the current draft snapshot profile, without requiring an immutable training specification. This is an initial quality view, not a complete assessment or permission to configure/train. Begin requires `If-Match`, `Idempotency-Key`, the draft workspace, server-issued snapshot identity, supported ordered cleaning steps, optional paired issue/fix references, and return stage `Prepare Data` or `Data & Goal`. The server issues a recipe and operation bound to the draft revision and current workspace. Only one open operation is permitted per draft; ordinary draft edits are rejected until cancellation or apply completes. Begin/cancel never mutate the saved draft or dataset.
+
+An operation persists its recipe, base draft revision/ETag, experiment/workspace/snapshot identity, selected issue/fix, and return stage. Replaying the same start key and intent returns the same operation. Apply consumes stored steps and an operation identity, not browser rows, hashes, receipts, or replacement draft fields. Preview is read-only. Cancellation is terminal and preserves the saved draft; it is prohibited after a data commit that still needs draft reconciliation.
+
+ML draft writes are serialized while apply runs. Catalog cleaning commits a durable receipt keyed by the server operation identity in the same transaction as workspace membership replacement. If the ML draft transaction fails after the catalog commit, the open operation remains recoverable; retry loads that receipt and completes reconciliation without running cleaning again. Newer external workspace changes prevent reconciliation and return a conflict; they never justify overwriting the current identity. Successful reconciliation creates a fresh snapshot, removes role references absent from its schema, invalidates assessment evidence, saves recipe identity, and restores the persisted return stage. Replaying a terminal operation returns its evidence plus the current draft without overwriting later edits.
+
+HTTP root: `/api/ml-studio/v1`. All operations use `workspace_id` query scope and the existing `{error: {code, message, remediation}}` error envelope.
+
+| Method and path | Exact input | Success (200) |
+| --- | --- | --- |
+| `GET /drafts/{experiment_id}/preparation` | `workspace_id` query | `{snapshot_id, issues, fixes, preparation_context}`; empty issues/fixes are valid. |
+| `POST /drafts/{experiment_id}/preparation` | `workspace_id`; `If-Match` current draft ETag; `Idempotency-Key` (1–256 characters); JSON exactly `{snapshot_id, steps, issue_id, fix_id, return_stage}` | `{preparation}`; repeated identical start key/intent returns the same operation, including its terminal outcome. |
+| `GET /drafts/{experiment_id}/preparation/{operation_id}` | `workspace_id` | `{preparation}` for this experiment/workspace only. |
+| `POST /drafts/{experiment_id}/preparation/{operation_id}` | `workspace_id`; JSON exactly `{action: "preview"}` | `{preparation, preview}`; preview uses the workspace-cleaning response contract. |
+| Same POST | `workspace_id`; `If-Match` operation `base_etag`; JSON exactly `{action: "apply"}` or `{action: "cancel"}` | `{preparation, draft, workflow_state, preparation_context}`. |
+
+Start `steps` contain at most 100 entries with `type` and optional object `params`. Step, recipe, and operation identities are server-issued. Parameters are finite, path-free bounded JSON. `issue_id` and `fix_id` are both null for manual preparation, or a matching pair from current options. `return_stage` is exactly `Data & Goal` or `Prepare Data`. Other fields, caller recipe hashes/identities, raw rows, client readiness, and supplied receipts are rejected.
+
+`preparation` contains `operation_id`, `experiment_id`, `workspace_id`, `base_draft_revision`, `base_etag`, `snapshot_id`, `workspace_version`, `source_id`, nullable `issue_id` and `fix_id`, `return_stage`, full `recipe: TransformationRecipeLineage`, `status` (`open`, `applied`, or `cancelled`), and nullable `result`. Applied `result` is `{snapshot_id, receipt, draft_revision}` describing that operation's commit. Replay returns this immutable evidence alongside the current draft, which may have a newer revision. Open/cancelled `result` is null. `GET /drafts/{experiment_id}` adds nullable `preparation_context` so reload can find an open operation without a browser callback.
+
+Each issue is `{issue_id, code: "missing_values", severity: "warning", field, message, remediation}`. Each fix is `{fix_id, issue_id, action_type: "remove_nulls", affected_columns, parameters: {columns}, support_status: "supported", explanation}`. Only missing-value findings are currently emitted; no absence-of-issues response asserts statistical readiness. Workflow still unlocks only Data & Goal and Prepare Data.
+
+Invalid/missing fields, unsafe/unsupported recipes, unknown issue/fix pairs, absent saved task/snapshot, and invalid actions return 400. Cross-workspace/experiment draft or operation retrieval returns 404. Revision mismatch, changed start intent, open-operation draft edits, stale snapshots, relationship preparation, wrong terminal action, pending committed-data reconciliation, and workspace changes after commit return 409 with their stable error codes. Governance blocking returns 422 at apply. Unknown errors retain safe `ml_studio_internal_error` (500). Retry begin with the same key/intent; retry apply with the same operation and base ETag. Preview after a committed-data/pending-draft failure is stale; retry Apply instead. If an external workspace mutation makes the committed receipt obsolete, reconciliation refuses to overwrite it; duplicate the draft and select a fresh snapshot while retaining the operation's commit evidence.
+
+Persistence uses `ml_preparation_operations` in the ML repository and `workspace_preparation_commits` in the catalog. Only hashed start keys are stored. Catalog receipt insertion is atomic with source membership/version mutation; ML snapshot, reconciled draft, and terminal outcome commit in one ML transaction. These are separate databases with explicit recovery, not a cross-database atomicity claim. Relationship-backed preparation remains outside this boundary.
+
+Verification: `tests/test_ml_studio_preparation.py` covers restart, conditional start, issue/fix validation, read-only preview, cancellation, save locking, concurrent apply, stale identity, durable commit recovery, role/evidence invalidation, and replay preserving newer edits. The focused preparation/draft/API/cleaning/workspace/persistence run on 2026-09-27 ran 82 tests with one platform-dependent skip; compilation and the provider-neutral CI harness passed.
 
 ## Workflow Application Contract — Proposed
 
@@ -158,6 +188,20 @@ The evidence view derives a task-appropriate metric landscape from immutable sel
 ## Reviewed Candidate Reference
 
 `ReviewedCandidateReference` points to an immutable run, specification version, snapshot, and server-created artifact hash. It records review status, reviewer, time, intended use, and prohibited uses. It contains no estimator or artifact bytes and does not authorize deployment.
+
+## Workspace-Safe Cleaning — Implemented Backend Boundary
+
+`POST /api/data-workspaces/{workspace_id}/manual-cleaning` accepts exactly `workspace_version` (positive integer), `source_id` (current primary source), `steps` (at most 100 supported engine steps, each containing `type` and optional object `params`), and `preview_only` (boolean). It resolves catalog data and governance from the server. Client rows, schema, paths, and extra request fields are rejected. `/api/manual_cleaning` retains its compatibility behavior and is not the ML Studio preparation endpoint.
+
+The response contains `committed`, `workspace_id`, `workspace_version`, `preview` (at most 100 records), `row_count`, ordered `schema` entries (`name`, `position`, `data_type`, `nullable`), `governance_readiness`, and `receipt`. Preview performs no durable writes and returns `receipt: null`; cancellation is discarding a preview without issuing apply. Full cleaned rows are never returned by this endpoint.
+
+Apply writes a new server-managed typed JSON table source and atomically replaces the primary source membership in the same workspace, advancing its version. The original source remains available and unchanged for other catalog/workspace consumers. The resulting source schema version advances from the base source version. Workspace memberships outside the primary source are retained. Workspaces containing any relationship, including inactive modeling drafts, return `preparation_relationships_unsupported` instead of silently altering join semantics.
+
+An apply receipt contains `receipt_id`, `workspace_id`, `workspace_version`, `base_workspace_version`, `base_source_id`, `source_id`, `content_fingerprint`, `schema_version`, `schema`, `row_count`, and `committed_at`. Identity, schema, and content describe the persisted representation consumed by the ML Studio workspace resolver. Standalone workspace-cleaning receipts are response evidence rather than a lookup resource; retrying that standalone route with the base version conflicts. Draft preparation operations use a server-only operation key to persist the receipt atomically in the catalog, enabling the recovery contract above. Clients cannot supply that key to the workspace-cleaning HTTP endpoint.
+
+Errors contain `error.code` and `error.message` with safe messages. Missing workspace returns 404. Stale workspace/source identity, foreign or non-primary source, and relationship-backed preparation return 409. Governance blocking returns 422. Invalid request/steps, cleaning failure, and empty apply results return 400. Unexpected commit failure returns safe `preparation_unavailable` with 500; callers must reload identity before retrying. The transactional commit rechecks workspace version, primary identity, source fingerprint, and relationship absence. Failed staging/commit removes its newly allocated file.
+
+Verified by `tests/test_workspace_cleaning.py`, `tests/test_source_workspace_context.py`, and `tests/test_ml_studio_api.py` (46 focused tests on 2026-09-27). Runtime verification uses `PYTHONPATH=.codex_tmp_py;.codex_tmp_py/site-packages` with the repository-local dependency bundle. This compatibility-root preparation boundary is separate from the versioned ML Studio object envelope.
 
 ## Structured Errors
 

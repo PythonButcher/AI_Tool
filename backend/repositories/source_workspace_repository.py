@@ -442,6 +442,67 @@ def register_source_in_workspace(
         conn.close()
 
 
+def get_preparation_commit(preparation_id: str, workspace_id: str) -> Optional[Dict[str, Any]]:
+    """Recover evidence committed atomically with a preparation data mutation."""
+    conn = get_db_connection()
+    try:
+        row = conn.execute(
+            "SELECT receipt_json FROM workspace_preparation_commits WHERE preparation_id = ? AND workspace_id = ?",
+            (preparation_id, workspace_id),
+        ).fetchone()
+        return json.loads(row["receipt_json"]) if row else None
+    finally:
+        conn.close()
+
+
+def replace_workspace_primary(*, source: Dict[str, Any], workspace_id: str,
+                              expected_version: int, expected_source_id: str,
+                              expected_fingerprint: str,
+                              preparation_id: Optional[str] = None) -> tuple[Dict[str, Any], Dict[str, Any]]:
+    """Commit a derived source without mutating catalog data shared elsewhere."""
+    conn = get_db_connection()
+    try:
+        conn.execute("BEGIN IMMEDIATE")
+        workspace = get_workspace(workspace_id, connection=conn)
+        if workspace is None:
+            raise SourceWorkspaceRepositoryError("workspace_not_found", "Workspace not found.")
+        if workspace["version"] != expected_version:
+            raise SourceWorkspaceRepositoryError("workspace_version_conflict", "Reload the workspace version.")
+        original = get_source(expected_source_id, connection=conn)
+        if workspace["primary_source_id"] != expected_source_id or original is None:
+            raise SourceWorkspaceRepositoryError("source_not_in_workspace", "Primary source identity changed.")
+        if original["content_fingerprint"] != expected_fingerprint:
+            raise SourceWorkspaceRepositoryError("source_version_conflict", "Source content changed.")
+        # Reject even inactive edges: replacement must not strand a modeling draft.
+        if conn.execute("SELECT 1 FROM workspace_relationships WHERE workspace_id = ? LIMIT 1", (workspace_id,)).fetchone():
+            raise SourceWorkspaceRepositoryError("preparation_relationships_unsupported", "Relationship workspaces cannot be cleaned through this boundary.")
+        _insert_source(conn, source)
+        conn.execute("UPDATE workspace_sources SET source_id = ? WHERE workspace_id = ? AND source_id = ?",
+                     (source["source_id"], workspace_id, expected_source_id))
+        conn.execute("UPDATE data_workspaces SET primary_source_id = ? WHERE workspace_id = ?",
+                     (source["source_id"], workspace_id))
+        _advance_workspace_version(conn, workspace_id=workspace_id, expected_version=expected_version,
+                                   updated_at=source["updated_at"])
+        result = get_source(source["source_id"], connection=conn), get_workspace(workspace_id, connection=conn)
+        if preparation_id:
+            receipt = {
+                "receipt_id": preparation_id, "workspace_id": workspace_id,
+                "workspace_version": expected_version + 1, "base_workspace_version": expected_version,
+                "base_source_id": expected_source_id, "source_id": source["source_id"],
+                "content_fingerprint": source["content_fingerprint"], "schema_version": source["schema_version"],
+                "schema": source["schema"], "row_count": source["row_count"], "committed_at": source["updated_at"],
+            }
+            conn.execute("INSERT INTO workspace_preparation_commits VALUES (?, ?, ?)",
+                         (preparation_id, workspace_id, json.dumps(receipt, allow_nan=False)))
+        conn.commit()
+        return result
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
 def get_source(source_id: str, *, connection=None) -> Optional[Dict[str, Any]]:
     """Retrieve a source by stable identity using a fresh connection by default."""
     owns_connection = connection is None

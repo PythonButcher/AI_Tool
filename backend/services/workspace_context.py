@@ -24,6 +24,7 @@ from backend.repositories.source_workspace_repository import (
     get_workspace,
     register_source_with_workspace,
     register_source_in_workspace,
+    replace_workspace_primary,
     require_workspace_sources,
     update_workspace_source_position,
 )
@@ -188,9 +189,13 @@ def register_managed_upload(
     workspace_version: Any = None,
     alias: Optional[str] = None,
     role: Optional[str] = None,
+    replace_source: Optional[Dict[str, Any]] = None,
+    preparation_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Persist accepted bytes and atomically register the requested membership."""
     source_id = f"src_{uuid4().hex}"
+    if replace_source is not None and not workspace_id:
+        raise WorkspaceContextError("workspace_not_found", "Source replacement requires an existing workspace.")
     target_workspace_id = workspace_id.strip() if workspace_id else None
     if workspace_id is not None and not target_workspace_id:
         raise WorkspaceContextError(
@@ -207,7 +212,7 @@ def register_managed_upload(
 
     new_workspace_id = f"ws_{uuid4().hex}"
     safe_name = secure_filename(filename) or "dataset"
-    suffix = Path(safe_name).suffix.lower()
+    suffix = ".table.json" if filename.endswith(".table.json") else Path(safe_name).suffix.lower()
     storage_key = f"{source_id}{suffix}"
     managed_root = MANAGED_UPLOAD_ROOT.resolve()
     managed_root.mkdir(parents=True, exist_ok=True)
@@ -236,7 +241,7 @@ def register_managed_upload(
             "format": suffix.lstrip(".") or None,
         },
         "content_fingerprint": f"sha256:{sha256(file_bytes).hexdigest()}",
-        "schema_version": 1,
+        "schema_version": replace_source["schema_version"] + 1 if replace_source else 1,
         "schema": dataframe_schema(dataframe),
         "row_count": int(dataframe.shape[0]),
         "column_count": int(dataframe.shape[1]),
@@ -269,7 +274,15 @@ def register_managed_upload(
         # storage key contains a random server-generated source identity.
         with managed_path.open("xb") as managed_file:
             managed_file.write(file_bytes)
-        if target_workspace_id:
+        if replace_source:
+            source, workspace = replace_workspace_primary(
+                source=source_record, workspace_id=target_workspace_id,
+                expected_version=expected_version,
+                expected_source_id=replace_source["source_id"],
+                expected_fingerprint=replace_source["content_fingerprint"],
+                preparation_id=preparation_id,
+            )
+        elif target_workspace_id:
             source, workspace = register_source_in_workspace(
                 source=source_record,
                 workspace_id=target_workspace_id,
