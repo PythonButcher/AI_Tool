@@ -376,7 +376,7 @@ class MLStudioService:
         except PersistenceError as exc:
             raise self._translate_persistence(exc) from exc
         return [
-            {key: draft[key] for key in ("experiment_id", "workspace_id", "draft_revision", "name", "active_stage", "task_type", "updated_at")}
+            {key: draft[key] for key in ("experiment_id", "workspace_id", "draft_revision", "etag", "name", "active_stage", "task_type", "updated_at")}
             for draft in drafts
         ]
 
@@ -422,6 +422,13 @@ class MLStudioService:
         except PersistenceError as exc:
             raise self._translate_persistence(exc) from exc
         return {"draft": draft, "workflow_state": self._draft_workflow(draft)}
+
+    def delete_draft(self, experiment_id: str, workspace_id: str, etag: str) -> None:
+        self._require_draft_workspace(workspace_id)
+        try:
+            self._repository.delete_draft(experiment_id, workspace_id, etag)
+        except PersistenceError as exc:
+            raise self._translate_persistence(exc) from exc
 
     def create_snapshot(self, request: Any) -> dict[str, Any]:
         payload = _require_object(request, label="snapshot request")

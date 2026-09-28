@@ -53,7 +53,7 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
   const [draftsState, setDraftsState] = useState({ status: 'idle', data: null, error: null });
   const [activeDraft, setActiveDraft] = useState(null);
   const [pendingDraftAction, setPendingDraftAction] = useState(null);
-  const [duplicateError, setDuplicateError] = useState(null);
+  const [draftActionError, setDraftActionError] = useState(null);
   const runsFetchIdRef = useRef(0);
   const draftsFetchIdRef = useRef(0);
   const fetchDrafts = useCallback(async () => {
@@ -88,6 +88,7 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
       const data = await res.json();
       if (identityRef.current !== currentIdentity) return;
       if (!res.ok) throw data.error || new Error('Failed to create draft');
+      lastHeaderSaveOkRef.current = true;
       setActiveDraft(data.draft);
       setWorkflowState(data.workflow_state);
       setActiveStage(data.workflow_state.active_stage);
@@ -112,6 +113,7 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
       const data = await res.json();
       if (identityRef.current !== currentIdentity) return;
       if (!res.ok) throw data.error || new Error('Failed to reopen draft');
+      lastHeaderSaveOkRef.current = true;
       setActiveDraft(data.draft);
       setWorkflowState(data.workflow_state);
       setActiveStage(data.workflow_state.active_stage);
@@ -130,7 +132,7 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
     if (pendingDraftAction) return;
     const currentIdentity = identityKey;
     setPendingDraftAction(`duplicating-${experiment_id}`);
-    setDuplicateError(null);
+    setDraftActionError(null);
     try {
       const res = await fetch(`${API_URL}/api/ml-studio/v1/drafts/${experiment_id}/duplicate?workspace_id=${activeWorkspace.workspace_id}`, {
         method: 'POST'
@@ -141,12 +143,43 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
       fetchDrafts();
     } catch (err) {
       if (identityRef.current !== currentIdentity) return;
-      setDuplicateError({
+      setDraftActionError({
         experiment_id,
+        action: 'duplicate',
         error: {
           message: err.message || 'Failed to duplicate draft.',
           code: err.code || 'error',
           remediation: err.remediation || 'Please try again.'
+        }
+      });
+    } finally {
+      if (identityRef.current === currentIdentity) setPendingDraftAction(null);
+    }
+  };
+  const handleDeleteDraft = async (draft) => {
+    if (pendingDraftAction || !window.confirm(`Delete "${draft.name}" from this workspace? Saved runs will remain available.`)) return;
+    const currentIdentity = identityKey;
+    setPendingDraftAction(`deleting-${draft.experiment_id}`);
+    setDraftActionError(null);
+    try {
+      const res = await fetch(`${API_URL}/api/ml-studio/v1/drafts/${draft.experiment_id}?workspace_id=${activeWorkspace.workspace_id}`, {
+        method: 'DELETE',
+        headers: { 'If-Match': draft.etag }
+      });
+      if (identityRef.current !== currentIdentity) return;
+      if (!res.ok) {
+        const data = await res.json();
+        throw data.error || new Error('Failed to delete experiment.');
+      }
+      fetchDrafts();
+    } catch (err) {
+      if (identityRef.current !== currentIdentity) return;
+      setDraftActionError({
+        experiment_id: draft.experiment_id,
+        action: 'delete',
+        error: {
+          message: err.message || 'Failed to delete experiment.',
+          remediation: err.remediation || 'Retry after checking the saved experiment.'
         }
       });
     } finally {
@@ -201,7 +234,7 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
     setSaveState('saved');
     setSaveError(null);
     setPendingDraftAction(null);
-    setDuplicateError(null);
+    setDraftActionError(null);
     if (!isIdentityAvailable) {
       return;
     }
@@ -211,11 +244,15 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
   }, [identityKey, isIdentityAvailable, fetchRuns, fetchDrafts]);
   const [workflowState, setWorkflowState] = useState(null);
   const [saveState, setSaveState] = useState('saved');
+  const [stagePending, setStagePending] = useState(false);
   const [saveError, setSaveError] = useState(null);
   const [localName, setLocalName] = useState('');
+  const [draftReloadKey, setDraftReloadKey] = useState(0);
   const saveTimerRef = useRef(null);
   const pendingEditsRef = useRef({});
   const isSavingRef = useRef(false);
+  const stageSavingRef = useRef(false);
+  const lastHeaderSaveOkRef = useRef(true);
   const etagRef = useRef(null);
   const activeDraftRef = useRef(activeDraft);
   useEffect(() => { activeDraftRef.current = activeDraft; }, [activeDraft]);
@@ -234,11 +271,13 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
   }, [identityKey, activeDraft?.experiment_id]);
   const flushSave = useCallback(async () => {
     const draft = activeDraftRef.current;
-    if (!draft || isSavingRef.current || saveState === 'conflict') return true;
+    if (!draft || saveState === 'conflict') return false;
+    if (isSavingRef.current) return false;
     const patch = { ...pendingEditsRef.current };
     if (Object.keys(patch).length === 0) return true;
     pendingEditsRef.current = {};
     isSavingRef.current = true;
+    lastHeaderSaveOkRef.current = null;
     setSaveState('saving');
     const currentIdentity = identityRef.current;
     try {
@@ -250,6 +289,7 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
       const data = await res.json();
       if (identityRef.current !== currentIdentity || activeDraftRef.current?.experiment_id !== draft.experiment_id) return false;
       if (!res.ok) {
+         lastHeaderSaveOkRef.current = false;
          pendingEditsRef.current = { ...patch, ...pendingEditsRef.current };
          if (res.status === 409 || data.error?.code === 'draft_revision_conflict') {
             setSaveState('conflict');
@@ -260,6 +300,7 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
          }
          return false;
       } else {
+         lastHeaderSaveOkRef.current = true;
          if (!data.draft) console.log('MISSING DRAFT', data);
          etagRef.current = data.draft.etag;
          setActiveDraft(data.draft);
@@ -273,6 +314,7 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
       }
     } catch (err) {
       if (identityRef.current !== currentIdentity || activeDraftRef.current?.experiment_id !== draft.experiment_id) return false;
+      lastHeaderSaveOkRef.current = false;
       pendingEditsRef.current = { ...patch, ...pendingEditsRef.current };
       setSaveState('save_error');
       setSaveError({ message: err.message || 'Network error.', code: 'error', remediation: 'Please try again.' });
@@ -280,7 +322,7 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
     } finally {
       if (identityRef.current === currentIdentity && activeDraftRef.current?.experiment_id === draft.experiment_id) {
         isSavingRef.current = false;
-        if (Object.keys(pendingEditsRef.current).length > 0) {
+        if (lastHeaderSaveOkRef.current === true && Object.keys(pendingEditsRef.current).length > 0) {
            saveTimerRef.current = setTimeout(flushSave, 100);
         }
       }
@@ -310,8 +352,10 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
       setShowGuidance(data.draft.guidance_enabled !== false);
       setLocalName(data.draft.name || '');
       pendingEditsRef.current = {};
+      lastHeaderSaveOkRef.current = true;
       setSaveState('saved');
       setSaveError(null);
+      setDraftReloadKey(key => key + 1);
     } catch (err) {
       if (identityRef.current !== currentIdentity) return;
       setSaveState('save_error');
@@ -332,7 +376,7 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
     scheduleSave({ guidance_enabled: newVal });
   };
   const handleStageSelect = async (stageId) => {
-    if (saveState === 'conflict') return;
+    if (saveState === 'conflict' || isSavingRef.current || stageSavingRef.current) return;
     if (workflowState) {
        const stageInfo = workflowState.stages?.find(s => s.stage === stageId);
        if (workflowState.stages && (!stageInfo || stageInfo.state === 'locked')) return;
@@ -345,7 +389,7 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
     }
   };
   const handleGoHome = async () => {
-     if (saveState === 'conflict') return;
+     if (saveState === 'conflict' || isSavingRef.current || stageSavingRef.current) return;
      if (Object.keys(pendingEditsRef.current).length > 0) {
         if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
         const ok = await flushSave();
@@ -355,48 +399,68 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
      setWorkflowState(null);
   };
   const handleExplicitStageSave = async (payload) => {
-    // 1. Flush any pending header edits
-    if (Object.keys(pendingEditsRef.current).length > 0) {
-        if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-        const ok = await flushSave();
-        if (!ok) {
-           return { success: false, error: { message: 'Failed to flush pending edits.' } };
-        }
+    if (stageSavingRef.current || !activeDraftRef.current) {
+      return { success: false, error: { message: 'A save is already in progress.' } };
     }
-    // Wait for in-flight save to resolve
-    if (isSavingRef.current) {
-       let attempts = 0;
-       while (isSavingRef.current && attempts < 50) {
-          await new Promise(r => setTimeout(r, 100));
-          attempts++;
-       }
-       if (isSavingRef.current) {
-          return { success: false, error: { message: 'Timeout waiting for header save to complete.' } };
-       }
-    }
-    if (saveState === 'conflict') {
-       return { success: false, error: saveError || { message: 'Conflict state prevents saving.' } };
-    }
-    // 2. Perform the explicit PATCH using the latest ETag
+    stageSavingRef.current = true;
+    setStagePending(true);
     const currentIdentity = identityRef.current;
+    const experimentId = activeDraftRef.current.experiment_id;
+    const stillCurrent = () => identityRef.current === currentIdentity && activeDraftRef.current?.experiment_id === experimentId;
     try {
-       const res = await fetch(`${API_URL}/api/ml-studio/v1/drafts/${activeDraftRef.current.experiment_id}?workspace_id=${activeWorkspace.workspace_id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json', 'If-Match': etagRef.current },
-          body: JSON.stringify(payload)
-       });
-       const data = await res.json();
-       if (identityRef.current !== currentIdentity) return { success: false, error: { message: 'Identity changed during save.' } };
-       if (!res.ok) {
-          return { success: false, error: data.error || { message: 'Failed to save stage.' } };
-       }
-       etagRef.current = data.draft.etag;
-       setActiveDraft(data.draft);
-       setWorkflowState(data.workflow_state);
-       setActiveStage(data.workflow_state.active_stage);
-       return { success: true };
+      // Header edits must finish first because every successful PATCH changes the ETag.
+      let attempts = 0;
+      while (isSavingRef.current || Object.keys(pendingEditsRef.current).length > 0) {
+        if (!stillCurrent()) return { success: false, error: { message: 'Draft identity changed during save.' } };
+        if (isSavingRef.current) {
+          if (++attempts > 50) return { success: false, error: { message: 'Waiting for the experiment save timed out.' } };
+          await new Promise(resolve => setTimeout(resolve, 100));
+          continue;
+        }
+        if (lastHeaderSaveOkRef.current === false || saveState === 'conflict') {
+          return { success: false, error: { message: 'Resolve the experiment save error before continuing.' } };
+        }
+        if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+        if (!await flushSave()) {
+          return { success: false, error: { message: 'Save the experiment details before continuing.' } };
+        }
+      }
+      if (!stillCurrent() || lastHeaderSaveOkRef.current === false || saveState === 'conflict') {
+        return { success: false, error: { message: 'Reload the current draft before continuing.' } };
+      }
+      isSavingRef.current = true;
+      setSaveState('saving');
+      const res = await fetch(`${API_URL}/api/ml-studio/v1/drafts/${experimentId}?workspace_id=${activeWorkspace.workspace_id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'If-Match': etagRef.current },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (!stillCurrent()) return { success: false, error: { message: 'Draft identity changed during save.' } };
+      if (!res.ok) {
+        const error = data.error || { message: 'Failed to save Data & Goal.' };
+        if (res.status === 409 || error.code === 'draft_revision_conflict') {
+          setSaveState('conflict');
+          setSaveError(error);
+        } else {
+          setSaveState('saved');
+        }
+        return { success: false, error };
+      }
+      etagRef.current = data.draft.etag;
+      setActiveDraft(data.draft);
+      setWorkflowState(data.workflow_state);
+      setActiveStage(data.workflow_state.active_stage);
+      setSaveState('saved');
+      setSaveError(null);
+      return { success: true };
     } catch (err) {
-       return { success: false, error: { message: err.message || 'Network error.' } };
+      if (stillCurrent()) setSaveState('saved');
+      return { success: false, error: { message: err.message || 'Network error.' } };
+    } finally {
+      if (stillCurrent()) isSavingRef.current = false;
+      stageSavingRef.current = false;
+      setStagePending(false);
     }
   };
   const activeDatasetSource = cleanedData ?? fullData ?? uploadedData;
@@ -417,6 +481,7 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
         activeDraft={activeDraft}
         onGoHome={handleGoHome}
         saveState={saveState}
+        stagePending={stagePending}
         saveError={saveError}
         localName={localName}
         onNameChange={handleNameChange}
@@ -456,14 +521,16 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
                    onCreate={handleCreateDraft}
                    onReopen={handleReopenDraft}
                    onDuplicate={handleDuplicateDraft}
+                   onDelete={handleDeleteDraft}
                    pendingAction={pendingDraftAction}
-                   onRetry={fetchDrafts}
-                   duplicateError={duplicateError}
+                   onRetry={() => { setDraftActionError(null); fetchDrafts(); }}
+                   draftActionError={draftActionError}
                  />
              ) : (
                  <>
                                           <div className={activeStage === 'Configure' ? '' : 'hidden-stage'}>
                          <ExperimentCanvas
+                 showGuidance={showGuidance}
                             activeWorkspace={activeWorkspace}
                             analysisContext={analysisContext}
                             numRows={numRows}
@@ -475,14 +542,24 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
                      </div>
                                           {activeStage === 'Data & Goal' && (
                          <DataGoalStage
+                 showGuidance={showGuidance}
+                            key={`${activeDraft.experiment_id}-${draftReloadKey}`}
                             activeWorkspace={activeWorkspace}
                             analysisContext={analysisContext}
                             activeDraft={activeDraft}
                             onSaveRequest={handleExplicitStageSave}
                          />
                      )}
-                     {activeStage !== 'Configure' && activeStage !== 'Data & Goal' && (
-                         <UnconnectedStage activeStage={activeStage} />
+                     {activeStage === 'Prepare Data' && (
+                         <PrepareDataStage
+                 showGuidance={showGuidance}
+                            activeWorkspace={activeWorkspace}
+                            analysisContext={analysisContext}
+                            activeDraft={activeDraft}
+                         />
+                     )}
+                     {activeStage !== 'Configure' && activeStage !== 'Data & Goal' && activeStage !== 'Prepare Data' && (
+                         <UnconnectedStage activeStage={activeStage} showGuidance={showGuidance} />
                      )}
                  </>
              )}
@@ -492,12 +569,67 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
                isIdentityAvailable={isIdentityAvailable}
             />
          </div>
-         {showGuidance && <GuidanceSidebar activeStage={activeStage} />}
+
       </div>
     </div>
   );
 }
-function TopRibbon({ activeStage, onStageSelect, showGuidance, onToggleGuidance, activeDraft, onGoHome, saveState, saveError, localName, onNameChange, onReloadDraft, onRetrySave, workflowState }) {
+
+function InfoPopover({ id, label, text }) {
+  const [isOpen, setIsOpen] = React.useState(false);
+  const popoverRef = React.useRef();
+
+  React.useEffect(() => {
+    function handleClickOutside(e) {
+      if (isOpen && popoverRef.current && !popoverRef.current.contains(e.target)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, [isOpen]);
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Escape') setIsOpen(false);
+  };
+
+  return (
+    <div className="info-popover-container" ref={popoverRef} onKeyDown={handleKeyDown}>
+      <button
+        type="button"
+        className="info-popover-trigger semantic-btn"
+        onClick={(e) => { e.preventDefault(); setIsOpen(!isOpen); }}
+        aria-label={"Help for " + label}
+        aria-expanded={isOpen}
+        aria-controls={id}
+      >
+        <FaInfoCircle className="info-popover-icon" />
+      </button>
+      {isOpen && (
+        <div id={id} className="info-popover-content" role="region" aria-label={"Help for " + label}>
+          <div className="info-popover-header">
+            <strong>{label} Help</strong>
+            <button
+              type="button"
+              className="semantic-btn close-btn"
+              onClick={() => setIsOpen(false)}
+              aria-label="Close help"
+            >
+              &times;
+            </button>
+          </div>
+          <p>{text}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TopRibbon({ activeStage, onStageSelect, showGuidance, onToggleGuidance, activeDraft, onGoHome, saveState, stagePending, saveError, localName, onNameChange, onReloadDraft, onRetrySave, workflowState }) {
   const STAGES = [
     { id: 'Data & Goal', label: 'Data & Goal', icon: <FaDatabase /> },
     { id: 'Prepare Data', label: 'Prepare Data', icon: <FaWrench /> },
@@ -512,7 +644,7 @@ function TopRibbon({ activeStage, onStageSelect, showGuidance, onToggleGuidance,
       <div className="ribbon-top-bar">
          <div className="experiment-info">
             {!isHome && (
-               <button className="semantic-btn back-home-btn" onClick={onGoHome} title="Back to Experiments">
+               <button className="semantic-btn back-home-btn" onClick={onGoHome} title="Back to Experiments" disabled={stagePending || saveState === 'saving'}>
                  <FaChevronDown className="inline-icon" /> Home
                </button>
             )}
@@ -525,7 +657,7 @@ function TopRibbon({ activeStage, onStageSelect, showGuidance, onToggleGuidance,
                    onChange={onNameChange}
                    aria-label="Experiment Name"
                    maxLength={500}
-                   disabled={saveState === 'conflict'}
+                   disabled={stagePending || saveState === 'saving' || saveState === 'conflict'}
                  />
               )}
             </span>
@@ -541,7 +673,7 @@ function TopRibbon({ activeStage, onStageSelect, showGuidance, onToggleGuidance,
          {!isHome && (
             <div className="guidance-toggle">
                <label className="checkbox-wrapper semantic-btn">
-                 <input type="checkbox" checked={showGuidance} onChange={onToggleGuidance} />
+                 <input type="checkbox" checked={showGuidance} onChange={onToggleGuidance} disabled={stagePending} />
                  <span>Guidance</span>
                </label>
             </div>
@@ -577,7 +709,7 @@ function TopRibbon({ activeStage, onStageSelect, showGuidance, onToggleGuidance,
                    className={`ribbon-stage semantic-btn ${isCurrent ? 'is-current' : 'is-inactive'} ${isLocked ? 'is-locked' : ''}`}
                    aria-current={isCurrent ? 'step' : undefined}
                    onClick={() => onStageSelect(stage.id)}
-                   disabled={isLocked || saveState === 'conflict'}
+                   disabled={isLocked || stagePending || saveState === 'saving' || saveState === 'conflict'}
                    title={isLocked ? "Stage locked" : ""}
                  >
                    <span className="ribbon-icon">{stage.icon}</span>
@@ -592,7 +724,7 @@ function TopRibbon({ activeStage, onStageSelect, showGuidance, onToggleGuidance,
     </header>
   );
 }
-function ExperimentHome({ draftsState, onCreate, onReopen, onDuplicate, pendingAction, onRetry, duplicateError }) {
+function ExperimentHome({ draftsState, onCreate, onReopen, onDuplicate, onDelete, pendingAction, onRetry, draftActionError }) {
   if (draftsState.status === 'loading' || draftsState.status === 'idle') {
     return <main className="ml-studio-canvas" aria-label="Experiment Home"><div className="canvas-state-message"><FaSyncAlt className="canvas-icon neutral-icon spin-icon" /><h2>Loading experiments...</h2></div></main>;
   }
@@ -669,13 +801,23 @@ function ExperimentHome({ draftsState, onCreate, onReopen, onDuplicate, pendingA
                   >
                     {pendingAction === `reopening-${draft.experiment_id}` ? 'Opening...' : 'Open'}
                   </button>
+                  <button
+                    className="semantic-btn delete-btn"
+                    onClick={() => onDelete(draft)}
+                    aria-label={`Delete ${draft.name}`}
+                    disabled={pendingAction !== null}
+                  >
+                    {pendingAction === `deleting-${draft.experiment_id}` ? 'Deleting...' : 'Delete'}
+                  </button>
                 </div>
               </div>
-              {duplicateError && duplicateError.experiment_id === draft.experiment_id && (
+              {draftActionError && draftActionError.experiment_id === draft.experiment_id && (
                 <div className="draft-row-error">
                   <FaExclamationTriangle className="inline-icon error-icon" />
-                  <span className="error-message">{duplicateError.error.message} {duplicateError.error.remediation}</span>
-                  <button className="semantic-btn retry-btn" onClick={() => onDuplicate(draft.experiment_id)}>Retry</button>
+                  <span className="error-message">{draftActionError.error.message} {draftActionError.error.remediation}</span>
+                  <button className="semantic-btn retry-btn" onClick={() => draftActionError.action === 'delete' ? onRetry() : onDuplicate(draft.experiment_id)}>
+                    {draftActionError.action === 'delete' ? 'Refresh list' : 'Retry'}
+                  </button>
                 </div>
               )}
             </div>
@@ -751,7 +893,7 @@ function AssetRail({ activeWorkspace, analysisContext, numRows, numCols }) {
   );
 }
 function ExperimentCanvas({
-  activeWorkspace, analysisContext, numRows, numCols, columns, onOpenCleaningForm, onRunStarted
+  showGuidance, activeWorkspace, analysisContext, numRows, numCols, columns, onOpenCleaningForm, onRunStarted
 }) {
   const [taskType, setTaskType] = useState('regression');
   const [target, setTarget] = useState('');
@@ -1034,10 +1176,10 @@ function ExperimentCanvas({
             {numRows.toLocaleString()} rows • {numCols.toLocaleString()} cols
           </div>
         </div>
-        <div className={`guidance-panel ${guidanceState.status}`}>
+        {showGuidance && <div className={`guidance-panel ${guidanceState.status}`}>
           <span className="guidance-icon">{guidanceState.icon}</span>
           <span><strong>Next Step:</strong> {guidanceState.text}</span>
-        </div>
+        </div>}}
         <h2 className="prep-form-title">Experiment Configuration</h2>
         {prepError && (
           <div className="prep-alert error">
@@ -1059,39 +1201,39 @@ function ExperimentCanvas({
         )}
         <div className="prep-form-grid" aria-busy={prepStatus === 'loading'}>
           <label className="prep-field">
-            <span>Task Type</span>
+            <span>Task Type {showGuidance && <InfoPopover id="help-task-type" label="Task Type" text="Select the type of machine learning task to perform." />}</span>
             <select value={taskType} onChange={e => { setTaskType(e.target.value); setPrepStatus('idle'); setExperimentData(null); }} disabled={prepStatus === 'loading'}>
               <option value="regression">Regression</option>
               <option value="classification">Classification</option>
             </select>
           </label>
           <label className="prep-field">
-            <span>Target Column</span>
+            <span>Target Column {showGuidance && <InfoPopover id="help-target" label="Target Column" text="Select the column you want to predict." />}</span>
             <select value={target} onChange={e => handleTargetChange(e.target.value)} disabled={prepStatus === 'loading'}>
               <option value="">Select target</option>
               {columns.map(col => <option key={col} value={col}>{col}</option>)}
             </select>
           </label>
           <label className="prep-field">
-            <span>Numeric Features</span>
+            <span>Numeric Features {showGuidance && <InfoPopover id="help-numeric" label="Numeric Features" text="Select columns that contain continuous numbers." />}</span>
             <select multiple value={numericFeatures} onChange={e => handleNumericFeaturesChange(Array.from(e.target.selectedOptions || []).map(o => o.value))} disabled={prepStatus === 'loading'} className="multi-select">
               {columns.map(col => <option key={col} value={col}>{col}</option>)}
             </select>
           </label>
           <label className="prep-field">
-            <span>Categorical Features</span>
+            <span>Categorical Features {showGuidance && <InfoPopover id="help-categorical" label="Categorical Features" text="Select columns that contain categories or discrete values." />}</span>
             <select multiple value={categoricalFeatures} onChange={e => handleCategoricalFeaturesChange(Array.from(e.target.selectedOptions || []).map(o => o.value))} disabled={prepStatus === 'loading'} className="multi-select">
               {columns.map(col => <option key={col} value={col}>{col}</option>)}
             </select>
           </label>
           <label className="prep-field">
-            <span>Excluded Columns</span>
+            <span>Excluded Columns {showGuidance && <InfoPopover id="help-excluded" label="Excluded Columns" text="Select columns to ignore during training." />}</span>
             <select multiple value={excludedColumns} onChange={e => handleExcludedColumnsChange(Array.from(e.target.selectedOptions || []).map(o => o.value))} disabled={prepStatus === 'loading'} className="multi-select">
               {columns.map(col => <option key={col} value={col}>{col}</option>)}
             </select>
           </label>
           <label className="prep-field">
-            <span>Split Strategy</span>
+            <span>Split Strategy {showGuidance && <InfoPopover id="help-split" label="Split Strategy" text="Choose how to divide data into training and validation sets." />}</span>
             <select value={splitStrategy} onChange={e => { setSplitStrategy(e.target.value); setPrepStatus('idle'); setExperimentData(null); }} disabled={prepStatus === 'loading'}>
               <option value="random">Random</option>
               {taskType === 'classification' && <option value="stratified">Stratified</option>}
@@ -1180,7 +1322,7 @@ function ExperimentCanvas({
     </main>
   );
 }
-function DataGoalStage({ activeWorkspace, analysisContext, activeDraft, workflowState, onSaveSuccess }) {
+function DataGoalStage({ showGuidance, activeWorkspace, analysisContext, activeDraft, workflowState, onSaveRequest }) {
   const [snapshotState, setSnapshotState] = useState({ status: 'loading', data: null, error: null, stale: false });
   const [previewState, setPreviewState] = useState({ status: 'loading', data: null, error: null });
   const [taskType, setTaskType] = useState(activeDraft?.task_type || 'regression');
@@ -1188,6 +1330,7 @@ function DataGoalStage({ activeWorkspace, analysisContext, activeDraft, workflow
   const [saveStatus, setSaveStatus] = useState({ status: 'idle', error: null });
   const identityKey = `${activeWorkspace?.workspace_id}-${analysisContext?.workspace_version}`;
   const reqIdRef = useRef(0);
+  const savePendingRef = useRef(false);
   // We must track if there's an open preparation context in the draft.
   const isOpenPreparation = activeDraft?.preparation_context?.status === 'open';
   useEffect(() => {
@@ -1274,8 +1417,10 @@ function DataGoalStage({ activeWorkspace, analysisContext, activeDraft, workflow
     return () => { reqIdRef.current += 1; };
   }, [identityKey]);
   const handleSave = async (doContinue = false) => {
+     if (savePendingRef.current) return;
      if (snapshotState.stale) return; // Do not save stale snapshot
      if (isOpenPreparation) return;
+     savePendingRef.current = true;
      setSaveStatus({ status: 'loading', error: null });
      const reqId = ++reqIdRef.current;
      try {
@@ -1285,22 +1430,16 @@ function DataGoalStage({ activeWorkspace, analysisContext, activeDraft, workflow
           goal: goal || null
        };
        if (doContinue) payload.active_stage = 'Prepare Data';
-       const res = await fetch(`${API_URL}/api/ml-studio/v1/drafts/${activeDraft.experiment_id}?workspace_id=${activeWorkspace.workspace_id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json', 'If-Match': activeDraft.etag },
-          body: JSON.stringify(payload)
-       });
+       const result = await onSaveRequest(payload);
        if (reqId !== reqIdRef.current) return;
-       const data = await res.json();
-       if (!res.ok) {
-          throw data.error || { message: 'Failed to save Data & Goal' };
-       }
+       if (!result.success) throw result.error || { message: 'Failed to save Data & Goal' };
        setSaveStatus({ status: 'success', error: null });
-       onSaveSuccess(data.draft, data.workflow_state);
      } catch (err) {
        if (reqId === reqIdRef.current) {
           setSaveStatus({ status: 'error', error: err });
        }
+     } finally {
+       savePendingRef.current = false;
      }
   };
   const isFormDisabled = snapshotState.status === 'loading' || previewState.status === 'loading' || isOpenPreparation || saveStatus.status === 'loading' || snapshotState.stale || snapshotState.status === 'error';
@@ -1345,6 +1484,7 @@ function DataGoalStage({ activeWorkspace, analysisContext, activeDraft, workflow
           <div className="dataset-label">
             <FaDatabase className="inline-icon" />
             <strong>Dataset: {activeWorkspace?.workspace_name || activeWorkspace?.workspace_id || 'Unknown'}</strong>
+            {showGuidance && <InfoPopover id="help-dataset" label="Dataset" text="The locked dataset schema used for this experiment." />}
           </div>
           <div className="dataset-stats">
             {previewState.data?.row_count !== undefined ? previewState.data.row_count.toLocaleString() : '---'} rows • {previewState.data?.schema?.length || '---'} cols
@@ -1391,8 +1531,9 @@ function DataGoalStage({ activeWorkspace, analysisContext, activeDraft, workflow
         </div>
         <div className="prep-form-grid" >
           <label className="prep-field">
-            <span>Problem Choice</span>
+            <span>Problem Choice {showGuidance && <InfoPopover id="help-problem" label="Problem Choice" text="Select the type of machine learning task to perform." />}</span>
             <select
+               aria-label="Problem Choice"
                value={taskType}
                onChange={e => setTaskType(e.target.value)}
                disabled={isFormDisabled}
@@ -1405,8 +1546,9 @@ function DataGoalStage({ activeWorkspace, analysisContext, activeDraft, workflow
             </select>
           </label>
           <label className="prep-field">
-            <span>Goal (Optional)</span>
+            <span>Goal (Optional) {showGuidance && <InfoPopover id="help-goal" label="Goal" text="State the business objective this model will solve." />}</span>
             <textarea
+               aria-label="Goal (Optional)"
                value={goal}
                onChange={e => setGoal(e.target.value)}
                disabled={isFormDisabled}
@@ -1435,6 +1577,7 @@ function DataGoalStage({ activeWorkspace, analysisContext, activeDraft, workflow
            >
              Save Data & Goal
            </button>
+           {showGuidance && <div style={{display: 'inline-flex', alignItems: 'center', marginLeft: '8px'}}><InfoPopover id="help-save" label="Save Data & Goal" text="Save your selections to update the draft state." /></div>}
            <button
              className="start-run-button"
              onClick={() => handleSave(true)}
@@ -1447,7 +1590,7 @@ function DataGoalStage({ activeWorkspace, analysisContext, activeDraft, workflow
     </main>
   );
 }
-function UnconnectedStage({ activeStage }) {
+function UnconnectedStage({ activeStage, showGuidance }) {
   const unconnectedInfo = {
     'Data & Goal': { purpose: 'Define the business goal and metrics.', prerequisite: 'None', providedBy: 'Dataset Selection' },
     'Prepare Data': { purpose: 'Clean and transform data.', prerequisite: 'Goal definition', providedBy: 'Data & Goal' },
@@ -1461,32 +1604,12 @@ function UnconnectedStage({ activeStage }) {
     <main className="ml-studio-canvas" aria-label="Experiment Canvas">
       <div className="canvas-state-message">
          <FaInfoCircle className="canvas-icon neutral-icon" />
-         <h2>Not connected yet</h2>
+         <h2>Not connected yet <span className="stage-heading-help">{showGuidance && <InfoPopover id={"help-unconnected-" + activeStage.replace(/ /g, "-")} label={activeStage} text={info.purpose} />}</span></h2>
          <p><strong>Purpose:</strong> {info.purpose}</p>
          <p><strong>Missing Prerequisite:</strong> {info.prerequisite}</p>
          <p><strong>Provided By:</strong> {info.providedBy}</p>
       </div>
     </main>
-  );
-}
-function GuidanceSidebar({ activeStage }) {
-  const guidanceContent = {
-    'Data & Goal': 'Define the business goal and metrics. (Currently unconnected)',
-    'Prepare Data': 'Clean and transform data. (Currently unconnected)',
-    'Configure': 'Configure the machine learning experiment. Select task type, target, and features. Ensure all roles are disjoint and explicitly confirmed.',
-    'Train': 'Train models based on the configuration. (Currently unconnected)',
-    'Review Results': 'Evaluate model performance and compare candidates. (Currently unconnected)',
-    'Use & Share': 'Deploy and share the selected model. (Currently unconnected)'
-  };
-  return (
-    <aside className="ml-studio-inspector" aria-label="Guidance">
-       <h3 className="panel-title"><FaInfoCircle className="panel-icon"/> Guidance</h3>
-       <div className="inspector-card">
-         <div className="inspector-card-content">
-           <p>{guidanceContent[activeStage]}</p>
-         </div>
-       </div>
-    </aside>
   );
 }
 function StatusPill({ status }) {
@@ -1579,5 +1702,124 @@ function RunDock({ runsState, onRetry, isIdentityAvailable }) {
        </div>
        )}
     </section>
+  );
+}
+
+function PrepareDataStage({ showGuidance, activeWorkspace, analysisContext, activeDraft }) {
+  const [optionsState, setOptionsState] = useState({ status: 'idle', data: null, error: null });
+  const reqIdRef = useRef(0);
+
+  const identityKey = `${activeWorkspace?.workspace_id}-${analysisContext?.workspace_version}-${activeDraft?.experiment_id}-${activeDraft?.snapshot_id}`;
+
+  const fetchOptions = useCallback(async () => {
+    if (!activeWorkspace?.workspace_id || !activeDraft?.experiment_id) {
+       setOptionsState({ status: 'error', data: null, error: { message: 'Missing workspace or experiment identity.', code: 'identity_missing', remediation: 'Ensure draft is saved.' } });
+       return;
+    }
+
+    const reqId = ++reqIdRef.current;
+    setOptionsState({ status: 'loading', data: null, error: null });
+
+    try {
+      const res = await fetch(`${API_URL}/api/ml-studio/v1/drafts/${activeDraft.experiment_id}/preparation?workspace_id=${activeWorkspace.workspace_id}`);
+      if (reqId !== reqIdRef.current) return;
+
+      const data = await res.json();
+      if (!res.ok) {
+         throw data.error || { message: 'Failed to load preparation options.', code: 'error', remediation: 'Please try again.' };
+      }
+
+      setOptionsState({ status: 'success', data, error: null });
+    } catch (err) {
+      if (reqId === reqIdRef.current) {
+        setOptionsState({
+          status: 'error', data: null,
+          error: {
+             message: err.message || 'An unexpected error occurred.',
+             code: err.code || 'error',
+             remediation: err.remediation || 'Please try again.'
+          }
+        });
+      }
+    }
+  }, [activeWorkspace?.workspace_id, activeDraft?.experiment_id]);
+
+  useEffect(() => {
+    fetchOptions();
+    return () => { reqIdRef.current += 1; };
+  }, [identityKey, fetchOptions]);
+
+  const { status, data, error } = optionsState;
+
+  return (
+    <main className="ml-studio-canvas" aria-label="Prepare Data Canvas">
+      <div className="prep-form-container">
+        <h2 className="prep-form-title">Prepare Data <span className="stage-heading-help">{showGuidance && <InfoPopover id="help-prepare" label="Prepare Data" text="Clean and transform data." />}</span></h2>
+
+        {status === 'loading' && (
+           <div className="canvas-state-message">
+              <FaSyncAlt className="canvas-icon neutral-icon spin-icon" />
+              <h2>Loading options...</h2>
+           </div>
+        )}
+
+        {status === 'error' && (
+           <div className="prep-alert error">
+             <FaExclamationTriangle className="alert-icon" />
+             <div className="alert-content">
+                <strong>{error.message}</strong>
+                <p>{error.remediation}</p>
+                <button className="retry-button" onClick={fetchOptions} type="button">
+                  <FaSyncAlt /> Retry
+                </button>
+             </div>
+           </div>
+        )}
+
+        {status === 'success' && data && (
+           <div className="preparation-options">
+              {data.preparation_context?.status === 'open' && (
+                 <div className="prep-alert warning">
+                   <FaExclamationTriangle className="alert-icon" />
+                   <div className="alert-content">
+                     <strong>Preparation operation is currently open.</strong>
+                     <p>A preparation step is pending (Operation ID: {data.preparation_context.operation_id}). Complete or cancel it to proceed.</p>
+                   </div>
+                 </div>
+              )}
+
+              <div className="assessment-results">
+                 <h3 className="results-title">Quality Findings</h3>
+                 {!data.issues || data.issues.length === 0 ? (
+                    <div className="canvas-state-message">
+                       <FaCheckCircle className="canvas-icon neutral-icon" />
+                       <p>This bounded check found no missing-value issues.</p>
+                    </div>
+                 ) : (
+                    data.issues.map(issue => (
+                       <div key={issue.issue_id} className={`issue-card ${issue.severity}`}>
+                          <div className="issue-header">
+                            <strong>{issue.severity.toUpperCase()}: {issue.message}</strong>
+                          </div>
+                          <p>{issue.remediation}</p>
+                          <div className="raw-id-item text-muted"><small>Issue ID: {issue.issue_id}</small></div>
+
+                          {data.fixes?.filter(f => f.issue_id === issue.issue_id).map(fix => (
+                             <div key={fix.fix_id} className={`fix-card ${fix.support_status}`}>
+                               <div className="fix-header">
+                                 <strong>Action: {fix.action_type}</strong>
+                               </div>
+                               <p className="fix-explanation">{fix.explanation}</p>
+                               <div className="raw-id-item text-muted"><small>Fix ID: {fix.fix_id}</small></div>
+                             </div>
+                          ))}
+                       </div>
+                    ))
+                 )}
+              </div>
+           </div>
+        )}
+      </div>
+    </main>
   );
 }

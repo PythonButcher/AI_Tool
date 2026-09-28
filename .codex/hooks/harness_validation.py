@@ -392,6 +392,53 @@ def validate_async_mutation_handoff(text: str) -> list[str]:
     return errors
 
 
+def validate_user_value(text: str) -> list[str]:
+    """Require a short, user-visible outcome before implementation detail."""
+    match = re.search(
+        r"^## User Value\s*$\n(?P<body>.*?)(?=^## |\Z)",
+        text,
+        flags=re.MULTILINE | re.DOTALL,
+    )
+    body = match.group("body").strip() if match else ""
+    if not body or len(body.split()) > 80 or "`" in body or re.search(r"\b(TODO|TBD)\b|\[.+?\]", body):
+        return ["Frontend handoff needs a short plain-English ## User Value section without paths or placeholders."]
+    return []
+
+
+def validate_repair_handoff(text: str) -> list[str]:
+    """Keep repeat repairs short and require one testable source-to-contract claim."""
+    if "REPAIR REQUIRED" not in text:
+        return []
+    errors: list[str] = []
+    if len(text.splitlines()) > 120:
+        errors.append("Repair handoff exceeds 120 lines; replace the old handoff with a focused repair goal.")
+    if not re.search(r"^Goal: .+", text):
+        errors.append("Repair handoff must start with a standalone Goal:.")
+    if not re.search(r"^## Repair Blocker\s*$", text, flags=re.MULTILINE):
+        errors.append("Repair handoff needs a ## Repair Blocker section.")
+    for label in ("Observed Source", "Expected Contract", "Regression Test", "Return Evidence"):
+        matches = re.findall(rf"^\*\*{label}\*\*:\s*(.+?)\s*$", text, flags=re.MULTILINE)
+        if len(matches) != 1 or len(matches[0]) < 20 or re.search(r"\b(TODO|TBD)\b|\[.+?\]", matches[0]):
+            errors.append(f"Repair handoff needs one concrete **{label}** field.")
+    return errors
+
+
+def validate_repair_test(root: Path, text: str) -> list[str]:
+    """Require the named regression test to exist before an agent returns a repair."""
+    match = re.search(
+        r"^\*\*Regression Test\*\*:\s*`(?P<path>frontend/frontend/src/[^`]+\.test\.[jt]sx?)`\s*—\s*`(?P<name>[^`]+)`",
+        text,
+        flags=re.MULTILINE,
+    )
+    if not match:
+        return ["Repair Regression Test must name a frontend test path and exact test title as `path` — `title`."]
+    relative = match.group("path")
+    path = root / relative
+    if not path.is_file() or match.group("name") not in path.read_text(encoding="utf-8", errors="replace"):
+        return [f"Named repair regression test is missing from {relative}: {match.group('name')}"]
+    return []
+
+
 def validate_frontend_handoff_worktree(
     root: Path,
     handoff: Path,
@@ -401,7 +448,11 @@ def validate_frontend_handoff_worktree(
     """Verify bounded frontend work without editing or restoring any file."""
     errors: list[str] = []
     text = handoff.read_text(encoding="utf-8", errors="replace")
+    errors.extend(validate_user_value(text))
     errors.extend(validate_async_mutation_handoff(text))
+    errors.extend(validate_repair_handoff(text))
+    if require_changes and "REPAIR REQUIRED" in text:
+        errors.extend(validate_repair_test(root, text))
     targets = _handoff_frontend_targets(handoff)
     if not targets:
         return ["Active frontend handoff must name at least one frontend source target."]

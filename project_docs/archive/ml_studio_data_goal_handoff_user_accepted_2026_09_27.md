@@ -1,4 +1,12 @@
-Goal: Connect ML Studio Data & Goal to governed snapshot/schema/preview and conditionally save the experiment's dataset, problem type, and goal.
+User-accepted Data & Goal handoff, preserved for historical reference. The user overruled Codex's incomplete review on 2026-09-27. At acceptance, a header PATCH could clear the GET-owned `preparation_context`; this is a known limitation, not an active repair assignment.
+
+Goal: Repair Data & Goal's server-owned open-preparation guard while preserving its bounded snapshot and conditional-save behavior.
+
+REPAIR REQUIRED
+
+## Repair Blocker
+
+`GET /drafts/{experiment_id}` returns `preparation_context` beside `draft` and `workflow_state`, but `handleReopenDraft` and `handleReloadDraft` drop that field. The current code instead reads it twice from a header PATCH response, where it is absent, and passes a duplicate prop to `DataGoalStage`. Preserve the context from each draft GET, clear it when leaving or changing draft identity, and pass it once to the stage. An open context must visibly explain the pending preparation and prevent the Data & Goal save. Add a focused test that reopens an open-preparation draft and verifies the save guard; keep the existing deferred save-order and navigation tests.
 
 ## Readiness Evidence
 

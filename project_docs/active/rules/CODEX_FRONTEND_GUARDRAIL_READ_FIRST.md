@@ -81,6 +81,8 @@ Browser and E2E checks are not the default path for Antigravity review. Use them
 
 For frontend review answers, start with one of these exact acceptance labels: `Complete`, `Not complete`, or `Complete except for documentation cleanup.` Then list only findings that change the next action. If Antigravity needs to fix something, update the active handoff file with the next `Goal:` prompt and reference that file instead of pasting the prompt in chat.
 
+If the user overrules a `Not complete` decision and accepts the return, record the acceptance as the gate decision. Preserve a concise factual note about any known limitation, but do not reissue the rejected repair or treat Codex's review as a veto. Move the active gate and owner to the next authorized step.
+
 ## Why This Exists
 
 This guardrail preserves Codex project leadership and Antigravity UI execution as separate responsibilities. Codex controls scope and acceptance without micromanaging reasonable frontend design choices.

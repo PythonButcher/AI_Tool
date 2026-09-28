@@ -8,9 +8,11 @@ The workflow application contract below is a staged design. Draft persistence, c
 
 ## Step 3 Draft API — Current Backend Truth
 
-`POST /api/ml-studio/v1/drafts` accepts editable draft fields and requires `workspace_id`. `GET /api/ml-studio/v1/drafts?workspace_id=...` returns up to 100 stable-order summaries for that workspace. `GET /api/ml-studio/v1/drafts/{experiment_id}?workspace_id=...` returns `draft` and server-derived `workflow_state`.
+`POST /api/ml-studio/v1/drafts` accepts editable draft fields and requires `workspace_id`. `GET /api/ml-studio/v1/drafts?workspace_id=...` returns up to 100 stable-order summaries for that workspace, including the current opaque `etag`. `GET /api/ml-studio/v1/drafts/{experiment_id}?workspace_id=...` returns `draft` and server-derived `workflow_state`.
 
 `PATCH /api/ml-studio/v1/drafts/{experiment_id}?workspace_id=...` requires the raw opaque `etag` in `If-Match`; a successful save returns `draft` with incremented `draft_revision`, new `etag`, and `updated_at`, plus `workflow_state`. A stale or missing tag returns HTTP 409 with `draft_revision_conflict` and leaves the stored draft unchanged. `POST /api/ml-studio/v1/drafts/{experiment_id}/duplicate?workspace_id=...` returns a new draft identity with copied editable settings, reset active stage, and no copied assessment, run, completion, or selection. `GET /api/ml-studio/v1/drafts/{experiment_id}/workflow?workspace_id=...` returns `workflow_state`.
+
+`DELETE /api/ml-studio/v1/drafts/{experiment_id}?workspace_id=...` requires the listed draft's `etag` in `If-Match` and returns 204. A stale or missing tag returns `draft_revision_conflict` (409); a draft outside the workspace or already deleted returns `draft_not_found` (404). An open preparation operation returns `draft_preparation_pending` (409). Deletion hides the saved draft from list, get, edit, and duplicate routes while retaining its server metadata, preparation history, immutable run records, and artifacts. It does not delete the governed dataset or workspace.
 
 Only an existing workspace can be used in the application route. Drafts are scoped by `workspace_id`; a draft from another workspace returns 404. The server validates a referenced snapshot against the same workspace. Client recipe identity, assessment evidence, run status, raw rows, filesystem paths, and completion claims are rejected. In this step, Data & Goal and Prepare Data are the only stages that can become active; later stages remain locked until their backend prerequisites are implemented.
 

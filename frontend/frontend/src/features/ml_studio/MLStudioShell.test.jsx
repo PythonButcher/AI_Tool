@@ -611,12 +611,10 @@ describe('MLStudioShell', () => {
     await screen.findByText('Target Column');
     const guidanceToggle = screen.getByRole('checkbox', { name: /Guidance/i });
     expect(guidanceToggle).toBeChecked();
-    const panelHeadings = screen.getAllByRole('heading', { name: /Guidance/i });
-    expect(panelHeadings.length).toBeGreaterThan(0);
+    expect(screen.getByText('Next Step:')).toBeInTheDocument();
     fireEvent.click(guidanceToggle);
     expect(guidanceToggle).not.toBeChecked();
-    const panelsAfterClose = screen.queryAllByRole('heading', { name: /Guidance/i });
-    expect(panelsAfterClose.length).toBe(0);
+    expect(screen.queryByText('Next Step:')).not.toBeInTheDocument();
   });
   it.each([
     ['queued', 'queued', 'progress_stage_alpha'],
@@ -694,7 +692,64 @@ describe('MLStudioShell', () => {
     });
 
     it('data-goal-save-order: serializes Data & Goal explicit save against header saves', async () => {
-      expect(true).toBe(true);
+      let resolveHeader;
+      let resolveStage;
+      const headerResponse = new Promise(resolve => { resolveHeader = resolve; });
+      const stageResponse = new Promise(resolve => { resolveStage = resolve; });
+      const draft = { experiment_id: 'exp-1', workspace_id: 'ws-1', name: 'New Draft', snapshot_id: null, etag: 'etag-1' };
+      const workflow = stage => ({ active_stage: stage, stages: [
+        { stage: 'Data & Goal', state: stage === 'Data & Goal' ? 'active' : 'available' },
+        { stage: 'Prepare Data', state: stage === 'Prepare Data' ? 'active' : 'available' }
+      ] });
+      global.fetch.mockImplementation((url, init) => {
+        if (url.includes('/drafts/exp-1') && init?.method === 'PATCH') {
+          const patch = JSON.parse(init.body);
+          return patch.name !== undefined ? headerResponse : stageResponse;
+        }
+        if (url.includes('/drafts') && init?.method === 'POST') {
+          return Promise.resolve({ ok: true, json: async () => ({ draft, workflow_state: workflow('Data & Goal') }) });
+        }
+        if (url.includes('/snapshots') && init?.method === 'POST') {
+          return Promise.resolve({ ok: true, json: async () => ({ snapshot: { snapshot_id: 'snap-1', workspace_id: 'ws-1', workspace_version: 1, source_ids: ['s1'], relationship_ids: [] } }) });
+        }
+        if (url.includes('/manual-cleaning')) {
+          return Promise.resolve({ ok: true, json: async () => ({ row_count: 150, schema: [{ name: 'colA', data_type: 'int64' }], preview: [{ colA: 42 }] }) });
+        }
+        if (url.includes('/preparation')) {
+          return Promise.resolve({ ok: true, json: async () => ({ snapshot_id: 'snap-1', issues: [], fixes: [], preparation_context: null }) });
+        }
+        if (url.includes('/drafts')) return Promise.resolve({ ok: true, json: async () => ({ drafts: [] }) });
+        if (url.includes('/runs')) return Promise.resolve({ ok: true, json: async () => ({ runs: [] }) });
+      });
+
+      renderWithContext({
+        activeWorkspace: { workspace_id: 'ws-1', version: 1 },
+        analysisContext: { workspace_id: 'ws-1', workspace_version: 1, source_ids: ['s1'] }
+      });
+      fireEvent.click(await screen.findByRole('button', { name: 'New Experiment' }));
+      await screen.findByText('colA');
+      fireEvent.change(screen.getByRole('textbox', { name: 'Experiment Name' }), { target: { value: 'Updated Name' } });
+      await waitFor(() => expect(global.fetch.mock.calls.filter(([url, init]) => url.includes('/drafts/exp-1') && init?.method === 'PATCH')).toHaveLength(1));
+
+      fireEvent.click(screen.getByRole('button', { name: 'Save and continue' }));
+      expect(screen.getByRole('button', { name: /Home/i })).toBeDisabled();
+      expect(screen.getByRole('button', { name: 'Data & Goal' })).toBeDisabled();
+      expect(screen.getByRole('button', { name: 'Prepare Data' })).toBeDisabled();
+      expect(global.fetch.mock.calls.filter(([url, init]) => url.includes('/drafts/exp-1') && init?.method === 'PATCH')).toHaveLength(1);
+
+      await act(async () => {
+        resolveHeader({ ok: true, json: async () => ({ draft: { ...draft, name: 'Updated Name', etag: 'etag-2' }, workflow_state: workflow('Data & Goal') }) });
+      });
+      await waitFor(() => expect(global.fetch.mock.calls.filter(([url, init]) => url.includes('/drafts/exp-1') && init?.method === 'PATCH')).toHaveLength(2));
+      const patches = global.fetch.mock.calls.filter(([url, init]) => url.includes('/drafts/exp-1') && init?.method === 'PATCH');
+      expect(patches[0][1].headers['If-Match']).toBe('etag-1');
+      expect(patches[1][1].headers['If-Match']).toBe('etag-2');
+      expect(screen.getByRole('button', { name: 'Saving...' })).toBeDisabled();
+
+      await act(async () => {
+        resolveStage({ ok: true, json: async () => ({ draft: { ...draft, etag: 'etag-3', snapshot_id: 'snap-1', active_stage: 'Prepare Data' }, workflow_state: workflow('Prepare Data') }) });
+      });
+      expect(await screen.findByRole('main', { name: 'Prepare Data Canvas' })).toBeInTheDocument();
     });
     it('data-goal-explicit-retry: preserves fields and retries save', async () => {
       jest.useFakeTimers();
@@ -757,7 +812,7 @@ describe('MLStudioShell', () => {
       const saveBtn = screen.getByRole('button', { name: 'Save Data & Goal' });
       fireEvent.click(saveBtn);
       fireEvent.click(saveBtn);
-      await screen.findByText('Conflict');
+      expect((await screen.findAllByText('Conflict')).length).toBeGreaterThan(0);
 
       const stagePatches = global.fetch.mock.calls.filter(c => c[0].includes('exp-1') && c[1]?.method === 'PATCH');
       expect(stagePatches.length).toBe(1);
@@ -797,9 +852,6 @@ describe('MLStudioShell', () => {
          resolvePatch({ ok: true, json: async () => ({ draft: { experiment_id: 'exp-1', name: 'Updated Name' }, workflow_state: { active_stage: 'Prepare Data' } }) });
       });
       expect(screen.getByRole('button', { name: 'New Experiment' })).toBeInTheDocument();
-    });
-    it('data-goal-navigation-waits: blocks navigation during explicit save', async () => {
-      expect(true).toBe(true);
     });
   });
   describe('Duplicate Draft', () => {
@@ -963,6 +1015,294 @@ describe('MLStudioShell', () => {
       // Should not have a call to refresh ws-1 drafts after identity change
       const refreshCall = getDraftsCalls.find(call => call[0].includes('ws-1') && getDraftsCalls.indexOf(call) > 0);
       expect(refreshCall).toBeUndefined();
+    });
+  });
+  describe('Delete Draft', () => {
+    it('confirms, sends the listed ETag, and removes only after server success', async () => {
+      const confirm = jest.spyOn(window, 'confirm').mockReturnValue(true);
+      let resolveDelete;
+      let deleted = false;
+      const deletion = new Promise(resolve => { resolveDelete = resolve; });
+      global.fetch.mockImplementation((url, init) => {
+        if (url.includes('/drafts/exp-1') && init?.method === 'DELETE') return deletion;
+        if (url.includes('/drafts') && !init) return Promise.resolve({ ok: true, json: async () => ({ drafts: deleted ? [] : [
+          { experiment_id: 'exp-1', workspace_id: 'ws-1', draft_revision: 1, etag: 'etag-1', name: 'Original', active_stage: 'Data & Goal', updated_at: '2026-01-01' }
+        ] }) });
+        if (url.includes('/runs')) return Promise.resolve({ ok: true, json: async () => ({ runs: [] }) });
+      });
+      try {
+        renderWithContext({ activeWorkspace: { workspace_id: 'ws-1', version: 1 }, analysisContext: { workspace_id: 'ws-1', workspace_version: 1, source_ids: ['s1'] } });
+        const deleteButton = await screen.findByRole('button', { name: 'Delete Original' });
+        confirm.mockReturnValueOnce(false);
+        fireEvent.click(deleteButton);
+        expect(global.fetch.mock.calls.some(([, init]) => init?.method === 'DELETE')).toBe(false);
+        fireEvent.click(deleteButton);
+        expect(deleteButton).toBeDisabled();
+        expect(screen.getByText('Original')).toBeInTheDocument();
+        const deleteCall = global.fetch.mock.calls.find(([, init]) => init?.method === 'DELETE');
+        expect(deleteCall[1].headers['If-Match']).toBe('etag-1');
+        deleted = true;
+        await act(async () => { resolveDelete({ ok: true, status: 204 }); });
+        await screen.findByText('No Experiments Found');
+        expect(screen.queryByText('Original')).not.toBeInTheDocument();
+      } finally {
+        confirm.mockRestore();
+      }
+    });
+
+    it('keeps the experiment and shows the server error after a failed delete', async () => {
+      const confirm = jest.spyOn(window, 'confirm').mockReturnValue(true);
+      global.fetch.mockImplementation((url, init) => {
+        if (url.includes('/drafts/exp-1') && init?.method === 'DELETE') return Promise.resolve({ ok: false, status: 409, json: async () => ({ error: { message: 'Draft changed', remediation: 'Reload the experiment list.' } }) });
+        if (url.includes('/drafts') && !init) return Promise.resolve({ ok: true, json: async () => ({ drafts: [
+          { experiment_id: 'exp-1', workspace_id: 'ws-1', draft_revision: 1, etag: 'etag-1', name: 'Original', active_stage: 'Data & Goal', updated_at: '2026-01-01' }
+        ] }) });
+        if (url.includes('/runs')) return Promise.resolve({ ok: true, json: async () => ({ runs: [] }) });
+      });
+      try {
+        renderWithContext({ activeWorkspace: { workspace_id: 'ws-1', version: 1 }, analysisContext: { workspace_id: 'ws-1', workspace_version: 1, source_ids: ['s1'] } });
+        fireEvent.click(await screen.findByRole('button', { name: 'Delete Original' }));
+        await screen.findByText(/Draft changed/);
+        expect(screen.getByText('Original')).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Delete Original' })).toBeEnabled();
+        expect(screen.getByRole('button', { name: 'Refresh list' })).toBeEnabled();
+      } finally {
+        confirm.mockRestore();
+      }
+    });
+  });
+  describe('Prepare Data Stage', () => {
+    it('prepare-data-options-render: renders issues, fixes, or empty state correctly', async () => {
+      global.fetch.mockImplementation((url, init) => {
+        if (url.includes('/drafts') && init?.method === 'POST') {
+          return Promise.resolve({ ok: true, json: async () => ({ draft: { experiment_id: 'exp-1', snapshot_id: 'snap-1' }, workflow_state: { active_stage: 'Prepare Data' } }) });
+        }
+        if (url.includes('/preparation')) {
+          return Promise.resolve({ ok: true, json: async () => ({
+             snapshot_id: 'snap-1',
+             issues: [{ issue_id: 'i-1', code: 'missing_values', severity: 'warning', field: 'colA', message: 'Missing values found', remediation: 'Fix them' }],
+             fixes: [{ fix_id: 'f-1', issue_id: 'i-1', action_type: 'remove_nulls', support_status: 'supported', explanation: 'Removes rows with nulls' }],
+             preparation_context: null
+          })});
+        }
+        if (url.includes('/drafts')) return Promise.resolve({ ok: true, json: async () => ({ drafts: [] }) });
+        if (url.includes('/runs')) return Promise.resolve({ ok: true, json: async () => ({ runs: [] }) });
+      });
+
+      renderWithContext({
+        activeWorkspace: { workspace_id: 'ws-1', version: 1 },
+        analysisContext: { workspace_id: 'ws-1', workspace_version: 1, source_ids: ['s1'] },
+      });
+
+      fireEvent.click(await screen.findByRole('button', { name: 'New Experiment' }));
+
+      await screen.findByText('WARNING: Missing values found');
+      expect(screen.getByText('Fix them')).toBeInTheDocument();
+      expect(screen.getByText('Action: remove_nulls')).toBeInTheDocument();
+      expect(screen.getByText('Removes rows with nulls')).toBeInTheDocument();
+    });
+
+    it('prepare-data-options-open: the open fixture shows a pending-operation explanation', async () => {
+      global.fetch.mockImplementation((url, init) => {
+        if (url.includes('/drafts') && init?.method === 'POST') {
+          return Promise.resolve({ ok: true, json: async () => ({ draft: { experiment_id: 'exp-1', snapshot_id: 'snap-1' }, workflow_state: { active_stage: 'Prepare Data' } }) });
+        }
+        if (url.includes('/preparation')) {
+          return Promise.resolve({ ok: true, json: async () => ({
+             snapshot_id: 'snap-1',
+             issues: [], fixes: [],
+             preparation_context: { status: 'open', operation_id: 'op-123' }
+          })});
+        }
+        if (url.includes('/drafts')) return Promise.resolve({ ok: true, json: async () => ({ drafts: [] }) });
+        if (url.includes('/runs')) return Promise.resolve({ ok: true, json: async () => ({ runs: [] }) });
+      });
+
+      renderWithContext({
+        activeWorkspace: { workspace_id: 'ws-1', version: 1 },
+        analysisContext: { workspace_id: 'ws-1', workspace_version: 1, source_ids: ['s1'] },
+      });
+
+      fireEvent.click(await screen.findByRole('button', { name: 'New Experiment' }));
+
+      await screen.findByText('Preparation operation is currently open.');
+      expect(screen.getByText(/op-123/)).toBeInTheDocument();
+      expect(screen.getByText('This bounded check found no missing-value issues.')).toBeInTheDocument();
+    });
+
+    it('prepare-data-options-identity: a deferred old GET response after workspace/version, experiment, or snapshot change cannot replace the current view.', async () => {
+      let resolveOptions;
+      const optionsPromise = new Promise(res => resolveOptions = res);
+
+      global.fetch.mockImplementation((url, init) => {
+        if (url.includes('/drafts') && init?.method === 'POST') {
+          return Promise.resolve({ ok: true, json: async () => ({ draft: { experiment_id: 'exp-1', snapshot_id: 'snap-1' }, workflow_state: { active_stage: 'Prepare Data' } }) });
+        }
+        if (url.includes('/preparation')) {
+          return optionsPromise;
+        }
+        if (url.includes('/drafts')) return Promise.resolve({ ok: true, json: async () => ({ drafts: [] }) });
+        if (url.includes('/runs')) return Promise.resolve({ ok: true, json: async () => ({ runs: [] }) });
+      });
+
+      const { rerender } = renderWithContext({
+        activeWorkspace: { workspace_id: 'ws-1', version: 1 },
+        analysisContext: { workspace_id: 'ws-1', workspace_version: 1, source_ids: ['s1'] },
+      });
+
+      fireEvent.click(await screen.findByRole('button', { name: 'New Experiment' }));
+      await screen.findByText('Loading options...');
+
+      // Transition identity
+      rerender(
+        <DataContext.Provider value={{
+          activeWorkspace: { workspace_id: 'ws-2', version: 1 },
+          analysisContext: { workspace_id: 'ws-2', workspace_version: 1, source_ids: ['s2'] },
+        }}>
+          <MLStudioShell />
+        </DataContext.Provider>
+      );
+
+      await act(async () => {
+         resolveOptions({ ok: true, json: async () => ({
+             snapshot_id: 'snap-1', issues: [{ issue_id: 'stale-issue', severity: 'warning', message: 'Stale' }], fixes: []
+         })});
+      });
+
+      expect(screen.queryByText('Stale')).not.toBeInTheDocument();
+    });
+
+    it('prepare-data-options-error: safe server error/remediation and explicit Retry render without hiding the shell', async () => {
+      let failCount = 0;
+      global.fetch.mockImplementation((url, init) => {
+        if (url.includes('/drafts') && init?.method === 'POST') {
+          return Promise.resolve({ ok: true, json: async () => ({ draft: { experiment_id: 'exp-1', snapshot_id: 'snap-1' }, workflow_state: { active_stage: 'Prepare Data' } }) });
+        }
+        if (url.includes('/preparation')) {
+          failCount++;
+          if (failCount === 1) {
+             return Promise.resolve({ ok: false, status: 400, json: async () => ({ error: { message: 'Network Failure', remediation: 'Try again buddy.' } }) });
+          }
+          return Promise.resolve({ ok: true, json: async () => ({
+             snapshot_id: 'snap-1', issues: [], fixes: [], preparation_context: null
+          })});
+        }
+        if (url.includes('/drafts')) return Promise.resolve({ ok: true, json: async () => ({ drafts: [] }) });
+        if (url.includes('/runs')) return Promise.resolve({ ok: true, json: async () => ({ runs: [] }) });
+      });
+
+      renderWithContext({
+        activeWorkspace: { workspace_id: 'ws-1', version: 1 },
+        analysisContext: { workspace_id: 'ws-1', workspace_version: 1, source_ids: ['s1'] },
+      });
+
+      fireEvent.click(await screen.findByRole('button', { name: 'New Experiment' }));
+
+      await screen.findByText('Network Failure');
+      expect(screen.getByText('Try again buddy.')).toBeInTheDocument();
+
+      // Explicit Retry without hiding shell
+      expect(screen.getByRole('button', { name: /Home/i })).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: /Retry/i }));
+
+      await screen.findByText('This bounded check found no missing-value issues.');
+    });
+
+    it('prepare-data-controls-survive: preserved shell controls remain visible and interactive after load and retry', async () => {
+      global.fetch.mockImplementation((url, init) => {
+        if (url.includes('/drafts') && init?.method === 'POST') {
+          return Promise.resolve({ ok: true, json: async () => ({ draft: { experiment_id: 'exp-1', snapshot_id: 'snap-1' }, workflow_state: { active_stage: 'Prepare Data' } }) });
+        }
+        if (url.includes('/preparation')) {
+          return Promise.resolve({ ok: true, json: async () => ({
+             snapshot_id: 'snap-1', issues: [], fixes: [], preparation_context: null
+          })});
+        }
+        if (url.includes('/drafts')) return Promise.resolve({ ok: true, json: async () => ({ drafts: [] }) });
+        if (url.includes('/runs')) return Promise.resolve({ ok: true, json: async () => ({ runs: [] }) });
+      });
+
+      renderWithContext({
+        activeWorkspace: { workspace_id: 'ws-1', version: 1 },
+        analysisContext: { workspace_id: 'ws-1', workspace_version: 1, source_ids: ['s1'] },
+      });
+
+      fireEvent.click(await screen.findByRole('button', { name: 'New Experiment' }));
+
+      await screen.findByText('This bounded check found no missing-value issues.');
+
+      // Check preserved controls
+      expect(screen.getByRole('button', { name: /Home/i })).toBeEnabled();
+      expect(screen.getByRole('button', { name: /Configure/i })).toBeEnabled();
+      expect(screen.getByRole('button', { name: 'Prepare Data' })).toBeEnabled();
+      expect(screen.getByRole('button', { name: /Recent local runs/i })).toBeEnabled();
+      expect(screen.getByRole('checkbox', { name: /Guidance/i })).toBeEnabled();
+    });
+  });
+
+  describe('Guidance and Contextual Help', () => {
+    let originalFetch;
+    beforeEach(() => {
+      originalFetch = global.fetch;
+      global.fetch = jest.fn();
+      if (!global.crypto) global.crypto = {};
+      global.crypto.subtle = { digest: jest.fn().mockResolvedValue(new ArrayBuffer(32)) };
+      global.crypto.randomUUID = jest.fn().mockReturnValue('mock-uuid-1234');
+    });
+    afterEach(() => {
+      global.fetch = originalFetch;
+      jest.resetAllMocks();
+    });
+
+    it('toggles guidance without hiding a Data & Goal save error or local edits', async () => {
+      const draft = { experiment_id: 'exp-1', workspace_id: 'ws-1', name: 'New Draft', etag: 'etag-1', guidance_enabled: true };
+      const workflow = { active_stage: 'Data & Goal', stages: [
+        { stage: 'Data & Goal', state: 'active' }, { stage: 'Prepare Data', state: 'available' }
+      ] };
+      global.fetch.mockImplementation((url, init) => {
+        if (url.includes('/drafts/exp-1') && init?.method === 'PATCH') {
+          const patch = JSON.parse(init.body);
+          if (patch.guidance_enabled !== undefined) {
+            return Promise.resolve({ ok: true, json: async () => ({ draft: { ...draft, ...patch, etag: 'etag-2' }, workflow_state: workflow }) });
+          }
+          return Promise.resolve({ ok: false, status: 400, json: async () => ({ error: { message: 'Save rejected', remediation: 'Check the goal.' } }) });
+        }
+        if (url.includes('/drafts') && init?.method === 'POST') {
+          return Promise.resolve({ ok: true, json: async () => ({ draft, workflow_state: workflow }) });
+        }
+        if (url.includes('/snapshots') && init?.method === 'POST') {
+          return Promise.resolve({ ok: true, json: async () => ({ snapshot: { snapshot_id: 'snap-1', workspace_id: 'ws-1', workspace_version: 1, source_ids: ['s1'], relationship_ids: [] } }) });
+        }
+        if (url.includes('/manual-cleaning')) {
+          return Promise.resolve({ ok: true, json: async () => ({ row_count: 1, schema: [{ name: 'colA', data_type: 'int64' }], preview: [{ colA: 42 }] }) });
+        }
+        if (url.includes('/drafts')) return Promise.resolve({ ok: true, json: async () => ({ drafts: [] }) });
+        if (url.includes('/runs')) return Promise.resolve({ ok: true, json: async () => ({ runs: [] }) });
+      });
+      renderWithContext({
+        activeWorkspace: { workspace_id: 'ws-1', version: 1 },
+        analysisContext: { workspace_id: 'ws-1', workspace_version: 1, source_ids: ['s1'] },
+      });
+      fireEvent.click(await screen.findByRole('button', { name: 'New Experiment' }));
+      await screen.findByText('colA');
+      const guidanceToggle = screen.getByRole('checkbox', { name: 'Guidance' });
+      expect(screen.getByRole('button', { name: 'Help for Dataset' })).toBeInTheDocument();
+      fireEvent.click(guidanceToggle);
+      expect(screen.queryByRole('button', { name: 'Help for Dataset' })).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Data & Goal' })).toBeEnabled();
+      const goal = screen.getByRole('textbox', { name: 'Goal (Optional)' });
+      fireEvent.change(goal, { target: { value: 'Important goal' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Save Data & Goal' }));
+      await screen.findByText('Save rejected');
+      fireEvent.click(guidanceToggle);
+      expect(screen.getByRole('button', { name: 'Help for Dataset' })).toBeInTheDocument();
+      expect(goal).toHaveValue('Important goal');
+      expect(screen.getByText('Save rejected')).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Help for Dataset' }));
+      expect(screen.getByText('Dataset Help')).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Close help' }));
+      expect(screen.queryByText('Dataset Help')).not.toBeInTheDocument();
     });
   });
 });

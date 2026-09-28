@@ -252,13 +252,16 @@ def drafts():
         return _unexpected_error()
 
 
-@ml_studio_bp.route("/drafts/<experiment_id>", methods=["GET", "PATCH"])
+@ml_studio_bp.route("/drafts/<experiment_id>", methods=["GET", "PATCH", "DELETE"])
 def draft(experiment_id):
     try:
         service = get_ml_studio_service()
         workspace_id = request.args.get("workspace_id")
         if request.method == "GET":
             return jsonify(service.get_draft(experiment_id, workspace_id)), 200
+        if request.method == "DELETE":
+            service.delete_draft(experiment_id, workspace_id, request.headers.get("If-Match"))
+            return "", 204
         return jsonify(service.update_draft(experiment_id, workspace_id, request.headers.get("If-Match"), request.get_json(silent=True))), 200
     except MLStudioServiceError as exc:
         return _error_response(exc)

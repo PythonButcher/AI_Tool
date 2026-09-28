@@ -23,8 +23,9 @@
   "latest_user_acceptance": {
     "accepted_by": "User",
     "accepted_at": "2026-09-27",
-    "gate": "Workspace-safe cleaning backend boundary",
-    "instruction": "accepted, proceed to the step step"
+    "gate": "ML Studio Data & Goal frontend handoff",
+    "instruction": "your not complete ruling is overruled by me",
+    "known_limitation": "The reviewed source can clear GET-owned preparation_context after a header PATCH; the user accepted the return with this known limitation."
   },
   "accepted_parallel_work": {
     "accepted_by": "User",
@@ -37,8 +38,28 @@
     "approved_at": "2026-09-24",
     "instruction": "Improve the overall cross-session Codex-to-Gemini handoff and review harness after repeated missed async save cases."
   },
+  "codex_data_goal_repair_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-09-27",
+    "instruction": "yeah this needs fixing, i cannot proeed to the next step correctly, error in the data and goal",
+    "scope": "Codex may repair the reported Data & Goal Save and continue frontend path and its focused tests in this session."
+  },
+  "codex_experiment_delete_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-09-27",
+    "instruction": "add a delete button for each workspace while you're there",
+    "clarification": "Saved ML Studio experiments",
+    "scope": "Codex may implement saved experiment deletion in the ML Studio home, its backend draft route and persistence, contract, and focused tests."
+  },
   "allowed_paths": [
     "project_docs/active/ai_hand_off/ml_studio_data_goal.md",
+    "project_docs/active/ai_hand_off/ml_studio_prepare_data_options.md",
+    "project_docs/active/ai_hand_off/ml_studio_prepare_data_column_label.md",
+    "project_docs/archive/ml_studio_data_goal_handoff_user_accepted_2026_09_27.md",
+    "project_docs/archive/ml_studio_prepare_data_options_initial_2026_09_27.md",
+    "project_docs/archive/ml_studio_prepare_data_column_label_deferred_2026_09_27.md",
+    "project_docs/active/ai_hand_off/ml_studio_data_goal_save_repair.md",
+    "project_docs/archive/ml_studio_data_goal_save_repair_codex_owned_2026_09_27.md",
     "backend/db/backend_db.py",
     "backend/ml_studio/preparation.py",
     "tests/test_ml_studio_preparation.py",
@@ -72,6 +93,8 @@
     "backend/ml_studio/service.py",
     "backend/ml_studio/contracts.py",
     "backend/routes/ml_studio.py",
+    "requirements.txt",
+    "backend/requirements.txt",
     "tests/test_ml_studio_drafts.py",
     "tests/test_ml_studio_api.py",
     "project_docs/active/ai_hand_off/ml_studio_draft_home_completion.md",
@@ -83,6 +106,7 @@
     ".agents/skills/auto-handoff-execution/SKILL.md",
     "project_docs/active/agent_harness/templates/ANTIGRAVITY_FRONTEND_HANDOFF_TEMPLATE.md",
     "project_docs/active/agent_harness/README.md",
+    "project_docs/active/codex_harness_engineering.md",
     "project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md",
     "project_docs/active/ai_hand_off/ml_studio_duplicate_draft.md",
     "project_docs/archive/ml_studio_duplicate_draft_reviewed_2026_09_26.md",

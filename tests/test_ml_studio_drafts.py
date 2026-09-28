@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import tempfile
 import unittest
+import json
+import sqlite3
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -63,6 +65,51 @@ class DraftRepositoryTests(unittest.TestCase):
             results = list(pool.map(lambda item: save(*item), ((self.repository, "First"), (other, "Second"))))
         self.assertCountEqual(results, ["saved", "draft_revision_conflict"])
         self.assertEqual(self.repository.get_draft(draft["experiment_id"], "workspace-1")["draft_revision"], 2)
+
+    def test_delete_is_conditional_workspace_scoped_and_preserves_metadata(self) -> None:
+        draft = self.repository.create_draft({"workspace_id": "workspace-1", "name": "Disposable"})
+        with self.assertRaises(PersistenceError) as error:
+            self.repository.delete_draft(draft["experiment_id"], "workspace-2", draft["etag"])
+        self.assertEqual(error.exception.code, "draft_not_found")
+        with self.assertRaises(PersistenceError) as error:
+            self.repository.delete_draft(draft["experiment_id"], "workspace-1", "stale")
+        self.assertEqual(error.exception.code, "draft_revision_conflict")
+        self.assertEqual(self.repository.list_drafts("workspace-1"), [draft])
+
+        self.repository.delete_draft(draft["experiment_id"], "workspace-1", draft["etag"])
+        self.assertEqual(self.repository.list_drafts("workspace-1"), [])
+        self.assertIsNone(self.repository.get_draft(draft["experiment_id"], "workspace-1"))
+        with self.repository._connection() as connection:
+            row = connection.execute("SELECT draft_json, deleted_at FROM ml_experiment_drafts WHERE experiment_id = ?", (draft["experiment_id"],)).fetchone()
+        self.assertIsNotNone(row["deleted_at"])
+        self.assertEqual(json.loads(row["draft_json"]), draft)
+
+    def test_delete_rejects_open_preparation(self) -> None:
+        draft = self.repository.create_draft({"workspace_id": "workspace-1"})
+        self.repository.begin_preparation(
+            {"operation_id": "prep-1", "experiment_id": draft["experiment_id"],
+             "workspace_id": "workspace-1", "base_etag": draft["etag"]},
+            key="delete-test", intent_hash="intent-1",
+        )
+        with self.assertRaises(PersistenceError) as error:
+            self.repository.delete_draft(draft["experiment_id"], "workspace-1", draft["etag"])
+        self.assertEqual(error.exception.code, "draft_preparation_pending")
+        self.assertIsNotNone(self.repository.get_draft(draft["experiment_id"], "workspace-1"))
+
+    def test_existing_draft_table_migrates_for_deletion(self) -> None:
+        legacy_path = Path(self.directory.name) / "legacy.sqlite"
+        connection = sqlite3.connect(legacy_path)
+        try:
+            connection.execute(
+                "CREATE TABLE ml_experiment_drafts (experiment_id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL, "
+                "draft_revision INTEGER NOT NULL, etag TEXT NOT NULL, draft_json TEXT NOT NULL, updated_at TEXT NOT NULL)"
+            )
+        finally:
+            connection.close()
+        migrated = MLStudioRepository(legacy_path)
+        draft = migrated.create_draft({"workspace_id": "workspace-1"})
+        migrated.delete_draft(draft["experiment_id"], "workspace-1", draft["etag"])
+        self.assertEqual(migrated.list_drafts("workspace-1"), [])
 
     def test_rejects_server_owned_state_paths_and_role_conflicts(self) -> None:
         bad_edits = (

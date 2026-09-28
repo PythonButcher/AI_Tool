@@ -2,25 +2,25 @@
 
 This file is the concise current truth for AI_Tool delivery.
 
-## Current Gate: ML Studio Data and Goal
+## Current Gate: Prepare Data affected-column labels
 
-- **Current Gate**: ML Studio Data and Goal
+- **Current Gate**: Prepare Data affected-column labels
 - **Roadmap Phase**: Phase 13 — Machine Learning Studio Foundation
 - **Phase State**: `IN PROGRESS`
-- **What This State Means**: The frontend handoff returned and requires Codex source and build review.
-- **Current Milestone**: Step 1: Implement the bounded Data & Goal frontend handoff
-- **Automatic Continuation**: `CONTINUE`
-- **Current Owner**: Codex
+- **What This State Means**: Antigravity owns one bounded repair to identify affected columns in the read-only Prepare Data options view.
+- **Current Milestone**: Step 1: Show affected columns in Prepare Data
+- **Automatic Continuation**: `WAIT_FOR_AGENT`
+- **Current Owner**: Antigravity
 - **Backend Readiness**: `backend_contract_ready`
-- **Frontend Readiness**: `backend_contract_ready`
-- **Next Action**: Antigravity executes `project_docs/active/ai_hand_off/ml_studio_data_goal.md`.
-- **Required Action**: Review `project_docs/active/ai_hand_off/ml_studio_data_goal.md` and its returned evidence.
+- **Frontend Readiness**: `frontend_repair_only`
+- **Next Action**: Execute `project_docs/active/ai_hand_off/ml_studio_prepare_data_column_label.md` and return changed-file and verification evidence.
+- **Required Action**: Render server-owned `issue.field` beside each missing-value warning and its paired fix without starting preparation.
 - **Active Gate**: `project_docs/active/active_gate/README.md`
 - **Authorization Record**: `project_docs/active/status/phase_authorization.json`
-- **Roadmap**: `project_docs/active/ml_studio/README.md` — Build Order, with clearly named Steps 1–13
-- **Active Handoff**: `project_docs/active/ai_hand_off/ml_studio_data_goal.md` — returned for Codex review: Connected Data & Goal stage components, preserved async controls, explicitly serialized saves to backend, removed inline styles, and passed all tests and build.
-- **Latest Verification**: 82 focused preparation/draft/API/cleaning/workspace/persistence tests ran with one symbolic-link permission skip. Compilation and provider-neutral CI harness pass. Recovery and concurrent apply commit data once; cancellation preserves drafts; apply refreshes snapshot/roles and invalidates assessment evidence. No frontend or browser verification is claimed.
+- **Roadmap**: `project_docs/active/ml_studio/README.md` — Step 4 assignment order
+- **Active Handoff**: `project_docs/active/ai_hand_off/ml_studio_prepare_data_column_label.md`
+- **Latest Verification**: Data & Goal saving and saved-experiment Delete passed 37 shell tests, 30 backend draft/API tests, the production build, Python compilation, the repository harness, and the active-gate check. The Prepare Data issue card still omits server-owned `issue.field`. No browser verification is claimed.
 
 ## Completion Rule
 
-Antigravity stops after the Data & Goal handoff and returns source/test/build evidence for Codex review. Prepare Data/Power Query integration remains separate. The accepted general autosave slice is not reopened; this stage's explicit save must independently satisfy its named asynchronous assertions.
+Codex reviews the returned affected-column repair before assigning the separate Power Query interaction. Browser acceptance remains with the user.

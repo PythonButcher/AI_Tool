@@ -8,6 +8,10 @@ The main goal is to prevent a single implementation session from spending excess
 
 This file applies to Codex. It is not an Antigravity rule file.
 
+## Explain User Value First
+
+When the user asks what a phase, handoff, or change will bring, start with the visible before-and-after result in everyday words. In the next sentence, state the meaningful limit or next capability. For example: "Prepare Data will show which columns have missing values and what the available fixes do. Applying a fix comes next." Keep API names, ownership labels, and test details out of that answer unless the user asks for them. Handoffs include the same short `User Value` section before technical context so Codex and the frontend owner share this explanation.
+
 For reusable agent-harness structure, hook-ready checks, and future-project templates, use `project_docs/active/agent_harness/README.md`. This file remains the Codex run-efficiency rule; the agent harness folder owns reusable harness architecture.
 
 Past expensive branches may be useful examples, but they are not global templates. Codex must derive the run shape from the current task, active plan, and touched subsystem instead of reusing the last branch's verification pattern.

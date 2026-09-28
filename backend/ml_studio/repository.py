@@ -268,7 +268,8 @@ class MLStudioRepository:
             draft_revision INTEGER NOT NULL CHECK (draft_revision > 0),
             etag TEXT NOT NULL,
             draft_json TEXT NOT NULL,
-            updated_at TEXT NOT NULL
+            updated_at TEXT NOT NULL,
+            deleted_at TEXT
         );
         CREATE INDEX IF NOT EXISTS ml_experiment_drafts_workspace_index
           ON ml_experiment_drafts (workspace_id, updated_at DESC, experiment_id);
@@ -289,6 +290,9 @@ class MLStudioRepository:
         with self._lock, self._connection() as connection:
             connection.execute("PRAGMA journal_mode = WAL")
             connection.executescript(schema)
+            columns = {row["name"] for row in connection.execute("PRAGMA table_info(ml_experiment_drafts)")}
+            if "deleted_at" not in columns:
+                connection.execute("ALTER TABLE ml_experiment_drafts ADD COLUMN deleted_at TEXT")
 
     @staticmethod
     def _public_experiment(row: sqlite3.Row) -> dict[str, Any]:
@@ -322,7 +326,7 @@ class MLStudioRepository:
         with self._lock, self._connection() as connection:
             connection.execute("BEGIN IMMEDIATE")
             connection.execute(
-                "INSERT INTO ml_experiment_drafts VALUES (?, ?, ?, ?, ?, ?)",
+                "INSERT INTO ml_experiment_drafts (experiment_id, workspace_id, draft_revision, etag, draft_json, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
                 (draft["experiment_id"], draft["workspace_id"], 1, draft["etag"], encoded, now),
             )
             connection.commit()
@@ -331,7 +335,7 @@ class MLStudioRepository:
     def get_draft(self, experiment_id: str, workspace_id: str) -> dict[str, Any] | None:
         with self._connection() as connection:
             row = connection.execute(
-                "SELECT draft_json FROM ml_experiment_drafts WHERE experiment_id = ? AND workspace_id = ?",
+                "SELECT draft_json FROM ml_experiment_drafts WHERE experiment_id = ? AND workspace_id = ? AND deleted_at IS NULL",
                 (experiment_id, workspace_id),
             ).fetchone()
         return None if row is None else json.loads(row["draft_json"])
@@ -341,7 +345,7 @@ class MLStudioRepository:
             raise PersistenceError("draft_invalid", "The draft query is invalid.", "Provide a workspace identity and a limit from 1 to 100.")
         with self._connection() as connection:
             rows = connection.execute(
-                "SELECT draft_json FROM ml_experiment_drafts WHERE workspace_id = ? ORDER BY updated_at DESC, experiment_id LIMIT ?",
+                "SELECT draft_json FROM ml_experiment_drafts WHERE workspace_id = ? AND deleted_at IS NULL ORDER BY updated_at DESC, experiment_id LIMIT ?",
                 (workspace_id, limit),
             ).fetchall()
         return [json.loads(row["draft_json"]) for row in rows]
@@ -353,7 +357,7 @@ class MLStudioRepository:
         with self._lock, self._connection() as connection:
             connection.execute("BEGIN IMMEDIATE")
             row = connection.execute(
-                "SELECT draft_json, etag FROM ml_experiment_drafts WHERE experiment_id = ? AND workspace_id = ?",
+                "SELECT draft_json, etag FROM ml_experiment_drafts WHERE experiment_id = ? AND workspace_id = ? AND deleted_at IS NULL",
                 (experiment_id, workspace_id),
             ).fetchone()
             if row is None:
@@ -374,6 +378,28 @@ class MLStudioRepository:
             )
             connection.commit()
         return draft
+
+    def delete_draft(self, experiment_id: str, workspace_id: str, etag: str) -> None:
+        """Hide one current draft while retaining preparation and immutable run evidence."""
+        if not isinstance(etag, str) or not etag:
+            raise PersistenceError("draft_revision_conflict", "The draft revision is missing.", "Reload the experiment list and retry.")
+        with self._lock, self._connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            row = connection.execute(
+                "SELECT etag FROM ml_experiment_drafts WHERE experiment_id = ? AND workspace_id = ? AND deleted_at IS NULL",
+                (experiment_id, workspace_id),
+            ).fetchone()
+            if row is None:
+                raise PersistenceError("draft_not_found", "The draft is unavailable in this workspace.", "Reload the experiment list.")
+            if row["etag"] != etag:
+                raise PersistenceError("draft_revision_conflict", "The draft changed since it was listed.", "Reload the experiment list before deleting it.")
+            if connection.execute("SELECT 1 FROM ml_preparation_operations WHERE experiment_id = ? AND status = 'open'", (experiment_id,)).fetchone():
+                raise PersistenceError("draft_preparation_pending", "Preparation is open for this draft.", "Apply or cancel preparation before deleting the draft.")
+            connection.execute(
+                "UPDATE ml_experiment_drafts SET deleted_at = ? WHERE experiment_id = ? AND workspace_id = ? AND deleted_at IS NULL",
+                (_now(), experiment_id, workspace_id),
+            )
+            connection.commit()
 
     @staticmethod
     def _public_preparation(row: sqlite3.Row) -> dict[str, Any]:
@@ -411,7 +437,7 @@ class MLStudioRepository:
                 if existing["workspace_id"] != context["workspace_id"] or existing["intent_hash"] != intent_hash:
                     raise PersistenceError("preparation_intent_conflict", "Preparation intent changed.", "Use the original start intent.")
                 return self._public_preparation(existing)
-            draft = connection.execute("SELECT etag FROM ml_experiment_drafts WHERE experiment_id = ? AND workspace_id = ?",
+            draft = connection.execute("SELECT etag FROM ml_experiment_drafts WHERE experiment_id = ? AND workspace_id = ? AND deleted_at IS NULL",
                                        (context["experiment_id"], context["workspace_id"])).fetchone()
             if draft is None or draft["etag"] != context["base_etag"]:
                 raise PersistenceError("draft_revision_conflict", "The draft revision changed.", "Reload the saved draft before preparing data.")
@@ -442,7 +468,7 @@ class MLStudioRepository:
                 if (action == "apply") != (operation["status"] == "applied"):
                     raise PersistenceError("preparation_terminal_conflict", "Preparation has a different terminal outcome.", "Reload the operation outcome.")
                 return operation
-            draft_row = connection.execute("SELECT draft_json FROM ml_experiment_drafts WHERE experiment_id = ? AND workspace_id = ?",
+            draft_row = connection.execute("SELECT draft_json FROM ml_experiment_drafts WHERE experiment_id = ? AND workspace_id = ? AND deleted_at IS NULL",
                                            (experiment_id, workspace_id)).fetchone()
             draft = json.loads(draft_row["draft_json"])
             if draft["etag"] != etag:
