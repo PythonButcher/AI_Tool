@@ -7,6 +7,12 @@
   "lifecycle_state": "IN PROGRESS",
   "diff_baseline": "e2896c2eced5511144c3151e34cae473e992af5a",
   "authority_kind": "direct_user_instruction",
+  "power_query_opening_handoff_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-09-29",
+    "instruction": "Implement this work — project_docs/active/active_gate/README.md",
+    "scope": "Inspect source and contracts, write and verify one bounded Stay/Open Power Query opening handoff, and transfer ownership to Antigravity. Codex frontend implementation remains excluded."
+  },
   "user_implementation_authorization": {
     "approved_by": "User",
     "approved_at": "2026-09-27",
@@ -52,12 +58,17 @@
     "scope": "Codex may implement saved experiment deletion in the ML Studio home, its backend draft route and persistence, contract, and focused tests."
   },
   "allowed_paths": [
+    "project_docs/active/ai_hand_off/ml_studio_power_query_opening.md",
+    "frontend/frontend/src/App.jsx",
+    "frontend/frontend/src/components/data_management/DataCleaningForm.jsx",
+    "frontend/frontend/src/components/data_management/DataCleaningForm.test.jsx",
     "project_docs/active/ai_hand_off/ml_studio_data_goal.md",
     "project_docs/active/ai_hand_off/ml_studio_prepare_data_options.md",
     "project_docs/active/ai_hand_off/ml_studio_prepare_data_column_label.md",
     "project_docs/archive/ml_studio_data_goal_handoff_user_accepted_2026_09_27.md",
     "project_docs/archive/ml_studio_prepare_data_options_initial_2026_09_27.md",
     "project_docs/archive/ml_studio_prepare_data_column_label_deferred_2026_09_27.md",
+    "project_docs/archive/ml_studio_prepare_data_column_label_accepted_2026_09_29.md",
     "project_docs/active/ai_hand_off/ml_studio_data_goal_save_repair.md",
     "project_docs/archive/ml_studio_data_goal_save_repair_codex_owned_2026_09_27.md",
     "backend/db/backend_db.py",

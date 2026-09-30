@@ -1305,4 +1305,174 @@ describe('MLStudioShell', () => {
       expect(screen.queryByText('Dataset Help')).not.toBeInTheDocument();
     });
   });
+
+  describe('ML Studio Opening Mode', () => {
+    it('Stay preserves the saved experiment without requests', async () => {
+      global.fetch.mockImplementation((url, init) => {
+        if (url.includes('/drafts') && init?.method === 'POST') {
+          return Promise.resolve({ ok: true, json: async () => ({ draft: { experiment_id: 'exp-1', snapshot_id: 'snap-1' }, workflow_state: { active_stage: 'Prepare Data' } }) });
+        }
+        if (url.includes('/preparation')) {
+          return Promise.resolve({ ok: true, json: async () => ({
+             snapshot_id: 'snap-1',
+             issues: [{ issue_id: 'i1', severity: 'blocking', message: 'Missing values in B', field: 'B' }],
+             fixes: [{ issue_id: 'i1', fix_id: 'f1', action_type: 'fill_missing', support_status: 'supported', explanation: 'Use mean.', parameters: {} }],
+             preparation_context: { status: 'idle' }
+          })});
+        }
+        if (url.includes('/drafts')) return Promise.resolve({ ok: true, json: async () => ({ drafts: [] }) });
+        if (url.includes('/runs')) return Promise.resolve({ ok: true, json: async () => ({ runs: [] }) });
+      });
+
+      renderWithContext({
+        activeWorkspace: { workspace_id: 'ws-1', version: 1 },
+        analysisContext: { workspace_id: 'ws-1', workspace_version: 1, source_ids: ['s1'] },
+      });
+
+      fireEvent.click(await screen.findByRole('button', { name: 'New Experiment' }));
+      await screen.findByText(/Missing values in B/i);
+
+      const fetchCountBefore = global.fetch.mock.calls.length;
+
+      fireEvent.click(screen.getByRole('button', { name: /Open in Power Query/i }));
+      expect(screen.getByText(/Open in Power Query\?/i)).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Stay' }));
+
+      expect(screen.queryByText(/Open in Power Query\?/i)).not.toBeInTheDocument();
+      expect(global.fetch.mock.calls.length).toBe(fetchCountBefore);
+    });
+
+    it('Open carries current issue identity and returns to the same experiment', async () => {
+      global.fetch.mockImplementation((url, init) => {
+        if (url.includes('/drafts') && init?.method === 'POST') {
+          return Promise.resolve({ ok: true, json: async () => ({ draft: { experiment_id: 'exp-1', snapshot_id: 'snap-1', draft_revision: 1, name: 'MyExp' }, workflow_state: { active_stage: 'Prepare Data' } }) });
+        }
+        if (url.includes('/preparation')) {
+          return Promise.resolve({ ok: true, json: async () => ({
+             snapshot_id: 'snap-1',
+             issues: [{ issue_id: 'i1', severity: 'blocking', message: 'Missing values in B', field: 'B' }],
+             fixes: [{ issue_id: 'i1', fix_id: 'f1', action_type: 'fill_missing', support_status: 'supported', explanation: 'Use mean.', parameters: { strategy: 'mean' } }],
+             preparation_context: { status: 'idle' }
+          })});
+        }
+        if (url.includes('/drafts')) return Promise.resolve({ ok: true, json: async () => ({ drafts: [] }) });
+        if (url.includes('/runs')) return Promise.resolve({ ok: true, json: async () => ({ runs: [] }) });
+      });
+
+      const mockOpenCleaning = jest.fn();
+      renderWithContext({
+        activeWorkspace: { workspace_id: 'ws-1', version: 1 },
+        analysisContext: { workspace_id: 'ws-1', workspace_version: 1, source_ids: ['s1'] },
+      }, undefined, { onOpenCleaningForm: mockOpenCleaning });
+
+      fireEvent.click(await screen.findByRole('button', { name: 'New Experiment' }));
+      await screen.findByText(/Missing values in B/i);
+
+      fireEvent.click(screen.getByRole('button', { name: /Open in Power Query/i }));
+      fireEvent.click(screen.getAllByRole('button', { name: /Open Power Query/i })[0]);
+
+      expect(mockOpenCleaning).toHaveBeenCalledWith(expect.objectContaining({
+        mlStudioMode: true,
+        mlStudioOpeningContext: expect.objectContaining({
+          experiment_id: 'exp-1',
+          workspace_id: 'ws-1',
+          snapshot_id: 'snap-1',
+          draft_revision: 1,
+          issue_id: 'i1',
+          fix_id: 'f1',
+          return_stage: 'Prepare Data',
+          title: 'MyExp',
+          field: 'B',
+          action: 'fill_missing',
+          explanation: 'Use mean.'
+        }),
+        initialSteps: expect.arrayContaining([expect.objectContaining({ type: 'fill_missing', params: { strategy: 'mean' } })]),
+        onClose: expect.any(Function)
+      }));
+    });
+
+    it('invalidates opening on identity change and unmount', async () => {
+      global.fetch.mockImplementation((url, init) => {
+        if (url.includes('/drafts') && init?.method === 'POST') {
+          return Promise.resolve({ ok: true, json: async () => ({ draft: { experiment_id: 'exp-1', snapshot_id: 'snap-1', draft_revision: 1 }, workflow_state: { active_stage: 'Prepare Data' } }) });
+        }
+        if (url.includes('/preparation')) {
+          return Promise.resolve({ ok: true, json: async () => ({
+             snapshot_id: 'snap-1',
+             issues: [{ issue_id: 'i1', severity: 'blocking', message: 'Missing values in B', field: 'B' }],
+             fixes: [{ issue_id: 'i1', fix_id: 'f1', action_type: 'fill_missing', support_status: 'supported', explanation: 'Use mean.', parameters: {} }],
+             preparation_context: { status: 'idle' }
+          })});
+        }
+        if (url.includes('/drafts')) return Promise.resolve({ ok: true, json: async () => ({ drafts: [] }) });
+        if (url.includes('/runs')) return Promise.resolve({ ok: true, json: async () => ({ runs: [] }) });
+      });
+
+      const mockOpenCleaning = jest.fn();
+      useDatasetMeta.mockReturnValue({ numRows: 100, numCols: 5 });
+      const { rerender, unmount } = render(
+        <DataContext.Provider value={{
+          activeWorkspace: { workspace_id: 'ws-1', version: 1 },
+          analysisContext: { workspace_id: 'ws-1', workspace_version: 1, source_ids: ['s1'] }
+        }}>
+          <MLStudioShell onOpenCleaningForm={mockOpenCleaning} />
+        </DataContext.Provider>
+      );
+
+      fireEvent.click(await screen.findByRole('button', { name: 'New Experiment' }));
+      await screen.findByText(/Missing values in B/i);
+
+      fireEvent.click(screen.getByRole('button', { name: /Open in Power Query/i }));
+      fireEvent.click(screen.getAllByRole('button', { name: /Open Power Query/i })[0]);
+
+      const onCloseCb = mockOpenCleaning.mock.calls.find(call => call[0]?.mlStudioMode)[0].onClose;
+
+      rerender(
+        <DataContext.Provider value={{
+          activeWorkspace: { workspace_id: 'ws-2', version: 1 },
+          analysisContext: { workspace_id: 'ws-2', workspace_version: 1, source_ids: ['s2'] }
+        }}>
+          <MLStudioShell onOpenCleaningForm={mockOpenCleaning} />
+        </DataContext.Provider>
+      );
+
+      onCloseCb();
+      const prepCalls = global.fetch.mock.calls.filter(c => c[0].includes('/preparation'));
+      expect(prepCalls.length).toBeGreaterThan(1);
+
+      unmount();
+      expect(mockOpenCleaning).toHaveBeenCalledWith(expect.objectContaining({ closeOverlay: true }));
+    });
+
+    it('opening respects missing, empty, failed, stale and pending options', async () => {
+      global.fetch.mockImplementation((url, init) => {
+        if (url.includes('/drafts') && init?.method === 'POST') {
+          return Promise.resolve({ ok: true, json: async () => ({ draft: { experiment_id: 'exp-1', snapshot_id: 'snap-1' }, workflow_state: { active_stage: 'Prepare Data' } }) });
+        }
+        if (url.includes('/preparation')) {
+          return Promise.resolve({ ok: true, json: async () => ({
+             snapshot_id: 'snap-2',
+             issues: [{ issue_id: 'i1', severity: 'blocking', message: 'Missing values in B', field: 'B' }],
+             fixes: [{ issue_id: 'i1', fix_id: 'f1', action_type: 'fill_missing', support_status: 'supported', explanation: 'Use mean.', parameters: {} }],
+             preparation_context: { status: 'idle' }
+          })});
+        }
+        if (url.includes('/drafts')) return Promise.resolve({ ok: true, json: async () => ({ drafts: [] }) });
+        if (url.includes('/runs')) return Promise.resolve({ ok: true, json: async () => ({ runs: [] }) });
+      });
+
+      renderWithContext({
+        activeWorkspace: { workspace_id: 'ws-1', version: 1 },
+        analysisContext: { workspace_id: 'ws-1', workspace_version: 1, source_ids: ['s1'] },
+      });
+
+      fireEvent.click(await screen.findByRole('button', { name: 'New Experiment' }));
+      await screen.findByText(/Missing values in B/i);
+
+      fireEvent.click(screen.getByRole('button', { name: /Open in Power Query/i }));
+
+      expect(screen.getByText(/Cannot Open Power Query/i)).toBeInTheDocument();
+      expect(screen.getByText(/Save the active experiment/i)).toBeInTheDocument();
+    });
+  });
 });

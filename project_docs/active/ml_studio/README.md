@@ -123,7 +123,7 @@ Step 1 is complete when this blueprint and the proposed contract agree with curr
 
 `backend/routes/manual_cleaning.py` preserves global-state `/api/manual_cleaning` for compatibility and implements `/api/data-workspaces/{workspace_id}/manual-cleaning` for governed preparation. The workspace endpoint validates version/primary-source identity, returns at most 100 preview rows, and atomically commits an isolated derived source with a server-issued identity/schema receipt. Workspaces containing relationships are explicitly unsupported. The cleaning gate passed 46 focused backend tests on 2026-09-27; draft-bound recipes and return state remain prerequisites for UI integration.
 
-`frontend/frontend/src/features/ml_studio/MLStudioShell.jsx` renders Data & Goal and a read-only Prepare Data options view. The options view does not yet identify each affected column, and it has no preparation mutation controls. The configuration form still constructs recipe identity/hash in the browser and uses an in-memory cleaning callback; these paths do not consume draft preparation operations. The Prepare Data/Power Query return path is a separate assignment.
+`frontend/frontend/src/features/ml_studio/MLStudioShell.jsx` renders Data & Goal and a read-only Prepare Data options view with affected-column labels. The view has no preparation mutation controls. The configuration form still constructs recipe identity/hash in the browser and uses an in-memory cleaning callback; these paths do not consume draft preparation operations. The Prepare Data/Power Query return path is a separate assignment.
 
 ### Ordered bounded work
 
@@ -132,7 +132,7 @@ Step 1 is complete when this blueprint and the proposed contract agree with curr
 3. **Data & Goal — Antigravity after backend review.** One handoff for governed dataset/schema/preview, explicit problem selection, and saving the draft's data/goal fields. Regression and classification have execution foundations; forecasting, clustering, and anomaly detection must be labeled unavailable until their execution prerequisites exist. No training or configuration replacement in this handoff.
 4. **Prepare Data — Antigravity after backend review.** The read-only options view uses server-issued issues, supported fixes, and open-operation context. Show each affected column in that view, then assign the separate Stay/Open Power Query and apply/cancel return path after Codex reviews the repair. Use exact verified fields from the backend contract and test workspace switches, stale responses, failed saves, retry, and unmount behavior in the applicable slice.
 
-The active gate covers the affected-column label in the read-only Prepare Data options view. Preparation mutation remains a separate assignment. Proposed fields/endpoints remain labeled proposed until implemented; compatibility services retain their existing contracts.
+The active gate assigns Antigravity the bounded Stay/Open Power Query opening and safe return handoff. The opening mode is read-only because the existing editor uses legacy cleaning behavior. Draft-bound preview/apply/cancel integration remains a separate assignment. Proposed fields/endpoints remain labeled proposed until implemented; compatibility services retain their existing contracts.
 
 ### Verification plan
 

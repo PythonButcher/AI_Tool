@@ -404,6 +404,9 @@ function AppContent() {
           {showCleaningForm && (
             <DataCleaningForm
               closeForm={() => {
+                if (cleaningFormProps && cleaningFormProps.onClose) {
+                  cleaningFormProps.onClose();
+                }
                 setShowCleaningForm(false);
                 setCleaningFormProps(null);
               }}
@@ -475,6 +478,11 @@ function AppContent() {
               activeWorkflow={activeWorkflow}
               setActiveWorkflow={setActiveWorkflow}
               onOpenCleaningForm={(props) => {
+                if (props && props.closeOverlay) {
+                  setShowCleaningForm(false);
+                  setCleaningFormProps(null);
+                  return;
+                }
                 setCleaningFormProps(props);
                 setShowCleaningForm(true);
               }}

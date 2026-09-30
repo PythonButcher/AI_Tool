@@ -10,7 +10,7 @@ Antigravity owns bounded frontend implementation, React/CSS, UI rendering, and f
 
 ## Active Handoffs And Goal Prompts
 
-The active handoff is `project_docs/active/ai_hand_off/ml_studio_prepare_data_column_label.md`. Antigravity shows the affected column in the read-only Prepare Data options view and returns focused evidence to Codex. Starting, previewing, applying, canceling, and returning from Power Query remain separate work.
+Antigravity owns [Power Query opening and safe return](ml_studio_power_query_opening.md). This is the only active handoff; it covers Stay/Open and a read-only editor mode. Preparation preview/apply/cancel integration remains separate.
 
 Completed handoffs belong outside this active folder.
 

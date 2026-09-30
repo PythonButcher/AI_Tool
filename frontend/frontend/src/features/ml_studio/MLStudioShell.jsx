@@ -556,6 +556,7 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
                             activeWorkspace={activeWorkspace}
                             analysisContext={analysisContext}
                             activeDraft={activeDraft}
+                            onOpenCleaningForm={onOpenCleaningForm}
                          />
                      )}
                      {activeStage !== 'Configure' && activeStage !== 'Data & Goal' && activeStage !== 'Prepare Data' && (
@@ -1705,8 +1706,10 @@ function RunDock({ runsState, onRetry, isIdentityAvailable }) {
   );
 }
 
-function PrepareDataStage({ showGuidance, activeWorkspace, analysisContext, activeDraft }) {
+function PrepareDataStage({ showGuidance, activeWorkspace, analysisContext, activeDraft, onOpenCleaningForm }) {
   const [optionsState, setOptionsState] = useState({ status: 'idle', data: null, error: null });
+  const [confirmation, setConfirmation] = useState(null);
+  const [actionableExplanation, setActionableExplanation] = useState(null);
   const reqIdRef = useRef(0);
 
   const identityKey = `${activeWorkspace?.workspace_id}-${analysisContext?.workspace_version}-${activeDraft?.experiment_id}-${activeDraft?.snapshot_id}`;
@@ -1746,10 +1749,61 @@ function PrepareDataStage({ showGuidance, activeWorkspace, analysisContext, acti
 
   useEffect(() => {
     fetchOptions();
-    return () => { reqIdRef.current += 1; };
-  }, [identityKey, fetchOptions]);
+    setConfirmation(null);
+    setActionableExplanation(null);
+    return () => {
+      reqIdRef.current += 1;
+      if (onOpenCleaningForm) {
+        onOpenCleaningForm({ closeOverlay: true });
+      }
+    };
+  }, [identityKey, fetchOptions, onOpenCleaningForm]);
 
   const { status, data, error } = optionsState;
+
+  const handleOpenPowerQueryClick = (issue, fix) => {
+    if (data?.preparation_context?.status === 'open') return;
+    if (!activeWorkspace?.workspace_id || !activeDraft?.experiment_id || !activeDraft?.snapshot_id || !data || data.snapshot_id !== activeDraft.snapshot_id) {
+       setActionableExplanation("Save the active experiment and dataset snapshot to configure preparation.");
+       return;
+    }
+    if (!issue.field || !fix.action_type || fix.support_status !== 'supported') return;
+    setActionableExplanation(null);
+    setConfirmation({ issue, fix });
+  };
+
+  const handleStay = () => {
+    setConfirmation(null);
+  };
+
+  const handleConfirmOpen = () => {
+    if (!confirmation) return;
+    const currentIdentity = identityKey;
+    onOpenCleaningForm({
+       mlStudioMode: true,
+       mlStudioOpeningContext: {
+         experiment_id: activeDraft.experiment_id,
+         workspace_id: activeWorkspace.workspace_id,
+         snapshot_id: activeDraft.snapshot_id,
+         draft_revision: activeDraft.draft_revision,
+         issue_id: confirmation.issue.issue_id,
+         fix_id: confirmation.fix.fix_id,
+         return_stage: "Prepare Data",
+         title: activeDraft.name || "Experiment",
+         field: confirmation.issue.field,
+         action: confirmation.fix.action_type,
+         explanation: confirmation.fix.explanation,
+       },
+       initialSteps: [{ type: confirmation.fix.action_type, params: confirmation.fix.parameters || {}, id: `fix-${Date.now()}` }],
+       onClose: () => {
+         // Return must never overwrite a newer draft or stage
+         if (currentIdentity !== `${activeWorkspace?.workspace_id}-${analysisContext?.workspace_version}-${activeDraft?.experiment_id}-${activeDraft?.snapshot_id}`) {
+           return;
+         }
+         fetchOptions();
+       }
+    });
+  };
 
   return (
     <main className="ml-studio-canvas" aria-label="Prepare Data Canvas">
@@ -1788,6 +1842,30 @@ function PrepareDataStage({ showGuidance, activeWorkspace, analysisContext, acti
                  </div>
               )}
 
+              {actionableExplanation && (
+                 <div className="prep-alert warning">
+                   <FaExclamationTriangle className="alert-icon" />
+                   <div className="alert-content">
+                     <strong>Cannot Open Power Query</strong>
+                     <p>{actionableExplanation}</p>
+                   </div>
+                 </div>
+              )}
+
+              {confirmation && (
+                 <div className="prep-alert confirmation-alert">
+                   <FaTools className="alert-icon" />
+                   <div className="alert-content">
+                     <strong>Open in Power Query?</strong>
+                     <p>This will open a read-only preview of the suggested fix for column <strong>{confirmation.issue.field}</strong>. No changes will be applied yet.</p>
+                     <div className="confirmation-actions">
+                        <button className="semantic-btn retry-btn" onClick={handleStay} type="button">Stay</button>
+                        <button className="power-query-btn" onClick={handleConfirmOpen} type="button"><FaTools /> Open Power Query</button>
+                     </div>
+                   </div>
+                 </div>
+              )}
+
               <div className="assessment-results">
                  <h3 className="results-title">Quality Findings</h3>
                  {!data.issues || data.issues.length === 0 ? (
@@ -1801,6 +1879,7 @@ function PrepareDataStage({ showGuidance, activeWorkspace, analysisContext, acti
                           <div className="issue-header">
                             <strong>{issue.severity.toUpperCase()}: {issue.message}</strong>
                           </div>
+                          {issue.field && <p className="issue-field-label"><strong>Column:</strong> {issue.field}</p>}
                           <p>{issue.remediation}</p>
                           <div className="raw-id-item text-muted"><small>Issue ID: {issue.issue_id}</small></div>
 
@@ -1811,6 +1890,16 @@ function PrepareDataStage({ showGuidance, activeWorkspace, analysisContext, acti
                                </div>
                                <p className="fix-explanation">{fix.explanation}</p>
                                <div className="raw-id-item text-muted"><small>Fix ID: {fix.fix_id}</small></div>
+                               {fix.support_status === 'supported' && (
+                                  <button
+                                    className="power-query-btn"
+                                    onClick={() => handleOpenPowerQueryClick(issue, fix)}
+                                    type="button"
+                                    disabled={data.preparation_context?.status === 'open' || !!confirmation}
+                                  >
+                                    <FaTools /> Open in Power Query
+                                  </button>
+                               )}
                              </div>
                           ))}
                        </div>

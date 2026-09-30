@@ -24,7 +24,7 @@ Decision Intelligence workspaces, decision frames, readiness and capability pane
 
 Dataset identity and semantic truth remain required for every BI answer and chart.
 
-ML Studio Step 4 has verified workspace-safe cleaning and draft preparation backend contracts. The [active gate](active_gate/README.md) assigns the affected-column repair in the read-only Prepare Data options view to Antigravity. Preparation mutation and Power Query return remain separate. Later workflow behavior must not be represented as working product behavior.
+ML Studio Step 4 has verified workspace-safe cleaning and draft preparation backend contracts. The [active gate](active_gate/README.md) assigns Antigravity the bounded [Power Query opening and safe return handoff](ai_hand_off/ml_studio_power_query_opening.md), using a read-only editor mode. Preparation mutation remains separate. Later workflow behavior must not be represented as working product behavior.
 
 ## Active Areas
 
