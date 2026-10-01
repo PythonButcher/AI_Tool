@@ -12,14 +12,14 @@ This file is the concise current truth for AI_Tool delivery.
 - **Automatic Continuation**: `CONTINUE`
 - **Current Owner**: Codex
 - **Backend Readiness**: `backend_contract_ready`
-- **Frontend Readiness**: `backend_contract_ready`
+- **Frontend Readiness**: `frontend_repair_only`
 - **Next Action**: Antigravity executes `project_docs/active/ai_hand_off/ml_studio_power_query_opening.md`, then returns to Codex.
 - **Required Action**: Review `project_docs/active/ai_hand_off/ml_studio_power_query_opening.md` and its returned evidence.
 - **Active Gate**: `project_docs/active/active_gate/README.md`
 - **Authorization Record**: `project_docs/active/status/phase_authorization.json`
 - **Roadmap**: `project_docs/active/ml_studio/README.md` — Step 4 assignment order
-- **Active Handoff**: `project_docs/active/ai_hand_off/ml_studio_power_query_opening.md` — returned for Codex review: Stay/Open identity, read-only editor isolation and safe return verified; focused tests and build passed
-- **Latest Verification**: Source and an isolated Flask GET confirm the overlay gateway and preparation response shape. All 14 preparation tests, 35 harness/policy tests, provider-neutral CI, both gate validators and `git diff --check` passed on 2026-09-29. Frontend opening behavior remains unimplemented.
+- **Active Handoff**: `project_docs/active/ai_hand_off/ml_studio_power_query_opening.md` — returned for Codex review: Fixed Data & Goal edits wipe, race condition in PrepareData options fetch, and invoked stale callback in test
+- **Latest Verification**: Source review confirms the stable App gateway and callback-independent cleanup. PrepareDataStage still omits draft_revision from identity; its parent regression uses placeholder editor content and omits Return. Reported test/build success does not cover these required assertions.
 
 ## Completion Rule
 

@@ -145,6 +145,15 @@ function AppContent() {
     }
   }, [openDashboard, closeDashboard, handleOpenAiChat]);
 
+  const handleOpenCleaningForm = useCallback((props) => {
+    if (props && props.closeOverlay) {
+      setShowCleaningForm(false);
+      setCleaningFormProps(null);
+      return;
+    }
+    setCleaningFormProps(props);
+    setShowCleaningForm(true);
+  }, []);
 
   const handleFileUpload = useCallback((raw, file = null) => {
     const previewRows = parseRecords(raw?.data_preview);
@@ -477,15 +486,7 @@ function AppContent() {
               setShowAiChat={setShowAiChat}
               activeWorkflow={activeWorkflow}
               setActiveWorkflow={setActiveWorkflow}
-              onOpenCleaningForm={(props) => {
-                if (props && props.closeOverlay) {
-                  setShowCleaningForm(false);
-                  setCleaningFormProps(null);
-                  return;
-                }
-                setCleaningFormProps(props);
-                setShowCleaningForm(true);
-              }}
+              onOpenCleaningForm={handleOpenCleaningForm}
 
               onDestinationSelect={handleDestinationSelect}
               setShowDataVisual={setShowDataVisual}

@@ -3,9 +3,18 @@ import { render, screen, waitFor, fireEvent, within , act} from '@testing-librar
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 import MLStudioShell from './MLStudioShell';
+import DataCleaningForm from '../../components/data_management/DataCleaningForm';
 import { DataContext } from '../../context/DataContext';
+import { HelpOverlayProvider } from '../../context/HelpOverlayContext';
 import { TextEncoder, TextDecoder } from 'util';
 Object.assign(global, { TextEncoder, TextDecoder });
+
+jest.mock('axios', () => ({
+  post: jest.fn(),
+  get: jest.fn(),
+  create: jest.fn(),
+  default: { post: jest.fn(), get: jest.fn(), create: jest.fn() }
+}));
 // Mock dataset meta hook
 jest.mock('../../context/DataContext', () => {
   const actual = jest.requireActual('../../context/DataContext');
@@ -1473,6 +1482,229 @@ describe('MLStudioShell', () => {
 
       expect(screen.getByText(/Cannot Open Power Query/i)).toBeInTheDocument();
       expect(screen.getByText(/Save the active experiment/i)).toBeInTheDocument();
+    });
+
+    it('Power Query stays open across App gateway rerenders', async () => {
+      global.fetch.mockImplementation((url, init) => {
+        if (url.includes('/drafts') && init?.method === 'POST') {
+          return Promise.resolve({ ok: true, json: async () => ({ draft: { experiment_id: 'exp-1', snapshot_id: 'snap-1' }, workflow_state: { active_stage: 'Prepare Data' } }) });
+        }
+        if (url.includes('/preparation')) {
+          return Promise.resolve({ ok: true, json: async () => ({
+             snapshot_id: 'snap-1',
+             issues: [{ issue_id: 'i1', severity: 'blocking', message: 'Missing values in B', field: 'B' }],
+             fixes: [{ issue_id: 'i1', fix_id: 'f1', action_type: 'fill_missing', support_status: 'supported', explanation: 'Use mean.', parameters: {} }],
+             preparation_context: { status: 'idle' }
+          })});
+        }
+        if (url.includes('/drafts')) return Promise.resolve({ ok: true, json: async () => ({ drafts: [] }) });
+        if (url.includes('/runs')) return Promise.resolve({ ok: true, json: async () => ({ runs: [] }) });
+      });
+      useDatasetMeta.mockReturnValue({ numRows: 100, numCols: 5 });
+
+      const StatefulParent = () => {
+        const [cleaningFormProps, setCleaningFormProps] = React.useState(null);
+        const [showCleaningForm, setShowCleaningForm] = React.useState(false);
+        const [counter, setCounter] = React.useState(0);
+
+        const handleOpenCleaningForm = React.useCallback((props) => {
+          if (props && props.closeOverlay) {
+            setShowCleaningForm(false);
+            setCleaningFormProps(null);
+            return;
+          }
+          setCleaningFormProps(props);
+          setShowCleaningForm(true);
+        }, []);
+
+        return (
+          <HelpOverlayProvider>
+            <DataContext.Provider value={{
+              activeWorkspace: { workspace_id: 'ws-1', version: 1 },
+              analysisContext: { workspace_id: 'ws-1', workspace_version: 1, source_ids: ['s1'] },
+              uploadedData: [],
+              fullData: []
+            }}>
+              <button onClick={() => setCounter(c => c + 1)}>Rerender Parent {counter}</button>
+              <MLStudioShell onOpenCleaningForm={handleOpenCleaningForm} />
+              {showCleaningForm && (
+                 <DataCleaningForm
+                   closeForm={() => {
+                     if (cleaningFormProps && cleaningFormProps.onClose) {
+                       cleaningFormProps.onClose();
+                     }
+                     setShowCleaningForm(false);
+                     setCleaningFormProps(null);
+                   }}
+                   {...cleaningFormProps}
+                 />
+              )}
+            </DataContext.Provider>
+          </HelpOverlayProvider>
+        );
+      };
+
+      render(<StatefulParent />);
+
+      fireEvent.click(await screen.findByRole('button', { name: 'New Experiment' }));
+      await screen.findByText(/Missing values in B/i);
+
+      fireEvent.click(screen.getByRole('button', { name: /Open in Power Query/i }));
+      fireEvent.click(screen.getAllByRole('button', { name: /Open Power Query/i })[0]);
+
+      // Wait for DataCleaningForm to render
+      await screen.findByText(/Missing values in B/i);
+      expect(screen.getAllByText(/Use mean./i).length).toBeGreaterThan(0);
+
+      const fetchCountBefore = global.fetch.mock.calls.length;
+      fireEvent.click(screen.getByRole('button', { name: 'Rerender Parent 0' }));
+      expect(screen.getByRole('button', { name: 'Rerender Parent 1' })).toBeInTheDocument();
+
+      // Ensure the overlay survives
+      expect(screen.getAllByText(/Use mean./i).length).toBeGreaterThan(0);
+      // Ensure no fetch was fired
+      expect(global.fetch.mock.calls.length).toBe(fetchCountBefore);
+
+      // Exercise the real editor's Return action
+      fireEvent.click(screen.getByRole('button', { name: /Return to Prepare Data/i }));
+
+      // Editor should close and we return to ML Studio
+      expect(screen.queryByRole('button', { name: /Return to Prepare Data/i })).not.toBeInTheDocument();
+      // Fetch options should have been called upon returning
+      expect(global.fetch.mock.calls.length).toBeGreaterThan(fetchCountBefore);
+    });
+
+    it('Power Query invalidates on draft revision change', async () => {
+      global.fetch.mockImplementation((url, init) => {
+        if (url.includes('/drafts') && init?.method === 'POST') {
+          return Promise.resolve({ ok: true, json: async () => ({ draft: { experiment_id: 'exp-1', snapshot_id: 'snap-1', draft_revision: 1 }, workflow_state: { active_stage: 'Prepare Data' } }) });
+        }
+        if (url.includes('/preparation')) {
+          return Promise.resolve({ ok: true, json: async () => ({
+             snapshot_id: 'snap-1',
+             issues: [{ issue_id: 'i1', severity: 'blocking', message: 'Missing values in B', field: 'B' }],
+             fixes: [{ issue_id: 'i1', fix_id: 'f1', action_type: 'remove_nulls', support_status: 'supported', explanation: 'Remove null rows.', parameters: {} }],
+             preparation_context: { status: 'idle' }
+          })});
+        }
+        if (url.includes('/drafts')) return Promise.resolve({ ok: true, json: async () => ({ drafts: [] }) });
+        if (url.includes('/runs')) return Promise.resolve({ ok: true, json: async () => ({ runs: [] }) });
+      });
+      useDatasetMeta.mockReturnValue({ numRows: 100, numCols: 5 });
+
+      const StatefulParent = () => {
+        const [cleaningFormProps, setCleaningFormProps] = React.useState(null);
+        const [showCleaningForm, setShowCleaningForm] = React.useState(false);
+        const [draftRevision, setDraftRevision] = React.useState(1);
+
+        const [capturedOnClose, setCapturedOnClose] = React.useState(null);
+
+        const handleOpenCleaningForm = React.useCallback((props) => {
+          if (props && props.closeOverlay) {
+            setShowCleaningForm(false);
+            setCleaningFormProps(null);
+            return;
+          }
+          setCleaningFormProps(props);
+          if (props && props.onClose) {
+            setCapturedOnClose(() => props.onClose);
+          }
+          setShowCleaningForm(true);
+        }, []);
+
+        return (
+          <HelpOverlayProvider>
+            <DataContext.Provider value={{
+              activeWorkspace: { workspace_id: 'ws-1', version: 1 },
+              analysisContext: { workspace_id: 'ws-1', workspace_version: 1, source_ids: ['s1'] },
+              uploadedData: [],
+              fullData: []
+            }}>
+              <button onClick={() => setDraftRevision(r => r + 1)}>Bump Revision {draftRevision}</button>
+              {capturedOnClose && <button onClick={capturedOnClose}>Invoke Stale Callback</button>}
+              {/* Note: we mock activeDraft bump indirectly by intercepting MLStudioShell or modifying fetch?
+                  Wait, MLStudioShell owns activeDraft via fetchDrafts. We can't change activeDraft from parent directly.
+                  Wait! activeDraft is passed internally in MLStudioShell!
+                  How to trigger a draft_revision change?
+                  Maybe by clicking Save?
+              */}
+              <MLStudioShell onOpenCleaningForm={handleOpenCleaningForm} />
+              {showCleaningForm && (
+                 <DataCleaningForm
+                   closeForm={() => {
+                     if (cleaningFormProps && cleaningFormProps.onClose) {
+                       cleaningFormProps.onClose();
+                     }
+                     setShowCleaningForm(false);
+                     setCleaningFormProps(null);
+                   }}
+                   {...cleaningFormProps}
+                 />
+              )}
+            </DataContext.Provider>
+          </HelpOverlayProvider>
+        );
+      };
+
+      render(<StatefulParent />);
+
+      fireEvent.click(await screen.findByRole('button', { name: 'New Experiment' }));
+      await screen.findByText(/Missing values in B/i);
+
+      fireEvent.click(screen.getByRole('button', { name: /Open in Power Query/i }));
+      fireEvent.click(screen.getAllByRole('button', { name: /Open Power Query/i })[0]);
+
+      // Wait for DataCleaningForm to render
+      await screen.findByText(/Missing values in B/i);
+      expect(screen.getAllByText(/Remove null rows./i).length).toBeGreaterThan(0);
+
+      // Now we need to change draft revision.
+      // Saving the stage or changing something that bumps draft_revision...
+      // Or we can just trigger a save!
+      // We also need to mock the /drafts GET to return the updated draft so activeDraft.draft_revision updates
+      global.fetch.mockImplementation((url, init) => {
+        if (url.includes('/drafts/exp-1') && init?.method === 'PATCH') {
+          return Promise.resolve({ ok: true, json: async () => ({ draft: { experiment_id: 'exp-1', snapshot_id: 'snap-1', draft_revision: 2, name: 'New Name' }, workflow_state: { active_stage: 'Prepare Data' } }) });
+        }
+        if (url.includes('/drafts') && (!init || init.method === 'GET')) {
+          return Promise.resolve({ ok: true, json: async () => ({ drafts: [{ experiment_id: 'exp-1', snapshot_id: 'snap-1', draft_revision: 2, name: 'New Name' }] }) });
+        }
+        if (url.includes('/runs')) return Promise.resolve({ ok: true, json: async () => ({ runs: [] }) });
+        return Promise.resolve({ ok: true, json: async () => ({}) });
+      });
+
+      // We trigger a save by changing the experiment name and blurring
+      const nameInput = screen.getByRole('textbox', { name: 'Experiment Name' });
+      fireEvent.change(nameInput, { target: { value: 'New Name' } });
+      fireEvent.blur(nameInput);
+
+      // Wait for PATCH fetch to happen
+      await waitFor(() => {
+        const patchCall = global.fetch.mock.calls.find(c => c[0].includes('/drafts/exp-1') && c[1]?.method === 'PATCH');
+        expect(patchCall).toBeDefined();
+      }, { timeout: 3000 });
+
+      // Also wait for the subsequent GET /drafts
+      await waitFor(() => {
+        const getCall = global.fetch.mock.calls.find(c => c[0].includes('/drafts') && (!c[1] || c[1].method === 'GET') && c[0] !== '/api/ml-studio/v1/drafts'); // well it's already there maybe
+        // Actually just waiting a bit for state to settle
+      });
+
+      // The save is debounced, so we wait for the save status to show 'Saved'
+      await waitFor(() => expect(screen.getByText('Saved')).toBeInTheDocument(), { timeout: 3000 });
+
+      // After save, draft_revision becomes 2. The overlayIdentityRef was snap-1-1.
+      // Since it changed, the overlay should be closed!
+      expect(screen.queryByRole('button', { name: /Return to Prepare Data/i })).not.toBeInTheDocument();
+
+      // If we somehow had a stale reference and called onClose now, it shouldn't refetch
+      const fetchCountBefore = global.fetch.mock.calls.length;
+
+      // Invoke the stale callback captured during opening
+      fireEvent.click(screen.getByRole('button', { name: 'Invoke Stale Callback' }));
+
+      // Since identity changed, onClose shouldn't trigger a refetch of preparation options
+      expect(global.fetch.mock.calls.length).toBe(fetchCountBefore);
     });
   });
 });

@@ -1011,8 +1011,8 @@ function ExperimentCanvas({
             relationship_ids: analysisContext.relationship_ids || []
           })
         });
-        if (reqId !== reqIdRef.current) return;
         const snapData = await snapRes.json();
+        if (reqId !== reqIdRef.current) return;
         if (!snapRes.ok) throw snapData.error || { code: 'unknown', message: 'Failed to create snapshot.' };
         currentSnapshot = snapData.snapshot;
         setSnapshotData(currentSnapshot);
@@ -1054,8 +1054,8 @@ function ExperimentCanvas({
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(experimentSpec)
         });
-        if (reqId !== reqIdRef.current) return;
         const expResData = await expRes.json();
+        if (reqId !== reqIdRef.current) return;
         if (!expRes.ok) throw expResData.error || { code: 'unknown', message: 'Failed to create experiment.' };
         currentExperiment = expResData.experiment;
         setExperimentData(currentExperiment);
@@ -1092,8 +1092,8 @@ function ExperimentCanvas({
           transformation_recipe: recipePayload
         })
       });
-      if (reqId !== reqIdRef.current) return;
       const assessData = await assessRes.json();
+      if (reqId !== reqIdRef.current) return;
       if (!assessRes.ok) throw assessData.error || { code: 'unknown', message: 'Failed to assess preparation.' };
       setAssessment(assessData.assessment);
       setPrepStatus(assessData.assessment.state === 'ready' ? 'ready' : 'blocked');
@@ -1334,13 +1334,6 @@ function DataGoalStage({ showGuidance, activeWorkspace, analysisContext, activeD
   const savePendingRef = useRef(false);
   // We must track if there's an open preparation context in the draft.
   const isOpenPreparation = activeDraft?.preparation_context?.status === 'open';
-  useEffect(() => {
-    // Sync local state when activeDraft changes, but preserve local edits if not saving successfully
-    if (saveStatus.status !== 'error') {
-       if (activeDraft?.task_type) setTaskType(activeDraft.task_type);
-       if (activeDraft?.goal !== null && activeDraft?.goal !== undefined) setGoal(activeDraft.goal);
-    }
-  }, [activeDraft]);
   const loadDataAndGoal = useCallback(async (forceReload = false) => {
     const reqId = ++reqIdRef.current;
     setSnapshotState(prev => ({ ...prev, status: 'loading', error: null }));
@@ -1358,8 +1351,8 @@ function DataGoalStage({ showGuidance, activeWorkspace, analysisContext, activeD
       let isStale = false;
       if (!forceReload && activeDraft?.snapshot_id) {
          const snapRes = await fetch(`${API_URL}/api/ml-studio/v1/snapshots/${activeDraft.snapshot_id}`);
-         if (reqId !== reqIdRef.current) return;
          const data = await snapRes.json();
+         if (reqId !== reqIdRef.current) return;
          if (!snapRes.ok) throw data.error || { message: 'Failed to load snapshot' };
          snapshotData = data.snapshot;
          const arraysMatch = (a, b) => a.length === b.length && a.every((val, i) => val === b[i]);
@@ -1377,8 +1370,8 @@ function DataGoalStage({ showGuidance, activeWorkspace, analysisContext, activeD
            headers: { 'Content-Type': 'application/json' },
            body: JSON.stringify(currentIdentity)
          });
-         if (reqId !== reqIdRef.current) return;
          const data = await snapRes.json();
+         if (reqId !== reqIdRef.current) return;
          if (!snapRes.ok) throw data.error || { message: 'Failed to create snapshot' };
          snapshotData = data.snapshot;
          isStale = false;
@@ -1403,8 +1396,8 @@ function DataGoalStage({ showGuidance, activeWorkspace, analysisContext, activeD
             preview_only: true
          })
       });
-      if (reqId !== reqIdRef.current) return;
       const data = await prevRes.json();
+      if (reqId !== reqIdRef.current) return;
       if (!prevRes.ok) throw data.error || { message: 'Failed to load preview' };
       setPreviewState({ status: 'success', data: data, error: null });
     } catch (err) {
@@ -1712,7 +1705,7 @@ function PrepareDataStage({ showGuidance, activeWorkspace, analysisContext, acti
   const [actionableExplanation, setActionableExplanation] = useState(null);
   const reqIdRef = useRef(0);
 
-  const identityKey = `${activeWorkspace?.workspace_id}-${analysisContext?.workspace_version}-${activeDraft?.experiment_id}-${activeDraft?.snapshot_id}`;
+  const identityKey = `${activeWorkspace?.workspace_id}-${analysisContext?.workspace_version}-${activeDraft?.experiment_id}-${activeDraft?.snapshot_id}-${activeDraft?.draft_revision}`;
 
   const fetchOptions = useCallback(async () => {
     if (!activeWorkspace?.workspace_id || !activeDraft?.experiment_id) {
@@ -1725,9 +1718,10 @@ function PrepareDataStage({ showGuidance, activeWorkspace, analysisContext, acti
 
     try {
       const res = await fetch(`${API_URL}/api/ml-studio/v1/drafts/${activeDraft.experiment_id}/preparation?workspace_id=${activeWorkspace.workspace_id}`);
+      const data = await res.json();
+
       if (reqId !== reqIdRef.current) return;
 
-      const data = await res.json();
       if (!res.ok) {
          throw data.error || { message: 'Failed to load preparation options.', code: 'error', remediation: 'Please try again.' };
       }
@@ -1746,18 +1740,26 @@ function PrepareDataStage({ showGuidance, activeWorkspace, analysisContext, acti
       }
     }
   }, [activeWorkspace?.workspace_id, activeDraft?.experiment_id]);
+  const overlayIdentityRef = useRef(null);
+  const latestPropsRef = useRef({ onOpenCleaningForm, fetchOptions });
+  useEffect(() => {
+    latestPropsRef.current = { onOpenCleaningForm, fetchOptions };
+  });
 
   useEffect(() => {
     fetchOptions();
     setConfirmation(null);
     setActionableExplanation(null);
+    const scopeIdentity = identityKey;
     return () => {
       reqIdRef.current += 1;
-      if (onOpenCleaningForm) {
-        onOpenCleaningForm({ closeOverlay: true });
+      const { onOpenCleaningForm: openFn } = latestPropsRef.current;
+      if (overlayIdentityRef.current === scopeIdentity && openFn) {
+        openFn({ closeOverlay: true });
+        overlayIdentityRef.current = null;
       }
     };
-  }, [identityKey, fetchOptions, onOpenCleaningForm]);
+  }, [identityKey, fetchOptions]);
 
   const { status, data, error } = optionsState;
 
@@ -1778,6 +1780,7 @@ function PrepareDataStage({ showGuidance, activeWorkspace, analysisContext, acti
 
   const handleConfirmOpen = () => {
     if (!confirmation) return;
+    overlayIdentityRef.current = identityKey;
     const currentIdentity = identityKey;
     onOpenCleaningForm({
        mlStudioMode: true,
@@ -1796,11 +1799,10 @@ function PrepareDataStage({ showGuidance, activeWorkspace, analysisContext, acti
        },
        initialSteps: [{ type: confirmation.fix.action_type, params: confirmation.fix.parameters || {}, id: `fix-${Date.now()}` }],
        onClose: () => {
-         // Return must never overwrite a newer draft or stage
-         if (currentIdentity !== `${activeWorkspace?.workspace_id}-${analysisContext?.workspace_version}-${activeDraft?.experiment_id}-${activeDraft?.snapshot_id}`) {
-           return;
-         }
-         fetchOptions();
+         const { fetchOptions: fetchFn } = latestPropsRef.current;
+         if (overlayIdentityRef.current !== currentIdentity) return;
+         overlayIdentityRef.current = null;
+         if (fetchFn) fetchFn();
        }
     });
   };

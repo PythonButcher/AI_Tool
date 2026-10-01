@@ -10,7 +10,7 @@ Antigravity owns bounded frontend implementation, React/CSS, UI rendering, and f
 
 ## Active Handoffs And Goal Prompts
 
-Antigravity owns [Power Query opening and safe return](ml_studio_power_query_opening.md). This is the only active handoff; it covers Stay/Open and a read-only editor mode. Preparation preview/apply/cancel integration remains separate.
+Antigravity owns the [Power Query opening lifecycle repair](ml_studio_power_query_opening.md). This is the only active handoff and is marked REPAIR REQUIRED. Preparation preview/apply/cancel integration remains separate.
 
 Completed handoffs belong outside this active folder.
 

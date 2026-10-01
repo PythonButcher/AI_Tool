@@ -1,4 +1,4 @@
-Goal: Implement the bounded ML Studio Stay/Open Power Query opening and safe return behavior.
+Goal: Make ML Studio Power Query opening invalidate on saved draft revision changes and verify safe return with the real editor.
 
 ## User Outcome
 
@@ -8,9 +8,9 @@ Users can stay in Prepare Data or inspect a selected issue in a read-only Power 
 
 **Current Step**: Step 1: Implement the Power Query opening handoff
 
-**Target Files**: The five frontend files named in `project_docs/active/ai_hand_off/ml_studio_power_query_opening.md`.
+**Target Files**: The three frontend files named in `project_docs/active/ai_hand_off/ml_studio_power_query_opening.md`.
 
-**Step Acceptance**: Implement the exact opening/return boundary, prevent all cleaning requests in ML Studio opening mode, preserve normal Power Query behavior, and return focused test and build evidence.
+**Step Acceptance**: Prove with the real editor in a stateful parent that Open survives ordinary rerenders, Return preserves the experiment, and revision-only identity changes dismiss the owned overlay and revoke stale callbacks.
 
 **Step Verification**: Run the handoff's focused frontend tests, production build, repository harness and `git diff --check`.
 
