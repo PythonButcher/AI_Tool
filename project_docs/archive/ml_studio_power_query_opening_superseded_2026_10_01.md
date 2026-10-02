@@ -1,3 +1,5 @@
+Historical reference only. Superseded by the user's direct Codex opening-flow repair request on 2026-10-01; not an active assignment.
+
 Goal: Invalidate the ML Studio Power Query overlay and its return callback when the saved draft revision changes, and prove the lifecycle with the real editor.
 
 REPAIR REQUIRED

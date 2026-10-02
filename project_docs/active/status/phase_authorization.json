@@ -7,6 +7,19 @@
   "lifecycle_state": "IN PROGRESS",
   "diff_baseline": "e2896c2eced5511144c3151e34cae473e992af5a",
   "authority_kind": "direct_user_instruction",
+  "next_preparation_step": {
+    "prepared_at": "2026-10-01",
+    "user_instruction": "if this is normal and expected lets prepare for the next step",
+    "scope": "Prepare a source-backed preview/cancel assignment and documentation only. Do not implement preview, apply or cancel UI in this preparation turn.",
+    "implementation_authorized": false,
+    "prepared_assignment": "project_docs/active/future/codex/ml_studio_power_query_preview_cancel.md"
+  },
+  "codex_power_query_repair_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-10-01",
+    "instruction": "there is no confirmation on the screen; fix these issues now",
+    "scope": "Codex may repair the Prepare Data confirmation visibility, Power Query opening and return interaction, focused frontend tests, styles and governing documentation."
+  },
   "power_query_opening_handoff_authorization": {
     "approved_by": "User",
     "approved_at": "2026-09-29",
@@ -58,6 +71,9 @@
     "scope": "Codex may implement saved experiment deletion in the ML Studio home, its backend draft route and persistence, contract, and focused tests."
   },
   "allowed_paths": [
+    "project_docs/active/future/codex/ml_studio_power_query_preview_cancel.md",
+    "project_docs/active/future/codex/README.md",
+    "project_docs/archive/ml_studio_power_query_opening_superseded_2026_10_01.md",
     "project_docs/active/ai_hand_off/ml_studio_power_query_opening.md",
     "frontend/frontend/src/App.jsx",
     "frontend/frontend/src/components/data_management/DataCleaningForm.jsx",
@@ -136,5 +152,5 @@
     "project_docs/archive/ml_studio_duplicate_draft_reviewed_2026_09_26.md"
   ],
   "accepted_change_snapshot": "project_docs/active/status/accepted_change_snapshot.json",
-  "codex_frontend_edits_allowed": false
+  "codex_frontend_edits_allowed": true
 }

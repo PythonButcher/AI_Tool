@@ -710,6 +710,85 @@
   }
 }
 /* ML Prep Form Styles */
+.ml-power-query-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(4px);
+  animation: dialogFadeIn 0.2s ease-out;
+}
+
+@keyframes dialogFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes dialogSlideUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.ml-power-query-dialog {
+  width: min(100%, 460px);
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  padding: 28px;
+  border-radius: 16px;
+  background: var(--bg-primary, #ffffff);
+  color: var(--text-primary, #1e293b);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  border: 1px solid color-mix(in srgb, var(--border-color, #e2e8f0) 80%, transparent);
+  animation: dialogSlideUp 0.2s ease-out;
+}
+.ml-power-query-dialog h2 {
+  margin-top: 0;
+  margin-bottom: 12px;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary, #0f172a);
+}
+.ml-power-query-dialog p {
+  margin: 0;
+  color: var(--text-secondary, #475569);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+.ml-power-query-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 28px;
+}
+.ml-power-query-dialog button:focus-visible {
+  outline: 2px solid var(--primary-color, #0ea5e9);
+  outline-offset: 3px;
+}
+.ml-dialog-cancel-btn {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.ml-dialog-cancel-btn:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+.ml-power-query-dialog .power-query-btn {
+  border-radius: 6px;
+  box-shadow: 0 1px 2px rgba(16, 185, 129, 0.2);
+}
+.ml-power-query-dialog .power-query-btn:hover {
+  box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.3);
+}
 .prep-form-container {
   padding: 24px;
   background: linear-gradient(145deg, var(--bg-primary, #ffffff), color-mix(in srgb, var(--bg-primary, #ffffff) 97%, #e0e7ff));

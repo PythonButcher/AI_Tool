@@ -10,7 +10,7 @@ Antigravity owns bounded frontend implementation, React/CSS, UI rendering, and f
 
 ## Active Handoffs And Goal Prompts
 
-Antigravity owns the [Power Query opening lifecycle repair](ml_studio_power_query_opening.md). This is the only active handoff and is marked REPAIR REQUIRED. Preparation preview/apply/cancel integration remains separate.
+There is no active agent handoff. The prepared preview/cancel assignment is at `project_docs/active/future/codex/ml_studio_power_query_preview_cancel.md` and requires explicit implementation authorization before promotion. The opening agent assignment is archived at `project_docs/archive/ml_studio_power_query_opening_superseded_2026_10_01.md`.
 
 Completed handoffs belong outside this active folder.
 

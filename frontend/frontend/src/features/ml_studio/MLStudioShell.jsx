@@ -1,5 +1,6 @@
 
 import React, { useContext, useEffect, useState, useRef, useCallback, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { DataContext, useDatasetMeta, normalizeDatasetRows } from '../../context/DataContext';
 import {
   FaDatabase, FaCrosshairs, FaLayerGroup, FaChevronDown, FaChevronUp, FaCheckDouble,
@@ -1699,11 +1700,62 @@ function RunDock({ runsState, onRetry, isIdentityAvailable }) {
   );
 }
 
+function PowerQueryOpeningDialog({ field, onStay, onOpen }) {
+  const stayRef = useRef(null);
+  const openRef = useRef(null);
+
+  useEffect(() => {
+    const trigger = document.activeElement;
+    stayRef.current?.focus();
+    return () => {
+      if (trigger?.isConnected) trigger.focus();
+    };
+  }, []);
+
+  const handleKeyDown = (event) => {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      event.stopPropagation();
+      onStay();
+    } else if (event.key === 'Tab') {
+      // Keep both forward and backward keyboard navigation inside the choice.
+      event.preventDefault();
+      const next = document.activeElement === stayRef.current ? openRef.current : stayRef.current;
+      next?.focus();
+    }
+  };
+
+  // Render outside the scrolling canvas so the choice cannot be clipped or offscreen.
+  return createPortal(
+    <div className="ml-power-query-dialog-backdrop">
+      <section className="ml-power-query-dialog" role="dialog" aria-modal="true"
+        aria-labelledby="ml-power-query-dialog-title" aria-describedby="ml-power-query-dialog-description"
+        onKeyDown={handleKeyDown}>
+        <h2 id="ml-power-query-dialog-title">Open in Power Query?</h2>
+        <p id="ml-power-query-dialog-description">
+          Inspect the suggested fix for column <strong>{field}</strong> in the read-only editor.
+          No changes will be applied yet.
+        </p>
+        <div className="ml-power-query-dialog-actions">
+          <button ref={stayRef} className="ml-dialog-cancel-btn" onClick={onStay} type="button">Stay</button>
+          <button ref={openRef} className="power-query-btn" onClick={onOpen} type="button"><FaTools /> Open Power Query</button>
+        </div>
+      </section>
+    </div>,
+    document.body
+  );
+}
+
 function PrepareDataStage({ showGuidance, activeWorkspace, analysisContext, activeDraft, onOpenCleaningForm }) {
   const [optionsState, setOptionsState] = useState({ status: 'idle', data: null, error: null });
   const [confirmation, setConfirmation] = useState(null);
   const [actionableExplanation, setActionableExplanation] = useState(null);
   const reqIdRef = useRef(0);
+  const explanationRef = useRef(null);
+
+  useEffect(() => {
+    if (actionableExplanation) explanationRef.current?.focus();
+  }, [actionableExplanation]);
 
   const identityKey = `${activeWorkspace?.workspace_id}-${analysisContext?.workspace_version}-${activeDraft?.experiment_id}-${activeDraft?.snapshot_id}-${activeDraft?.draft_revision}`;
 
@@ -1769,6 +1821,10 @@ function PrepareDataStage({ showGuidance, activeWorkspace, analysisContext, acti
        setActionableExplanation("Save the active experiment and dataset snapshot to configure preparation.");
        return;
     }
+    if (typeof onOpenCleaningForm !== 'function') {
+      setActionableExplanation('Power Query is unavailable. Reload the application and try again.');
+      return;
+    }
     if (!issue.field || !fix.action_type || fix.support_status !== 'supported') return;
     setActionableExplanation(null);
     setConfirmation({ issue, fix });
@@ -1779,10 +1835,16 @@ function PrepareDataStage({ showGuidance, activeWorkspace, analysisContext, acti
   };
 
   const handleConfirmOpen = () => {
-    if (!confirmation) return;
+    if (!confirmation || overlayIdentityRef.current === identityKey) return;
+    if (typeof onOpenCleaningForm !== 'function') {
+      setConfirmation(null);
+      setActionableExplanation('Power Query is unavailable. Reload the application and try again.');
+      return;
+    }
     overlayIdentityRef.current = identityKey;
     const currentIdentity = identityKey;
-    onOpenCleaningForm({
+    try {
+      onOpenCleaningForm({
        mlStudioMode: true,
        mlStudioOpeningContext: {
          experiment_id: activeDraft.experiment_id,
@@ -1804,7 +1866,13 @@ function PrepareDataStage({ showGuidance, activeWorkspace, analysisContext, acti
          overlayIdentityRef.current = null;
          if (fetchFn) fetchFn();
        }
-    });
+      });
+      setConfirmation(null);
+    } catch (err) {
+      overlayIdentityRef.current = null;
+      setConfirmation(null);
+      setActionableExplanation('Power Query could not open. Please try again.');
+    }
   };
 
   return (
@@ -1845,7 +1913,7 @@ function PrepareDataStage({ showGuidance, activeWorkspace, analysisContext, acti
               )}
 
               {actionableExplanation && (
-                 <div className="prep-alert warning">
+                 <div className="prep-alert warning" role="alert" tabIndex={-1} ref={explanationRef}>
                    <FaExclamationTriangle className="alert-icon" />
                    <div className="alert-content">
                      <strong>Cannot Open Power Query</strong>
@@ -1855,17 +1923,7 @@ function PrepareDataStage({ showGuidance, activeWorkspace, analysisContext, acti
               )}
 
               {confirmation && (
-                 <div className="prep-alert confirmation-alert">
-                   <FaTools className="alert-icon" />
-                   <div className="alert-content">
-                     <strong>Open in Power Query?</strong>
-                     <p>This will open a read-only preview of the suggested fix for column <strong>{confirmation.issue.field}</strong>. No changes will be applied yet.</p>
-                     <div className="confirmation-actions">
-                        <button className="semantic-btn retry-btn" onClick={handleStay} type="button">Stay</button>
-                        <button className="power-query-btn" onClick={handleConfirmOpen} type="button"><FaTools /> Open Power Query</button>
-                     </div>
-                   </div>
-                 </div>
+                 <PowerQueryOpeningDialog field={confirmation.issue.field} onStay={handleStay} onOpen={handleConfirmOpen} />
               )}
 
               <div className="assessment-results">

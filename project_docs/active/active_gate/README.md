@@ -1,45 +1,43 @@
-Goal: Make ML Studio Power Query opening invalidate on saved draft revision changes and verify safe return with the real editor.
+Goal: Authorize the prepared ML Studio Power Query preview and cancel assignment before implementation.
 
 ## User Outcome
 
-Users can stay in Prepare Data or inspect a selected issue in a read-only Power Query mode and return to the same saved experiment without changing data.
+Run Preview will show the selected fix's resulting rows and row count, with Cancel and Return preserving the saved experiment and dataset.
 
 ## Scope
 
-**Current Step**: Step 1: Implement the Power Query opening handoff
+**Current Step**: Step 1: Authorize preview and cancel implementation
 
-**Target Files**: The three frontend files named in `project_docs/active/ai_hand_off/ml_studio_power_query_opening.md`.
+**Target Files**: project_docs/active/status/phase_authorization.json and the prepared assignment at project_docs/active/future/codex/ml_studio_power_query_preview_cancel.md.
 
-**Step Acceptance**: Prove with the real editor in a stateful parent that Open survives ordinary rerenders, Return preserves the experiment, and revision-only identity changes dismiss the owned overlay and revoke stale callbacks.
+**Step Acceptance**: Obtain a direct user instruction to implement this bounded preview/cancel assignment, record it, promote the prepared file to the sole active frontend handoff and assign the owner.
 
-**Step Verification**: Run the handoff's focused frontend tests, production build, repository harness and `git diff --check`.
+**Step Verification**: Run repository documentation checks after authorization and promotion.
 
-**Next Step**: Codex reviews the returned source and acceptance evidence.
+**Next Step**: Antigravity implements only the promoted preview/cancel session and returns focused source/test/build evidence to Codex.
 
-**Continuation Rule**: `WAIT_FOR_AGENT`.
+**Continuation Rule**: `WAIT_FOR_USER`.
 
-**Stop Condition**: Antigravity returns only the bounded handoff for Codex review. Do not begin preparation preview, apply or cancel integration.
+**Stop Condition**: Do not implement or activate the assignment until the user authorizes it. Apply, dataset replacement and editable transformations are excluded.
 
-- [ ] **Step 1: Implement the Power Query opening handoff** — [IN PROGRESS]
+- [ ] **Step 1: Authorize preview and cancel implementation** — [IN PROGRESS]
 
 ## Contracts
 
+- `project_docs/active/future/codex/ml_studio_power_query_preview_cancel.md` — prepared-only scope and exact API boundaries
 - `project_docs/active/contracts/ml_studio.md` — Draft Preparation Operations
-- `project_docs/active/ai_hand_off/ml_studio_power_query_opening.md` — exact API, local context and acceptance boundary
-- `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md` — ownership boundary
+- `project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md` — ownership and readiness
 
 ## Acceptance
 
-Stay preserves the saved experiment. Open carries current issue identity into a read-only editor. Return preserves that same experiment and Prepare Data stage. Identity changes invalidate stale callbacks. The normal editor retains its existing behavior. No data mutation, draft write or durable operation is introduced.
+Implementation authorization is explicit and recorded. One bounded active handoff names the exact begin/preview/cancel requests, server-issued operation and recipe, current/base ETags, safe return/recovery and focused tests. No Apply action is assigned.
 
 ## Verification
 
-- `npm --prefix frontend/frontend test -- --watchAll=false --runInBand --runTestsByPath src/features/ml_studio/MLStudioShell.test.jsx src/components/data_management/DataCleaningForm.test.jsx`
-- `npm --prefix frontend/frontend run build`
-- `python .codex/hooks/agent_harness_check.py`
+- `python .codex/hooks/ci_harness_check.py`
 - `python C:/Users/18022/.codex/skills/active-gate-governance/scripts/check_active_gate.py project_docs/active/active_gate .`
 - `git diff --check`
 
 ## Owner And Control Return
 
-Current owner: Antigravity, working only from `project_docs/active/ai_hand_off/ml_studio_power_query_opening.md`. Return source and verification evidence to Codex, who owns integration review. Browser acceptance belongs to the user.
+Current owner: User for implementation authorization. Codex records the instruction and promotes the prepared assignment; Antigravity owns the bounded frontend implementation. Browser acceptance remains in chat and belongs to the user.

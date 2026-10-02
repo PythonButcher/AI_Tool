@@ -1316,6 +1316,78 @@ describe('MLStudioShell', () => {
   });
 
   describe('ML Studio Opening Mode', () => {
+    it('shows a focused dialog outside the canvas and reopens Power Query after Return', async () => {
+      const draft = { experiment_id: 'exp-1', snapshot_id: 'snap-1', draft_revision: 1, name: 'Quantity check' };
+      global.fetch.mockImplementation((url, init) => {
+        if (url.includes('/drafts') && init?.method === 'POST') {
+          return Promise.resolve({ ok: true, json: async () => ({ draft, workflow_state: { active_stage: 'Prepare Data' } }) });
+        }
+        if (url.includes('/preparation')) {
+          return Promise.resolve({ ok: true, json: async () => ({
+            snapshot_id: 'snap-1',
+            issues: [{ issue_id: 'issue-qty', code: 'missing_values', severity: 'warning', field: 'Qty', message: 'This field contains missing values.' }],
+            fixes: [{ issue_id: 'issue-qty', fix_id: 'fix-qty', action_type: 'remove_nulls', affected_columns: ['Qty'], parameters: { columns: ['Qty'] }, support_status: 'supported', explanation: 'Remove rows missing this field; this may reduce the sample.' }],
+            preparation_context: null,
+          }) });
+        }
+        return Promise.resolve({ ok: true, json: async () => url.includes('/runs') ? { runs: [] } : { drafts: [] } });
+      });
+      const opened = jest.fn();
+      function Parent() {
+        const [editorProps, setEditorProps] = React.useState(null);
+        const openEditor = React.useCallback((props) => {
+          if (props.closeOverlay) return setEditorProps(null);
+          opened(props);
+          setEditorProps(props);
+        }, []);
+        return (
+          <HelpOverlayProvider>
+            <DataContext.Provider value={{
+              activeWorkspace: { workspace_id: 'ws-1', version: 1 },
+              analysisContext: { workspace_id: 'ws-1', workspace_version: 1, source_ids: ['source-1'] },
+              uploadedData: [], fullData: [],
+            }}>
+              <MLStudioShell onOpenCleaningForm={openEditor} />
+              {editorProps && <DataCleaningForm {...editorProps} closeForm={() => {
+                editorProps.onClose();
+                setEditorProps(null);
+              }} />}
+            </DataContext.Provider>
+          </HelpOverlayProvider>
+        );
+      }
+      useDatasetMeta.mockReturnValue({ numRows: 100, numCols: 5 });
+      render(<Parent />);
+      fireEvent.click(await screen.findByRole('button', { name: 'New Experiment' }));
+      const trigger = await screen.findByRole('button', { name: 'Open in Power Query' });
+      trigger.focus();
+      fireEvent.click(trigger);
+      const dialog = screen.getByRole('dialog', { name: 'Open in Power Query?' });
+      expect(dialog.closest('.prep-form-container')).toBeNull();
+      expect(within(dialog).getByRole('button', { name: 'Stay' })).toHaveFocus();
+      fireEvent.keyDown(document.activeElement, { key: 'Tab' });
+      expect(within(dialog).getByRole('button', { name: 'Open Power Query' })).toHaveFocus();
+      fireEvent.keyDown(document.activeElement, { key: 'Escape' });
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(trigger).toHaveFocus();
+      expect(opened).not.toHaveBeenCalled();
+
+      fireEvent.click(trigger);
+      fireEvent.click(screen.getByRole('button', { name: 'Open Power Query' }));
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(opened).toHaveBeenCalledTimes(1);
+      expect(screen.getByRole('button', { name: 'Return to Prepare Data' })).toBeVisible();
+      expect(screen.queryByRole('button', { name: 'Apply All' })).not.toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Return to Prepare Data' }));
+      const reopenedTrigger = await screen.findByRole('button', { name: 'Open in Power Query' });
+      expect(reopenedTrigger).toBeEnabled();
+      fireEvent.click(reopenedTrigger);
+      fireEvent.click(screen.getByRole('button', { name: 'Open Power Query' }));
+      expect(opened).toHaveBeenCalledTimes(2);
+      expect(opened.mock.calls[1][0].mlStudioOpeningContext).toMatchObject({ experiment_id: 'exp-1', draft_revision: 1, field: 'Qty' });
+      expect(global.fetch.mock.calls.filter(([, init]) => init?.method && init.method !== 'GET')).toHaveLength(1);
+    });
+
     it('Stay preserves the saved experiment without requests', async () => {
       global.fetch.mockImplementation((url, init) => {
         if (url.includes('/drafts') && init?.method === 'POST') {
@@ -1336,7 +1408,7 @@ describe('MLStudioShell', () => {
       renderWithContext({
         activeWorkspace: { workspace_id: 'ws-1', version: 1 },
         analysisContext: { workspace_id: 'ws-1', workspace_version: 1, source_ids: ['s1'] },
-      });
+      }, undefined, { onOpenCleaningForm: jest.fn() });
 
       fireEvent.click(await screen.findByRole('button', { name: 'New Experiment' }));
       await screen.findByText(/Missing values in B/i);
