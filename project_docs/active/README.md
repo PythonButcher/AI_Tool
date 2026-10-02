@@ -24,7 +24,7 @@ Decision Intelligence workspaces, decision frames, readiness and capability pane
 
 Dataset identity and semantic truth remain required for every BI answer and chart.
 
-ML Studio Step 4 has verified workspace-safe cleaning and draft preparation backend contracts. Power Query opening uses a focused Stay/Open dialog and a read-only editor. The [preview/cancel assignment](future/codex/ml_studio_power_query_preview_cancel.md) is prepared only; the [active gate](active_gate/README.md) waits for explicit implementation authorization.
+ML Studio Step 4 has verified workspace-safe cleaning and draft preparation backend contracts. Power Query opening uses a focused Stay/Open dialog and a read-only editor. The [active gate](active_gate/README.md) assigns Antigravity the authorized [preview/cancel handoff](ai_hand_off/ml_studio_power_query_preview_cancel.md). Preview/cancel UI is not yet implemented; Apply remains separate.
 
 ## Active Areas
 

@@ -1,6 +1,6 @@
 Goal: Preview the selected suggested preparation step against the saved experiment's governed source, then cancel and return without changing its dataset or draft.
 
-PREPARED ONLY — NOT AUTHORIZED FOR IMPLEMENTATION. Promote this document into one active Antigravity handoff only after the user authorizes the next step. Update the gate, status and authorization before source changes.
+ACTIVE HANDOFF — Antigravity owns this bounded implementation. User authorization is recorded in project_docs/active/status/phase_authorization.json. Stop after source and verification evidence return to Codex.
 
 ## User Value
 
@@ -21,7 +21,7 @@ The editor currently disables runCleaning in ML Studio mode. Its legacy path pos
 - project_docs/active/contracts/ml_studio.md — Draft Preparation Operations and Workspace-Safe Cleaning
 - project_docs/active/ml_studio/README.md — Step 4
 - project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md
-- The authorization, execution status and sole active gate after promotion
+- project_docs/active/status/phase_authorization.json, project_docs/active/status/project_execution_status.md and project_docs/active/active_gate/README.md
 - backend/ml_studio/preparation.py, backend/routes/ml_studio.py, backend/ml_studio/repository.py and backend/services/workspace_cleaning.py for contract evidence only
 
 ## Scope And Target Files
@@ -119,6 +119,8 @@ Focused tests cover the exact selected-fix request, representative full envelope
 - python .codex/hooks/agent_harness_check.py
 - git diff --check
 - git diff --name-only
-- After promotion only: run the governed Antigravity return command with the promoted active handoff path, changed-file list, exact named tests, build results and source lines for operation/base_etag ownership and safe cancellation.
+- python .gemini/skills/status-tracker-skill/scripts/update_status.py return --handoff project_docs/active/ai_hand_off/ml_studio_power_query_preview_cancel.md --summary "Draft-bound preview and cancellation verified; focused tests and build passed"
+
+Return the exact changed-file list, command exit results, named async test assertions and source lines for operation/base_etag ownership, header-save ordering, lost-response recovery and safe cancellation. The return command must use this active handoff, not a future-file path.
 
 Antigravity may choose component structure, accessible labels, spacing and loading presentation within existing styles. It must stop after this one session boundary and return to Codex. Codex reviews integration before any Apply assignment. Browser acceptance belongs to the user; it is never claimed by this document.

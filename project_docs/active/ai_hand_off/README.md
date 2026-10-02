@@ -10,7 +10,7 @@ Antigravity owns bounded frontend implementation, React/CSS, UI rendering, and f
 
 ## Active Handoffs And Goal Prompts
 
-There is no active agent handoff. The prepared preview/cancel assignment is at `project_docs/active/future/codex/ml_studio_power_query_preview_cancel.md` and requires explicit implementation authorization before promotion. The opening agent assignment is archived at `project_docs/archive/ml_studio_power_query_opening_superseded_2026_10_01.md`.
+Antigravity owns [Power Query preview and cancel](ml_studio_power_query_preview_cancel.md), the sole active handoff. It covers the suggested step's preview and safe cancellation/return; Apply remains excluded.
 
 Completed handoffs belong outside this active folder.
 
