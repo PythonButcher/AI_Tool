@@ -2,7 +2,7 @@
 
 ## Status
 
-Phase 13 source-backed contract. The `ml_studio_contract_v1` objects, identity-first routes, asynchronous local execution, evaluation, comparison, candidate review, persistence, and managed artifact integrity described below exist for regression and classification. They do not provide resumable workflow drafts, all five task types, explicit nomination before final evaluation, reloadable model export, prediction, or publishing.
+Phase 13 source-backed contract. The `ml_studio_contract_v1` objects, identity-first routes, asynchronous local execution, evaluation, comparison, candidate review, persistence, and managed artifact integrity described below exist for regression and classification. Draft persistence is implemented in its section below. All five task types, explicit nomination before final evaluation, reloadable model export, prediction, and publishing are not provided by these foundations.
 
 The workflow application contract below is a staged design. Draft persistence, conditional saves, and draft preparation recipe/return operations are implemented and tested in their source-backed sections. Later workflow transitions, run binding, nomination, final evaluation, export, and prediction remain proposed. Standalone `/recipes` is not implemented; recipe issuance currently belongs to a draft preparation operation.
 
@@ -46,6 +46,20 @@ Persistence uses `ml_preparation_operations` in the ML repository and `workspace
 
 Verification: `tests/test_ml_studio_preparation.py` covers restart, conditional start, issue/fix validation, read-only preview, cancellation, save locking, concurrent apply, stale identity, durable commit recovery, role/evidence invalidation, and replay preserving newer edits. The focused preparation/draft/API/cleaning/workspace/persistence run on 2026-09-27 ran 82 tests with one platform-dependent skip; compilation and the provider-neutral CI harness passed.
 
+### Preparation Frontend Integration — Implemented
+
+The draft-bound editor opens after pending saves finish, sends the current ETag and a stable start key, previews at most 100 server-returned rows with the full result count, and confirms terminal cancel/apply before returning. Repeated actions retain operation identity after lost responses. Draft GET context survives responses that omit it. Reopened operations can resume even when options fail because a data commit awaits reconciliation. Apply refreshes the governed workspace and reopens the saved experiment; the ordinary editor retains its compatibility behavior. Focused editor and integrated shell tests cover these boundaries. Visual browser acceptance remains unverified and user-owned.
+
+## Saved Configuration Assessment — Implemented
+
+`POST /drafts/{experiment_id}/assessment?workspace_id=...` accepts exactly `{}` and requires the current `If-Match`. It reads saved roles, validation, metric, candidates and resources; validates the current server snapshot; and returns `{draft, workflow_state, assessment, preparation_context}`. No browser recipe hash, configuration identity, rows or readiness flag is accepted. The server commits an immutable configuration, its assessment, and the revised draft pointer in one SQLite transaction. Repeating the original ETag immediately after a lost successful response returns the same assessment; subsequent edits conflict.
+
+`assessment` contains `assessment_id`, `assessed_at`, `bound_draft_revision`, `bound_etag`, `input_fingerprint`, `state` (`ready` or `blocked`), field-level `issues`, and `configuration`. The configuration has version `ml_studio_configuration_v1`, server-issued `configuration_id` and immutable `specification_version`, internal experiment identity, `draft_experiment_id`, workspace/snapshot/recipe bindings, saved input fingerprint and normalized settings. Header name, Guidance and stage navigation do not affect that fingerprint. Dependency edits preserve immutable evidence but mark it stale. Draft GET returns the assessment; `workflow_state.assessment_current` describes its binding to saved settings, not a guarantee that a subsequent external workspace mutation cannot occur.
+
+Regression/classification settings use `validation: {strategy, holdout_fraction, folds, seed}`, `metric: {primary}`, `candidate: {families}`, and `resource: {max_rows, max_features, timeout_seconds}`. Supported strategies are random, stratified (classification), time_ordered, and grouped; the latter two require exactly one corresponding role. Selection metrics are RMSE/MAE or balanced accuracy/weighted F1. Candidate families are regularized_linear/random_forest or logistic/random_forest. Limits are 20–100000 rows, 1–200 features, 5–600 seconds and 2–5 development folds. Feature imputation is declared as training-only; missing targets block readiness. Other tasks remain blocked until their implementation steps.
+
+Configure is available after Data & Goal. The searchable exclusive-role editor autosaves through the existing conditional draft writer, flushes before navigation/assessment and displays server findings. Training remains separately gated by the execution implementation. Configuration source and API tests cover durable reload, concurrent/lost-response assessment, stale evidence, scope, invalid settings, save ordering and frontend retry/navigation behavior.
+
 ## Workflow Application Contract — Proposed
 
 ### Draft And Workflow Objects
@@ -57,6 +71,34 @@ Verification: `tests/test_ml_studio_preparation.py` covers restart, conditional 
 `WorkflowState` contains `experiment_id`, `draft_revision`, the effective `active_stage`, and six ordered stage records. Each record contains the stage key, one state from `locked`, `available`, `active`, `complete`, or `stale`, ordered blocker codes, ordered stale-reason codes, and only the immutable snapshot, recipe, assessment, configuration, run, evaluation, or selection references that justify that state. It may include one active run summary. The server derives this object; the browser cannot mark stages complete or current evidence fresh.
 
 Draft updates require `If-Match: <etag>`. A mismatch returns `draft_revision_conflict` with safe remediation and does not overwrite either revision. Save responses return the new revision, `etag`, save time, and recomputed workflow state. No draft accepts raw rows, filesystem paths, client-issued readiness, run status, or candidate-selection truth.
+
+### Implemented Draft Training
+
+`POST /drafts/{experiment_id}/runs?workspace_id=...` accepts exactly `{configuration_id}` with current `If-Match` and a stable `Idempotency-Key`. Submission verifies the ready assessment, snapshot, exclusive active run and draft revision atomically. Repeating the same key/configuration recovers the original run. A new key is required for a deliberate new run. `GET` lists at most 20 experiment-scoped runs; `GET /drafts/{experiment_id}/runs/{run_id}` returns `{run, events}`; `POST` to that item accepts exactly `{action: "cancel"}`.
+
+Development runs use `run_purpose: development_comparison` and `ml_studio_development_v1` evidence. They reserve the holdout before fitting, fit preprocessing inside each development fold, compare against mean/majority baselines, and persist candidate fold metrics, spread and bounded residual/confusion evidence. They do not score the holdout or select a winner. Fitted development pipelines include immutable configuration and reserved row indices, are stored under server-owned names, and are hash-checked against registered metadata before reload. Browser retries preserve a submission key, poll real saved events and show cancellation/interruption/failure states. Restart recovery marks unfinished runs interrupted; a user can submit a new development run.
+
+Local fitting uses a spawned process with deadline/cancellation termination, configured row/feature limits, a 128 MB resolved-data limit and a 64 MB total fitted-artifact limit. Regression supports regularized linear/random forest; classification supports logistic/random forest. Classification probabilities are not exposed without calibration evidence. Nomination and later stages below remain proposed until their step is verified.
+
+### Implemented Draft Review And Selection
+
+All routes below require `workspace_id` query scope. `GET /drafts/{experiment_id}/review` supplies recent development runs plus runs referenced by saved nominations, nominations with their final run, selections, current input fingerprint and workflow state. The UI displays development means/spread, baselines, residual or confusion evidence and limitations before separate nomination, final-evaluation and selection actions.
+
+`POST /drafts/{experiment_id}/nominations` requires `If-Match` and exactly `{run_id, family, nominator, intended_use}`. It binds a completed current development candidate to its verified fitted artifact. The server locks one nomination per experiment and dataset identity (source fingerprints, relationship lineage, transformation recipe and row count); changing model, features or split settings cannot unlock another holdout look. Same-decision retries return the original receipt; different nominations conflict.
+
+`POST /drafts/{experiment_id}/nominations/{nomination_id}/final-evaluation` accepts `{}` and creates or returns one durable final run. Only the nominated hash-verified pipeline scores its reserved rows; it does not refit or rank models. `ml_studio_final_evaluation_v1` binds nomination/configuration/dataset with candidate and baseline metrics, bounded task evidence, holdout count, limitations and `evaluated_once: true`. Completed results are reused. If no result committed, cancellation/failure/restart recovery may retry the same immutable final run and candidate. The flag means one committed evaluation, not a promise that an interrupted calculation never restarts.
+
+`POST /drafts/{experiment_id}/selections` requires `If-Match` and exactly `{nomination_id, reviewed_by, intended_use, prohibited_use}`. Selection requires current draft/data evidence, a completed final evaluation and the original verified model. `ml_studio_selection_v1` records the selected family, lineage, run/configuration references, artifact hash, review notes and timestamp. Repeating the decision recovers its immutable receipt. Dependency edits retain historical evidence and mark selection stale. This receipt completes the local cycle; exports/prediction remain separately implemented steps.
+
+### Implemented Selected Outputs
+
+`GET /drafts/{experiment_id}/selections/{selection_id}?workspace_id=...` returns the scoped selection, saved configuration, current/stale flag, content-derived `InferenceSchema`, supported export descriptors, latest 20 prediction receipts and local `MLCycleSummary`. Historical exports/evidence stay readable; new predictions require current selected settings and snapshot truth.
+
+`POST .../exports` accepts `{}` and prepares eight verified outputs: fitted pipeline (`model.joblib`), fitted preprocessor, inference schema, evaluation report JSON, model card Markdown, reproducibility manifest, portable Python CSV inference example and cycle-summary JSON. `GET .../exports/{kind}` permits only listed kinds, checks exact bytes against registered hashes, and downloads with a path-free filename and hash header. Binary artifacts are server-produced; clients cannot upload estimators or paths. The pipeline includes preprocessing; the example normalizes categorical inputs and uses recorded library versions. External publishing is absent.
+
+`POST .../batch-predictions` requires `Idempotency-Key` and exactly `{input_schema_version, rows}` or `{input_schema_version, csv_text}`. Input is bounded to 2 MB and 1–10000 rows. UTF-8 CSV headers must be unique. Required columns must match exactly; numeric fields allow finite numbers/null, categorical fields bounded strings/null. Missing values use development-fitted median/mode; unknown categories use the fitted encoder's ignore policy. Errors return safe rule counts without echoing raw values. Classification emits class labels, with no probability claim.
+
+Prediction reloads the selected hash-verified model in a bounded local process and saves `ml_studio_prediction_receipt_v1` with selection/configuration/schema/input hash, model hash, row count, at most 100 preview outputs and a verified CSV artifact. Same-key/same-input retries recover the receipt; different input conflicts. `GET .../batch-predictions/{prediction_id}/download` verifies the saved output and scopes it to this selection. Text outputs are escaped against spreadsheet formula interpretation. `ml_studio_cycle_summary_v1` binds the exact selection, intended/prohibited uses, configuration, dataset/recipe lineage, development/final evidence and limitations; preview and export use the same summary.
 
 ### Evaluation And Selection Objects
 

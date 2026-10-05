@@ -137,7 +137,7 @@ class DraftRepositoryTests(unittest.TestCase):
             "active_stage": "Prepare Data",
         })
         self.assertEqual(result["workflow_state"]["active_stage"], "Prepare Data")
-        self.assertEqual(result["workflow_state"]["stages"][2]["state"], "locked")
+        self.assertEqual(result["workflow_state"]["stages"][2]["state"], "available")
         with self.assertRaises(MLStudioServiceError) as error:
             service.update_draft(result["draft"]["experiment_id"], "workspace-1", result["draft"]["etag"], {"active_stage": "Train"})
         self.assertEqual(error.exception.code, "draft_stage_locked")

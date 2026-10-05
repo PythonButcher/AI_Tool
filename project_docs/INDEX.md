@@ -20,6 +20,7 @@ This is the top-level routing file. Use it to find the smallest current document
 | Check implementation authorization | `project_docs/active/status/phase_authorization.json` |
 | Work on the current project gate | `project_docs/active/active_gate/README.md` |
 | Review the active ML Studio roadmap | `project_docs/active/ml_studio/README.md` |
+| Execute ML Studio completion and UI makeover | `project_docs/active/active_gate/README.md` and `project_docs/active/ml_studio/completion_brief.md` |
 | Review retired product and roadmap decisions | `project_docs/archive/README.md`, only when historical context is needed |
 | Review the completed data and backend roadmap | `project_docs/archive/multiple_data_sources_implementation_plan_completed.md` only when historical context is needed |
 | Review completed AI Chat rollout history | `project_docs/archive/ai_chat_decision_output_unification_rollout_completed.md` only when historical context is needed |

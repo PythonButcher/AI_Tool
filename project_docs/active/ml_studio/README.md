@@ -10,7 +10,7 @@ The numbered steps below are the build order. The six stages inside the finished
 
 ## Build Order
 
-Do one bounded assignment at a time. Each step can contain a backend assignment followed by a frontend assignment; it is not one large agent prompt. Review and check in after each meaningful visible result before advancing.
+The user authorizes one sustained Codex-owned completion effort, including backend, frontend and a whole-studio theme-aligned UI makeover. Execute one meaningful verified step at a time and continue without routine approval pauses. The [completion brief](completion_brief.md) records current standing and execution detail; the sole active gate controls the current atomic step.
 
 1. [Design the complete workflow](#step-1--design-the-complete-workflow)
 2. [Build the workspace](#step-2--build-the-workspace)
@@ -115,7 +115,7 @@ Step 1 is complete when this blueprint and the proposed contract agree with curr
 
 ## Step 4 — Connect data preparation and Power Query
 
-**Authorization:** The user authorized the active workspace-safe cleaning backend gate on 2026-09-27. Codex implements that bounded gate; frontend implementation remains with Antigravity after backend readiness.
+**Authorization:** The 2026-10-04 completion assignment authorizes Codex backend and frontend work, including preview, cancel, apply and the UI makeover. Verify backend readiness before UI integration.
 
 ### Source-backed prerequisites
 
@@ -132,7 +132,7 @@ Step 1 is complete when this blueprint and the proposed contract agree with curr
 3. **Data & Goal — Antigravity after backend review.** One handoff for governed dataset/schema/preview, explicit problem selection, and saving the draft's data/goal fields. Regression and classification have execution foundations; forecasting, clustering, and anomaly detection must be labeled unavailable until their execution prerequisites exist. No training or configuration replacement in this handoff.
 4. **Prepare Data — Antigravity after backend review.** The read-only options view uses server-issued issues, supported fixes, and open-operation context. Show each affected column in that view, then assign the separate Stay/Open Power Query and apply/cancel return path after Codex reviews the repair. Use exact verified fields from the backend contract and test workspace switches, stale responses, failed saves, retry, and unmount behavior in the applicable slice.
 
-The Stay/Open choice uses a focused dialog and returns from the read-only editor to an enabled issue action. The active gate assigns Antigravity the authorized draft-bound preview/cancel handoff at `project_docs/active/ai_hand_off/ml_studio_power_query_preview_cancel.md`. Apply and dataset reconciliation remain separate. Proposed fields/endpoints remain labeled proposed until implemented; compatibility services retain their existing contracts.
+The Stay/Open choice uses a focused dialog and returns from the read-only editor to an enabled issue action. The active gate now assigns Codex the full preparation round trip, including preview/cancel/apply and reconciliation. Proposed fields/endpoints remain labeled proposed until implemented; compatibility services retain their existing contracts.
 
 ### Verification plan
 
@@ -316,7 +316,7 @@ Source inspection informs this plan; it does not certify the current UI.
 | Existing surface | Planning consequence |
 | --- | --- |
 | backend/ml_studio contracts, service, repository, execution, evaluation, and artifacts modules | Audit and reuse applicable foundations. Current task support is regression/classification; other tasks need new contracts and evaluation paths. |
-| /api/ml-studio/v1 snapshot, experiment version, assessment, run/event/cancel, evaluation/evidence, comparison, and candidate routes | Useful foundations exist. Draft CRUD/list/duplicate and batch prediction/export were not found in this route surface; design and verify them before UI assignment. |
+| /api/ml-studio/v1 snapshot, draft CRUD/delete/duplicate/workflow, preparation, experiment version, assessment, run/event/cancel, evaluation/evidence, comparison, and candidate routes | Useful foundations exist, including resumable drafts. Nomination, final evaluation, selection, batch prediction/export and summary extensions still require implementation and verification. |
 | Immutable versions, runs, candidates, and artifact metadata | These are not proof of resumable drafts or reloadable fitted-model exports. Verify persistence and artifact contents independently. |
 | Current evaluation/comparison rules | Reconcile automatic winner selection, compatible comparisons, explicit nomination, and untouched final evaluation. |
 | TopRibbon static stage array/active index and EvidenceInspector static truth presentation | A visible stage ribbon is not a functional workflow. Replace static stage selection with actual state and task-specific evidence. |
@@ -326,9 +326,9 @@ Earlier backend test results do not establish that browser assessment submits th
 
 ## Delivery Control And Definition Of Done
 
-One active gate and one implementation handoff at a time. Frontend owner is not reassigned by this plan: Claude Code is an option the user raised, not an agent already dispatched. Codex owns backend, contracts, planning, and integration review; the chosen frontend owner owns React/CSS. No frontend edits by Codex are authorized here.
+One active gate governs the whole completion effort. The user's 2026-10-04 assignment explicitly makes Codex the backend and frontend owner, including React/CSS and the complete UI makeover. No specialist agent is dispatched by this document.
 
-At each meaningful visible step, return changed files and focused verification evidence, then have Codex review before continuing. Check in with the user with what visibly changed and what remains. Do not batch the full rebuild into one frontend task. Follow repository restrictions on browser operation; browser acceptance remains in chat and belongs to the user.
+At each meaningful step Codex verifies and self-reviews the change, keeps gate/status aligned and continues through the authorized scope. Share concise progress updates without routine permission pauses. This is a full-stack completion effort with ordered steps, not an oversized specialist frontend handoff. Follow repository restrictions on browser operation; browser acceptance remains in chat and belongs to the user.
 
 Tests must cover successful transitions and blocked, stale, empty, cancelled, failed, and resumed states. Frontend evidence must distinguish source tests/builds from actual visual inspection. Backend readiness never equals frontend completion. Preserve user work, use safe patch edits, and stop on unexpected file shrinkage; never discard changes to make verification pass.
 

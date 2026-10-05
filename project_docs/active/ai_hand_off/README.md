@@ -10,7 +10,7 @@ Antigravity owns bounded frontend implementation, React/CSS, UI rendering, and f
 
 ## Active Handoffs And Goal Prompts
 
-Antigravity owns [Power Query preview and cancel](ml_studio_power_query_preview_cancel.md), the sole active handoff. It covers the suggested step's preview and safe cancellation/return; Apply remains excluded.
+No specialist frontend handoff is active. Codex owns ML Studio completion, including frontend work and a theme-aligned UI makeover, under the [sole gate](../active_gate/README.md) and [completion brief](../ml_studio/completion_brief.md). The narrow preview/cancel assignment is archived.
 
 Completed handoffs belong outside this active folder.
 

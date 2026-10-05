@@ -1,24 +1,27 @@
 # Project Execution Status
 
-## Current Gate: Power Query preview and cancel
+## Current Gate: ML Studio completion and theme-aligned UI makeover
 
-- **Current Gate**: Power Query preview and cancel
+- **Current Gate**: ML Studio completion and theme-aligned UI makeover
 - **Roadmap Phase**: Phase 13 — Machine Learning Studio Foundation
 - **Phase State**: `IN PROGRESS`
-- **What This State Means**: The user authorized the bounded preview/cancel assignment. Antigravity owns frontend implementation; Apply remains excluded.
-- **Current Milestone**: Step 1: Implement preview and cancel preparation
-- **Automatic Continuation**: `WAIT_FOR_AGENT`
-- **Current Owner**: Antigravity
+- **What This State Means**: The user explicitly authorized this Codex chat to execute the completion plan, including backend, frontend and the whole-studio UI makeover.
+- **Current Milestone**: Step 6: Complete forecasting through all stages
+- **Automatic Continuation**: `CONTINUE`
+- **Current Owner**: Codex
 - **Backend Readiness**: `backend_contract_ready`
 - **Frontend Readiness**: `backend_contract_ready`
-- **Next Action**: Antigravity executes `project_docs/active/ai_hand_off/ml_studio_power_query_preview_cancel.md`, then returns to Codex.
-- **Required Action**: Implement and verify draft-bound Run Preview and Cancel and Return, including open-session and lost-response recovery.
+- **Next Action**: Codex executes `project_docs/active/active_gate/README.md`, completing the chronological forecasting journey.
+- **Required Action**: Complete preparation, then configuration, training, selection, outputs, additional tasks and the UI makeover with verification at each meaningful step.
 - **Active Gate**: `project_docs/active/active_gate/README.md`
 - **Authorization Record**: `project_docs/active/status/phase_authorization.json`
-- **Roadmap**: `project_docs/active/ml_studio/README.md` — Step 4
-- **Active Handoff**: `project_docs/active/ai_hand_off/ml_studio_power_query_preview_cancel.md`
-- **Latest Verification**: The user reports opening is better and the screenshot shows the intended read-only suggested-step editor. On 2026-10-01, all 14 draft preparation tests passed again; source confirms begin/preview/cancel, server recipe issuance, bounded preview and draft/dataset preservation. Preview/cancel UI is not implemented.
+- **Roadmap**: `project_docs/active/ml_studio/README.md`
+- **Execution Brief**: `project_docs/active/ml_studio/completion_brief.md`
+- **Active Handoff**: None; Codex owns implementation directly.
+- **Latest Verification**: Outputs/review: eight real integration tests passed. Eight export formats were hash-checked; model and preprocessor reloaded; the exported inference example ran outside app code. CSV/missing/unknown-category predictions, idempotent receipts, bounded schema errors and stale/scoped access passed. Use & Share/review UI: nine tests passed; shell/Use & Share: 43 passed. Production build passed with warnings; targeted new-stage lint passed after corrections. Forecasting, clustering, anomalies and final UI/integration checks remain under implementation.
+
+Readiness values describe regression/classification through selection, exports, prediction and local summary. System and bundled Python lack pytest; the existing unittest-based suites run with `PYTHONPATH=.codex_tmp_py;.codex_tmp_py/site-packages`.
 
 ## Completion Rule
 
-Antigravity returns the bounded diff, named async test assertions and production-build results. Codex reviews the server identity and cancellation boundary before user browser acceptance.
+Codex self-reviews implementation and supplies focused behavior tests, integrated five-task evidence and production-build results. A restyled shell or passing build alone is insufficient. Final browser acceptance belongs to the user in chat.

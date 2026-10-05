@@ -32,7 +32,7 @@ VALID_RUN_STATES: Final = frozenset(
     {"queued", "running", "cancel_requested", "completed", "failed", "cancelled", "interrupted"}
 )
 _ALLOWED_TRANSITIONS: Final = {
-    "queued": frozenset({"running", "cancelled", "interrupted"}),
+    "queued": frozenset({"running", "failed", "cancelled", "interrupted"}),
     "running": frozenset({"cancel_requested", "completed", "failed", "interrupted"}),
     "cancel_requested": frozenset({"cancelled", "interrupted"}),
     "completed": frozenset(),
@@ -273,6 +273,35 @@ class MLStudioRepository:
         );
         CREATE INDEX IF NOT EXISTS ml_experiment_drafts_workspace_index
           ON ml_experiment_drafts (workspace_id, updated_at DESC, experiment_id);
+        CREATE TABLE IF NOT EXISTS ml_draft_assessments (
+            assessment_id TEXT PRIMARY KEY,
+            experiment_id TEXT NOT NULL REFERENCES ml_experiment_drafts(experiment_id),
+            workspace_id TEXT NOT NULL,
+            assessment_json TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS ml_candidate_nominations (
+            nomination_id TEXT PRIMARY KEY,
+            experiment_id TEXT NOT NULL REFERENCES ml_experiment_drafts(experiment_id),
+            workspace_id TEXT NOT NULL,
+            holdout_key TEXT NOT NULL,
+            nomination_json TEXT NOT NULL,
+            UNIQUE (experiment_id, holdout_key)
+        );
+        CREATE TABLE IF NOT EXISTS ml_candidate_selections (
+            selection_id TEXT PRIMARY KEY,
+            nomination_id TEXT NOT NULL UNIQUE REFERENCES ml_candidate_nominations(nomination_id),
+            experiment_id TEXT NOT NULL REFERENCES ml_experiment_drafts(experiment_id),
+            workspace_id TEXT NOT NULL,
+            selection_json TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS ml_batch_predictions (
+            prediction_id TEXT PRIMARY KEY,
+            selection_id TEXT NOT NULL REFERENCES ml_candidate_selections(selection_id),
+            request_key_hash TEXT NOT NULL,
+            input_hash TEXT NOT NULL,
+            receipt_json TEXT NOT NULL,
+            UNIQUE (selection_id, request_key_hash)
+        );
         CREATE TABLE IF NOT EXISTS ml_preparation_operations (
             operation_id TEXT PRIMARY KEY,
             experiment_id TEXT NOT NULL REFERENCES ml_experiment_drafts(experiment_id),
@@ -378,6 +407,56 @@ class MLStudioRepository:
             )
             connection.commit()
         return draft
+
+    def get_draft_assessment(self, assessment_id: str | None, experiment_id: str, workspace_id: str) -> dict | None:
+        with self._connection() as connection:
+            row = connection.execute(
+                "SELECT assessment_json FROM ml_draft_assessments WHERE assessment_id = ? AND experiment_id = ? AND workspace_id = ?",
+                (assessment_id, experiment_id, workspace_id),
+            ).fetchone()
+        return json.loads(row["assessment_json"]) if row else None
+
+    def save_draft_assessment(self, experiment_id: str, workspace_id: str, etag: str, assessment: dict) -> tuple[dict, dict]:
+        """Commit the immutable configuration and its draft pointer together.
+
+        Replaying the original ETag recovers an acknowledged-but-lost response,
+        but never overwrites subsequent edits or an open preparation operation.
+        """
+        with self._lock, self._connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            row = connection.execute("SELECT draft_json FROM ml_experiment_drafts WHERE experiment_id = ? AND workspace_id = ? AND deleted_at IS NULL",
+                                     (experiment_id, workspace_id)).fetchone()
+            if row is None:
+                raise PersistenceError("draft_not_found", "The draft is unavailable.", "Reload the current workspace.")
+            draft = json.loads(row["draft_json"])
+            if not etag or draft["etag"] != etag:
+                stored = connection.execute("SELECT assessment_json FROM ml_draft_assessments WHERE assessment_id = ? AND experiment_id = ? AND workspace_id = ?",
+                                            (draft.get("latest_assessment_id"), experiment_id, workspace_id)).fetchone()
+                previous = json.loads(stored["assessment_json"]) if stored else None
+                if (previous and previous["bound_etag"] == etag
+                        and draft["draft_revision"] == previous["bound_draft_revision"] + 1):
+                    return draft, previous
+                raise PersistenceError("draft_revision_conflict", "The draft changed before assessment.", "Reload or save the latest draft and assess again.")
+            if connection.execute("SELECT 1 FROM ml_preparation_operations WHERE experiment_id = ? AND status = 'open'", (experiment_id,)).fetchone():
+                raise PersistenceError("draft_preparation_pending", "Preparation is open.", "Apply or cancel preparation before assessment.")
+            configuration = dict(assessment["configuration"])
+            latest = connection.execute("SELECT MAX(specification_version) AS version FROM ml_experiment_specifications WHERE experiment_id = ?",
+                                        (configuration["experiment_id"],)).fetchone()["version"]
+            configuration["specification_version"] = (latest or 0) + 1
+            encoded = _canonical_json(configuration, limit=MAX_EXPERIMENT_JSON_BYTES, label="draft configuration")
+            connection.execute("INSERT INTO ml_experiment_specifications VALUES (?, ?, ?, ?, ?)",
+                               (configuration["experiment_id"], configuration["specification_version"], encoded, _payload_hash(encoded), _now()))
+            assessment = {**assessment, "configuration": configuration}
+            connection.execute("INSERT INTO ml_draft_assessments VALUES (?, ?, ?, ?)",
+                               (assessment["assessment_id"], experiment_id, workspace_id,
+                                _canonical_json(assessment, limit=MAX_EXPERIMENT_JSON_BYTES, label="draft assessment")))
+            draft.update(latest_assessment_id=assessment["assessment_id"], latest_assessment_fingerprint=assessment["input_fingerprint"],
+                         draft_revision=draft["draft_revision"] + 1, etag=secrets.token_urlsafe(24), updated_at=_now())
+            connection.execute("UPDATE ml_experiment_drafts SET draft_revision = ?, etag = ?, draft_json = ?, updated_at = ? WHERE experiment_id = ? AND workspace_id = ?",
+                               (draft["draft_revision"], draft["etag"], _canonical_json(draft, limit=MAX_DRAFT_JSON_BYTES, label="assessed draft"),
+                                draft["updated_at"], experiment_id, workspace_id))
+            connection.commit()
+        return draft, assessment
 
     def delete_draft(self, experiment_id: str, workspace_id: str, etag: str) -> None:
         """Hide one current draft while retaining preparation and immutable run evidence."""
@@ -631,7 +710,8 @@ class MLStudioRepository:
             ).fetchall()
         return [self._public_experiment(row) for row in rows]
 
-    def submit_run(self, run: RunSpecification, *, idempotency_key: str) -> tuple[dict[str, Any], bool]:
+    def submit_run(self, run: RunSpecification, *, idempotency_key: str, single_active_experiment: bool = False,
+                   draft_binding: tuple[str, str, str] | None = None) -> tuple[dict[str, Any], bool]:
         if not isinstance(run, RunSpecification):
             raise TypeError("run must be a RunSpecification")
         if not isinstance(idempotency_key, str) or not idempotency_key.strip() or len(idempotency_key) > 256:
@@ -662,6 +742,20 @@ class MLStudioRepository:
                         )
                     connection.commit()
                     return self._public_run(existing), False
+                if draft_binding is not None:
+                    draft_id, workspace_id, etag = draft_binding
+                    draft_row = connection.execute(
+                        "SELECT etag FROM ml_experiment_drafts WHERE experiment_id = ? AND workspace_id = ? AND deleted_at IS NULL",
+                        (draft_id, workspace_id),
+                    ).fetchone()
+                    if draft_row is None or draft_row["etag"] != etag:
+                        raise PersistenceError("draft_revision_conflict", "The draft changed before submission.", "Reload and assess the saved configuration before retrying.")
+                    if connection.execute("SELECT 1 FROM ml_preparation_operations WHERE experiment_id = ? AND status = 'open'", (draft_id,)).fetchone():
+                        raise PersistenceError("draft_preparation_pending", "Preparation is open for this draft.", "Apply or cancel preparation before submitting.")
+                if single_active_experiment and connection.execute(
+                    "SELECT 1 FROM ml_runs WHERE experiment_id = ? AND status IN ('queued', 'running', 'cancel_requested')", (run.experiment_id,)
+                ).fetchone():
+                    raise PersistenceError("draft_run_pending", "This experiment already has an active run.", "Wait for completion or cancel it before submitting another run.")
                 experiment = connection.execute(
                     "SELECT specification_json FROM ml_experiment_specifications WHERE experiment_id = ? AND specification_version = ?",
                     (run.experiment_id, run.specification_version),
@@ -724,10 +818,31 @@ class MLStudioRepository:
             row = connection.execute("SELECT * FROM ml_runs WHERE run_id = ?", (run_id,)).fetchone()
         return None if row is None else self._public_run(row)
 
-    def list_runs(self, *, run_ids: Sequence[str] | None = None, limit: int = 100) -> list[dict[str, Any]]:
+    def find_run_submission(self, key: str) -> dict | None:
+        if not isinstance(key, str) or not key.strip() or len(key) > 256:
+            raise PersistenceError("idempotency_key_invalid", "Use a stable key of 1 to 256 characters.", "Retry with the same key for the same configuration.")
+        with self._connection() as connection:
+            row = connection.execute("SELECT * FROM ml_runs WHERE idempotency_key_hash = ?", (_idempotency_hash(key.strip()),)).fetchone()
+        return self._public_run(row) if row else None
+
+    def list_runs(self, *, run_ids: Sequence[str] | None = None, limit: int = 100,
+                  experiment_id: str | None = None, workspace_id: str | None = None,
+                  run_purpose: str | None = None) -> list[dict[str, Any]]:
         safe_limit = min(max(int(limit), 1), 500)
         with self._connection() as connection:
-            if run_ids is None:
+            if experiment_id is not None or workspace_id is not None or run_purpose is not None:
+                clauses, parameters = [], []
+                if experiment_id is not None:
+                    clauses.append("experiment_id = ?")
+                    parameters.append(experiment_id)
+                if workspace_id is not None:
+                    clauses.append("json_extract(specification_json, '$.dataset_snapshot.workspace_id') = ?")
+                    parameters.append(workspace_id)
+                if run_purpose is not None:
+                    clauses.append("json_extract(specification_json, '$.parameters.run_purpose') = ?")
+                    parameters.append(run_purpose)
+                rows = connection.execute("SELECT * FROM ml_runs WHERE " + " AND ".join(clauses) + " ORDER BY submitted_at DESC, run_id LIMIT ?", (*parameters, safe_limit)).fetchall()
+            elif run_ids is None:
                 rows = connection.execute(
                     "SELECT * FROM ml_runs ORDER BY submitted_at DESC, run_id LIMIT ?",
                     (safe_limit,),
@@ -742,6 +857,99 @@ class MLStudioRepository:
                     normalized,
                 ).fetchall()
         return [self._public_run(row) for row in rows]
+
+    def prediction_receipt(self, selection_id: str, request_key: str) -> dict | None:
+        with self._connection() as connection:
+            row = connection.execute("SELECT receipt_json FROM ml_batch_predictions WHERE selection_id = ? AND request_key_hash = ?", (selection_id, _idempotency_hash(request_key))).fetchone()
+        return json.loads(row["receipt_json"]) if row else None
+
+    def save_prediction_receipt(self, receipt: dict, request_key: str) -> dict:
+        with self._lock, self._connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            existing = connection.execute("SELECT receipt_json FROM ml_batch_predictions WHERE selection_id = ? AND request_key_hash = ?", (receipt["selection_id"], _idempotency_hash(request_key))).fetchone()
+            if existing:
+                prior = json.loads(existing["receipt_json"])
+                if prior["input_hash"] != receipt["input_hash"]:
+                    raise PersistenceError("idempotency_key_conflict", "The prediction key already belongs to different input.", "Reuse the original key only for identical prediction input.")
+                return prior
+            encoded = _canonical_json(receipt, limit=MAX_EVALUATION_JSON_BYTES, label="prediction receipt")
+            connection.execute("INSERT INTO ml_batch_predictions VALUES (?, ?, ?, ?, ?)", (receipt["prediction_id"], receipt["selection_id"], _idempotency_hash(request_key), receipt["input_hash"], encoded))
+            connection.commit()
+        return receipt
+
+    def get_prediction_receipt(self, selection_id: str, prediction_id: str) -> dict | None:
+        with self._connection() as connection:
+            row = connection.execute("SELECT receipt_json FROM ml_batch_predictions WHERE selection_id = ? AND prediction_id = ?", (selection_id, prediction_id)).fetchone()
+        return json.loads(row["receipt_json"]) if row else None
+
+    def list_prediction_receipts(self, selection_id: str) -> list[dict]:
+        with self._connection() as connection:
+            rows = connection.execute("SELECT receipt_json FROM ml_batch_predictions WHERE selection_id = ? ORDER BY rowid DESC LIMIT 20", (selection_id,)).fetchall()
+        return [json.loads(row["receipt_json"]) for row in rows]
+
+    def list_nominations(self, experiment_id: str, workspace_id: str) -> list[dict]:
+        with self._connection() as connection:
+            rows = connection.execute("SELECT nomination_json FROM ml_candidate_nominations WHERE experiment_id = ? AND workspace_id = ? ORDER BY rowid DESC LIMIT 100", (experiment_id, workspace_id)).fetchall()
+        return [json.loads(row["nomination_json"]) for row in rows]
+
+    def list_selections(self, experiment_id: str, workspace_id: str) -> list[dict]:
+        with self._connection() as connection:
+            rows = connection.execute("SELECT selection_json FROM ml_candidate_selections WHERE experiment_id = ? AND workspace_id = ? ORDER BY rowid DESC LIMIT 100", (experiment_id, workspace_id)).fetchall()
+        return [json.loads(row["selection_json"]) for row in rows]
+
+    @staticmethod
+    def _assert_decision_binding(connection, experiment_id: str, workspace_id: str, etag: str) -> None:
+        row = connection.execute("SELECT etag FROM ml_experiment_drafts WHERE experiment_id = ? AND workspace_id = ? AND deleted_at IS NULL", (experiment_id, workspace_id)).fetchone()
+        if row is None or row["etag"] != etag:
+            raise PersistenceError("draft_revision_conflict", "The draft changed before this decision.", "Reload the draft and review its current evidence.")
+        if connection.execute("SELECT 1 FROM ml_preparation_operations WHERE experiment_id = ? AND status = 'open'", (experiment_id,)).fetchone():
+            raise PersistenceError("draft_preparation_pending", "Preparation is open.", "Apply or cancel preparation before this decision.")
+
+    def save_nomination(self, value: dict, etag: str) -> dict:
+        with self._lock, self._connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            existing = connection.execute("SELECT nomination_json FROM ml_candidate_nominations WHERE experiment_id = ? AND holdout_key = ?", (value["experiment_id"], value["holdout_key"])).fetchone()
+            if existing:
+                prior = json.loads(existing["nomination_json"])
+                if any(prior[key] != value[key] for key in ("development_run_id", "family", "nominator", "intended_use")):
+                    raise PersistenceError("holdout_nomination_locked", "This dataset already has a nominated candidate in this experiment.", "Use its saved final evaluation; do not rank alternatives using the same holdout.")
+                return prior
+            self._assert_decision_binding(connection, value["experiment_id"], value["workspace_id"], etag)
+            encoded = _canonical_json(value, limit=MAX_DRAFT_JSON_BYTES, label="candidate nomination")
+            connection.execute("INSERT INTO ml_candidate_nominations VALUES (?, ?, ?, ?, ?)", (value["nomination_id"], value["experiment_id"], value["workspace_id"], value["holdout_key"], encoded))
+            connection.commit()
+        return value
+
+    def save_selection(self, value: dict, etag: str) -> dict:
+        with self._lock, self._connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            existing = connection.execute("SELECT selection_json FROM ml_candidate_selections WHERE nomination_id = ?", (value["nomination_id"],)).fetchone()
+            if existing:
+                prior = json.loads(existing["selection_json"])
+                if any(prior[key] != value[key] for key in ("reviewed_by", "intended_use", "prohibited_use")):
+                    raise PersistenceError("selection_immutable", "The saved selection already has its review notes.", "Reopen the saved receipt.")
+                return prior
+            self._assert_decision_binding(connection, value["experiment_id"], value["workspace_id"], etag)
+            encoded = _canonical_json(value, limit=MAX_DRAFT_JSON_BYTES, label="candidate selection")
+            connection.execute("INSERT INTO ml_candidate_selections VALUES (?, ?, ?, ?, ?)", (value["selection_id"], value["nomination_id"], value["experiment_id"], value["workspace_id"], encoded))
+            connection.commit()
+        return value
+
+    def resume_final_evaluation(self, run_id: str, *, draft_binding: tuple[str, str, str] | None = None) -> bool:
+        """Retry only the same locked candidate when no final evidence committed."""
+        with self._lock, self._connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            row = connection.execute("SELECT * FROM ml_runs WHERE run_id = ?", (run_id,)).fetchone()
+            if row is None or row["status"] not in ("failed", "interrupted", "cancelled") or row["evaluation_json"] is not None:
+                return False
+            if json.loads(row["specification_json"])["parameters"].get("run_purpose") != "final_evaluation":
+                raise PersistenceError("run_resume_invalid", "Only a locked final evaluation can resume.", "Submit a new development run instead.")
+            if draft_binding is not None:
+                self._assert_decision_binding(connection, *draft_binding)
+            connection.execute("UPDATE ml_runs SET status = 'queued', progress_stage = 'final_evaluation_retry', failure_json = NULL, started_at = NULL, finished_at = NULL, updated_at = ? WHERE run_id = ?", (_now(), run_id))
+            connection.execute("INSERT INTO ml_run_events (run_id, event_type, status, progress_stage, occurred_at) VALUES (?, 'resumed', 'queued', 'final_evaluation_retry', ?)", (run_id, _now()))
+            connection.commit()
+        return True
 
     def transition_run(
         self,

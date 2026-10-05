@@ -12,6 +12,7 @@ import {
 import CleaningRibbon from './cleaning_components/CleaningRibbon';
 import AppliedStepsList from './cleaning_components/AppliedStepsList';
 import DataCleaningPreview from './cleaning_components/DataCleaningPreview';
+import PreparationEditor from '../../features/ml_studio/PreparationEditor';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
@@ -38,7 +39,14 @@ const columnListFromData = (dataset) => {
   return [];
 };
 
-function DataCleaningForm({ closeForm, setShowDataPreview, initialSteps = [], onApplyComplete, mlStudioMode, mlStudioOpeningContext }) {
+function DataCleaningForm(props) {
+  if (props.mlStudioMode && (props.mlStudioOpeningContext?.base_etag || props.mlStudioOpeningContext?.preparation)) {
+    return <PreparationEditor context={props.mlStudioOpeningContext} initialSteps={props.initialSteps || []} closeForm={props.closeForm} onFinished={props.onPreparationFinished} />;
+  }
+  return <LegacyDataCleaningForm {...props} />;
+}
+
+function LegacyDataCleaningForm({ closeForm, setShowDataPreview, initialSteps = [], onApplyComplete, mlStudioMode, mlStudioOpeningContext }) {
   const {
     uploadedData,
     fullData,

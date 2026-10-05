@@ -1,12 +1,20 @@
 {
   "schema_version": 1,
   "authorized_work": {
-    "name": "ML Studio Step 4 — Connect Data Preparation and Power Query"
+    "name": "ML Studio completion and theme-aligned UI makeover"
   },
   "authorization_state": "AUTHORIZED",
   "lifecycle_state": "IN PROGRESS",
   "diff_baseline": "e2896c2eced5511144c3151e34cae473e992af5a",
   "authority_kind": "direct_user_instruction",
+  "completion_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-10-04",
+    "instruction": "Complete ML Studio end to end, including a polished UI makeover that fits AI Tool’s existing themes. I explicitly authorize you to implement both backend and frontend, including React, CSS, and the whole-studio redesign.",
+    "scope": "This Codex chat executes ML Studio backend, frontend, contracts, tests and theme-aligned UI redesign through all five task workflows and the completion gate. Final browser acceptance remains with the user.",
+    "brief": "project_docs/active/ml_studio/completion_brief.md",
+    "codex_frontend_implementation_authorized": true
+  },
   "next_preparation_step": {
     "prepared_at": "2026-10-01",
     "user_instruction": "if this is normal and expected lets prepare for the next step",
@@ -34,7 +42,9 @@
     "approved_at": "2026-09-27",
     "evidence": "Direct user message in this Codex session referencing the sole active gate.",
     "instruction": "accepted, proceed to the step step",
-    "scope": "Implement and verify draft-bound preparation recipes and durable return context under the current active gate. Frontend implementation remains excluded."
+    "scope": "Codex in the receiving chat may complete ML Studio backend and frontend, all five task journeys and the theme-aligned UI makeover under the completion gate.",
+    "current_instruction": "Execute the completion plan continuously through meaningful, verified steps until engineering completion or a concrete blocker, including backend, frontend and the whole-studio redesign.",
+    "current_approved_at": "2026-10-04"
   },
   "preparation_authorization": {
     "approved_by": "User",
@@ -74,6 +84,12 @@
     "scope": "Codex may implement saved experiment deletion in the ML Studio home, its backend draft route and persistence, contract, and focused tests."
   },
   "allowed_paths": [
+    "project_docs/INDEX.md",
+    "backend/ml_studio/**",
+    "tests/test_ml_studio*.py",
+    "frontend/frontend/src/features/ml_studio/**",
+    "project_docs/active/ml_studio/**",
+    "project_docs/archive/ml_studio_power_query_preview_cancel_superseded_2026_10_04.md",
     "project_docs/active/ai_hand_off/ml_studio_power_query_preview_cancel.md",
     "project_docs/active/future/codex/ml_studio_power_query_preview_cancel.md",
     "project_docs/active/future/codex/README.md",

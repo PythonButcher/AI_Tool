@@ -1,22 +1,27 @@
 
-import React, { useContext, useEffect, useState, useRef, useCallback, useMemo } from 'react';
+import React, { useContext, useEffect, useState, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { DataContext, useDatasetMeta, normalizeDatasetRows } from '../../context/DataContext';
+import { DataContext, useDatasetMeta } from '../../context/DataContext';
 import {
-  FaDatabase, FaCrosshairs, FaLayerGroup, FaChevronDown, FaChevronUp, FaCheckDouble,
-  FaUsers, FaSearch, FaRobot, FaInfoCircle, FaExclamationTriangle,
+  FaDatabase, FaLayerGroup, FaChevronDown, FaChevronUp,
+  FaSearch, FaInfoCircle, FaExclamationTriangle,
   FaTable, FaPlayCircle, FaCheckCircle, FaTimesCircle, FaSyncAlt,
-  FaBoxOpen, FaCodeBranch, FaCheck, FaWrench, FaTools,
-  FaBrain, FaCog, FaPlay, FaBan, FaCopy
+  FaBoxOpen, FaCodeBranch, FaWrench, FaTools,
+  FaBrain, FaCog, FaCopy
 } from 'react-icons/fa';
 import './MLStudioShell.css';
+import ConfigurationStage from './ConfigurationStage';
+import TrainingStage from './TrainingStage';
+import ReviewStage from './ReviewStage';
+import UseShareStage from './UseShareStage';
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
-async function digestMessage(message) {
-  const msgUint8 = new TextEncoder().encode(message);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const hashHex = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
-  return `sha256:${hashHex}`;
+function draftFromEnvelope(data, previous = null) {
+  const preparation_context = Object.prototype.hasOwnProperty.call(data, 'preparation_context')
+    ? data.preparation_context
+    : previous?.experiment_id === data.draft.experiment_id ? previous.preparation_context : null;
+  const assessment = Object.prototype.hasOwnProperty.call(data, 'assessment') ? data.assessment
+    : previous?.experiment_id === data.draft.experiment_id ? previous.assessment : null;
+  return { ...data.draft, preparation_context, assessment, assessment_current: data.workflow_state?.assessment_current === true };
 }
 export default function MLStudioShell({ onOpenCleaningForm }) {
   const {
@@ -25,7 +30,7 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
     workspaceRefreshStatus,
     workspaceRefreshError,
     workspaceVersionConflict,
-    uploadedData, fullData, cleanedData
+    refreshWorkspace
   } = useContext(DataContext);
   const { numRows, numCols } = useDatasetMeta();
   const hasRequiredIdentity = Boolean(
@@ -47,6 +52,7 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
     ? `${activeWorkspace?.workspace_id}-${analysisContext?.workspace_version}`
     : null;
   const identityRef = useRef(identityKey);
+  const preparationResumeRef = useRef(null);
   useEffect(() => { identityRef.current = identityKey; }, [identityKey]);
   const [runsState, setRunsState] = useState({ status: 'idle', data: null, error: null });
   const [activeStage, setActiveStage] = useState('Configure');
@@ -90,7 +96,7 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
       if (identityRef.current !== currentIdentity) return;
       if (!res.ok) throw data.error || new Error('Failed to create draft');
       lastHeaderSaveOkRef.current = true;
-      setActiveDraft(data.draft);
+      setActiveDraft(draftFromEnvelope(data));
       setWorkflowState(data.workflow_state);
       setActiveStage(data.workflow_state.active_stage);
       setShowGuidance(data.draft.guidance_enabled !== false);
@@ -115,7 +121,7 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
       if (identityRef.current !== currentIdentity) return;
       if (!res.ok) throw data.error || new Error('Failed to reopen draft');
       lastHeaderSaveOkRef.current = true;
-      setActiveDraft(data.draft);
+      setActiveDraft(draftFromEnvelope(data));
       setWorkflowState(data.workflow_state);
       setActiveStage(data.workflow_state.active_stage);
       setShowGuidance(data.draft.guidance_enabled !== false);
@@ -129,6 +135,8 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
       if (identityRef.current === currentIdentity) setPendingDraftAction(null);
     }
   };
+  const reopenDraftRef = useRef(handleReopenDraft);
+  reopenDraftRef.current = handleReopenDraft;
   const handleDuplicateDraft = async (experiment_id) => {
     if (pendingDraftAction) return;
     const currentIdentity = identityKey;
@@ -192,7 +200,7 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
     const fetchId = ++runsFetchIdRef.current;
     setRunsState({ status: 'loading', data: null, error: null });
     try {
-      const response = await fetch(`${API_URL}/api/ml-studio/v1/runs?limit=20`);
+      const response = await fetch(`${API_URL}/api/ml-studio/v1/runs?limit=20&workspace_id=${encodeURIComponent(activeWorkspace.workspace_id)}`);
       if (fetchId !== runsFetchIdRef.current) return;
       if (!response.ok) {
         let errorData;
@@ -225,7 +233,7 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
         }
       });
     }
-  }, [isIdentityAvailable]);
+  }, [isIdentityAvailable, activeWorkspace?.workspace_id]);
   useEffect(() => {
     runsFetchIdRef.current += 1; draftsFetchIdRef.current += 1;
     setRunsState({ status: 'idle', data: null, error: null });
@@ -241,8 +249,13 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
     }
     fetchRuns();
     fetchDrafts();
+    const resume = preparationResumeRef.current;
+    if (resume?.workspace_id === activeWorkspace?.workspace_id) {
+      preparationResumeRef.current = null;
+      reopenDraftRef.current(resume.experiment_id);
+    }
     return () => { runsFetchIdRef.current += 1; draftsFetchIdRef.current += 1; identityRef.current = null; };
-  }, [identityKey, isIdentityAvailable, fetchRuns, fetchDrafts]);
+  }, [identityKey, isIdentityAvailable, fetchRuns, fetchDrafts, activeWorkspace?.workspace_id]);
   const [workflowState, setWorkflowState] = useState(null);
   const [saveState, setSaveState] = useState('saved');
   const [stagePending, setStagePending] = useState(false);
@@ -302,10 +315,9 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
          return false;
       } else {
          lastHeaderSaveOkRef.current = true;
-         if (!data.draft) console.log('MISSING DRAFT', data);
          etagRef.current = data.draft.etag;
-         setActiveDraft(data.draft);
-         setWorkflowState(data.workflow_state);
+         activeDraftRef.current = draftFromEnvelope(data, activeDraftRef.current);
+         setActiveDraft(previous => draftFromEnvelope(data, previous));
          setWorkflowState(data.workflow_state);
       setActiveStage(data.workflow_state.active_stage);
          setSaveState('saved');
@@ -344,10 +356,8 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
       const data = await res.json();
       if (identityRef.current !== currentIdentity) return;
       if (!res.ok) throw new Error('Failed to reload draft');
-      if (!data.draft) console.log('MISSING DRAFT', data);
-         etagRef.current = data.draft.etag;
-      setActiveDraft(data.draft);
-      setWorkflowState(data.workflow_state);
+      etagRef.current = data.draft.etag;
+      setActiveDraft(draftFromEnvelope(data));
       setWorkflowState(data.workflow_state);
       setActiveStage(data.workflow_state.active_stage);
       setShowGuidance(data.draft.guidance_enabled !== false);
@@ -429,6 +439,7 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
       if (!stillCurrent() || lastHeaderSaveOkRef.current === false || saveState === 'conflict') {
         return { success: false, error: { message: 'Reload the current draft before continuing.' } };
       }
+      if (Object.keys(payload).length === 0) return { success: true, draft: activeDraftRef.current };
       isSavingRef.current = true;
       setSaveState('saving');
       const res = await fetch(`${API_URL}/api/ml-studio/v1/drafts/${experimentId}?workspace_id=${activeWorkspace.workspace_id}`, {
@@ -449,12 +460,12 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
         return { success: false, error };
       }
       etagRef.current = data.draft.etag;
-      setActiveDraft(data.draft);
+      setActiveDraft(previous => draftFromEnvelope(data, previous));
       setWorkflowState(data.workflow_state);
       setActiveStage(data.workflow_state.active_stage);
       setSaveState('saved');
       setSaveError(null);
-      return { success: true };
+      return { success: true, draft: data.draft };
     } catch (err) {
       if (stillCurrent()) setSaveState('saved');
       return { success: false, error: { message: err.message || 'Network error.' } };
@@ -464,14 +475,49 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
       setStagePending(false);
     }
   };
-  const activeDatasetSource = cleanedData ?? fullData ?? uploadedData;
-  const activeDataset = useMemo(() => normalizeDatasetRows(activeDatasetSource), [activeDatasetSource]);
-  const columns = useMemo(() => {
-    if (!Array.isArray(activeDataset) || activeDataset.length === 0) return [];
-    const sample = activeDataset[0];
-    if (!sample || typeof sample !== 'object') return [];
-    return Object.keys(sample);
-  }, [activeDataset]);
+  const handleAssessDraft = async (settings) => {
+    const saved = await handleExplicitStageSave(settings);
+    if (!saved.success) return saved;
+    const identity = identityRef.current;
+    const experimentId = saved.draft.experiment_id;
+    stageSavingRef.current = true;
+    setStagePending(true);
+    isSavingRef.current = true;
+    try {
+      const response = await fetch(`${API_URL}/api/ml-studio/v1/drafts/${experimentId}/assessment?workspace_id=${activeWorkspace.workspace_id}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'If-Match': saved.draft.etag }, body: '{}',
+      });
+      const data = await response.json();
+      if (identityRef.current !== identity || activeDraftRef.current?.experiment_id !== experimentId) return { success: false, error: { message: 'Experiment changed.' } };
+      if (!response.ok) throw data.error || new Error('Assessment failed.');
+      etagRef.current = data.draft.etag;
+      activeDraftRef.current = draftFromEnvelope(data);
+      setActiveDraft(draftFromEnvelope(data));
+      setWorkflowState(data.workflow_state);
+      setSaveState('saved');
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: { message: error.message || 'Assessment response was lost.', remediation: error.remediation || 'Reload the saved experiment to recover its assessment, or assess again.' } };
+    } finally {
+      if (identityRef.current === identity && activeDraftRef.current?.experiment_id === experimentId) {
+        stageSavingRef.current = false; isSavingRef.current = false; setStagePending(false);
+        if (Object.keys(pendingEditsRef.current).length) saveTimerRef.current = setTimeout(flushSave, 100);
+      }
+    }
+  };
+  const handlePreparationFinished = async (result) => {
+    const draft = activeDraftRef.current;
+    if (!draft || result.draft.experiment_id !== draft.experiment_id || result.draft.workspace_id !== activeWorkspace?.workspace_id) return;
+    etagRef.current = result.draft.etag;
+    setActiveDraft(draftFromEnvelope(result));
+    setWorkflowState(result.workflow_state);
+    setActiveStage(result.workflow_state.active_stage);
+    if (result.preparation.status === 'applied' && refreshWorkspace) {
+      preparationResumeRef.current = { workspace_id: draft.workspace_id, experiment_id: draft.experiment_id };
+      const refreshed = await refreshWorkspace(draft.workspace_id);
+      if (!refreshed) throw new Error('Data was applied. Refresh the workspace, then reopen this experiment to recover its saved state.');
+    }
+  };
   return (
     <div className="ml-studio-shell">
       <TopRibbon
@@ -529,18 +575,12 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
                  />
              ) : (
                  <>
-                                          <div className={activeStage === 'Configure' ? '' : 'hidden-stage'}>
-                         <ExperimentCanvas
-                 showGuidance={showGuidance}
-                            activeWorkspace={activeWorkspace}
-                            analysisContext={analysisContext}
-                            numRows={numRows}
-                            numCols={numCols}
-                            columns={columns}
-                            onOpenCleaningForm={onOpenCleaningForm}
-                            onRunStarted={fetchRuns}
-                         />
-                     </div>
+                     {activeStage === 'Configure' && <ConfigurationStage
+                       key={`${activeDraft.experiment_id}-${activeDraft.snapshot_id}-${activeDraft.task_type}-${draftReloadKey}`}
+                       draft={activeDraft} showGuidance={showGuidance} onEdit={scheduleSave}
+                       onAssess={handleAssessDraft} onContinue={() => handleStageSelect('Train')}
+                       canTrain={workflowState?.stages?.some(stage => stage.stage === 'Train' && ['available', 'active'].includes(stage.state))}
+                     />}
                                           {activeStage === 'Data & Goal' && (
                          <DataGoalStage
                  showGuidance={showGuidance}
@@ -558,11 +598,36 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
                             analysisContext={analysisContext}
                             activeDraft={activeDraft}
                             onOpenCleaningForm={onOpenCleaningForm}
+                            onSaveRequest={handleExplicitStageSave}
+                            onPreparationFinished={handlePreparationFinished}
                          />
                      )}
-                     {activeStage !== 'Configure' && activeStage !== 'Data & Goal' && activeStage !== 'Prepare Data' && (
-                         <UnconnectedStage activeStage={activeStage} showGuidance={showGuidance} />
-                     )}
+                     {activeStage === 'Train' && <TrainingStage
+                       key={`${activeDraft.experiment_id}-${draftReloadKey}`}
+                       draft={activeDraft} showGuidance={showGuidance}
+                       onBeforeSubmit={handleExplicitStageSave}
+                       onRunChanged={async () => {
+                         const identity = identityRef.current;
+                         const experimentId = activeDraft.experiment_id;
+                         try {
+                           const response = await fetch(`${API_URL}/api/ml-studio/v1/drafts/${experimentId}/workflow?workspace_id=${activeDraft.workspace_id}`);
+                           const data = await response.json();
+                           if (response.ok && identity === identityRef.current && activeDraftRef.current?.experiment_id === experimentId) setWorkflowState(data.workflow_state);
+                         } catch { /* The training panel supplies retry and error handling. */ }
+                         fetchRuns();
+                       }}
+                       onReview={() => handleStageSelect('Review Results')}
+                     />}
+                     {activeStage === 'Review Results' && <ReviewStage
+                       key={`${activeDraft.experiment_id}-${draftReloadKey}`}
+                       draft={activeDraft} showGuidance={showGuidance} onBeforeDecision={handleExplicitStageSave}
+                       onWorkflowChanged={setWorkflowState} onContinue={() => handleStageSelect('Use & Share')}
+                     />}
+                     {activeStage === 'Use & Share' && <UseShareStage
+                       key={`${activeDraft.experiment_id}-${draftReloadKey}`}
+                       draft={activeDraft} selectionId={workflowState?.selection_id} showGuidance={showGuidance}
+                       onBeforePredict={handleExplicitStageSave}
+                     />}
                  </>
              )}
             <RunDock
@@ -894,436 +959,6 @@ function AssetRail({ activeWorkspace, analysisContext, numRows, numCols }) {
     </aside>
   );
 }
-function ExperimentCanvas({
-  showGuidance, activeWorkspace, analysisContext, numRows, numCols, columns, onOpenCleaningForm, onRunStarted
-}) {
-  const [taskType, setTaskType] = useState('regression');
-  const [target, setTarget] = useState('');
-  const [numericFeatures, setNumericFeatures] = useState([]);
-  const [categoricalFeatures, setCategoricalFeatures] = useState([]);
-  const [excludedColumns, setExcludedColumns] = useState([]);
-  const [splitStrategy, setSplitStrategy] = useState('random');
-  const [isConfirmed, setIsConfirmed] = useState(false);
-  const [prepStatus, setPrepStatus] = useState('idle'); // idle, loading, ready, blocked, error
-  const [prepError, setPrepError] = useState(null);
-  const [assessment, setAssessment] = useState(null);
-  const [snapshotData, setSnapshotData] = useState(null);
-  const [experimentData, setExperimentData] = useState(null);
-  const [runSubmitStatus, setRunSubmitStatus] = useState('idle');
-  const [runSubmitError, setRunSubmitError] = useState(null);
-  const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID());
-  const reqIdRef = useRef(0);
-  // Clear prep state when identity changes or navigation
-  useEffect(() => {
-    setPrepStatus('idle');
-    setPrepError(null);
-    setAssessment(null);
-    setSnapshotData(null);
-    setExperimentData(null);
-    setRunSubmitStatus('idle');
-    setRunSubmitError(null);
-    setIdempotencyKey(crypto.randomUUID());
-    reqIdRef.current += 1;
-  }, [activeWorkspace?.workspace_id, analysisContext?.workspace_version]);
-  const guidanceState = useMemo(() => {
-    if (!target) return { status: 'incomplete', text: 'Choose a target', icon: <FaInfoCircle /> };
-    if (numericFeatures.length === 0 && categoricalFeatures.length === 0) return { status: 'incomplete', text: 'Choose at least one feature', icon: <FaInfoCircle /> };
-    if (!isConfirmed) return { status: 'incomplete', text: 'Confirm the roles', icon: <FaInfoCircle /> };
-    if (prepStatus === 'loading') return { status: 'incomplete', text: 'Assessing...', icon: <FaSyncAlt className="spin-icon" /> };
-    if (prepStatus === 'blocked') return { status: 'error', text: 'Resolve readiness issues', icon: <FaExclamationTriangle /> };
-    if (prepStatus === 'ready') return { status: 'ready', text: 'Ready to start run', icon: <FaCheckCircle /> };
-    return { status: 'ready', text: 'Ready to assess', icon: <FaCheckCircle /> };
-  }, [target, numericFeatures, categoricalFeatures, isConfirmed, prepStatus]);
-  const handleTargetChange = (val) => {
-    setTarget(val);
-    setPrepStatus('idle');
-    setExperimentData(null);
-    if (val) {
-      setNumericFeatures(prev => prev.filter(f => f !== val));
-      setCategoricalFeatures(prev => prev.filter(f => f !== val));
-      setExcludedColumns(prev => prev.filter(f => f !== val));
-    }
-  };
-  const handleNumericFeaturesChange = (vals) => {
-    const valid = vals.filter(f => f !== target);
-    setNumericFeatures(valid);
-    setPrepStatus('idle');
-    setExperimentData(null);
-    setCategoricalFeatures(prev => prev.filter(f => !valid.includes(f)));
-    setExcludedColumns(prev => prev.filter(f => !valid.includes(f)));
-  };
-  const handleCategoricalFeaturesChange = (vals) => {
-    const valid = vals.filter(f => f !== target);
-    setCategoricalFeatures(valid);
-    setPrepStatus('idle');
-    setExperimentData(null);
-    setNumericFeatures(prev => prev.filter(f => !valid.includes(f)));
-    setExcludedColumns(prev => prev.filter(f => !valid.includes(f)));
-  };
-  const handleExcludedColumnsChange = (vals) => {
-    const valid = vals.filter(f => f !== target);
-    setExcludedColumns(valid);
-    setPrepStatus('idle');
-    setExperimentData(null);
-    setNumericFeatures(prev => prev.filter(f => !valid.includes(f)));
-    setCategoricalFeatures(prev => prev.filter(f => !valid.includes(f)));
-  };
-  const validateForm = () => {
-    if (!target) return 'Please select a target column.';
-    if (numericFeatures.length === 0 && categoricalFeatures.length === 0) return 'Please select at least one feature column.';
-    // Check disjoin
-    const allFeatures = [...numericFeatures, ...categoricalFeatures];
-    if (allFeatures.includes(target)) return 'Target cannot be a feature.';
-    if (excludedColumns.includes(target)) return 'Target cannot be excluded.';
-    for (const f of allFeatures) {
-      if (excludedColumns.includes(f)) return 'A feature cannot be excluded.';
-    }
-    const hasDuplicates = new Set(allFeatures).size !== allFeatures.length;
-    if (hasDuplicates) return 'Features must be unique across numeric and categorical roles.';
-    return null;
-  };
-  const handleAssess = async (forceNewSnapshot = false, forceNewExperiment = false) => {
-    const errorMsg = validateForm();
-    if (errorMsg) {
-      setPrepError({ code: 'validation_error', message: errorMsg, remediation: 'Fix the configuration and try again.' });
-      return;
-    }
-    if (!isConfirmed) {
-      setPrepError({ code: 'confirmation_required', message: 'You must explicitly confirm the target and feature roles.', remediation: 'Check the confirmation box.' });
-      return;
-    }
-    const reqId = ++reqIdRef.current;
-    setPrepStatus('loading');
-    setPrepError(null);
-    setRunSubmitStatus('idle');
-    setRunSubmitError(null);
-    setIdempotencyKey(crypto.randomUUID());
-    try {
-      // 1. Create Snapsho
-      let currentSnapshot = forceNewSnapshot ? null : snapshotData;
-      if (!currentSnapshot) {
-        const snapRes = await fetch(`${API_URL}/api/ml-studio/v1/snapshots`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            workspace_id: activeWorkspace.workspace_id,
-            workspace_version: analysisContext.workspace_version,
-            source_ids: analysisContext.source_ids || [],
-            relationship_ids: analysisContext.relationship_ids || []
-          })
-        });
-        const snapData = await snapRes.json();
-        if (reqId !== reqIdRef.current) return;
-        if (!snapRes.ok) throw snapData.error || { code: 'unknown', message: 'Failed to create snapshot.' };
-        currentSnapshot = snapData.snapshot;
-        setSnapshotData(currentSnapshot);
-      }
-      // 2. Create Experimen
-      let currentExperiment = forceNewExperiment ? null : experimentData;
-      if (!currentExperiment) {
-        const experimentSpec = {
-          contract_version: "ml_studio_contract_v1",
-          experiment_id: `exp-${Date.now()}`,
-          specification_version: 1,
-          task_type: taskType,
-          target,
-          feature_roles: {
-            numeric: numericFeatures,
-            categorical: categoricalFeatures
-          },
-          excluded_columns: excludedColumns,
-          split_policy: {
-            strategy: splitStrategy,
-            final_holdout_fraction: 0.2,
-            cross_validation_folds: 5,
-            time_column: null,
-            group_column: null
-          },
-          candidate_families: taskType === 'regression'
-            ? ['regularized_linear', 'random_forest', 'hist_gradient_boosting']
-            : ['logistic', 'random_forest', 'hist_gradient_boosting'],
-          metric_policy: {
-            primary_metric: taskType === 'regression' ? 'rmse' : 'logloss',
-            optimization: taskType === 'regression' ? 'minimize' : 'minimize',
-            reported_metrics: taskType === 'regression' ? ['rmse', 'mae'] : ['logloss', 'roc_auc']
-          },
-          resource_limits: { max_rows: 100000, max_features: 100, max_candidates: 3, timeout_seconds: 3600 },
-          random_seed_policy: { final_holdout_seed: 42, cross_validation_seed: 42, estimator_seed: 42 }
-        };
-        const expRes = await fetch(`${API_URL}/api/ml-studio/v1/experiments`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(experimentSpec)
-        });
-        const expResData = await expRes.json();
-        if (reqId !== reqIdRef.current) return;
-        if (!expRes.ok) throw expResData.error || { code: 'unknown', message: 'Failed to create experiment.' };
-        currentExperiment = expResData.experiment;
-        setExperimentData(currentExperiment);
-      }
-      // 3. Assess
-      const recipeSteps = [];
-      const recipePayload = {
-        contract_version: "ml_studio_contract_v1",
-        recipe_id: `recipe-${Date.now()}`,
-        workspace_id: activeWorkspace.workspace_id,
-        base_snapshot_id: currentSnapshot.snapshot_id,
-        base_recipe_hash: currentSnapshot.transformation_recipe_hash,
-        recipe_version: 1,
-        steps: recipeSteps,
-      };
-      const canonicalString = JSON.stringify({
-        base_recipe_hash: recipePayload.base_recipe_hash,
-        base_snapshot_id: recipePayload.base_snapshot_id,
-        recipe_id: recipePayload.recipe_id,
-        recipe_version: recipePayload.recipe_version,
-        steps: recipePayload.steps,
-        workspace_id: recipePayload.workspace_id
-      });
-      recipePayload.canonical_recipe_hash = await digestMessage(canonicalString);
-      recipePayload.created_at = new Date().toISOString();
-      recipePayload.created_by = null;
-      const assessRes = await fetch(`${API_URL}/api/ml-studio/v1/preparation-assessments`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          snapshot_id: currentSnapshot.snapshot_id,
-          experiment_id: currentExperiment.experiment_id,
-          specification_version: currentExperiment.specification_version,
-          transformation_recipe: recipePayload
-        })
-      });
-      const assessData = await assessRes.json();
-      if (reqId !== reqIdRef.current) return;
-      if (!assessRes.ok) throw assessData.error || { code: 'unknown', message: 'Failed to assess preparation.' };
-      setAssessment(assessData.assessment);
-      setPrepStatus(assessData.assessment.state === 'ready' ? 'ready' : 'blocked');
-    } catch (err) {
-      if (reqId !== reqIdRef.current) return;
-      setPrepError({
-        code: err.code || 'ml_studio_internal_error',
-        message: err.message || 'An unexpected error occurred.',
-        remediation: err.remediation || 'Please try again.'
-      });
-      setPrepStatus('error');
-    }
-  };
-  const openFixInPowerQuery = (fix) => {
-    const step = {
-      type: fix.action_type,
-      params: fix.parameters || {},
-      id: `fix-${Date.now()}`
-    };
-    if (onOpenCleaningForm) {
-      onOpenCleaningForm({
-        initialSteps: [step],
-        onApplyComplete: () => {
-          // Refresh assessment truth after power query apply
-          setAssessment(null);
-          setPrepStatus('idle');
-          setExperimentData(null);
-          setSnapshotData(null); // Force new snapsho
-          handleAssess(true, true); // Re-trigger assessmen
-        }
-      });
-    }
-  };
-  const handleStartRun = async () => {
-    setRunSubmitStatus('loading');
-    setRunSubmitError(null);
-    const revision = process.env.REACT_APP_GIT_SHA?.length >= 7 && process.env.REACT_APP_GIT_SHA?.length <= 64
-      ? process.env.REACT_APP_GIT_SHA
-      : 'web-ui-unknown';
-    try {
-      const response = await fetch(`${API_URL}/api/ml-studio/v1/runs`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Idempotency-Key': idempotencyKey
-        },
-        body: JSON.stringify({
-          experiment_id: experimentData.experiment_id,
-          specification_version: experimentData.specification_version,
-          snapshot_id: snapshotData.snapshot_id,
-          parameters: {},
-          environment: { client: 'ai_tool_web' },
-          code_revision: revision
-        })
-      });
-      const data = await response.json();
-      if (!response.ok) {
-        throw data.error || { code: 'unknown', message: 'Failed to start run.' };
-      }
-      await onRunStarted();
-      setRunSubmitStatus('idle');
-      setIdempotencyKey(crypto.randomUUID());
-    } catch (err) {
-      setRunSubmitStatus('error');
-      setRunSubmitError({
-        code: err.code || 'ml_studio_internal_error',
-        message: err.message || 'An unexpected error occurred.',
-        remediation: err.remediation || 'Please try again.'
-      });
-    }
-  };
-  return (
-    <main className="ml-studio-canvas" aria-label="Experiment Canvas">
-      <div className="prep-form-container">
-        <div className="connected-dataset-panel">
-          <div className="dataset-label">
-            <FaDatabase className="inline-icon" />
-            <strong>{activeWorkspace?.workspace_name || activeWorkspace?.workspace_id || 'Active Dataset'}</strong>
-          </div>
-          <div className="dataset-stats">
-            {numRows.toLocaleString()} rows • {numCols.toLocaleString()} cols
-          </div>
-        </div>
-        {showGuidance && <div className={`guidance-panel ${guidanceState.status}`}>
-          <span className="guidance-icon">{guidanceState.icon}</span>
-          <span><strong>Next Step:</strong> {guidanceState.text}</span>
-        </div>}}
-        <h2 className="prep-form-title">Experiment Configuration</h2>
-        {prepError && (
-          <div className="prep-alert error">
-            <FaExclamationTriangle className="alert-icon" />
-            <div className="alert-content">
-              <strong>{prepError.message}</strong>
-              <p>{prepError.remediation}</p>
-              {prepError.code === 'snapshot_identity_stale' && (
-                <button
-                  className="retry-button"
-                  onClick={() => { setSnapshotData(null); handleAssess(true, true); }}
-                  type="button"
-                >
-                  <FaSyncAlt /> Reload Datase
-                </button>
-              )}
-            </div>
-          </div>
-        )}
-        <div className="prep-form-grid" aria-busy={prepStatus === 'loading'}>
-          <label className="prep-field">
-            <span>Task Type {showGuidance && <InfoPopover id="help-task-type" label="Task Type" text="Select the type of machine learning task to perform." />}</span>
-            <select value={taskType} onChange={e => { setTaskType(e.target.value); setPrepStatus('idle'); setExperimentData(null); }} disabled={prepStatus === 'loading'}>
-              <option value="regression">Regression</option>
-              <option value="classification">Classification</option>
-            </select>
-          </label>
-          <label className="prep-field">
-            <span>Target Column {showGuidance && <InfoPopover id="help-target" label="Target Column" text="Select the column you want to predict." />}</span>
-            <select value={target} onChange={e => handleTargetChange(e.target.value)} disabled={prepStatus === 'loading'}>
-              <option value="">Select target</option>
-              {columns.map(col => <option key={col} value={col}>{col}</option>)}
-            </select>
-          </label>
-          <label className="prep-field">
-            <span>Numeric Features {showGuidance && <InfoPopover id="help-numeric" label="Numeric Features" text="Select columns that contain continuous numbers." />}</span>
-            <select multiple value={numericFeatures} onChange={e => handleNumericFeaturesChange(Array.from(e.target.selectedOptions || []).map(o => o.value))} disabled={prepStatus === 'loading'} className="multi-select">
-              {columns.map(col => <option key={col} value={col}>{col}</option>)}
-            </select>
-          </label>
-          <label className="prep-field">
-            <span>Categorical Features {showGuidance && <InfoPopover id="help-categorical" label="Categorical Features" text="Select columns that contain categories or discrete values." />}</span>
-            <select multiple value={categoricalFeatures} onChange={e => handleCategoricalFeaturesChange(Array.from(e.target.selectedOptions || []).map(o => o.value))} disabled={prepStatus === 'loading'} className="multi-select">
-              {columns.map(col => <option key={col} value={col}>{col}</option>)}
-            </select>
-          </label>
-          <label className="prep-field">
-            <span>Excluded Columns {showGuidance && <InfoPopover id="help-excluded" label="Excluded Columns" text="Select columns to ignore during training." />}</span>
-            <select multiple value={excludedColumns} onChange={e => handleExcludedColumnsChange(Array.from(e.target.selectedOptions || []).map(o => o.value))} disabled={prepStatus === 'loading'} className="multi-select">
-              {columns.map(col => <option key={col} value={col}>{col}</option>)}
-            </select>
-          </label>
-          <label className="prep-field">
-            <span>Split Strategy {showGuidance && <InfoPopover id="help-split" label="Split Strategy" text="Choose how to divide data into training and validation sets." />}</span>
-            <select value={splitStrategy} onChange={e => { setSplitStrategy(e.target.value); setPrepStatus('idle'); setExperimentData(null); }} disabled={prepStatus === 'loading'}>
-              <option value="random">Random</option>
-              {taskType === 'classification' && <option value="stratified">Stratified</option>}
-            </select>
-          </label>
-          <div className="prep-field confirmation-field">
-            <label className="checkbox-wrapper">
-              <input type="checkbox" checked={isConfirmed} onChange={e => setIsConfirmed(e.target.checked)} disabled={prepStatus === 'loading'} />
-              <span>I explicitly confirm the target and feature roles are correct.</span>
-            </label>
-          </div>
-          <button
-            type="button"
-            className="assess-button"
-            onClick={handleAssess}
-            disabled={prepStatus === 'loading'}
-          >
-            {prepStatus === 'loading' ? 'Assessing...' : 'Assess Preparation Readiness'}
-          </button>
-        </div>
-        {prepStatus === 'ready' && assessment && (
-          <div className="prep-alert success">
-            <FaCheck className="alert-icon" />
-            <div className="alert-content">
-              <strong>Dataset is Ready!</strong>
-              <p>Assessment ID: {assessment.assessment_id}</p>
-              <p>Fingerprint: {assessment.input_fingerprint}</p>
-              <div className="start-run-container">
-                <button
-                  type="button"
-                  className="start-run-button"
-                  onClick={handleStartRun}
-                  disabled={runSubmitStatus === 'loading'}
-                >
-                  {runSubmitStatus === 'loading' ? 'Starting Run…' : 'Start Run'}
-                </button>
-                {runSubmitStatus === 'error' && runSubmitError && (
-                  <div className="run-submit-error" role="alert">
-                    <FaExclamationTriangle className="inline-icon error-text" />
-                    <span className="error-text"><strong>{runSubmitError.message}</strong> {runSubmitError.remediation}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-        {prepStatus === 'blocked' && assessment && (
-          <div className="assessment-results">
-            <h3 className="results-title"><FaBan /> Readiness Blocked</h3>
-            <p>Please resolve the following issues before proceeding.</p>
-            {assessment.issues?.map(issue => (
-              <div key={issue.issue_id} className={`issue-card ${issue.severity}`}>
-                <div className="issue-header">
-                  <strong>{issue.severity.toUpperCase()}: {issue.message}</strong>
-                </div>
-                <p>{issue.remediation}</p>
-              </div>
-            ))}
-            {assessment.suggested_fixes?.length > 0 && (
-              <div className="suggested-fixes">
-                <h4>Suggested Fixes</h4>
-                {assessment.suggested_fixes.map(fix => (
-                  <div key={fix.fix_id} className={`fix-card ${fix.status}`}>
-                    <div className="fix-header">
-                      <strong>Action: {fix.action_type}</strong>
-                      <span className={`status-badge ${fix.status}`}>{fix.status}</span>
-                    </div>
-                    <p className="fix-reason">{fix.reason}</p>
-                    <p className="fix-explanation">{fix.explanation}</p>
-                    {fix.status === 'supported' && (
-                      <button
-                        className="power-query-btn"
-                        onClick={() => openFixInPowerQuery(fix)}
-                        type="button"
-                      >
-                        <FaTools /> Open in Power Query
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    </main>
-  );
-}
 function DataGoalStage({ showGuidance, activeWorkspace, analysisContext, activeDraft, workflowState, onSaveRequest }) {
   const [snapshotState, setSnapshotState] = useState({ status: 'loading', data: null, error: null, stale: false });
   const [previewState, setPreviewState] = useState({ status: 'loading', data: null, error: null });
@@ -1585,28 +1220,6 @@ function DataGoalStage({ showGuidance, activeWorkspace, analysisContext, activeD
     </main>
   );
 }
-function UnconnectedStage({ activeStage, showGuidance }) {
-  const unconnectedInfo = {
-    'Data & Goal': { purpose: 'Define the business goal and metrics.', prerequisite: 'None', providedBy: 'Dataset Selection' },
-    'Prepare Data': { purpose: 'Clean and transform data.', prerequisite: 'Goal definition', providedBy: 'Data & Goal' },
-    'Train': { purpose: 'Train models.', prerequisite: 'Prepared data and configuration', providedBy: 'Configure' },
-    'Review Results': { purpose: 'Evaluate model performance.', prerequisite: 'Completed run', providedBy: 'Train' },
-    'Use & Share': { purpose: 'Deploy and share model.', prerequisite: 'Selected candidate', providedBy: 'Review Results' }
-  };
-  const info = unconnectedInfo[activeStage];
-  if (!info) return null;
-  return (
-    <main className="ml-studio-canvas" aria-label="Experiment Canvas">
-      <div className="canvas-state-message">
-         <FaInfoCircle className="canvas-icon neutral-icon" />
-         <h2>Not connected yet <span className="stage-heading-help">{showGuidance && <InfoPopover id={"help-unconnected-" + activeStage.replace(/ /g, "-")} label={activeStage} text={info.purpose} />}</span></h2>
-         <p><strong>Purpose:</strong> {info.purpose}</p>
-         <p><strong>Missing Prerequisite:</strong> {info.prerequisite}</p>
-         <p><strong>Provided By:</strong> {info.providedBy}</p>
-      </div>
-    </main>
-  );
-}
 function StatusPill({ status }) {
   const statusMap = {
     'completed': { icon: <FaCheckCircle />, className: 'status-success' },
@@ -1733,8 +1346,8 @@ function PowerQueryOpeningDialog({ field, onStay, onOpen }) {
         onKeyDown={handleKeyDown}>
         <h2 id="ml-power-query-dialog-title">Open in Power Query?</h2>
         <p id="ml-power-query-dialog-description">
-          Inspect the suggested fix for column <strong>{field}</strong> in the read-only editor.
-          No changes will be applied yet.
+          Preview the suggested fix for column <strong>{field}</strong> and review its effect.
+          Opening the editor leaves your dataset unchanged. You decide whether to apply it.
         </p>
         <div className="ml-power-query-dialog-actions">
           <button ref={stayRef} className="ml-dialog-cancel-btn" onClick={onStay} type="button">Stay</button>
@@ -1746,10 +1359,12 @@ function PowerQueryOpeningDialog({ field, onStay, onOpen }) {
   );
 }
 
-function PrepareDataStage({ showGuidance, activeWorkspace, analysisContext, activeDraft, onOpenCleaningForm }) {
+function PrepareDataStage({ showGuidance, activeWorkspace, analysisContext, activeDraft, onOpenCleaningForm, onSaveRequest, onPreparationFinished }) {
   const [optionsState, setOptionsState] = useState({ status: 'idle', data: null, error: null });
   const [confirmation, setConfirmation] = useState(null);
   const [actionableExplanation, setActionableExplanation] = useState(null);
+  const [opening, setOpening] = useState(false);
+  const openingRef = useRef(false);
   const reqIdRef = useRef(0);
   const explanationRef = useRef(null);
 
@@ -1757,7 +1372,10 @@ function PrepareDataStage({ showGuidance, activeWorkspace, analysisContext, acti
     if (actionableExplanation) explanationRef.current?.focus();
   }, [actionableExplanation]);
 
-  const identityKey = `${activeWorkspace?.workspace_id}-${analysisContext?.workspace_version}-${activeDraft?.experiment_id}-${activeDraft?.snapshot_id}-${activeDraft?.draft_revision}`;
+  const scopeIdentity = `${activeWorkspace?.workspace_id}-${analysisContext?.workspace_version}-${activeDraft?.experiment_id}-${activeDraft?.snapshot_id}`;
+  const identityKey = `${scopeIdentity}-${activeDraft?.draft_revision}`;
+  const scopeRef = useRef(scopeIdentity);
+  useEffect(() => { scopeRef.current = scopeIdentity; return () => { scopeRef.current = null; }; }, [scopeIdentity]);
 
   const fetchOptions = useCallback(async () => {
     if (!activeWorkspace?.workspace_id || !activeDraft?.experiment_id) {
@@ -1834,23 +1452,30 @@ function PrepareDataStage({ showGuidance, activeWorkspace, analysisContext, acti
     setConfirmation(null);
   };
 
-  const handleConfirmOpen = () => {
-    if (!confirmation || overlayIdentityRef.current === identityKey) return;
+  const handleConfirmOpen = async () => {
+    if (!confirmation || openingRef.current || overlayIdentityRef.current === identityKey) return;
     if (typeof onOpenCleaningForm !== 'function') {
       setConfirmation(null);
       setActionableExplanation('Power Query is unavailable. Reload the application and try again.');
       return;
     }
-    overlayIdentityRef.current = identityKey;
-    const currentIdentity = identityKey;
+    openingRef.current = true;
+    setOpening(true);
+    let currentIdentity = identityKey;
     try {
+      const saved = await onSaveRequest({});
+      if (scopeRef.current !== scopeIdentity) return;
+      if (!saved.success) throw new Error(saved.error?.message || 'Save the draft before preparing data.');
+      currentIdentity = `${scopeIdentity}-${saved.draft.draft_revision}`;
+      overlayIdentityRef.current = currentIdentity;
       onOpenCleaningForm({
        mlStudioMode: true,
        mlStudioOpeningContext: {
          experiment_id: activeDraft.experiment_id,
          workspace_id: activeWorkspace.workspace_id,
          snapshot_id: activeDraft.snapshot_id,
-         draft_revision: activeDraft.draft_revision,
+         draft_revision: saved.draft.draft_revision,
+         base_etag: saved.draft.etag,
          issue_id: confirmation.issue.issue_id,
          fix_id: confirmation.fix.fix_id,
          return_stage: "Prepare Data",
@@ -1860,6 +1485,7 @@ function PrepareDataStage({ showGuidance, activeWorkspace, analysisContext, acti
          explanation: confirmation.fix.explanation,
        },
        initialSteps: [{ type: confirmation.fix.action_type, params: confirmation.fix.parameters || {}, id: `fix-${Date.now()}` }],
+       onPreparationFinished,
        onClose: () => {
          const { fetchOptions: fetchFn } = latestPropsRef.current;
          if (overlayIdentityRef.current !== currentIdentity) return;
@@ -1871,8 +1497,22 @@ function PrepareDataStage({ showGuidance, activeWorkspace, analysisContext, acti
     } catch (err) {
       overlayIdentityRef.current = null;
       setConfirmation(null);
-      setActionableExplanation('Power Query could not open. Please try again.');
+      setActionableExplanation(err.message || 'Power Query could not open. Please try again.');
+    } finally {
+      openingRef.current = false;
+      setOpening(false);
     }
+  };
+
+  const handleResume = () => {
+    const preparation = data?.preparation_context || activeDraft.preparation_context;
+    if (!preparation || typeof onOpenCleaningForm !== 'function') return;
+    overlayIdentityRef.current = identityKey;
+    onOpenCleaningForm({ mlStudioMode: true,
+      mlStudioOpeningContext: { ...preparation, preparation, title: activeDraft.name },
+      initialSteps: [], onPreparationFinished,
+      onClose: () => { overlayIdentityRef.current = null; fetchOptions(); },
+    });
   };
 
   return (
@@ -1896,6 +1536,7 @@ function PrepareDataStage({ showGuidance, activeWorkspace, analysisContext, acti
                 <button className="retry-button" onClick={fetchOptions} type="button">
                   <FaSyncAlt /> Retry
                 </button>
+                {activeDraft.preparation_context?.status === 'open' && <button type="button" className="power-query-btn" onClick={handleResume}>Resume preparation</button>}
              </div>
            </div>
         )}
@@ -1908,6 +1549,7 @@ function PrepareDataStage({ showGuidance, activeWorkspace, analysisContext, acti
                    <div className="alert-content">
                      <strong>Preparation operation is currently open.</strong>
                      <p>A preparation step is pending (Operation ID: {data.preparation_context.operation_id}). Complete or cancel it to proceed.</p>
+                     <button type="button" className="power-query-btn" onClick={handleResume}>Resume preparation</button>
                    </div>
                  </div>
               )}
@@ -1925,6 +1567,7 @@ function PrepareDataStage({ showGuidance, activeWorkspace, analysisContext, acti
               {confirmation && (
                  <PowerQueryOpeningDialog field={confirmation.issue.field} onStay={handleStay} onOpen={handleConfirmOpen} />
               )}
+              {opening && <p role="status">Saving experiment before opening preparation…</p>}
 
               <div className="assessment-results">
                  <h3 className="results-title">Quality Findings</h3>

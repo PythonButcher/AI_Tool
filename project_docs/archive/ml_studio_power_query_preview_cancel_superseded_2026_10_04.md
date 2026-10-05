@@ -1,3 +1,7 @@
+# Superseded reference — not active instructions
+
+The Codex-owned completion gate and brief replace this narrow assignment on 2026-10-04.
+
 Goal: Preview the selected suggested preparation step against the saved experiment's governed source, then cancel and return without changing its dataset or draft.
 
 ACTIVE HANDOFF — Antigravity owns this bounded implementation. User authorization is recorded in project_docs/active/status/phase_authorization.json. Stop after source and verification evidence return to Codex.
