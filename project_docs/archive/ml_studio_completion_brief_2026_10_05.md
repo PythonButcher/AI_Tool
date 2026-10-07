@@ -1,4 +1,8 @@
-Goal: Finish ML Studio end to end and give the entire studio a polished, theme-aligned UI makeover in one sustained Codex implementation effort.
+# ML Studio Completion Brief — Historical Reference
+
+Archived 2026-10-05 after engineering verification. This document preserves the starting scope and source review; it is not an active execution instruction or a browser-acceptance record. Current truth belongs to `project_docs/active/status/project_execution_status.md`, and implemented interfaces belong to `project_docs/active/contracts/ml_studio.md`.
+
+Original goal: Finish ML Studio end to end and give the entire studio a polished, theme-aligned UI makeover in one sustained Codex implementation effort.
 
 ## User Value And Authority
 

@@ -68,7 +68,10 @@ def supervised_specification(config: dict) -> ExperimentSpecification:
 
 def make_pipeline(config: dict, family: str):
     from sklearn.compose import ColumnTransformer
+    from sklearn.cluster import KMeans, MiniBatchKMeans
     from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
+    from sklearn.ensemble import IsolationForest
+    from sklearn.neighbors import LocalOutlierFactor
     from sklearn.impute import SimpleImputer
     from sklearn.linear_model import LogisticRegression, Ridge
     from sklearn.pipeline import Pipeline
@@ -82,7 +85,14 @@ def make_pipeline(config: dict, family: str):
         # Bound category expansion and keep wide feature spaces sparse.
         transforms.append(("categorical", Pipeline([("impute", SimpleImputer(strategy="most_frequent")),
             ("encode", OneHotEncoder(handle_unknown="ignore", max_categories=32, sparse_output=True))]), roles["categorical"]))
-    if family == "regularized_linear":
+    if family == "isolation_forest":
+        model = IsolationForest(n_estimators=100, max_samples="auto", contamination="auto", random_state=seed, n_jobs=1)
+    elif family == "local_outlier_factor":
+        model = LocalOutlierFactor(n_neighbors=config["candidate"]["neighbors"], novelty=True, contamination="auto", n_jobs=1)
+    elif family in ("kmeans", "mini_batch_kmeans"):
+        cls = KMeans if family == "kmeans" else MiniBatchKMeans
+        model = cls(n_clusters=config["candidate"]["cluster_count"], n_init=10, random_state=seed, **({"batch_size": 256} if family == "mini_batch_kmeans" else {}))
+    elif family == "regularized_linear":
         model = Ridge(alpha=1.0)
     elif family == "logistic":
         model = LogisticRegression(max_iter=1000, class_weight="balanced", random_state=seed)
@@ -118,6 +128,12 @@ def train_development(data, config: dict, progress: Callable[[str], None] = lamb
     if config["task_type"] == "forecasting":
         from .forecasting import train_forecasting
         return train_forecasting(data, config, progress)
+    if config["task_type"] == "clustering":
+        from .clustering import train_clustering
+        return train_clustering(data, config, progress)
+    if config["task_type"] == "anomaly_detection":
+        from .anomalies import train_anomalies
+        return train_anomalies(data, config, progress)
     import joblib
     import numpy as np
     import pandas as pd

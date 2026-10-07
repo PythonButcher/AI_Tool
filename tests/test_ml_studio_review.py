@@ -61,9 +61,12 @@ class ReviewTests(unittest.TestCase):
         self.assertEqual(review["selections"], [receipt])
         self.assertEqual(len(review["runs"]), 1)
         self.assertEqual(review["workflow_state"]["selection_id"], receipt["selection_id"])
+        self.assertTrue(review["workflow_state"]["experiment_complete"])
+        self.assertEqual(next(stage['state'] for stage in review['workflow_state']['stages'] if stage['stage'] == 'Review Results'), 'complete')
         self.assertEqual(next(stage["state"] for stage in review["workflow_state"]["stages"] if stage["stage"] == "Use & Share"), "available")
         changed = self.service.update_draft(self.draft["experiment_id"], 'workspace-1', self.ready['draft']['etag'], {'metric': {'primary': 'mae'}})
         self.assertIsNone(changed['workflow_state']['selection_id'])
+        self.assertFalse(changed['workflow_state']['experiment_complete'])
         self.assertEqual(next(stage['state'] for stage in changed['workflow_state']['stages'] if stage['stage'] == 'Use & Share'), 'stale')
 
     def test_concurrent_nominations_lock_one_candidate_and_interrupted_final_resumes_same_identity(self):

@@ -23,6 +23,14 @@
 .ml-evidence-figure text { fill:var(--text-secondary); font-size:10px; }
 .ml-plot-zero { stroke:var(--text-secondary); stroke-dasharray:4 4; }
 .ml-plot-axis { stroke:var(--border-color); }
+.ml-forecast-line { fill:none; stroke-width:2; }
+.ml-forecast-line.actual { stroke:var(--accent-green); }
+.ml-forecast-line.predicted { stroke:var(--accent-blue); }
+.ml-forecast-line.baseline { stroke:var(--text-secondary); stroke-dasharray:5 4; }
+.ml-plot-legend { display:flex; gap:18px; flex-wrap:wrap; font-size:.75rem; margin:14px 0; }
+.ml-plot-legend .actual { color:var(--accent-green); }
+.ml-plot-legend .predicted { color:var(--accent-blue); }
+.ml-plot-legend .baseline { color:var(--text-secondary); }
 .ml-evidence-notes { margin-top:20px; color:var(--text-secondary); font-size:.8rem; }
 .ml-evidence-notes summary { cursor:pointer; }
 .ml-evidence-notes li, .ml-limitations li { margin:8px 0; line-height:1.6; }
@@ -40,3 +48,7 @@
 .ml-review :focus-visible,.ml-training :focus-visible { outline:3px solid var(--accent-blue); outline-offset:3px; }
 @media(max-width:1050px) { .ml-decision-panel { grid-template-columns:1fr; gap:16px; } }
 @media(max-width:600px) { .ml-review-section { padding:16px; } .ml-review-toolbar label { width:100%; } .ml-evidence-figure { padding:12px; } .ml-review th,.ml-review td { padding:10px; } }
+.ml-cluster-sizes { display: grid; gap: 10px; margin: 20px 0; }
+.ml-cluster-sizes > div { display: grid; grid-template-columns: 85px minmax(60px, 1fr) 80px; gap: 12px; align-items: center; }
+.ml-cluster-sizes meter { width: 100%; accent-color: var(--accent-color, #3b82f6); }
+.ml-score-bin { fill: var(--accent-color, #3b82f6); opacity: .8; }

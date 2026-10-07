@@ -1,18 +1,25 @@
 {
   "schema_version": 1,
   "authorized_work": {
-    "name": "ML Studio completion and theme-aligned UI makeover"
+    "name": "ML Studio header alignment and hierarchy"
   },
   "authorization_state": "AUTHORIZED",
-  "lifecycle_state": "IN PROGRESS",
+  "lifecycle_state": "AWAITING USER ACCEPTANCE",
   "diff_baseline": "e2896c2eced5511144c3151e34cae473e992af5a",
   "authority_kind": "direct_user_instruction",
+  "header_repair_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-10-06",
+    "instruction": "The section that says ML Studio and Experiments looks uneven and dull; fix it using the supplied screenshot.",
+    "scope": "Codex may refine the ML Studio header markup, alignment, hierarchy and theme styling, preserve existing controls, and update governing status with verification.",
+    "codex_frontend_implementation_authorized": true
+  },
   "completion_authorization": {
     "approved_by": "User",
     "approved_at": "2026-10-04",
     "instruction": "Complete ML Studio end to end, including a polished UI makeover that fits AI Tool’s existing themes. I explicitly authorize you to implement both backend and frontend, including React, CSS, and the whole-studio redesign.",
     "scope": "This Codex chat executes ML Studio backend, frontend, contracts, tests and theme-aligned UI redesign through all five task workflows and the completion gate. Final browser acceptance remains with the user.",
-    "brief": "project_docs/active/ml_studio/completion_brief.md",
+    "brief": "project_docs/archive/ml_studio_completion_brief_2026_10_05.md",
     "codex_frontend_implementation_authorized": true
   },
   "next_preparation_step": {
@@ -89,6 +96,7 @@
     "tests/test_ml_studio*.py",
     "frontend/frontend/src/features/ml_studio/**",
     "project_docs/active/ml_studio/**",
+    "project_docs/archive/ml_studio_completion_brief_2026_10_05.md",
     "project_docs/archive/ml_studio_power_query_preview_cancel_superseded_2026_10_04.md",
     "project_docs/active/ai_hand_off/ml_studio_power_query_preview_cancel.md",
     "project_docs/active/future/codex/ml_studio_power_query_preview_cancel.md",

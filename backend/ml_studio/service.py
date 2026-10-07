@@ -352,23 +352,37 @@ class MLStudioService:
         selections = self._repository.list_selections(draft["experiment_id"], draft["workspace_id"])
         selection = next((item for item in selections if item["input_fingerprint"] == dependency_fingerprint(draft)), None)
         if selections:
-            available.add("Use & Share")
+            available.update(("Review Results", "Use & Share"))
+        completed_stages = set()
+        if has_data_goal:
+            completed_stages.add("Data & Goal")
+        if fresh and assessment["state"] == "ready":
+            completed_stages.update(("Prepare Data", "Configure"))
+        if current_run or selection:
+            completed_stages.add("Train")
+        if selection:
+            completed_stages.add("Review Results")
         effective = draft["active_stage"] if isinstance(draft["active_stage"], str) and draft["active_stage"] in available else "Data & Goal"
         records = []
         for stage in stages:
-            state = "active" if stage == effective else "available" if stage in available else "locked"
+            state = "active" if stage == effective else "complete" if stage in completed_stages else "available" if stage in available else "locked"
             stale = bool(assessment and not fresh and stage in ("Train", "Review Results", "Use & Share")) or bool(stage == "Review Results" and complete and not current_run)
             stale = stale or bool(stage == "Use & Share" and selections and not selection)
             if stale:
                 state = "stale"
             blockers = [] if stage in available else ["data_goal_required" if not has_data_goal else "assessment_required" if stage == "Train" else "development_run_required" if stage == "Review Results" else "selection_required"]
             records.append({"stage": stage, "state": state, "blocker_codes": blockers,
-                            "stale_reason_codes": ["configuration_changed"] if stale else []})
+                            "stale_reason_codes": ["configuration_changed"] if stale else [],
+                            "snapshot_id": draft["snapshot_id"],
+                            "configuration_id": assessment["configuration"]["configuration_id"] if fresh else None,
+                            "run_id": current_run["run_id"] if current_run else None,
+                            "selection_id": selection["selection_id"] if selection else None})
         return {
             "experiment_id": draft["experiment_id"], "draft_revision": draft["draft_revision"],
             "active_stage": effective, "stages": records, "assessment_current": fresh,
             "latest_run_id": runs[0]["run_id"] if runs else None,
             "selection_id": selection["selection_id"] if selection else None,
+            "experiment_complete": selection is not None,
             "active_run": next(({key: run[key] for key in ("run_id", "status", "progress_stage")} for run in runs if run["status"] in ("queued", "running", "cancel_requested")), None),
         }
 
@@ -449,6 +463,10 @@ class MLStudioService:
         self._require_draft_workspace(workspace_id)
         payload = _require_object(request, label="experiment draft edit")
         current = self.get_draft(experiment_id, workspace_id)["draft"]
+        if "task_type" in payload and payload["task_type"] != current["task_type"]:
+            payload = dict(payload)
+            for field in ("validation", "metric", "candidate"):
+                payload.setdefault(field, {})
         self._validate_draft_references({**current, **payload})
         try:
             draft = self._repository.update_draft(experiment_id, workspace_id, etag, payload)

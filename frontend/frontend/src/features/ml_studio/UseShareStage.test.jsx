@@ -81,6 +81,22 @@ test('stale selection keeps evidence visible and prevents prediction', async () 
   expect(writes).toHaveLength(0);
 });
 
+test('output tabs support keyboard selection and retain local problem and use boundaries', async () => {
+  details.summary.problem_statement = 'Estimate next-quarter demand';
+  details.selection = { ...details.selection, experiment_name: 'Demand study' };
+  mount();
+  const predict = await screen.findByRole('tab', { name: 'Predict' });
+  predict.focus();
+  fireEvent.keyDown(predict, { key: 'End' });
+  expect(screen.getByRole('tab', { name: 'Local summary' })).toHaveFocus();
+  expect(screen.getByRole('tab', { name: 'Local summary' })).toHaveAttribute('aria-selected', 'true');
+  expect(screen.getByText('Estimate next-quarter demand')).toBeInTheDocument();
+  expect(screen.getByText('Automated decisions')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Export this record' }));
+  expect(screen.getByRole('tab', { name: 'Exports' })).toHaveFocus();
+  expect(screen.getByRole('button', { name: 'Prepare exports' })).toBeInTheDocument();
+});
+
 test('CSV validation errors display rule counts without dropping the selected file', async () => {
   fetch.mockImplementation((url, options) => options?.method ? Promise.resolve({ ok: false, json: async () => ({ error: { message: 'Input schema mismatch' }, validation_issues: ['feature: expected number (2 rows)'] }) }) : ok(details));
   mount();

@@ -110,6 +110,8 @@ def train_forecasting(data, config, progress):
     development_groups = [(key, part.iloc[:-horizon]) for key, part in groups]
     development_indices = [int(index) for _, part in development_groups for index in part.index]
     holdout_indices = [int(index) for _, part in groups for index in part.iloc[-horizon:].index]
+    from .evaluation import _structural_leakage
+    findings = _structural_leakage(data.iloc[development_indices], data.iloc[development_indices][target], config["roles"]["numeric"] + config["roles"]["categorical"])
     fold_parts, naive_scores, seasonal_scores, splits = [], [], [], []
     for fold in range(folds):
         training = [(key, part.iloc[:len(part) - (folds - fold) * horizon]) for key, part in development_groups]
@@ -145,7 +147,7 @@ def train_forecasting(data, config, progress):
             "series_count": len(groups), "horizon": horizon, "frequency": settings["frequency"], "folds": splits},
         "baseline": {"name": "Last observation", "metrics": {name: float(np.mean([score[name] for score in naive_scores])) for name in naive_scores[0]},
             "alternatives": [{"name": f"Seasonal naive ({settings['season_length']} periods)", "metrics": {name: float(np.mean([score[name] for score in seasonal_scores])) for name in seasonal_scores[0]}}]},
-        "warnings": [], "limitations": ["Rolling origins and the final horizon preserve time order; forecast uncertainty grows with horizon.",
+        "warnings": [item.message for item in findings], "limitations": ["Rolling origins and the final horizon preserve time order; forecast uncertainty grows with horizon.",
             "Future feature values must actually be known at prediction time. No prediction intervals are supplied.",
             "Only regular hourly, daily, Monday-weekly or month-start series are supported; new series require training.",
             "A shared lag model fits the series together; evaluation does not guarantee performance after a distribution change."],

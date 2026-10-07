@@ -14,6 +14,8 @@ import ConfigurationStage from './ConfigurationStage';
 import TrainingStage from './TrainingStage';
 import ReviewStage from './ReviewStage';
 import UseShareStage from './UseShareStage';
+import { readable } from './TrainingStage';
+import './StudioDesign.css';
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 function draftFromEnvelope(data, previous = null) {
   const preparation_context = Object.prototype.hasOwnProperty.call(data, 'preparation_context')
@@ -460,6 +462,7 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
         return { success: false, error };
       }
       etagRef.current = data.draft.etag;
+      activeDraftRef.current = draftFromEnvelope(data, activeDraftRef.current);
       setActiveDraft(previous => draftFromEnvelope(data, previous));
       setWorkflowState(data.workflow_state);
       setActiveStage(data.workflow_state.active_stage);
@@ -470,9 +473,11 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
       if (stillCurrent()) setSaveState('saved');
       return { success: false, error: { message: err.message || 'Network error.' } };
     } finally {
-      if (stillCurrent()) isSavingRef.current = false;
-      stageSavingRef.current = false;
-      setStagePending(false);
+      if (stillCurrent()) {
+        isSavingRef.current = false;
+        stageSavingRef.current = false;
+        setStagePending(false);
+      }
     }
   };
   const handleAssessDraft = async (settings) => {
@@ -538,6 +543,8 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
       />
       <div className="ml-studio-body">
          <AssetRail
+            draft={activeDraft}
+            workflowState={workflowState}
             activeWorkspace={activeWorkspace}
             analysisContext={analysisContext}
             numRows={numRows}
@@ -579,7 +586,7 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
                        key={`${activeDraft.experiment_id}-${activeDraft.snapshot_id}-${activeDraft.task_type}-${draftReloadKey}`}
                        draft={activeDraft} showGuidance={showGuidance} onEdit={scheduleSave}
                        onAssess={handleAssessDraft} onContinue={() => handleStageSelect('Train')}
-                       canTrain={workflowState?.stages?.some(stage => stage.stage === 'Train' && ['available', 'active'].includes(stage.state))}
+                       canTrain={workflowState?.stages?.some(stage => stage.stage === 'Train' && ['available', 'active', 'complete'].includes(stage.state))}
                      />}
                                           {activeStage === 'Data & Goal' && (
                          <DataGoalStage
@@ -710,13 +717,20 @@ function TopRibbon({ activeStage, onStageSelect, showGuidance, onToggleGuidance,
     <header className="ml-studio-ribbon" aria-label="Run Ribbon">
       <div className="ribbon-top-bar">
          <div className="experiment-info">
+            <div className="ml-studio-brand">
+              <span className="ml-studio-brand-mark" aria-hidden="true"><FaBrain /></span>
+              <div className="ml-studio-brand-copy">
+                <span className="ml-studio-brand-title">ML Studio</span>
+                <span className="ml-studio-brand-context">{isHome ? 'Experiments' : 'Experiment workspace'}</span>
+              </div>
+            </div>
             {!isHome && (
                <button className="semantic-btn back-home-btn" onClick={onGoHome} title="Back to Experiments" disabled={stagePending || saveState === 'saving'}>
                  <FaChevronDown className="inline-icon" /> Home
                </button>
             )}
-            <span className="experiment-name">
-              {isHome ? 'Experiments' : (
+            {!isHome && (
+              <span className="experiment-name">
                  <input
                    type="text"
                    className="experiment-name-input"
@@ -726,10 +740,10 @@ function TopRibbon({ activeStage, onStageSelect, showGuidance, onToggleGuidance,
                    maxLength={500}
                    disabled={stagePending || saveState === 'saving' || saveState === 'conflict'}
                  />
-              )}
-            </span>
+              </span>
+            )}
             {!isHome && (
-              <span className={`save-status status-${saveState}`}>
+              <span className={`save-status status-${saveState}`} role="status">
                  {saveState === 'saving' && 'Saving...'}
                  {saveState === 'saved' && 'Saved'}
                  {saveState === 'save_error' && 'Save Error'}
@@ -739,6 +753,7 @@ function TopRibbon({ activeStage, onStageSelect, showGuidance, onToggleGuidance,
          </div>
          {!isHome && (
             <div className="guidance-toggle">
+               {workflowState?.experiment_complete && <span className="ml-cycle-complete"><FaCheckCircle aria-hidden="true" /> Cycle complete</span>}
                <label className="checkbox-wrapper semantic-btn">
                  <input type="checkbox" checked={showGuidance} onChange={onToggleGuidance} disabled={stagePending} />
                  <span>Guidance</span>
@@ -765,7 +780,7 @@ function TopRibbon({ activeStage, onStageSelect, showGuidance, onToggleGuidance,
          </div>
       )}
       {!isHome && (
-         <div className="ribbon-container">
+         <nav className="ribbon-container" aria-label="Experiment stages">
                       {STAGES.map((stage, i) => {
              const isCurrent = activeStage === stage.id;
              const stageInfo = workflowState?.stages?.find(s => s.stage === stage.id);
@@ -773,25 +788,26 @@ function TopRibbon({ activeStage, onStageSelect, showGuidance, onToggleGuidance,
              return (
                <React.Fragment key={stage.id}>
                  <button
-                   className={`ribbon-stage semantic-btn ${isCurrent ? 'is-current' : 'is-inactive'} ${isLocked ? 'is-locked' : ''}`}
+                   className={`ribbon-stage semantic-btn ${isCurrent ? 'is-current' : 'is-inactive'} ${isLocked ? 'is-locked' : ''} state-${stageInfo?.state || 'available'}`}
                    aria-current={isCurrent ? 'step' : undefined}
                    onClick={() => onStageSelect(stage.id)}
                    disabled={isLocked || stagePending || saveState === 'saving' || saveState === 'conflict'}
-                   title={isLocked ? "Stage locked" : ""}
+                   title={isLocked ? `Complete the prerequisite first: ${(stageInfo?.blocker_codes || []).map(readable).join(', ')}` : stageInfo?.state === 'stale' ? 'Saved settings changed; evidence needs refresh' : stageInfo?.state === 'complete' ? 'This step has saved completion evidence' : ''}
                  >
-                   <span className="ribbon-icon">{stage.icon}</span>
-                   <span className="ribbon-label">{stage.label}</span>
+                   <span className="ribbon-icon" aria-hidden="true">{stageInfo?.state === 'complete' ? <FaCheckCircle /> : <span className="ml-stage-number">{i + 1}</span>}</span>
+                   <span className="ribbon-label">{stage.label}{stageInfo?.state === 'stale' && <small>Needs refresh</small>}</span>
                  </button>
                  {i < STAGES.length - 1 && <div className="ribbon-connector"></div>}
                </React.Fragment>
              );
            })}
-         </div>
+         </nav>
       )}
     </header>
   );
 }
 function ExperimentHome({ draftsState, onCreate, onReopen, onDuplicate, onDelete, pendingAction, onRetry, draftActionError }) {
+  const [query, setQuery] = useState('');
   if (draftsState.status === 'loading' || draftsState.status === 'idle') {
     return <main className="ml-studio-canvas" aria-label="Experiment Home"><div className="canvas-state-message"><FaSyncAlt className="canvas-icon neutral-icon spin-icon" /><h2>Loading experiments...</h2></div></main>;
   }
@@ -807,14 +823,17 @@ function ExperimentHome({ draftsState, onCreate, onReopen, onDuplicate, onDelete
       </main>
     );
   }
-  const drafts = draftsState.data || [];
-  if (drafts.length === 0) {
+  const allDrafts = draftsState.data || [];
+  const drafts = allDrafts.filter(draft => `${draft.name} ${draft.task_type || ''}`.toLowerCase().includes(query.toLowerCase()));
+  if (allDrafts.length === 0) {
     return (
       <main className="ml-studio-canvas" aria-label="Experiment Home">
         <div className="canvas-state-message no-dataset">
-          <FaDatabase className="canvas-icon neutral-icon" />
+          <FaBrain className="canvas-icon neutral-icon" />
+          <span className="ml-eyebrow">From governed data to a considered decision</span>
           <h2>No Experiments Found</h2>
-          <p className="empty-state-text">Create a new experiment to get started.</p>
+          <p className="empty-state-text">Prepare your data, compare models and keep the evidence behind your choice. Every experiment stays local and can be resumed.</p>
+          <div className="ml-task-overview"><span>Predict values</span><span>Classify</span><span>Forecast</span><span>Find groups</span><span>Detect unusual rows</span></div>
           <button
             className="start-run-button"
             onClick={onCreate}
@@ -830,7 +849,7 @@ function ExperimentHome({ draftsState, onCreate, onReopen, onDuplicate, onDelete
     <main className="ml-studio-canvas align-top" aria-label="Experiment Home">
       <div className="experiment-home-container">
         <div className="experiment-home-header">
-          <h2 className="prep-form-title">Workspace Experiments</h2>
+          <div><span className="ml-eyebrow">Your local model workspace</span><h2 className="prep-form-title">Workspace Experiments</h2><p>Resume a saved experiment or explore a new question with the same governed data.</p></div>
           <button
             className="start-run-button"
             onClick={onCreate}
@@ -839,16 +858,19 @@ function ExperimentHome({ draftsState, onCreate, onReopen, onDuplicate, onDelete
             {pendingAction === 'creating' ? 'Creating...' : 'New Experiment'}
           </button>
         </div>
+        <div className="ml-home-toolbar"><span>{allDrafts.length} saved experiments</span><label>Find an experiment<input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Search name or task" /></label></div>
+        {drafts.length === 0 && <p role="status">No experiments match this search.</p>}
         <div className="drafts-list">
           {drafts.map(draft => (
             <div key={draft.experiment_id} className="draft-item-container">
               <div className="draft-card">
                 <div className="draft-info">
                   <h4>{draft.name}</h4>
-                  <div className="draft-identity-meta">
+                  <span className="ml-draft-task">{draft.task_type ? readable(draft.task_type) : 'Choose a task'}</span>
+                  <details className="draft-identity-meta"><summary>Saved identity</summary>
                     <span className="draft-id" aria-label="Experiment ID">ID: {draft.experiment_id}</span>
                     <span className="draft-rev" aria-label="Revision">Rev: {draft.draft_revision}</span>
-                  </div>
+                  </details>
                   <span className="draft-stage">Stage: {draft.active_stage}</span>
                   <span className="draft-updated">Updated: {new Date(draft.updated_at).toLocaleString()}</span>
                 </div>
@@ -894,10 +916,14 @@ function ExperimentHome({ draftsState, onCreate, onReopen, onDuplicate, onDelete
     </main>
   );
 }
-function AssetRail({ activeWorkspace, analysisContext, numRows, numCols }) {
+function AssetRail({ activeWorkspace, analysisContext, numRows, numCols, draft, workflowState }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isMobileExpanded, setIsMobileExpanded] = useState(false);
-  const copyId = (id) => navigator.clipboard.writeText(id).catch(()=>{});
+  const [copyStatus, setCopyStatus] = useState('');
+  const copyId = async id => {
+    try { await navigator.clipboard.writeText(id); setCopyStatus('Identifier copied'); }
+    catch { setCopyStatus('Copy unavailable. Select the displayed identifier to copy it.'); }
+  };
   return (
     <aside className={`ml-studio-rail ${isMobileExpanded ? 'is-mobile-expanded' : ''}`} aria-label="Asset Rail">
        <button
@@ -905,10 +931,10 @@ function AssetRail({ activeWorkspace, analysisContext, numRows, numCols }) {
          aria-expanded={isMobileExpanded}
          onClick={() => setIsMobileExpanded(!isMobileExpanded)}
        >
-         <span><FaBoxOpen className="panel-icon"/> Asset Identity</span>
+         <span><FaDatabase className="panel-icon"/> Data context · {numRows.toLocaleString()} rows</span>
          {isMobileExpanded ? <FaChevronUp className="toggle-icon"/> : <FaChevronDown className="toggle-icon"/>}
        </button>
-       <h3 className="panel-title desktop-rail-title"><FaBoxOpen className="panel-icon"/> Asset Identity</h3>
+       <h3 className="panel-title desktop-rail-title"><FaDatabase className="panel-icon"/> Data context</h3>
        <div className="rail-content">
          <div className="rail-section">
            <div className="rail-item">
@@ -935,6 +961,7 @@ function AssetRail({ activeWorkspace, analysisContext, numRows, numCols }) {
            </div>
          </div>
          <div className="rail-section">
+           {draft && <div className="ml-context-question"><span className="ml-eyebrow">This experiment</span><strong>{readable(draft.task_type) || 'Task not chosen'}</strong>{draft.goal && <p>{draft.goal}</p>}<span className="ml-context-state">{workflowState?.experiment_complete ? 'Candidate selected' : draft.assessment_current && draft.assessment?.state === 'ready' ? 'Configuration assessed' : 'Preparation & design'}</span></div>}
            <button className="semantic-btn expand-raw-btn" aria-expanded={isExpanded} onClick={() => setIsExpanded(!isExpanded)}>
              {isExpanded ? 'Hide Identifiers' : 'Show Identifiers'}
            </button>
@@ -954,6 +981,7 @@ function AssetRail({ activeWorkspace, analysisContext, numRows, numCols }) {
                ))}
              </div>
            )}
+           {copyStatus && <p className="ml-output-note" role="status">{copyStatus}</p>}
          </div>
        </div>
     </aside>
@@ -1042,8 +1070,11 @@ function DataGoalStage({ showGuidance, activeWorkspace, analysisContext, activeD
       }
     }
   }, [activeWorkspace, analysisContext, activeDraft?.snapshot_id, isOpenPreparation]);
+  const dataGoalLoader = useRef(loadDataAndGoal);
+  dataGoalLoader.current = loadDataAndGoal;
   useEffect(() => {
-    loadDataAndGoal();
+    // Reload on workspace identity changes, not on every saved header revision.
+    dataGoalLoader.current();
     return () => { reqIdRef.current += 1; };
   }, [identityKey]);
   const handleSave = async (doContinue = false) => {
@@ -1170,9 +1201,9 @@ function DataGoalStage({ showGuidance, activeWorkspace, analysisContext, activeD
             >
               <option value="regression">Predict a number (regression)</option>
               <option value="classification">Classify (classification)</option>
-              <option value="forecasting" disabled>Forecast (forecasting) - Unavailable</option>
-              <option value="clustering" disabled>Find groups (clustering) - Unavailable</option>
-              <option value="anomaly_detection" disabled>Detect anomalies (anomaly_detection) - Unavailable</option>
+              <option value="forecasting">Forecast (forecasting)</option>
+              <option value="clustering">Find groups (clustering)</option>
+              <option value="anomaly_detection">Detect unusual observations (anomaly detection)</option>
             </select>
           </label>
           <label className="prep-field">
@@ -1235,22 +1266,24 @@ function StatusPill({ status }) {
   );
 }
 function RunDock({ runsState, onRetry, isIdentityAvailable }) {
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const activeCount = (runsState.data || []).filter(run => ['queued', 'running', 'cancel_requested'].includes(run.status)).length;
   if (!isIdentityAvailable) {
      return <section className="ml-studio-dock empty-dock" aria-label="Recent local runs"></section>;
   }
   return (
     <section className={`ml-studio-dock ${isExpanded ? '' : 'collapsed'}`} aria-label="Recent local runs" aria-busy={runsState.status === 'loading'}>
        <div className="dock-header">
-         <button className="semantic-btn dock-toggle-btn" aria-expanded={isExpanded} onClick={() => setIsExpanded(!isExpanded)}>
-           <h3><FaLayerGroup className="panel-icon"/> Recent local runs</h3>
+         <button className="semantic-btn dock-toggle-btn" aria-expanded={isExpanded} aria-controls="ml-run-activity" onClick={() => setIsExpanded(!isExpanded)}>
+           <span><FaLayerGroup className="panel-icon"/> Recent local runs</span>{isExpanded ? <FaChevronDown aria-hidden="true" /> : <FaChevronUp aria-hidden="true" />}
          </button>
          {runsState.status === 'success' && runsState.data && (
-           <span className="run-count">{runsState.data.length} durable runs</span>
+           <span className="run-count" role="status">{activeCount ? `${activeCount} active · ` : ''}{runsState.data.length} saved runs</span>
          )}
+         {runsState.status === 'error' && <span className="run-count" role="status">Run activity unavailable · expand to retry</span>}
        </div>
        {isExpanded && (
-       <div className="dock-content">
+       <div className="dock-content" id="ml-run-activity">
          {runsState.status === 'loading' && (
            <div className="run-dock-skeleton">
               <div className="skeleton-row header-row"></div>
@@ -1272,7 +1305,7 @@ function RunDock({ runsState, onRetry, isIdentityAvailable }) {
          {runsState.status === 'success' && runsState.data && runsState.data.length === 0 && (
            <div className="run-dock-empty">
               <FaBoxOpen className="empty-icon" />
-              <p>No durable runs exist. Run creation arrives later.</p>
+              <p>No saved runs yet. Assess a configuration, then start training.</p>
            </div>
          )}
          {runsState.status === 'success' && runsState.data && runsState.data.length > 0 && (

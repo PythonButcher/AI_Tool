@@ -30,6 +30,8 @@ EXPORTS = {
 def supported_exports(selection):
     if selection.get("task_type") == "forecasting":
         return {**EXPORTS, "runtime": ("forecast-runtime.py", "text/x-python", "Portable forecast inference runtime")}
+    if selection.get("task_type") == "anomaly_detection":
+        return {**EXPORTS, "runtime": ("anomaly-runtime.py", "text/x-python", "Portable detector scoring and threshold")}
     return EXPORTS
 
 
@@ -54,6 +56,13 @@ def inference_schema(selection, config):
         "additional_fields": False, "max_rows": 10000, "max_input_bytes": MAX_INPUT_BYTES,
         "outputs": [{"name": "prediction", "logical_type": "number" if config["task_type"] == "regression" else "string"}],
         "probabilities_supported": False}
+    if config["task_type"] == "clustering":
+        schema["outputs"] = [{"name": "cluster", "logical_type": "integer"}]
+        schema["assignment_note"] = "Assignments use development-fitted centers. Cluster IDs are arbitrary labels, not class predictions."
+    if config["task_type"] == "anomaly_detection":
+        schema["outputs"] = [{"name": "score", "logical_type": "number"}, {"name": "is_unusual", "logical_type": "boolean"}]
+        schema["detector"] = selection["inference_context"]
+        schema["assignment_note"] = "Larger scores mean more unusual. Flags use the fitted training threshold and are not confirmed errors or probabilities."
     if config["task_type"] == "forecasting":
         import pandas as pd
         roles = config["roles"]
@@ -78,7 +87,7 @@ def inference_schema(selection, config):
 def cycle_summary(service, selection, config):
     development = service.get_run(selection["development_run_id"])
     final = service.get_run(selection["final_run_id"])
-    return {"contract_version": "ml_studio_cycle_summary_v1", "selection": selection, "problem_statement": selection["intended_use"],
+    return {"contract_version": "ml_studio_cycle_summary_v1", "selection": selection, "problem_statement": selection.get("problem_statement", selection["intended_use"]),
         "configuration": config, "dataset_snapshot": development["run_specification"]["dataset_snapshot"],
         "development_evidence": development["evaluation_result"], "final_evidence": final["evaluation_result"],
         "limitations": development["evaluation_result"]["limitations"] + final["evaluation_result"]["limitations"],
@@ -172,11 +181,12 @@ for field in fields:
 model = joblib.load("model.joblib")
 predictions = pd.DataFrame({"prediction": model.predict(frame)})
 # Keep text labels from being interpreted as formulas by spreadsheet readers.
-predictions["prediction"] = predictions["prediction"].map(lambda value: "'" + value if isinstance(value, str) and value.startswith(("=", "+", "-", "@", "\\t", "\\r")) else value)
+for column in predictions.select_dtypes(include="object"):
+    predictions[column] = predictions[column].map(lambda value: "'" + value if isinstance(value, str) and value.startswith(("=", "+", "-", "@", "\\t", "\\r")) else value)
 predictions.to_csv(sys.argv[2], index=False)
 '''
     card = "\n".join(["# Local model card", "", f"Task: {config['task_type']}", f"Candidate: {selection['family']}", "", "## Intended use", selection["intended_use"], "", "## Prohibited use", selection["prohibited_use"], "", "## Evaluation and limitations", *[f"- {item}" for item in summary["limitations"]], "", "This is a local selection receipt, not a deployment approval. Classification probabilities are not provided."])
-    preprocessor = bundle["pipeline"]["estimator"].named_steps["preprocessor"] if config["task_type"] == "forecasting" else bundle["pipeline"].named_steps["preprocessor"]
+    preprocessor = bundle["pipeline"]["estimator"].named_steps["preprocessor"] if config["task_type"] in ("forecasting", "anomaly_detection") else bundle["pipeline"].named_steps["preprocessor"]
     payloads = {"model": serialize(bundle["pipeline"]), "preprocessor": serialize(preprocessor),
         "schema": _json(schema), "report": _json({"development": summary["development_evidence"], "final": summary["final_evidence"]}),
         "model_card": card.encode("utf-8"), "example": example.encode("utf-8"), "summary": _json(summary)}
@@ -185,6 +195,13 @@ predictions.to_csv(sys.argv[2], index=False)
             'import runpy\nforecast, horizon = runpy.run_path("forecast-runtime.py")["predict_forecast"](model, frame)\npredictions = pd.DataFrame({"prediction": forecast, "horizon": horizon})')
         payloads["example"] = example.encode("utf-8")
         payloads["runtime"] = (Path(__file__).parent / "forecast_runtime.py").read_bytes()
+    elif config["task_type"] == "clustering":
+        payloads["example"] = example.replace('"prediction"', '"cluster"').encode("utf-8")
+    elif config["task_type"] == "anomaly_detection":
+        example = example.replace('predictions = pd.DataFrame({"prediction": model.predict(frame)})',
+            'import runpy\nscores, flags = runpy.run_path("anomaly-runtime.py")["predict_anomalies"](model, frame)\npredictions = pd.DataFrame({"score": scores, "is_unusual": flags})')
+        payloads["example"] = example.encode("utf-8")
+        payloads["runtime"] = (Path(__file__).parent / "anomaly_runtime.py").read_bytes()
     existing = {item["kind"]: item["artifact"] for item in export_descriptors(service, selection)}
     artifacts = {}
     for kind, value in payloads.items():
@@ -279,6 +296,11 @@ def _prediction_worker(connection, data, config):
         if bundle["configuration"]["configuration_id"] != config["configuration_id"] or bundle["family"] != config["family"]:
             raise ValueError("artifact binding mismatch")
         with threadpool_limits(limits=1):
+            if config["task_type"] == "anomaly_detection":
+                from .anomaly_runtime import predict_anomalies
+                values, flags = predict_anomalies(bundle["pipeline"], normalize_features(data, config))
+                connection.send({"result": {"predictions": values.tolist(), "flags": flags.tolist()}})
+                return
             if config["task_type"] == "forecasting":
                 from .forecast_runtime import predict_forecast
                 try:
@@ -324,7 +346,10 @@ def predict_batch(service, experiment_id, workspace_id, selection_id, key, paylo
             raise MLStudioServiceError(safe.code, safe.message, safe.remediation) from exc
         raise
     predictions = result["predictions"]
-    records = [{"input_row": index + 1, "prediction": value} for index, value in enumerate(predictions)]
+    output_name = "cluster" if config["task_type"] == "clustering" else "prediction"
+    records = [{"input_row": index + 1, output_name: value} for index, value in enumerate(predictions)]
+    if config["task_type"] == "anomaly_detection":
+        records = [{"input_row": index + 1, "score": value, "is_unusual": result["flags"][index]} for index, value in enumerate(predictions)]
     if config["task_type"] == "forecasting":
         for index, record in enumerate(records):
             record.update({"time": rows[index][config["roles"]["time"][0]], "series": rows[index][config["roles"]["group"][0]] if config["roles"]["group"] else "Single series", "horizon": result["horizons"][index]})
@@ -340,7 +365,7 @@ def predict_batch(service, experiment_id, workspace_id, selection_id, key, paylo
         "configuration_id": selection["configuration_id"], "input_schema_version": inference_schema(selection, config)["schema_id"],
         "input_hash": input_hash, "row_count": len(rows), "output_artifact": artifact, "model_artifact_hash": metadata["sha256"],
         "preview": records[:100], "output_columns": columns,
-        "warnings": ["Preview is limited to 100 rows. Unknown categories use the fitted encoder's ignore policy. Probabilities are not provided."],
+        "warnings": ["Preview is limited to 100 rows. Unknown categories use the fitted encoder's ignore policy. Probabilities are not provided."] + (["Flags mean unusual under the fitted detector, not confirmed errors. Scores use the saved training threshold."] if config["task_type"] == "anomaly_detection" else []),
         "created_at": service._clock().isoformat()}
     try:
         return service._repository.save_prediction_receipt(receipt, key)

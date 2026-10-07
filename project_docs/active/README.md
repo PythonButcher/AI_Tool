@@ -24,7 +24,7 @@ Decision Intelligence workspaces, decision frames, readiness and capability pane
 
 Dataset identity and semantic truth remain required for every BI answer and chart.
 
-ML Studio is assigned to Codex for end-to-end completion and a whole-studio UI makeover under the [active gate](active_gate/README.md). The [completion brief](ml_studio/completion_brief.md) records the starting source review, ordered implementation, contracts and design direction. Codex frontend work is explicitly authorized; status and the active gate identify the current implementation step.
+ML Studio's five local task workflows and theme-aligned UI are engineering-complete. The [status](status/project_execution_status.md) records verified evidence and limitations; the [contract](contracts/ml_studio.md) defines implemented behavior. The user owns final browser acceptance in chat. The [active gate](active_gate/README.md) preserves that boundary until concrete feedback or new direction arrives.
 
 ## Active Areas
 
@@ -42,7 +42,7 @@ ML Studio is assigned to Codex for end-to-end completion and a whole-studio UI m
 | Multiple-source workspace contract | `project_docs/active/contracts/multiple_data_source_workspace.md` | Source, workspace membership, and analysis-context truth |
 | Multiple-source relationship contract | `project_docs/active/contracts/multiple_data_source_relationships.md` | Relationship persistence, validation, diagnostics, and activation truth |
 | Project active gate | `project_docs/active/active_gate/README.md` | The only active work workspace |
-| ML Studio roadmap | `project_docs/active/ml_studio/README.md` | Replacement whole-product plan, proposed experience, delivery order, and acceptance boundaries |
+| ML Studio roadmap | `project_docs/active/ml_studio/README.md` | Durable whole-product requirements and acceptance boundaries; status owns delivery truth |
 | Completed data and backend roadmap | `project_docs/archive/multiple_data_sources_implementation_plan_completed.md` | Historical delivery record; not active scope |
 | Deferred planning | `project_docs/active/future/README.md` | The one home for all deferred active-folder plans; not active until promoted |
 | Agent harness | `project_docs/active/agent_harness/` | Reusable agent backbone, hooks, and validation |

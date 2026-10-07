@@ -6,6 +6,10 @@
 .ml-selection-metric { display:flex; flex-direction:column; gap:6px; flex-shrink:0; padding-left:24px; border-left:1px solid var(--border-color); }
 .ml-selection-metric strong { font-size:2rem; font-weight:600; }
 .ml-selection-metric span,.ml-selection-metric small { color:var(--text-secondary); font-size:.8rem; }
+.ml-forecast-context { display:flex; align-items:start; justify-content:space-between; gap:24px; border-left:3px solid var(--accent-blue); padding:16px 20px; background:var(--bg-primary); }
+.ml-forecast-context > div { min-width:0; }
+.ml-forecast-context button { flex-shrink:0; }
+@media(max-width:600px) { .ml-forecast-context { flex-direction:column; } }
 .ml-output-tabs { display:flex; gap:8px; border-bottom:1px solid var(--border-color); overflow-x:auto; }
 .ml-output-tabs button { background:none; color:var(--text-secondary); padding:12px 18px; border:0; border-bottom:3px solid transparent; font:inherit; cursor:pointer; white-space:nowrap; }
 .ml-output-tabs button[aria-selected=true] { color:var(--accent-blue); border-bottom-color:var(--accent-blue); font-weight:600; }

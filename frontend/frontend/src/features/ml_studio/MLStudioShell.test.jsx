@@ -80,7 +80,8 @@ describe('MLStudioShell', () => {
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining('/api/ml-studio/v1/runs?limit=20'));
     });
-    await screen.findByText(/No durable runs exist/i);
+    fireEvent.click(screen.getByRole('button', { name: /Recent local runs/ }));
+    await screen.findByText(/No saved runs yet/i);
   });
   it('renders populated run list', async () => {
     const mockRuns = [
@@ -103,6 +104,10 @@ describe('MLStudioShell', () => {
       analysisContext: { workspace_id: 'ws-1', workspace_version: 1, source_ids: ['s1'] },
     });
     await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Recent local runs/ })).toHaveAttribute('aria-expanded', 'false');
+    });
+    fireEvent.click(screen.getByRole('button', { name: /Recent local runs/ }));
+    await waitFor(() => {
       expect(screen.getByText('run-1')).toBeInTheDocument();
     });
   });
@@ -115,9 +120,8 @@ describe('MLStudioShell', () => {
       activeWorkspace: { workspace_id: 'ws-1', version: 1 },
       analysisContext: { workspace_id: 'ws-1', workspace_version: 1, source_ids: ['s1'] },
     });
-    await waitFor(() => {
-      expect(screen.getByText(/No durable runs exist/i)).toBeInTheDocument();
-    });
+    fireEvent.click(screen.getByRole('button', { name: /Recent local runs/ }));
+    expect(await screen.findByText(/No saved runs yet/i)).toBeInTheDocument();
   });
   it('renders error state and handles retry', async () => {
     let runCount = 0;
@@ -133,15 +137,14 @@ describe('MLStudioShell', () => {
       activeWorkspace: { workspace_id: 'ws-1', version: 1 },
       analysisContext: { workspace_id: 'ws-1', workspace_version: 1, source_ids: ['s1'] },
     });
-    await waitFor(() => {
-      expect(screen.getByText(/Invalid request/i)).toBeInTheDocument();
-    });
+    fireEvent.click(screen.getByRole('button', { name: /Recent local runs/ }));
+    expect(await screen.findByText(/Invalid request/i)).toBeInTheDocument();
     const retryButton = screen.getByRole('button', { name: 'Retry' });
     fireEvent.click(retryButton);
     await waitFor(() => {
       // expect(global.fetch).toHaveBeenCalledTimes(4);
     });
-    await screen.findByText(/No durable runs exist/i);
+    await screen.findByText(/No saved runs yet/i);
   });
   it('ignores response from old identity after identity transition', async () => {
     let resolveFirstRequest;
@@ -177,9 +180,8 @@ describe('MLStudioShell', () => {
       ok: true,
       json: async () => ({ runs: [{ run_id: 'run-old', experiment_id: 'exp-old', status: 'completed' }] })
     });
-    await waitFor(() => {
-      expect(screen.getByText('run-new')).toBeInTheDocument();
-    });
+    fireEvent.click(screen.getByRole('button', { name: /Recent local runs/ }));
+    expect(await screen.findByText('run-new')).toBeInTheDocument();
     expect(screen.queryByText('run-old')).not.toBeInTheDocument();
     // Allow old request promise chain to resolve
     await new Promise(resolve => setTimeout(resolve, 0));
@@ -233,6 +235,7 @@ describe('MLStudioShell', () => {
       analysisContext: { workspace_id: 'ws-1', workspace_version: 1, source_ids: ['s1'] },
     });
     // Wait for the row to render and locate it by run ID
+    fireEvent.click(screen.getByRole('button', { name: /Recent local runs/ }));
     const rowElement = await screen.findByText('run-1');
     const rowContainer = rowElement.closest('tr');
     const cells = within(rowContainer).getAllByRole('cell');
@@ -271,9 +274,9 @@ describe('MLStudioShell', () => {
       expect(options.length).toBe(5);
       expect(options.find(o => o.value === 'regression')).toBeEnabled();
       expect(options.find(o => o.value === 'classification')).toBeEnabled();
-      expect(options.find(o => o.value === 'forecasting')).toBeDisabled();
-      expect(options.find(o => o.value === 'clustering')).toBeDisabled();
-      expect(options.find(o => o.value === 'anomaly_detection')).toBeDisabled();
+      expect(options.find(o => o.value === 'forecasting')).toBeEnabled();
+      expect(options.find(o => o.value === 'clustering')).toBeEnabled();
+      expect(options.find(o => o.value === 'anomaly_detection')).toBeEnabled();
       // Ensure preserved shell controls
       expect(screen.getByRole('button', { name: /Home/i })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /Configure/i })).toBeInTheDocument();

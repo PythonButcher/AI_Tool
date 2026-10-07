@@ -17,8 +17,10 @@ TASK_MODELS = {
     "regression": ("regularized_linear", "random_forest"),
     "classification": ("logistic", "random_forest"),
     "forecasting": ("lagged_ridge", "lagged_forest"),
+    "clustering": ("kmeans", "mini_batch_kmeans"),
+    "anomaly_detection": ("isolation_forest", "local_outlier_factor"),
 }
-TASK_METRICS = {"regression": ("rmse", "mae"), "classification": ("balanced_accuracy", "weighted_f1"), "forecasting": ("rmse", "mae")}
+TASK_METRICS = {"regression": ("rmse", "mae"), "classification": ("balanced_accuracy", "weighted_f1"), "forecasting": ("rmse", "mae"), "clustering": ("silhouette", "stability_ari"), "anomaly_detection": ("score_stability", "roc_auc")}
 
 
 def dependency_fingerprint(draft: Mapping[str, Any]) -> str:
@@ -60,14 +62,16 @@ def assess_configuration(draft: dict, snapshot: dict) -> dict:
         issue("task_unavailable", "This task's execution support is not available yet.")
     if not features and task != "forecasting":
         issue("features_required", "Assign at least one numeric or categorical feature.")
-    if not roles["target"]:
+    if not roles["target"] and task not in ("clustering", "anomaly_detection"):
         issue("target_required", "Choose the column you want to predict.")
+    if task == "clustering" and roles["target"]:
+        issue("clustering_target", "Clustering has no target. Reassign this column to a feature or ignore it.")
     target = profile.get(roles["target"], {})
     if target.get("null_count", 0):
         issue("target_missing", "Prepare missing target values before training.", field=roles["target"])
     if task in ("regression", "forecasting") and target and target["logical_type"] != "numeric":
         issue("target_type", "This task requires a numeric target.", field=roles["target"])
-    if target and target["distinct_count"] < 2 and task != "forecasting":
+    if target and target["distinct_count"] < 2 and task not in ("forecasting", "anomaly_detection"):
         issue("constant_target", "The target needs at least two distinct values.", field=roles["target"])
     if task == "classification" and target.get("distinct_count", 0) > 100:
         issue("too_many_classes", "Local classification supports at most 100 classes.", field=roles["target"])
@@ -112,11 +116,34 @@ def assess_configuration(draft: dict, snapshot: dict) -> dict:
         if any(column.startswith("__ml_lag_") for column in features):
             issue("reserved_feature_name", "Rename the selected feature to avoid the reserved lag prefix.")
         issue("forecast_grid_check", "Training checks regular timestamps, unique series/time rows and enough history for every rolling origin.", severity="warning")
+        if all(type(validation[key]) is int and validation[key] > 0 for key in ("lags", "season_length", "folds", "horizon")):
+            minimum_history = max(validation["lags"] + 10, validation["season_length"]) + (validation["folds"] + 1) * validation["horizon"]
+            series_count = profile.get(roles["group"][0], {}).get("distinct_count", 1) if roles["group"] else 1
+            if snapshot["row_count"] < minimum_history * series_count:
+                issue("forecast_history_short", f"Provide at least {minimum_history} observations per series or reduce horizon, lags or folds.")
     metrics = TASK_METRICS.get(task, ("rmse",))
     metric = setting("metric", {"primary": metrics[0]})
     if metric["primary"] not in metrics:
         issue("metric_invalid", "Choose a task-appropriate selection metric.")
-    candidate = setting("candidate", {"families": list(TASK_MODELS.get(task, ()))})
+    if task == "anomaly_detection":
+        if target and target["logical_type"] != "numeric":
+            issue("anomaly_labels_invalid", "Optional evaluation labels must be numeric: 0 for ordinary, 1 for known anomaly.")
+        if metric["primary"] == "roc_auc" and (not target or target.get("distinct_count") != 2):
+            issue("anomaly_labels_required", "ROC AUC requires an optional evaluation label column with both 0 and 1 values.")
+        issue("anomaly_interpretation", "Labels never train the detector or tune its threshold. Scores and flags describe unusual observations, not confirmed errors; unlabeled stability is not detection accuracy.", severity="warning")
+    candidate_defaults = {"families": list(TASK_MODELS.get(task, ()))}
+    if task == "clustering":
+        candidate_defaults["cluster_count"] = 3
+        issue("clustering_geometry", "Numeric inputs are standardized; categories are one-hot encoded. Euclidean distance and roughly compact groups are assumptions, not evidence of real-world segments.", severity="warning")
+    if task == "anomaly_detection":
+        candidate_defaults.update({"contamination": .05, "neighbors": 20})
+    candidate = setting("candidate", candidate_defaults)
+    if task == "clustering":
+        integer(candidate, "cluster_count", 2, 12)
+    if task == "anomaly_detection":
+        integer(candidate, "neighbors", 5, 100)
+        if type(candidate["contamination"]) not in (int, float) or not .005 <= candidate["contamination"] <= .3:
+            issue("anomaly_threshold_invalid", "Expected unusual fraction must be between 0.5% and 30%; it sets a training-score quantile, not a guaranteed future flag rate.")
     families = candidate["families"]
     if (not isinstance(families, list) or not families or any(not isinstance(family, str) for family in families)
             or len(families) > 3 or len(set(families)) != len(families) or any(family not in TASK_MODELS.get(task, ()) for family in families)):

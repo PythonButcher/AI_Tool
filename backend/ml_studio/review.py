@@ -5,14 +5,13 @@ import hashlib
 from io import BytesIO
 import json
 from uuid import uuid4
-from pathlib import Path
 
 from .configuration import dependency_fingerprint
 from .contracts import ContractObject, DatasetSnapshotIdentity, RunSpecification, StructuredError
 from .repository import PersistenceError
 from .service import MLStudioServiceError, _snapshot_from_dict
 from .training import TrainingCancelled, run_with_limits, measure, normalize_features
-from .workflow_execution import scoped_run
+from .workflow_execution import scoped_run, execution_revision
 
 
 @dataclass(frozen=True)
@@ -123,7 +122,7 @@ def submit_final_evaluation(service, experiment_id, workspace_id, nomination_id,
     run = RunSpecification(run_id=nomination["final_run_id"], experiment_id=development["experiment_id"],
         specification_version=development["specification_version"], dataset_snapshot=_snapshot_from_dict(specification["dataset_snapshot"]),
         submitted_at=service._clock(), parameters={**specification["parameters"], "run_purpose": "final_evaluation", "nomination_id": nomination_id},
-        environment=specification["environment"], code_revision=hashlib.sha256(Path(__file__).read_bytes()).hexdigest())
+        environment=specification["environment"], code_revision=execution_revision())
     try:
         if existing:
             stored, created = existing, False
@@ -157,6 +156,16 @@ def _final_worker(connection, data, config):
             from .forecasting import evaluate_forecast
             connection.send({"event": "scoring_nominated_forecast"})
             connection.send({"result": evaluate_forecast(bundle, data, saved)})
+            return
+        if saved["task_type"] == "clustering":
+            from .clustering import evaluate_clustering
+            connection.send({"event": "scoring_nominated_clusters"})
+            connection.send({"result": evaluate_clustering(bundle, data, saved)})
+            return
+        if saved["task_type"] == "anomaly_detection":
+            from .anomalies import evaluate_anomalies
+            connection.send({"event": "scoring_nominated_detector"})
+            connection.send({"result": evaluate_anomalies(bundle, data, saved)})
             return
         data = normalize_features(data, saved)
         target = data[saved["roles"]["target"]].reset_index(drop=True)
@@ -228,7 +237,7 @@ def execute_final_evaluation(service, run_id):
 def select_candidate(service, experiment_id, workspace_id, etag, payload):
     _fields(payload, ("nomination_id", "reviewed_by", "intended_use", "prohibited_use"))
     nomination = nomination_for(service, experiment_id, workspace_id, payload["nomination_id"])
-    _current(service, experiment_id, workspace_id, nomination["input_fingerprint"])
+    envelope = _current(service, experiment_id, workspace_id, nomination["input_fingerprint"])
     final = service._repository.get_run(nomination["final_run_id"])
     if not final or final["status"] != "completed":
         raise MLStudioServiceError("final_evidence_required", "Selection requires the saved final evaluation.", "Evaluate the nominated candidate first.", status_code=409)
@@ -249,6 +258,7 @@ def select_candidate(service, experiment_id, workspace_id, etag, payload):
         "artifact": artifact, "task_type": config["task_type"],
         "inference_context": final["evaluation_result"]["evidence"].get("inference_context"),
         "decision": "selected", "selected_at": service._clock().isoformat(),
+        "experiment_name": envelope["draft"]["name"], "problem_statement": envelope["draft"].get("goal") or payload["intended_use"].strip(),
         **{key: payload[key].strip() for key in ("reviewed_by", "intended_use", "prohibited_use")}}
     try:
         return service._repository.save_selection(value, etag)

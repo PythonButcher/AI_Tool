@@ -1,16 +1,16 @@
-# ML Studio Rebuild Plan
+# ML Studio Product Roadmap And Requirements
 
 ## Start Here
 
-This file explains **what we will build and in what order**. It covers the whole ML Studio, not just Experiment Configuration.
+This durable reference defines the whole ML Studio experience and its delivery rationale. All five local task workflows are engineering-complete; [status](../status/project_execution_status.md) owns verified delivery truth and the user retains final browser acceptance. The [contract](../contracts/ml_studio.md) defines exact implemented behavior and supported limits.
 
-For the current authorized action and owner, open the [active gate](../active_gate/README.md). For the first planned build step, go directly to [Step 1 — Design the complete workflow](#step-1--design-the-complete-workflow).
+For the current authorized action and owner, open the [active gate](../active_gate/README.md). The sections below remain product requirements, not an instruction to restart their implementation.
 
-The numbered steps below are the build order. The six stages inside the finished app are a different thing: Data & Goal → Prepare Data → Configure → Train → Review Results → Use & Share.
+The numbered steps below describe the delivery order. The six stages inside the app are a different thing: Data & Goal → Prepare Data → Configure → Train → Review Results → Use & Share.
 
 ## Build Order
 
-The user authorizes one sustained Codex-owned completion effort, including backend, frontend and a whole-studio theme-aligned UI makeover. Execute one meaningful verified step at a time and continue without routine approval pauses. The [completion brief](completion_brief.md) records current standing and execution detail; the sole active gate controls the current atomic step.
+The user's assignment authorized Codex backend, frontend and the whole-studio theme-aligned UI makeover. The [archived completion brief](../../archive/ml_studio_completion_brief_2026_10_05.md) preserves that starting scope and source review only. It does not govern new work; the sole active gate controls execution.
 
 1. [Design the complete workflow](#step-1--design-the-complete-workflow)
 2. [Build the workspace](#step-2--build-the-workspace)
@@ -28,7 +28,7 @@ The user authorizes one sustained Codex-owned completion effort, including backe
 
 ## Step 1 — Design the complete workflow
 
-**Status:** Complete as a design and contract gate. No application behavior was implemented.
+**Design reference:** This blueprint was written before implementation. Its original design-only boundary does not describe the current application.
 
 Step 1 is the implementation-neutral blueprint. It describes the whole product; it does not claim these behaviors exist in the application.
 
@@ -309,13 +309,13 @@ Provisional outputs are the fitted model and preprocessing pipeline, input schem
 
 Prepare a local ML Cycle Summary containing the problem, lineage, configuration, chosen candidate, metrics, limitations, and artifact references. Preview and export are useful initially. Context Ledger and AI Chat publishing need explicit adapter contracts and user action in a later approved integration; do not show dead or pretend-connected publish controls.
 
-### Existing Source: Reuse And Gaps
+### Original Source Review: Reuse And Gaps
 
-Source inspection informs this plan; it does not certify the current UI.
+The following table preserves the planning baseline, before the five-task implementation. It is not current capability or remaining-work status; consult the implemented contract and execution status for those.
 
 | Existing surface | Planning consequence |
 | --- | --- |
-| backend/ml_studio contracts, service, repository, execution, evaluation, and artifacts modules | Audit and reuse applicable foundations. Current task support is regression/classification; other tasks need new contracts and evaluation paths. |
+| backend/ml_studio contracts, service, repository, execution, evaluation, and artifacts modules | At planning time, regression/classification foundations needed expansion to the other tasks and their evaluation paths. |
 | /api/ml-studio/v1 snapshot, draft CRUD/delete/duplicate/workflow, preparation, experiment version, assessment, run/event/cancel, evaluation/evidence, comparison, and candidate routes | Useful foundations exist, including resumable drafts. Nomination, final evaluation, selection, batch prediction/export and summary extensions still require implementation and verification. |
 | Immutable versions, runs, candidates, and artifact metadata | These are not proof of resumable drafts or reloadable fitted-model exports. Verify persistence and artifact contents independently. |
 | Current evaluation/comparison rules | Reconcile automatic winner selection, compatible comparisons, explicit nomination, and untouched final evaluation. |
@@ -326,7 +326,7 @@ Earlier backend test results do not establish that browser assessment submits th
 
 ## Delivery Control And Definition Of Done
 
-One active gate governs the whole completion effort. The user's 2026-10-04 assignment explicitly makes Codex the backend and frontend owner, including React/CSS and the complete UI makeover. No specialist agent is dispatched by this document.
+One active gate governs executable work. The user's 2026-10-04 assignment explicitly authorized Codex backend and frontend implementation, including React/CSS and the complete UI makeover. No specialist agent is dispatched by this document. Engineering delivery is recorded in status; final browser acceptance remains separate.
 
 At each meaningful step Codex verifies and self-reviews the change, keeps gate/status aligned and continues through the authorized scope. Share concise progress updates without routine permission pauses. This is a full-stack completion effort with ordered steps, not an oversized specialist frontend handoff. Follow repository restrictions on browser operation; browser acceptance remains in chat and belongs to the user.
 

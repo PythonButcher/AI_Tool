@@ -14,6 +14,12 @@ from .service import MLStudioServiceError, _snapshot_from_dict
 from .training import DevelopmentEvaluation, TrainingCancelled, run_with_limits
 
 
+def execution_revision() -> str:
+    """Bind runs to the full local algorithm implementation, including runtimes."""
+    source_root = Path(__file__).parent
+    return hashlib.sha256(b"".join(path.name.encode() + b"\0" + path.read_bytes() for path in sorted(source_root.glob("*.py")))).hexdigest()
+
+
 def submit_draft_run(service, experiment_id: str, workspace_id: str, etag: str, key: str, payload: dict) -> tuple[dict, bool]:
     if not isinstance(payload, dict) or set(payload) != {"configuration_id"} or not isinstance(payload["configuration_id"], str):
         raise MLStudioServiceError("run_submission_invalid", "Supply exactly the server-issued configuration_id.", "Assess the saved configuration first.")
@@ -38,13 +44,11 @@ def submit_draft_run(service, experiment_id: str, workspace_id: str, etag: str, 
         config = assessment["configuration"]
         snapshot = _snapshot_from_dict(service.get_snapshot(config["snapshot_id"]))
         service._assert_snapshot_current(snapshot)
-        source_root = Path(__file__).parent
-        revision = hashlib.sha256(b"".join(path.read_bytes() for path in sorted(source_root.glob("*.py")))).hexdigest()
         run = RunSpecification(run_id=f"run-{uuid4().hex}", experiment_id=config["experiment_id"], specification_version=config["specification_version"],
             dataset_snapshot=snapshot, submitted_at=service._clock(),
             parameters={"run_purpose": "development_comparison", "configuration_id": config["configuration_id"],
                         "draft_experiment_id": experiment_id, "input_fingerprint": config["input_fingerprint"], "resource_limits": config["resource"]},
-            environment={"python": platform.python_version()}, code_revision=revision)
+            environment={"python": platform.python_version()}, code_revision=execution_revision())
         stored, created = repository.submit_run(run, idempotency_key=key, single_active_experiment=True,
                                                 draft_binding=(experiment_id, workspace_id, etag))
         if created and service._run_scheduler:
@@ -104,7 +108,7 @@ def execute_development_run(service, run_id: str) -> None:
             dataset_snapshot=snapshot, configuration_id=config["configuration_id"], task_type=config["task_type"],
             split=result["split"], candidates=result["candidates"], baseline=result["baseline"], limitations=result["limitations"],
             warnings=tuple(result["warnings"]), runtime_versions=result["runtime_versions"],
-            primary_metric=config["metric"]["primary"], metric_direction="maximize" if config["task_type"] == "classification" else "minimize")
+            primary_metric=config["metric"]["primary"], metric_direction="maximize" if config["task_type"] in ("classification", "clustering", "anomaly_detection") else "minimize")
         repository.transition_run(run_id, "completed", progress_stage="development_complete", evaluation_result=evaluation, warnings=evaluation.warnings)
     except TrainingCancelled:
         service._finish_cancellation(run_id)

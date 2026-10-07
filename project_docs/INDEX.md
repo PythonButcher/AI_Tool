@@ -20,7 +20,7 @@ This is the top-level routing file. Use it to find the smallest current document
 | Check implementation authorization | `project_docs/active/status/phase_authorization.json` |
 | Work on the current project gate | `project_docs/active/active_gate/README.md` |
 | Review the active ML Studio roadmap | `project_docs/active/ml_studio/README.md` |
-| Execute ML Studio completion and UI makeover | `project_docs/active/active_gate/README.md` and `project_docs/active/ml_studio/completion_brief.md` |
+| Review ML Studio implementation and supported boundaries | `project_docs/active/contracts/ml_studio.md` and `project_docs/active/status/project_execution_status.md` |
 | Review retired product and roadmap decisions | `project_docs/archive/README.md`, only when historical context is needed |
 | Review the completed data and backend roadmap | `project_docs/archive/multiple_data_sources_implementation_plan_completed.md` only when historical context is needed |
 | Review completed AI Chat rollout history | `project_docs/archive/ai_chat_decision_output_unification_rollout_completed.md` only when historical context is needed |
@@ -43,7 +43,7 @@ AI Chat is a BI-first NLP workspace. Existing grounded answers, semantic-model r
 
 Decision Intelligence output has been removed from the AI Chat product path. Isolated backend services remain for compatibility only and must not be treated as active UI scope.
 
-Phase 13 establishes ML Studio as a first-class AI Tool destination. Backend evaluation integrity, durable contracts, and identity-first execution must be verified before frontend implementation begins.
+Phase 13 establishes ML Studio as a first-class AI Tool destination. All five local task workflows and the theme-aligned frontend are engineering-complete; final browser acceptance belongs to the user. Status records verification and remaining limitations.
 
 ## Ownership
 
