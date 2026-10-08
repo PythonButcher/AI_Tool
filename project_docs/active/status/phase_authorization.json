@@ -1,12 +1,32 @@
 {
   "schema_version": 1,
   "authorized_work": {
-    "name": "ML Studio header alignment and hierarchy"
+    "name": "ML Studio preparation transition and Configure polish"
   },
   "authorization_state": "AUTHORIZED",
   "lifecycle_state": "AWAITING USER ACCEPTANCE",
   "diff_baseline": "e2896c2eced5511144c3151e34cae473e992af5a",
   "authority_kind": "direct_user_instruction",
+  "managed_upload_ignore_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-10-07",
+    "instruction": "Add /backend/storage/managed_uploads/ to .gitignore.",
+    "scope": "Ignore generated local datasets without deleting files or changing application behavior."
+  },
+  "configuration_polish_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-10-07",
+    "instruction": "Give the Configure page a little polish as well while fixing the preparation transition.",
+    "scope": "Codex may refine ConfigurationStage markup and styling for hierarchy, readable table scrolling, model choices and assessment actions while preserving its controls and backend contracts.",
+    "codex_frontend_implementation_authorized": true
+  },
+  "preparation_transition_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-10-07",
+    "instruction": "Once data is prepared, center the result and provide a clearer transition to the Configure tab. Implement now.",
+    "scope": "Codex may implement the centered Prepare Data result and guarded Configure action, its styles and regression tests, and governing documentation.",
+    "codex_frontend_implementation_authorized": true
+  },
   "header_repair_authorization": {
     "approved_by": "User",
     "approved_at": "2026-10-06",
@@ -91,6 +111,7 @@
     "scope": "Codex may implement saved experiment deletion in the ML Studio home, its backend draft route and persistence, contract, and focused tests."
   },
   "allowed_paths": [
+    ".gitignore",
     "project_docs/INDEX.md",
     "backend/ml_studio/**",
     "tests/test_ml_studio*.py",

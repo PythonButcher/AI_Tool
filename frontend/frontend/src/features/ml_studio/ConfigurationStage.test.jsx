@@ -16,6 +16,8 @@ test('searchable roles are exclusive and assessments submit settings without bro
   fireEvent.change(role, { target: { value: 'target' } });
   expect(edit).toHaveBeenLastCalledWith({ roles: { ...draft.roles, target: 'x', numeric: [] } });
   expect(screen.getByRole('combobox', { name: 'Role for y' })).toHaveValue('ignored');
+  expect(screen.getByText('Target: x')).toBeInTheDocument();
+  expect(screen.getByText('0 inputs')).toBeInTheDocument();
   fireEvent.change(screen.getByRole('combobox', { name: 'Role for y' }), { target: { value: 'numeric' } });
   fireEvent.change(screen.getByRole('searchbox', { name: 'Find a column' }), { target: { value: 'label' } });
   expect(screen.queryByRole('combobox', { name: 'Role for x' })).not.toBeInTheDocument();
@@ -48,9 +50,11 @@ test('stale or blocked evidence cannot offer training and guidance does not rese
   const view = render(<ConfigurationStage {...props} />);
   await screen.findByRole('combobox', { name: 'Role for x' });
   expect(screen.getByRole('button', { name: 'Continue to Train' })).toBeVisible();
+  expect(screen.getByRole('status')).toHaveTextContent('Your configuration is ready');
   expect(screen.getByText(/Training-only imputation/)).toBeInTheDocument();
   view.rerender(<ConfigurationStage {...props} showGuidance={false} draft={{ ...props.draft, assessment_current: false }} />);
   expect(screen.queryByRole('button', { name: 'Continue to Train' })).not.toBeInTheDocument();
+  expect(screen.getByRole('status')).toHaveTextContent('Assess your updated settings');
   expect(screen.getByRole('combobox', { name: 'Role for x' })).toHaveValue('numeric');
   expect(screen.queryByText(/Each column has one role/)).not.toBeInTheDocument();
 });

@@ -7,7 +7,7 @@ import {
   FaSearch, FaInfoCircle, FaExclamationTriangle,
   FaTable, FaPlayCircle, FaCheckCircle, FaTimesCircle, FaSyncAlt,
   FaBoxOpen, FaCodeBranch, FaWrench, FaTools,
-  FaBrain, FaCog, FaCopy
+  FaBrain, FaCog, FaCopy, FaArrowRight
 } from 'react-icons/fa';
 import './MLStudioShell.css';
 import ConfigurationStage from './ConfigurationStage';
@@ -607,6 +607,10 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
                             onOpenCleaningForm={onOpenCleaningForm}
                             onSaveRequest={handleExplicitStageSave}
                             onPreparationFinished={handlePreparationFinished}
+                            onContinue={() => handleStageSelect('Configure')}
+                            canConfigure={workflowState?.stages?.some(stage => stage.stage === 'Configure' && ['available', 'active', 'complete', 'stale'].includes(stage.state))}
+                            navigationPending={stagePending || saveState === 'saving'}
+                            navigationBlocked={saveState === 'conflict' || saveState === 'save_error'}
                          />
                      )}
                      {activeStage === 'Train' && <TrainingStage
@@ -1392,7 +1396,7 @@ function PowerQueryOpeningDialog({ field, onStay, onOpen }) {
   );
 }
 
-function PrepareDataStage({ showGuidance, activeWorkspace, analysisContext, activeDraft, onOpenCleaningForm, onSaveRequest, onPreparationFinished }) {
+function PrepareDataStage({ showGuidance, activeWorkspace, analysisContext, activeDraft, onOpenCleaningForm, onSaveRequest, onPreparationFinished, onContinue, canConfigure, navigationPending, navigationBlocked }) {
   const [optionsState, setOptionsState] = useState({ status: 'idle', data: null, error: null });
   const [confirmation, setConfirmation] = useState(null);
   const [actionableExplanation, setActionableExplanation] = useState(null);
@@ -1465,9 +1469,13 @@ function PrepareDataStage({ showGuidance, activeWorkspace, analysisContext, acti
   }, [identityKey, fetchOptions]);
 
   const { status, data, error } = optionsState;
+  const preparationOpen = (data?.preparation_context || activeDraft.preparation_context)?.status === 'open';
+  // A clean missing-value check only permits the next setup step, not training.
+  const hasClearCheck = status === 'success' && data?.snapshot_id === activeDraft.snapshot_id
+    && Array.isArray(data?.issues) && data.issues.length === 0 && !preparationOpen;
 
   const handleOpenPowerQueryClick = (issue, fix) => {
-    if (data?.preparation_context?.status === 'open') return;
+    if (preparationOpen) return;
     if (!activeWorkspace?.workspace_id || !activeDraft?.experiment_id || !activeDraft?.snapshot_id || !data || data.snapshot_id !== activeDraft.snapshot_id) {
        setActionableExplanation("Save the active experiment and dataset snapshot to configure preparation.");
        return;
@@ -1549,8 +1557,8 @@ function PrepareDataStage({ showGuidance, activeWorkspace, analysisContext, acti
   };
 
   return (
-    <main className="ml-studio-canvas" aria-label="Prepare Data Canvas">
-      <div className="prep-form-container">
+    <main className={`ml-studio-canvas ml-prepare-canvas${hasClearCheck ? ' has-clear-check' : ''}`} aria-label="Prepare Data Canvas">
+      <div className="prep-form-container ml-prepare-layout">
         <h2 className="prep-form-title">Prepare Data <span className="stage-heading-help">{showGuidance && <InfoPopover id="help-prepare" label="Prepare Data" text="Clean and transform data." />}</span></h2>
 
         {status === 'loading' && (
@@ -1576,12 +1584,12 @@ function PrepareDataStage({ showGuidance, activeWorkspace, analysisContext, acti
 
         {status === 'success' && data && (
            <div className="preparation-options">
-              {data.preparation_context?.status === 'open' && (
+              {preparationOpen && (
                  <div className="prep-alert warning">
                    <FaExclamationTriangle className="alert-icon" />
                    <div className="alert-content">
                      <strong>Preparation operation is currently open.</strong>
-                     <p>A preparation step is pending (Operation ID: {data.preparation_context.operation_id}). Complete or cancel it to proceed.</p>
+                     <p>A preparation step is pending (Operation ID: {(data.preparation_context || activeDraft.preparation_context).operation_id}). Complete or cancel it to proceed.</p>
                      <button type="button" className="power-query-btn" onClick={handleResume}>Resume preparation</button>
                    </div>
                  </div>
@@ -1602,15 +1610,28 @@ function PrepareDataStage({ showGuidance, activeWorkspace, analysisContext, acti
               )}
               {opening && <p role="status">Saving experiment before opening preparation…</p>}
 
+              {hasClearCheck ? (
+                <section className="ml-preparation-next" aria-labelledby="preparation-next-title">
+                  <span className="ml-preparation-check" aria-hidden="true"><FaCheckCircle /></span>
+                  <span className="ml-preparation-eyebrow">Next · Step 3</span>
+                  <h3 id="preparation-next-title">{canConfigure ? 'Ready to configure' : 'Preparation check complete'}</h3>
+                  <p className="ml-preparation-result">No missing values found in the current dataset.</p>
+                  <p className="ml-preparation-next-description">Assign column roles, choose your models, and set up validation in Configure.</p>
+                  <button type="button" className="semantic-btn primary ml-preparation-continue"
+                    onClick={onContinue} disabled={!canConfigure || navigationPending || navigationBlocked}
+                    aria-describedby="preparation-next-help">
+                    {navigationPending ? 'Saving…' : 'Continue to Configure'} <FaArrowRight aria-hidden="true" />
+                  </button>
+                  <p id="preparation-next-help" className="ml-preparation-next-help">
+                    {!canConfigure ? 'Configure is locked. Review your data and task in Data & Goal.'
+                      : navigationBlocked ? 'Resolve the save warning above before continuing.'
+                        : 'You can also use the Configure tab above. Training readiness is checked there.'}
+                  </p>
+                </section>
+              ) : data.issues?.length > 0 ? (
               <div className="assessment-results">
                  <h3 className="results-title">Quality Findings</h3>
-                 {!data.issues || data.issues.length === 0 ? (
-                    <div className="canvas-state-message">
-                       <FaCheckCircle className="canvas-icon neutral-icon" />
-                       <p>This bounded check found no missing-value issues.</p>
-                    </div>
-                 ) : (
-                    data.issues.map(issue => (
+                 {data.issues.map(issue => (
                        <div key={issue.issue_id} className={`issue-card ${issue.severity}`}>
                           <div className="issue-header">
                             <strong>{issue.severity.toUpperCase()}: {issue.message}</strong>
@@ -1631,7 +1652,7 @@ function PrepareDataStage({ showGuidance, activeWorkspace, analysisContext, acti
                                     className="power-query-btn"
                                     onClick={() => handleOpenPowerQueryClick(issue, fix)}
                                     type="button"
-                                    disabled={data.preparation_context?.status === 'open' || !!confirmation}
+                                    disabled={preparationOpen || !!confirmation}
                                   >
                                     <FaTools /> Open in Power Query
                                   </button>
@@ -1639,9 +1660,9 @@ function PrepareDataStage({ showGuidance, activeWorkspace, analysisContext, acti
                              </div>
                           ))}
                        </div>
-                    ))
-                 )}
+                    ))}
               </div>
+              ) : null}
            </div>
         )}
       </div>

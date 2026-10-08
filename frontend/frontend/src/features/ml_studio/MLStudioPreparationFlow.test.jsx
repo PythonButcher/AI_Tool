@@ -74,7 +74,7 @@ test('pending commit recovery remains reachable when preparation options report 
   fireEvent.click(await screen.findByRole('button', { name: 'Apply and return' }));
   await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   await waitFor(() => expect(screen.getByRole('textbox', { name: 'Experiment Name' })).toHaveValue('Saved experiment'));
-  expect(await screen.findByText('This bounded check found no missing-value issues.')).toBeInTheDocument();
+  expect(await screen.findByText('No missing values found in the current dataset.')).toBeInTheDocument();
   const actions = global.fetch.mock.calls.filter(([, options]) => options?.method === 'POST');
   expect(actions).toHaveLength(1);
   expect(actions[0][0]).toContain('/preparation/op-1?workspace_id=ws-1');

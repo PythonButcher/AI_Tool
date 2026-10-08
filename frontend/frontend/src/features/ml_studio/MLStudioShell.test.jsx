@@ -718,7 +718,7 @@ describe('MLStudioShell', () => {
 
       await screen.findByText('Preparation operation is currently open.');
       expect(screen.getByText(/op-123/)).toBeInTheDocument();
-      expect(screen.getByText('This bounded check found no missing-value issues.')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Continue to Configure' })).not.toBeInTheDocument();
     });
 
     it('prepare-data-options-identity: a deferred old GET response after workspace/version, experiment, or snapshot change cannot replace the current view.', async () => {
@@ -797,7 +797,7 @@ describe('MLStudioShell', () => {
 
       fireEvent.click(screen.getByRole('button', { name: /Retry/i }));
 
-      await screen.findByText('This bounded check found no missing-value issues.');
+      await screen.findByText('No missing values found in the current dataset.');
     });
 
     it('prepare-data-controls-survive: preserved shell controls remain visible and interactive after load and retry', async () => {
@@ -821,11 +821,11 @@ describe('MLStudioShell', () => {
 
       fireEvent.click(await screen.findByRole('button', { name: 'New Experiment' }));
 
-      await screen.findByText('This bounded check found no missing-value issues.');
+      await screen.findByText('No missing values found in the current dataset.');
 
       // Check preserved controls
       expect(screen.getByRole('button', { name: /Home/i })).toBeEnabled();
-      expect(screen.getByRole('button', { name: /Configure/i })).toBeEnabled();
+      expect(screen.getByRole('button', { name: 'Configure' })).toBeEnabled();
       expect(screen.getByRole('button', { name: 'Prepare Data' })).toBeEnabled();
       expect(screen.getByRole('button', { name: /Recent local runs/i })).toBeEnabled();
       expect(screen.getByRole('checkbox', { name: /Guidance/i })).toBeEnabled();

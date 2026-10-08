@@ -58,7 +58,7 @@ test('navigation flushes configuration edits and returning preserves roles and g
   fireEvent.change(await screen.findByRole('combobox', { name: 'Role for x' }), { target: { value: 'categorical' } });
   fireEvent.click(screen.getByRole('button', { name: /Prepare Data/i }));
   await screen.findByRole('main', { name: 'Prepare Data Canvas' });
-  fireEvent.click(screen.getByRole('button', { name: /Configure/i }));
+  fireEvent.click(screen.getByRole('button', { name: 'Configure' }));
   expect(await screen.findByRole('combobox', { name: 'Role for x' })).toHaveValue('categorical');
   fireEvent.click(screen.getByRole('checkbox', { name: 'Guidance' }));
   expect(screen.queryByText(/Each column has one role/)).not.toBeInTheDocument();

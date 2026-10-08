@@ -10,7 +10,7 @@ test('detector configuration sends threshold controls and optional evaluation la
   const onAssess = jest.fn(async () => ({ success: true }));
   render(<ConfigurationStage draft={{ experiment_id: 'anomaly', snapshot_id: 's', task_type: 'anomaly_detection', roles: { numeric: ['value'] } }} onEdit={jest.fn()} onAssess={onAssess} showGuidance />);
   expect(await screen.findByRole('option', { name: 'Evaluation label (0 / 1)' })).toBeEnabled();
-  expect(screen.getByText(/evaluation labels optional/)).toBeInTheDocument();
+  expect(screen.getByText(/evaluation labels optional/i)).toBeInTheDocument();
   fireEvent.change(screen.getByRole('combobox', { name: 'Role for label' }), { target: { value: 'target' } });
   fireEvent.change(screen.getByRole('spinbutton', { name: 'Expected unusual fraction (%)' }), { target: { value: '10' } });
   fireEvent.click(screen.getByRole('checkbox', { name: 'Local outlier factor (new-row scoring)' }));

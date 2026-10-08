@@ -1,14 +1,14 @@
-Goal: Preserve ML Studio's header and workflow contracts until the user supplies the next implementation direction.
+Goal: Preserve ML Studio's preparation and configuration interactions until the user supplies concrete next direction.
 
 ## User Outcome
 
-Users can identify the studio and the current experiment context at a glance in a compact, readable header.
+Users see what the preparation check found and can deliberately open Configure through a prominent next-step action.
 
 ## Scope
 
-No implementation mutation is pending. Preserve `frontend/frontend/src/features/ml_studio/MLStudioShell.jsx`, `StudioDesign.css` and the existing workflow boundaries.
+No application mutation is pending. Preserve `frontend/frontend/src/features/ml_studio/MLStudioShell.jsx`, `ConfigurationStage.jsx`, `StudioDesign.css` and their preparation/configuration tests.
 
-Concrete user feedback in chat determines any next repair. Define its observable behavior, target files and focused verification here, and align status and authorization before implementing it. Do not infer additional scope or dispatch a specialist handoff.
+Concrete user feedback determines any next repair. Define its behavior, targets and verification here and align status/authorization before implementation. A separate configuration proposal and runtime uploads do not authorize agent work or data changes through this gate.
 
 ## Contracts
 
@@ -18,11 +18,11 @@ Concrete user feedback in chat determines any next repair. Define its observable
 
 ## Acceptance
 
-Any next change must preserve the coherent brand grouping, centered icon alignment, title/context hierarchy, theme tokens and accessible save/navigation controls. Maintain the server-owned workflow identities and distinguish automated evidence from user visual acceptance.
+Any next change must preserve the centered preparation result, guarded Configure action, readable role table and explicit assessment controls. Keep backend readiness authoritative, preserve unsaved edits and retain task-specific settings. Do not equate a missing-value check with training readiness or automated checks with user visual acceptance.
 
 ## Verification
 
-- `npm --prefix frontend/frontend test -- --watchAll=false --runInBand --runTestsByPath src/features/ml_studio/MLStudioShell.test.jsx`
+- `npm --prefix frontend/frontend test -- --watchAll=false --runInBand --testPathPattern '(features/ml_studio/.*test|components/data_management/DataCleaningForm.test)'`
 - `npm --prefix frontend/frontend run build`
 - `python .codex/hooks/agent_harness_check.py`
 - `python C:/Users/18022/.codex/skills/active-gate-governance/scripts/check_active_gate.py project_docs/active/active_gate .`
@@ -30,4 +30,4 @@ Any next change must preserve the coherent brand grouping, centered icon alignme
 
 ## Owner And Control Return
 
-Owner: User, with `WAIT_FOR_USER`. Codex acts on concrete user direction and updates this gate before implementation. Browser acceptance remains in chat and browser operation requires a specific user request. Run the verification commands only for a relevant change.
+Owner: User, with `WAIT_FOR_USER`. Codex acts on concrete user direction and updates this gate before implementation. Browser acceptance remains in chat; browser operation requires a specific user request. Run verification commands only for a relevant change.
