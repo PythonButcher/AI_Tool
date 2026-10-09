@@ -91,8 +91,90 @@ test('cancel before begin closes without mutation and keyboard focus stays in th
   const cancel = screen.getByRole('button', { name: 'Cancel and return' });
   expect(cancel).toHaveFocus();
   fireEvent.keyDown(cancel, { key: 'Tab', shiftKey: true });
-  expect(screen.getByRole('button', { name: 'Apply and return' })).toHaveFocus();
+  expect(screen.getByRole('button', { name: 'Run Preview' })).toHaveFocus();
   fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
   expect(close).toHaveBeenCalledTimes(1);
   expect(global.fetch).not.toHaveBeenCalled();
+});
+
+test('editing after preview releases the operation, requires a new preview and issues a new intent key', async () => {
+  const changedOperation = { ...operation, operation_id: 'op-2' };
+  global.fetch.mockResolvedValueOnce(response({ preparation: operation }))
+    .mockResolvedValueOnce(response({ preparation: operation, preview: { row_count: 8, preview: [{ amount: 1 }] } }))
+    .mockResolvedValueOnce(response({ preparation: { ...operation, status: 'cancelled' }, draft: {} }))
+    .mockResolvedValueOnce(response({ preparation: changedOperation }))
+    .mockResolvedValueOnce(response({ preparation: changedOperation, preview: { row_count: 8, preview: [{ amount: 1 }] } }));
+  renderEditor({ context: { ...context, columns: [{ name: 'amount', logical_type: 'numeric' }] } });
+  expect(screen.getByRole('button', { name: 'Apply and return' })).toBeDisabled();
+  fireEvent.click(screen.getByRole('button', { name: 'Run Preview' }));
+  await screen.findByText('8 resulting rows · showing 1');
+  expect(screen.getByRole('button', { name: 'Edit Step' })).toBeDisabled();
+  fireEvent.click(screen.getByRole('button', { name: 'Edit steps' }));
+  await waitFor(() => expect(screen.queryByRole('button', { name: 'Edit steps' })).not.toBeInTheDocument());
+  expect(JSON.parse(global.fetch.mock.calls[2][1].body)).toEqual({ action: 'cancel' });
+  fireEvent.click(screen.getByRole('button', { name: 'Trim Whitespace' }));
+  expect(screen.getByRole('button', { name: 'Run Preview' })).toBeDisabled();
+  fireEvent.click(screen.getByRole('button', { name: 'Add step' }));
+  expect(screen.getAllByRole('button', { name: 'Edit Step' })).toHaveLength(2);
+  expect(screen.getByRole('button', { name: 'Apply and return' })).toBeDisabled();
+  fireEvent.click(screen.getByRole('button', { name: 'Run Preview' }));
+  await screen.findByText('8 resulting rows · showing 1');
+  const first = global.fetch.mock.calls[0][1], next = global.fetch.mock.calls[3][1];
+  expect(next.headers['Idempotency-Key']).not.toBe(first.headers['Idempotency-Key']);
+  expect(JSON.parse(next.body).steps.map(step => step.type)).toEqual(['remove_nulls', 'trim_whitespace']);
+});
+
+test('a lost cancellation leaves the plan locked until the same cancellation succeeds', async () => {
+  global.fetch.mockRejectedValueOnce(new Error('Connection lost'))
+    .mockResolvedValueOnce(response({ preparation: { ...operation, status: 'cancelled' }, draft: {} }));
+  renderEditor({ context: { ...context, preparation: operation } });
+  fireEvent.click(screen.getByRole('button', { name: 'Edit steps' }));
+  await screen.findByRole('alert');
+  expect(screen.getByRole('button', { name: 'Edit Step' })).toBeDisabled();
+  fireEvent.click(screen.getByRole('button', { name: 'Edit steps' }));
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Edit Step' })).toBeEnabled());
+  expect(global.fetch.mock.calls[0]).toEqual(global.fetch.mock.calls[1]);
+});
+
+test('a definitively rejected start can be edited or closed without retrying an invalid recipe', async () => {
+  const close = jest.fn();
+  global.fetch.mockResolvedValueOnce({ ok: false, status: 400, json: async () => ({ error: { message: 'Invalid recipe' } }) });
+  renderEditor({ closeForm: close });
+  fireEvent.click(screen.getByRole('button', { name: 'Run Preview' }));
+  await screen.findByRole('alert');
+  expect(screen.getByRole('button', { name: 'Edit Step' })).toBeEnabled();
+  fireEvent.click(screen.getByRole('button', { name: 'Cancel and return' }));
+  expect(close).toHaveBeenCalledTimes(1);
+  expect(global.fetch).toHaveBeenCalledTimes(1);
+});
+
+test('the full editor adds, edits, reorders and removes real transformations before preview', () => {
+  renderEditor({ context: { ...context, columns: ['amount'] }, initialSteps: [] });
+  fireEvent.click(screen.getByRole('button', { name: 'Trim Whitespace' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Add step' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Change Case' }));
+  fireEvent.change(screen.getByRole('combobox', { name: 'Case' }), { target: { value: 'upper' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Add step' }));
+  fireEvent.click(screen.getAllByRole('button', { name: 'Move Step Up' })[1]);
+  fireEvent.click(screen.getAllByRole('button', { name: 'Edit Step' })[0]);
+  expect(screen.getByRole('combobox', { name: 'Case' })).toHaveValue('upper');
+  fireEvent.change(screen.getByRole('combobox', { name: 'Case' }), { target: { value: 'lower' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Update step' }));
+  fireEvent.click(screen.getAllByRole('button', { name: 'Remove Step' })[1]);
+  expect(screen.getAllByRole('button', { name: 'Edit Step' })).toHaveLength(1);
+  expect(global.fetch).not.toHaveBeenCalled();
+});
+
+test('the full editor sends a numeric zero replacement without converting it to text', async () => {
+  global.fetch.mockResolvedValueOnce(response({ preparation: operation }))
+    .mockResolvedValueOnce(response({ preparation: operation, preview: { row_count: 10, preview: [] } }));
+  renderEditor({ context: { ...context, columns: ['amount'] }, initialSteps: [] });
+  fireEvent.click(screen.getByRole('button', { name: 'Missing & Rows' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Replace Nulls' }));
+  fireEvent.change(screen.getByRole('textbox', { name: 'Custom Value (optional)' }), { target: { value: '0' } });
+  fireEvent.change(screen.getByRole('combobox', { name: 'Replacement value type' }), { target: { value: 'number' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Add step' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Run Preview' }));
+  await screen.findByText('10 resulting rows · showing 0');
+  expect(JSON.parse(global.fetch.mock.calls[0][1].body).steps[0].params.value).toBe(0);
 });

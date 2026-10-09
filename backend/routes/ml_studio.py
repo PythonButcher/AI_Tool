@@ -194,7 +194,17 @@ def get_draft_preparation_service() -> DraftPreparationService:
             raise MLStudioServiceError(exc.code, str(exc), "Reload the governed workspace and preparation context.", status_code=status) from exc
 
     service = get_ml_studio_service()
-    return DraftPreparationService(service, service._repository, cleaner, get_preparation_commit)
+
+    def quality(snapshot):
+        from backend.ml_studio.preparation_quality import inspect_quality
+        dataframe, version, fingerprints = _resolve_run_data(snapshot)
+        expected = {item.source_id: (item.content_fingerprint, item.schema_version) for item in snapshot.source_fingerprints}
+        if version != snapshot.workspace_version or fingerprints != expected:
+            raise MLStudioServiceError("snapshot_identity_stale", "The dataset changed during inspection.",
+                                       "Reload the saved dataset.", status_code=409)
+        return inspect_quality(dataframe)
+
+    return DraftPreparationService(service, service._repository, cleaner, get_preparation_commit, quality)
 
 
 @ml_studio_bp.route("/drafts/<experiment_id>/preparation", methods=["GET", "POST"])

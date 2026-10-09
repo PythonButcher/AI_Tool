@@ -186,6 +186,41 @@ class DraftPreparationTests(unittest.TestCase):
         self.assertEqual(options.get_json()['issues'], [])
         self.assertEqual(self.begin(issue_id='fake', fix_id='fake').status_code, 400)
 
+    def test_quality_groups_and_batch_preview_preserve_data_until_apply(self):
+        from io import BytesIO
+        body = b'row_id,value,label\n1,, A \n2,,B\n2,,B\n3,3,C\n4,4,D\n'
+        uploaded = self.client.post('/api/upload', data={'file': (BytesIO(body), 'batch.csv')}, content_type='multipart/form-data')
+        self.assertEqual(uploaded.status_code, 200, uploaded.get_json())
+        self.workspace_id = uploaded.get_json()['workspace']['workspace_id']
+        truth = _resolve_snapshot_truth(self.workspace_id)
+        snapshot = self.service.create_snapshot({key: truth[key] for key in ('workspace_id', 'workspace_version', 'source_ids', 'relationship_ids')})
+        self.draft = self.service.create_draft({'workspace_id': self.workspace_id, 'snapshot_id': snapshot['snapshot_id'], 'task_type': 'regression'})['draft']
+        self.url = f"/api/ml-studio/v1/drafts/{self.draft['experiment_id']}/preparation?workspace_id={self.workspace_id}"
+        self.payload['snapshot_id'] = snapshot['snapshot_id']
+        options = self.client.get(self.url).get_json()
+        self.assertEqual(options['row_count'], 5)
+        self.assertEqual({issue['code']: issue['count'] for issue in options['issues']},
+                         {'missing_values': 3, 'duplicate_rows': 1})
+        self.assertIn('duplicate_rows', options['checks'])
+        self.assertTrue(options['not_checked'])
+        steps = [{'type': fix['action_type'], 'params': fix['parameters']} for fix in options['fixes']]
+        operation = self.begin(steps=steps).get_json()['preparation']
+        preview = self.action(operation, 'preview').get_json()['preview']
+        self.assertEqual((preview['input_row_count'], preview['row_count'], preview['removed_row_count']), (5, 2, 3))
+        self.assertEqual(get_workspace(self.workspace_id)['version'], 1)
+        applied = self.action(operation, 'apply')
+        self.assertEqual(applied.status_code, 200, applied.get_json())
+        self.assertEqual(applied.get_json()['preparation']['result']['receipt']['row_count'], 2)
+        self.assertEqual(self.client.get(self.url).get_json()['issues'], [])
+
+    def test_quality_does_not_invent_numeric_type_or_domain_fixes(self):
+        import pandas as pd
+        from backend.ml_studio.preparation_quality import inspect_quality
+        evidence = inspect_quality(pd.DataFrame({'amount': [1, float('inf')], 'code': [' 01 ', '02']}))
+        self.assertEqual({issue['code'] for issue in evidence['findings']}, {'whitespace', 'non_finite_values'})
+        self.assertEqual(evidence['data_preview'][0]['code'], ' 01 ')
+        self.assertIsNone(evidence['data_preview'][1]['amount'])
+
     def test_missing_value_fix_is_issued_and_bound_to_current_snapshot(self):
         from io import BytesIO
         body = b'row_id,value\n' + b''.join(f'{i},{"" if i == 10 else i}\n'.encode() for i in range(150))

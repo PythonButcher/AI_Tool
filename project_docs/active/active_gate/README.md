@@ -1,14 +1,14 @@
-Goal: Preserve ML Studio's preparation and configuration interactions until the user supplies concrete next direction.
+Goal: Preserve governed bulk data preparation and editable Power Query recipes while awaiting concrete user direction.
 
 ## User Outcome
 
-Users see what the preparation check found and can deliberately open Configure through a prominent next-step action.
+Prepare Data presents grouped findings with counts and clear choices. Users can preview and apply several fixes together or open the full transformation controls, then return to the correct experiment and continue configuring it.
 
 ## Scope
 
-No application mutation is pending. Preserve `frontend/frontend/src/features/ml_studio/MLStudioShell.jsx`, `ConfigurationStage.jsx`, `StudioDesign.css` and their preparation/configuration tests.
+No application mutation is pending. Preserve the ML Studio preparation components, shared transformation controls, server quality evidence and draft-bound preparation lifecycle.
 
-Concrete user feedback determines any next repair. Define its behavior, targets and verification here and align status/authorization before implementation. A separate configuration proposal and runtime uploads do not authorize agent work or data changes through this gate.
+Concrete user feedback determines the next repair. Define its behavior, target files and proportionate verification here and align status/authorization before implementation. Runtime datasets and deferred proposals do not independently authorize work.
 
 ## Contracts
 
@@ -18,16 +18,21 @@ Concrete user feedback determines any next repair. Define its behavior, targets 
 
 ## Acceptance
 
-Any next change must preserve the centered preparation result, guarded Configure action, readable role table and explicit assessment controls. Keep backend readiness authoritative, preserve unsaved edits and retain task-specific settings. Do not equate a missing-value check with training readiness or automated checks with user visual acceptance.
+- Multiple issue groups and multi-column fixes are visible without repeated dialogs.
+- A combined preview shows the real row impact before Apply; dismissal never means repaired.
+- Users can add, edit, remove and reorder supported transformations, including after a preview, without losing recovery or allowing stale Apply.
+- Returning from Apply refreshes dataset identity and findings; Cancel preserves data. Reload can resume an open operation.
+- Preserve focus, loading/error states, duplicate submission guards, task settings and responsive theme styling. Keep training-derived imputation inside training partitions. Do not claim unimplemented statistical or domain checks.
 
 ## Verification
 
-- `npm --prefix frontend/frontend test -- --watchAll=false --runInBand --testPathPattern '(features/ml_studio/.*test|components/data_management/DataCleaningForm.test)'`
+- `python -m unittest tests.test_ml_studio_preparation tests.test_workspace_cleaning -q`
+- `npm --prefix frontend/frontend test -- --watchAll=false --runInBand --testPathPattern '(features/ml_studio/.*test|components/data_management/.*test)'`
 - `npm --prefix frontend/frontend run build`
-- `python .codex/hooks/agent_harness_check.py`
+- `python .codex/hooks/ci_harness_check.py`
 - `python C:/Users/18022/.codex/skills/active-gate-governance/scripts/check_active_gate.py project_docs/active/active_gate .`
 - `git diff --check`
 
 ## Owner And Control Return
 
-Owner: User, with `WAIT_FOR_USER`. Codex acts on concrete user direction and updates this gate before implementation. Browser acceptance remains in chat; browser operation requires a specific user request. Run verification commands only for a relevant change.
+Owner: User, with `WAIT_FOR_USER`. Codex acts on concrete user direction and updates this gate before implementation. Browser acceptance stays in chat; browser operation requires a specific request. Run verification commands only for a relevant change.

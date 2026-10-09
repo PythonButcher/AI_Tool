@@ -21,11 +21,13 @@ class DraftPreparationService:
     """
 
     def __init__(self, service: MLStudioService, repository: MLStudioRepository,
-                 cleaner: Callable[..., dict], receipt_lookup: Callable[[str, str], dict | None]):
+                 cleaner: Callable[..., dict], receipt_lookup: Callable[[str, str], dict | None],
+                 quality_resolver: Callable[..., dict] | None = None):
         self.service = service
         self.repository = repository
         self.cleaner = cleaner
         self.receipt_lookup = receipt_lookup
+        self.quality_resolver = quality_resolver
 
     @staticmethod
     def _invalid(message: str) -> MLStudioServiceError:
@@ -46,17 +48,42 @@ class DraftPreparationService:
         snapshot = _snapshot_from_dict(self.service.get_snapshot(draft["snapshot_id"]))
         self.service._assert_snapshot_current(snapshot)
         issues, fixes = [], []
+        roles = draft.get("roles") or {}
         for column in snapshot.column_profile:
             if column.null_count:
                 issue_id = _stable_preparation_id("issue", "missing_values", column.name)
                 fix_id = _stable_preparation_id("fix", "remove_nulls", column.name)
                 issues.append({"issue_id": issue_id, "code": "missing_values", "severity": "warning",
                                "field": column.name, "message": "This field contains missing values.",
-                               "remediation": "Choose a preparation strategy appropriate to this field."})
+                               "remediation": "Choose a preparation strategy appropriate to this field.",
+                               "count": column.null_count, "logical_type": column.logical_type,
+                               "training_imputation_available": draft["task_type"] != "forecasting" and column.null_count < snapshot.row_count
+                               and column.name != roles.get("target")
+                               and column.name not in (roles.get("time", []) + roles.get("group", []))})
                 fixes.append({"fix_id": fix_id, "issue_id": issue_id, "action_type": "remove_nulls",
                               "affected_columns": [column.name], "parameters": {"columns": [column.name]},
                               "support_status": "supported", "explanation": "Remove rows missing this field; this may reduce the sample."})
+        quality = self.quality_resolver(snapshot) if self.quality_resolver else {}
+        for finding in quality.get("findings", []):
+            code, field = finding["code"], finding.get("field")
+            issue_id = _stable_preparation_id("issue", code, field)
+            issues.append({**finding, "issue_id": issue_id, "severity": "warning"})
+            action = {"duplicate_rows": "remove_duplicates", "whitespace": "trim_whitespace"}.get(code)
+            if action:
+                params = {"columns": [field]} if field else {"keep": "first"}
+                fixes.append({"fix_id": _stable_preparation_id("fix", action, field), "issue_id": issue_id,
+                              "action_type": action, "affected_columns": [field] if field else [],
+                              "parameters": params, "support_status": "supported",
+                              "explanation": finding["remediation"]})
+        # Recheck after profiling so evidence from a concurrent workspace change
+        # cannot be presented as belonging to this saved snapshot.
+        self.service._assert_snapshot_current(snapshot)
         return {"snapshot_id": snapshot.snapshot_id, "issues": issues, "fixes": fixes,
+                "row_count": snapshot.row_count,
+                "columns": [{"name": c.name, "logical_type": c.logical_type} for c in snapshot.column_profile],
+                "checks": ["missing_values", *quality.get("checks", [])],
+                "not_checked": ["Domain rules, outliers and intended data types require review."],
+                "data_preview": quality.get("data_preview", []),
                 "preparation_context": envelope["preparation_context"]}
 
     def begin(self, experiment_id: str, workspace_id: str, etag: str, key: str, payload: Any) -> dict:
@@ -103,6 +130,8 @@ class DraftPreparationService:
                     raise ValueError("invalid step")
                 params = step.get("params", {})
                 affected = params.get("columns") or list(columns)
+                if isinstance(affected, str):
+                    affected = [affected]
                 if not isinstance(affected, list) or any(not isinstance(column, str) or not column for column in affected):
                     raise ValueError("invalid affected fields")
                 steps.append(TransformationStep(step_id=f"step-{uuid4().hex}", action_type=step["type"], affected_columns=tuple(affected), parameters=params))

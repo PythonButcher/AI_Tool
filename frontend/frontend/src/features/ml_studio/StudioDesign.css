@@ -1,5 +1,35 @@
 /* Studio composition follows the application's light/dark tokens. Container
    queries respond to the actual workspace width, including the app sidebar. */
+.ml-quality-review { display: grid; gap: 18px; }
+.ml-quality-summary { display: flex; justify-content: space-between; align-items: center; gap: 20px; padding: 22px; border: 1px solid var(--border-color); border-radius: 14px; background: var(--bg-primary); }
+.ml-quality-summary h3 { margin: 6px 0 8px; font-size: 22px; letter-spacing: -.025em; }
+.ml-quality-summary p, .ml-quality-guidance, .ml-quality-actions p, .ml-prepare-next-action p { color: var(--text-secondary); line-height: 1.6; margin: 0; font-size: 13px; }
+.ml-quality-summary > button { flex-shrink: 0; }
+.ml-quality-guidance { padding: 12px 16px; background: var(--accent-blue-soft); border-left: 3px solid var(--accent-blue); border-radius: 0 8px 8px 0; }
+.ml-quality-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 18px; }
+.ml-quality-toolbar > label:not(.ml-quality-select-all) { display: grid; gap: 5px; font-size: 12px; flex: 1; max-width: 420px; }
+.ml-quality-toolbar .ml-quality-select-all { display: flex; gap: 8px; align-items: center; font-size: 13px; }
+.ml-quality-toolbar > span { font-size: 12px; color: var(--text-secondary); margin-left: auto; }
+.ml-quality-group { background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; }
+.ml-quality-group h4 { display: flex; align-items: center; gap: 10px; margin: 0; padding: 16px 18px; border-bottom: 1px solid var(--border-color); font-size: 15px; }
+.ml-quality-group h4 span { color: var(--accent-blue); background: var(--accent-blue-soft); border-radius: 20px; padding: 3px 9px; font-size: 12px; }
+.ml-quality-table-scroll { overflow: auto; }
+.ml-studio-shell .ml-quality-group table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.ml-studio-shell .ml-quality-group :is(th, td) { padding: 12px 14px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--border-color); }
+.ml-studio-shell .ml-quality-group thead th { font-weight: 500; background: var(--bg-secondary); color: var(--text-secondary); white-space: nowrap; }
+.ml-studio-shell .ml-quality-group tbody th { position: static; font-weight: 600; min-width: 190px; max-width: 300px; overflow-wrap: anywhere; background: transparent; }
+.ml-quality-group small { display: block; font-weight: 400; line-height: 1.5; color: var(--text-secondary); margin-top: 5px; }
+.ml-quality-group td select { min-width: 200px; }
+.ml-quality-group td input:not([type='checkbox']) { margin-top: 8px; }
+.ml-quality-group td button { color: var(--accent-blue); border: 1px solid var(--border-color); border-radius: 7px; padding: 8px 10px; background: var(--bg-primary); white-space: nowrap; font-size: 12px; }
+.ml-quality-group details { font-size: 12px; max-width: 240px; }
+.ml-quality-group tr:last-child :is(th, td) { border-bottom: 0; }
+.ml-quality-actions, .ml-prepare-next-action { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 18px 0; }
+.ml-quality-actions { position: sticky; bottom: 0; padding: 16px; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 12px; z-index: 2; }
+.ml-quality-actions button, .ml-prepare-next-action button { flex-shrink: 0; }
+.ml-quality-error { padding: 12px; background: var(--accent-red-soft); color: var(--text-primary); border-radius: 8px; }
+.ml-quality-coverage { font-size: 12px; color: var(--text-secondary); }
+@container ml-studio (max-width: 720px) { .ml-quality-summary, .ml-quality-actions, .ml-prepare-next-action { flex-direction: column; align-items: stretch; } .ml-quality-toolbar > span { margin-left: 0; } }
 .ml-studio-shell {
   --bg-surface: var(--bg-primary);
   --primary-color: var(--accent-blue);

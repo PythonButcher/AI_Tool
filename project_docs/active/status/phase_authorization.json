@@ -1,12 +1,19 @@
 {
   "schema_version": 1,
   "authorized_work": {
-    "name": "ML Studio preparation transition and Configure polish"
+    "name": "ML Studio bulk preparation and full editor"
   },
   "authorization_state": "AUTHORIZED",
   "lifecycle_state": "AWAITING USER ACCEPTANCE",
-  "diff_baseline": "e2896c2eced5511144c3151e34cae473e992af5a",
+  "diff_baseline": "2e3670e9bc26a3a6b4749baebf6e25c7032e9475",
   "authority_kind": "direct_user_instruction",
+  "bulk_preparation_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-10-08",
+    "instruction": "Just apply those fixes now",
+    "scope": "Implement grouped multi-issue findings, bulk treatments and combined preview/apply, editable Power Query transformations, task-aware missing-value guidance, backend validation, regression tests and accurate contracts/status. Preserve governed experiment and dataset identity.",
+    "codex_frontend_implementation_authorized": true
+  },
   "managed_upload_ignore_authorization": {
     "approved_by": "User",
     "approved_at": "2026-10-07",
@@ -111,6 +118,11 @@
     "scope": "Codex may implement saved experiment deletion in the ML Studio home, its backend draft route and persistence, contract, and focused tests."
   },
   "allowed_paths": [
+    "frontend/frontend/src/components/data_management/cleaning_components/**",
+    "backend/services/manual_cleaning_engine.py",
+    "tests/test_workspace_cleaning.py",
+    "project_docs/active/ai_hand_off/codex_configuration_redesign.md",
+    "project_docs/active/future/codex/codex_configuration_redesign.md",
     ".gitignore",
     "project_docs/INDEX.md",
     "backend/ml_studio/**",

@@ -11,6 +11,7 @@ import {
 } from 'react-icons/fa';
 import './MLStudioShell.css';
 import ConfigurationStage from './ConfigurationStage';
+import PreparationFindings from './PreparationFindings';
 import TrainingStage from './TrainingStage';
 import ReviewStage from './ReviewStage';
 import UseShareStage from './UseShareStage';
@@ -1493,8 +1494,12 @@ function PrepareDataStage({ showGuidance, activeWorkspace, analysisContext, acti
     setConfirmation(null);
   };
 
-  const handleConfirmOpen = async () => {
-    if (!confirmation || openingRef.current || overlayIdentityRef.current === identityKey) return;
+  const handleOpenPlan = async (intent) => {
+    if (!intent || preparationOpen || openingRef.current || overlayIdentityRef.current === identityKey) return;
+    if (!data || data.snapshot_id !== activeDraft.snapshot_id) {
+      setActionableExplanation('Save the active experiment and dataset snapshot to configure preparation.');
+      return;
+    }
     if (typeof onOpenCleaningForm !== 'function') {
       setConfirmation(null);
       setActionableExplanation('Power Query is unavailable. Reload the application and try again.');
@@ -1507,6 +1512,7 @@ function PrepareDataStage({ showGuidance, activeWorkspace, analysisContext, acti
       const saved = await onSaveRequest({});
       if (scopeRef.current !== scopeIdentity) return;
       if (!saved.success) throw new Error(saved.error?.message || 'Save the draft before preparing data.');
+      if (saved.draft.snapshot_id !== activeDraft.snapshot_id) throw new Error('The saved dataset changed. Reload preparation before opening the editor.');
       currentIdentity = `${scopeIdentity}-${saved.draft.draft_revision}`;
       overlayIdentityRef.current = currentIdentity;
       onOpenCleaningForm({
@@ -1517,15 +1523,18 @@ function PrepareDataStage({ showGuidance, activeWorkspace, analysisContext, acti
          snapshot_id: activeDraft.snapshot_id,
          draft_revision: saved.draft.draft_revision,
          base_etag: saved.draft.etag,
-         issue_id: confirmation.issue.issue_id,
-         fix_id: confirmation.fix.fix_id,
+         issue_id: intent.issue?.issue_id ?? null,
+         fix_id: intent.fix?.fix_id ?? null,
          return_stage: "Prepare Data",
          title: activeDraft.name || "Experiment",
-         field: confirmation.issue.field,
-         action: confirmation.fix.action_type,
-         explanation: confirmation.fix.explanation,
+         field: intent.issue?.field,
+         action: intent.fix?.action_type,
+         explanation: intent.fix?.explanation,
+         columns: data.columns || [],
+         data_preview: data.data_preview || [],
+         auto_preview: intent.autoPreview === true,
        },
-       initialSteps: [{ type: confirmation.fix.action_type, params: confirmation.fix.parameters || {}, id: `fix-${Date.now()}` }],
+       initialSteps: intent.steps || [{ type: intent.fix.action_type, params: intent.fix.parameters || {}, id: `fix-${Date.now()}` }],
        onPreparationFinished,
        onClose: () => {
          const { fetchOptions: fetchFn } = latestPropsRef.current;
@@ -1545,12 +1554,14 @@ function PrepareDataStage({ showGuidance, activeWorkspace, analysisContext, acti
     }
   };
 
+  const handleConfirmOpen = () => handleOpenPlan(confirmation);
+
   const handleResume = () => {
     const preparation = data?.preparation_context || activeDraft.preparation_context;
     if (!preparation || typeof onOpenCleaningForm !== 'function') return;
     overlayIdentityRef.current = identityKey;
     onOpenCleaningForm({ mlStudioMode: true,
-      mlStudioOpeningContext: { ...preparation, preparation, title: activeDraft.name },
+      mlStudioOpeningContext: { ...preparation, preparation, title: activeDraft.name, columns: data?.columns || [], data_preview: data?.data_preview || [] },
       initialSteps: [], onPreparationFinished,
       onClose: () => { overlayIdentityRef.current = null; fetchOptions(); },
     });
@@ -1616,6 +1627,7 @@ function PrepareDataStage({ showGuidance, activeWorkspace, analysisContext, acti
                   <span className="ml-preparation-eyebrow">Next · Step 3</span>
                   <h3 id="preparation-next-title">{canConfigure ? 'Ready to configure' : 'Preparation check complete'}</h3>
                   <p className="ml-preparation-result">No missing values found in the current dataset.</p>
+                  {data.checks?.length > 1 && <p>No findings in the {data.checks.length} supported checks. Domain rules and intended types still require review.</p>}
                   <p className="ml-preparation-next-description">Assign column roles, choose your models, and set up validation in Configure.</p>
                   <button type="button" className="semantic-btn primary ml-preparation-continue"
                     onClick={onContinue} disabled={!canConfigure || navigationPending || navigationBlocked}
@@ -1627,41 +1639,13 @@ function PrepareDataStage({ showGuidance, activeWorkspace, analysisContext, acti
                       : navigationBlocked ? 'Resolve the save warning above before continuing.'
                         : 'You can also use the Configure tab above. Training readiness is checked there.'}
                   </p>
+                  <button type="button" className="semantic-btn secondary" disabled={opening || navigationPending || navigationBlocked} onClick={() => handleOpenPlan({ steps: [] })}>Open full editor</button>
                 </section>
               ) : data.issues?.length > 0 ? (
-              <div className="assessment-results">
-                 <h3 className="results-title">Quality Findings</h3>
-                 {data.issues.map(issue => (
-                       <div key={issue.issue_id} className={`issue-card ${issue.severity}`}>
-                          <div className="issue-header">
-                            <strong>{issue.severity.toUpperCase()}: {issue.message}</strong>
-                          </div>
-                          {issue.field && <p className="issue-field-label"><strong>Column:</strong> {issue.field}</p>}
-                          <p>{issue.remediation}</p>
-                          <div className="raw-id-item text-muted"><small>Issue ID: {issue.issue_id}</small></div>
-
-                          {data.fixes?.filter(f => f.issue_id === issue.issue_id).map(fix => (
-                             <div key={fix.fix_id} className={`fix-card ${fix.support_status}`}>
-                               <div className="fix-header">
-                                 <strong>Action: {fix.action_type}</strong>
-                               </div>
-                               <p className="fix-explanation">{fix.explanation}</p>
-                               <div className="raw-id-item text-muted"><small>Fix ID: {fix.fix_id}</small></div>
-                               {fix.support_status === 'supported' && (
-                                  <button
-                                    className="power-query-btn"
-                                    onClick={() => handleOpenPowerQueryClick(issue, fix)}
-                                    type="button"
-                                    disabled={preparationOpen || !!confirmation}
-                                  >
-                                    <FaTools /> Open in Power Query
-                                  </button>
-                               )}
-                             </div>
-                          ))}
-                       </div>
-                    ))}
-              </div>
+              <><PreparationFindings key={data.snapshot_id} data={data} disabled={preparationOpen || !!confirmation || opening || navigationPending || navigationBlocked}
+                onOpenPlan={handleOpenPlan} onOpenIssue={handleOpenPowerQueryClick} />
+                <div className="ml-prepare-next-action"><p>Configure checks your chosen target and inputs. These findings remain available when you return.</p><button type="button" className="semantic-btn secondary"
+                  onClick={onContinue} disabled={!canConfigure || preparationOpen || opening || navigationPending || navigationBlocked}>Continue to Configure <FaArrowRight aria-hidden="true" /></button></div></>
               ) : null}
            </div>
         )}

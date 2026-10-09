@@ -68,6 +68,28 @@ class WorkspaceCleaningTests(unittest.TestCase):
         self.assertEqual(load_datahub_dataset(self.first["source"]["source_id"])["dataframe"].shape, (150, 2))
         legacy_write.assert_not_called()
 
+    def test_recipe_uses_intermediate_schema_and_numeric_filter_values(self):
+        response = self.clean(steps=[
+            {'type': 'rename_columns', 'params': {'mappings': {'value': 'amount'}}},
+            {'type': 'filter_rows', 'params': {'conditions': [{'column': 'amount', 'operator': 'gte', 'value': '140'}]}},
+            {'type': 'keep_columns', 'params': {'columns': ['amount']}},
+        ])
+        self.assertEqual(response.status_code, 200, response.get_json())
+        result = response.get_json()
+        self.assertEqual((result['row_count'], result['removed_row_count']), (10, 140))
+        self.assertEqual(result['preview'][0], {'amount': 140})
+
+    def test_invalid_recipe_columns_are_not_silently_ignored(self):
+        for steps in (
+            [{'type': 'remove_nulls', 'params': {'columns': ['missing_column']}}],
+            [{'type': 'rename_columns', 'params': {'mappings': {'value': 'row_id'}}}],
+            [{'type': 'keep_columns', 'params': {}}],
+            [{'type': 'remove_columns', 'params': {'columns': ['value']}}, {'type': 'trim_whitespace', 'params': {'columns': ['value']}}],
+        ):
+            with self.subTest(steps=steps):
+                self.assertEqual(self.clean(steps=steps, preview_only=False).status_code, 400)
+        self.assertEqual(get_workspace(self.first['workspace']['workspace_id'])['version'], 1)
+
     def test_foreign_and_stale_requests_are_rejected(self):
         for override in ({"source_id": self.second["source"]["source_id"]}, {"workspace_version": 2}):
             response = self.clean(preview_only=False, **override)

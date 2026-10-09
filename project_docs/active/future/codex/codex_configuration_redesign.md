@@ -1,3 +1,5 @@
+Deferred proposal, preserved for reference. This is not an active assignment; the sole active gate controls implementation.
+
 Goal: Redesign the ML Studio Configuration stage (Step 3) to improve clarity and user experience based on direct user feedback.
 
 ## User Outcome

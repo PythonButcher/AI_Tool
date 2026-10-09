@@ -687,9 +687,9 @@ describe('MLStudioShell', () => {
 
       fireEvent.click(await screen.findByRole('button', { name: 'New Experiment' }));
 
-      await screen.findByText('WARNING: Missing values found');
+      await screen.findByText('Missing values found');
       expect(screen.getByText('Fix them')).toBeInTheDocument();
-      expect(screen.getByText('Action: remove_nulls')).toBeInTheDocument();
+      expect(screen.getByRole('combobox', { name: 'Treatment for colA' })).toBeInTheDocument();
       expect(screen.getByText('Removes rows with nulls')).toBeInTheDocument();
     });
 

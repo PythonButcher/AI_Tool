@@ -40,7 +40,7 @@ def clean_workspace(workspace_id: str, payload: object, *, preparation_id: str |
     if has_relationships:
         raise WorkspaceContextError("preparation_relationships_unsupported", "Relationship workspaces require a separate preparation contract.")
     source = get_source(payload["source_id"])
-    engine = ManualCleaningEngine()
+    engine = ManualCleaningEngine(strict_columns=True)
     steps = payload["steps"]
     if not isinstance(steps, list) or len(steps) > 100 or any(
         not isinstance(step, dict) or set(step) - {"type", "params"}
@@ -66,6 +66,8 @@ def clean_workspace(workspace_id: str, payload: object, *, preparation_id: str |
     preview = json.loads(cleaned.head(100).to_json(orient="records", date_format="iso"))
     result = {"committed": False, "workspace_id": workspace_id, "workspace_version": version,
               "preview": preview, "row_count": len(cleaned), "schema": dataframe_schema(cleaned),
+              "input_row_count": len(original), "removed_row_count": max(0, len(original) - len(cleaned)),
+              "added_row_count": max(0, len(cleaned) - len(original)),
               "governance_readiness": readiness, "receipt": None}
     if payload["preview_only"]:
         return result

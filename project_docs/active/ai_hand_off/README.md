@@ -10,7 +10,7 @@ Antigravity owns bounded frontend implementation, React/CSS, UI rendering, and f
 
 ## Active Handoffs And Goal Prompts
 
-No specialist frontend handoff is active. ML Studio engineering is complete; the user owns final browser acceptance in chat. Consult [status](../status/project_execution_status.md) for verified evidence and the [sole gate](../active_gate/README.md) before acting on new direction.
+No specialist frontend handoff is active. ML Studio preparation improvements are engineering-complete; the user owns final browser acceptance in chat. Consult [status](../status/project_execution_status.md) and the [sole gate](../active_gate/README.md) before acting on new direction.
 
 Completed handoffs belong outside this active folder.
 
