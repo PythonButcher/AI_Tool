@@ -1,57 +1,43 @@
-Goal: Make AI Chat a reliable business workspace from grounded questions to reviewable dashboard results.
+Goal: Deliver coherent, theme-aligned interfaces for ML Studio exploration and the AI Chat business workspace while preserving their working data flows.
 
 ## User Outcome
 
-Users can start with meaningful data-aware questions, refine verified answers, inspect a dashboard draft and add chosen results without losing existing dashboard content or analytical provenance.
+Developers can explore machine-learning tasks and trustworthy learning material, start or resume an experiment, and work in a spacious AI Chat window with readable results, a focused composer and consistent navigation.
 
 ## Scope
 
-**Current Step**: Step 4: Integrated regression verification and contract alignment
+**Target Files**: This chat owns `frontend/frontend/src/features/ml_studio/MLStudioHome.jsx`, `MLStudioHome.css`, `MLStudioShell.jsx` and focused home/shell tests. The authorized AI Chat chat owns `features/ai/AIShell.jsx`, `AIShell.css`, `DashboardDraft.jsx`, focused tests, and the user's requested sidebar/header refinement. This chat owns shared navigation/status records and the final production build.
 
-**Target Files**: AI Chat, semantic resolver, dashboard and state regression tests; BI/dashboard contracts and governing status.
-
-**Step Acceptance**: Representative integrated journeys, backend regression tests, focused frontend tests, Python compilation, production build and documentation checks pass. Record actual limitations and preserve the user-owned visual acceptance boundary.
-
-**Step Verification**: All commands below, plus relationship execution and semantic-role regressions for the shared resolver.
-
-**Next Step**: Return verified engineering results and limitations to the user in chat.
-
-**Continuation Rule**: CONTINUE through executable steps under explicit backend and frontend authorization.
-
-**Stop Condition**: Engineering acceptance evidence is complete, or a concrete blocker prevents meaningful progress. Browser acceptance belongs to the user in chat.
-
-- [x] **Step 1: Grounded follow-ups and temporal analysis** — [COMPLETED]
-- [x] **Step 2: Reviewable dashboard drafts and provenance** — [COMPLETED]
-- [x] **Step 3: Chat interaction reliability and presentation** — [COMPLETED]
-- [ ] **Step 4: Integrated regression verification and contract alignment** — [IN PROGRESS]
+ML Studio combines an interactive home, supported algorithm links and working experiment actions. AI Chat provides a coherent header, conversation, composer, results and optional sidebar without losing grounded BI answers or dashboard content. Keep refinements within the user's direction and the file ownership above.
 
 ## Contracts
 
-- [BI result, grounding, refinement and session contracts](../contracts/decision_objects.md)
-- [Dashboard storage](../contracts/dashboard_canvas_state.md)
-- [Workspace identity](../contracts/multiple_data_source_workspace.md)
-- [Governed relationships](../contracts/multiple_data_source_relationships.md)
-- [AI Chat roadmap](../ai_chat/README.md)
+- [ML Studio workflow and supported algorithms](../contracts/ml_studio.md)
+- [ML Studio product requirements](../ml_studio/README.md)
+- [AI Chat business workspace](../ai_chat/README.md)
+- [BI result contracts](../contracts/decision_objects.md)
+- [Dashboard state](../contracts/dashboard_canvas_state.md)
 
 ## Acceptance
 
-- Preserve BI answers, charts, tables, artifact inspection and exports; numerical claims come from real analytical execution.
-- Test grounded answer, contextual follow-up, ambiguity, draft selection, dashboard addition and recoverable failure journeys using synthetic data.
-- Retain metric definitions, aggregation, filters, time grain, dataset identity and multi-source lineage. Do not present snapshots as live refreshable results.
-- Preserve `chartStudioDashboard:v1`, its legacy fallback and existing items; avoid duplicate additions.
-- Guard duplicate submission, cancellation, stale responses and dataset changes. Preserve recoverable work.
-- Keep existing themes, responsive layout and keyboard access. Do not introduce inert controls or unimplemented success states.
+- Use existing theme tokens, responsive container layouts, keyboard focus and reduced-motion support.
+- Learning content describes only current draft task families and links to verified official educational resources.
+- Illustrations are clearly educational and never impersonate real experiment results.
+- Preserve dataset identity, draft persistence, pending-action guards and recoverable errors.
+- Keep learning available before selecting data; creation still requires valid workspace identity.
+- Preserve grounded AI Chat answers, contextual follow-ups, recoverable failures and deliberate dashboard additions. Preserve dashboard storage and dataset lineage.
+- Respect each chat's file ownership. AI Chat browser operations remain prohibited.
 
 ## Verification
 
-- `python -m unittest tests.test_decision_chat_service tests.test_decision_chat_workspace -q`
-- Compile changed Python modules with `python -m py_compile`.
-- `npm --prefix frontend/frontend test -- --watchAll=false --runInBand --testPathPattern '(features/ai/.*test|features/dashboard/.*test|context/WindowContext.*test|utils/aiDashboard.*test)'`
+- `npm --prefix frontend/frontend test -- --watchAll=false --runInBand --testPathPattern 'features/ml_studio/.*test'`
+- AI Chat owner: `npm --prefix frontend/frontend test -- --watchAll=false --runInBand --testPathPattern '(features/ai/.*test|features/dashboard/.*test|context/WindowContext.*test|utils/aiDashboard.*test)'`
 - `npm --prefix frontend/frontend run build`
+- `python .codex/hooks/agent_harness_check.py`
 - `python .codex/hooks/ci_harness_check.py`
 - `python C:/Users/18022/.codex/skills/active-gate-governance/scripts/check_active_gate.py project_docs/active/active_gate .`
 - `git diff --check`
 
 ## Owner And Control Return
 
-Owner: Codex, with CONTINUE. Codex implements and reviews the full authorized scope. Return to the user when engineering checks pass, with limitations stated. Preserve ML Studio's pending acceptance. No browser operations are authorized.
+Owner: User, with WAIT_FOR_USER. Final acceptance or refinement requests belong in chat. Do not start additional implementation without user direction. The ML Studio chat coordinates shared records; the AI Chat chat owns its assigned interface files. Delivery evidence belongs in execution status.

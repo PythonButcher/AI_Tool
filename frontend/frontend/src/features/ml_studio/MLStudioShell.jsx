@@ -7,7 +7,7 @@ import {
   FaSearch, FaInfoCircle, FaExclamationTriangle,
   FaTable, FaPlayCircle, FaCheckCircle, FaTimesCircle, FaSyncAlt,
   FaBoxOpen, FaCodeBranch, FaWrench, FaTools,
-  FaBrain, FaCog, FaCopy, FaArrowRight
+  FaBrain, FaCog, FaCopy, FaArrowRight, FaFlask
 } from 'react-icons/fa';
 import './MLStudioShell.css';
 import ConfigurationStage from './ConfigurationStage';
@@ -17,6 +17,7 @@ import ReviewStage from './ReviewStage';
 import UseShareStage from './UseShareStage';
 import { readable } from './TrainingStage';
 import './StudioDesign.css';
+import MLStudioHome from './MLStudioHome';
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 function draftFromEnvelope(data, previous = null) {
   const preparation_context = Object.prototype.hasOwnProperty.call(data, 'preparation_context')
@@ -543,14 +544,14 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
         workflowState={workflowState}
       />
       <div className="ml-studio-body">
-         <AssetRail
+         {hasRequiredIdentity && <AssetRail
             draft={activeDraft}
             workflowState={workflowState}
             activeWorkspace={activeWorkspace}
             analysisContext={analysisContext}
             numRows={numRows}
             numCols={numCols}
-         />
+         />}
          <div className="ml-studio-center-column">
              {hasBlockedIdentity ? (
                  <main className="ml-studio-canvas" aria-label="Experiment Canvas">
@@ -563,13 +564,7 @@ export default function MLStudioShell({ onOpenCleaningForm }) {
                     </div>
                  </main>
              ) : !hasRequiredIdentity ? (
-                 <main className="ml-studio-canvas" aria-label="Experiment Canvas">
-                    <div className="canvas-state-message no-dataset">
-                       <FaDatabase className="canvas-icon neutral-icon" />
-                       <h2>No Dataset Selected</h2>
-                       <p>A governed workspace dataset must be selected to proceed.</p>
-                    </div>
-                 </main>
+                 <MLStudioHome canCreate={false} />
              ) : !activeDraft ? (
                  <ExperimentHome
                    draftsState={draftsState}
@@ -830,41 +825,12 @@ function ExperimentHome({ draftsState, onCreate, onReopen, onDuplicate, onDelete
   }
   const allDrafts = draftsState.data || [];
   const drafts = allDrafts.filter(draft => `${draft.name} ${draft.task_type || ''}`.toLowerCase().includes(query.toLowerCase()));
-  if (allDrafts.length === 0) {
-    return (
-      <main className="ml-studio-canvas" aria-label="Experiment Home">
-        <div className="canvas-state-message no-dataset">
-          <FaBrain className="canvas-icon neutral-icon" />
-          <span className="ml-eyebrow">From governed data to a considered decision</span>
-          <h2>No Experiments Found</h2>
-          <p className="empty-state-text">Prepare your data, compare models and keep the evidence behind your choice. Every experiment stays local and can be resumed.</p>
-          <div className="ml-task-overview"><span>Predict values</span><span>Classify</span><span>Forecast</span><span>Find groups</span><span>Detect unusual rows</span></div>
-          <button
-            className="start-run-button"
-            onClick={onCreate}
-            disabled={pendingAction !== null}
-          >
-            {pendingAction === 'creating' ? 'Creating...' : 'New Experiment'}
-          </button>
-        </div>
-      </main>
-    );
-  }
   return (
-    <main className="ml-studio-canvas align-top" aria-label="Experiment Home">
+    <MLStudioHome onCreate={onCreate} pendingAction={pendingAction} savedCount={allDrafts.length}>
       <div className="experiment-home-container">
-        <div className="experiment-home-header">
-          <div><span className="ml-eyebrow">Your local model workspace</span><h2 className="prep-form-title">Workspace Experiments</h2><p>Resume a saved experiment or explore a new question with the same governed data.</p></div>
-          <button
-            className="start-run-button"
-            onClick={onCreate}
-            disabled={pendingAction !== null}
-          >
-            {pendingAction === 'creating' ? 'Creating...' : 'New Experiment'}
-          </button>
-        </div>
-        <div className="ml-home-toolbar"><span>{allDrafts.length} saved experiments</span><label>Find an experiment<input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Search name or task" /></label></div>
-        {drafts.length === 0 && <p role="status">No experiments match this search.</p>}
+        {allDrafts.length === 0 ? <div className="ml-welcome-empty"><FaFlask aria-hidden="true" /><div><h3>No Experiments Found</h3><p>Your next idea starts here. Create an experiment above, or get inspired by the tasks below.</p></div></div> :
+          <div className="ml-home-toolbar"><span>Make room for your next idea. Your work is saved here.</span><label>Find an experiment<input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Search name or task" /></label></div>}
+        {allDrafts.length > 0 && drafts.length === 0 && <p role="status">No experiments match this search.</p>}
         <div className="drafts-list">
           {drafts.map(draft => (
             <div key={draft.experiment_id} className="draft-item-container">
@@ -918,7 +884,7 @@ function ExperimentHome({ draftsState, onCreate, onReopen, onDuplicate, onDelete
           ))}
         </div>
       </div>
-    </main>
+    </MLStudioHome>
   );
 }
 function AssetRail({ activeWorkspace, analysisContext, numRows, numCols, draft, workflowState }) {

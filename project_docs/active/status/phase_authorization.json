@@ -1,10 +1,50 @@
 {
   "schema_version": 1,
   "authorized_work": {
-    "name": "AI Chat business workspace"
+    "name": "ML Studio and AI Chat interface polish"
   },
   "authorization_state": "AUTHORIZED",
-  "lifecycle_state": "IN PROGRESS",
+  "lifecycle_state": "AWAITING USER ACCEPTANCE",
+  "interface_verification": {
+    "verified_at": "2026-10-10",
+    "ml_studio": "101 tests passed across 14 suites; final home and shell changes rechecked with 7 and 38 passing tests. Home visually inspected in light/dark themes and at 390px width.",
+    "ai_chat": "Owning chat reports 22 focused frontend tests, scoped ESLint, 46 backend tests and Python compilation passed. No browser verification or acceptance.",
+    "shared": "Production build passed with existing warnings; generated CSS contains the final 760px AI Chat header guard. CI harness, 28 hook tests, 7 policy tests and diff checks passed."
+  },
+  "ml_studio_splash_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-10-10",
+    "instruction": "Create a dynamic, theme-aligned ML Studio splash page with engaging professional design and learning links for the algorithms offered by the tool.",
+    "scope": "Codex may implement and verify the ML Studio home and learning explorer, preserving experiment actions and backend contracts.",
+    "codex_frontend_implementation_authorized": true
+  },
+  "concurrent_ai_chat_work": {
+    "gate": "AI Chat business workspace",
+    "state": "AWAITING USER ACCEPTANCE",
+    "current_step": "Engineering verification complete",
+    "scope": "Unified header, larger conversation/composer/results controls and optional sidebar in AIShell.jsx, AIShell.css and DashboardDraft.jsx. Preserve BI and dashboard behavior. Final focused tests and shared build passed; no browser operations are authorized for that assignment."
+  },
+  "interface_coordination_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-10-10",
+    "instruction": "Yes, coordinate both chats",
+    "evidence": "User reply in Improve AI Chat BI workspace, verified through read_thread.",
+    "scope": "ML Studio chat owns ML Studio files, shared gate/status and the production build. AI Chat chat owns AI Chat and its sidebar/header refinement, plus focused tests."
+  },
+  "sidebar_header_polish_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-10-10",
+    "instruction": "make sure to update and improve the side bar , and header elements",
+    "evidence": "User message in Improve AI Chat BI workspace, verified through read_thread.",
+    "codex_frontend_implementation_authorized": true
+  },
+  "ai_chat_window_polish_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-10-10",
+    "instruction": "I am see them and its not enough I wanted more polish to the overall chat window",
+    "scope": "Codex may redesign the AI Chat window hierarchy, header, conversation, composer, results panel and responsive styling while retaining implemented BI and dashboard behavior.",
+    "codex_frontend_implementation_authorized": true
+  },
   "diff_baseline": "2e3670e9bc26a3a6b4749baebf6e25c7032e9475",
   "authority_kind": "direct_user_instruction",
   "ai_chat_improvement_authorization": {

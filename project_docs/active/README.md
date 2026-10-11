@@ -24,7 +24,7 @@ Decision Intelligence workspaces, decision frames, readiness and capability pane
 
 Dataset identity and semantic truth remain required for every BI answer and chart.
 
-The [AI Chat business workspace](ai_chat/README.md) is the current authorized backend and frontend effort. The [active gate](active_gate/README.md) controls execution. ML Studio's five local task workflows and theme-aligned UI remain engineering-complete and awaiting user acceptance; [status](status/project_execution_status.md) preserves that boundary and the [contract](contracts/ml_studio.md) defines implemented behavior.
+ML Studio's home and learning experience and AI Chat's interface/navigation refinement are engineering-complete and awaiting user acceptance in chat. The [active gate](active_gate/README.md) controls ownership. [Status](status/project_execution_status.md) records shared verification and acceptance boundaries; the [contract](contracts/ml_studio.md) defines implemented ML behavior.
 
 ## Active Areas
 

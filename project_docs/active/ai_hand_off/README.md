@@ -10,7 +10,7 @@ Antigravity owns bounded frontend implementation, React/CSS, UI rendering, and f
 
 ## Active Handoffs And Goal Prompts
 
-No specialist frontend handoff is active. Codex owns the authorized AI Chat backend and frontend effort. ML Studio preparation improvements remain awaiting user acceptance in chat. Consult [status](../status/project_execution_status.md) and the [sole gate](../active_gate/README.md) before acting.
+No specialist frontend handoff is active. Both coordinated interface changes are engineering-complete; the user owns final acceptance in chat. Consult [status](../status/project_execution_status.md) and the [sole gate](../active_gate/README.md) before acting.
 
 Completed handoffs belong outside this active folder.
 

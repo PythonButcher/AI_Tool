@@ -49,6 +49,7 @@ test('grounded answer supports a contextual refinement and dashboard save', asyn
   await waitFor(() => expect(axios.post).toHaveBeenCalledTimes(2));
   expect(axios.post.mock.calls[1][1].analytics_refinement.arguments.field).toBe('Region');
   await waitFor(() => expect(screen.queryByText('Analyzing your data…')).not.toBeInTheDocument());
+  fireEvent.click(screen.getAllByRole('button', { name: 'Open chart' })[0]);
   fireEvent.click(screen.getByRole('button', { name: 'Save to Dashboard' }));
   const saved = JSON.parse(localStorage.getItem('chartStudioDashboard:v1')).items;
   expect(saved).toHaveLength(1);
@@ -154,4 +155,46 @@ test('dashboard control delegates to the live app navigation', () => {
   render(tree(context, { onOpenDashboard }));
   fireEvent.click(screen.getByRole('button', { name: 'Open dashboard' }));
   expect(onOpenDashboard).toHaveBeenCalledTimes(1);
+});
+
+test('choosing data from the composer preserves the question and opens an initialized picker', () => {
+  render(tree());
+  const input = screen.getByRole('textbox', { name: 'Business question' });
+  fireEvent.change(input, { target: { value: 'Compare revenue' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Choose dataset for question' }));
+  expect(input).toHaveValue('Compare revenue @');
+  expect(input).toHaveFocus();
+  fireEvent.click(screen.getByRole('button', { name: 'Choose dataset for question' }));
+  expect(input).toHaveValue('Compare revenue @');
+  expect(axios.post).not.toHaveBeenCalled();
+});
+
+test('sliding the sidebar preserves an in-flight question and an unsent follow-up', async () => {
+  const pending = deferred();
+  axios.post.mockReturnValue(pending.promise);
+  render(tree());
+  send('Show revenue');
+  const input = screen.getByRole('textbox', { name: 'Business question' });
+  fireEvent.change(input, { target: { value: 'Break it down by region' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Hide chat sidebar' }));
+  expect(screen.queryByRole('navigation', { name: 'Chat tools' })).not.toBeInTheDocument();
+  expect(input).toHaveValue('Break it down by region');
+  await act(async () => pending.resolve(success()));
+  expect(await screen.findByText('Revenue is 100.')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Show chat sidebar' }));
+  expect(screen.getByRole('navigation', { name: 'Chat tools' })).not.toHaveAttribute('inert');
+  expect(input).toHaveValue('Break it down by region');
+  expect(axios.post).toHaveBeenCalledTimes(1);
+});
+
+test('result inspection moves focus into the pane and returns it to the header on close', () => {
+  render(tree());
+  expect(screen.queryByRole('complementary', { name: 'BI Results' })).not.toBeInTheDocument();
+  const toggle = screen.getByRole('button', { name: 'Toggle Results Pane' });
+  fireEvent.click(toggle);
+  expect(screen.getByRole('heading', { name: 'Result details' })).toHaveFocus();
+  fireEvent.click(screen.getByRole('button', { name: 'Close Results Pane' }));
+  expect(toggle).toHaveFocus();
+  expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  expect(screen.queryByRole('complementary', { name: 'BI Results' })).not.toBeInTheDocument();
 });

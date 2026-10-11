@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { FaLayerGroup } from 'react-icons/fa';
 import { canSaveResult } from '../../utils/aiDashboardResults';
 
 export default function DashboardDraft({ draft, onAdd, onInspect, onOpenDashboard }) {
@@ -19,10 +20,12 @@ export default function DashboardDraft({ draft, onAdd, onInspect, onOpenDashboar
   };
   return (
     <section className="ai-shell__dashboard-draft" aria-label="Dashboard draft">
-      <h3>Review your dashboard</h3>
+      <div className="ai-shell__draft-heading">
+        <FaLayerGroup /><h3>Review your dashboard</h3><span>{choices.length} selected</span>
+      </div>
       <p>{draft.note}</p>
       {draft.items.map(item => (
-        <div className="ai-shell__draft-item" key={item.item_id}>
+        <div className={`ai-shell__draft-item ${item.status !== 'ready' ? 'is-unavailable' : ''}`} key={item.item_id}>
           <label>
             <input type="checkbox" checked={Boolean(selected[item.item_id])}
               disabled={item.status !== 'ready' || !canSaveResult(item.artifact)}
@@ -30,7 +33,7 @@ export default function DashboardDraft({ draft, onAdd, onInspect, onOpenDashboar
             {item.label}
           </label>
           {item.status === 'ready' ? <>
-            <input aria-label={`Title for ${item.label}`} maxLength={120}
+            <input type="text" aria-label={`Title for ${item.label}`} maxLength={120}
               value={titles[item.item_id] ?? item.artifact.title}
               onChange={event => setTitles(previous => ({ ...previous, [item.item_id]: event.target.value }))} />
             <span>{item.artifact.bi_grounding?.aggregation} · {item.artifact.bi_grounding?.row_count} rows</span>
@@ -38,11 +41,13 @@ export default function DashboardDraft({ draft, onAdd, onInspect, onOpenDashboar
           </> : <p role="status">Unavailable: {item.message}</p>}
         </div>
       ))}
-      <button type="button" className="ai-shell__primary-action" disabled={!choices.length} onClick={add}>
-        Add {choices.length} selected to dashboard
-      </button>
+      <div className="ai-shell__draft-footer">
+        <button type="button" className="ai-shell__primary-action" disabled={!choices.length} onClick={add}>
+          Add {choices.length} selected to dashboard
+        </button>
+        {feedback && <button type="button" onClick={onOpenDashboard}>View dashboard</button>}
+      </div>
       {feedback && <p role="status">{feedback}</p>}
-      {feedback && <button type="button" onClick={onOpenDashboard}>View dashboard</button>}
       {error && <p role="alert">{error}</p>}
     </section>
   );

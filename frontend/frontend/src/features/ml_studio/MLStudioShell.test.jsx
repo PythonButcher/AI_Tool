@@ -56,6 +56,9 @@ describe('MLStudioShell', () => {
       analysisContext: null,
     }, { numRows: 0, numCols: 0 });
     expect(screen.getByText('No Dataset Selected')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'New Experiment' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: /Anomaly detection/ }));
+    expect(screen.getByRole('heading', { name: 'Isolation forest' })).toBeInTheDocument();
     expect(global.fetch).not.toHaveBeenCalled();
   });
   it('renders "Identity Conflict" when blocked by version conflict', () => {

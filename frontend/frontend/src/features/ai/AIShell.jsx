@@ -2,10 +2,14 @@ import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
 import {
   FaChartBar,
+  FaChartLine,
+  FaArrowUp,
+  FaArrowRight,
+  FaBars,
   FaCheckCircle,
   FaChevronRight,
   FaCircle,
-  FaCloud,
+  FaChevronDown,
   FaDatabase,
   FaExclamationTriangle,
   FaExternalLinkAlt,
@@ -13,15 +17,13 @@ import {
   FaFilePdf,
   FaInfoCircle,
   FaLayerGroup,
-  FaPaperPlane,
   FaPlus,
   FaRobot,
   FaShieldAlt,
-  FaTerminal,
+  FaTimes,
   FaThumbtack,
 } from 'react-icons/fa';
 import {
-  Avatar,
   Button,
   Chip,
   IconButton,
@@ -213,7 +215,8 @@ function AIShell({ onOpenDashboard } = {}) {
   const [awaitingCleanInstructions, setAwaitingCleanInstructions] = useState(false);
   const [sessionState, setSessionState] = useState({ active_mode: 'explore' });
   const [activeArtifact, setActiveArtifact] = useState(null);
-  const [isResultsPaneOpen, setIsResultsPaneOpen] = useState(() => window.innerWidth > 900);
+  const [isResultsPaneOpen, setIsResultsPaneOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [pinFeedbackIds, setPinFeedbackIds] = useState({});
   const [failedRequest, setFailedRequest] = useState(null);
   const [notice, setNotice] = useState(null);
@@ -225,12 +228,23 @@ function AIShell({ onOpenDashboard } = {}) {
   const [highlightedIndex, setHighlightedIndex] = useState(0);
 
   const inputRef = useRef(null);
+  const resultsToggleRef = useRef(null);
+  const resultsHeadingRef = useRef(null);
   const chatBodyRef = useRef(null);
   const requestRef = useRef(null);
   const dataScope = useMemo(() => ({ workspaceId: activeWorkspace?.workspace_id, version: activeWorkspace?.version, semanticModel, cleanedData, fullData }), [activeWorkspace?.workspace_id, activeWorkspace?.version, semanticModel, cleanedData, fullData]);
   const scopeRef = useRef(dataScope);
   scopeRef.current = dataScope;
   const previousScope = useRef(dataScope);
+
+  useEffect(() => {
+    if (isResultsPaneOpen) resultsHeadingRef.current?.focus();
+  }, [isResultsPaneOpen]);
+
+  const closeResults = () => {
+    setIsResultsPaneOpen(false);
+    resultsToggleRef.current?.focus();
+  };
   const suggestions = useMemo(() => buildChatSuggestions(semanticModel), [semanticModel]);
   const datasetLabel = sessionState.dataset_context?.dataset?.dataset_name
     || activeWorkspace?.name || activeWorkspace?.workspace_name || semanticModel?.dataset?.name || 'No data selected';
@@ -485,7 +499,7 @@ function AIShell({ onOpenDashboard } = {}) {
 
     return (
       <div className={`${baseClass} is-chart`}>
-        <div className="ai-shell__artifact-content" style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+        <div className="ai-shell__artifact-content">
           <div className="ai-shell__artifact-export-bar">
             <span>Export this BI result</span>
             {renderExportButton(artifact)}
@@ -513,7 +527,7 @@ function AIShell({ onOpenDashboard } = {}) {
             </div>
           )}
 
-          <AICharts aiChartType={content.chartType || 'Bar'} aiChartData={content.chartData} />
+          <div className="ai-shell__chart-canvas"><AICharts aiChartType={content.chartType || 'Bar'} aiChartData={content.chartData} /></div>
           {content.explanation && (
             <Typography variant="body2" sx={{ mt: 2, lineHeight: 1.7, opacity: 0.75 }}>
               {content.explanation}
@@ -535,6 +549,19 @@ function AIShell({ onOpenDashboard } = {}) {
     setUserInput(`${before}@${datasetName} ${after}`);
     setIsMentionOpen(false);
     setMentionStartIndex(-1);
+    inputRef.current?.focus();
+  };
+
+  const chooseData = () => {
+    // Keep the question intact when data is selected from a toolbar control.
+    const prefix = userInput.trimEnd();
+    const value = prefix.endsWith('@') ? prefix : `${prefix}${prefix ? ' ' : ''}@`;
+    setUserInput(value);
+    setMentionQuery('');
+    setMentionStartIndex(value.length - 1);
+    setMentionPosition({ top: -180, left: 0 });
+    setHighlightedIndex(0);
+    setIsMentionOpen(true);
     inputRef.current?.focus();
   };
 
@@ -735,84 +762,110 @@ function AIShell({ onOpenDashboard } = {}) {
   };
 
   return (
-    <div className="ai-shell">
-      <nav className="ai-shell__left-rail">
+    <div className={`ai-shell ${isResultsPaneOpen ? 'has-open-results' : ''}`}>
+      <header className="ai-shell__header">
+        <div className="ai-shell__header-left">
+          <Tooltip title={isSidebarOpen ? 'Hide sidebar for more chat space' : 'Show chat sidebar'}>
+            <button type="button" className="ai-shell__sidebar-toggle"
+              aria-label={isSidebarOpen ? 'Hide chat sidebar' : 'Show chat sidebar'}
+              aria-expanded={isSidebarOpen} aria-controls="ai-chat-navigation"
+              onClick={() => setIsSidebarOpen(open => !open)}><FaBars /></button>
+          </Tooltip>
+          <div className="ai-shell__brand-mark" aria-hidden="true"><FaLayerGroup /></div>
+          <div className="ai-shell__titles">
+            <h1 className="ai-shell__main-title">AI Chat <span>Business intelligence</span></h1>
+            <p className="ai-shell__header-subtitle">From a good question to a clear next step.</p>
+          </div>
+        </div>
+        <div className="ai-shell__header-right">
+          <button type="button" className="ai-shell__header-action ai-shell__dashboard-link" aria-label="Open dashboard" onClick={viewDashboard}>
+            <FaChartBar /><span>Dashboard</span><FaExternalLinkAlt className="ai-shell__external-icon" />
+          </button>
+          <button ref={resultsToggleRef} type="button" className={`ai-shell__header-action ${isResultsPaneOpen ? 'is-selected' : ''}`}
+            aria-label="Toggle Results Pane" aria-expanded={isResultsPaneOpen} aria-controls="ai-chat-results"
+            onClick={() => setIsResultsPaneOpen(open => !open)}>
+            <FaEye /><span>Results</span>{activeArtifact && <span className="ai-shell__result-dot" />}
+          </button>
+        </div>
+      </header>
+
+      <div className="ai-shell__body">
+      <nav id="ai-chat-navigation" className={`ai-shell__left-rail ${isSidebarOpen ? 'is-open' : 'is-collapsed'}`}
+        aria-label="Chat tools" aria-hidden={!isSidebarOpen} inert={!isSidebarOpen ? '' : undefined}>
+        <div className="ai-shell__rail-inner">
         <div className="ai-shell__rail-top">
+          <span className="ai-shell__rail-label">Workspace</span>
           <Tooltip title="AI Chat" placement="right">
-            <span className="ai-shell__rail-item is-active" aria-current="page"><FaRobot /></span>
+            <span className="ai-shell__rail-item is-active" aria-current="page"><FaRobot /><span>Chat</span></span>
           </Tooltip>
           <Tooltip title="Choose data" placement="right">
-            <button className="ai-shell__rail-item" aria-label="Choose data" onClick={() => { setUserInput('@'); inputRef.current?.focus(); setIsMentionOpen(true); }}><FaDatabase /></button>
+            <button type="button" className="ai-shell__rail-item" aria-label="Choose data" onClick={chooseData}><FaDatabase /><span>Data</span></button>
           </Tooltip>
-          <Tooltip title="Open dashboard" placement="right">
-            <button className="ai-shell__rail-item" aria-label="Open dashboard" onClick={viewDashboard}><FaChartBar /></button>
+          <Tooltip title="Prepare a cleaning request" placement="right">
+            <button type="button" className="ai-shell__rail-item" aria-label="Clean Data" onClick={() => { setUserInput('/clean'); inputRef.current?.focus(); }}><FaShieldAlt /><span>Prepare</span></button>
           </Tooltip>
         </div>
         <div className="ai-shell__rail-bottom">
-          <Tooltip title="Show results" placement="right">
-            <button className="ai-shell__rail-item" aria-label="Show results" onClick={() => setIsResultsPaneOpen(true)}><FaEye /></button>
+          <span className="ai-shell__rail-label">Your work</span>
+          <Tooltip title="Open dashboard" placement="right">
+            <button type="button" className="ai-shell__rail-item" aria-label="Go to dashboard" onClick={viewDashboard}><FaChartBar /><span>Dashboard</span></button>
           </Tooltip>
+          <Tooltip title="Show results" placement="right">
+            <button type="button" className="ai-shell__rail-item" aria-label="Show results" onClick={() => setIsResultsPaneOpen(true)}><FaEye /><span>Results</span></button>
+          </Tooltip>
+        </div>
         </div>
       </nav>
 
       <main className="ai-shell__workspace">
-        <header className="ai-shell__header">
-          <div className="ai-shell__header-left">
-            <Avatar className="ai-shell__avatar"><FaRobot /></Avatar>
-            <div className="ai-shell__titles">
-              <Typography variant="subtitle2" className="ai-shell__main-title">Business Intelligence Agent</Typography>
-              <div className="ai-shell__status-bar">
-                <span className="ai-shell__status-item">
-                  <FaCircle className={`ai-shell__indicator is-${connectionStatus.data.toLowerCase()}`} />
-                  {connectionStatus.data}
-                </span>
-                <span className="ai-shell__status-item">
-                  <FaCloud className={`ai-shell__indicator is-${connectionStatus.semantic.toLowerCase()}`} />
-                  Semantic {connectionStatus.semantic}
-                </span>
-              </div>
-            </div>
-          </div>
-          <div className="ai-shell__header-right">
-            <IconButton onClick={() => setIsResultsPaneOpen((open) => !open)} size="small" aria-label="Toggle Results Pane">
-              <FaEye style={{ color: isResultsPaneOpen ? 'var(--text-primary)' : 'var(--text-secondary)' }} />
-            </IconButton>
-          </div>
-        </header>
-
         <details className="ai-shell__data-context">
-          <summary><FaDatabase /> {datasetLabel}<span>{semanticModel?.metrics?.length || 0} metrics available</span></summary>
+          <summary>
+            <span className="ai-shell__source-icon"><FaDatabase /></span>
+            <span className="ai-shell__source-name"><span>Working with</span><strong>{datasetLabel}</strong></span>
+            <span className="ai-shell__source-status"><FaCircle className={`ai-shell__indicator is-${connectionStatus.data.toLowerCase()}`} />{semanticModel?.metrics?.length || 0} metrics</span>
+            <FaChevronDown className="ai-shell__details-chevron" />
+          </summary>
+          <div className="ai-shell__data-details">
           <p>Metrics: {semanticModel?.metrics?.map(item => item.label || item.name).join(', ') || 'Select data to see available metrics.'}</p>
           <p>Breakdowns: {semanticModel?.dimensions?.map(item => item.label || item.field).join(', ') || 'No semantic dimensions loaded.'}</p>
           {activeWorkspace?.workspace_id && <p>Queries use the active workspace model. Source relationships are validated by the server.</p>}
+          </div>
         </details>
 
-        <div className="ai-shell__conversation" ref={chatBodyRef}>
+        <div className={`ai-shell__conversation ${userMessages.length === 0 ? 'is-empty' : ''}`} ref={chatBodyRef} aria-label="Conversation">
           {userMessages.length === 0 && (
             <div className="ai-shell__welcome-hero">
-              <div className="ai-shell__hero-icon"><FaRobot /></div>
-              <Typography variant="h4" className="ai-shell__hero-title">Business Intelligence</Typography>
+              <div className="ai-shell__hero-eyebrow"><span className="ai-shell__hero-icon"><FaChartLine /></span>Your data, a little clearer</div>
+              <Typography component="h2" className="ai-shell__hero-title">What would you like<br />to understand?</Typography>
               <Typography variant="body1" className="ai-shell__hero-subtitle">
-                Ask plain-language questions about your data, compare business metrics, and create charts.
+                Explore a metric, spot a trend, or turn a question into a dashboard. Start with what matters to your business.
               </Typography>
-              <div className="ai-shell__hero-actions">
-                <Chip icon={<FaPlus />} label="Choose Dataset" onClick={() => setUserInput('@')} clickable />
-                <Chip icon={<FaChartBar />} label="Create Chart" onClick={() => setUserInput('Show ')} clickable />
-                <Chip icon={<FaShieldAlt />} label="Clean Data" onClick={() => setUserInput('/clean')} clickable />
-              </div>
-              {suggestions.length > 0 && <div className="ai-shell__starter-grid" aria-label="Suggested business questions">
-                {suggestions.map(question => <button key={question} type="button" onClick={() => { setUserInput(question); inputRef.current?.focus(); }}>
-                  <FaChartBar /><span>{question}</span><FaChevronRight />
-                </button>)}
+              {suggestions.length > 0 ? <>
+                <div className="ai-shell__section-label">A few places to start</div>
+                <div className="ai-shell__starter-grid" aria-label="Suggested business questions">
+                  {suggestions.map(question => {
+                    const kind = question.startsWith('Build') ? 'dashboard' : question.includes('monthly') ? 'trend' : question.includes('as a chart') ? 'breakdown' : 'metric';
+                    const label = { dashboard: 'Build a dashboard', trend: 'Follow a trend', breakdown: 'Compare a breakdown', metric: 'Explore a metric' }[kind];
+                    const QuestionIcon = { dashboard: FaLayerGroup, trend: FaChartLine, breakdown: FaChartBar, metric: FaDatabase }[kind];
+                    return <button key={question} type="button" aria-label={question} onClick={() => { setUserInput(question); inputRef.current?.focus(); }}>
+                      <span className="ai-shell__starter-heading"><QuestionIcon /><span>{label}</span><FaArrowRight /></span>
+                      <span className="ai-shell__starter-question">{question}</span>
+                    </button>;
+                  })}
+                </div>
+              </> : <div className="ai-shell__connect-card">
+                <FaDatabase /><div><strong>Start with your data</strong><p>Choose a dataset to ask questions in context.</p></div>
+                <button type="button" onClick={chooseData}>Choose Dataset <FaArrowRight /></button>
               </div>}
             </div>
           )}
 
           {userMessages.map((message, index) => (
             <div key={`${message.role}-${index}`} className={`ai-shell__message-row is-${message.role}`}>
+              {message.role === 'assistant' && <div className="ai-shell__message-avatar" aria-hidden="true"><FaLayerGroup /></div>}
               <div className="ai-shell__message-card">
                 <div className="ai-shell__message-header">
-                  <span className="ai-shell__message-author">{message.role === 'user' ? 'You' : 'Agent'}</span>
+                  <span className="ai-shell__message-author">{message.role === 'user' ? 'You' : 'AI Chat'}</span>
                   {message.grounded && (
                     <span className="ai-shell__grounded-tag"><FaShieldAlt /> Grounded</span>
                   )}
@@ -868,7 +921,7 @@ function AIShell({ onOpenDashboard } = {}) {
             </div>
           )}
           {governanceWarning && (
-            <div className="ai-shell__alert-bar" style={{ backgroundColor: '#fff3cd', color: '#856404' }}>
+            <div className="ai-shell__alert-bar is-warning">
               <FaExclamationTriangle /> {governanceWarning}
             </div>
           )}
@@ -894,7 +947,7 @@ function AIShell({ onOpenDashboard } = {}) {
               <TextField
                 inputRef={inputRef}
                 onKeyDown={handleKeyDown}
-                placeholder="Ask a business question, or type @ to choose data..."
+                placeholder="Ask a question about your business…"
                 inputProps={{ 'aria-label': 'Business question' }}
                 variant="standard"
                 fullWidth
@@ -904,42 +957,59 @@ function AIShell({ onOpenDashboard } = {}) {
                 maxRows={6}
                 InputProps={{ disableUnderline: true }}
               />
+            </div>
+            <div className="ai-shell__composer-toolbar">
+              <div className="ai-shell__composer-tools">
+                <Tooltip title="Choose data without clearing your question">
+                  <button type="button" className="ai-shell__composer-tool" aria-label="Choose dataset for question" onClick={chooseData}><FaPlus /><span>Data</span></button>
+                </Tooltip>
+                <Tooltip title="Prepare a data cleaning request">
+                  <button type="button" className="ai-shell__composer-tool" aria-label="Prepare data cleaning question" onClick={() => { setUserInput('/clean'); inputRef.current?.focus(); }}><FaShieldAlt /><span>Clean</span></button>
+                </Tooltip>
+              </div>
+              <span className="ai-shell__keyboard-hint"><kbd>Enter</kbd> to send</span>
               <button
+                type="button"
                 className="ai-shell__send-btn"
                 onClick={handleSendMessage}
                 disabled={loading || !userInput.trim()}
                 aria-label="Send Message"
               >
-                {loading ? <div className="ai-shell__spinner" /> : <FaPaperPlane className="ai-shell__send-icon" />}
+                {loading ? <div className="ai-shell__spinner" /> : <><span>Send</span><FaArrowUp className="ai-shell__send-icon" /></>}
               </button>
             </div>
           </div>
-          <div className="ai-shell__composer-hint">Enter to send · Shift + Enter for a new line · Results are verified against your data</div>
+          <div className="ai-shell__composer-hint"><FaShieldAlt /><span>Answers grounded in your data. Review the details behind each result.</span></div>
         </div>
       </main>
 
-      <aside className={`ai-shell__results-pane ${isResultsPaneOpen ? 'is-open' : 'is-closed'}`}>
+      <aside id="ai-chat-results" aria-label="BI Results" hidden={!isResultsPaneOpen} className={`ai-shell__results-pane ${isResultsPaneOpen ? 'is-open' : 'is-closed'} ${activeArtifact ? 'has-result' : ''}`}>
         <div className="ai-shell__pane-header">
-          <Typography variant="overline" sx={{ fontWeight: 900, letterSpacing: '0.15em' }}>BI Results</Typography>
-          <IconButton onClick={() => setIsResultsPaneOpen(false)} size="small" aria-label="Close Results Pane">
-            <FaChevronRight />
+          <div><span className="ai-shell__section-label">Your analysis</span><h2 ref={resultsHeadingRef} tabIndex={-1}>Result details</h2></div>
+          <IconButton onClick={closeResults} size="small" aria-label="Close Results Pane">
+            <FaTimes />
           </IconButton>
         </div>
 
         <div className="ai-shell__result-viewer">
-          <div className="ai-shell__viewer-label"><FaEye /> Active Result</div>
+          {activeArtifact && <div className="ai-shell__viewer-label"><FaCircle /><span>{activeArtifact.title || 'Active result'}</span></div>}
           {activeArtifact ? (
             renderArtifact(activeArtifact, true)
           ) : (
             <div className="ai-shell__viewer-empty">
-              <div className="ai-shell__viewer-empty-icon"><FaTerminal /></div>
-              <Typography variant="caption">
-                Ask a question to display the latest business result or chart here.
-              </Typography>
+              <div className="ai-shell__viewer-empty-icon"><FaChartBar /></div>
+              <h3>Room for a closer look</h3>
+              <p>Your charts and business results appear here, with the details behind every answer.</p>
+              <div className="ai-shell__result-guide">
+                <div><FaEye /><span><strong>Explore the result</strong><span>Inspect charts and key numbers.</span></span></div>
+                <div><FaDatabase /><span><strong>See the source</strong><span>Review metrics, filters and data.</span></span></div>
+                <div><FaLayerGroup /><span><strong>Keep what matters</strong><span>Save useful results to a dashboard.</span></span></div>
+              </div>
             </div>
           )}
         </div>
       </aside>
+      </div>
     </div>
   );
 }
