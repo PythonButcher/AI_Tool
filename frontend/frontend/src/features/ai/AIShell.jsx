@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
 import {
   FaChartBar,
@@ -6,6 +6,8 @@ import {
   FaArrowUp,
   FaArrowRight,
   FaBars,
+  FaCommentAlt,
+  FaRedo,
   FaCheckCircle,
   FaChevronRight,
   FaCircle,
@@ -18,13 +20,16 @@ import {
   FaInfoCircle,
   FaLayerGroup,
   FaPlus,
-  FaRobot,
   FaShieldAlt,
   FaTimes,
   FaThumbtack,
 } from 'react-icons/fa';
 import {
   Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   Chip,
   IconButton,
   TextField,
@@ -40,6 +45,9 @@ import { AICommands } from '../workflow/AiCommandBlock';
 import { generateAiResultPdf } from '../../utils/aiResultPdfExport';
 import AICharts from './AICharts';
 import DashboardDraft from './DashboardDraft';
+import ChatHistory from './ChatHistory';
+import useChatConversations from './useChatConversations';
+import { restoreConversation } from './chatConversations';
 import { buildChatSuggestions } from './chatSuggestions';
 import { canSaveResult, resultKey } from '../../utils/aiDashboardResults';
 import './AIShell.css';
@@ -195,7 +203,7 @@ const TrustedResultCard = ({ biGrounding, analysisLineage }) => {
  * AI Chat keeps its established split-pane layout while returning to a focused
  * workflow: grounded answers, tables, charts, and conversational refinements.
  */
-function AIShell({ onOpenDashboard } = {}) {
+function AIChatConversation({ onOpenDashboard, conversation, conversations, storageError, onSnapshot, onNewChat, onSelectChat, onRenameChat, onDeleteChat, onResetChat, isSidebarOpen, setIsSidebarOpen }) {
   const {
     activeWorkspace,
     cleanedData,
@@ -207,19 +215,24 @@ function AIShell({ onOpenDashboard } = {}) {
   const { datasets = [] } = useContext(WarehouseContext);
   const { addDashboardResults, openDashboard, dashboardItems = [] } = useWindowContext();
 
-  const [userMessages, setUserMessages] = useState([]);
-  const [userInput, setUserInput] = useState('');
+  const dataScope = useMemo(() => ({ workspaceId: activeWorkspace?.workspace_id, version: activeWorkspace?.version, semanticModel, cleanedData, fullData }), [activeWorkspace?.workspace_id, activeWorkspace?.version, semanticModel, cleanedData, fullData]);
+  const [initial] = useState(() => restoreConversation(conversation, dataScope));
+  const [userMessages, setUserMessages] = useState(initial.messages);
+  const [userInput, setUserInput] = useState(initial.draft);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [governanceWarning, setGovernanceWarning] = useState(null);
-  const [awaitingCleanInstructions, setAwaitingCleanInstructions] = useState(false);
-  const [sessionState, setSessionState] = useState({ active_mode: 'explore' });
-  const [activeArtifact, setActiveArtifact] = useState(null);
+  const [error, setError] = useState(initial.error);
+  const [governanceWarning, setGovernanceWarning] = useState(initial.governanceWarning);
+  const [awaitingCleanInstructions, setAwaitingCleanInstructions] = useState(initial.awaitingCleanInstructions);
+  const [sessionState, setSessionState] = useState(initial.sessionState);
+  const [activeArtifact, setActiveArtifact] = useState(initial.activeArtifact);
   const [isResultsPaneOpen, setIsResultsPaneOpen] = useState(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [pinFeedbackIds, setPinFeedbackIds] = useState({});
-  const [failedRequest, setFailedRequest] = useState(null);
-  const [notice, setNotice] = useState(null);
+  const [failedRequest, setFailedRequest] = useState(initial.failedRequest);
+  const [notice, setNotice] = useState(initial.notice);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [chatAction, setChatAction] = useState(null);
+  const [isChatActionOpen, setIsChatActionOpen] = useState(false);
+  const [chatName, setChatName] = useState('');
 
   const [mentionQuery, setMentionQuery] = useState(null);
   const [isMentionOpen, setIsMentionOpen] = useState(false);
@@ -227,15 +240,49 @@ function AIShell({ onOpenDashboard } = {}) {
   const [mentionStartIndex, setMentionStartIndex] = useState(-1);
   const [highlightedIndex, setHighlightedIndex] = useState(0);
 
+  const shellRef = useRef(null);
   const inputRef = useRef(null);
   const resultsToggleRef = useRef(null);
   const resultsHeadingRef = useRef(null);
   const chatBodyRef = useRef(null);
   const requestRef = useRef(null);
-  const dataScope = useMemo(() => ({ workspaceId: activeWorkspace?.workspace_id, version: activeWorkspace?.version, semanticModel, cleanedData, fullData }), [activeWorkspace?.workspace_id, activeWorkspace?.version, semanticModel, cleanedData, fullData]);
   const scopeRef = useRef(dataScope);
   scopeRef.current = dataScope;
   const previousScope = useRef(dataScope);
+
+  useEffect(() => {
+    onSnapshot({ messages: userMessages, draft: userInput, sessionState, activeArtifact, sourceScope: dataScope,
+      awaitingCleanInstructions, failedRequest, error, governanceWarning, notice });
+  }, [onSnapshot, userMessages, userInput, sessionState, activeArtifact, dataScope,
+    awaitingCleanInstructions, failedRequest, error, governanceWarning, notice]);
+
+  useEffect(() => { inputRef.current?.focus(); }, []);
+
+  const navigationSnapshot = () => {
+    const pending = requestRef.current;
+    pending?.controller.abort();
+    requestRef.current = null;
+    return { messages: userMessages, draft: userInput || pending?.message || '', sessionState, activeArtifact,
+      sourceScope: dataScope, awaitingCleanInstructions, failedRequest, error, governanceWarning,
+      notice: pending ? 'The pending request was stopped when you left this chat. Send your question again to continue.' : notice };
+  };
+
+  const startNewChat = () => onNewChat(navigationSnapshot(), conversation.id);
+  const selectChat = id => {
+    if (id !== conversation.id) onSelectChat(id, navigationSnapshot(), conversation.id);
+    else { setIsHistoryOpen(false); inputRef.current?.focus(); }
+  };
+  const prepareChatAction = (kind, chat = conversation) => {
+    setChatName(chat.title);
+    setChatAction({ kind, chat });
+    setIsChatActionOpen(true);
+  };
+  const applyChatAction = () => {
+    if (chatAction.kind === 'rename') onRenameChat(chatAction.chat.id, chatName);
+    else if (chatAction.kind === 'delete') onDeleteChat(chatAction.chat.id);
+    else onResetChat();
+    setIsChatActionOpen(false);
+  };
 
   useEffect(() => {
     if (isResultsPaneOpen) resultsHeadingRef.current?.focus();
@@ -762,7 +809,7 @@ function AIShell({ onOpenDashboard } = {}) {
   };
 
   return (
-    <div className={`ai-shell ${isResultsPaneOpen ? 'has-open-results' : ''}`}>
+    <div ref={shellRef} className={`ai-shell ${isResultsPaneOpen ? 'has-open-results' : ''}`}>
       <header className="ai-shell__header">
         <div className="ai-shell__header-left">
           <Tooltip title={isSidebarOpen ? 'Hide sidebar for more chat space' : 'Show chat sidebar'}>
@@ -774,10 +821,21 @@ function AIShell({ onOpenDashboard } = {}) {
           <div className="ai-shell__brand-mark" aria-hidden="true"><FaLayerGroup /></div>
           <div className="ai-shell__titles">
             <h1 className="ai-shell__main-title">AI Chat <span>Business intelligence</span></h1>
-            <p className="ai-shell__header-subtitle">From a good question to a clear next step.</p>
+            <button type="button" className="ai-shell__conversation-title" aria-label="Show chat history" onClick={() => setIsHistoryOpen(true)}>
+              <span>{conversation.title}</span><FaChevronDown />
+            </button>
           </div>
         </div>
         <div className="ai-shell__header-right">
+          <Tooltip title="Start a new chat">
+            <button type="button" className="ai-shell__header-action ai-shell__new-chat" aria-label="New chat" onClick={startNewChat}>
+              <FaPlus /><span>New chat</span>
+            </button>
+          </Tooltip>
+          <Tooltip title="Reset this chat and start fresh">
+            <span><button type="button" className="ai-shell__header-action ai-shell__reset-chat" aria-label="Reset current chat"
+              disabled={!userMessages.length && !userInput.trim()} onClick={() => prepareChatAction('reset')}><FaRedo /></button></span>
+          </Tooltip>
           <button type="button" className="ai-shell__header-action ai-shell__dashboard-link" aria-label="Open dashboard" onClick={viewDashboard}>
             <FaChartBar /><span>Dashboard</span><FaExternalLinkAlt className="ai-shell__external-icon" />
           </button>
@@ -796,7 +854,7 @@ function AIShell({ onOpenDashboard } = {}) {
         <div className="ai-shell__rail-top">
           <span className="ai-shell__rail-label">Workspace</span>
           <Tooltip title="AI Chat" placement="right">
-            <span className="ai-shell__rail-item is-active" aria-current="page"><FaRobot /><span>Chat</span></span>
+            <button type="button" className="ai-shell__rail-item is-active" aria-label="Open chat history" onClick={() => setIsHistoryOpen(true)}><FaCommentAlt /><span>Chats</span></button>
           </Tooltip>
           <Tooltip title="Choose data" placement="right">
             <button type="button" className="ai-shell__rail-item" aria-label="Choose data" onClick={chooseData}><FaDatabase /><span>Data</span></button>
@@ -805,6 +863,11 @@ function AIShell({ onOpenDashboard } = {}) {
             <button type="button" className="ai-shell__rail-item" aria-label="Clean Data" onClick={() => { setUserInput('/clean'); inputRef.current?.focus(); }}><FaShieldAlt /><span>Prepare</span></button>
           </Tooltip>
         </div>
+        <section className="ai-shell__sidebar-chats" aria-label="Recent chats">
+          <div className="ai-shell__sidebar-chat-heading"><span>Recent chats</span><button type="button" onClick={startNewChat} aria-label="Start another chat"><FaPlus /></button></div>
+          <ChatHistory conversations={conversations} activeId={conversation.id} onSelect={selectChat}
+            onRename={chat => prepareChatAction('rename', chat)} onDelete={chat => prepareChatAction('delete', chat)} />
+        </section>
         <div className="ai-shell__rail-bottom">
           <span className="ai-shell__rail-label">Your work</span>
           <Tooltip title="Open dashboard" placement="right">
@@ -833,6 +896,7 @@ function AIShell({ onOpenDashboard } = {}) {
         </details>
 
         <div className={`ai-shell__conversation ${userMessages.length === 0 ? 'is-empty' : ''}`} ref={chatBodyRef} aria-label="Conversation">
+          {storageError && <div className="ai-shell__alert-bar" role="alert"><FaInfoCircle />{storageError}</div>}
           {userMessages.length === 0 && (
             <div className="ai-shell__welcome-hero">
               <div className="ai-shell__hero-eyebrow"><span className="ai-shell__hero-icon"><FaChartLine /></span>Your data, a little clearer</div>
@@ -1010,8 +1074,53 @@ function AIShell({ onOpenDashboard } = {}) {
         </div>
       </aside>
       </div>
+
+      <Dialog open={isHistoryOpen} onClose={() => setIsHistoryOpen(false)} fullWidth maxWidth="sm"
+        container={() => shellRef.current?.ownerDocument.body}
+        className="ai-shell__chat-dialog" aria-labelledby="ai-chat-history-title">
+        <DialogTitle id="ai-chat-history-title">Your chats</DialogTitle>
+        <DialogContent>
+          <p className="ai-shell__history-note">Conversations are stored on this device.</p>
+          <ChatHistory conversations={conversations} activeId={conversation.id} onSelect={selectChat}
+            onRename={chat => prepareChatAction('rename', chat)} onDelete={chat => prepareChatAction('delete', chat)} />
+        </DialogContent>
+        <DialogActions><Button onClick={() => setIsHistoryOpen(false)}>Close</Button><Button onClick={startNewChat} startIcon={<FaPlus />}>New chat</Button></DialogActions>
+      </Dialog>
+
+      <Dialog open={isChatActionOpen} onClose={() => setIsChatActionOpen(false)} fullWidth maxWidth="xs"
+        container={() => shellRef.current?.ownerDocument.body}
+        TransitionProps={{ onExited: () => setChatAction(null) }}
+        className="ai-shell__chat-dialog ai-shell__chat-action-dialog" aria-labelledby="ai-chat-action-title">
+        <DialogTitle id="ai-chat-action-title">{chatAction?.kind === 'rename' ? 'Rename chat' : chatAction?.kind === 'delete' ? 'Delete this chat?' : 'Reset this chat?'}</DialogTitle>
+        <DialogContent>
+          {chatAction?.kind === 'rename' ? <TextField autoFocus fullWidth label="Chat name" value={chatName}
+            inputProps={{ maxLength: 80 }} onChange={event => setChatName(event.target.value)}
+            onKeyDown={event => { if (event.key === 'Enter' && chatName.trim()) { event.preventDefault(); applyChatAction(); } }} />
+            : <p className="ai-shell__history-note">{chatAction?.kind === 'delete'
+              ? `Delete “${chatAction.chat.title}” and its saved messages?`
+              : 'Clear the messages, draft and analytical context in this chat and start fresh?'} Saved dashboard results remain available.</p>}
+        </DialogContent>
+        <DialogActions>
+          <Button autoFocus={chatAction?.kind !== 'rename'} onClick={() => setIsChatActionOpen(false)}>Cancel</Button>
+          <Button disabled={chatAction?.kind === 'rename' && !chatName.trim()} onClick={applyChatAction}
+            color={chatAction?.kind === 'rename' ? 'primary' : 'error'}>
+            {chatAction?.kind === 'rename' ? 'Save name' : chatAction?.kind === 'delete' ? 'Delete chat' : 'Reset chat'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
+}
+
+function AIShell({ onOpenDashboard } = {}) {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const { conversations, activeId, storageError, saveActive, newChat, selectChat, renameChat, deleteChat, resetChat } = useChatConversations();
+  const conversation = conversations.find(chat => chat.id === activeId);
+  const saveSnapshot = useCallback(snapshot => saveActive(activeId, snapshot), [activeId, saveActive]);
+  return <AIChatConversation key={conversation.id} conversation={conversation} conversations={conversations}
+    isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen}
+    storageError={storageError} onSnapshot={saveSnapshot} onOpenDashboard={onOpenDashboard}
+    onNewChat={newChat} onSelectChat={selectChat} onRenameChat={renameChat} onDeleteChat={deleteChat} onResetChat={resetChat} />;
 }
 
 export default AIShell;

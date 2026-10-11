@@ -1,10 +1,34 @@
 {
   "schema_version": 1,
   "authorized_work": {
-    "name": "ML Studio and AI Chat interface polish"
+    "name": "AI Chat conversation management"
   },
   "authorization_state": "AUTHORIZED",
   "lifecycle_state": "AWAITING USER ACCEPTANCE",
+  "chat_delete_repair_verification": {
+    "frontend": "24 AI Chat tests passed, including inactive-chat cancellation/deletion/persistence and separate-document dialog ownership. Scoped lint, CSS layer validation and production build passed with existing unrelated warnings.",
+    "repository": "CI harness, 28 hook tests, 7 policy tests and whitespace checks passed.",
+    "acceptance": "User acts next in chat. No browser operations performed."
+  },
+  "chat_delete_repair_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-10-11",
+    "instruction": "The delete button for individual chats does not work.",
+    "scope": "Repair chat confirmation dialog placement and verify individual deletion in docked and separate-document chat hosts.",
+    "codex_frontend_implementation_authorized": true
+  },
+  "conversation_management_verification": {
+    "frontend": "31 focused tests across 5 suites, scoped ESLint, CSS parsing and production build passed. Existing unrelated lint/dependency/bundle warnings remain.",
+    "repository": "CI harness, active-gate validation, 28 hook tests, 7 policy tests and whitespace checks passed.",
+    "acceptance": "Engineering-complete; user acceptance remains in chat. No browser operations performed."
+  },
+  "ai_chat_conversation_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-10-10",
+    "instruction": "Add a clear way to add a new chat, refresh the current chat, and implement standard chat-window functionality.",
+    "scope": "Codex may implement new/reset chat actions, conversation switching, local history, rename/delete controls, request isolation, tests and governing documentation.",
+    "codex_frontend_implementation_authorized": true
+  },
   "interface_verification": {
     "verified_at": "2026-10-10",
     "ml_studio": "101 tests passed across 14 suites; final home and shell changes rechecked with 7 and 38 passing tests. Home visually inspected in light/dark themes and at 390px width.",

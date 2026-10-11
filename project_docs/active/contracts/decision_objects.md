@@ -78,6 +78,16 @@ The frontend reviews selections and titles before appending result snapshots thr
 
 The chat request lifecycle guards duplicate submission, aborts client waiting on cancellation/unmount, and ignores late responses after a dataset/model/workspace change. Cancellation does not promise to stop server computation. Recoverable failures preserve the question for retry. Earlier results retain source evidence; their analytical follow-up controls are disabled after a source change. Explicit catalog selection omits the active workspace and retires a carried workspace selection rather than executing an unrelated active model.
 
+### Local Conversation Management
+
+AI Chat manages separate client conversations with New Chat, switching, rename, confirmed deletion and confirmed Reset Chat. New/reset chats start with empty messages, draft, result selection and BI session state. The selected dataset and saved dashboard items remain independent. Sidebar visibility belongs to the window and survives conversation changes.
+
+Each mounted conversation owns its request controller and compact analytical state. Switching or starting a chat aborts client waiting, preserves an interrupted question as a draft in its originating conversation and ignores late completion. The request sends only the active conversation's eligible transcript and analytical state. Same-session switching can restore follow-ups only when the workspace identity/version and model/data object references still match; a source change retires incompatible context.
+
+`aiChatConversations:v1` is an additive localStorage collection with `schema_version: 1`, `activeId` and `conversations`. Each conversation stores its local `id`, title, custom-title flag, timestamps, transcript, unsent draft and selected artifact. Grounded answer/chart snapshots and dashboard draft artifacts retain original evidence. Runtime source references, source dataset rows and operational BI session state are excluded. Reloaded transcripts remain inspectable snapshots; new questions execute against current selected data, and stored follow-up controls remain disabled until an analysis is re-run. This is local device storage, not server persistence or cross-device synchronization.
+
+Unavailable or full storage leaves chats usable in memory and displays a save error. Unreadable or unsupported stored collections are left untouched; a fresh in-memory conversation is available without silently overwriting the recoverable value. Reset/delete actions affect only their chat, never dashboard storage.
+
 The same compact state is stored under `session_state.analytics_state` and `session_state.last_analytic_context` with `schema_version: "ai_chat_analytics_state_v1"`. The enclosing session uses `schema_version: "ai_chat_bi_session_state_v1"`; `session_state.dataset_context` retains only canonical identity, counts, a deterministic fingerprint, and, for multi-source results, the identity-only canonical `analysis_context` plus aggregate-only `analysis_lineage`. Raw rows are never stored. A later refinement re-resolves the retained IDs and current versions before execution.
 
 ### Multi-Source Analysis Lineage

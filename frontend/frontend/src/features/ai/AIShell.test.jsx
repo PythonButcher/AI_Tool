@@ -3,6 +3,7 @@ import { render, screen, fireEvent, act, waitFor, within } from '@testing-librar
 import '@testing-library/jest-dom';
 import axios from 'axios';
 import AIShell from './AIShell';
+import { CHAT_STORAGE_KEY } from './chatConversations';
 import { DataContext } from '../../context/DataContext';
 import { WarehouseContext } from '../../context/WarehouseContext';
 import { WindowProvider } from '../../context/WindowContext';
@@ -64,7 +65,7 @@ test('failure preserves text and retry does not duplicate the user message', asy
   expect(screen.getByRole('textbox', { name: 'Business question' })).toHaveValue('How much revenue?');
   fireEvent.click(screen.getByRole('button', { name: 'Retry last question' }));
   await screen.findByText('Revenue is 100.');
-  expect(screen.getAllByText('How much revenue?')).toHaveLength(1);
+  expect(within(screen.getByRole('main')).getAllByText('How much revenue?')).toHaveLength(1);
 });
 
 test('double submission, cancellation and late completion cannot add duplicate or stale answers', async () => {
@@ -197,4 +198,163 @@ test('result inspection moves focus into the pane and returns it to the header o
   expect(toggle).toHaveFocus();
   expect(toggle).toHaveAttribute('aria-expanded', 'false');
   expect(screen.queryByRole('complementary', { name: 'BI Results' })).not.toBeInTheDocument();
+});
+
+test('new chats isolate backend context and switching restores the prior draft and analysis', async () => {
+  axios.post.mockResolvedValue(success());
+  render(tree());
+  send('Revenue overview');
+  await screen.findByText('Revenue is 100.');
+  fireEvent.change(screen.getByRole('textbox', { name: 'Business question' }), { target: { value: 'My unsent follow-up' } });
+  fireEvent.click(screen.getByRole('button', { name: 'New chat' }));
+  expect(screen.getByRole('textbox', { name: 'Business question' })).toHaveValue('');
+  expect(screen.queryByText('Revenue is 100.')).not.toBeInTheDocument();
+  send('Different analysis');
+  await screen.findByText('Revenue is 100.');
+  expect(axios.post.mock.calls[1][1].session_state).toEqual({ active_mode: 'explore' });
+  expect(axios.post.mock.calls[1][1].conversation_history).toEqual([]);
+  fireEvent.click(screen.getByRole('button', { name: 'Show chat history' }));
+  fireEvent.click(within(screen.getByRole('dialog', { name: 'Your chats' })).getByRole('button', { name: 'Open chat: Revenue overview' }));
+  expect(screen.getByRole('textbox', { name: 'Business question' })).toHaveValue('My unsent follow-up');
+  send('Break it down by region');
+  await waitFor(() => expect(axios.post).toHaveBeenCalledTimes(3));
+  expect(axios.post.mock.calls[2][1].session_state.analytics_state.metric_id).toBe('revenue');
+  expect(axios.post.mock.calls[2][1].conversation_history.map(message => message.content)).not.toContain('Different analysis');
+  await waitFor(() => expect(screen.queryByText('Analyzing your data…')).not.toBeInTheDocument());
+});
+
+test('creating a chat aborts its predecessor and late responses cannot cross conversations', async () => {
+  const pending = deferred();
+  axios.post.mockReturnValueOnce(pending.promise).mockResolvedValueOnce(success({ assistant_message: 'Current answer' }));
+  render(tree());
+  send('Pending question');
+  fireEvent.click(screen.getByRole('button', { name: 'Hide chat sidebar' }));
+  fireEvent.click(screen.getByRole('button', { name: 'New chat' }));
+  expect(screen.getByRole('button', { name: 'Show chat sidebar' })).toBeInTheDocument();
+  expect(axios.post.mock.calls[0][2].signal.aborted).toBe(true);
+  send('Current question');
+  await screen.findByText('Current answer');
+  await act(async () => pending.resolve(success({ assistant_message: 'Wrong conversation answer' })));
+  expect(screen.queryByText('Wrong conversation answer')).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Show chat history' }));
+  fireEvent.click(within(screen.getByRole('dialog', { name: 'Your chats' })).getByRole('button', { name: 'Open chat: Pending question' }));
+  expect(screen.getByRole('textbox', { name: 'Business question' })).toHaveValue('Pending question');
+  expect(screen.queryByText('Current answer')).not.toBeInTheDocument();
+});
+
+test('reset confirms clearing the chat and leaves saved dashboard results intact', async () => {
+  axios.post.mockResolvedValue(success());
+  render(tree());
+  send('Revenue overview');
+  await screen.findByText('Revenue is 100.');
+  fireEvent.click(screen.getByRole('button', { name: 'Open chart' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Save to Dashboard' }));
+  const dashboard = localStorage.getItem('chartStudioDashboard:v1');
+  fireEvent.click(screen.getByRole('button', { name: 'Reset current chat' }));
+  fireEvent.click(within(screen.getByRole('dialog', { name: 'Reset this chat?' })).getByRole('button', { name: 'Cancel' }));
+  expect(screen.getByText('Revenue is 100.')).toBeInTheDocument();
+  fireEvent.click(await screen.findByRole('button', { name: 'Reset current chat' }));
+  fireEvent.click(within(screen.getByRole('dialog', { name: 'Reset this chat?' })).getByRole('button', { name: 'Reset chat' }));
+  expect(screen.queryByText('Revenue is 100.')).not.toBeInTheDocument();
+  expect(screen.getByRole('textbox', { name: 'Business question' })).toHaveValue('');
+  expect(localStorage.getItem('chartStudioDashboard:v1')).toBe(dashboard);
+  send('Fresh analysis');
+  await screen.findByText('Revenue is 100.');
+  expect(axios.post.mock.calls[1][1].session_state).toEqual({ active_mode: 'explore' });
+  expect(axios.post.mock.calls[1][1].conversation_history).toEqual([]);
+});
+
+test('conversation titles can be renamed and the last chat can be safely deleted', async () => {
+  render(tree());
+  fireEvent.click(screen.getByRole('button', { name: 'Show chat history' }));
+  fireEvent.click(within(screen.getByRole('dialog', { name: 'Your chats' })).getByRole('button', { name: 'Rename chat: New chat' }));
+  const rename = screen.getByRole('dialog', { name: 'Rename chat' });
+  fireEvent.change(within(rename).getByRole('textbox', { name: 'Chat name' }), { target: { value: 'Quarterly review' } });
+  fireEvent.click(within(rename).getByRole('button', { name: 'Save name' }));
+  const history = await screen.findByRole('dialog', { name: 'Your chats' });
+  expect(within(history).getByRole('button', { name: 'Open chat: Quarterly review' })).toBeInTheDocument();
+  fireEvent.click(within(history).getByRole('button', { name: 'Delete chat: Quarterly review' }));
+  fireEvent.click(within(screen.getByRole('dialog', { name: 'Delete this chat?' })).getByRole('button', { name: 'Delete chat' }));
+  expect(screen.queryByText('Quarterly review')).not.toBeInTheDocument();
+  expect(screen.getByRole('textbox', { name: 'Business question' })).toHaveValue('');
+  expect(screen.getByRole('button', { name: 'Reset current chat' })).toBeDisabled();
+});
+
+test('deleting an inactive chat preserves the active draft and persists the removal', async () => {
+  render(tree());
+  fireEvent.change(screen.getByRole('textbox', { name: 'Business question' }), { target: { value: 'First draft' } });
+  fireEvent.click(screen.getByRole('button', { name: 'New chat' }));
+  fireEvent.change(screen.getByRole('textbox', { name: 'Business question' }), { target: { value: 'Keep this draft' } });
+  const chats = screen.getByRole('navigation', { name: 'Chat tools' });
+  const deleteButtons = within(chats).getAllByRole('button', { name: 'Delete chat: New chat' });
+  // The latest chat sorts first, so remove the other conversation.
+  fireEvent.click(deleteButtons[1]);
+  fireEvent.click(within(screen.getByRole('dialog', { name: 'Delete this chat?' })).getByRole('button', { name: 'Cancel' }));
+  await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Delete this chat?' })).not.toBeInTheDocument());
+  expect(within(chats).getAllByRole('button', { name: 'Delete chat: New chat' })).toHaveLength(2);
+  fireEvent.click(within(chats).getAllByRole('button', { name: 'Delete chat: New chat' })[1]);
+  fireEvent.click(within(screen.getByRole('dialog', { name: 'Delete this chat?' })).getByRole('button', { name: 'Delete chat' }));
+  await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Delete this chat?' })).not.toBeInTheDocument());
+  expect(screen.getByRole('textbox', { name: 'Business question' })).toHaveValue('Keep this draft');
+  expect(within(chats).getAllByRole('button', { name: 'Delete chat: New chat' })).toHaveLength(1);
+  await waitFor(() => expect(JSON.parse(localStorage.getItem(CHAT_STORAGE_KEY)).conversations).toHaveLength(1));
+});
+
+test('chat dialogs belong to the same document as a popped-out chat', async () => {
+  const frame = document.createElement('iframe');
+  document.body.appendChild(frame);
+  const popupBody = frame.contentDocument.body;
+  const container = frame.contentDocument.createElement('div');
+  popupBody.appendChild(container);
+  const view = render(tree(), { container, baseElement: popupBody });
+  try {
+    fireEvent.click(within(container).getByRole('button', { name: 'Show chat history' }));
+    const history = await within(popupBody).findByRole('dialog', { name: 'Your chats' });
+    fireEvent.click(within(history).getByRole('button', { name: 'Delete chat: New chat' }));
+    const confirmation = within(popupBody).getByRole('dialog', { name: 'Delete this chat?' });
+    expect(confirmation.ownerDocument).toBe(frame.contentDocument);
+    expect(screen.queryByRole('dialog', { name: 'Delete this chat?' })).not.toBeInTheDocument();
+    fireEvent.click(within(confirmation).getByRole('button', { name: 'Delete chat' }));
+    expect(within(container).getByRole('textbox', { name: 'Business question' })).toHaveValue('');
+  } finally {
+    view.unmount();
+    frame.remove();
+  }
+});
+
+test('history and unsent drafts survive remount without carrying unverifiable analytical state', async () => {
+  axios.post.mockResolvedValue(success());
+  const view = render(tree());
+  send('Saved revenue analysis');
+  await screen.findByText('Revenue is 100.');
+  fireEvent.change(screen.getByRole('textbox', { name: 'Business question' }), { target: { value: 'Unsent question' } });
+  view.unmount();
+  expect(JSON.parse(localStorage.getItem(CHAT_STORAGE_KEY)).conversations[0].messages).toHaveLength(2);
+  render(tree());
+  expect(screen.getByText('Revenue is 100.')).toBeInTheDocument();
+  expect(screen.getByRole('textbox', { name: 'Business question' })).toHaveValue('Unsent question');
+  send('Fresh revenue question');
+  await waitFor(() => expect(axios.post).toHaveBeenCalledTimes(2));
+  expect(axios.post.mock.calls[1][1].session_state).toEqual({ active_mode: 'explore' });
+  expect(axios.post.mock.calls[1][1].conversation_history).toEqual([]);
+  await waitFor(() => expect(screen.queryByText('Analyzing your data…')).not.toBeInTheDocument());
+});
+
+test('a chat-storage failure leaves conversation switching usable in memory', async () => {
+  const original = Storage.prototype.setItem;
+  const spy = jest.spyOn(Storage.prototype, 'setItem').mockImplementation(function (key, value) {
+    if (key === CHAT_STORAGE_KEY) throw new Error('quota');
+    return original.call(this, key, value);
+  });
+  try {
+    axios.post.mockResolvedValue(success());
+    render(tree());
+    send('Keep this conversation');
+    await screen.findByText('Revenue is 100.');
+    await screen.findByText(/Could not save chat history/);
+    fireEvent.click(screen.getByRole('button', { name: 'New chat' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Show chat history' }));
+    fireEvent.click(within(screen.getByRole('dialog', { name: 'Your chats' })).getByRole('button', { name: 'Open chat: Keep this conversation' }));
+    expect(screen.getByText('Revenue is 100.')).toBeInTheDocument();
+  } finally { spy.mockRestore(); }
 });

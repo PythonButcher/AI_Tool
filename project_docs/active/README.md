@@ -24,7 +24,7 @@ Decision Intelligence workspaces, decision frames, readiness and capability pane
 
 Dataset identity and semantic truth remain required for every BI answer and chart.
 
-ML Studio's home and learning experience and AI Chat's interface/navigation refinement are engineering-complete and awaiting user acceptance in chat. The [active gate](active_gate/README.md) controls ownership. [Status](status/project_execution_status.md) records shared verification and acceptance boundaries; the [contract](contracts/ml_studio.md) defines implemented ML behavior.
+AI Chat conversation management and its individual-delete repair are engineering-complete and awaiting user acceptance in chat. ML Studio's home and learning experience and the AI Chat visual refinement retain their pending acceptance boundaries. The [active gate](active_gate/README.md) controls execution; [status](status/project_execution_status.md) records verification and ownership.
 
 ## Active Areas
 

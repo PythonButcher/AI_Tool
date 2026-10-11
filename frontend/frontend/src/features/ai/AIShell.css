@@ -2,7 +2,7 @@
   --chat-surface: color-mix(in srgb, var(--bg-secondary) 46%, var(--bg-primary));
   --chat-tint: color-mix(in srgb, var(--accent-blue) 7%, var(--bg-primary));
   --chat-border: color-mix(in srgb, var(--border-color) 80%, var(--bg-primary));
-  --chat-sidebar-width: 168px;
+  --chat-sidebar-width: 248px;
   container: ai-chat / inline-size;
   position: relative;
   display: flex;
@@ -193,6 +193,57 @@
   font-size: 13px;
   line-height: 1.5;
 }
+
+.ai-shell__conversation-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 300px;
+  padding: 0;
+  border: 0;
+  color: var(--text-secondary);
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+.ai-shell__conversation-title span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ai-shell__conversation-title svg { flex-shrink: 0; font-size: 10px; }
+.ai-shell__conversation-title:hover { color: var(--text-primary); }
+
+.ai-shell__header-action.ai-shell__new-chat {
+  border-color: color-mix(in srgb, var(--accent-blue) 28%, var(--border-color));
+  background: var(--accent-blue-soft);
+  color: var(--accent-blue);
+}
+.ai-shell__header-action.ai-shell__new-chat:hover { border-color: var(--accent-blue); }
+.ai-shell__reset-chat { min-width: 42px; padding: 0 12px; }
+
+.ai-shell__sidebar-chats { flex: 1; min-height: 150px; width: 100%; }
+.ai-shell__sidebar-chat-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 8px 10px; color: var(--text-secondary); font-size: 12px; }
+.ai-shell__sidebar-chat-heading button { display: grid; place-items: center; width: 28px; height: 28px; border: 0; border-radius: 6px; background: transparent; color: inherit; cursor: pointer; }
+.ai-shell__sidebar-chat-heading button:hover { background: var(--bg-secondary-soft); }
+.ai-shell__chat-list { display: grid; gap: 5px; }
+.ai-shell__chat-list-row { display: flex; align-items: center; min-width: 0; border: 1px solid transparent; border-radius: 9px; }
+.ai-shell__chat-list-row:hover { background: var(--bg-primary); }
+.ai-shell__chat-list-row.is-current { background: var(--accent-blue-soft); border-color: color-mix(in srgb, var(--accent-blue) 15%, var(--border-color)); }
+.ai-shell__chat-select { display: flex; flex: 1; min-width: 0; min-height: 42px; align-items: center; gap: 9px; padding: 8px 10px; border: 0; border-radius: 8px; color: var(--text-primary); background: transparent; font: inherit; font-size: 13px; text-align: left; cursor: pointer; }
+.ai-shell__chat-select > svg { flex-shrink: 0; font-size: 11px; color: var(--text-secondary); }
+.ai-shell__chat-select > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ai-shell__chat-row-actions { display: flex; flex-shrink: 0; padding-right: 4px; }
+.ai-shell__chat-row-actions button { display: grid; place-items: center; width: 28px; height: 32px; padding: 0; border: 0; border-radius: 6px; color: var(--text-secondary); background: transparent; cursor: pointer; }
+.ai-shell__chat-row-actions button:hover { background: var(--bg-secondary-soft); color: var(--text-primary); }
+/* The docked chat portal sits at 1600; its dialogs must remain above that host.
+   Confirmations also sit above the conversation picker when both are open. */
+.ai-shell__chat-dialog.MuiModal-root { z-index: 1700; }
+.ai-shell__chat-action-dialog.MuiModal-root { z-index: 1701; }
+.ai-shell__chat-dialog .MuiPaper-root { border: 1px solid var(--border-color); border-radius: 16px; background: var(--bg-primary); color: var(--text-primary); }
+.ai-shell__chat-dialog .MuiDialogTitle-root { font-family: var(--font-sans); font-size: 20px; font-weight: 600; }
+.ai-shell__chat-dialog .MuiDialogContent-root { padding-top: 12px; }
+.ai-shell__history-note { margin: 0 0 18px; color: var(--text-secondary); font: 14px/1.7 var(--font-sans); }
+.ai-shell__chat-dialog .MuiButton-root { font-family: var(--font-sans); text-transform: none; }
+.ai-shell__chat-dialog button:focus-visible { outline: 2px solid var(--accent-blue); outline-offset: 2px; }
 
 .ai-shell__header-right {
   display: flex;
@@ -1056,7 +1107,7 @@
   .ai-shell__rail-inner { padding: 20px 8px; }
   .ai-shell__rail-item { width: 64px; height: 62px; padding: 0; flex-direction: column; justify-content: center; gap: 8px; }
   .ai-shell__rail-item span { font-size: 11px; }
-  .ai-shell__rail-label { display: none; }
+  .ai-shell__rail-label, .ai-shell__sidebar-chats { display: none; }
   .ai-shell__rail-item.is-active::before { top: 18px; bottom: 18px; }
 }
 
@@ -1067,8 +1118,14 @@
   .ai-shell__viewer-empty { max-width: 360px; }
 }
 
+@container ai-chat (max-width: 1000px) {
+  .ai-shell__dashboard-link { display: none; }
+}
+
 @container ai-chat (max-width: 760px) {
-  .ai-shell__main-title > span, .ai-shell__header-subtitle { display: none; }
+  .ai-shell__main-title > span, .ai-shell__header-subtitle, .ai-shell__brand-mark, .ai-shell__dashboard-link { display: none; }
+  .ai-shell__conversation-title { max-width: 130px; }
+  .ai-shell__header-right { gap: 6px; }
 }
 
 @container ai-chat (max-width: 580px) {
@@ -1077,6 +1134,8 @@
   .ai-shell__brand-mark { flex-basis: 34px; height: 34px; border-radius: 11px; font-size: 15px; }
   .ai-shell__main-title > span, .ai-shell__header-subtitle, .ai-shell__keyboard-hint { display: none; }
   .ai-shell__header-action { padding: 0 9px; gap: 6px; }
+  .ai-shell__new-chat > span { display: none; }
+  .ai-shell__new-chat { min-width: 42px; }
   .ai-shell__dashboard-link > span, .ai-shell__external-icon { display: none; }
   .ai-shell__data-context { margin: 12px 16px 0; }
   .ai-shell__source-name > span { display: none; }
@@ -1097,6 +1156,10 @@
 }
 
 @container ai-chat (max-width: 420px) {
+  .ai-shell__header { padding-right: 12px; padding-left: 12px; gap: 8px; }
+  .ai-shell__conversation-title { max-width: 90px; }
+  .ai-shell__header-action > span { display: none; }
+  .ai-shell__header-action { min-width: 40px; }
   .ai-shell__brand-mark { display: none; }
   .ai-shell__header-right { gap: 2px; }
   .ai-shell__conversation, .ai-shell__footer { padding-right: 12px; padding-left: 12px; }

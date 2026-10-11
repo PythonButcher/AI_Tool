@@ -1,19 +1,17 @@
-Goal: Deliver coherent, theme-aligned interfaces for ML Studio exploration and the AI Chat business workspace while preserving their working data flows.
+Goal: Let users start, reset, resume and manage isolated AI Chat conversations without losing grounded results or mixing analytical context.
 
 ## User Outcome
 
-Developers can explore machine-learning tasks and trustworthy learning material, start or resume an experiment, and work in a spacious AI Chat window with readable results, a focused composer and consistent navigation.
+Users can create a fresh chat from the header, return to locally saved conversations, rename or delete a chat, and deliberately reset the current conversation.
 
 ## Scope
 
-**Target Files**: This chat owns `frontend/frontend/src/features/ml_studio/MLStudioHome.jsx`, `MLStudioHome.css`, `MLStudioShell.jsx` and focused home/shell tests. The authorized AI Chat chat owns `features/ai/AIShell.jsx`, `AIShell.css`, `DashboardDraft.jsx`, focused tests, and the user's requested sidebar/header refinement. This chat owns shared navigation/status records and the final production build.
+No executable implementation step is active. Await specific user feedback in chat before opening bounded repairs to the conversation controls, storage or request lifecycle in `frontend/frontend/src/features/ai/`.
 
-ML Studio combines an interactive home, supported algorithm links and working experiment actions. AI Chat provides a coherent header, conversation, composer, results and optional sidebar without losing grounded BI answers or dashboard content. Keep refinements within the user's direction and the file ownership above.
+Preserve grounded results, dataset lineage and dashboard items. Do not extend scope to ML Studio or perform browser operations.
 
 ## Contracts
 
-- [ML Studio workflow and supported algorithms](../contracts/ml_studio.md)
-- [ML Studio product requirements](../ml_studio/README.md)
 - [AI Chat business workspace](../ai_chat/README.md)
 - [BI result contracts](../contracts/decision_objects.md)
 - [Dashboard state](../contracts/dashboard_canvas_state.md)
@@ -21,17 +19,17 @@ ML Studio combines an interactive home, supported algorithm links and working ex
 ## Acceptance
 
 - Use existing theme tokens, responsive container layouts, keyboard focus and reduced-motion support.
-- Learning content describes only current draft task families and links to verified official educational resources.
-- Illustrations are clearly educational and never impersonate real experiment results.
-- Preserve dataset identity, draft persistence, pending-action guards and recoverable errors.
-- Keep learning available before selecting data; creation still requires valid workspace identity.
+- Expose New Chat and Reset Chat outside the collapsible sidebar; make saved conversations available at narrow window widths.
+- Keep messages, drafts, artifacts and in-memory analytical context isolated per conversation.
+- Confirm reset/delete actions and preserve dashboard items.
+- Keep dialogs above the docked chat portal and in the same document as the chat host. Deleting an inactive conversation preserves the active draft.
+- Keep local storage additive; handle unavailable or malformed storage without claiming persistence succeeded.
 - Preserve grounded AI Chat answers, contextual follow-ups, recoverable failures and deliberate dashboard additions. Preserve dashboard storage and dataset lineage.
-- Respect each chat's file ownership. AI Chat browser operations remain prohibited.
+- Preserve pending ML Studio acceptance. No AI Chat browser operations are authorized.
 
 ## Verification
 
-- `npm --prefix frontend/frontend test -- --watchAll=false --runInBand --testPathPattern 'features/ml_studio/.*test'`
-- AI Chat owner: `npm --prefix frontend/frontend test -- --watchAll=false --runInBand --testPathPattern '(features/ai/.*test|features/dashboard/.*test|context/WindowContext.*test|utils/aiDashboard.*test)'`
+- `npm --prefix frontend/frontend test -- --watchAll=false --runInBand --testPathPattern '(features/ai/.*test|features/dashboard/.*test|context/WindowContext.*test|utils/aiDashboard.*test)'`
 - `npm --prefix frontend/frontend run build`
 - `python .codex/hooks/agent_harness_check.py`
 - `python .codex/hooks/ci_harness_check.py`
@@ -40,4 +38,4 @@ ML Studio combines an interactive home, supported algorithm links and working ex
 
 ## Owner And Control Return
 
-Owner: User, with WAIT_FOR_USER. Final acceptance or refinement requests belong in chat. Do not start additional implementation without user direction. The ML Studio chat coordinates shared records; the AI Chat chat owns its assigned interface files. Delivery evidence belongs in execution status.
+Owner: User, with WAIT_FOR_USER. Final visual acceptance and any requested refinements remain in chat. Codex resumes only after specific user direction and updates authorization and status before implementing a bounded repair.
