@@ -1,12 +1,25 @@
 {
   "schema_version": 1,
   "authorized_work": {
-    "name": "ML Studio bulk preparation and full editor"
+    "name": "AI Chat business workspace"
   },
   "authorization_state": "AUTHORIZED",
-  "lifecycle_state": "AWAITING USER ACCEPTANCE",
+  "lifecycle_state": "IN PROGRESS",
   "diff_baseline": "2e3670e9bc26a3a6b4749baebf6e25c7032e9475",
   "authority_kind": "direct_user_instruction",
+  "ai_chat_improvement_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-10-10",
+    "instruction": "Improve AI Tool’s existing AI Chat into a more polished, capable, and business-friendly BI workspace. This prompt authorizes implementation, not just an audit or proposal.",
+    "scope": "Codex implements backend, frontend, connected dashboards, contracts and regression tests. Preserve grounded analytical truth, local dashboard compatibility and pending ML Studio acceptance. No browser actions or GEMINI.md edits.",
+    "codex_frontend_implementation_authorized": true
+  },
+  "pending_ml_studio_acceptance": {
+    "gate": "ML Studio bulk preparation and full editor",
+    "state": "AWAITING USER ACCEPTANCE",
+    "owner": "User",
+    "latest_verification": "2026-10-08: 96 frontend tests, 65 focused backend tests, production build and repository checks passed. No browser acceptance."
+  },
   "bulk_preparation_authorization": {
     "approved_by": "User",
     "approved_at": "2026-10-08",
@@ -118,6 +131,21 @@
     "scope": "Codex may implement saved experiment deletion in the ML Studio home, its backend draft route and persistence, contract, and focused tests."
   },
   "allowed_paths": [
+    "backend/decision_engine/chat_service.py",
+    "backend/decision_engine/bi_*.py",
+    "backend/services/metric_resolver.py",
+    "backend/routes/decision_chat.py",
+    "tests/test_decision_chat*.py",
+    "tests/test_metric_resolver.py",
+    "frontend/frontend/src/features/ai/**",
+    "frontend/frontend/src/features/dashboard/**",
+    "frontend/frontend/src/context/WindowContext*",
+    "frontend/frontend/src/components/layout/CanvasContainer.jsx",
+    "frontend/frontend/src/utils/aiDashboard*",
+    "frontend/frontend/src/utils/dashboardCanvasUtils*",
+    "project_docs/active/ai_chat/**",
+    "project_docs/active/contracts/decision_objects.md",
+    "project_docs/active/contracts/dashboard_canvas_state.md",
     "frontend/frontend/src/components/data_management/cleaning_components/**",
     "backend/services/manual_cleaning_engine.py",
     "tests/test_workspace_cleaning.py",

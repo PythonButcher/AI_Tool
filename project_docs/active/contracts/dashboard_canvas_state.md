@@ -73,6 +73,12 @@ The stored value should remain a single object with dashboard state and item arr
 
 ## DashboardItemLayout
 
+AI Chat can add a chart or ungrouped KPI with optional `resultSnapshot: { schemaVersion: "ai_chat_result_snapshot_v1", artifact, savedAt }`. `artifact` is the exact backend answer/chart plus the row-free `dataset_context`; it preserves `bi_grounding`, metric definition, aggregation, dimensions, filters, time grain, dataset fingerprint and any `analysis_lineage`. `savedAt` is a local save timestamp, not a data freshness claim. `sourceMetadata.resultKey` is a canonical identity over source, analytical specification and verified values. Equivalent repeated additions are skipped, even if response artifact IDs differ. Different filters, datasets or result values are distinct.
+
+Snapshot items render their saved values independently of active data and dashboard slicers and explicitly say so. They do not trigger analytical recomputation, refresh or sharing. Users can change the draft title and item selection; recalculating data requires a backend query. The new snapshot renderer is selected only when `resultSnapshot.schemaVersion` matches; existing live chart/KPI renderers keep their behavior.
+
+Batch addition writes the full additive v1 value before reporting success and appends below existing layout bounds. Storage failures leave the current dashboard and the reviewable draft intact for retry. Initial state loads before persistence, and malformed v1 data falls back to valid legacy data without writing or deleting the legacy key. Snapshot and provenance fields survive normalization and reload.
+
 Use grid coordinates compatible with `react-grid-layout`.
 
 | Field | Type | Required | Notes |

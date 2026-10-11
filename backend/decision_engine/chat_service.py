@@ -8,9 +8,12 @@ import re
 from calendar import monthrange
 from copy import deepcopy
 from decimal import Decimal, InvalidOperation
+from datetime import date
 from typing import Any, Dict, List, Optional, Tuple
 
 from backend.decision_engine.grounding import build_grounding_summary
+from backend.decision_engine.bi_intent import clarification, is_temporal, time_grain
+from backend.decision_engine.bi_dashboard import build_dashboard_response, is_dashboard_request
 from backend.decision_engine.mode_detection import (
     detect_chat_mode_details,
     is_decision_request,
@@ -165,9 +168,12 @@ class DecisionChatService:
             # A current workspace identity is enough to resolve the complete
             # active model. Re-resolve on refinements so client-carried joined
             # rows, relationship arrays, and lineage never become truth.
-            resolver_workspace_id = explicit_workspace_id or str(
-                prior_analysis_context.get("workspace_id") or ""
-            ).strip()
+            # An explicit catalog selection retires the prior workspace scope.
+            # Without this, @dataset can accidentally execute the old join.
+            explicit_dataset_selection = normalized_ref or payload.get("resolved_datasets") or payload.get("resolvedDatasets")
+            resolver_workspace_id = explicit_workspace_id or (
+                "" if explicit_dataset_selection else str(prior_analysis_context.get("workspace_id") or "").strip()
+            )
             if resolver_workspace_id:
                 try:
                     analysis_context = resolve_active_model_analysis_context(
@@ -321,6 +327,8 @@ class DecisionChatService:
             session_state,
             dataset_context,
         )
+        if dataset_changed and analytics_refinement:
+            raise DecisionServiceError("The dataset changed. Ask a new question before refining a result from another data context.")
         conversation_context = DecisionChatService._build_conversation_context(
             payload.get("conversation_history"),
             session_state,
@@ -365,6 +373,7 @@ class DecisionChatService:
             )
 
         artifacts: List[Dict[str, Any]] = []
+        dashboard_draft = None
         warnings: List[str] = (
             ["The active dataset changed, so prior structured analysis state was cleared before this turn."]
             if dataset_changed
@@ -433,6 +442,7 @@ class DecisionChatService:
                     analytics_refinement=analytics_refinement,
                 )
                 if analytics_result is not None:
+                    dashboard_draft = analytics_result.get("dashboard_draft")
                     assistant_message = analytics_result["assistant_message"]
                     artifacts.extend(analytics_result["artifacts"])
                     available_actions = list(analytics_result.get("suggested_actions") or [])
@@ -466,6 +476,7 @@ class DecisionChatService:
                     analytics_refinement=analytics_refinement,
                 )
                 if analytics_result is not None:
+                    dashboard_draft = analytics_result.get("dashboard_draft")
                     assistant_message = analytics_result["assistant_message"]
                     artifacts.extend(analytics_result["artifacts"])
                     available_actions = list(analytics_result.get("suggested_actions") or [])
@@ -640,6 +651,12 @@ class DecisionChatService:
             ),
             "suggested_actions": normalized_actions,
             "artifacts": normalized_artifacts,
+            "dashboard_draft": ({
+                **dashboard_draft,
+                "items": [{**item, **({"artifact": normalized_artifacts[item["artifact_index"]]}
+                                      if item.get("status") == "ready" else {})}
+                          for item in dashboard_draft["items"]],
+            } if dashboard_draft else None),
             "draft_workspace_preview": draft_workspace_preview,
             "decision_output": decision_output,
             "clarification_state": response_clarification,
@@ -1459,6 +1476,7 @@ class DecisionChatService:
                 "group_by": list(state.get("group_by") or [])[:4],
                 "filters": [dict(item) for item in (state.get("filters") or [])[:8] if isinstance(item, dict)],
                 "time_period": state.get("time_period") if isinstance(state.get("time_period"), dict) else None,
+                "time_granularity": state.get("time_granularity"),
                 "output_preference": state.get("output_preference"),
             },
             "payload_expectations": {
@@ -1522,6 +1540,7 @@ class DecisionChatService:
                             "dimension_id": dimension.get("id"),
                             "field": field,
                             "output_preference": "chart",
+                            "granularity": "month",
                         },
                     },
                     "payload_expectations": payload_expectations,
@@ -1675,12 +1694,12 @@ class DecisionChatService:
                     payload=payload,
                     dataset_trust=dataset_trust,
                     semantic_model=semantic_model,
-                    analytic_state=analytic_state,
+                    analytic_state=artifact.get("_analytic_state") or analytic_state,
                     artifact=artifact,
                 )
                 lineage = payload.get("_analysis_lineage")
                 grounded_artifacts.append({
-                    **artifact,
+                    **{key: value for key, value in artifact.items() if key != "_analytic_state"},
                     "bi_grounding": grounding,
                     **({"analysis_lineage": deepcopy(lineage)} if isinstance(lineage, dict) else {}),
                 })
@@ -1782,6 +1801,7 @@ class DecisionChatService:
             "dimensions": dimensions,
             "filters": normalized_filters,
             "time_period": time_period,
+            "time_granularity": state.get("time_granularity"),
             "output_type": artifact.get("type") or None,
         }
         lineage = payload.get("_analysis_lineage")
@@ -2433,6 +2453,13 @@ class DecisionChatService:
             "add ",
             "group by",
             "break down by",
+            "break that down",
+            "break it down",
+            "breakdown",
+            "trend",
+            "monthly",
+            "quarterly",
+            "daily",
         )
         if any(phrase in normalized for phrase in refinement_phrases):
             return True
@@ -2463,6 +2490,8 @@ class DecisionChatService:
         """
         analytic_state = DecisionChatService._normalize_analytic_state(analytic_state)
         lowered = str(user_message or "").strip().lower()
+        if is_dashboard_request(user_message):
+            return build_dashboard_response(DecisionChatService, user_message, dataset, semantic_model, analytic_state)
         has_current_metric = bool(
             DecisionChatService._find_semantic_metric_reference(user_message, semantic_model)
         )
@@ -2505,7 +2534,13 @@ class DecisionChatService:
         analytics_refinement: Dict[str, Any] | None = None,
     ) -> Dict[str, Any] | None:
         semantic_model = semantic_model if isinstance(semantic_model, dict) else {}
+        metric_matches = DecisionChatService._find_semantic_reference_matches(user_message, semantic_model.get("metrics"))
+        if len(metric_matches) > 1:
+            return clarification("Which metric should I use?", metric_matches, user_message, "metric", analytic_state)
         metric_ref = DecisionChatService._find_semantic_metric_reference(user_message, semantic_model)
+        dimension_matches = DecisionChatService._find_semantic_reference_matches(user_message, semantic_model.get("dimensions"))
+        if len(dimension_matches) > 1:
+            return clarification("Which field should I use for the breakdown?", dimension_matches, user_message, "dimension", analytic_state)
         dimension_ref = DecisionChatService._find_semantic_dimension_reference(user_message, semantic_model)
         prior_group_by = list(analytic_state.get("group_by") or [])
         prior_metric_id = analytic_state.get("metric_id")
@@ -2519,7 +2554,26 @@ class DecisionChatService:
             dimension_ref = {"field": prior_group_by[0], "label": prior_group_by[0]}
 
         if metric_ref is None:
+            if semantic_model.get("metrics"):
+                return clarification("Which metric would you like to analyze?", semantic_model["metrics"], user_message, "metric", analytic_state)
             return None
+
+        requested_grain = time_grain(user_message)
+        wants_trend = bool(requested_grain or re.search(r"\btrend\b", user_message, re.I))
+        wants_period = bool(re.search(r"\b(?:from\s+\d{4}-|q[1-4][ -]?20\d{2}|(?:january|february|march|april|may|june|july|august|september|october|november|december)\s+20\d{2})", user_message, re.I))
+        if wants_period:
+            temporal_fields = [item for item in semantic_model.get("dimensions", []) if is_temporal(item)]
+            if len(temporal_fields) > 1 and not DecisionChatService._find_semantic_reference(user_message, temporal_fields):
+                return clarification("Which date should the time filter use?", temporal_fields, user_message, "dimension", analytic_state)
+        if wants_trend:
+            temporal = [item for item in semantic_model.get("dimensions", []) if is_temporal(item)]
+            explicit_time = DecisionChatService._find_semantic_dimension_reference(user_message, {"dimensions": temporal})
+            if not explicit_time and len(temporal) != 1:
+                return clarification(
+                    "Which date should define the trend?" if temporal else "This model has no date dimension for a trend. Choose a categorical breakdown instead.",
+                    temporal, user_message, "dimension", analytic_state,
+                )
+            dimension_ref = explicit_time or temporal[0]
 
         refinement_operation = str((analytics_refinement or {}).get("operation") or "")
         refinement_arguments = (
@@ -2548,6 +2602,16 @@ class DecisionChatService:
         elif refinement_arguments.get("output_preference") in {"answer", "chart"}:
             prefer_chart = refinement_arguments.get("output_preference") == "chart"
         group_by = [dimension_ref.get("id") or dimension_ref.get("field")] if isinstance(dimension_ref, dict) and (dimension_ref.get("id") or dimension_ref.get("field")) else []
+        temporal_group = bool(dimension_ref and is_temporal(dimension_ref))
+        grain = refinement_arguments.get("granularity") or requested_grain
+        if not grain and temporal_group and analytic_state.get("group_by") == [dimension_ref.get("field")]:
+            grain = analytic_state.get("time_granularity")
+        if wants_trend and not grain:
+            grain = "month"
+        if grain and group_by:
+            group_by = [{"id": group_by[0], "granularity": grain}]
+        if wants_trend:
+            prefer_chart = True
         filters = DecisionChatService._build_semantic_filters(
             user_message=user_message,
             dataset=dataset,
@@ -2563,8 +2627,21 @@ class DecisionChatService:
         aggregation_override = (
             refinement_arguments.get("aggregation")
             if refinement_operation == "set_aggregation"
-            else None
+            else analytic_state.get("aggregation_override")
         )
+        # Respect explicit aggregation language without treating ranking words
+        # such as "top" or "highest region" as a change to the metric definition.
+        if not analytics_refinement:
+            aggregation_words = {"average": "mean", "mean": "mean", "sum": "sum"}
+            aggregation_query = user_message
+            references = [str(metric_definition.get(key) or "") for key in ("id", "name", "label", "field")] if metric_definition else []
+            for reference in sorted(set(references), key=len, reverse=True):
+                if reference:
+                    aggregation_query = re.sub(rf"(?<!\w){re.escape(reference)}(?!\w)", " ", aggregation_query, flags=re.I)
+            for word, aggregation in aggregation_words.items():
+                if re.search(rf"\b{word}\b", aggregation_query, re.I) and (metric_definition or {}).get("expression", {}).get("type") == "column_aggregation":
+                    aggregation_override = aggregation
+                    break
         if aggregation_override:
             if metric_definition is None:
                 raise DecisionServiceError("The current semantic metric cannot accept an aggregation refinement.")
@@ -2582,13 +2659,13 @@ class DecisionChatService:
                 semantic_model=semantic_model,
                 group_by=group_by,
                 filters=filters,
-                limit=8 if prefer_chart else 5,
-                sort="value_desc" if group_by else None,
+                limit=None if temporal_group else (8 if prefer_chart else 5),
+                sort="group_asc" if temporal_group else ("value_desc" if group_by else None),
             )
         except MetricResolutionError as exc:
-            if exc.code == "metric_measure_not_numeric":
-                raise DecisionServiceError(f"{exc.code}: {exc}") from exc
-            return None
+            # Once a semantic metric has been selected, a raw-field fallback
+            # could silently change its definition. Keep failures explicit.
+            raise DecisionServiceError(f"{exc.code}: {exc}") from exc
 
         if prefer_chart and metric_result.get("group_by"):
             artifact = DecisionChatService._build_metric_chart_artifact(metric_result)
@@ -2601,6 +2678,8 @@ class DecisionChatService:
             "metric_id": (metric_result.get("metric") or {}).get("id"),
             "metric_name": (metric_result.get("metric") or {}).get("label") or (metric_result.get("metric") or {}).get("name"),
             "aggregation": (metric_result.get("execution") or {}).get("resolved_aggregation"),
+            "aggregation_override": aggregation_override,
+            "time_granularity": grain if temporal_group else None,
             "group_by": [item.get("field") for item in (metric_result.get("group_by") or []) if item.get("field")],
             "filters": list(metric_result.get("filters") or []),
             "time_period": DecisionChatService._extract_time_period(
@@ -2863,18 +2942,10 @@ class DecisionChatService:
         dataset: List[Dict[str, Any]],
         dimensions: List[Dict[str, Any]],
     ) -> List[Dict[str, Any]]:
-        temporal = next(
-            (
-                item for item in dimensions
-                if isinstance(item, dict)
-                and (
-                    str(item.get("semantic_kind") or "").strip().lower() == "temporal"
-                    or str(item.get("data_type") or "").strip().lower() in {"date", "datetime", "timestamp"}
-                )
-                and str(item.get("field") or "").strip()
-            ),
-            None,
-        )
+        temporal_fields = [item for item in dimensions if isinstance(item, dict) and is_temporal(item) and item.get("field")]
+        temporal = DecisionChatService._find_semantic_reference(user_message, temporal_fields)
+        if not temporal and len(temporal_fields) == 1:
+            temporal = temporal_fields[0]
         if not temporal:
             return []
         field = str(temporal.get("field"))
@@ -2886,6 +2957,9 @@ class DecisionChatService:
         )
         if explicit_range:
             start, end = explicit_range.groups()
+            DecisionChatService._normalize_analytics_refinement({
+                "operation": "set_time_period", "arguments": {"field": field, "start": start, "end": end},
+            })
             return [
                 {"field": field, "operator": "gte", "value": start},
                 {"field": field, "operator": "lte", "value": end},
@@ -2960,6 +3034,8 @@ class DecisionChatService:
                 )
             normalized_arguments["aggregation"] = aggregation
         elif operation == "set_group_by":
+            if arguments.get("granularity") is not None and arguments["granularity"] not in {"day", "month", "quarter", "year"}:
+                raise DecisionServiceError("Time granularity must be day, month, quarter, or year.")
             reference = str(
                 arguments.get("dimension_id") or arguments.get("field") or arguments.get("dimension") or ""
             ).strip()
@@ -2973,6 +3049,11 @@ class DecisionChatService:
             end = str(arguments.get("end") or "").strip()
             if not field or not start or not end:
                 raise DecisionServiceError("set_time_period requires arguments.field, arguments.start, and arguments.end.")
+            try:
+                if date.fromisoformat(start) > date.fromisoformat(end):
+                    raise ValueError("reversed range")
+            except ValueError as exc:
+                raise DecisionServiceError("Choose valid ISO dates with the start on or before the end.") from exc
         elif operation == "set_output":
             output = str(arguments.get("output") or "").strip().lower()
             if output not in {"answer", "chart"}:
@@ -3007,6 +3088,8 @@ class DecisionChatService:
         elif operation == "set_time_period":
             reference = arguments.get("field") or arguments.get("dimension_id")
             dimension = DecisionChatService._find_semantic_dimension_by_reference(reference, semantic_model)
+            if not dimension or not is_temporal(dimension):
+                raise DecisionServiceError("The time period requires a date dimension in the current semantic model.")
             field = (dimension or {}).get("field") or reference
             updated = [item for item in updated if item.get("field") != field]
             updated.extend([
@@ -3116,7 +3199,16 @@ class DecisionChatService:
         user_message: str,
         definitions: Any,
     ) -> Dict[str, Any] | None:
+        matches = DecisionChatService._find_semantic_reference_matches(user_message, definitions)
+        return matches[0] if matches else None
+
+    @staticmethod
+    def _find_semantic_reference_matches(user_message: str, definitions: Any) -> List[Dict[str, Any]]:
         """Select the longest grounded business reference, never a source alias alone."""
+        for definition in definitions or []:
+            reference = str(definition.get("id") or definition.get("field") or "")
+            if reference and re.search(rf"(?:metric|dimension):{re.escape(reference)}(?![\w.])", user_message, re.I):
+                return [definition]
         normalized_query = DecisionChatService._normalize_reference_text(user_message)
         matches: List[Tuple[int, int, Dict[str, Any]]] = []
         for index, definition in enumerate(definitions or []):
@@ -3149,8 +3241,9 @@ class DecisionChatService:
             if best_score:
                 matches.append((best_score, -index, definition))
         if not matches:
-            return None
-        return sorted(matches, key=lambda item: (item[0], item[1]), reverse=True)[0][2]
+            return []
+        best_score = max(item[0] for item in matches)
+        return [item[2] for item in matches if item[0] == best_score]
 
     @staticmethod
     def _find_semantic_metric_reference(user_message: str, semantic_model: Dict[str, Any] | None) -> Dict[str, Any] | None:
@@ -3187,8 +3280,8 @@ class DecisionChatService:
         metric_meta = metric_result.get("metric") or {}
         values = list(chart_ready.get("values") or [])
         labels = list(chart_ready.get("labels") or [])
-        chart_type = "Line" if any("date" in str(label).lower() or "-" in str(label) for label in labels[:3]) else "Bar"
         group_by = list(metric_result.get("group_by") or [])
+        chart_type = "Line" if any(is_temporal(group) for group in group_by) else "Bar"
         filters_applied = metric_result.get("filters") or []
         metric_label = metric_meta.get("label") or metric_meta.get("name") or "Metric"
         group_label = (
@@ -3310,8 +3403,9 @@ class DecisionChatService:
                 "groupByField": primary_group.get("field") or "",
             },
             "aggregation": metric.get("default_aggregation") or (metric.get("expression") or {}).get("aggregation") or "sum",
+            "timeGranularity": primary_group.get("granularity"),
             "sortLimit": {
-                "sort": "value_desc" if group_by else None,
+                "sort": "group_asc" if is_temporal(primary_group) else ("value_desc" if group_by else None),
                 "limit": None,
             },
             "slicers": DecisionChatService._filters_to_slicers(filters, scope="local"),
@@ -3374,8 +3468,8 @@ class DecisionChatService:
             "title": metric_meta.get("label") or metric_meta.get("name") or "Metric summary",
             "content": {
                 "metric": metric_meta,
-                "summary": metric_result.get("summary") or {},
-                "rows": preview_rows,
+                "summary": {**(metric_result.get("summary") or {}), "value_formatted": DecisionChatService._format_value((metric_result.get("summary") or {}).get("value"), metric_meta.get("format_hint"))},
+                "rows": [{**row, "value_formatted": DecisionChatService._format_value(row.get("value"), metric_meta.get("format_hint"))} for row in preview_rows],
                 "group_by": metric_result.get("group_by") or [],
                 "filters": metric_result.get("filters") or [],
                 "result_context": DecisionChatService._build_metric_result_context(metric_result),
@@ -3433,13 +3527,13 @@ class DecisionChatService:
         if not rows or len(rows) == 1 and not rows[0].get("group"):
             return f"{metric_label} is {summary_value} for the current grounded context.{evidence_note}"
 
-        top_row = rows[0]
+        top_row = max(rows, key=lambda row: float(row.get("value") or 0))
         top_group = DecisionChatService._format_group_label(
             top_row.get("group") or {},
             metric_result.get("group_by") or [],
         )
         top_value = DecisionChatService._format_value(top_row.get("value"), metric_meta.get("format_hint"))
-        return f"{metric_label} totals {summary_value}. The top result is {top_group} at {top_value}.{evidence_note}"
+        return f"{metric_label} is {summary_value}. The highest displayed result is {top_group} at {top_value}.{evidence_note}"
 
     @staticmethod
     def _build_raw_summary(

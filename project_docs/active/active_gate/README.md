@@ -1,33 +1,52 @@
-Goal: Preserve governed bulk data preparation and editable Power Query recipes while awaiting concrete user direction.
+Goal: Make AI Chat a reliable business workspace from grounded questions to reviewable dashboard results.
 
 ## User Outcome
 
-Prepare Data presents grouped findings with counts and clear choices. Users can preview and apply several fixes together or open the full transformation controls, then return to the correct experiment and continue configuring it.
+Users can start with meaningful data-aware questions, refine verified answers, inspect a dashboard draft and add chosen results without losing existing dashboard content or analytical provenance.
 
 ## Scope
 
-No application mutation is pending. Preserve the ML Studio preparation components, shared transformation controls, server quality evidence and draft-bound preparation lifecycle.
+**Current Step**: Step 4: Integrated regression verification and contract alignment
 
-Concrete user feedback determines the next repair. Define its behavior, target files and proportionate verification here and align status/authorization before implementation. Runtime datasets and deferred proposals do not independently authorize work.
+**Target Files**: AI Chat, semantic resolver, dashboard and state regression tests; BI/dashboard contracts and governing status.
+
+**Step Acceptance**: Representative integrated journeys, backend regression tests, focused frontend tests, Python compilation, production build and documentation checks pass. Record actual limitations and preserve the user-owned visual acceptance boundary.
+
+**Step Verification**: All commands below, plus relationship execution and semantic-role regressions for the shared resolver.
+
+**Next Step**: Return verified engineering results and limitations to the user in chat.
+
+**Continuation Rule**: CONTINUE through executable steps under explicit backend and frontend authorization.
+
+**Stop Condition**: Engineering acceptance evidence is complete, or a concrete blocker prevents meaningful progress. Browser acceptance belongs to the user in chat.
+
+- [x] **Step 1: Grounded follow-ups and temporal analysis** — [COMPLETED]
+- [x] **Step 2: Reviewable dashboard drafts and provenance** — [COMPLETED]
+- [x] **Step 3: Chat interaction reliability and presentation** — [COMPLETED]
+- [ ] **Step 4: Integrated regression verification and contract alignment** — [IN PROGRESS]
 
 ## Contracts
 
-- [ML Studio contract](../contracts/ml_studio.md): implemented interfaces, identities, evaluation boundaries and supported limitations.
-- [Roadmap](../ml_studio/README.md): durable six-stage and five-task product requirements.
-- [Frontend guardrail](../rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md): ownership and the explicit Codex authorization boundary.
+- [BI result, grounding, refinement and session contracts](../contracts/decision_objects.md)
+- [Dashboard storage](../contracts/dashboard_canvas_state.md)
+- [Workspace identity](../contracts/multiple_data_source_workspace.md)
+- [Governed relationships](../contracts/multiple_data_source_relationships.md)
+- [AI Chat roadmap](../ai_chat/README.md)
 
 ## Acceptance
 
-- Multiple issue groups and multi-column fixes are visible without repeated dialogs.
-- A combined preview shows the real row impact before Apply; dismissal never means repaired.
-- Users can add, edit, remove and reorder supported transformations, including after a preview, without losing recovery or allowing stale Apply.
-- Returning from Apply refreshes dataset identity and findings; Cancel preserves data. Reload can resume an open operation.
-- Preserve focus, loading/error states, duplicate submission guards, task settings and responsive theme styling. Keep training-derived imputation inside training partitions. Do not claim unimplemented statistical or domain checks.
+- Preserve BI answers, charts, tables, artifact inspection and exports; numerical claims come from real analytical execution.
+- Test grounded answer, contextual follow-up, ambiguity, draft selection, dashboard addition and recoverable failure journeys using synthetic data.
+- Retain metric definitions, aggregation, filters, time grain, dataset identity and multi-source lineage. Do not present snapshots as live refreshable results.
+- Preserve `chartStudioDashboard:v1`, its legacy fallback and existing items; avoid duplicate additions.
+- Guard duplicate submission, cancellation, stale responses and dataset changes. Preserve recoverable work.
+- Keep existing themes, responsive layout and keyboard access. Do not introduce inert controls or unimplemented success states.
 
 ## Verification
 
-- `python -m unittest tests.test_ml_studio_preparation tests.test_workspace_cleaning -q`
-- `npm --prefix frontend/frontend test -- --watchAll=false --runInBand --testPathPattern '(features/ml_studio/.*test|components/data_management/.*test)'`
+- `python -m unittest tests.test_decision_chat_service tests.test_decision_chat_workspace -q`
+- Compile changed Python modules with `python -m py_compile`.
+- `npm --prefix frontend/frontend test -- --watchAll=false --runInBand --testPathPattern '(features/ai/.*test|features/dashboard/.*test|context/WindowContext.*test|utils/aiDashboard.*test)'`
 - `npm --prefix frontend/frontend run build`
 - `python .codex/hooks/ci_harness_check.py`
 - `python C:/Users/18022/.codex/skills/active-gate-governance/scripts/check_active_gate.py project_docs/active/active_gate .`
@@ -35,4 +54,4 @@ Concrete user feedback determines the next repair. Define its behavior, target f
 
 ## Owner And Control Return
 
-Owner: User, with `WAIT_FOR_USER`. Codex acts on concrete user direction and updates this gate before implementation. Browser acceptance stays in chat; browser operation requires a specific request. Run verification commands only for a relevant change.
+Owner: Codex, with CONTINUE. Codex implements and reviews the full authorized scope. Return to the user when engineering checks pass, with limitations stated. Preserve ML Studio's pending acceptance. No browser operations are authorized.

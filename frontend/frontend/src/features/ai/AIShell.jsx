@@ -19,7 +19,6 @@ import {
   FaShieldAlt,
   FaTerminal,
   FaThumbtack,
-  FaTools,
 } from 'react-icons/fa';
 import {
   Avatar,
@@ -38,6 +37,9 @@ import { detectToken, extractTokens } from '../../utils/mentionUtils';
 import { AICommands } from '../workflow/AiCommandBlock';
 import { generateAiResultPdf } from '../../utils/aiResultPdfExport';
 import AICharts from './AICharts';
+import DashboardDraft from './DashboardDraft';
+import { buildChatSuggestions } from './chatSuggestions';
+import { canSaveResult, resultKey } from '../../utils/aiDashboardResults';
 import './AIShell.css';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
@@ -100,10 +102,10 @@ const TrustedResultCard = ({ biGrounding, analysisLineage }) => {
   const metricName = metric_definition?.label || metric_definition?.name;
 
   return (
-    <div className="ai-shell__trusted-result">
-      <div className="ai-shell__trusted-header">
-        <FaShieldAlt /> <span>BI Grounding</span>
-      </div>
+    <details className="ai-shell__trusted-result">
+      <summary className="ai-shell__trusted-header">
+        <FaShieldAlt /> <span>Source, metric and filters</span>
+      </summary>
       <div className="ai-shell__trusted-content">
         <div className="ai-shell__trusted-row">
           <span className="ai-shell__trusted-label">Dataset</span>
@@ -183,7 +185,7 @@ const TrustedResultCard = ({ biGrounding, analysisLineage }) => {
           </div>
         )}
       </div>
-    </div>
+    </details>
   );
 };
 
@@ -191,7 +193,7 @@ const TrustedResultCard = ({ biGrounding, analysisLineage }) => {
  * AI Chat keeps its established split-pane layout while returning to a focused
  * workflow: grounded answers, tables, charts, and conversational refinements.
  */
-function AIShell() {
+function AIShell({ onOpenDashboard } = {}) {
   const {
     activeWorkspace,
     cleanedData,
@@ -201,7 +203,7 @@ function AIShell() {
     refreshSemanticModelFromDataset,
   } = useContext(DataContext);
   const { datasets = [] } = useContext(WarehouseContext);
-  const { addDashboardChart, addChart } = useWindowContext();
+  const { addDashboardResults, openDashboard, dashboardItems = [] } = useWindowContext();
 
   const [userMessages, setUserMessages] = useState([]);
   const [userInput, setUserInput] = useState('');
@@ -211,8 +213,10 @@ function AIShell() {
   const [awaitingCleanInstructions, setAwaitingCleanInstructions] = useState(false);
   const [sessionState, setSessionState] = useState({ active_mode: 'explore' });
   const [activeArtifact, setActiveArtifact] = useState(null);
-  const [isResultsPaneOpen, setIsResultsPaneOpen] = useState(true);
+  const [isResultsPaneOpen, setIsResultsPaneOpen] = useState(() => window.innerWidth > 900);
   const [pinFeedbackIds, setPinFeedbackIds] = useState({});
+  const [failedRequest, setFailedRequest] = useState(null);
+  const [notice, setNotice] = useState(null);
 
   const [mentionQuery, setMentionQuery] = useState(null);
   const [isMentionOpen, setIsMentionOpen] = useState(false);
@@ -222,18 +226,51 @@ function AIShell() {
 
   const inputRef = useRef(null);
   const chatBodyRef = useRef(null);
+  const requestRef = useRef(null);
+  const dataScope = useMemo(() => ({ workspaceId: activeWorkspace?.workspace_id, version: activeWorkspace?.version, semanticModel, cleanedData, fullData }), [activeWorkspace?.workspace_id, activeWorkspace?.version, semanticModel, cleanedData, fullData]);
+  const scopeRef = useRef(dataScope);
+  scopeRef.current = dataScope;
+  const previousScope = useRef(dataScope);
+  const suggestions = useMemo(() => buildChatSuggestions(semanticModel), [semanticModel]);
+  const datasetLabel = sessionState.dataset_context?.dataset?.dataset_name
+    || activeWorkspace?.name || activeWorkspace?.workspace_name || semanticModel?.dataset?.name || 'No data selected';
+  const viewDashboard = () => {
+    openDashboard();
+    onOpenDashboard?.();
+  };
+
+  useEffect(() => {
+    if (previousScope.current !== dataScope) {
+      requestRef.current?.controller.abort();
+      requestRef.current = null;
+      setLoading(false);
+      setSessionState({ active_mode: 'explore' });
+      setAwaitingCleanInstructions(false);
+      setActiveArtifact(null);
+      setError(null);
+      setFailedRequest(null);
+      setGovernanceWarning(null);
+      setNotice('Data context changed. Your earlier results remain available; new questions use the selected data.');
+      previousScope.current = dataScope;
+    }
+  }, [dataScope]);
+
+  useEffect(() => () => {
+    requestRef.current?.controller.abort();
+    requestRef.current = null;
+  }, []);
 
   const connectionStatus = useMemo(() => {
-    const dataLoaded = (cleanedData?.length > 0) || (fullData?.length > 0);
+    const dataLoaded = Boolean(activeWorkspace?.workspace_id) || (cleanedData?.length > 0) || (fullData?.length > 0);
     return {
       semantic: semanticModel ? 'Active' : 'Standby',
       data: dataLoaded ? 'Connected' : 'Disconnected',
     };
-  }, [semanticModel, cleanedData, fullData]);
+  }, [activeWorkspace?.workspace_id, semanticModel, cleanedData, fullData]);
 
   useEffect(() => {
     if (chatBodyRef.current) {
-      chatBodyRef.current.scrollTo({
+      chatBodyRef.current.scrollTo?.({
         top: chatBodyRef.current.scrollHeight,
         behavior: 'smooth',
       });
@@ -328,7 +365,14 @@ function AIShell() {
     </Tooltip>
   );
 
-  const renderAnswerContent = (content = {}) => {
+  const renderAnswerContent = (content = {}, canRefine = true) => {
+    if (content.reason_code === 'analytics_clarification_required') {
+      return <div className="ai-shell__clarification">
+        <p>{content.message}</p>
+        {content.choices?.map(choice => <button key={choice.user_message} type="button" disabled={loading || !canRefine}
+          onClick={() => submitTurn({ message: choice.user_message })}>{choice.label}</button>)}
+      </div>;
+    }
     const metricLabel = content.metric?.label || content.metric?.name || content.fieldsUsed?.value;
     const summaryValue = content.summary?.value_formatted
       ?? content.summary?.value
@@ -399,6 +443,9 @@ function AIShell() {
           <div className="ai-shell__artifact-header">
             <span className="ai-shell__artifact-title"><FaCheckCircle /> Business result</span>
             <div className="ai-shell__artifact-header-actions">
+              {canSaveResult(artifact) && <Button size="small" onClick={() => saveResult(artifact)}>
+                {dashboardItems.some(item => item.sourceMetadata?.resultKey === resultKey(artifact)) ? 'On dashboard' : 'Save KPI'}
+              </Button>}
               {renderExportButton(artifact)}
               {!isInspector && inspectable && (
                 <IconButton size="small" onClick={() => handleInspect(artifact)} aria-label="Open result">
@@ -407,7 +454,7 @@ function AIShell() {
               )}
             </div>
           </div>
-          <div className="ai-shell__artifact-content">{renderAnswerContent(content)}</div>
+          <div className="ai-shell__artifact-content">{renderAnswerContent(content, artifact.scope === dataScope)}</div>
           <TrustedResultCard biGrounding={artifact.bi_grounding} analysisLineage={artifact.analysis_lineage} />
         </div>
       );
@@ -416,17 +463,17 @@ function AIShell() {
     if (!isInspector) {
       return (
         <div className="ai-shell__artifact-preview-container">
-          <div className="ai-shell__artifact-preview-link" onClick={() => handleInspect(artifact)}>
+          <div className="ai-shell__artifact-preview-link">
             <div className="ai-shell__preview-icon"><FaChartBar /></div>
-            <div className="ai-shell__preview-info">
+            <button type="button" className="ai-shell__preview-info" onClick={() => handleInspect(artifact)}>
               <Typography variant="caption" className="ai-shell__preview-type">Visualization</Typography>
               <Typography variant="body2" className="ai-shell__preview-title">
                 {artifact.title || content.title || content.explanation || `${content.chartType || 'Chart'} result`}
               </Typography>
-            </div>
+            </button>
             <div className="ai-shell__preview-actions">
               {renderExportButton(artifact, 'is-preview-export')}
-              <IconButton size="small" className="ai-shell__preview-action" aria-label="Open chart">
+              <IconButton size="small" className="ai-shell__preview-action" aria-label="Open chart" onClick={() => handleInspect(artifact)}>
                 <FaChevronRight />
               </IconButton>
             </div>
@@ -450,34 +497,18 @@ function AIShell() {
                 variant="contained"
                 size="medium"
                 startIcon={<FaThumbtack />}
-                onClick={() => {
-                  addDashboardChart({
-                    type: content.chartType || 'Bar',
-                    mapping: content.chartData?.mapping || {},
-                    dataSourceMode: 'semantic',
-                    chartSpec: content.chartSpec,
-                  });
-                  const feedbackId = artifact.id || artifact.artifact_id || 'active-chart';
-                  setPinFeedbackIds((previous) => ({ ...previous, [feedbackId]: true }));
-                  setTimeout(() => {
-                    setPinFeedbackIds((previous) => ({ ...previous, [feedbackId]: false }));
-                  }, 2000);
-                }}
+                onClick={() => saveResult(artifact)}
+                disabled={!canSaveResult(artifact) || dashboardItems.some(item => item.sourceMetadata?.resultKey === resultKey(artifact))}
               >
-                {pinFeedbackIds[artifact.id || artifact.artifact_id || 'active-chart'] ? 'Pinned!' : 'Pin to Dashboard'}
+                {pinFeedbackIds[resultKey(artifact)] || dashboardItems.some(item => item.sourceMetadata?.resultKey === resultKey(artifact)) ? 'On dashboard' : 'Save to Dashboard'}
               </Button>
               <Button
                 variant="outlined"
                 size="medium"
                 startIcon={<FaChartBar />}
-                onClick={() => addChart({
-                  type: content.chartType || 'Bar',
-                  mapping: content.chartData?.mapping || {},
-                  dataSourceMode: 'semantic',
-                  chartSpec: content.chartSpec,
-                })}
+                onClick={viewDashboard}
               >
-                Open Chart Window
+                View Dashboard
               </Button>
             </div>
           )}
@@ -511,6 +542,7 @@ function AIShell() {
     const value = event.target.value;
     const cursorPosition = event.target.selectionStart;
     setUserInput(value);
+    setHighlightedIndex(0);
     const token = detectToken(value, cursorPosition);
 
     if (token !== null) {
@@ -524,14 +556,16 @@ function AIShell() {
     }
   };
 
-  const runCleanCommand = async (message, datasetContext, followUp = false) => {
+  const runCleanCommand = async (message, datasetContext, followUp = false, signal, isCurrent = () => true) => {
     const parts = message.split(' ');
     const instructions = followUp ? message : (parts.length > 1 ? parts.slice(1).join(' ') : null);
     const response = await axios.post(`${API_URL}/ai_cmd`, {
       command: '/clean',
       dataset: datasetContext,
       instructions,
-    });
+    }, { signal, timeout: 120000 });
+
+    if (!isCurrent()) return '';
 
     if (response.data.cleaned_data) {
       setCleanedData(response.data.cleaned_data);
@@ -552,184 +586,118 @@ function AIShell() {
     return 'The active data context is ready.';
   };
 
-  const handleSendMessage = async () => {
-    const message = userInput.trim();
-    if (!message || loading) return;
-
+  const submitTurn = async ({ message, previousState = sessionState, refinement, retry = false }) => {
+    message = message.trim();
+    if (!message || requestRef.current) return;
+    const controller = new AbortController();
+    const request = { controller, scope: dataScope, message };
+    requestRef.current = request;
+    const isCurrent = () => requestRef.current === request && scopeRef.current === request.scope;
     const tokens = extractTokens(message, datasets);
-    const datasetContext = resolveDatasetForNlp();
-    setUserInput('');
+    const biSessionState = buildBiSessionState(previousState);
     setLoading(true);
     setError(null);
+    setFailedRequest(null);
+    setNotice(null);
     setGovernanceWarning(null);
-    setUserMessages((previous) => [
-      ...previous,
-      { role: 'user', content: message, grounded: tokens.length > 0 },
-    ]);
+    if (!retry) {
+      setUserInput('');
+      setUserMessages(previous => [...previous, { role: 'user', content: message, scope: dataScope }]);
+    } else {
+      setUserInput(current => current === message ? '' : current);
+    }
 
     try {
-      if (AICommands.isCommand(message) && message.split(' ')[0] === '/clean') {
-        const reply = await runCleanCommand(message, datasetContext, false);
-        setUserMessages((previous) => [...previous, { role: 'assistant', content: reply, grounded: true }]);
+      if ((AICommands.isCommand(message) && message.split(' ')[0] === '/clean') || awaitingCleanInstructions) {
+        const reply = await runCleanCommand(message, resolveDatasetForNlp(), awaitingCleanInstructions, controller.signal, isCurrent);
+        if (isCurrent()) setUserMessages(previous => [...previous, { role: 'assistant', content: reply, scope: dataScope }]);
         return;
       }
-
-      if (awaitingCleanInstructions) {
-        const reply = await runCleanCommand(message, datasetContext, true);
-        setUserMessages((previous) => [...previous, { role: 'assistant', content: reply, grounded: true }]);
-        return;
-      }
-
-      const biSessionState = buildBiSessionState(sessionState);
-      const {
-        payloadDataset,
-        payloadSemanticModel,
-        datasetRef,
-      } = resolveRequestContext(biSessionState, tokens);
-
-      const hasWorkspaceContext = Boolean(activeWorkspace?.workspace_id);
-
+      const { payloadDataset, payloadSemanticModel, datasetRef } = resolveRequestContext(biSessionState, tokens);
       const response = await axios.post(`${API_URL}/api/decision/chat/turns`, {
-        workspace_id: activeWorkspace?.workspace_id,
+        workspace_id: tokens.length || datasetRef?.source === 'datahub' ? undefined : activeWorkspace?.workspace_id,
         user_message: message,
         dataset: payloadDataset,
         semantic_model: payloadSemanticModel,
         dataset_ref: datasetRef,
         resolved_datasets: tokens,
-        requested_mode: (payloadDataset || datasetRef || hasWorkspaceContext) ? 'explore' : 'ask',
-        conversation_history: userMessages
-          .map(({ role, content }) => ({ role, content }))
-          .slice(-10),
+        requested_mode: (payloadDataset || datasetRef || activeWorkspace?.workspace_id) ? 'explore' : 'ask',
+        conversation_history: userMessages.filter(item => item.scope === dataScope)
+          .map(({ role, content }) => ({ role, content })).slice(-10),
         session_state: biSessionState,
-      });
-
+        ...(refinement ? { analytics_refinement: refinement } : {}),
+      }, { signal: controller.signal, timeout: 120000 });
+      if (!isCurrent()) return;
       const data = response.data;
-      if (data.status !== 'success') {
-        throw new Error(data.error?.message || 'The BI query could not be completed.');
-      }
-
-      const biArtifacts = filterBiArtifacts(data.artifacts);
-      const responseEnteredDecisionMode = data.mode === 'decide'
-        || (Array.isArray(data.artifacts) && data.artifacts.some((artifact) => !BI_ARTIFACT_TYPES.has(artifact?.type)));
-      const assistantMessage = responseEnteredDecisionMode && biArtifacts.length === 0
-        ? 'Ask about a metric, segment, time period, comparison, table, or chart and I will analyze the active data.'
-        : (data.assistant_message || 'The BI query completed.');
+      if (data.status !== 'success') throw new Error(data.error?.message || 'The BI query could not be completed.');
       const nextSessionState = buildBiSessionState(data.session_state);
-
-      setUserMessages((previous) => [...previous, {
-        role: 'assistant',
-        content: assistantMessage,
-        artifacts: biArtifacts,
+      const withIdentity = artifact => ({ ...artifact, dataset_context: nextSessionState.dataset_context, scope: dataScope });
+      const biArtifacts = filterBiArtifacts(data.artifacts).map(withIdentity);
+      const draft = data.dashboard_draft ? {
+        ...data.dashboard_draft,
+        items: data.dashboard_draft.items.map(item => ({
+          ...item, ...(item.artifact ? { artifact: withIdentity(item.artifact) } : {}),
+        })),
+      } : null;
+      const verified = biArtifacts.some(artifact => artifact.bi_grounding?.metric_definition && !artifact.content?.reason_code);
+      setUserMessages(previous => [...previous, {
+        role: 'assistant', content: data.assistant_message || 'The BI query completed.',
+        artifacts: biArtifacts, dashboard_draft: draft,
         suggested_actions: data.suggested_actions || [],
-        grounded: Boolean(payloadDataset || datasetRef || hasWorkspaceContext),
-        session_state: nextSessionState,
+        grounded: verified, session_state: nextSessionState, scope: dataScope,
       }]);
       setSessionState(nextSessionState);
-
       if (data.governance_readiness?.status === 'warning') {
-        setGovernanceWarning(
-          data.governance_readiness.reasons?.[0]?.message
-          || 'The active dataset has a quality warning that may affect this result.',
-        );
+        setGovernanceWarning(data.governance_readiness.reasons?.[0]?.message || 'The data has a quality warning that may affect this result.');
       }
-
-      const lastBiArtifact = biArtifacts[biArtifacts.length - 1];
-      if (lastBiArtifact) {
-        setActiveArtifact(lastBiArtifact);
-        setIsResultsPaneOpen(true);
-      }
-    } catch (requestError) {
-      const readinessMessage = requestError.response?.data?.governance_readiness?.reasons?.[0]?.message;
-      const apiErrorMessage = requestError.response?.data?.error?.message;
-      setError(readinessMessage || apiErrorMessage || requestError.message || 'Could not reach the analytics service.');
+      const latest = biArtifacts[biArtifacts.length - 1];
+      if (latest && !draft) setActiveArtifact(latest);
+    } catch (failure) {
+      if (!isCurrent() || controller.signal.aborted) return;
+      const detail = failure.response?.data;
+      setError(detail?.governance_readiness?.reasons?.[0]?.message || detail?.error?.message
+        || (failure.code === 'ECONNABORTED' ? 'This analysis took too long. Retry or ask a narrower question.' : 'Could not complete this analysis. Check your data connection and try again.'));
+      setFailedRequest({ message, previousState: biSessionState, refinement, scope: dataScope });
+      setUserInput(current => current || message);
     } finally {
-      setLoading(false);
+      if (requestRef.current === request) {
+        requestRef.current = null;
+        setLoading(false);
+      }
     }
   };
 
-  const handleSuggestedAction = async (action, previousSessionState) => {
-    if (!action || !action.enabled || action.kind !== 'analytics_refinement' || !action.analytics_refinement || loading) return;
+  const handleSendMessage = () => submitTurn({ message: userInput });
 
-    const message = action.label;
-    const tokens = extractTokens(message, datasets);
-    setLoading(true);
-    setError(null);
-    setGovernanceWarning(null);
-    setUserMessages((previous) => [
-      ...previous,
-      { role: 'user', content: message, grounded: tokens.length > 0 },
-    ]);
+  const handleSuggestedAction = (action, previousSessionState) => {
+    if (action?.enabled && action.kind === 'analytics_refinement' && action.analytics_refinement) {
+      return submitTurn({ message: action.label, previousState: previousSessionState, refinement: action.analytics_refinement });
+    }
+  };
 
+  const stopRequest = () => {
+    const request = requestRef.current;
+    if (!request) return;
+    request.controller.abort();
+    requestRef.current = null;
+    setLoading(false);
+    setUserInput(current => current || request.message);
+    setNotice('Stopped waiting for this result. Edit your question or send it again.');
+  };
+
+  const saveResult = artifact => {
     try {
-      const biSessionState = buildBiSessionState(previousSessionState);
-      const {
-        payloadDataset,
-        payloadSemanticModel,
-        datasetRef,
-      } = resolveRequestContext(biSessionState, tokens);
-
-      const hasWorkspaceContext = Boolean(activeWorkspace?.workspace_id);
-
-      const response = await axios.post(`${API_URL}/api/decision/chat/turns`, {
-        workspace_id: activeWorkspace?.workspace_id,
-        user_message: message,
-        dataset: payloadDataset,
-        semantic_model: payloadSemanticModel,
-        dataset_ref: datasetRef,
-        resolved_datasets: tokens,
-        requested_mode: (payloadDataset || datasetRef || hasWorkspaceContext) ? 'explore' : 'ask',
-        conversation_history: userMessages
-          .map(({ role, content }) => ({ role, content }))
-          .slice(-10),
-        session_state: biSessionState,
-        analytics_refinement: action.analytics_refinement,
-      });
-
-      const data = response.data;
-      if (data.status !== 'success') {
-        throw new Error(data.error?.message || 'The BI query could not be completed.');
-      }
-
-      const biArtifacts = filterBiArtifacts(data.artifacts);
-      const responseEnteredDecisionMode = data.mode === 'decide'
-        || (Array.isArray(data.artifacts) && data.artifacts.some((artifact) => !BI_ARTIFACT_TYPES.has(artifact?.type)));
-      const assistantMessage = responseEnteredDecisionMode && biArtifacts.length === 0
-        ? 'Ask about a metric, segment, time period, comparison, table, or chart and I will analyze the active data.'
-        : (data.assistant_message || 'The BI query completed.');
-      const nextSessionState = buildBiSessionState(data.session_state);
-
-      setUserMessages((previous) => [...previous, {
-        role: 'assistant',
-        content: assistantMessage,
-        artifacts: biArtifacts,
-        suggested_actions: data.suggested_actions || [],
-        grounded: Boolean(payloadDataset || datasetRef || hasWorkspaceContext),
-        session_state: nextSessionState,
-      }]);
-      setSessionState(nextSessionState);
-
-      if (data.governance_readiness?.status === 'warning') {
-        setGovernanceWarning(
-          data.governance_readiness.reasons?.[0]?.message
-          || 'The active dataset has a quality warning that may affect this result.',
-        );
-      }
-
-      const lastBiArtifact = biArtifacts[biArtifacts.length - 1];
-      if (lastBiArtifact) {
-        setActiveArtifact(lastBiArtifact);
-        setIsResultsPaneOpen(true);
-      }
-    } catch (requestError) {
-      const readinessMessage = requestError.response?.data?.governance_readiness?.reasons?.[0]?.message;
-      const apiErrorMessage = requestError.response?.data?.error?.message;
-      setError(readinessMessage || apiErrorMessage || requestError.message || 'Could not reach the analytics service.');
-    } finally {
-      setLoading(false);
+      const result = addDashboardResults([{ artifact }]);
+      setError(null);
+      setPinFeedbackIds(previous => ({ ...previous, [resultKey(artifact)]: true }));
+      setNotice(result.added.length ? 'Result saved to your dashboard.' : 'This result is already on your dashboard.');
+    } catch (failure) {
+      setError(failure.message);
     }
   };
 
   const handleKeyDown = (event) => {
+    if (event.nativeEvent?.isComposing || event.isComposing) return;
     if (isMentionOpen) {
       if (event.key === 'Escape') {
         event.preventDefault();
@@ -753,7 +721,7 @@ function AIShell() {
         }
         if (event.key === 'Enter') {
           event.preventDefault();
-          handleMentionSelect(filteredDatasets[highlightedIndex].name);
+          handleMentionSelect(filteredDatasets[Math.min(highlightedIndex, filteredDatasets.length - 1)].name);
           setHighlightedIndex(0);
           return;
         }
@@ -771,18 +739,18 @@ function AIShell() {
       <nav className="ai-shell__left-rail">
         <div className="ai-shell__rail-top">
           <Tooltip title="AI Chat" placement="right">
-            <div className="ai-shell__rail-item is-active"><FaRobot /></div>
+            <span className="ai-shell__rail-item is-active" aria-current="page"><FaRobot /></span>
           </Tooltip>
-          <Tooltip title="Data Connections" placement="right">
-            <div className="ai-shell__rail-item"><FaDatabase /></div>
+          <Tooltip title="Choose data" placement="right">
+            <button className="ai-shell__rail-item" aria-label="Choose data" onClick={() => { setUserInput('@'); inputRef.current?.focus(); setIsMentionOpen(true); }}><FaDatabase /></button>
           </Tooltip>
-          <Tooltip title="Custom Workflows" placement="right">
-            <div className="ai-shell__rail-item"><FaTools /></div>
+          <Tooltip title="Open dashboard" placement="right">
+            <button className="ai-shell__rail-item" aria-label="Open dashboard" onClick={viewDashboard}><FaChartBar /></button>
           </Tooltip>
         </div>
         <div className="ai-shell__rail-bottom">
-          <Tooltip title="AI Settings" placement="right">
-            <div className="ai-shell__rail-item"><FaLayerGroup /></div>
+          <Tooltip title="Show results" placement="right">
+            <button className="ai-shell__rail-item" aria-label="Show results" onClick={() => setIsResultsPaneOpen(true)}><FaEye /></button>
           </Tooltip>
         </div>
       </nav>
@@ -812,6 +780,13 @@ function AIShell() {
           </div>
         </header>
 
+        <details className="ai-shell__data-context">
+          <summary><FaDatabase /> {datasetLabel}<span>{semanticModel?.metrics?.length || 0} metrics available</span></summary>
+          <p>Metrics: {semanticModel?.metrics?.map(item => item.label || item.name).join(', ') || 'Select data to see available metrics.'}</p>
+          <p>Breakdowns: {semanticModel?.dimensions?.map(item => item.label || item.field).join(', ') || 'No semantic dimensions loaded.'}</p>
+          {activeWorkspace?.workspace_id && <p>Queries use the active workspace model. Source relationships are validated by the server.</p>}
+        </details>
+
         <div className="ai-shell__conversation" ref={chatBodyRef}>
           {userMessages.length === 0 && (
             <div className="ai-shell__welcome-hero">
@@ -825,6 +800,11 @@ function AIShell() {
                 <Chip icon={<FaChartBar />} label="Create Chart" onClick={() => setUserInput('Show ')} clickable />
                 <Chip icon={<FaShieldAlt />} label="Clean Data" onClick={() => setUserInput('/clean')} clickable />
               </div>
+              {suggestions.length > 0 && <div className="ai-shell__starter-grid" aria-label="Suggested business questions">
+                {suggestions.map(question => <button key={question} type="button" onClick={() => { setUserInput(question); inputRef.current?.focus(); }}>
+                  <FaChartBar /><span>{question}</span><FaChevronRight />
+                </button>)}
+              </div>}
             </div>
           )}
 
@@ -839,7 +819,9 @@ function AIShell() {
                 </div>
                 <div className="ai-shell__message-content">{message.content}</div>
 
-                {message.artifacts?.length > 0 && (
+                {message.dashboard_draft && <DashboardDraft draft={message.dashboard_draft} onAdd={addDashboardResults} onInspect={handleInspect} onOpenDashboard={viewDashboard} />}
+
+                {!message.dashboard_draft && message.artifacts?.length > 0 && (
                   <div className="ai-shell__artifact-container">
                     {message.artifacts.map((artifact, artifactIndex) => (
                       <React.Fragment key={artifact.artifact_id || artifact.id || artifactIndex}>
@@ -852,7 +834,7 @@ function AIShell() {
                 {message.suggested_actions?.length > 0 && (
                   <div className="ai-shell__suggested-actions">
                     {message.suggested_actions.map(action => {
-                      const isDisabled = !action.enabled;
+                      const isDisabled = !action.enabled || loading || message.scope !== dataScope;
                       const title = isDisabled ? action.disabled_reason || 'Action disabled' : '';
                       return (
                         <Tooltip key={action.action_id} title={title}>
@@ -880,6 +862,8 @@ function AIShell() {
             <div className="ai-shell__message-row is-assistant">
               <div className="ai-shell__message-card is-loading">
                 <div className="ai-shell__typing"><span /><span /><span /></div>
+                <span role="status">Analyzing your data…</span>
+                <button type="button" onClick={stopRequest}>Stop waiting</button>
               </div>
             </div>
           )}
@@ -888,7 +872,10 @@ function AIShell() {
               <FaExclamationTriangle /> {governanceWarning}
             </div>
           )}
-          {error && <div className="ai-shell__alert-bar"><FaInfoCircle /> {error}</div>}
+          {notice && <div className="ai-shell__notice" role="status">{notice}</div>}
+          {error && <div className="ai-shell__alert-bar" role="alert"><FaInfoCircle /> {error}
+            {failedRequest?.scope === dataScope && <button type="button" disabled={loading} onClick={() => submitTurn({ ...failedRequest, retry: true })}>Retry last question</button>}
+          </div>}
         </div>
 
         <div className="ai-shell__footer">
@@ -908,11 +895,11 @@ function AIShell() {
                 inputRef={inputRef}
                 onKeyDown={handleKeyDown}
                 placeholder="Ask a business question, or type @ to choose data..."
+                inputProps={{ 'aria-label': 'Business question' }}
                 variant="standard"
                 fullWidth
                 value={userInput}
                 onChange={handleInputChange}
-                disabled={loading}
                 multiline
                 maxRows={6}
                 InputProps={{ disableUnderline: true }}
@@ -927,6 +914,7 @@ function AIShell() {
               </button>
             </div>
           </div>
+          <div className="ai-shell__composer-hint">Enter to send · Shift + Enter for a new line · Results are verified against your data</div>
         </div>
       </main>
 

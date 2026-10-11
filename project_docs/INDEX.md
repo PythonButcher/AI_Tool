@@ -19,6 +19,7 @@ This is the top-level routing file. Use it to find the smallest current document
 | Check concise current status | `project_docs/active/status/project_execution_status.md` |
 | Check implementation authorization | `project_docs/active/status/phase_authorization.json` |
 | Work on the current project gate | `project_docs/active/active_gate/README.md` |
+| Improve the AI Chat business workspace | `project_docs/active/ai_chat/README.md` |
 | Review the active ML Studio roadmap | `project_docs/active/ml_studio/README.md` |
 | Review ML Studio implementation and supported boundaries | `project_docs/active/contracts/ml_studio.md` and `project_docs/active/status/project_execution_status.md` |
 | Review retired product and roadmap decisions | `project_docs/archive/README.md`, only when historical context is needed |

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import ChartComponentAI from '../charts/ChartComponentAI';
 import PropTypes from 'prop-types';
 import { getDynamicColors } from '../../utils/ChartStyles';
@@ -28,12 +28,13 @@ function AICharts({ aiChartType, aiChartData }) {
     if (!aiChartData) return null;
 
     // Already well-formed
-    if (aiChartData.labels && aiChartData.datasets) return aiChartData;
+    if (Array.isArray(aiChartData.labels) && Array.isArray(aiChartData.datasets)
+      && aiChartData.datasets.every(dataset => Array.isArray(dataset?.data))) return aiChartData;
 
     // Simple [{label,value}] array ➜ build datasets on the fly
     if (
       Array.isArray(aiChartData) &&
-      aiChartData.every(d => 'label' in d && 'value' in d)
+      aiChartData.every(d => d && typeof d === 'object' && 'label' in d && 'value' in d)
     ) {
       return {
         labels: aiChartData.map(d => d.label),

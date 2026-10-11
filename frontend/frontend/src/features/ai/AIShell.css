@@ -1,4 +1,5 @@
 .ai-shell {
+  position: relative;
   display: flex;
   width: 100%;
   height: 100%;
@@ -30,6 +31,8 @@
 }
 
 .ai-shell__rail-item {
+  border: 0;
+  background: transparent;
   display: flex;
   width: 40px;
   height: 40px;
@@ -755,4 +758,46 @@
   .ai-shell__message-card {
     max-width: 100%;
   }
+}
+
+/* Keep the familiar split workspace, with business questions as the entry point. */
+.ai-shell__data-context { padding: 12px 24px; border-bottom: 1px solid var(--border-color); background: var(--bg-secondary); font-size: .8rem; }
+.ai-shell__data-context summary { display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 600; }
+.ai-shell__data-context summary span { margin-left: auto; color: var(--text-secondary); font-weight: 400; }
+.ai-shell__data-context p { color: var(--text-secondary); line-height: 1.6; overflow-wrap: anywhere; }
+.ai-shell__starter-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; width: 100%; margin-top: 24px; text-align: left; }
+.ai-shell__starter-grid button { display: flex; gap: 12px; align-items: center; min-height: 78px; padding: 16px; text-align: left; }
+.ai-shell__starter-grid button span { flex: 1; line-height: 1.5; }
+.ai-shell__starter-grid button svg { flex-shrink: 0; color: var(--text-secondary); }
+.ai-shell__starter-grid button, .ai-shell__clarification button, .ai-shell__dashboard-draft button,
+.ai-shell__alert-bar button, .ai-shell__message-card.is-loading button { border: 1px solid var(--border-color); border-radius: 10px; background: var(--bg-secondary); color: var(--text-primary); font: inherit; cursor: pointer; }
+.ai-shell button:focus-visible, .ai-shell summary:focus-visible, .ai-shell input:focus-visible { outline: 2px solid var(--primary-main); outline-offset: 3px; }
+.ai-shell button:disabled { opacity: .55; cursor: not-allowed; }
+.ai-shell__preview-info { flex: 1; min-width: 0; padding: 8px 0; border: 0; text-align: left; color: inherit; background: transparent; cursor: pointer; }
+.ai-shell__trusted-header { cursor: pointer; margin-bottom: 0; padding: 4px 0; }
+.ai-shell__trusted-result[open] .ai-shell__trusted-header { margin-bottom: 12px; }
+.ai-shell__composer-hint { margin-top: 10px; color: var(--text-secondary); font-size: .7rem; text-align: center; line-height: 1.5; }
+.ai-shell__notice { margin: 12px 0; padding: 12px 16px; border: 1px solid var(--border-color); border-radius: 10px; color: var(--text-secondary); font-size: .8rem; }
+.ai-shell__clarification button { padding: 10px 14px; margin: 4px 8px 4px 0; }
+.ai-shell__dashboard-draft { margin-top: 18px; border: 1px solid var(--border-color); border-radius: 14px; padding: 18px; background: var(--bg-primary); }
+.ai-shell__dashboard-draft h3 { font-size: 1rem; margin: 0 0 8px; }
+.ai-shell__dashboard-draft p { font-size: .8rem; line-height: 1.6; color: var(--text-secondary); }
+.ai-shell__draft-item { display: grid; gap: 8px; padding: 14px 0; border-top: 1px solid var(--border-color); }
+.ai-shell__draft-item label { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: .85rem; }
+.ai-shell__draft-item input[type="text"], .ai-shell__draft-item input:not([type]) { width: 100%; box-sizing: border-box; border: 1px solid var(--border-color); border-radius: 6px; padding: 8px; background: var(--bg-secondary); color: var(--text-primary); font: inherit; }
+.ai-shell__draft-item span { color: var(--text-secondary); font-size: .75rem; }
+.ai-shell__draft-item button { justify-self: start; padding: 6px 10px; font-size: .75rem; }
+.ai-shell__dashboard-draft .ai-shell__primary-action { width: 100%; padding: 12px; font-weight: 600; }
+.ai-shell__message-card.is-loading { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; font-size: .8rem; }
+.ai-shell__message-card.is-loading button, .ai-shell__alert-bar button { padding: 6px 10px; }
+.ai-shell__answer-metric-value, .ai-shell__answer-row-value { font-variant-numeric: tabular-nums; }
+@media (max-width: 600px) {
+  .ai-shell__starter-grid { grid-template-columns: 1fr; }
+  .ai-shell__header, .ai-shell__data-context { padding-left: 16px; padding-right: 16px; }
+  .ai-shell__data-context summary { flex-wrap: wrap; }
+  .ai-shell__data-context summary span { margin-left: 0; }
+  .ai-shell__conversation, .ai-shell__footer { padding-left: 16px; padding-right: 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ai-shell *, .ai-shell *::before, .ai-shell *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }

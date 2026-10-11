@@ -1,0 +1,7 @@
+.dashboard-result-snapshot { display: flex; flex-direction: column; gap: 12px; height: 100%; min-height: 0; padding: 16px; overflow: auto; color: var(--text-primary); background: var(--bg-primary); }
+.dashboard-result-snapshot header { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
+.dashboard-result-snapshot header span, .dashboard-result-snapshot details { font-size: .75rem; color: var(--text-secondary); }
+.dashboard-result-snapshot details { margin-top: auto; }
+.dashboard-result-snapshot summary { cursor: pointer; }
+.dashboard-result-snapshot__kpi { display: flex; flex-direction: column; gap: 6px; padding: 12px 0; }
+.dashboard-result-snapshot__kpi strong { font-size: clamp(1.5rem, 3vw, 2.5rem); font-variant-numeric: tabular-nums; }

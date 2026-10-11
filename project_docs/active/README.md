@@ -24,7 +24,7 @@ Decision Intelligence workspaces, decision frames, readiness and capability pane
 
 Dataset identity and semantic truth remain required for every BI answer and chart.
 
-ML Studio's five local task workflows and theme-aligned UI are engineering-complete. The [status](status/project_execution_status.md) records verified evidence and limitations; the [contract](contracts/ml_studio.md) defines implemented behavior. The user owns final browser acceptance in chat. The [active gate](active_gate/README.md) preserves that boundary until concrete feedback or new direction arrives.
+The [AI Chat business workspace](ai_chat/README.md) is the current authorized backend and frontend effort. The [active gate](active_gate/README.md) controls execution. ML Studio's five local task workflows and theme-aligned UI remain engineering-complete and awaiting user acceptance; [status](status/project_execution_status.md) preserves that boundary and the [contract](contracts/ml_studio.md) defines implemented behavior.
 
 ## Active Areas
 
