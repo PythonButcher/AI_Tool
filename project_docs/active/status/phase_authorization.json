@@ -1,10 +1,23 @@
 {
   "schema_version": 1,
   "authorized_work": {
-    "name": "AI Chat conversation management"
+    "name": "AI Chat model routing"
   },
   "authorization_state": "AUTHORIZED",
   "lifecycle_state": "AWAITING USER ACCEPTANCE",
+  "model_router_verification": {
+    "backend": "36 router and BI regression tests passed; changed Python modules compiled. Provider calls are mocked, with no paid live calls.",
+    "frontend": "27 AI Chat tests, scoped ESLint, CSS parsing and production build passed. Existing unrelated build warnings remain.",
+    "repository": "CI harness, 28 hook tests, 7 policy tests and whitespace checks passed.",
+    "acceptance": "Engineering-complete; User acts next in chat. Live provider access/quality and browser acceptance remain unverified."
+  },
+  "model_router_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-10-11",
+    "instruction": "Begin adding a model router with cheaper models for easy questions and a deeper option for detailed tasks; choose solid models and implement now.",
+    "scope": "Backend routing, bounded AI explanations, frontend Auto/Quick/Deep analysis selection, configuration, tests and contracts. Preserve deterministic BI calculations and governance. No web research or browser operations.",
+    "codex_frontend_implementation_authorized": true
+  },
   "chat_delete_repair_verification": {
     "frontend": "24 AI Chat tests passed, including inactive-chat cancellation/deletion/persistence and separate-document dialog ownership. Scoped lint, CSS layer validation and production build passed with existing unrelated warnings.",
     "repository": "CI harness, 28 hook tests, 7 policy tests and whitespace checks passed.",
@@ -195,6 +208,9 @@
     "scope": "Codex may implement saved experiment deletion in the ML Studio home, its backend draft route and persistence, contract, and focused tests."
   },
   "allowed_paths": [
+    "backend/services/chat_model_router.py",
+    "tests/test_chat_model_router.py",
+    "project_docs/active/contracts/ai_chat_model_routing.md",
     "backend/decision_engine/chat_service.py",
     "backend/decision_engine/bi_*.py",
     "backend/services/metric_resolver.py",

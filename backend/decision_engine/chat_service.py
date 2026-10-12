@@ -3681,14 +3681,14 @@ class DecisionChatService:
 
         if row_count <= 0:
             return (
-                "I can help frame a decision, but I need an active dataset before I can ground analytics or draft a workspace from real business context.",
+                "Select a dataset for data-backed answers. General explanations are not findings about your data.",
                 ["No active dataset was provided for this turn."],
             )
 
         return (
-            f"I am grounded in {row_count} rows across {column_count} columns"
+            f"The selected dataset has {row_count} rows across {column_count} columns"
             f" with {metric_count} semantic metrics and {dimension_count} semantic dimensions available. "
-            "Ask for a chart, compare a segment, or frame a business decision in plain English.",
+            "No calculation was produced for this question. Ask for a named metric, breakdown or chart.",
             [],
         )
 

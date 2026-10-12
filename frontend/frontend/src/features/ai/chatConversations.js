@@ -1,11 +1,12 @@
 export const CHAT_STORAGE_KEY = 'aiChatConversations:v1';
+export const normalizeModelMode = value => ['auto', 'quick', 'deep'].includes(value) ? value : 'auto';
 
 export const createConversation = () => {
   const now = new Date().toISOString();
   return {
     id: window.crypto?.randomUUID?.() || `chat-${Date.now()}-${Math.random().toString(36).slice(2)}`,
     title: 'New chat', customTitle: false, createdAt: now, updatedAt: now,
-    messages: [], draft: '', sessionState: { active_mode: 'explore' },
+    messages: [], draft: '', modelMode: 'auto', sessionState: { active_mode: 'explore' },
   };
 };
 
@@ -35,6 +36,7 @@ export const restoreConversation = (conversation, scope) => {
       scope: sameChatScope(message.scope, scope) ? scope : null,
     })),
     draft: conversation.draft || '',
+    modelMode: normalizeModelMode(conversation.modelMode),
     sessionState: canResume ? conversation.sessionState : { active_mode: 'explore' },
     activeArtifact: conversation.activeArtifact ? bindArtifact(conversation.activeArtifact) : null,
     awaitingCleanInstructions: canResume && Boolean(conversation.awaitingCleanInstructions),
@@ -66,6 +68,7 @@ export const serializeChatWorkspace = workspace => JSON.stringify({
     id: conversation.id, title: conversation.title, customTitle: conversation.customTitle,
     createdAt: conversation.createdAt, updatedAt: conversation.updatedAt,
     draft: conversation.draft,
+    modelMode: normalizeModelMode(conversation.modelMode),
     messages: conversation.messages.map(persistedMessage),
     activeArtifact: conversation.activeArtifact ? withoutScope(conversation.activeArtifact) : null,
     // Analytical state is retained only in memory, where its source can be proven.
@@ -98,6 +101,7 @@ export const loadChatWorkspace = () => {
         createdAt: typeof value.createdAt === 'string' ? value.createdAt : fresh.createdAt,
         updatedAt: typeof value.updatedAt === 'string' ? value.updatedAt : fresh.updatedAt,
         draft: typeof value.draft === 'string' ? value.draft : '',
+        modelMode: normalizeModelMode(value.modelMode),
         messages: value.messages.map(persistedMessage),
         activeArtifact: value.activeArtifact ? withoutScope(value.activeArtifact) : null,
         sourceScope: null, sessionState: { active_mode: 'explore' },

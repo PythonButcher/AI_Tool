@@ -1,23 +1,23 @@
 # Project Execution Status
 
-## Current Gate: AI Chat conversation management
+## Current Gate: AI Chat model routing
 
-- **Current Gate**: AI Chat conversation management
+- **Current Gate**: AI Chat model routing
 - **Roadmap Phase**: Phase 14 — AI Chat Business Workspace
 - **Phase State**: `AWAITING USER ACCEPTANCE`
-- **What This State Means**: Individual-chat deletion repair is engineering-complete. Final visual acceptance belongs to the user in chat.
+- **What This State Means**: Model routing and the composer selector are engineering-complete. Live provider access/quality and final visual acceptance remain unverified.
 - **Current Milestone**: Engineering verification complete
 - **Automatic Continuation**: `WAIT_FOR_USER`
 - **Current Owner**: User
 - **Backend Readiness**: `backend_contract_ready`
 - **Frontend Readiness**: `backend_contract_ready`
-- **Next Action**: User tries individual chat deletion and provides acceptance or specific feedback in chat.
-- **Required Action**: Await user direction; no further implementation or browser operations are active.
+- **Next Action**: User tries Auto, Quick and Deep analysis and provides feedback in chat.
+- **Required Action**: Await user direction; model calls use the deployment's server API key. No live paid calls or browser operations were performed during verification.
 - **Active Gate**: `project_docs/active/active_gate/README.md`
 - **Authorization Record**: `project_docs/active/status/phase_authorization.json`
 - **Roadmap**: `project_docs/active/ai_chat/README.md`
 - **Active Handoff**: None. Codex frontend implementation is explicitly authorized for this assignment.
-- **Latest Verification**: Individual-delete repair: 24 AI Chat tests passed, including inactive-chat cancellation/deletion/persistence and separate-document dialog ownership. Scoped ESLint, CSS layer validation, production build, repository CI, 28 hook tests, 7 policy tests and whitespace checks passed. Confirmation dialogs now sit above the docked portal and use the chat host's document. Existing unrelated build warnings remain. No browser verification or user acceptance occurred. The broader conversation-management assignment's 31 tests across 5 suites remain preserved evidence.
+- **Latest Verification**: Model routing: 36 backend tests and 27 AI Chat frontend tests passed, including provider failure, governance, route selection, grounded-result preservation, per-chat preferences and retry isolation. Changed Python compilation, scoped ESLint, CSS parsing, production build, repository CI, 28 hook tests, 7 policy tests and whitespace checks passed. Provider calls were mocked. Existing unrelated build warnings remain; live API quality/access and browser acceptance are unverified.
 
 ## Preserved Interface Verification
 
@@ -31,4 +31,4 @@ The [ML Studio contract](../contracts/ml_studio.md) retains capability limitatio
 
 ## Completion Rule
 
-Engineering verification covers new/reset chat actions, conversation switching, stale response isolation, local history and storage failure behavior. Final visual acceptance belongs to the user in chat; Codex resumes only for specific user-directed work.
+Verify routing decisions, provider payloads, governance boundaries, failure fallback, per-chat selection and grounded-result preservation; run focused tests and production build. Final visual acceptance belongs to the user in chat.

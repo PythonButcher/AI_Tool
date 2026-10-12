@@ -1,5 +1,7 @@
 # AI Chat Business Workspace
 
+The current extension is [model routing](../contracts/ai_chat_model_routing.md): economical explanations, explicit deeper reasoning and local execution for direct BI calculations. Model commentary stays distinct from verified numerical results.
+
 Phase 14 delivers a question-to-dashboard improvement. Codex owns backend and frontend under the user's 2026-10-10 authorization; the user owns final visual acceptance. The sole [active gate](../active_gate/README.md) controls execution and [status](../status/project_execution_status.md) owns delivery truth.
 
 The existing BI-first shell, deterministic metric resolver, typed follow-ups and artifact exports remain the foundation. Source inspection found context gaps in natural breakdown/trend requests, silent metric ambiguity, chart pinning that loses provenance, and missing request lifecycle guards.

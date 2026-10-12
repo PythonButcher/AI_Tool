@@ -264,6 +264,45 @@ test('reset confirms clearing the chat and leaves saved dashboard results intact
   expect(axios.post.mock.calls[1][1].conversation_history).toEqual([]);
 });
 
+test('answer mode is sent, attributed and retained per chat across reloads', async () => {
+  axios.post.mockResolvedValue(success({ ai_commentary: 'Consider checking seasonality.',
+    model_routing: { status: 'completed', selected_mode: 'deep', model: 'gpt-5-mini', reason: 'Selected by you.' } }));
+  const view = render(tree());
+  expect(screen.getByRole('combobox', { name: 'Answer mode' })).toHaveValue('auto');
+  fireEvent.change(screen.getByRole('combobox', { name: 'Answer mode' }), { target: { value: 'deep' } });
+  send('Revenue explanation');
+  await screen.findByText('Consider checking seasonality.');
+  expect(axios.post.mock.calls[0][1].model_mode).toBe('deep');
+  expect(screen.getByText('Deep analysis · gpt-5-mini')).toBeInTheDocument();
+  expect(screen.getByText('Revenue is 100.')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'New chat' }));
+  expect(screen.getByRole('combobox', { name: 'Answer mode' })).toHaveValue('auto');
+  fireEvent.click(screen.getByRole('button', { name: 'Show chat history' }));
+  fireEvent.click(within(screen.getByRole('dialog', { name: 'Your chats' })).getByRole('button', { name: 'Open chat: Revenue explanation' }));
+  expect(screen.getByRole('combobox', { name: 'Answer mode' })).toHaveValue('deep');
+  view.unmount();
+  render(tree());
+  expect(screen.getByRole('combobox', { name: 'Answer mode' })).toHaveValue('deep');
+  expect(screen.getByText('Deep analysis · gpt-5-mini')).toBeInTheDocument();
+});
+
+test('retry keeps the original model choice and unavailable commentary preserves results', async () => {
+  axios.post.mockRejectedValueOnce(new Error('Connection lost')).mockResolvedValueOnce(success({
+    model_routing: { status: 'unavailable', selected_mode: 'quick', model: null,
+      reason: 'AI explanation is temporarily unavailable. The built-in response is available.' },
+  }));
+  render(tree());
+  fireEvent.change(screen.getByRole('combobox', { name: 'Answer mode' }), { target: { value: 'quick' } });
+  send('Explain revenue');
+  await screen.findByRole('button', { name: 'Retry last question' });
+  fireEvent.change(screen.getByRole('combobox', { name: 'Answer mode' }), { target: { value: 'deep' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Retry last question' }));
+  await screen.findByText('Revenue is 100.');
+  expect(axios.post.mock.calls[1][1].model_mode).toBe('quick');
+  expect(screen.getByText(/AI explanation is temporarily unavailable/)).toBeInTheDocument();
+  expect(screen.queryByRole('region', { name: 'AI explanation' })).not.toBeInTheDocument();
+});
+
 test('conversation titles can be renamed and the last chat can be safely deleted', async () => {
   render(tree());
   fireEvent.click(screen.getByRole('button', { name: 'Show chat history' }));

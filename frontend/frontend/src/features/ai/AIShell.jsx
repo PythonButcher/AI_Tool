@@ -219,6 +219,7 @@ function AIChatConversation({ onOpenDashboard, conversation, conversations, stor
   const [initial] = useState(() => restoreConversation(conversation, dataScope));
   const [userMessages, setUserMessages] = useState(initial.messages);
   const [userInput, setUserInput] = useState(initial.draft);
+  const [modelMode, setModelMode] = useState(initial.modelMode);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(initial.error);
   const [governanceWarning, setGovernanceWarning] = useState(initial.governanceWarning);
@@ -251,9 +252,9 @@ function AIChatConversation({ onOpenDashboard, conversation, conversations, stor
   const previousScope = useRef(dataScope);
 
   useEffect(() => {
-    onSnapshot({ messages: userMessages, draft: userInput, sessionState, activeArtifact, sourceScope: dataScope,
+    onSnapshot({ messages: userMessages, draft: userInput, modelMode, sessionState, activeArtifact, sourceScope: dataScope,
       awaitingCleanInstructions, failedRequest, error, governanceWarning, notice });
-  }, [onSnapshot, userMessages, userInput, sessionState, activeArtifact, dataScope,
+  }, [onSnapshot, userMessages, userInput, modelMode, sessionState, activeArtifact, dataScope,
     awaitingCleanInstructions, failedRequest, error, governanceWarning, notice]);
 
   useEffect(() => { inputRef.current?.focus(); }, []);
@@ -262,7 +263,7 @@ function AIChatConversation({ onOpenDashboard, conversation, conversations, stor
     const pending = requestRef.current;
     pending?.controller.abort();
     requestRef.current = null;
-    return { messages: userMessages, draft: userInput || pending?.message || '', sessionState, activeArtifact,
+    return { messages: userMessages, draft: userInput || pending?.message || '', modelMode, sessionState, activeArtifact,
       sourceScope: dataScope, awaitingCleanInstructions, failedRequest, error, governanceWarning,
       notice: pending ? 'The pending request was stopped when you left this chat. Send your question again to continue.' : notice };
   };
@@ -660,7 +661,7 @@ function AIChatConversation({ onOpenDashboard, conversation, conversations, stor
     return 'The active data context is ready.';
   };
 
-  const submitTurn = async ({ message, previousState = sessionState, refinement, retry = false }) => {
+  const submitTurn = async ({ message, previousState = sessionState, refinement, retry = false, requestModelMode = modelMode }) => {
     message = message.trim();
     if (!message || requestRef.current) return;
     const controller = new AbortController();
@@ -691,13 +692,14 @@ function AIChatConversation({ onOpenDashboard, conversation, conversations, stor
       const response = await axios.post(`${API_URL}/api/decision/chat/turns`, {
         workspace_id: tokens.length || datasetRef?.source === 'datahub' ? undefined : activeWorkspace?.workspace_id,
         user_message: message,
+        model_mode: requestModelMode,
         dataset: payloadDataset,
         semantic_model: payloadSemanticModel,
         dataset_ref: datasetRef,
         resolved_datasets: tokens,
         requested_mode: (payloadDataset || datasetRef || activeWorkspace?.workspace_id) ? 'explore' : 'ask',
         conversation_history: userMessages.filter(item => item.scope === dataScope)
-          .map(({ role, content }) => ({ role, content })).slice(-10),
+          .map(({ role, content, ai_commentary }) => ({ role, content, ...(ai_commentary ? { ai_commentary } : {}) })).slice(-10),
         session_state: biSessionState,
         ...(refinement ? { analytics_refinement: refinement } : {}),
       }, { signal: controller.signal, timeout: 120000 });
@@ -716,6 +718,7 @@ function AIChatConversation({ onOpenDashboard, conversation, conversations, stor
       const verified = biArtifacts.some(artifact => artifact.bi_grounding?.metric_definition && !artifact.content?.reason_code);
       setUserMessages(previous => [...previous, {
         role: 'assistant', content: data.assistant_message || 'The BI query completed.',
+        ai_commentary: data.ai_commentary, model_routing: data.model_routing,
         artifacts: biArtifacts, dashboard_draft: draft,
         suggested_actions: data.suggested_actions || [],
         grounded: verified, session_state: nextSessionState, scope: dataScope,
@@ -731,7 +734,7 @@ function AIChatConversation({ onOpenDashboard, conversation, conversations, stor
       const detail = failure.response?.data;
       setError(detail?.governance_readiness?.reasons?.[0]?.message || detail?.error?.message
         || (failure.code === 'ECONNABORTED' ? 'This analysis took too long. Retry or ask a narrower question.' : 'Could not complete this analysis. Check your data connection and try again.'));
-      setFailedRequest({ message, previousState: biSessionState, refinement, scope: dataScope });
+      setFailedRequest({ message, previousState: biSessionState, refinement, scope: dataScope, requestModelMode });
       setUserInput(current => current || message);
     } finally {
       if (requestRef.current === request) {
@@ -935,6 +938,16 @@ function AIChatConversation({ onOpenDashboard, conversation, conversations, stor
                   )}
                 </div>
                 <div className="ai-shell__message-content">{message.content}</div>
+                {message.model_routing && <p className="ai-shell__model-attribution" title={message.model_routing.reason}>
+                  {message.model_routing.status === 'completed'
+                    ? `${message.model_routing.selected_mode === 'deep' ? 'Deep analysis' : 'Quick'} · ${message.model_routing.model}`
+                    : message.model_routing.status === 'local' ? 'Built-in analysis · No model call' : message.model_routing.reason}
+                </p>}
+                {message.ai_commentary && <section className="ai-shell__ai-commentary" aria-label="AI explanation">
+                  <strong>AI explanation</strong>
+                  <div className="ai-shell__message-content">{message.ai_commentary}</div>
+                  <p>Interpretation may contain errors. Check the calculated results and source data.</p>
+                </section>}
 
                 {message.dashboard_draft && <DashboardDraft draft={message.dashboard_draft} onAdd={addDashboardResults} onInspect={handleInspect} onOpenDashboard={viewDashboard} />}
 
@@ -1041,6 +1054,18 @@ function AIChatConversation({ onOpenDashboard, conversation, conversations, stor
               >
                 {loading ? <div className="ai-shell__spinner" /> : <><span>Send</span><FaArrowUp className="ai-shell__send-icon" /></>}
               </button>
+            </div>
+            <div className="ai-shell__model-controls">
+              <label htmlFor="ai-chat-model-mode">Answer mode</label>
+              <select id="ai-chat-model-mode" value={modelMode} disabled={loading}
+                aria-describedby="ai-chat-model-hint" onChange={event => setModelMode(event.target.value)}>
+                <option value="auto">Auto</option>
+                <option value="quick">Quick</option>
+                <option value="deep">Deep analysis</option>
+              </select>
+              <span id="ai-chat-model-hint">{modelMode === 'deep' ? 'More detailed reasoning · May take longer · No web search'
+                : modelMode === 'quick' ? 'Brief explanations · Lower output budget'
+                  : 'Local calculations first · Models chosen to fit your question'}</span>
             </div>
           </div>
           <div className="ai-shell__composer-hint"><FaShieldAlt /><span>Answers grounded in your data. Review the details behind each result.</span></div>

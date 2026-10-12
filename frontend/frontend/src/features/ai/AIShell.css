@@ -245,6 +245,16 @@
 .ai-shell__chat-dialog .MuiButton-root { font-family: var(--font-sans); text-transform: none; }
 .ai-shell__chat-dialog button:focus-visible { outline: 2px solid var(--accent-blue); outline-offset: 2px; }
 
+.ai-shell__model-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 10px 4px 2px; border-top: 1px solid var(--chat-border); margin-top: 10px; color: var(--text-secondary); font-size: 12px; }
+.ai-shell__model-controls label { font-weight: 600; }
+.ai-shell__model-controls select { min-height: 36px; border: 1px solid var(--border-color); border-radius: 8px; padding: 6px 28px 6px 10px; background: var(--bg-primary); color: var(--text-primary); font: inherit; font-size: 13px; }
+.ai-shell__model-controls select:focus-visible { outline: 2px solid var(--accent-blue); outline-offset: 2px; }
+.ai-shell__model-controls span { flex: 1 1 200px; line-height: 1.5; }
+.ai-shell__model-attribution { margin: 10px 0 0; color: var(--text-secondary); font-size: 12px; overflow-wrap: anywhere; }
+.ai-shell__ai-commentary { margin-top: 16px; padding: 16px; border: 1px solid var(--chat-border); border-radius: 12px; background: var(--chat-tint); }
+.ai-shell__ai-commentary > strong { display: block; margin-bottom: 8px; font-size: 13px; }
+.ai-shell__ai-commentary > p { margin: 12px 0 0; font-size: 12px; line-height: 1.5; color: var(--text-secondary); }
+
 .ai-shell__header-right {
   display: flex;
   align-items: center;

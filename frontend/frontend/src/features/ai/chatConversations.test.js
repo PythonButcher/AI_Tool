@@ -33,3 +33,14 @@ test('malformed saved history remains untouched and does not prevent an in-memor
   expect(loaded.workspace.conversations).toHaveLength(1);
   expect(localStorage.getItem(CHAT_STORAGE_KEY)).toBe('{broken');
 });
+
+test('older saved chats and unknown answer modes default to Auto', () => {
+  const chat = createConversation();
+  const saved = JSON.parse(serializeChatWorkspace({ activeId: chat.id, conversations: [chat] }));
+  delete saved.conversations[0].modelMode;
+  localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(saved));
+  expect(loadChatWorkspace().workspace.conversations[0].modelMode).toBe('auto');
+  saved.conversations[0].modelMode = 'arbitrary-model';
+  localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(saved));
+  expect(loadChatWorkspace().workspace.conversations[0].modelMode).toBe('auto');
+});
