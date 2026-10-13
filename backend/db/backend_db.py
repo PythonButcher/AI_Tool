@@ -169,6 +169,14 @@ def _ensure_schema(conn):
         '''
     )
 
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS workspace_preparation_commits (
+            preparation_id TEXT PRIMARY KEY,
+            workspace_id TEXT NOT NULL,
+            receipt_json TEXT NOT NULL,
+            FOREIGN KEY (workspace_id) REFERENCES data_workspaces(workspace_id) ON DELETE CASCADE
+        )
+    ''')
     conn.commit()
 
 

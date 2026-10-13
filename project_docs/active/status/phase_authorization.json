@@ -1,13 +1,175 @@
 {
   "schema_version": 1,
   "authorized_work": {
-    "name": "ML Studio Step 4 — Connect Data Preparation and Power Query"
+    "name": "AI Chat model routing"
   },
-  "authorization_state": "REVIEW_ONLY",
-  "lifecycle_state": "NOT STARTED",
-  "diff_baseline": "e2896c2eced5511144c3151e34cae473e992af5a",
+  "authorization_state": "AUTHORIZED",
+  "lifecycle_state": "AWAITING USER ACCEPTANCE",
+  "model_router_verification": {
+    "backend": "36 router and BI regression tests passed; changed Python modules compiled. Provider calls are mocked, with no paid live calls.",
+    "frontend": "27 AI Chat tests, scoped ESLint, CSS parsing and production build passed. Existing unrelated build warnings remain.",
+    "repository": "CI harness, 28 hook tests, 7 policy tests and whitespace checks passed.",
+    "acceptance": "Engineering-complete; User acts next in chat. Live provider access/quality and browser acceptance remain unverified."
+  },
+  "model_router_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-10-11",
+    "instruction": "Begin adding a model router with cheaper models for easy questions and a deeper option for detailed tasks; choose solid models and implement now.",
+    "scope": "Backend routing, bounded AI explanations, frontend Auto/Quick/Deep analysis selection, configuration, tests and contracts. Preserve deterministic BI calculations and governance. No web research or browser operations.",
+    "codex_frontend_implementation_authorized": true
+  },
+  "chat_delete_repair_verification": {
+    "frontend": "24 AI Chat tests passed, including inactive-chat cancellation/deletion/persistence and separate-document dialog ownership. Scoped lint, CSS layer validation and production build passed with existing unrelated warnings.",
+    "repository": "CI harness, 28 hook tests, 7 policy tests and whitespace checks passed.",
+    "acceptance": "User acts next in chat. No browser operations performed."
+  },
+  "chat_delete_repair_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-10-11",
+    "instruction": "The delete button for individual chats does not work.",
+    "scope": "Repair chat confirmation dialog placement and verify individual deletion in docked and separate-document chat hosts.",
+    "codex_frontend_implementation_authorized": true
+  },
+  "conversation_management_verification": {
+    "frontend": "31 focused tests across 5 suites, scoped ESLint, CSS parsing and production build passed. Existing unrelated lint/dependency/bundle warnings remain.",
+    "repository": "CI harness, active-gate validation, 28 hook tests, 7 policy tests and whitespace checks passed.",
+    "acceptance": "Engineering-complete; user acceptance remains in chat. No browser operations performed."
+  },
+  "ai_chat_conversation_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-10-10",
+    "instruction": "Add a clear way to add a new chat, refresh the current chat, and implement standard chat-window functionality.",
+    "scope": "Codex may implement new/reset chat actions, conversation switching, local history, rename/delete controls, request isolation, tests and governing documentation.",
+    "codex_frontend_implementation_authorized": true
+  },
+  "interface_verification": {
+    "verified_at": "2026-10-10",
+    "ml_studio": "101 tests passed across 14 suites; final home and shell changes rechecked with 7 and 38 passing tests. Home visually inspected in light/dark themes and at 390px width.",
+    "ai_chat": "Owning chat reports 22 focused frontend tests, scoped ESLint, 46 backend tests and Python compilation passed. No browser verification or acceptance.",
+    "shared": "Production build passed with existing warnings; generated CSS contains the final 760px AI Chat header guard. CI harness, 28 hook tests, 7 policy tests and diff checks passed."
+  },
+  "ml_studio_splash_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-10-10",
+    "instruction": "Create a dynamic, theme-aligned ML Studio splash page with engaging professional design and learning links for the algorithms offered by the tool.",
+    "scope": "Codex may implement and verify the ML Studio home and learning explorer, preserving experiment actions and backend contracts.",
+    "codex_frontend_implementation_authorized": true
+  },
+  "concurrent_ai_chat_work": {
+    "gate": "AI Chat business workspace",
+    "state": "AWAITING USER ACCEPTANCE",
+    "current_step": "Engineering verification complete",
+    "scope": "Unified header, larger conversation/composer/results controls and optional sidebar in AIShell.jsx, AIShell.css and DashboardDraft.jsx. Preserve BI and dashboard behavior. Final focused tests and shared build passed; no browser operations are authorized for that assignment."
+  },
+  "interface_coordination_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-10-10",
+    "instruction": "Yes, coordinate both chats",
+    "evidence": "User reply in Improve AI Chat BI workspace, verified through read_thread.",
+    "scope": "ML Studio chat owns ML Studio files, shared gate/status and the production build. AI Chat chat owns AI Chat and its sidebar/header refinement, plus focused tests."
+  },
+  "sidebar_header_polish_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-10-10",
+    "instruction": "make sure to update and improve the side bar , and header elements",
+    "evidence": "User message in Improve AI Chat BI workspace, verified through read_thread.",
+    "codex_frontend_implementation_authorized": true
+  },
+  "ai_chat_window_polish_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-10-10",
+    "instruction": "I am see them and its not enough I wanted more polish to the overall chat window",
+    "scope": "Codex may redesign the AI Chat window hierarchy, header, conversation, composer, results panel and responsive styling while retaining implemented BI and dashboard behavior.",
+    "codex_frontend_implementation_authorized": true
+  },
+  "diff_baseline": "2e3670e9bc26a3a6b4749baebf6e25c7032e9475",
   "authority_kind": "direct_user_instruction",
-  "user_implementation_authorization": null,
+  "ai_chat_improvement_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-10-10",
+    "instruction": "Improve AI Tool’s existing AI Chat into a more polished, capable, and business-friendly BI workspace. This prompt authorizes implementation, not just an audit or proposal.",
+    "scope": "Codex implements backend, frontend, connected dashboards, contracts and regression tests. Preserve grounded analytical truth, local dashboard compatibility and pending ML Studio acceptance. No browser actions or GEMINI.md edits.",
+    "codex_frontend_implementation_authorized": true
+  },
+  "pending_ml_studio_acceptance": {
+    "gate": "ML Studio bulk preparation and full editor",
+    "state": "AWAITING USER ACCEPTANCE",
+    "owner": "User",
+    "latest_verification": "2026-10-08: 96 frontend tests, 65 focused backend tests, production build and repository checks passed. No browser acceptance."
+  },
+  "bulk_preparation_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-10-08",
+    "instruction": "Just apply those fixes now",
+    "scope": "Implement grouped multi-issue findings, bulk treatments and combined preview/apply, editable Power Query transformations, task-aware missing-value guidance, backend validation, regression tests and accurate contracts/status. Preserve governed experiment and dataset identity.",
+    "codex_frontend_implementation_authorized": true
+  },
+  "managed_upload_ignore_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-10-07",
+    "instruction": "Add /backend/storage/managed_uploads/ to .gitignore.",
+    "scope": "Ignore generated local datasets without deleting files or changing application behavior."
+  },
+  "configuration_polish_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-10-07",
+    "instruction": "Give the Configure page a little polish as well while fixing the preparation transition.",
+    "scope": "Codex may refine ConfigurationStage markup and styling for hierarchy, readable table scrolling, model choices and assessment actions while preserving its controls and backend contracts.",
+    "codex_frontend_implementation_authorized": true
+  },
+  "preparation_transition_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-10-07",
+    "instruction": "Once data is prepared, center the result and provide a clearer transition to the Configure tab. Implement now.",
+    "scope": "Codex may implement the centered Prepare Data result and guarded Configure action, its styles and regression tests, and governing documentation.",
+    "codex_frontend_implementation_authorized": true
+  },
+  "header_repair_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-10-06",
+    "instruction": "The section that says ML Studio and Experiments looks uneven and dull; fix it using the supplied screenshot.",
+    "scope": "Codex may refine the ML Studio header markup, alignment, hierarchy and theme styling, preserve existing controls, and update governing status with verification.",
+    "codex_frontend_implementation_authorized": true
+  },
+  "completion_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-10-04",
+    "instruction": "Complete ML Studio end to end, including a polished UI makeover that fits AI Tool’s existing themes. I explicitly authorize you to implement both backend and frontend, including React, CSS, and the whole-studio redesign.",
+    "scope": "This Codex chat executes ML Studio backend, frontend, contracts, tests and theme-aligned UI redesign through all five task workflows and the completion gate. Final browser acceptance remains with the user.",
+    "brief": "project_docs/archive/ml_studio_completion_brief_2026_10_05.md",
+    "codex_frontend_implementation_authorized": true
+  },
+  "next_preparation_step": {
+    "prepared_at": "2026-10-01",
+    "user_instruction": "if this is normal and expected lets prepare for the next step",
+    "scope": "Implement the bounded draft-bound Power Query preview/cancel assignment through Antigravity. Apply, dataset replacement and editable transformations remain excluded.",
+    "implementation_authorized": true,
+    "approved_by": "User",
+    "approved_at": "2026-10-01",
+    "implementation_instruction": "ok lets try it, and i will review",
+    "active_assignment": "project_docs/active/ai_hand_off/ml_studio_power_query_preview_cancel.md"
+  },
+  "codex_power_query_repair_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-10-01",
+    "instruction": "there is no confirmation on the screen; fix these issues now",
+    "scope": "Codex may repair the Prepare Data confirmation visibility, Power Query opening and return interaction, focused frontend tests, styles and governing documentation."
+  },
+  "power_query_opening_handoff_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-09-29",
+    "instruction": "Implement this work — project_docs/active/active_gate/README.md",
+    "scope": "Inspect source and contracts, write and verify one bounded Stay/Open Power Query opening handoff, and transfer ownership to Antigravity. Codex frontend implementation remains excluded."
+  },
+  "user_implementation_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-09-27",
+    "evidence": "Direct user message in this Codex session referencing the sole active gate.",
+    "instruction": "accepted, proceed to the step step",
+    "scope": "Codex in the receiving chat may complete ML Studio backend and frontend, all five task journeys and the theme-aligned UI makeover under the completion gate.",
+    "current_instruction": "Execute the completion plan continuously through meaningful, verified steps until engineering completion or a concrete blocker, including backend, frontend and the whole-studio redesign.",
+    "current_approved_at": "2026-10-04"
+  },
   "preparation_authorization": {
     "approved_by": "User",
     "approved_at": "2026-09-26",
@@ -16,9 +178,10 @@
   },
   "latest_user_acceptance": {
     "accepted_by": "User",
-    "accepted_at": "2026-09-26",
-    "gate": "Step 3 — Draft duplication slice",
-    "instruction": "ok approved whats next?"
+    "accepted_at": "2026-09-27",
+    "gate": "ML Studio Data & Goal frontend handoff",
+    "instruction": "your not complete ruling is overruled by me",
+    "known_limitation": "The reviewed source can clear GET-owned preparation_context after a header PATCH; the user accepted the return with this known limitation."
   },
   "accepted_parallel_work": {
     "accepted_by": "User",
@@ -31,7 +194,78 @@
     "approved_at": "2026-09-24",
     "instruction": "Improve the overall cross-session Codex-to-Gemini handoff and review harness after repeated missed async save cases."
   },
+  "codex_data_goal_repair_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-09-27",
+    "instruction": "yeah this needs fixing, i cannot proeed to the next step correctly, error in the data and goal",
+    "scope": "Codex may repair the reported Data & Goal Save and continue frontend path and its focused tests in this session."
+  },
+  "codex_experiment_delete_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-09-27",
+    "instruction": "add a delete button for each workspace while you're there",
+    "clarification": "Saved ML Studio experiments",
+    "scope": "Codex may implement saved experiment deletion in the ML Studio home, its backend draft route and persistence, contract, and focused tests."
+  },
   "allowed_paths": [
+    "backend/services/chat_model_router.py",
+    "tests/test_chat_model_router.py",
+    "project_docs/active/contracts/ai_chat_model_routing.md",
+    "backend/decision_engine/chat_service.py",
+    "backend/decision_engine/bi_*.py",
+    "backend/services/metric_resolver.py",
+    "backend/routes/decision_chat.py",
+    "tests/test_decision_chat*.py",
+    "tests/test_metric_resolver.py",
+    "frontend/frontend/src/features/ai/**",
+    "frontend/frontend/src/features/dashboard/**",
+    "frontend/frontend/src/context/WindowContext*",
+    "frontend/frontend/src/components/layout/CanvasContainer.jsx",
+    "frontend/frontend/src/utils/aiDashboard*",
+    "frontend/frontend/src/utils/dashboardCanvasUtils*",
+    "project_docs/active/ai_chat/**",
+    "project_docs/active/contracts/decision_objects.md",
+    "project_docs/active/contracts/dashboard_canvas_state.md",
+    "frontend/frontend/src/components/data_management/cleaning_components/**",
+    "backend/services/manual_cleaning_engine.py",
+    "tests/test_workspace_cleaning.py",
+    "project_docs/active/ai_hand_off/codex_configuration_redesign.md",
+    "project_docs/active/future/codex/codex_configuration_redesign.md",
+    ".gitignore",
+    "project_docs/INDEX.md",
+    "backend/ml_studio/**",
+    "tests/test_ml_studio*.py",
+    "frontend/frontend/src/features/ml_studio/**",
+    "project_docs/active/ml_studio/**",
+    "project_docs/archive/ml_studio_completion_brief_2026_10_05.md",
+    "project_docs/archive/ml_studio_power_query_preview_cancel_superseded_2026_10_04.md",
+    "project_docs/active/ai_hand_off/ml_studio_power_query_preview_cancel.md",
+    "project_docs/active/future/codex/ml_studio_power_query_preview_cancel.md",
+    "project_docs/active/future/codex/README.md",
+    "project_docs/archive/ml_studio_power_query_opening_superseded_2026_10_01.md",
+    "project_docs/active/ai_hand_off/ml_studio_power_query_opening.md",
+    "frontend/frontend/src/App.jsx",
+    "frontend/frontend/src/components/data_management/DataCleaningForm.jsx",
+    "frontend/frontend/src/components/data_management/DataCleaningForm.test.jsx",
+    "project_docs/active/ai_hand_off/ml_studio_data_goal.md",
+    "project_docs/active/ai_hand_off/ml_studio_prepare_data_options.md",
+    "project_docs/active/ai_hand_off/ml_studio_prepare_data_column_label.md",
+    "project_docs/archive/ml_studio_data_goal_handoff_user_accepted_2026_09_27.md",
+    "project_docs/archive/ml_studio_prepare_data_options_initial_2026_09_27.md",
+    "project_docs/archive/ml_studio_prepare_data_column_label_deferred_2026_09_27.md",
+    "project_docs/archive/ml_studio_prepare_data_column_label_accepted_2026_09_29.md",
+    "project_docs/active/ai_hand_off/ml_studio_data_goal_save_repair.md",
+    "project_docs/archive/ml_studio_data_goal_save_repair_codex_owned_2026_09_27.md",
+    "backend/db/backend_db.py",
+    "backend/ml_studio/preparation.py",
+    "tests/test_ml_studio_preparation.py",
+    "backend/services/dataset_context.py",
+    "project_docs/active/status/accepted_change_snapshot.json",
+    "backend/routes/manual_cleaning.py",
+    "backend/services/workspace_cleaning.py",
+    "backend/services/workspace_context.py",
+    "backend/repositories/source_workspace_repository.py",
+    "tests/test_workspace_cleaning.py",
     "project_docs/active/contracts/ml_studio.md",
     "project_docs/active/active_gate/README.md",
     "project_docs/active/README.md",
@@ -55,6 +289,8 @@
     "backend/ml_studio/service.py",
     "backend/ml_studio/contracts.py",
     "backend/routes/ml_studio.py",
+    "requirements.txt",
+    "backend/requirements.txt",
     "tests/test_ml_studio_drafts.py",
     "tests/test_ml_studio_api.py",
     "project_docs/active/ai_hand_off/ml_studio_draft_home_completion.md",
@@ -66,6 +302,7 @@
     ".agents/skills/auto-handoff-execution/SKILL.md",
     "project_docs/active/agent_harness/templates/ANTIGRAVITY_FRONTEND_HANDOFF_TEMPLATE.md",
     "project_docs/active/agent_harness/README.md",
+    "project_docs/active/codex_harness_engineering.md",
     "project_docs/active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md",
     "project_docs/active/ai_hand_off/ml_studio_duplicate_draft.md",
     "project_docs/archive/ml_studio_duplicate_draft_reviewed_2026_09_26.md",
@@ -84,5 +321,5 @@
     "project_docs/archive/ml_studio_duplicate_draft_reviewed_2026_09_26.md"
   ],
   "accepted_change_snapshot": "project_docs/active/status/accepted_change_snapshot.json",
-  "codex_frontend_edits_allowed": false
+  "codex_frontend_edits_allowed": true
 }

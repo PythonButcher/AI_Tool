@@ -185,6 +185,31 @@ class StatusAndHandoffTests(unittest.TestCase):
             harness_validation.check_handoffs(root, "Antigravity", "frontend_repair_only", errors)
         self.assertTrue(any("REPAIR REQUIRED" in error for error in errors))
 
+    def test_repair_requires_specific_proof(self) -> None:
+        errors = harness_validation.validate_repair_handoff(
+            "Goal: Repair the stage save.\n\nREPAIR REQUIRED\n\n## Repair Blocker\n"
+        )
+        self.assertTrue(any("Observed Source" in error for error in errors))
+        self.assertTrue(any("Regression Test" in error for error in errors))
+
+    def test_repair_rejects_recycled_long_handoff(self) -> None:
+        text = "Goal: Repair the stage save.\nREPAIR REQUIRED\n## Repair Blocker\n" + "Background.\n" * 120
+        self.assertTrue(any("exceeds 120 lines" in error for error in harness_validation.validate_repair_handoff(text)))
+
+    def test_repair_return_requires_named_test(self) -> None:
+        temporary = self._status_root(status_text())
+        with temporary:
+            root = Path(temporary.name)
+            errors = harness_validation.validate_repair_test(
+                root,
+                "**Regression Test**: `frontend/frontend/src/Feature.test.jsx` — `open-context-survives-header-save`; assert the blocked action stays disabled.\n",
+            )
+            self.assertTrue(any("Named repair regression test is missing" in error for error in errors))
+            test_file = root / "frontend/frontend/src/Feature.test.jsx"
+            test_file.parent.mkdir(parents=True)
+            test_file.write_text("it('open-context-survives-header-save', () => { expect(saveButton).toBeDisabled(); });\n", encoding="utf-8")
+            self.assertEqual(harness_validation.validate_repair_test(root, "**Regression Test**: `frontend/frontend/src/Feature.test.jsx` — `open-context-survives-header-save`; assert the blocked action stays disabled.\n"), [])
+
 
 class FrontendHandoffIntegrityTests(unittest.TestCase):
     def _repository(self) -> tuple[tempfile.TemporaryDirectory[str], Path, Path]:
@@ -204,6 +229,7 @@ class FrontendHandoffIntegrityTests(unittest.TestCase):
         )
         handoff = root / "handoff.md"
         handoff.write_text(
+            "## User Value\n\nUsers can see the current feature state and understand what action comes next.\n\n## Scope\n\n"
             "Target files:\n\n"
             "- `frontend/frontend/src/Feature.jsx`\n"
             "- `frontend/frontend/src/Feature.css`\n\n"
@@ -215,6 +241,13 @@ class FrontendHandoffIntegrityTests(unittest.TestCase):
             encoding="utf-8",
         )
         return temporary, root, handoff
+
+    def test_handoff_requires_plain_english_user_value(self) -> None:
+        self.assertTrue(any("User Value" in error for error in harness_validation.validate_user_value("Goal: Build a feature.\n")))
+        self.assertEqual(
+            harness_validation.validate_user_value("## User Value\n\nPrepare Data will show columns with missing values and explain available fixes. Applying a fix comes later.\n"),
+            [],
+        )
 
     def test_return_requires_durable_changes_to_required_targets(self) -> None:
         temporary, root, handoff = self._repository()

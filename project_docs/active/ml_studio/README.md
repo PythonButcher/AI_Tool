@@ -1,16 +1,16 @@
-# ML Studio Rebuild Plan
+# ML Studio Product Roadmap And Requirements
 
 ## Start Here
 
-This file explains **what we will build and in what order**. It covers the whole ML Studio, not just Experiment Configuration.
+This durable reference defines the whole ML Studio experience and its delivery rationale. All five local task workflows are engineering-complete; [status](../status/project_execution_status.md) owns verified delivery truth and the user retains final browser acceptance. The [contract](../contracts/ml_studio.md) defines exact implemented behavior and supported limits.
 
-For the current authorized action and owner, open the [active gate](../active_gate/README.md). For the first planned build step, go directly to [Step 1 — Design the complete workflow](#step-1--design-the-complete-workflow).
+For the current authorized action and owner, open the [active gate](../active_gate/README.md). The sections below remain product requirements, not an instruction to restart their implementation.
 
-The numbered steps below are the build order. The six stages inside the finished app are a different thing: Data & Goal → Prepare Data → Configure → Train → Review Results → Use & Share.
+The numbered steps below describe the delivery order. The six stages inside the app are a different thing: Data & Goal → Prepare Data → Configure → Train → Review Results → Use & Share.
 
 ## Build Order
 
-Do one bounded assignment at a time. Each step can contain a backend assignment followed by a frontend assignment; it is not one large agent prompt. Review and check in after each meaningful visible result before advancing.
+The user's assignment authorized Codex backend, frontend and the whole-studio theme-aligned UI makeover. The [archived completion brief](../../archive/ml_studio_completion_brief_2026_10_05.md) preserves that starting scope and source review only. It does not govern new work; the sole active gate controls execution.
 
 1. [Design the complete workflow](#step-1--design-the-complete-workflow)
 2. [Build the workspace](#step-2--build-the-workspace)
@@ -28,7 +28,7 @@ Do one bounded assignment at a time. Each step can contain a backend assignment 
 
 ## Step 1 — Design the complete workflow
 
-**Status:** Complete as a design and contract gate. No application behavior was implemented.
+**Design reference:** This blueprint was written before implementation. Its original design-only boundary does not describe the current application.
 
 Step 1 is the implementation-neutral blueprint. It describes the whole product; it does not claim these behaviors exist in the application.
 
@@ -115,24 +115,24 @@ Step 1 is complete when this blueprint and the proposed contract agree with curr
 
 ## Step 4 — Connect data preparation and Power Query
 
-**Authorization:** Preparation only. The user requested preparation on 2026-09-26 and explicitly prohibited implementation. Backend and frontend changes require a new direct instruction.
+**Authorization:** The 2026-10-04 completion assignment authorizes Codex backend and frontend work, including preview, cancel, apply and the UI makeover. Verify backend readiness before UI integration.
 
 ### Source-backed prerequisites
 
-`backend/routes/ml_studio.py` already provides server-resolved snapshots and preparation-assessment routes. `backend/ml_studio/service.py` checks snapshot identity and governance; its assessment endpoint still requires an immutable experiment specification and a caller-supplied, hash-validated transformation recipe. Its draft workflow currently unlocks only Data & Goal and Prepare Data. These are foundations, not a draft-bound preparation workflow.
+`backend/routes/ml_studio.py` provides server-resolved snapshots, immutable preparation assessments, and draft-bound preparation operations. `backend/ml_studio/preparation.py` issues server-owned recipes and persistent return context without requiring a training specification. Missing-value warnings and supported row-removal fixes derive from the current draft snapshot; this quality view is not a complete statistical assessment. Draft workflow still unlocks only Data & Goal and Prepare Data.
 
-`backend/routes/manual_cleaning.py:19` exposes `/api/manual_cleaning`, which uses global uploaded/cleaned data rather than an explicit workspace identity. It returns both a bounded preview and full cleaned rows. This route does not prove that cleaning updates the same governed workspace used by an ML Studio draft. That identity and commit boundary must be established before the ML Studio UI consumes it.
+`backend/routes/manual_cleaning.py` preserves global-state `/api/manual_cleaning` for compatibility and implements `/api/data-workspaces/{workspace_id}/manual-cleaning` for governed preparation. The workspace endpoint validates version/primary-source identity, returns at most 100 preview rows, and atomically commits an isolated derived source with a server-issued identity/schema receipt. Workspaces containing relationships are explicitly unsupported. The cleaning gate passed 46 focused backend tests on 2026-09-27; draft-bound recipes and return state remain prerequisites for UI integration.
 
-`frontend/frontend/src/features/ml_studio/MLStudioShell.jsx:1010` passes initial cleaning steps and an in-memory apply callback; `frontend/frontend/src/App.jsx:477` opens the cleaning form. The callback creates a fresh snapshot/assessment but carries no durable experiment, issue, or return-stage context. The configuration form constructs recipe identity and its hash in the browser. The proposed server-issued recipe route and persisted return context in the contract are not implemented.
+`frontend/frontend/src/features/ml_studio/MLStudioShell.jsx` renders Data & Goal and a read-only Prepare Data options view with affected-column labels. The view has no preparation mutation controls. The configuration form still constructs recipe identity/hash in the browser and uses an in-memory cleaning callback; these paths do not consume draft preparation operations. The Prepare Data/Power Query return path is a separate assignment.
 
 ### Ordered bounded work
 
-1. **Workspace-safe cleaning boundary — Codex.** Specify and then, only after authorization, implement explicit workspace/version validation, a server-owned commit receipt, and bounded preview behavior using the existing cleaning engine. Determine the canonical workspace update path before choosing an endpoint. Preserve existing callers. Prove wrong-workspace and stale-version rejection, no commit during preview or cancellation, and a receipt matching the committed workspace/schema. Primary source: `backend/routes/manual_cleaning.py`, the workspace resolver used by `backend/routes/ml_studio.py`, and the existing workspace services. This is the first backend gate.
-2. **Draft preparation and return state — Codex.** Bind server-issued recipe lineage and persisted return context to the current experiment, workspace, draft revision, snapshot, selected issue/fix, and return stage. Define conditional-update and retry behavior before implementation. Apply must refresh governed identity/schema, reconcile removed role columns, and invalidate incompatible assessment evidence. Cancel must preserve the saved draft. Do not treat a browser callback, local hash, or unsaved form as server truth.
+1. **Workspace-safe cleaning boundary — Codex, backend gate verified.** Implemented explicit workspace/version and primary-source validation, bounded preview, immutable derived source storage, atomic membership replacement, and server-issued apply receipts. Focused tests prove identity rejection, preview/discard isolation, commit-race cleanup, and receipt/schema agreement with reloaded ML Studio workspace truth. Relationship-backed preparation requires its own commit design and is rejected by this boundary.
+2. **Draft preparation and return state — Codex, backend gate verified.** Server-issued recipe lineage and persistent operations bind experiment, workspace, revision, snapshot, issue/fix, and return stage. Start is conditionally idempotent; open operations block ordinary draft edits. Catalog receipts support restart recovery without duplicate cleaning. Apply refreshes snapshot/schema, removes absent role fields, invalidates assessment evidence, and restores return stage. Preview/cancel preserve the saved draft. The expanded backend run executed 82 tests with one symbolic-link permission skip.
 3. **Data & Goal — Antigravity after backend review.** One handoff for governed dataset/schema/preview, explicit problem selection, and saving the draft's data/goal fields. Regression and classification have execution foundations; forecasting, clustering, and anomaly detection must be labeled unavailable until their execution prerequisites exist. No training or configuration replacement in this handoff.
-4. **Prepare Data — Antigravity after backend review.** One handoff for server-issued issues and supported fixes, Stay/Open Power Query, and the apply/cancel return path. Use the exact verified fields from the backend contract. Keep workspace switches, stale responses, failed saves, retry, and unmount behavior in the acceptance tests.
+4. **Prepare Data — Antigravity after backend review.** The read-only options view uses server-issued issues, supported fixes, and open-operation context. Show each affected column in that view, then assign the separate Stay/Open Power Query and apply/cancel return path after Codex reviews the repair. Use exact verified fields from the backend contract and test workspace switches, stale responses, failed saves, retry, and unmount behavior in the applicable slice.
 
-No frontend handoff is active. Each backend assignment must return focused contract, source, and test evidence before a UI handoff is issued. Proposed fields and endpoints must be labeled proposed until implemented; compatibility services must retain their existing contracts.
+The Stay/Open choice uses a focused dialog and returns from the read-only editor to an enabled issue action. The active gate now assigns Codex the full preparation round trip, including preview/cancel/apply and reconciliation. Proposed fields/endpoints remain labeled proposed until implemented; compatibility services retain their existing contracts.
 
 ### Verification plan
 
@@ -309,14 +309,14 @@ Provisional outputs are the fitted model and preprocessing pipeline, input schem
 
 Prepare a local ML Cycle Summary containing the problem, lineage, configuration, chosen candidate, metrics, limitations, and artifact references. Preview and export are useful initially. Context Ledger and AI Chat publishing need explicit adapter contracts and user action in a later approved integration; do not show dead or pretend-connected publish controls.
 
-### Existing Source: Reuse And Gaps
+### Original Source Review: Reuse And Gaps
 
-Source inspection informs this plan; it does not certify the current UI.
+The following table preserves the planning baseline, before the five-task implementation. It is not current capability or remaining-work status; consult the implemented contract and execution status for those.
 
 | Existing surface | Planning consequence |
 | --- | --- |
-| backend/ml_studio contracts, service, repository, execution, evaluation, and artifacts modules | Audit and reuse applicable foundations. Current task support is regression/classification; other tasks need new contracts and evaluation paths. |
-| /api/ml-studio/v1 snapshot, experiment version, assessment, run/event/cancel, evaluation/evidence, comparison, and candidate routes | Useful foundations exist. Draft CRUD/list/duplicate and batch prediction/export were not found in this route surface; design and verify them before UI assignment. |
+| backend/ml_studio contracts, service, repository, execution, evaluation, and artifacts modules | At planning time, regression/classification foundations needed expansion to the other tasks and their evaluation paths. |
+| /api/ml-studio/v1 snapshot, draft CRUD/delete/duplicate/workflow, preparation, experiment version, assessment, run/event/cancel, evaluation/evidence, comparison, and candidate routes | Useful foundations exist, including resumable drafts. Nomination, final evaluation, selection, batch prediction/export and summary extensions still require implementation and verification. |
 | Immutable versions, runs, candidates, and artifact metadata | These are not proof of resumable drafts or reloadable fitted-model exports. Verify persistence and artifact contents independently. |
 | Current evaluation/comparison rules | Reconcile automatic winner selection, compatible comparisons, explicit nomination, and untouched final evaluation. |
 | TopRibbon static stage array/active index and EvidenceInspector static truth presentation | A visible stage ribbon is not a functional workflow. Replace static stage selection with actual state and task-specific evidence. |
@@ -326,9 +326,9 @@ Earlier backend test results do not establish that browser assessment submits th
 
 ## Delivery Control And Definition Of Done
 
-One active gate and one implementation handoff at a time. Frontend owner is not reassigned by this plan: Claude Code is an option the user raised, not an agent already dispatched. Codex owns backend, contracts, planning, and integration review; the chosen frontend owner owns React/CSS. No frontend edits by Codex are authorized here.
+One active gate governs executable work. The user's 2026-10-04 assignment explicitly authorized Codex backend and frontend implementation, including React/CSS and the complete UI makeover. No specialist agent is dispatched by this document. Engineering delivery is recorded in status; final browser acceptance remains separate.
 
-At each meaningful visible step, return changed files and focused verification evidence, then have Codex review before continuing. Check in with the user with what visibly changed and what remains. Do not batch the full rebuild into one frontend task. Follow repository restrictions on browser operation; browser acceptance remains in chat and belongs to the user.
+At each meaningful step Codex verifies and self-reviews the change, keeps gate/status aligned and continues through the authorized scope. Share concise progress updates without routine permission pauses. This is a full-stack completion effort with ordered steps, not an oversized specialist frontend handoff. Follow repository restrictions on browser operation; browser acceptance remains in chat and belongs to the user.
 
 Tests must cover successful transitions and blocked, stale, empty, cancelled, failed, and resumed states. Frontend evidence must distinguish source tests/builds from actual visual inspection. Backend readiness never equals frontend completion. Preserve user work, use safe patch edits, and stop on unexpected file shrinkage; never discard changes to make verification pass.
 

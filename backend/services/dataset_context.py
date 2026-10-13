@@ -293,6 +293,11 @@ def read_dataset_file(path_or_source: Any, filename: Optional[str] = None) -> pd
     source_name = _resolve_dataset_name(path_or_source, filename=filename)
     lower_name = source_name.lower()
 
+    if lower_name.endswith(".table.json"):
+        # Server-written preparation files retain types and values; do not run
+        # upload inference again over an explicitly cleaned dataset.
+        return pd.read_json(StringIO(_read_text_source(path_or_source)), orient="table")
+
     if lower_name.endswith(".csv"):
         return _read_csv_with_fallback(path_or_source, source_name)
     if lower_name.endswith((".xls", ".xlsx")):

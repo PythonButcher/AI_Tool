@@ -10,7 +10,7 @@ import './DashboardCanvas.css';
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
 function DashboardCanvas() {
-  const { dashboardState, dashboardItems, updateDashboardItemLayout } = useWindowContext();
+  const { dashboardState, dashboardItems, dashboardStorageError, updateDashboardItemLayout } = useWindowContext();
   const { cleanedData, fullData } = React.useContext(DataContext);
 
   const isEditMode = dashboardState.mode === 'edit';
@@ -46,6 +46,7 @@ function DashboardCanvas() {
 
   return (
     <div className={`dashboard-canvas-container ${isEditMode ? 'is-edit-mode' : 'is-view-mode'}`}>
+      {dashboardStorageError && <p role="alert">{dashboardStorageError}</p>}
       {!hasItems ? (
         <div className="dashboard-canvas__empty">
           <p>Your dashboard is empty.</p>

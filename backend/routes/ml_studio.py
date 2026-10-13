@@ -5,9 +5,10 @@ from __future__ import annotations
 import hashlib
 import json
 from pathlib import Path
+from io import BytesIO
 from typing import Any
 
-from flask import Blueprint, current_app, jsonify, request
+from flask import Blueprint, current_app, jsonify, request, send_file
 from pandas.api.types import (
     is_bool_dtype,
     is_datetime64_any_dtype,
@@ -18,6 +19,7 @@ from pandas.api.types import (
 from backend.ml_studio.artifacts import ManagedArtifactStore
 from backend.ml_studio.execution import AsyncRunExecutor
 from backend.ml_studio.repository import MLStudioRepository
+from backend.ml_studio.preparation import DraftPreparationService
 from backend.ml_studio.service import MLStudioService, MLStudioServiceError
 from backend.repositories.source_workspace_repository import get_workspace
 from backend.repositories.source_workspace_repository import get_source
@@ -162,7 +164,7 @@ def get_ml_studio_service() -> MLStudioService:
         if verified.sha256 != metadata["sha256"] or verified.size_bytes != metadata["size_bytes"]:
             raise ValueError("artifact metadata mismatch")
 
-    service = MLStudioService(repository, resolver, verify_artifact, run_data_resolver=run_data_resolver, workspace_resolver=get_workspace)
+    service = MLStudioService(repository, resolver, verify_artifact, run_data_resolver=run_data_resolver, workspace_resolver=get_workspace, artifact_store=artifact_store)
     service.recover_incomplete_runs()
     executor = AsyncRunExecutor(
         service.execute_run,
@@ -176,6 +178,66 @@ def get_ml_studio_service() -> MLStudioService:
 
 def _error_response(error: MLStudioServiceError):
     return jsonify({"error": error.to_dict()}), error.status_code
+
+
+def get_draft_preparation_service() -> DraftPreparationService:
+    """Inject the catalog boundary into framework-independent ML orchestration."""
+    from backend.repositories.source_workspace_repository import get_preparation_commit
+    from backend.services.workspace_cleaning import clean_workspace
+    from backend.services.workspace_context import WorkspaceContextError
+
+    def cleaner(*args, **kwargs):
+        try:
+            return clean_workspace(*args, **kwargs)
+        except WorkspaceContextError as exc:
+            status = 409 if exc.code in {"workspace_version_conflict", "source_version_conflict", "source_not_in_workspace", "preparation_relationships_unsupported"} else 404 if exc.code == "workspace_not_found" else 422 if exc.code == "governance_blocked" else 400
+            raise MLStudioServiceError(exc.code, str(exc), "Reload the governed workspace and preparation context.", status_code=status) from exc
+
+    service = get_ml_studio_service()
+
+    def quality(snapshot):
+        from backend.ml_studio.preparation_quality import inspect_quality
+        dataframe, version, fingerprints = _resolve_run_data(snapshot)
+        expected = {item.source_id: (item.content_fingerprint, item.schema_version) for item in snapshot.source_fingerprints}
+        if version != snapshot.workspace_version or fingerprints != expected:
+            raise MLStudioServiceError("snapshot_identity_stale", "The dataset changed during inspection.",
+                                       "Reload the saved dataset.", status_code=409)
+        return inspect_quality(dataframe)
+
+    return DraftPreparationService(service, service._repository, cleaner, get_preparation_commit, quality)
+
+
+@ml_studio_bp.route("/drafts/<experiment_id>/preparation", methods=["GET", "POST"])
+def draft_preparation(experiment_id):
+    try:
+        service = get_draft_preparation_service()
+        workspace_id = request.args.get("workspace_id")
+        if request.method == "GET":
+            return jsonify(service.options(experiment_id, workspace_id)), 200
+        return jsonify(service.begin(experiment_id, workspace_id, request.headers.get("If-Match"), request.headers.get("Idempotency-Key"), request.get_json(silent=True))), 200
+    except MLStudioServiceError as exc:
+        return _error_response(exc)
+    except Exception:
+        return _unexpected_error()
+
+
+@ml_studio_bp.route("/drafts/<experiment_id>/preparation/<operation_id>", methods=["GET", "POST"])
+def draft_preparation_operation(experiment_id, operation_id):
+    try:
+        service = get_draft_preparation_service()
+        workspace_id = request.args.get("workspace_id")
+        if request.method == "GET":
+            return jsonify({"preparation": service._operation(operation_id, experiment_id, workspace_id)}), 200
+        payload = request.get_json(silent=True)
+        if not isinstance(payload, dict) or set(payload) != {"action"} or not isinstance(payload["action"], str):
+            raise service._invalid("Supply exactly one action: preview, apply, or cancel.")
+        if payload["action"] == "preview":
+            return jsonify(service.preview(operation_id, experiment_id, workspace_id)), 200
+        return jsonify(service.finish(operation_id, experiment_id, workspace_id, request.headers.get("If-Match"), payload["action"])), 200
+    except MLStudioServiceError as exc:
+        return _error_response(exc)
+    except Exception:
+        return _unexpected_error()
 
 
 def _unexpected_error():
@@ -201,13 +263,16 @@ def drafts():
         return _unexpected_error()
 
 
-@ml_studio_bp.route("/drafts/<experiment_id>", methods=["GET", "PATCH"])
+@ml_studio_bp.route("/drafts/<experiment_id>", methods=["GET", "PATCH", "DELETE"])
 def draft(experiment_id):
     try:
         service = get_ml_studio_service()
         workspace_id = request.args.get("workspace_id")
         if request.method == "GET":
             return jsonify(service.get_draft(experiment_id, workspace_id)), 200
+        if request.method == "DELETE":
+            service.delete_draft(experiment_id, workspace_id, request.headers.get("If-Match"))
+            return "", 204
         return jsonify(service.update_draft(experiment_id, workspace_id, request.headers.get("If-Match"), request.get_json(silent=True))), 200
     except MLStudioServiceError as exc:
         return _error_response(exc)
@@ -235,10 +300,188 @@ def draft_workflow(experiment_id):
         return _unexpected_error()
 
 
+@ml_studio_bp.route("/drafts/<experiment_id>/assessment", methods=["POST"])
+def assess_draft(experiment_id):
+    try:
+        return jsonify(get_ml_studio_service().assess_draft(experiment_id, request.args.get("workspace_id"),
+                       request.headers.get("If-Match"), request.get_json(silent=True))), 200
+    except MLStudioServiceError as exc:
+        return _error_response(exc)
+    except Exception:
+        return _unexpected_error()
+
+
 @ml_studio_bp.route("/snapshots", methods=["POST"])
 def create_snapshot():
     try:
         return jsonify({"snapshot": get_ml_studio_service().create_snapshot(request.get_json(silent=True))}), 201
+    except MLStudioServiceError as exc:
+        return _error_response(exc)
+    except Exception:
+        return _unexpected_error()
+
+
+@ml_studio_bp.route("/drafts/<experiment_id>/runs", methods=["GET", "POST"])
+def draft_runs(experiment_id):
+    from backend.ml_studio.workflow_execution import submit_draft_run
+    try:
+        service = get_ml_studio_service()
+        workspace_id = request.args.get("workspace_id")
+        if request.method == "POST":
+            value, created = submit_draft_run(service, experiment_id, workspace_id, request.headers.get("If-Match"),
+                request.headers.get("Idempotency-Key"), request.get_json(silent=True))
+            return jsonify({"run": value, "created": created}), 201 if created else 200
+        service.get_draft(experiment_id, workspace_id)
+        runs = service._repository.list_runs(experiment_id=f"studio-{experiment_id}", workspace_id=workspace_id, run_purpose="development_comparison", limit=20)
+        return jsonify({"runs": [{key: value for key, value in run.items() if key != "evaluation_result"} for run in runs]}), 200
+    except MLStudioServiceError as exc:
+        return _error_response(exc)
+    except Exception:
+        return _unexpected_error()
+
+
+@ml_studio_bp.route("/drafts/<experiment_id>/runs/<run_id>", methods=["GET", "POST"])
+def draft_run(experiment_id, run_id):
+    from backend.ml_studio.workflow_execution import scoped_run
+    try:
+        service = get_ml_studio_service()
+        run = scoped_run(service, experiment_id, request.args.get("workspace_id"), run_id)
+        if request.method == "POST":
+            if request.get_json(silent=True) != {"action": "cancel"}:
+                raise MLStudioServiceError("run_action_invalid", "Supply the cancel action.", "Use {action: cancel} to request cancellation.")
+            run = service.cancel_run(run_id)
+        return jsonify({"run": run, "events": service.get_events(run_id, limit=100)}), 200
+    except MLStudioServiceError as exc:
+        return _error_response(exc)
+    except Exception:
+        return _unexpected_error()
+
+
+@ml_studio_bp.route("/drafts/<experiment_id>/review", methods=["GET"])
+def draft_review(experiment_id):
+    from backend.ml_studio.review import review_state
+    try:
+        return jsonify(review_state(get_ml_studio_service(), experiment_id, request.args.get("workspace_id"))), 200
+    except MLStudioServiceError as exc:
+        return _error_response(exc)
+    except Exception:
+        return _unexpected_error()
+
+
+@ml_studio_bp.route("/drafts/<experiment_id>/nominations", methods=["POST"])
+def draft_nomination(experiment_id):
+    from backend.ml_studio.review import nominate
+    try:
+        value = nominate(get_ml_studio_service(), experiment_id, request.args.get("workspace_id"), request.headers.get("If-Match"), request.get_json(silent=True))
+        return jsonify({"nomination": value}), 200
+    except MLStudioServiceError as exc:
+        return _error_response(exc)
+    except Exception:
+        return _unexpected_error()
+
+
+@ml_studio_bp.route("/drafts/<experiment_id>/nominations/<nomination_id>/final-evaluation", methods=["POST"])
+def draft_final_evaluation(experiment_id, nomination_id):
+    from backend.ml_studio.review import submit_final_evaluation
+    try:
+        value = submit_final_evaluation(get_ml_studio_service(), experiment_id, request.args.get("workspace_id"), nomination_id, request.get_json(silent=True))
+        return jsonify({"run": value}), 200
+    except MLStudioServiceError as exc:
+        return _error_response(exc)
+    except Exception:
+        return _unexpected_error()
+
+
+@ml_studio_bp.route("/drafts/<experiment_id>/selections", methods=["POST"])
+def draft_selection(experiment_id):
+    from backend.ml_studio.review import select_candidate
+    try:
+        service = get_ml_studio_service()
+        workspace_id = request.args.get("workspace_id")
+        value = select_candidate(service, experiment_id, workspace_id, request.headers.get("If-Match"), request.get_json(silent=True))
+        return jsonify({"selection": value, "workflow_state": service.get_draft(experiment_id, workspace_id)["workflow_state"]}), 200
+    except MLStudioServiceError as exc:
+        return _error_response(exc)
+    except Exception:
+        return _unexpected_error()
+
+
+def _verified_download(content, metadata, filename):
+    response = send_file(BytesIO(content), mimetype=metadata["media_type"], download_name=filename,
+        as_attachment=True, etag=metadata["sha256"].removeprefix("sha256:"))
+    response.headers["X-Artifact-SHA256"] = metadata["sha256"]
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["Cache-Control"] = "private, no-store"
+    return response
+
+
+@ml_studio_bp.route("/drafts/<experiment_id>/selections/<selection_id>", methods=["GET"])
+def selected_candidate_details(experiment_id, selection_id):
+    from backend.ml_studio.outputs import selection_details
+    try:
+        return jsonify(selection_details(get_ml_studio_service(), experiment_id, request.args.get("workspace_id"), selection_id)), 200
+    except MLStudioServiceError as exc:
+        return _error_response(exc)
+    except Exception:
+        return _unexpected_error()
+
+
+@ml_studio_bp.route("/drafts/<experiment_id>/selections/<selection_id>/exports", methods=["POST"])
+def prepare_selected_exports(experiment_id, selection_id):
+    from backend.ml_studio.outputs import prepare_exports
+    try:
+        return jsonify(prepare_exports(get_ml_studio_service(), experiment_id, request.args.get("workspace_id"), selection_id, request.get_json(silent=True))), 200
+    except MLStudioServiceError as exc:
+        return _error_response(exc)
+    except Exception:
+        return _unexpected_error()
+
+
+@ml_studio_bp.route("/drafts/<experiment_id>/selections/<selection_id>/exports/<kind>", methods=["GET"])
+def selected_export_download(experiment_id, selection_id, kind):
+    from backend.ml_studio.outputs import download_export
+    try:
+        descriptor, content = download_export(get_ml_studio_service(), experiment_id, request.args.get("workspace_id"), selection_id, kind)
+        return _verified_download(content, descriptor["artifact"], descriptor["filename"])
+    except MLStudioServiceError as exc:
+        return _error_response(exc)
+    except Exception:
+        return _unexpected_error()
+
+
+@ml_studio_bp.route("/drafts/<experiment_id>/selections/<selection_id>/batch-predictions", methods=["POST"])
+def selected_batch_prediction(experiment_id, selection_id):
+    from backend.ml_studio.outputs import predict_batch, MAX_INPUT_BYTES
+    try:
+        if not request.is_json:
+            raise MLStudioServiceError("prediction_request_invalid", "Prediction input must be JSON containing rows or CSV text.", "Use the selected model's prediction form.")
+        raw = request.stream.read(MAX_INPUT_BYTES + 1)
+        if len(raw) > MAX_INPUT_BYTES:
+            raise MLStudioServiceError("prediction_input_too_large", "Prediction input exceeds 2 MB.", "Choose a smaller batch.", status_code=413)
+        try:
+            payload = json.loads(raw)
+        except (ValueError, UnicodeError) as exc:
+            raise MLStudioServiceError("prediction_request_invalid", "The prediction request is not valid JSON.", "Provide rows or CSV text using the selected schema.") from exc
+        receipt = predict_batch(get_ml_studio_service(), experiment_id, request.args.get("workspace_id"), selection_id, request.headers.get("Idempotency-Key"), payload)
+        return jsonify({"prediction": receipt}), 200
+    except MLStudioServiceError as exc:
+        if hasattr(exc, "validation_issues"):
+            return jsonify({"error": exc.error.to_dict(), "validation_issues": exc.validation_issues}), exc.status_code
+        return _error_response(exc)
+    except Exception:
+        return _unexpected_error()
+
+
+@ml_studio_bp.route("/drafts/<experiment_id>/selections/<selection_id>/batch-predictions/<prediction_id>/download", methods=["GET"])
+def selected_prediction_download(experiment_id, selection_id, prediction_id):
+    from backend.ml_studio.outputs import selection_for
+    try:
+        service = get_ml_studio_service()
+        selection_for(service, experiment_id, request.args.get("workspace_id"), selection_id)
+        receipt = service._repository.get_prediction_receipt(selection_id, prediction_id)
+        if receipt is None:
+            raise MLStudioServiceError("prediction_not_found", "The prediction output is unavailable in this selection.", "Choose a saved prediction batch.", status_code=404)
+        return _verified_download(service._artifact_store.read_verified(receipt["output_artifact"]), receipt["output_artifact"], "predictions.csv")
     except MLStudioServiceError as exc:
         return _error_response(exc)
     except Exception:
@@ -302,7 +545,7 @@ def submit_run():
 @ml_studio_bp.route("/runs", methods=["GET"])
 def list_runs():
     try:
-        return jsonify({"runs": get_ml_studio_service().list_runs(limit=request.args.get("limit", 100))}), 200
+        return jsonify({"runs": get_ml_studio_service().list_runs(limit=request.args.get("limit", 100), workspace_id=request.args.get("workspace_id"))}), 200
     except (MLStudioServiceError, TypeError, ValueError) as exc:
         if isinstance(exc, MLStudioServiceError):
             return _error_response(exc)

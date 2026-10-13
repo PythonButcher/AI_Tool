@@ -898,6 +898,10 @@ function CanvasContainer({
       isExternalWindow={isAiChatPoppedOut && !!aiChatPopupRoot}
     >
       <AIShell
+        onOpenDashboard={() => {
+          onDestinationSelect?.(DESTINATIONS.DASHBOARDS);
+          handleMinimizeAiChat();
+        }}
         setShowAIChart={setShowAIChart}
         setAiChartType={setAiChartType}
         setAiChartData={setAiChartData}

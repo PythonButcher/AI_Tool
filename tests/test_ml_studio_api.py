@@ -154,6 +154,19 @@ class MLStudioApiTests(unittest.TestCase):
         self.assertEqual(unsafe.status_code, 400)
         self.assertEqual(self.client.get(f"/api/ml-studio/v1/drafts/{draft_id}/workflow?workspace_id=workspace-1").status_code, 200)
 
+    def test_delete_draft_requires_current_etag_and_hides_only_that_draft(self) -> None:
+        first = self.client.post("/api/ml-studio/v1/drafts", json={"workspace_id": "workspace-1"}).get_json()["draft"]
+        second = self.client.post("/api/ml-studio/v1/drafts", json={"workspace_id": "workspace-1"}).get_json()["draft"]
+        url = f"/api/ml-studio/v1/drafts/{first['experiment_id']}?workspace_id=workspace-1"
+        self.assertEqual(self.client.delete(url).get_json()["error"]["code"], "draft_revision_conflict")
+        self.assertEqual(self.client.delete(url, headers={"If-Match": "stale"}).status_code, 409)
+        self.assertEqual(self.client.delete(url.replace("workspace-1", "other"), headers={"If-Match": first["etag"]}).status_code, 404)
+        self.assertEqual(self.client.delete(url, headers={"If-Match": first["etag"]}).status_code, 204)
+        self.assertEqual(self.client.get(url).status_code, 404)
+        listed = self.client.get("/api/ml-studio/v1/drafts?workspace_id=workspace-1").get_json()["drafts"]
+        self.assertEqual([item["experiment_id"] for item in listed], [second["experiment_id"]])
+        self.assertEqual(listed[0]["etag"], second["etag"])
+
     def _create_snapshot(self) -> dict:
         response = self.client.post("/api/ml-studio/v1/snapshots", json=snapshot_request())
         self.assertEqual(response.status_code, 201, response.get_json())

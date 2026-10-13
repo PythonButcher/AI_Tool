@@ -1,26 +1,34 @@
 # Project Execution Status
 
-This file is the concise current truth for AI_Tool delivery.
+## Current Gate: AI Chat model routing
 
-## Current Gate: ML Studio Workspace-Safe Preparation
-
-- **Current Gate**: ML Studio Workspace-Safe Preparation
-- **Roadmap Phase**: Phase 13 — Machine Learning Studio Foundation
-- **Phase State**: `NOT STARTED`
-- **What This State Means**: Step 4 is prepared under REVIEW_ONLY authority. The user accepted duplication and explicitly requested preparation without implementation. No Step 4 backend or frontend work is authorized.
-- **Current Milestone**: Step 1: Authorize the workspace-safe cleaning boundary
+- **Current Gate**: AI Chat model routing
+- **Roadmap Phase**: Phase 14 — AI Chat Business Workspace
+- **Phase State**: `AWAITING USER ACCEPTANCE`
+- **What This State Means**: Model routing and the composer selector are engineering-complete. Live provider access/quality and final visual acceptance remain unverified.
+- **Current Milestone**: Engineering verification complete
 - **Automatic Continuation**: `WAIT_FOR_USER`
 - **Current Owner**: User
-- **Backend Readiness**: `backend_not_ready`
-- **Frontend Readiness**: `blocked_contract_and_api_first`
-- **Next Action**: Wait for a direct user instruction to begin the first backend assignment in `project_docs/active/active_gate/README.md`.
-- **Required Action**: Establish workspace-scoped cleaning identity and commit receipts before connecting ML Studio preparation UI.
+- **Backend Readiness**: `backend_contract_ready`
+- **Frontend Readiness**: `backend_contract_ready`
+- **Next Action**: User tries Auto, Quick and Deep analysis and provides feedback in chat.
+- **Required Action**: Await user direction; model calls use the deployment's server API key. No live paid calls or browser operations were performed during verification.
 - **Active Gate**: `project_docs/active/active_gate/README.md`
 - **Authorization Record**: `project_docs/active/status/phase_authorization.json`
-- **Roadmap**: `project_docs/active/ml_studio/README.md` — Build Order, with clearly named Steps 1–13
-- **Active Handoff**: None; backend prerequisites must be established first.
-- **Latest Verification**: Source inspection found identity-checked snapshots/assessments, global-state manual cleaning, browser-generated recipes, and an in-memory apply callback without persisted draft return context. The Step 4 roadmap records the ordered backend and frontend assignments; no runtime verification was performed for Step 4.
+- **Roadmap**: `project_docs/active/ai_chat/README.md`
+- **Active Handoff**: None. Codex frontend implementation is explicitly authorized for this assignment.
+- **Latest Verification**: Model routing: 36 backend tests and 27 AI Chat frontend tests passed, including provider failure, governance, route selection, grounded-result preservation, per-chat preferences and retry isolation. Changed Python compilation, scoped ESLint, CSS parsing, production build, repository CI, 28 hook tests, 7 policy tests and whitespace checks passed. Provider calls were mocked. Existing unrelated build warnings remain; live API quality/access and browser acceptance are unverified.
+
+## Preserved Interface Verification
+
+The unified AI Chat header, larger controls, wider conversation, optional sidebar, composer and results are engineering-complete. Its 22 focused frontend tests, scoped ESLint, 46 backend tests and Python compilation passed. The shared production build includes its final source. ML Studio's home and learning experience remains awaiting user acceptance. No AI Chat browser verification or user acceptance occurred.
+
+## Preserved ML Studio State
+
+ML Studio bulk preparation and full editor remain engineering-complete and **awaiting user acceptance**, without browser acceptance. The 2026-10-08 evidence remains: 96 frontend tests, 65 focused backend tests, changed Python compilation, frontend production build, CI harness, 28 hook tests, 7 policy tests and whitespace checks passed. Build warnings were pre-existing; Jest/hook fixtures needed execution outside the restricted sandbox. The current assignment changes only the home experience.
+
+The [ML Studio contract](../contracts/ml_studio.md) retains capability limitations. Managed uploads remain intact and ignored. The [configuration proposal](../future/codex/codex_configuration_redesign.md) remains deferred. Python tests use `PYTHONPATH=.codex_tmp_py;.codex_tmp_py/site-packages`.
 
 ## Completion Rule
 
-Preparation does not authorize implementation. Codex acts next only after the user authorizes the first backend assignment. The accepted autosave slice still has unverified in-flight navigation and automatic retry behavior; it is not reopened by Step 4 preparation.
+Verify routing decisions, provider payloads, governance boundaries, failure fallback, per-chat selection and grounded-result preservation; run focused tests and production build. Final visual acceptance belongs to the user in chat.

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ast
 import operator
+import re
 from typing import Any, Dict, List, Optional, Sequence
 
 import pandas as pd
@@ -82,19 +83,68 @@ class MetricResolver:
             resolved_model,
             dataframe,
         )
-        all_filters = [*metric_filters, *request_filters]
-        filtered_df = MetricResolver._apply_filters(dataframe, all_filters)
+        all_filters = []
+        for item in [*metric_filters, *request_filters]:
+            if item not in all_filters:
+                all_filters.append(item)
+        execution_filters = [dict(item) for item in all_filters]
+        temporal_fields = {item.get("field") for item in resolved_model.get("dimensions", [])
+                           if item.get("semantic_kind") == "temporal" or item.get("data_type") in {"date", "datetime", "timestamp"}}
+        for item in execution_filters:
+            if item["field"] in temporal_fields and item["operator"] in {"gt", "gte", "lt", "lte"}:
+                try:
+                    dataframe[item["field"]] = pd.to_datetime(dataframe[item["field"]], errors="raise", utc=True)
+                    # A date-only inclusive end means the entire calendar day,
+                    # including timestamped rows after midnight.
+                    if item["operator"] == "lte" and re.fullmatch(r"\d{4}-\d{2}-\d{2}", str(item["value"])):
+                        item.update(operator="lt", value=pd.Timestamp(item["value"], tz="UTC") + pd.Timedelta(days=1))
+                except (ValueError, TypeError) as exc:
+                    raise MetricResolutionError(f"Cannot apply the date filter to '{item['field']}'.") from exc
+        filtered_df = MetricResolver._apply_filters(dataframe, execution_filters)
+
+        # Calendar buckets use separate execution columns: a date-based measure
+        # (for example distinct order dates) must retain its original values.
+        execution_df = filtered_df.copy()
+        execution_groups = []
+        group_fields = {}
+        for index, definition in enumerate(group_defs):
+            execution_group = dict(definition)
+            grain = definition.get("granularity")
+            if grain:
+                field = definition["field"]
+                if pd.api.types.is_numeric_dtype(filtered_df[field]) and not filtered_df.empty:
+                    raise MetricResolutionError("A numeric date encoding needs an explicit date conversion before a trend.", code="invalid_trend_dates")
+                dates = pd.to_datetime(filtered_df[field], errors="coerce", utc=True)
+                if dates.isna().any():
+                    raise MetricResolutionError(
+                        f"'{field}' contains missing or invalid dates. Clean them before requesting a trend.",
+                        code="invalid_trend_dates",
+                    )
+                key = f"__calendar_group_{index}"
+                while key in execution_df.columns:
+                    key += "_"
+                formats = {"day": "%Y-%m-%d", "month": "%Y-%m", "year": "%Y"}
+                if grain == "quarter":
+                    buckets = dates.dt.year.astype(str) + "-Q" + dates.dt.quarter.astype(str)
+                else:
+                    buckets = dates.dt.strftime(formats[grain])
+                execution_df[key] = buckets
+                execution_group["field"] = key
+                group_fields[key] = field
+            execution_groups.append(execution_group)
 
         result = MetricResolver._execute_metric(
-            dataframe=filtered_df,
+            dataframe=execution_df,
             metric=resolved_metric,
-            group_defs=group_defs,
+            group_defs=execution_groups,
             limit=limit,
             sort=sort,
         )
 
         execution = result.pop("execution")
         rows = result["rows"]
+        for row in rows:
+            row["group"] = {group_fields.get(key, key): value for key, value in row.get("group", {}).items()}
         summary_value = result["summary"]["value"]
 
         return {
@@ -195,6 +245,13 @@ class MetricResolver:
             if field_name not in dataframe.columns:
                 raise MetricResolutionError(f"Grouping field '{field_name}' does not exist in the dataset.")
 
+            grain = item.get("granularity") if isinstance(item, dict) else None
+            if grain:
+                if grain not in {"day", "month", "quarter", "year"}:
+                    raise MetricResolutionError("Time granularity must be day, month, quarter, or year.")
+                if definition.get("semantic_kind") != "temporal" and definition.get("data_type") not in {"date", "datetime", "timestamp"}:
+                    raise MetricResolutionError("Calendar grouping requires a temporal dimension.")
+
             resolved.append({
                 "id": definition.get("id"),
                 "name": definition.get("name") or field_name,
@@ -202,6 +259,7 @@ class MetricResolver:
                 "field": field_name,
                 "semantic_kind": definition.get("semantic_kind"),
                 "data_type": definition.get("data_type"),
+                **({"granularity": grain} if grain else {}),
             })
 
         return resolved
@@ -346,7 +404,10 @@ class MetricResolver:
                 coerced = pd.to_numeric(pd.Series([value]), errors="coerce").iloc[0]
                 return value if pd.isna(coerced) else coerced
             if pd.api.types.is_datetime64_any_dtype(series):
-                coerced = pd.to_datetime(pd.Series([value]), errors="coerce").iloc[0]
+                timezone = series.dt.tz
+                coerced = pd.to_datetime(pd.Series([value]), errors="coerce", utc=timezone is not None).iloc[0]
+                if timezone is not None and not pd.isna(coerced):
+                    coerced = coerced.tz_convert(timezone)
                 return value if pd.isna(coerced) else coerced
         except Exception:
             return value

@@ -1,11 +1,17 @@
-import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
 import {
   FaChartBar,
+  FaChartLine,
+  FaArrowUp,
+  FaArrowRight,
+  FaBars,
+  FaCommentAlt,
+  FaRedo,
   FaCheckCircle,
   FaChevronRight,
   FaCircle,
-  FaCloud,
+  FaChevronDown,
   FaDatabase,
   FaExclamationTriangle,
   FaExternalLinkAlt,
@@ -13,17 +19,17 @@ import {
   FaFilePdf,
   FaInfoCircle,
   FaLayerGroup,
-  FaPaperPlane,
   FaPlus,
-  FaRobot,
   FaShieldAlt,
-  FaTerminal,
+  FaTimes,
   FaThumbtack,
-  FaTools,
 } from 'react-icons/fa';
 import {
-  Avatar,
   Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   Chip,
   IconButton,
   TextField,
@@ -38,6 +44,12 @@ import { detectToken, extractTokens } from '../../utils/mentionUtils';
 import { AICommands } from '../workflow/AiCommandBlock';
 import { generateAiResultPdf } from '../../utils/aiResultPdfExport';
 import AICharts from './AICharts';
+import DashboardDraft from './DashboardDraft';
+import ChatHistory from './ChatHistory';
+import useChatConversations from './useChatConversations';
+import { restoreConversation } from './chatConversations';
+import { buildChatSuggestions } from './chatSuggestions';
+import { canSaveResult, resultKey } from '../../utils/aiDashboardResults';
 import './AIShell.css';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
@@ -100,10 +112,10 @@ const TrustedResultCard = ({ biGrounding, analysisLineage }) => {
   const metricName = metric_definition?.label || metric_definition?.name;
 
   return (
-    <div className="ai-shell__trusted-result">
-      <div className="ai-shell__trusted-header">
-        <FaShieldAlt /> <span>BI Grounding</span>
-      </div>
+    <details className="ai-shell__trusted-result">
+      <summary className="ai-shell__trusted-header">
+        <FaShieldAlt /> <span>Source, metric and filters</span>
+      </summary>
       <div className="ai-shell__trusted-content">
         <div className="ai-shell__trusted-row">
           <span className="ai-shell__trusted-label">Dataset</span>
@@ -183,7 +195,7 @@ const TrustedResultCard = ({ biGrounding, analysisLineage }) => {
           </div>
         )}
       </div>
-    </div>
+    </details>
   );
 };
 
@@ -191,7 +203,7 @@ const TrustedResultCard = ({ biGrounding, analysisLineage }) => {
  * AI Chat keeps its established split-pane layout while returning to a focused
  * workflow: grounded answers, tables, charts, and conversational refinements.
  */
-function AIShell() {
+function AIChatConversation({ onOpenDashboard, conversation, conversations, storageError, onSnapshot, onNewChat, onSelectChat, onRenameChat, onDeleteChat, onResetChat, isSidebarOpen, setIsSidebarOpen }) {
   const {
     activeWorkspace,
     cleanedData,
@@ -201,18 +213,27 @@ function AIShell() {
     refreshSemanticModelFromDataset,
   } = useContext(DataContext);
   const { datasets = [] } = useContext(WarehouseContext);
-  const { addDashboardChart, addChart } = useWindowContext();
+  const { addDashboardResults, openDashboard, dashboardItems = [] } = useWindowContext();
 
-  const [userMessages, setUserMessages] = useState([]);
-  const [userInput, setUserInput] = useState('');
+  const dataScope = useMemo(() => ({ workspaceId: activeWorkspace?.workspace_id, version: activeWorkspace?.version, semanticModel, cleanedData, fullData }), [activeWorkspace?.workspace_id, activeWorkspace?.version, semanticModel, cleanedData, fullData]);
+  const [initial] = useState(() => restoreConversation(conversation, dataScope));
+  const [userMessages, setUserMessages] = useState(initial.messages);
+  const [userInput, setUserInput] = useState(initial.draft);
+  const [modelMode, setModelMode] = useState(initial.modelMode);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [governanceWarning, setGovernanceWarning] = useState(null);
-  const [awaitingCleanInstructions, setAwaitingCleanInstructions] = useState(false);
-  const [sessionState, setSessionState] = useState({ active_mode: 'explore' });
-  const [activeArtifact, setActiveArtifact] = useState(null);
-  const [isResultsPaneOpen, setIsResultsPaneOpen] = useState(true);
+  const [error, setError] = useState(initial.error);
+  const [governanceWarning, setGovernanceWarning] = useState(initial.governanceWarning);
+  const [awaitingCleanInstructions, setAwaitingCleanInstructions] = useState(initial.awaitingCleanInstructions);
+  const [sessionState, setSessionState] = useState(initial.sessionState);
+  const [activeArtifact, setActiveArtifact] = useState(initial.activeArtifact);
+  const [isResultsPaneOpen, setIsResultsPaneOpen] = useState(false);
   const [pinFeedbackIds, setPinFeedbackIds] = useState({});
+  const [failedRequest, setFailedRequest] = useState(initial.failedRequest);
+  const [notice, setNotice] = useState(initial.notice);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [chatAction, setChatAction] = useState(null);
+  const [isChatActionOpen, setIsChatActionOpen] = useState(false);
+  const [chatName, setChatName] = useState('');
 
   const [mentionQuery, setMentionQuery] = useState(null);
   const [isMentionOpen, setIsMentionOpen] = useState(false);
@@ -220,20 +241,98 @@ function AIShell() {
   const [mentionStartIndex, setMentionStartIndex] = useState(-1);
   const [highlightedIndex, setHighlightedIndex] = useState(0);
 
+  const shellRef = useRef(null);
   const inputRef = useRef(null);
+  const resultsToggleRef = useRef(null);
+  const resultsHeadingRef = useRef(null);
   const chatBodyRef = useRef(null);
+  const requestRef = useRef(null);
+  const scopeRef = useRef(dataScope);
+  scopeRef.current = dataScope;
+  const previousScope = useRef(dataScope);
+
+  useEffect(() => {
+    onSnapshot({ messages: userMessages, draft: userInput, modelMode, sessionState, activeArtifact, sourceScope: dataScope,
+      awaitingCleanInstructions, failedRequest, error, governanceWarning, notice });
+  }, [onSnapshot, userMessages, userInput, modelMode, sessionState, activeArtifact, dataScope,
+    awaitingCleanInstructions, failedRequest, error, governanceWarning, notice]);
+
+  useEffect(() => { inputRef.current?.focus(); }, []);
+
+  const navigationSnapshot = () => {
+    const pending = requestRef.current;
+    pending?.controller.abort();
+    requestRef.current = null;
+    return { messages: userMessages, draft: userInput || pending?.message || '', modelMode, sessionState, activeArtifact,
+      sourceScope: dataScope, awaitingCleanInstructions, failedRequest, error, governanceWarning,
+      notice: pending ? 'The pending request was stopped when you left this chat. Send your question again to continue.' : notice };
+  };
+
+  const startNewChat = () => onNewChat(navigationSnapshot(), conversation.id);
+  const selectChat = id => {
+    if (id !== conversation.id) onSelectChat(id, navigationSnapshot(), conversation.id);
+    else { setIsHistoryOpen(false); inputRef.current?.focus(); }
+  };
+  const prepareChatAction = (kind, chat = conversation) => {
+    setChatName(chat.title);
+    setChatAction({ kind, chat });
+    setIsChatActionOpen(true);
+  };
+  const applyChatAction = () => {
+    if (chatAction.kind === 'rename') onRenameChat(chatAction.chat.id, chatName);
+    else if (chatAction.kind === 'delete') onDeleteChat(chatAction.chat.id);
+    else onResetChat();
+    setIsChatActionOpen(false);
+  };
+
+  useEffect(() => {
+    if (isResultsPaneOpen) resultsHeadingRef.current?.focus();
+  }, [isResultsPaneOpen]);
+
+  const closeResults = () => {
+    setIsResultsPaneOpen(false);
+    resultsToggleRef.current?.focus();
+  };
+  const suggestions = useMemo(() => buildChatSuggestions(semanticModel), [semanticModel]);
+  const datasetLabel = sessionState.dataset_context?.dataset?.dataset_name
+    || activeWorkspace?.name || activeWorkspace?.workspace_name || semanticModel?.dataset?.name || 'No data selected';
+  const viewDashboard = () => {
+    openDashboard();
+    onOpenDashboard?.();
+  };
+
+  useEffect(() => {
+    if (previousScope.current !== dataScope) {
+      requestRef.current?.controller.abort();
+      requestRef.current = null;
+      setLoading(false);
+      setSessionState({ active_mode: 'explore' });
+      setAwaitingCleanInstructions(false);
+      setActiveArtifact(null);
+      setError(null);
+      setFailedRequest(null);
+      setGovernanceWarning(null);
+      setNotice('Data context changed. Your earlier results remain available; new questions use the selected data.');
+      previousScope.current = dataScope;
+    }
+  }, [dataScope]);
+
+  useEffect(() => () => {
+    requestRef.current?.controller.abort();
+    requestRef.current = null;
+  }, []);
 
   const connectionStatus = useMemo(() => {
-    const dataLoaded = (cleanedData?.length > 0) || (fullData?.length > 0);
+    const dataLoaded = Boolean(activeWorkspace?.workspace_id) || (cleanedData?.length > 0) || (fullData?.length > 0);
     return {
       semantic: semanticModel ? 'Active' : 'Standby',
       data: dataLoaded ? 'Connected' : 'Disconnected',
     };
-  }, [semanticModel, cleanedData, fullData]);
+  }, [activeWorkspace?.workspace_id, semanticModel, cleanedData, fullData]);
 
   useEffect(() => {
     if (chatBodyRef.current) {
-      chatBodyRef.current.scrollTo({
+      chatBodyRef.current.scrollTo?.({
         top: chatBodyRef.current.scrollHeight,
         behavior: 'smooth',
       });
@@ -328,7 +427,14 @@ function AIShell() {
     </Tooltip>
   );
 
-  const renderAnswerContent = (content = {}) => {
+  const renderAnswerContent = (content = {}, canRefine = true) => {
+    if (content.reason_code === 'analytics_clarification_required') {
+      return <div className="ai-shell__clarification">
+        <p>{content.message}</p>
+        {content.choices?.map(choice => <button key={choice.user_message} type="button" disabled={loading || !canRefine}
+          onClick={() => submitTurn({ message: choice.user_message })}>{choice.label}</button>)}
+      </div>;
+    }
     const metricLabel = content.metric?.label || content.metric?.name || content.fieldsUsed?.value;
     const summaryValue = content.summary?.value_formatted
       ?? content.summary?.value
@@ -399,6 +505,9 @@ function AIShell() {
           <div className="ai-shell__artifact-header">
             <span className="ai-shell__artifact-title"><FaCheckCircle /> Business result</span>
             <div className="ai-shell__artifact-header-actions">
+              {canSaveResult(artifact) && <Button size="small" onClick={() => saveResult(artifact)}>
+                {dashboardItems.some(item => item.sourceMetadata?.resultKey === resultKey(artifact)) ? 'On dashboard' : 'Save KPI'}
+              </Button>}
               {renderExportButton(artifact)}
               {!isInspector && inspectable && (
                 <IconButton size="small" onClick={() => handleInspect(artifact)} aria-label="Open result">
@@ -407,7 +516,7 @@ function AIShell() {
               )}
             </div>
           </div>
-          <div className="ai-shell__artifact-content">{renderAnswerContent(content)}</div>
+          <div className="ai-shell__artifact-content">{renderAnswerContent(content, artifact.scope === dataScope)}</div>
           <TrustedResultCard biGrounding={artifact.bi_grounding} analysisLineage={artifact.analysis_lineage} />
         </div>
       );
@@ -416,17 +525,17 @@ function AIShell() {
     if (!isInspector) {
       return (
         <div className="ai-shell__artifact-preview-container">
-          <div className="ai-shell__artifact-preview-link" onClick={() => handleInspect(artifact)}>
+          <div className="ai-shell__artifact-preview-link">
             <div className="ai-shell__preview-icon"><FaChartBar /></div>
-            <div className="ai-shell__preview-info">
+            <button type="button" className="ai-shell__preview-info" onClick={() => handleInspect(artifact)}>
               <Typography variant="caption" className="ai-shell__preview-type">Visualization</Typography>
               <Typography variant="body2" className="ai-shell__preview-title">
                 {artifact.title || content.title || content.explanation || `${content.chartType || 'Chart'} result`}
               </Typography>
-            </div>
+            </button>
             <div className="ai-shell__preview-actions">
               {renderExportButton(artifact, 'is-preview-export')}
-              <IconButton size="small" className="ai-shell__preview-action" aria-label="Open chart">
+              <IconButton size="small" className="ai-shell__preview-action" aria-label="Open chart" onClick={() => handleInspect(artifact)}>
                 <FaChevronRight />
               </IconButton>
             </div>
@@ -438,7 +547,7 @@ function AIShell() {
 
     return (
       <div className={`${baseClass} is-chart`}>
-        <div className="ai-shell__artifact-content" style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+        <div className="ai-shell__artifact-content">
           <div className="ai-shell__artifact-export-bar">
             <span>Export this BI result</span>
             {renderExportButton(artifact)}
@@ -450,39 +559,23 @@ function AIShell() {
                 variant="contained"
                 size="medium"
                 startIcon={<FaThumbtack />}
-                onClick={() => {
-                  addDashboardChart({
-                    type: content.chartType || 'Bar',
-                    mapping: content.chartData?.mapping || {},
-                    dataSourceMode: 'semantic',
-                    chartSpec: content.chartSpec,
-                  });
-                  const feedbackId = artifact.id || artifact.artifact_id || 'active-chart';
-                  setPinFeedbackIds((previous) => ({ ...previous, [feedbackId]: true }));
-                  setTimeout(() => {
-                    setPinFeedbackIds((previous) => ({ ...previous, [feedbackId]: false }));
-                  }, 2000);
-                }}
+                onClick={() => saveResult(artifact)}
+                disabled={!canSaveResult(artifact) || dashboardItems.some(item => item.sourceMetadata?.resultKey === resultKey(artifact))}
               >
-                {pinFeedbackIds[artifact.id || artifact.artifact_id || 'active-chart'] ? 'Pinned!' : 'Pin to Dashboard'}
+                {pinFeedbackIds[resultKey(artifact)] || dashboardItems.some(item => item.sourceMetadata?.resultKey === resultKey(artifact)) ? 'On dashboard' : 'Save to Dashboard'}
               </Button>
               <Button
                 variant="outlined"
                 size="medium"
                 startIcon={<FaChartBar />}
-                onClick={() => addChart({
-                  type: content.chartType || 'Bar',
-                  mapping: content.chartData?.mapping || {},
-                  dataSourceMode: 'semantic',
-                  chartSpec: content.chartSpec,
-                })}
+                onClick={viewDashboard}
               >
-                Open Chart Window
+                View Dashboard
               </Button>
             </div>
           )}
 
-          <AICharts aiChartType={content.chartType || 'Bar'} aiChartData={content.chartData} />
+          <div className="ai-shell__chart-canvas"><AICharts aiChartType={content.chartType || 'Bar'} aiChartData={content.chartData} /></div>
           {content.explanation && (
             <Typography variant="body2" sx={{ mt: 2, lineHeight: 1.7, opacity: 0.75 }}>
               {content.explanation}
@@ -507,10 +600,24 @@ function AIShell() {
     inputRef.current?.focus();
   };
 
+  const chooseData = () => {
+    // Keep the question intact when data is selected from a toolbar control.
+    const prefix = userInput.trimEnd();
+    const value = prefix.endsWith('@') ? prefix : `${prefix}${prefix ? ' ' : ''}@`;
+    setUserInput(value);
+    setMentionQuery('');
+    setMentionStartIndex(value.length - 1);
+    setMentionPosition({ top: -180, left: 0 });
+    setHighlightedIndex(0);
+    setIsMentionOpen(true);
+    inputRef.current?.focus();
+  };
+
   const handleInputChange = (event) => {
     const value = event.target.value;
     const cursorPosition = event.target.selectionStart;
     setUserInput(value);
+    setHighlightedIndex(0);
     const token = detectToken(value, cursorPosition);
 
     if (token !== null) {
@@ -524,14 +631,16 @@ function AIShell() {
     }
   };
 
-  const runCleanCommand = async (message, datasetContext, followUp = false) => {
+  const runCleanCommand = async (message, datasetContext, followUp = false, signal, isCurrent = () => true) => {
     const parts = message.split(' ');
     const instructions = followUp ? message : (parts.length > 1 ? parts.slice(1).join(' ') : null);
     const response = await axios.post(`${API_URL}/ai_cmd`, {
       command: '/clean',
       dataset: datasetContext,
       instructions,
-    });
+    }, { signal, timeout: 120000 });
+
+    if (!isCurrent()) return '';
 
     if (response.data.cleaned_data) {
       setCleanedData(response.data.cleaned_data);
@@ -552,184 +661,120 @@ function AIShell() {
     return 'The active data context is ready.';
   };
 
-  const handleSendMessage = async () => {
-    const message = userInput.trim();
-    if (!message || loading) return;
-
+  const submitTurn = async ({ message, previousState = sessionState, refinement, retry = false, requestModelMode = modelMode }) => {
+    message = message.trim();
+    if (!message || requestRef.current) return;
+    const controller = new AbortController();
+    const request = { controller, scope: dataScope, message };
+    requestRef.current = request;
+    const isCurrent = () => requestRef.current === request && scopeRef.current === request.scope;
     const tokens = extractTokens(message, datasets);
-    const datasetContext = resolveDatasetForNlp();
-    setUserInput('');
+    const biSessionState = buildBiSessionState(previousState);
     setLoading(true);
     setError(null);
+    setFailedRequest(null);
+    setNotice(null);
     setGovernanceWarning(null);
-    setUserMessages((previous) => [
-      ...previous,
-      { role: 'user', content: message, grounded: tokens.length > 0 },
-    ]);
+    if (!retry) {
+      setUserInput('');
+      setUserMessages(previous => [...previous, { role: 'user', content: message, scope: dataScope }]);
+    } else {
+      setUserInput(current => current === message ? '' : current);
+    }
 
     try {
-      if (AICommands.isCommand(message) && message.split(' ')[0] === '/clean') {
-        const reply = await runCleanCommand(message, datasetContext, false);
-        setUserMessages((previous) => [...previous, { role: 'assistant', content: reply, grounded: true }]);
+      if ((AICommands.isCommand(message) && message.split(' ')[0] === '/clean') || awaitingCleanInstructions) {
+        const reply = await runCleanCommand(message, resolveDatasetForNlp(), awaitingCleanInstructions, controller.signal, isCurrent);
+        if (isCurrent()) setUserMessages(previous => [...previous, { role: 'assistant', content: reply, scope: dataScope }]);
         return;
       }
-
-      if (awaitingCleanInstructions) {
-        const reply = await runCleanCommand(message, datasetContext, true);
-        setUserMessages((previous) => [...previous, { role: 'assistant', content: reply, grounded: true }]);
-        return;
-      }
-
-      const biSessionState = buildBiSessionState(sessionState);
-      const {
-        payloadDataset,
-        payloadSemanticModel,
-        datasetRef,
-      } = resolveRequestContext(biSessionState, tokens);
-
-      const hasWorkspaceContext = Boolean(activeWorkspace?.workspace_id);
-
+      const { payloadDataset, payloadSemanticModel, datasetRef } = resolveRequestContext(biSessionState, tokens);
       const response = await axios.post(`${API_URL}/api/decision/chat/turns`, {
-        workspace_id: activeWorkspace?.workspace_id,
+        workspace_id: tokens.length || datasetRef?.source === 'datahub' ? undefined : activeWorkspace?.workspace_id,
         user_message: message,
+        model_mode: requestModelMode,
         dataset: payloadDataset,
         semantic_model: payloadSemanticModel,
         dataset_ref: datasetRef,
         resolved_datasets: tokens,
-        requested_mode: (payloadDataset || datasetRef || hasWorkspaceContext) ? 'explore' : 'ask',
-        conversation_history: userMessages
-          .map(({ role, content }) => ({ role, content }))
-          .slice(-10),
+        requested_mode: (payloadDataset || datasetRef || activeWorkspace?.workspace_id) ? 'explore' : 'ask',
+        conversation_history: userMessages.filter(item => item.scope === dataScope)
+          .map(({ role, content, ai_commentary }) => ({ role, content, ...(ai_commentary ? { ai_commentary } : {}) })).slice(-10),
         session_state: biSessionState,
-      });
-
+        ...(refinement ? { analytics_refinement: refinement } : {}),
+      }, { signal: controller.signal, timeout: 120000 });
+      if (!isCurrent()) return;
       const data = response.data;
-      if (data.status !== 'success') {
-        throw new Error(data.error?.message || 'The BI query could not be completed.');
-      }
-
-      const biArtifacts = filterBiArtifacts(data.artifacts);
-      const responseEnteredDecisionMode = data.mode === 'decide'
-        || (Array.isArray(data.artifacts) && data.artifacts.some((artifact) => !BI_ARTIFACT_TYPES.has(artifact?.type)));
-      const assistantMessage = responseEnteredDecisionMode && biArtifacts.length === 0
-        ? 'Ask about a metric, segment, time period, comparison, table, or chart and I will analyze the active data.'
-        : (data.assistant_message || 'The BI query completed.');
+      if (data.status !== 'success') throw new Error(data.error?.message || 'The BI query could not be completed.');
       const nextSessionState = buildBiSessionState(data.session_state);
-
-      setUserMessages((previous) => [...previous, {
-        role: 'assistant',
-        content: assistantMessage,
-        artifacts: biArtifacts,
+      const withIdentity = artifact => ({ ...artifact, dataset_context: nextSessionState.dataset_context, scope: dataScope });
+      const biArtifacts = filterBiArtifacts(data.artifacts).map(withIdentity);
+      const draft = data.dashboard_draft ? {
+        ...data.dashboard_draft,
+        items: data.dashboard_draft.items.map(item => ({
+          ...item, ...(item.artifact ? { artifact: withIdentity(item.artifact) } : {}),
+        })),
+      } : null;
+      const verified = biArtifacts.some(artifact => artifact.bi_grounding?.metric_definition && !artifact.content?.reason_code);
+      setUserMessages(previous => [...previous, {
+        role: 'assistant', content: data.assistant_message || 'The BI query completed.',
+        ai_commentary: data.ai_commentary, model_routing: data.model_routing,
+        artifacts: biArtifacts, dashboard_draft: draft,
         suggested_actions: data.suggested_actions || [],
-        grounded: Boolean(payloadDataset || datasetRef || hasWorkspaceContext),
-        session_state: nextSessionState,
+        grounded: verified, session_state: nextSessionState, scope: dataScope,
       }]);
       setSessionState(nextSessionState);
-
       if (data.governance_readiness?.status === 'warning') {
-        setGovernanceWarning(
-          data.governance_readiness.reasons?.[0]?.message
-          || 'The active dataset has a quality warning that may affect this result.',
-        );
+        setGovernanceWarning(data.governance_readiness.reasons?.[0]?.message || 'The data has a quality warning that may affect this result.');
       }
-
-      const lastBiArtifact = biArtifacts[biArtifacts.length - 1];
-      if (lastBiArtifact) {
-        setActiveArtifact(lastBiArtifact);
-        setIsResultsPaneOpen(true);
-      }
-    } catch (requestError) {
-      const readinessMessage = requestError.response?.data?.governance_readiness?.reasons?.[0]?.message;
-      const apiErrorMessage = requestError.response?.data?.error?.message;
-      setError(readinessMessage || apiErrorMessage || requestError.message || 'Could not reach the analytics service.');
+      const latest = biArtifacts[biArtifacts.length - 1];
+      if (latest && !draft) setActiveArtifact(latest);
+    } catch (failure) {
+      if (!isCurrent() || controller.signal.aborted) return;
+      const detail = failure.response?.data;
+      setError(detail?.governance_readiness?.reasons?.[0]?.message || detail?.error?.message
+        || (failure.code === 'ECONNABORTED' ? 'This analysis took too long. Retry or ask a narrower question.' : 'Could not complete this analysis. Check your data connection and try again.'));
+      setFailedRequest({ message, previousState: biSessionState, refinement, scope: dataScope, requestModelMode });
+      setUserInput(current => current || message);
     } finally {
-      setLoading(false);
+      if (requestRef.current === request) {
+        requestRef.current = null;
+        setLoading(false);
+      }
     }
   };
 
-  const handleSuggestedAction = async (action, previousSessionState) => {
-    if (!action || !action.enabled || action.kind !== 'analytics_refinement' || !action.analytics_refinement || loading) return;
+  const handleSendMessage = () => submitTurn({ message: userInput });
 
-    const message = action.label;
-    const tokens = extractTokens(message, datasets);
-    setLoading(true);
-    setError(null);
-    setGovernanceWarning(null);
-    setUserMessages((previous) => [
-      ...previous,
-      { role: 'user', content: message, grounded: tokens.length > 0 },
-    ]);
+  const handleSuggestedAction = (action, previousSessionState) => {
+    if (action?.enabled && action.kind === 'analytics_refinement' && action.analytics_refinement) {
+      return submitTurn({ message: action.label, previousState: previousSessionState, refinement: action.analytics_refinement });
+    }
+  };
 
+  const stopRequest = () => {
+    const request = requestRef.current;
+    if (!request) return;
+    request.controller.abort();
+    requestRef.current = null;
+    setLoading(false);
+    setUserInput(current => current || request.message);
+    setNotice('Stopped waiting for this result. Edit your question or send it again.');
+  };
+
+  const saveResult = artifact => {
     try {
-      const biSessionState = buildBiSessionState(previousSessionState);
-      const {
-        payloadDataset,
-        payloadSemanticModel,
-        datasetRef,
-      } = resolveRequestContext(biSessionState, tokens);
-
-      const hasWorkspaceContext = Boolean(activeWorkspace?.workspace_id);
-
-      const response = await axios.post(`${API_URL}/api/decision/chat/turns`, {
-        workspace_id: activeWorkspace?.workspace_id,
-        user_message: message,
-        dataset: payloadDataset,
-        semantic_model: payloadSemanticModel,
-        dataset_ref: datasetRef,
-        resolved_datasets: tokens,
-        requested_mode: (payloadDataset || datasetRef || hasWorkspaceContext) ? 'explore' : 'ask',
-        conversation_history: userMessages
-          .map(({ role, content }) => ({ role, content }))
-          .slice(-10),
-        session_state: biSessionState,
-        analytics_refinement: action.analytics_refinement,
-      });
-
-      const data = response.data;
-      if (data.status !== 'success') {
-        throw new Error(data.error?.message || 'The BI query could not be completed.');
-      }
-
-      const biArtifacts = filterBiArtifacts(data.artifacts);
-      const responseEnteredDecisionMode = data.mode === 'decide'
-        || (Array.isArray(data.artifacts) && data.artifacts.some((artifact) => !BI_ARTIFACT_TYPES.has(artifact?.type)));
-      const assistantMessage = responseEnteredDecisionMode && biArtifacts.length === 0
-        ? 'Ask about a metric, segment, time period, comparison, table, or chart and I will analyze the active data.'
-        : (data.assistant_message || 'The BI query completed.');
-      const nextSessionState = buildBiSessionState(data.session_state);
-
-      setUserMessages((previous) => [...previous, {
-        role: 'assistant',
-        content: assistantMessage,
-        artifacts: biArtifacts,
-        suggested_actions: data.suggested_actions || [],
-        grounded: Boolean(payloadDataset || datasetRef || hasWorkspaceContext),
-        session_state: nextSessionState,
-      }]);
-      setSessionState(nextSessionState);
-
-      if (data.governance_readiness?.status === 'warning') {
-        setGovernanceWarning(
-          data.governance_readiness.reasons?.[0]?.message
-          || 'The active dataset has a quality warning that may affect this result.',
-        );
-      }
-
-      const lastBiArtifact = biArtifacts[biArtifacts.length - 1];
-      if (lastBiArtifact) {
-        setActiveArtifact(lastBiArtifact);
-        setIsResultsPaneOpen(true);
-      }
-    } catch (requestError) {
-      const readinessMessage = requestError.response?.data?.governance_readiness?.reasons?.[0]?.message;
-      const apiErrorMessage = requestError.response?.data?.error?.message;
-      setError(readinessMessage || apiErrorMessage || requestError.message || 'Could not reach the analytics service.');
-    } finally {
-      setLoading(false);
+      const result = addDashboardResults([{ artifact }]);
+      setError(null);
+      setPinFeedbackIds(previous => ({ ...previous, [resultKey(artifact)]: true }));
+      setNotice(result.added.length ? 'Result saved to your dashboard.' : 'This result is already on your dashboard.');
+    } catch (failure) {
+      setError(failure.message);
     }
   };
 
   const handleKeyDown = (event) => {
+    if (event.nativeEvent?.isComposing || event.isComposing) return;
     if (isMentionOpen) {
       if (event.key === 'Escape') {
         event.preventDefault();
@@ -753,7 +798,7 @@ function AIShell() {
         }
         if (event.key === 'Enter') {
           event.preventDefault();
-          handleMentionSelect(filteredDatasets[highlightedIndex].name);
+          handleMentionSelect(filteredDatasets[Math.min(highlightedIndex, filteredDatasets.length - 1)].name);
           setHighlightedIndex(0);
           return;
         }
@@ -767,79 +812,146 @@ function AIShell() {
   };
 
   return (
-    <div className="ai-shell">
-      <nav className="ai-shell__left-rail">
+    <div ref={shellRef} className={`ai-shell ${isResultsPaneOpen ? 'has-open-results' : ''}`}>
+      <header className="ai-shell__header">
+        <div className="ai-shell__header-left">
+          <Tooltip title={isSidebarOpen ? 'Hide sidebar for more chat space' : 'Show chat sidebar'}>
+            <button type="button" className="ai-shell__sidebar-toggle"
+              aria-label={isSidebarOpen ? 'Hide chat sidebar' : 'Show chat sidebar'}
+              aria-expanded={isSidebarOpen} aria-controls="ai-chat-navigation"
+              onClick={() => setIsSidebarOpen(open => !open)}><FaBars /></button>
+          </Tooltip>
+          <div className="ai-shell__brand-mark" aria-hidden="true"><FaLayerGroup /></div>
+          <div className="ai-shell__titles">
+            <h1 className="ai-shell__main-title">AI Chat <span>Business intelligence</span></h1>
+            <button type="button" className="ai-shell__conversation-title" aria-label="Show chat history" onClick={() => setIsHistoryOpen(true)}>
+              <span>{conversation.title}</span><FaChevronDown />
+            </button>
+          </div>
+        </div>
+        <div className="ai-shell__header-right">
+          <Tooltip title="Start a new chat">
+            <button type="button" className="ai-shell__header-action ai-shell__new-chat" aria-label="New chat" onClick={startNewChat}>
+              <FaPlus /><span>New chat</span>
+            </button>
+          </Tooltip>
+          <Tooltip title="Reset this chat and start fresh">
+            <span><button type="button" className="ai-shell__header-action ai-shell__reset-chat" aria-label="Reset current chat"
+              disabled={!userMessages.length && !userInput.trim()} onClick={() => prepareChatAction('reset')}><FaRedo /></button></span>
+          </Tooltip>
+          <button type="button" className="ai-shell__header-action ai-shell__dashboard-link" aria-label="Open dashboard" onClick={viewDashboard}>
+            <FaChartBar /><span>Dashboard</span><FaExternalLinkAlt className="ai-shell__external-icon" />
+          </button>
+          <button ref={resultsToggleRef} type="button" className={`ai-shell__header-action ${isResultsPaneOpen ? 'is-selected' : ''}`}
+            aria-label="Toggle Results Pane" aria-expanded={isResultsPaneOpen} aria-controls="ai-chat-results"
+            onClick={() => setIsResultsPaneOpen(open => !open)}>
+            <FaEye /><span>Results</span>{activeArtifact && <span className="ai-shell__result-dot" />}
+          </button>
+        </div>
+      </header>
+
+      <div className="ai-shell__body">
+      <nav id="ai-chat-navigation" className={`ai-shell__left-rail ${isSidebarOpen ? 'is-open' : 'is-collapsed'}`}
+        aria-label="Chat tools" aria-hidden={!isSidebarOpen} inert={!isSidebarOpen ? '' : undefined}>
+        <div className="ai-shell__rail-inner">
         <div className="ai-shell__rail-top">
+          <span className="ai-shell__rail-label">Workspace</span>
           <Tooltip title="AI Chat" placement="right">
-            <div className="ai-shell__rail-item is-active"><FaRobot /></div>
+            <button type="button" className="ai-shell__rail-item is-active" aria-label="Open chat history" onClick={() => setIsHistoryOpen(true)}><FaCommentAlt /><span>Chats</span></button>
           </Tooltip>
-          <Tooltip title="Data Connections" placement="right">
-            <div className="ai-shell__rail-item"><FaDatabase /></div>
+          <Tooltip title="Choose data" placement="right">
+            <button type="button" className="ai-shell__rail-item" aria-label="Choose data" onClick={chooseData}><FaDatabase /><span>Data</span></button>
           </Tooltip>
-          <Tooltip title="Custom Workflows" placement="right">
-            <div className="ai-shell__rail-item"><FaTools /></div>
+          <Tooltip title="Prepare a cleaning request" placement="right">
+            <button type="button" className="ai-shell__rail-item" aria-label="Clean Data" onClick={() => { setUserInput('/clean'); inputRef.current?.focus(); }}><FaShieldAlt /><span>Prepare</span></button>
           </Tooltip>
         </div>
+        <section className="ai-shell__sidebar-chats" aria-label="Recent chats">
+          <div className="ai-shell__sidebar-chat-heading"><span>Recent chats</span><button type="button" onClick={startNewChat} aria-label="Start another chat"><FaPlus /></button></div>
+          <ChatHistory conversations={conversations} activeId={conversation.id} onSelect={selectChat}
+            onRename={chat => prepareChatAction('rename', chat)} onDelete={chat => prepareChatAction('delete', chat)} />
+        </section>
         <div className="ai-shell__rail-bottom">
-          <Tooltip title="AI Settings" placement="right">
-            <div className="ai-shell__rail-item"><FaLayerGroup /></div>
+          <span className="ai-shell__rail-label">Your work</span>
+          <Tooltip title="Open dashboard" placement="right">
+            <button type="button" className="ai-shell__rail-item" aria-label="Go to dashboard" onClick={viewDashboard}><FaChartBar /><span>Dashboard</span></button>
           </Tooltip>
+          <Tooltip title="Show results" placement="right">
+            <button type="button" className="ai-shell__rail-item" aria-label="Show results" onClick={() => setIsResultsPaneOpen(true)}><FaEye /><span>Results</span></button>
+          </Tooltip>
+        </div>
         </div>
       </nav>
 
       <main className="ai-shell__workspace">
-        <header className="ai-shell__header">
-          <div className="ai-shell__header-left">
-            <Avatar className="ai-shell__avatar"><FaRobot /></Avatar>
-            <div className="ai-shell__titles">
-              <Typography variant="subtitle2" className="ai-shell__main-title">Business Intelligence Agent</Typography>
-              <div className="ai-shell__status-bar">
-                <span className="ai-shell__status-item">
-                  <FaCircle className={`ai-shell__indicator is-${connectionStatus.data.toLowerCase()}`} />
-                  {connectionStatus.data}
-                </span>
-                <span className="ai-shell__status-item">
-                  <FaCloud className={`ai-shell__indicator is-${connectionStatus.semantic.toLowerCase()}`} />
-                  Semantic {connectionStatus.semantic}
-                </span>
-              </div>
-            </div>
+        <details className="ai-shell__data-context">
+          <summary>
+            <span className="ai-shell__source-icon"><FaDatabase /></span>
+            <span className="ai-shell__source-name"><span>Working with</span><strong>{datasetLabel}</strong></span>
+            <span className="ai-shell__source-status"><FaCircle className={`ai-shell__indicator is-${connectionStatus.data.toLowerCase()}`} />{semanticModel?.metrics?.length || 0} metrics</span>
+            <FaChevronDown className="ai-shell__details-chevron" />
+          </summary>
+          <div className="ai-shell__data-details">
+          <p>Metrics: {semanticModel?.metrics?.map(item => item.label || item.name).join(', ') || 'Select data to see available metrics.'}</p>
+          <p>Breakdowns: {semanticModel?.dimensions?.map(item => item.label || item.field).join(', ') || 'No semantic dimensions loaded.'}</p>
+          {activeWorkspace?.workspace_id && <p>Queries use the active workspace model. Source relationships are validated by the server.</p>}
           </div>
-          <div className="ai-shell__header-right">
-            <IconButton onClick={() => setIsResultsPaneOpen((open) => !open)} size="small" aria-label="Toggle Results Pane">
-              <FaEye style={{ color: isResultsPaneOpen ? 'var(--text-primary)' : 'var(--text-secondary)' }} />
-            </IconButton>
-          </div>
-        </header>
+        </details>
 
-        <div className="ai-shell__conversation" ref={chatBodyRef}>
+        <div className={`ai-shell__conversation ${userMessages.length === 0 ? 'is-empty' : ''}`} ref={chatBodyRef} aria-label="Conversation">
+          {storageError && <div className="ai-shell__alert-bar" role="alert"><FaInfoCircle />{storageError}</div>}
           {userMessages.length === 0 && (
             <div className="ai-shell__welcome-hero">
-              <div className="ai-shell__hero-icon"><FaRobot /></div>
-              <Typography variant="h4" className="ai-shell__hero-title">Business Intelligence</Typography>
+              <div className="ai-shell__hero-eyebrow"><span className="ai-shell__hero-icon"><FaChartLine /></span>Your data, a little clearer</div>
+              <Typography component="h2" className="ai-shell__hero-title">What would you like<br />to understand?</Typography>
               <Typography variant="body1" className="ai-shell__hero-subtitle">
-                Ask plain-language questions about your data, compare business metrics, and create charts.
+                Explore a metric, spot a trend, or turn a question into a dashboard. Start with what matters to your business.
               </Typography>
-              <div className="ai-shell__hero-actions">
-                <Chip icon={<FaPlus />} label="Choose Dataset" onClick={() => setUserInput('@')} clickable />
-                <Chip icon={<FaChartBar />} label="Create Chart" onClick={() => setUserInput('Show ')} clickable />
-                <Chip icon={<FaShieldAlt />} label="Clean Data" onClick={() => setUserInput('/clean')} clickable />
-              </div>
+              {suggestions.length > 0 ? <>
+                <div className="ai-shell__section-label">A few places to start</div>
+                <div className="ai-shell__starter-grid" aria-label="Suggested business questions">
+                  {suggestions.map(question => {
+                    const kind = question.startsWith('Build') ? 'dashboard' : question.includes('monthly') ? 'trend' : question.includes('as a chart') ? 'breakdown' : 'metric';
+                    const label = { dashboard: 'Build a dashboard', trend: 'Follow a trend', breakdown: 'Compare a breakdown', metric: 'Explore a metric' }[kind];
+                    const QuestionIcon = { dashboard: FaLayerGroup, trend: FaChartLine, breakdown: FaChartBar, metric: FaDatabase }[kind];
+                    return <button key={question} type="button" aria-label={question} onClick={() => { setUserInput(question); inputRef.current?.focus(); }}>
+                      <span className="ai-shell__starter-heading"><QuestionIcon /><span>{label}</span><FaArrowRight /></span>
+                      <span className="ai-shell__starter-question">{question}</span>
+                    </button>;
+                  })}
+                </div>
+              </> : <div className="ai-shell__connect-card">
+                <FaDatabase /><div><strong>Start with your data</strong><p>Choose a dataset to ask questions in context.</p></div>
+                <button type="button" onClick={chooseData}>Choose Dataset <FaArrowRight /></button>
+              </div>}
             </div>
           )}
 
           {userMessages.map((message, index) => (
             <div key={`${message.role}-${index}`} className={`ai-shell__message-row is-${message.role}`}>
+              {message.role === 'assistant' && <div className="ai-shell__message-avatar" aria-hidden="true"><FaLayerGroup /></div>}
               <div className="ai-shell__message-card">
                 <div className="ai-shell__message-header">
-                  <span className="ai-shell__message-author">{message.role === 'user' ? 'You' : 'Agent'}</span>
+                  <span className="ai-shell__message-author">{message.role === 'user' ? 'You' : 'AI Chat'}</span>
                   {message.grounded && (
                     <span className="ai-shell__grounded-tag"><FaShieldAlt /> Grounded</span>
                   )}
                 </div>
                 <div className="ai-shell__message-content">{message.content}</div>
+                {message.model_routing && <p className="ai-shell__model-attribution" title={message.model_routing.reason}>
+                  {message.model_routing.status === 'completed'
+                    ? `${message.model_routing.selected_mode === 'deep' ? 'Deep analysis' : 'Quick'} · ${message.model_routing.model}`
+                    : message.model_routing.status === 'local' ? 'Built-in analysis · No model call' : message.model_routing.reason}
+                </p>}
+                {message.ai_commentary && <section className="ai-shell__ai-commentary" aria-label="AI explanation">
+                  <strong>AI explanation</strong>
+                  <div className="ai-shell__message-content">{message.ai_commentary}</div>
+                  <p>Interpretation may contain errors. Check the calculated results and source data.</p>
+                </section>}
 
-                {message.artifacts?.length > 0 && (
+                {message.dashboard_draft && <DashboardDraft draft={message.dashboard_draft} onAdd={addDashboardResults} onInspect={handleInspect} onOpenDashboard={viewDashboard} />}
+
+                {!message.dashboard_draft && message.artifacts?.length > 0 && (
                   <div className="ai-shell__artifact-container">
                     {message.artifacts.map((artifact, artifactIndex) => (
                       <React.Fragment key={artifact.artifact_id || artifact.id || artifactIndex}>
@@ -852,7 +964,7 @@ function AIShell() {
                 {message.suggested_actions?.length > 0 && (
                   <div className="ai-shell__suggested-actions">
                     {message.suggested_actions.map(action => {
-                      const isDisabled = !action.enabled;
+                      const isDisabled = !action.enabled || loading || message.scope !== dataScope;
                       const title = isDisabled ? action.disabled_reason || 'Action disabled' : '';
                       return (
                         <Tooltip key={action.action_id} title={title}>
@@ -880,15 +992,20 @@ function AIShell() {
             <div className="ai-shell__message-row is-assistant">
               <div className="ai-shell__message-card is-loading">
                 <div className="ai-shell__typing"><span /><span /><span /></div>
+                <span role="status">Analyzing your data…</span>
+                <button type="button" onClick={stopRequest}>Stop waiting</button>
               </div>
             </div>
           )}
           {governanceWarning && (
-            <div className="ai-shell__alert-bar" style={{ backgroundColor: '#fff3cd', color: '#856404' }}>
+            <div className="ai-shell__alert-bar is-warning">
               <FaExclamationTriangle /> {governanceWarning}
             </div>
           )}
-          {error && <div className="ai-shell__alert-bar"><FaInfoCircle /> {error}</div>}
+          {notice && <div className="ai-shell__notice" role="status">{notice}</div>}
+          {error && <div className="ai-shell__alert-bar" role="alert"><FaInfoCircle /> {error}
+            {failedRequest?.scope === dataScope && <button type="button" disabled={loading} onClick={() => submitTurn({ ...failedRequest, retry: true })}>Retry last question</button>}
+          </div>}
         </div>
 
         <div className="ai-shell__footer">
@@ -907,53 +1024,128 @@ function AIShell() {
               <TextField
                 inputRef={inputRef}
                 onKeyDown={handleKeyDown}
-                placeholder="Ask a business question, or type @ to choose data..."
+                placeholder="Ask a question about your business…"
+                inputProps={{ 'aria-label': 'Business question' }}
                 variant="standard"
                 fullWidth
                 value={userInput}
                 onChange={handleInputChange}
-                disabled={loading}
                 multiline
                 maxRows={6}
                 InputProps={{ disableUnderline: true }}
               />
+            </div>
+            <div className="ai-shell__composer-toolbar">
+              <div className="ai-shell__composer-tools">
+                <Tooltip title="Choose data without clearing your question">
+                  <button type="button" className="ai-shell__composer-tool" aria-label="Choose dataset for question" onClick={chooseData}><FaPlus /><span>Data</span></button>
+                </Tooltip>
+                <Tooltip title="Prepare a data cleaning request">
+                  <button type="button" className="ai-shell__composer-tool" aria-label="Prepare data cleaning question" onClick={() => { setUserInput('/clean'); inputRef.current?.focus(); }}><FaShieldAlt /><span>Clean</span></button>
+                </Tooltip>
+              </div>
+              <span className="ai-shell__keyboard-hint"><kbd>Enter</kbd> to send</span>
               <button
+                type="button"
                 className="ai-shell__send-btn"
                 onClick={handleSendMessage}
                 disabled={loading || !userInput.trim()}
                 aria-label="Send Message"
               >
-                {loading ? <div className="ai-shell__spinner" /> : <FaPaperPlane className="ai-shell__send-icon" />}
+                {loading ? <div className="ai-shell__spinner" /> : <><span>Send</span><FaArrowUp className="ai-shell__send-icon" /></>}
               </button>
             </div>
+            <div className="ai-shell__model-controls">
+              <label htmlFor="ai-chat-model-mode">Answer mode</label>
+              <select id="ai-chat-model-mode" value={modelMode} disabled={loading}
+                aria-describedby="ai-chat-model-hint" onChange={event => setModelMode(event.target.value)}>
+                <option value="auto">Auto</option>
+                <option value="quick">Quick</option>
+                <option value="deep">Deep analysis</option>
+              </select>
+              <span id="ai-chat-model-hint">{modelMode === 'deep' ? 'More detailed reasoning · May take longer · No web search'
+                : modelMode === 'quick' ? 'Brief explanations · Lower output budget'
+                  : 'Local calculations first · Models chosen to fit your question'}</span>
+            </div>
           </div>
+          <div className="ai-shell__composer-hint"><FaShieldAlt /><span>Answers grounded in your data. Review the details behind each result.</span></div>
         </div>
       </main>
 
-      <aside className={`ai-shell__results-pane ${isResultsPaneOpen ? 'is-open' : 'is-closed'}`}>
+      <aside id="ai-chat-results" aria-label="BI Results" hidden={!isResultsPaneOpen} className={`ai-shell__results-pane ${isResultsPaneOpen ? 'is-open' : 'is-closed'} ${activeArtifact ? 'has-result' : ''}`}>
         <div className="ai-shell__pane-header">
-          <Typography variant="overline" sx={{ fontWeight: 900, letterSpacing: '0.15em' }}>BI Results</Typography>
-          <IconButton onClick={() => setIsResultsPaneOpen(false)} size="small" aria-label="Close Results Pane">
-            <FaChevronRight />
+          <div><span className="ai-shell__section-label">Your analysis</span><h2 ref={resultsHeadingRef} tabIndex={-1}>Result details</h2></div>
+          <IconButton onClick={closeResults} size="small" aria-label="Close Results Pane">
+            <FaTimes />
           </IconButton>
         </div>
 
         <div className="ai-shell__result-viewer">
-          <div className="ai-shell__viewer-label"><FaEye /> Active Result</div>
+          {activeArtifact && <div className="ai-shell__viewer-label"><FaCircle /><span>{activeArtifact.title || 'Active result'}</span></div>}
           {activeArtifact ? (
             renderArtifact(activeArtifact, true)
           ) : (
             <div className="ai-shell__viewer-empty">
-              <div className="ai-shell__viewer-empty-icon"><FaTerminal /></div>
-              <Typography variant="caption">
-                Ask a question to display the latest business result or chart here.
-              </Typography>
+              <div className="ai-shell__viewer-empty-icon"><FaChartBar /></div>
+              <h3>Room for a closer look</h3>
+              <p>Your charts and business results appear here, with the details behind every answer.</p>
+              <div className="ai-shell__result-guide">
+                <div><FaEye /><span><strong>Explore the result</strong><span>Inspect charts and key numbers.</span></span></div>
+                <div><FaDatabase /><span><strong>See the source</strong><span>Review metrics, filters and data.</span></span></div>
+                <div><FaLayerGroup /><span><strong>Keep what matters</strong><span>Save useful results to a dashboard.</span></span></div>
+              </div>
             </div>
           )}
         </div>
       </aside>
+      </div>
+
+      <Dialog open={isHistoryOpen} onClose={() => setIsHistoryOpen(false)} fullWidth maxWidth="sm"
+        container={() => shellRef.current?.ownerDocument.body}
+        className="ai-shell__chat-dialog" aria-labelledby="ai-chat-history-title">
+        <DialogTitle id="ai-chat-history-title">Your chats</DialogTitle>
+        <DialogContent>
+          <p className="ai-shell__history-note">Conversations are stored on this device.</p>
+          <ChatHistory conversations={conversations} activeId={conversation.id} onSelect={selectChat}
+            onRename={chat => prepareChatAction('rename', chat)} onDelete={chat => prepareChatAction('delete', chat)} />
+        </DialogContent>
+        <DialogActions><Button onClick={() => setIsHistoryOpen(false)}>Close</Button><Button onClick={startNewChat} startIcon={<FaPlus />}>New chat</Button></DialogActions>
+      </Dialog>
+
+      <Dialog open={isChatActionOpen} onClose={() => setIsChatActionOpen(false)} fullWidth maxWidth="xs"
+        container={() => shellRef.current?.ownerDocument.body}
+        TransitionProps={{ onExited: () => setChatAction(null) }}
+        className="ai-shell__chat-dialog ai-shell__chat-action-dialog" aria-labelledby="ai-chat-action-title">
+        <DialogTitle id="ai-chat-action-title">{chatAction?.kind === 'rename' ? 'Rename chat' : chatAction?.kind === 'delete' ? 'Delete this chat?' : 'Reset this chat?'}</DialogTitle>
+        <DialogContent>
+          {chatAction?.kind === 'rename' ? <TextField autoFocus fullWidth label="Chat name" value={chatName}
+            inputProps={{ maxLength: 80 }} onChange={event => setChatName(event.target.value)}
+            onKeyDown={event => { if (event.key === 'Enter' && chatName.trim()) { event.preventDefault(); applyChatAction(); } }} />
+            : <p className="ai-shell__history-note">{chatAction?.kind === 'delete'
+              ? `Delete “${chatAction.chat.title}” and its saved messages?`
+              : 'Clear the messages, draft and analytical context in this chat and start fresh?'} Saved dashboard results remain available.</p>}
+        </DialogContent>
+        <DialogActions>
+          <Button autoFocus={chatAction?.kind !== 'rename'} onClick={() => setIsChatActionOpen(false)}>Cancel</Button>
+          <Button disabled={chatAction?.kind === 'rename' && !chatName.trim()} onClick={applyChatAction}
+            color={chatAction?.kind === 'rename' ? 'primary' : 'error'}>
+            {chatAction?.kind === 'rename' ? 'Save name' : chatAction?.kind === 'delete' ? 'Delete chat' : 'Reset chat'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
+}
+
+function AIShell({ onOpenDashboard } = {}) {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const { conversations, activeId, storageError, saveActive, newChat, selectChat, renameChat, deleteChat, resetChat } = useChatConversations();
+  const conversation = conversations.find(chat => chat.id === activeId);
+  const saveSnapshot = useCallback(snapshot => saveActive(activeId, snapshot), [activeId, saveActive]);
+  return <AIChatConversation key={conversation.id} conversation={conversation} conversations={conversations}
+    isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen}
+    storageError={storageError} onSnapshot={saveSnapshot} onOpenDashboard={onOpenDashboard}
+    onNewChat={newChat} onSelectChat={selectChat} onRenameChat={renameChat} onDeleteChat={deleteChat} onResetChat={resetChat} />;
 }
 
 export default AIShell;

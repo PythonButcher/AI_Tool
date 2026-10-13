@@ -1,0 +1,29 @@
+.ml-configuration { display: flex; flex-direction: column; gap: 24px; min-width: 0; }
+.ml-stage-heading, .ml-section-heading { display: flex; align-items: start; justify-content: space-between; gap: 20px; }
+.ml-stage-heading h2 { font-size: 28px; margin: 8px 0; letter-spacing: -.03em; }
+.ml-configuration p { color: var(--text-secondary); line-height: 1.55; }
+.ml-task-badge { padding: 6px 12px; border-radius: 20px; background: var(--accent-blue-soft); color: var(--accent-blue); font-size: 13px; }
+.ml-configuration-grid { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(260px, 1fr); gap: 24px; }
+.ml-role-panel, .ml-settings-panel { min-width: 0; border: 1px solid var(--border-color); border-radius: 12px; padding: 22px; background: var(--bg-primary); }
+.ml-configuration h3 { font-size: 16px; margin-bottom: 10px; }
+.ml-configuration label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 500; margin: 12px 0; }
+.ml-configuration input, .ml-configuration select { background: var(--bg-primary); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 7px; min-height: 38px; padding: 8px 10px; max-width: 100%; font: inherit; }
+.ml-configuration .ml-check-label { flex-direction: row; align-items: center; gap: 10px; }
+.ml-configuration input[type=checkbox] { min-height: auto; accent-color: var(--accent-blue); }
+.ml-configuration fieldset { border: 0; border-top: 1px solid var(--border-color); margin-top: 20px; }
+.ml-configuration legend { font-size: 14px; font-weight: 600; padding-right: 10px; }
+.ml-field-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.ml-field-pair input { width: 100%; }
+.ml-configuration .ml-guidance { font-size: 13px; border-left: 3px solid var(--accent-blue); padding: 8px 12px; margin: 14px 0; background: var(--accent-blue-soft); }
+.ml-local-limits { margin-top: 20px; }
+.ml-configuration summary { cursor: pointer; font-size: 13px; color: var(--text-secondary); }
+.ml-readiness { border-top: 1px solid var(--border-color); padding-top: 20px; }
+.ml-readiness ul { padding-left: 22px; margin: 12px 0; line-height: 1.8; }
+.ml-readiness details { margin-top: 12px; overflow-wrap: anywhere; font-size: 12px; }
+.ml-stage-actions { position: sticky; bottom: 0; margin-top: auto; display: flex; align-items: center; gap: 12px; padding: 16px 0; border-top: 1px solid var(--border-color); background: var(--bg-primary); flex-wrap: wrap; z-index: 2; }
+.ml-stage-actions > span { margin-right: auto; color: var(--text-secondary); font-size: 13px; }
+.ml-stage-actions button { background: var(--accent-blue); color: var(--text-on-accent); border: 0; border-radius: 8px; padding: 11px 18px; font: inherit; cursor: pointer; }
+.ml-stage-actions button:disabled { opacity: .5; cursor: wait; }
+.ml-configuration :focus-visible { outline: 3px solid var(--accent-blue); outline-offset: 3px; }
+@media (max-width: 1100px) { .ml-configuration-grid { grid-template-columns: 1fr; } .ml-settings-panel { max-width: none; } }
+@media (max-width: 640px) { .ml-section-heading { flex-direction: column; gap: 0; } .ml-section-heading label { width: 100%; } .ml-role-panel, .ml-settings-panel { padding: 16px; } .ml-stage-actions > span { width: 100%; } }

@@ -1,0 +1,134 @@
+/* Scoped to the landing page. Colors inherit the host's light/dark theme. */
+.ml-studio-shell .ml-welcome-canvas { flex-direction: column; padding: clamp(18px, 3cqi, 40px); }
+.ml-welcome { width: 100%; max-width: 1240px; margin: 0 auto; display: grid; gap: 34px; }
+.ml-welcome :is(h1, h2, h3, h4, p) { margin: 0; }
+.ml-welcome :is(a, button, h2):focus-visible { outline: 3px solid var(--accent-blue); outline-offset: 5px; }
+.ml-welcome a { color: var(--accent-blue); text-decoration: none; }
+.ml-welcome a:hover { text-decoration: underline; text-underline-offset: 4px; }
+.ml-welcome-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.ml-welcome-hero { position: relative; isolation: isolate; display: grid; grid-template-columns: 1.12fr 1fr; align-items: center; gap: 32px; padding: clamp(24px, 4cqi, 48px); border: 1px solid var(--border-color); border-radius: 22px; background: radial-gradient(ellipse at 95% 5%, var(--accent-blue-soft), transparent 65%), var(--bg-primary); overflow: hidden; }
+.ml-welcome-hero::after { content: ''; position: absolute; z-index: -1; inset: 0; opacity: .35; background-image: radial-gradient(var(--border-color) 1px, transparent 1px); background-size: 20px 20px; mask-image: linear-gradient(90deg, transparent 30%, #000); }
+.ml-welcome-kicker { display: flex; gap: 8px; align-items: center; color: var(--text-secondary); font-size: 11px; font-weight: 600; letter-spacing: .025em; margin-bottom: 22px; }
+.ml-welcome-kicker > span { width: 7px; height: 7px; border-radius: 50%; background: var(--accent-blue); box-shadow: 0 0 0 4px var(--accent-blue-soft); flex-shrink: 0; }
+.ml-welcome h1 { font-size: clamp(34px, 4.6cqi, 58px); font-weight: 750; line-height: 1.08; letter-spacing: -.055em; color: var(--text-primary); }
+.ml-welcome h1 > span { color: var(--accent-blue); }
+.ml-welcome-intro > p { max-width: 480px; margin-top: 20px; font-size: 14px; line-height: 1.8; color: var(--text-secondary); }
+.ml-welcome-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-top: 26px; }
+.ml-studio-shell .ml-welcome-actions .start-run-button { display: inline-flex; align-items: center; justify-content: center; gap: 10px; margin: 0; padding: 12px 16px; font-size: 13px; border-radius: 9px; min-height: 44px; }
+.ml-welcome-secondary { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; border: 1px solid var(--border-color); border-radius: 9px; padding: 11px 14px; background: var(--bg-primary); color: var(--text-primary); font-size: 12px; font-weight: 600; }
+.ml-welcome-secondary:hover { border-color: var(--accent-blue); color: var(--accent-blue); }
+.ml-welcome-assurances { display: flex; flex-wrap: wrap; gap: 10px 16px; margin-top: 22px; color: var(--text-secondary); font-size: 10px; }
+.ml-welcome-assurances > span { display: inline-flex; align-items: center; gap: 5px; }
+.ml-welcome-assurances svg { color: var(--accent-blue); font-size: 9px; }
+.ml-welcome-lab { min-width: 0; border: 1px solid color-mix(in srgb, var(--accent-blue) 26%, var(--border-color)); background: var(--bg-primary); border-radius: 15px; box-shadow: 0 18px 45px color-mix(in srgb, var(--accent-blue) 9%, transparent); transform: rotate(-2deg); }
+.ml-welcome-lab-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 16px; border-bottom: 1px solid var(--border-color); font-size: 9px; letter-spacing: .06em; color: var(--text-secondary); }
+.ml-welcome-lab-heading > span:first-child { display: flex; align-items: center; gap: 7px; }
+.ml-welcome-concept { border-radius: 5px; background: var(--bg-secondary); padding: 4px 6px; letter-spacing: 0; }
+.ml-welcome-lab-flow { display: flex; align-items: center; padding: 22px 22px 0; gap: 10px; color: var(--text-secondary); font-size: 11px; }
+.ml-welcome-lab-flow span { display: flex; gap: 7px; align-items: center; }
+.ml-welcome-lab-flow svg { color: var(--accent-blue); }
+.ml-welcome-lab-flow i { flex: 1; height: 1px; background: var(--border-color); }
+.ml-welcome-plot { display: block; width: 100%; height: auto; padding: 5px 12px 0; }
+.plot-grid { stroke: var(--border-color); stroke-width: 1; stroke-dasharray: 2 5; }
+.plot-fit { stroke: var(--accent-blue); fill: none; stroke-width: 3; stroke-linecap: round; stroke-dasharray: 500; animation: ml-welcome-draw 1.2s ease-out both; }
+.plot-sample { fill: var(--accent-blue); opacity: .55; }
+.plot-boundary { stroke: var(--text-secondary); stroke-dasharray: 4 6; fill: none; opacity: .6; }
+.plot-projection { stroke-dasharray: 5 6; animation: none; }
+.plot-forecast-area { fill: var(--accent-blue-soft); }
+.plot-group { fill: var(--accent-blue); }
+.plot-group-1 { fill: var(--accent-green); }
+.plot-group-2 { fill: var(--text-secondary); }
+.plot-clusters { fill: var(--accent-blue-soft); stroke: var(--accent-blue); stroke-dasharray: 3 5; }
+.plot-outlier { stroke: var(--accent-blue); fill: var(--accent-blue-soft); }
+.plot-outlier circle:last-child { fill: var(--accent-blue); }
+.ml-welcome-lab-caption { display: flex; flex-wrap: wrap; gap: 7px; justify-content: space-between; padding: 14px 18px; border-top: 1px solid var(--border-color); font-size: 10px; color: var(--text-secondary); }
+.ml-welcome-lab-caption > span:first-child { color: var(--accent-blue); font-weight: 600; }
+.ml-welcome-section-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 20px; }
+.ml-welcome h2 { margin-top: 6px; color: var(--text-primary); font-size: 24px; font-weight: 650; line-height: 1.3; letter-spacing: -.035em; }
+.ml-welcome-section-heading p { margin-top: 9px; color: var(--text-secondary); font-size: 13px; line-height: 1.6; }
+.ml-welcome-tag, .ml-welcome-count { display: inline-flex; gap: 7px; align-items: center; padding: 8px 10px; border: 1px solid var(--border-color); background: var(--bg-primary); border-radius: 7px; color: var(--text-secondary); font-size: 11px; }
+.ml-welcome-task-picker { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; margin-bottom: 16px; }
+.ml-welcome-task-picker button { display: flex; flex-direction: column; align-items: flex-start; gap: 9px; min-width: 0; min-height: 120px; padding: 18px 14px; border: 1px solid var(--border-color); border-radius: 11px; color: var(--text-secondary); background: var(--bg-primary); text-align: left; transition: border-color .18s, transform .18s, background .18s; }
+.ml-welcome-task-picker button > svg { font-size: 18px; margin-bottom: 3px; }
+.ml-welcome-task-picker strong { color: var(--text-primary); font-size: 12px; font-weight: 650; overflow-wrap: anywhere; }
+.ml-welcome-task-picker button > span { font-size: 10px; line-height: 1.4; }
+.ml-welcome-task-picker button:hover { transform: translateY(-2px); border-color: var(--accent-blue); }
+.ml-welcome-task-picker button[aria-pressed='true'] { color: var(--accent-blue); background: var(--accent-blue-soft); border-color: var(--accent-blue); box-shadow: inset 0 0 0 1px var(--accent-blue); }
+.ml-welcome-task-detail { display: grid; grid-template-columns: .95fr 1.3fr; border: 1px solid var(--border-color); border-radius: 14px; overflow: hidden; background: var(--bg-primary); }
+.ml-welcome-task-story { padding: 30px; background: linear-gradient(145deg, var(--accent-blue-soft), transparent); animation: ml-welcome-appear .25s ease-out; }
+.ml-welcome-task-icon { display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid color-mix(in srgb, var(--accent-blue) 25%, var(--border-color)); border-radius: 12px; color: var(--accent-blue); background: var(--bg-primary); margin-bottom: 22px; font-size: 20px; }
+.ml-welcome-task-story h3 { font-size: 27px; line-height: 1.2; letter-spacing: -.035em; margin: 8px 0 14px; }
+.ml-welcome-task-story p { font-size: 13px; line-height: 1.8; color: var(--text-secondary); }
+.ml-welcome-task-story .ml-welcome-example { margin: 14px 0 24px; font-size: 12px; }
+.ml-welcome-task-story dl { margin: 0; display: grid; gap: 16px; border-top: 1px solid var(--border-color); padding-top: 20px; }
+.ml-welcome-task-story dt { font-size: 10px; text-transform: uppercase; letter-spacing: .07em; color: var(--text-secondary); }
+.ml-welcome-task-story dd { font-size: 12px; margin: 6px 0 0; line-height: 1.5; }
+.ml-welcome-models { min-width: 0; padding: 28px; display: grid; align-content: start; gap: 12px; }
+.ml-welcome-models-heading { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 2px; }
+.ml-welcome-models-heading h3 { font-size: 14px; font-weight: 650; }
+.ml-welcome-models-heading > span { font-size: 10px; color: var(--text-secondary); }
+.ml-welcome a.ml-welcome-model { display: flex; align-items: center; gap: 18px; justify-content: space-between; padding: 18px; border: 1px solid var(--border-color); border-radius: 9px; color: var(--text-primary); transition: border-color .18s, background .18s; text-decoration: none; }
+.ml-welcome-model > svg { color: var(--text-secondary); flex-shrink: 0; font-size: 11px; }
+.ml-welcome a.ml-welcome-model:hover { border-color: var(--accent-blue); background: var(--accent-blue-soft); }
+.ml-welcome-source { color: var(--text-secondary); font-size: 9px; font-weight: 600; letter-spacing: .06em; }
+.ml-welcome-model h4 { font-size: 15px; margin: 8px 0; font-weight: 650; }
+.ml-welcome-model p { font-size: 12px; line-height: 1.6; color: var(--text-secondary); }
+.ml-welcome-read { display: inline-flex; gap: 7px; align-items: center; font-size: 11px; color: var(--accent-blue); margin-top: 12px; font-weight: 600; }
+.ml-welcome-tip { display: flex; gap: 9px; color: var(--text-secondary); font-size: 11px; line-height: 1.7; padding-top: 4px; }
+.ml-welcome-tip > svg { flex-shrink: 0; margin-top: 3px; color: var(--accent-blue); }
+.ml-welcome-tip strong { color: var(--text-primary); font-weight: 600; }
+.ml-welcome-extra a { display: inline-flex; gap: 8px; align-items: center; font-size: 12px; line-height: 1.6; }
+.ml-welcome-extra p { color: var(--text-secondary); font-size: 11px; line-height: 1.6; margin-top: 6px; }
+.ml-welcome-path { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px; border-block: 1px solid var(--border-color); padding: 28px 0; }
+.ml-welcome-path > div > span { display: block; color: var(--accent-blue); font-size: 11px; font-family: Consolas, monospace; margin-bottom: 12px; }
+.ml-welcome-path h3 { font-size: 14px; font-weight: 650; margin-bottom: 8px; }
+.ml-welcome-path p { color: var(--text-secondary); font-size: 12px; line-height: 1.7; max-width: 300px; }
+.ml-welcome-foundations { display: flex; align-items: center; gap: 20px; padding: 24px; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 12px; }
+.ml-welcome-book { display: grid; place-items: center; flex-shrink: 0; width: 48px; height: 48px; border-radius: 12px; color: var(--accent-blue); background: var(--accent-blue-soft); font-size: 22px; }
+.ml-welcome-foundations > div:nth-child(2) { flex: 1; }
+.ml-welcome-foundations h2 { font-size: 19px; }
+.ml-welcome-foundations p { margin-top: 8px; color: var(--text-secondary); font-size: 12px; line-height: 1.7; max-width: 620px; }
+.ml-welcome-foundations > a { display: inline-flex; align-items: center; gap: 10px; flex-shrink: 0; font-size: 12px; font-weight: 600; padding: 12px 0; }
+.ml-welcome-footer { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; color: var(--text-secondary); font-size: 10px; line-height: 1.6; }
+.ml-welcome-dataset, .ml-welcome-empty { display: flex; align-items: center; gap: 16px; padding: 20px 24px; background: var(--bg-primary); border: 1px dashed var(--border-color); border-radius: 12px; }
+.ml-welcome-dataset > svg, .ml-welcome-empty > svg { color: var(--accent-blue); flex-shrink: 0; font-size: 22px; }
+.ml-welcome-dataset h2, .ml-welcome-empty h3 { font-size: 14px; font-weight: 600; margin: 0 0 5px; }
+.ml-welcome-dataset p, .ml-welcome-empty p { color: var(--text-secondary); font-size: 12px; line-height: 1.7; }
+.ml-welcome-saved .ml-home-toolbar { margin: 0 0 16px; }
+@keyframes ml-welcome-draw { from { stroke-dashoffset: 500; } to { stroke-dashoffset: 0; } }
+@keyframes ml-welcome-appear { from { opacity: .5; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+@container ml-studio (max-width: 900px) {
+  .ml-welcome-hero { gap: 22px; padding: 26px; }
+  .ml-welcome-lab { transform: none; }
+  .ml-welcome-lab-caption > span:last-child { display: none; }
+  .ml-welcome-task-picker { gap: 7px; }
+  .ml-welcome-task-picker button { padding: 14px 10px; }
+  .ml-welcome-task-picker button > span { display: none; }
+  .ml-welcome-task-picker button { min-height: 95px; }
+  .ml-welcome-task-story, .ml-welcome-models { padding: 22px; }
+  .ml-welcome-foundations { flex-wrap: wrap; }
+  .ml-welcome-foundations > a { margin-left: 68px; }
+}
+@container ml-studio (max-width: 640px) {
+  .ml-welcome { gap: 28px; }
+  .ml-welcome-hero, .ml-welcome-task-detail { grid-template-columns: minmax(0, 1fr); }
+  .ml-welcome-hero { padding: 24px; }
+  .ml-welcome h1 { font-size: 40px; }
+  .ml-welcome-lab { width: 100%; max-width: 390px; justify-self: center; }
+  .ml-welcome-plot { max-height: 200px; }
+  .ml-welcome-task-picker { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ml-welcome-task-picker button { min-height: 76px; gap: 8px; }
+  .ml-welcome-task-picker button:last-child { grid-column: 1 / -1; }
+  .ml-welcome-path { grid-template-columns: minmax(0, 1fr); gap: 22px; }
+  .ml-welcome-path p { max-width: none; }
+  .ml-welcome-foundations { padding: 20px; align-items: flex-start; }
+  .ml-welcome-foundations > div:nth-child(2) { flex-basis: calc(100% - 68px); }
+  .ml-welcome-foundations > a { margin-left: 0; }
+  .ml-welcome-tag { display: none; }
+  .ml-welcome-actions { align-items: stretch; flex-direction: column; }
+  .ml-welcome-secondary { justify-content: center; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ml-welcome *, .ml-welcome *::before, .ml-welcome *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  .ml-welcome-task-picker button:hover { transform: none; }
+}

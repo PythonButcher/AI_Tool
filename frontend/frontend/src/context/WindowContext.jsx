@@ -5,6 +5,7 @@ import React, {
   useMemo,
   useEffect,
   useCallback,
+  useRef,
 } from 'react';
 import {
   createDefaultDashboardFilters,
@@ -17,6 +18,7 @@ import {
   normalizeDashboardItemDisplay,
   normalizeDashboardItemSourceMetadata
 } from '../utils/dashboardCanvasUtils';
+import { appendDashboardResults } from '../utils/aiDashboardResults';
 
 export const WindowContext = createContext();
 
@@ -46,6 +48,9 @@ const normalizeDashboardItem = (item, index = 0) => {
     locked: item?.locked || false,
     display: normalizeDashboardItemDisplay(item?.display),
     sourceMetadata: normalizeDashboardItemSourceMetadata(item?.sourceMetadata),
+    resultSnapshot: item?.resultSnapshot || null,
+    createdAt: item?.createdAt,
+    updatedAt: item?.updatedAt,
   };
 
   if (item?.itemType === 'kpi') {
@@ -74,19 +79,12 @@ const normalizeDashboardItem = (item, index = 0) => {
 };
 
 const loadDashboardStorage = () => {
-  try {
-    let stored = localStorage.getItem(DASHBOARD_V1_STORAGE_KEY);
-    if (!stored) {
-      stored = localStorage.getItem(DASHBOARD_STORAGE_KEY);
-    }
-    if (!stored) {
-      return {
-        state: createDefaultDashboardState(),
-        items: [],
-      };
-    }
-
+  for (const key of [DASHBOARD_V1_STORAGE_KEY, DASHBOARD_STORAGE_KEY]) {
+    try {
+    const stored = localStorage.getItem(key);
+    if (!stored) continue;
     const parsed = JSON.parse(stored);
+    if (!parsed || !Array.isArray(parsed.items) || !parsed.state || typeof parsed.state !== 'object') continue;
     const dashboardState = {
       ...createDefaultDashboardState(),
       ...parsed?.state,
@@ -101,12 +99,11 @@ const loadDashboardStorage = () => {
       items: Array.isArray(parsed?.items) ? parsed.items.map((item, index) => normalizeDashboardItem(item, index)) : [],
     };
   } catch (error) {
-    console.error('Failed to parse dashboard storage', error);
-    return {
-      state: createDefaultDashboardState(),
-      items: [],
-    };
+    // A damaged v1 value must not prevent recovery from the untouched legacy key.
+    console.warn('Could not load dashboard storage', key);
   }
+  }
+  return { state: createDefaultDashboardState(), items: [] };
 };
 
 export const WindowProvider = ({ children }) => {
@@ -116,8 +113,12 @@ export const WindowProvider = ({ children }) => {
   const [windowStates, setWindowStates] = useState({});
   const [lockedWindows, setLockedWindows] = useState({});
   const [windowContentStates, setWindowContentStates] = useState({});
-  const [dashboardState, setDashboardState] = useState(createDefaultDashboardState);
-  const [dashboardItems, setDashboardItems] = useState([]);
+  const [initialDashboard] = useState(loadDashboardStorage);
+  const [dashboardState, setDashboardState] = useState(initialDashboard.state);
+  const [dashboardItems, setDashboardItems] = useState(initialDashboard.items);
+  const [dashboardStorageError, setDashboardStorageError] = useState(null);
+  const dashboardRef = useRef({ state: dashboardState, items: dashboardItems });
+  dashboardRef.current = { state: dashboardState, items: dashboardItems };
   const [isSlicerPanelOpen, setIsSlicerPanelOpen] = useState(false);
 
   const openWindow = useCallback((id) => {
@@ -188,21 +189,48 @@ export const WindowProvider = ({ children }) => {
       }
     }
 
-    const dashboardStorage = loadDashboardStorage();
-    setDashboardState(dashboardStorage.state);
-    setDashboardItems(dashboardStorage.items);
   }, []);
 
   useEffect(() => {
-    localStorage.setItem(WINDOW_STATES_STORAGE_KEY, JSON.stringify(windowStates));
+    try {
+      localStorage.setItem(WINDOW_STATES_STORAGE_KEY, JSON.stringify(windowStates));
+    } catch (error) {
+      // Window geometry is optional. Dashboard persistence reports its own
+      // actionable error rather than letting a storage exception unmount UI.
+    }
   }, [windowStates]);
 
   useEffect(() => {
+    try {
     localStorage.setItem(DASHBOARD_V1_STORAGE_KEY, JSON.stringify({
       state: dashboardState,
       items: dashboardItems,
     }));
+    setDashboardStorageError(null);
+    } catch (error) {
+      setDashboardStorageError('Dashboard changes could not be saved in this browser. Free local storage and try again.');
+    }
   }, [dashboardItems, dashboardState]);
+
+  const addDashboardResults = useCallback((selections) => {
+    const current = dashboardRef.current;
+    const result = appendDashboardResults(current.items, selections);
+    const next = { state: { ...current.state, isVisible: true }, items: result.items.map(normalizeDashboardItem) };
+    // Write before acknowledging success. A quota/storage failure leaves the
+    // reviewable draft and existing dashboard intact for a deliberate retry.
+    try {
+      localStorage.setItem(DASHBOARD_V1_STORAGE_KEY, JSON.stringify(next));
+    } catch (error) {
+      const message = 'Could not save these results. Free browser storage and try again; your draft is still here.';
+      setDashboardStorageError(message);
+      throw new Error(message);
+    }
+    dashboardRef.current = next;
+    setDashboardItems(next.items);
+    setDashboardState(next.state);
+    setDashboardStorageError(null);
+    return { added: result.added, skipped: result.skipped };
+  }, []);
 
   const saveWindowState = useCallback((id, layout) => {
     setWindowStates((prev) => ({ ...prev, [id]: layout }));
@@ -370,6 +398,8 @@ export const WindowProvider = ({ children }) => {
       updateChart,
       dashboardState,
       dashboardItems,
+      dashboardStorageError,
+      addDashboardResults,
       openDashboard,
       closeDashboard,
       isSlicerPanelOpen,
@@ -408,6 +438,8 @@ export const WindowProvider = ({ children }) => {
       updateChart,
       dashboardState,
       dashboardItems,
+      dashboardStorageError,
+      addDashboardResults,
       openDashboard,
       closeDashboard,
       isSlicerPanelOpen,
