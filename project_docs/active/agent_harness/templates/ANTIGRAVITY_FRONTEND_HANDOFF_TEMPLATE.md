@@ -2,11 +2,25 @@
 
 Goal: [State one independently reviewable user outcome for one React slice.]
 
+## User Value
+
+[In one or two plain-English sentences, say what the user will see or be able to do when this slice is finished, then what remains unavailable. Do not use API names, file paths, or implementation terms here.]
+
 ## Readiness Evidence
 
 **Frontend Readiness**: `[backend_contract_ready | frontend_repair_only]`
 
-[Cite the focused backend tests, endpoint or service evidence, contract, and fixture source that prove readiness. For a repair, add `REPAIR REQUIRED` above this section and a `## Repair Blocker` section naming the exact file, observed defect, expected behavior, and evidence.]
+[Cite focused backend evidence. For a repair, replace the original handoff with a standalone handoff of at most 120 lines. Keep `Goal:` first, then add `REPAIR REQUIRED` and `## Repair Blocker` near the top. Include the four exact fields below; do not append a repair paragraph to the original large assignment.]
+
+Repair-only fields:
+
+**Observed Source**: [Exact file and handler/prop or state transition that fails.]
+
+**Expected Contract**: [Exact response field, owning endpoint, and the UI invariant; name response types that do not contain the field.]
+
+**Regression Test**: `[frontend test path]` — `[exact test title]`; [deferred request or user action and observable assertion].
+
+**Return Evidence**: [Focused test command, build command, and source lines to show on return.]
 
 ## Required Context
 
@@ -130,3 +144,5 @@ Run:
 - `python .gemini/skills/status-tracker-skill/scripts/update_status.py return --handoff HANDOFF_FILE --summary "CONCISE EVIDENCE"`
 
 The governed return command rejects missing or empty targets, suspicious shrinkage, out-of-scope frontend files, missing required changes, forbidden inline styles, whitespace errors, and a return with no durable source diff. Return the exact changed-file list, each command and exit result, a concise evidence summary, and any contract mismatch, then stop for Codex review. Do not begin adjacent work or claim browser acceptance.
+
+For a repair return, quote the exact named regression test result and identify the final source lines where the contract field enters state, survives other response types, and controls the action. A passing suite without that named test is not a repair return.

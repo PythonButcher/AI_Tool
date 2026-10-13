@@ -5,7 +5,8 @@ from typing import List, Dict, Any, Callable
 class ManualCleaningEngine:
     """Extensible manual cleaning engine similar to Power Query."""
 
-    def __init__(self):
+    def __init__(self, *, strict_columns: bool = False):
+        self.strict_columns = strict_columns
         self.registry: Dict[str, Callable[[pd.DataFrame, Dict[str, Any]], pd.DataFrame]] = {
             "trim_whitespace": self._trim_whitespace,
             "change_case": self._change_case,
@@ -41,8 +42,50 @@ class ManualCleaningEngine:
             if not handler:
                 # Skip unknown steps to remain forward compatible
                 continue
+            if self.strict_columns:
+                self._validate_columns(df, step_type, params)
             df = handler(df, params)
         return df
+
+    @staticmethod
+    def _validate_columns(df: pd.DataFrame, step_type: str, params: Dict[str, Any]) -> None:
+        """Governed recipes must not silently skip stale or mistyped columns.
+
+        Validate against each intermediate frame so later steps can reference
+        columns produced by a rename, split or aggregation.
+        """
+        references = []
+        for key in ("columns", "subset", "order", "group_columns", "index", "id_vars", "value_vars"):
+            value = params.get(key)
+            if value in (None, ""):
+                continue
+            if step_type == "pivot" and key == "columns":
+                value = [value]
+            if not isinstance(value, list) or any(not isinstance(item, str) for item in value):
+                raise ValueError("Column selections must be lists of names.")
+            references.extend(value)
+        for key in ("column", "values"):
+            if params.get(key):
+                references.append(params[key])
+        for key in ("conditions", "aggregations", "sort_by"):
+            for item in params.get(key) or []:
+                references.append(item.get("column"))
+        mappings = params.get("mappings") or {}
+        references.extend(mappings)
+        if any(not isinstance(column, str) or column not in df.columns for column in references):
+            raise ValueError("A step references a column absent at this point in the recipe.")
+        if mappings:
+            names = [mappings.get(column, column) for column in df.columns]
+            if any(not isinstance(name, str) or not name.strip() for name in names) or len(set(names)) != len(names):
+                raise ValueError("Renamed columns must have distinct nonempty names.")
+        required = {
+            "remove_columns": ("columns",), "keep_columns": ("columns",), "merge_columns": ("columns", "new_column"),
+            "split_column": ("column", "new_columns"), "extract_date_component": ("column",),
+            "group_by": ("group_columns", "aggregations"), "pivot": ("columns", "values"),
+            "unpivot": ("value_vars",), "rename_columns": ("mappings",), "filter_rows": ("conditions",),
+        }
+        if any(not params.get(key) for key in required.get(step_type, ())):
+            raise ValueError("Required transformation settings are missing.")
 
     def _get_columns(self, df: pd.DataFrame, params: Dict[str, Any]) -> List[str]:
         columns = params.get("columns") or []
@@ -120,6 +163,9 @@ class ManualCleaningEngine:
             if col not in df.columns:
                 continue
             series = df[col]
+            if self.strict_columns and pd.api.types.is_numeric_dtype(series.dtype) and op in {"eq", "neq", "gt", "gte", "lt", "lte", "in", "not_in"}:
+                # Form fields are text; compare numeric columns numerically.
+                value = [float(item) for item in value] if isinstance(value, list) else float(value)
             if op == "eq":
                 mask &= series == value
             elif op == "neq":

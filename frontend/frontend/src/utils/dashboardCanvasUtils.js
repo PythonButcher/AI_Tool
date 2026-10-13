@@ -81,6 +81,7 @@ export const normalizeDashboardItemSourceMetadata = (metadata) => ({
   sourceSurface: metadata?.sourceSurface || 'unknown',
   sourceMode: metadata?.sourceMode || 'unknown',
   sourceArtifactId: metadata?.sourceArtifactId || null,
+  resultKey: metadata?.resultKey || null,
   datasetName: metadata?.datasetName || null,
   createdByLabel: metadata?.createdByLabel || null,
 });

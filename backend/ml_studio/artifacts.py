@@ -1,6 +1,6 @@
 """Integrity-checked, server-owned artifact storage for ML Studio.
 
-The store deliberately exposes metadata rather than filesystem paths or bytes.
+The store exposes metadata and verified bytes without filesystem paths.
 Artifacts are write-once, created through an atomic replace while a process-safe
 lock file is held, and confined to a single managed root.
 """
@@ -280,6 +280,28 @@ class ManagedArtifactStore:
                     "Quarantine it and recreate it from the immutable run inputs.",
                 )
             return metadata
+
+    def read_verified(self, expected: dict) -> bytes:
+        """Read only server-registered artifacts and hash the returned bytes.
+
+        Compare against the database record, not just a writable sidecar. No
+        caller-supplied path is accepted and verification covers the exact bytes
+        that will be loaded or downloaded.
+        """
+        run_id, name = expected["run_id"], expected["name"]
+        self._validate_name(name)
+        with self._lock:
+            directory = self._safe_run_directory(run_id, create=False)
+            path = directory / name
+            if path.is_symlink():
+                raise ArtifactStoreError("artifact_path_unsafe", "The artifact location is unsafe.", "Recreate the managed artifact.")
+            try:
+                content = path.read_bytes()
+            except OSError as exc:
+                raise ArtifactStoreError("artifact_missing_or_invalid", "The artifact is unavailable.", "Recreate it from its immutable inputs.") from exc
+            if len(content) != expected["size_bytes"] or f"sha256:{hashlib.sha256(content).hexdigest()}" != expected["sha256"]:
+                raise ArtifactStoreError("artifact_integrity_failed", "The artifact failed verification.", "Recreate it from its immutable inputs.")
+            return content
 
     def delete_run(self, run_id: str) -> int:
         """Delete files for one validated run without following links."""

@@ -1,0 +1,27 @@
+.ml-training-layout { display:grid; grid-template-columns:minmax(0, 1fr) minmax(230px, 290px); gap:24px; align-items:start; }
+.ml-training-main, .ml-training-plan { background:var(--bg-primary); border:1px solid var(--border-color); border-radius:14px; padding:24px; min-width:0; }
+.ml-training-plan { background:var(--bg-secondary); }
+.ml-training-plan h3 { margin:12px 0; }
+.ml-training-plan li { margin:10px 0; text-transform:capitalize; }
+.ml-training-plan dl { display:grid; grid-template-columns:1fr; gap:6px; margin-top:24px; }
+.ml-training-plan dt, .ml-run-details dt { color:var(--text-secondary); font-size:.8rem; }
+.ml-training-plan dd { margin:0 0 12px; font-weight:600; }
+.ml-training-empty { padding:48px 12px; max-width:540px; }
+.ml-training-empty h3 { font-size:1.5rem; margin:12px 0; }
+.ml-training p { color:var(--text-secondary); line-height:1.6; }
+.ml-run-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.ml-run-heading h3, .ml-current-event { text-transform:capitalize; }
+.ml-run-status { border:1px solid var(--border-color); border-radius:99px; padding:5px 10px; font-size:.8rem; }
+.ml-run-status.completed { color:var(--accent-green); }
+.ml-run-status.running { color:var(--accent-blue); }
+.ml-training .ml-training-outcome { color:var(--text-primary); border-left:3px solid var(--accent-green); padding:8px 16px; }
+.ml-event-timeline { list-style:none; padding:0; margin:24px 0; max-height:320px; overflow:auto; }
+.ml-event-timeline li { display:flex; justify-content:space-between; gap:16px; border-left:2px solid var(--border-color); padding:8px 16px; font-size:.85rem; text-transform:capitalize; }
+.ml-event-timeline li:last-child { border-color:var(--accent-blue); font-weight:600; }
+.ml-event-timeline time { color:var(--text-secondary); white-space:nowrap; }
+.ml-run-details { border-top:1px solid var(--border-color); padding-top:16px; color:var(--text-secondary); font-size:.8rem; }
+.ml-run-details summary { cursor:pointer; }
+.ml-run-details dd { overflow-wrap:anywhere; margin:4px 0 14px; }
+.ml-training .ml-stage-actions > div { display:flex; gap:10px; flex-wrap:wrap; }
+@media(max-width:1050px) { .ml-training-layout { grid-template-columns:1fr; } .ml-training-plan { order:-1; } .ml-training-plan dl { grid-template-columns:1fr 1fr; } }
+@media(max-width:600px) { .ml-training-main,.ml-training-plan { padding:16px; } .ml-event-timeline li { padding:8px; gap:8px; } .ml-training-empty { padding:24px 0; } }

@@ -1,46 +1,48 @@
-Goal: Establish workspace-safe data cleaning contracts for ML Studio preparation.
+Goal: Let AI Chat use economical models for everyday explanations and deeper reasoning for detailed questions while preserving verified BI results.
 
 ## User Outcome
 
-A developer can preview and apply preparation changes to the governed workspace bound to an experiment, with a server-issued receipt identifying the resulting data state.
+Users choose Auto, Quick or Deep analysis, see which model answered, and retain useful local results when AI is unavailable.
 
 ## Scope
 
-**Current Step**: Step 1: Authorize the workspace-safe cleaning boundary
+No executable implementation step is active. Await specific user feedback before opening bounded repairs to `backend/services/chat_model_router.py`, the chat route, or `frontend/frontend/src/features/ai/`. Live provider access and quality depend on the deployment's API key and model availability.
 
-**Target Files**: Preparation edits only the gate, status, authorization record, active navigation, and `project_docs/active/ml_studio/README.md`. After explicit implementation authorization, Codex may propose changes to `backend/routes/manual_cleaning.py`, the workspace resolver in `backend/routes/ml_studio.py`, their directly required workspace services, `project_docs/active/contracts/ml_studio.md`, and focused backend tests. Record the exact allowed source paths before mutation.
-
-**Step Acceptance**: A direct user instruction authorizes the first backend assignment. Codex records the exact mutation boundary and specifies workspace/version validation, bounded preview, the canonical workspace commit path, and a server-issued apply receipt before source implementation.
-
-**Step Verification**: Preparation runs the repository harness, active-gate validator, and `git diff --check`. After authorization, focused tests must prove stale-version and cross-workspace rejection, no commit during preview/cancellation, and receipt/schema identity after apply.
-
-**Next Step**: Codex defines and implements the bounded workspace-safe cleaning contract, verifies it, then prepares the draft recipe/return-context assignment. No UI handoff precedes backend readiness.
-
-**Continuation Rule**: `WAIT_FOR_USER`. Authority is `REVIEW_ONLY`; the user requested preparation without implementation.
-
-**Stop Condition**: Do not implement backend or frontend changes, execute cleaning requests, or issue an active frontend handoff until implementation is explicitly authorized.
-
-- [ ] **Step 1: Authorize the workspace-safe cleaning boundary** — [IN PROGRESS]
-- [ ] **Step 2: Implement and verify workspace-safe preview/apply receipts** — [PENDING]
+Preserve grounded results, dataset lineage and dashboard items. Do not extend scope to ML Studio or perform browser operations.
 
 ## Contracts
 
-- `project_docs/active/ml_studio/README.md` — Step 4 prerequisites and assignment order.
-- `project_docs/active/contracts/ml_studio.md` — implemented and proposed contract boundaries.
-- `project_docs/active/status/phase_authorization.json` — implementation authority.
+- [AI Chat business workspace](../ai_chat/README.md)
+- [Model routing](../contracts/ai_chat_model_routing.md)
+- [BI result contracts](../contracts/decision_objects.md)
+- [Dashboard state](../contracts/dashboard_canvas_state.md)
 
 ## Acceptance
 
-The proposed backend contract scopes every preparation mutation to an existing workspace and expected version, uses server-resolved data, and returns bounded preview or an authoritative commit receipt. Preview/cancellation preserve data; applying to stale or wrong identities is rejected. Preserve the existing cleaning engine and compatibility callers. Proposed routes/fields remain labeled proposed until verified in source and tests.
+- Use existing theme tokens, responsive container layouts, keyboard focus and reduced-motion support.
+- Auto avoids paid calls for direct calculations; explicit Quick/Deep controls reasoning tier. Model IDs stay server-controlled.
+- Governance and clarification boundaries run before provider calls. AI commentary cannot alter computed artifacts or execute tools.
+- No hidden model escalation or provider retries. Failure preserves local results and reports unavailable commentary.
+- Persist selection per chat and snapshot it for submissions/retries. Deep analysis does not claim internet research.
+- Expose New Chat and Reset Chat outside the collapsible sidebar; make saved conversations available at narrow window widths.
+- Keep messages, drafts, artifacts and in-memory analytical context isolated per conversation.
+- Confirm reset/delete actions and preserve dashboard items.
+- Keep dialogs above the docked chat portal and in the same document as the chat host. Deleting an inactive conversation preserves the active draft.
+- Keep local storage additive; handle unavailable or malformed storage without claiming persistence succeeded.
+- Preserve grounded AI Chat answers, contextual follow-ups, recoverable failures and deliberate dashboard additions. Preserve dashboard storage and dataset lineage.
+- Preserve pending ML Studio acceptance. No AI Chat browser operations are authorized.
 
 ## Verification
 
+- `python -m unittest tests.test_chat_model_router tests.test_decision_chat_service`
+
+- `npm --prefix frontend/frontend test -- --watchAll=false --runInBand --testPathPattern '(features/ai/.*test|features/dashboard/.*test|context/WindowContext.*test|utils/aiDashboard.*test)'`
+- `npm --prefix frontend/frontend run build`
 - `python .codex/hooks/agent_harness_check.py`
+- `python .codex/hooks/ci_harness_check.py`
 - `python C:/Users/18022/.codex/skills/active-gate-governance/scripts/check_active_gate.py project_docs/active/active_gate .`
 - `git diff --check`
 
 ## Owner And Control Return
 
-Current owner: User for implementation authorization; Codex owns the first backend assignment once authorized.
-
-Control return: `WAIT_FOR_USER`. After authorization Codex records `AUTHORIZED`, the exact allowed paths, and one atomic backend step. Antigravity receives a bounded handoff only after the relevant backend gate passes.
+Owner: User, WAIT_FOR_USER. Final visual acceptance and requested refinements remain in chat. Codex resumes on specific user direction and updates the authorization and status before bounded implementation.

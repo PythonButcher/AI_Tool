@@ -1,9 +1,10 @@
 import React from 'react';
 import { useWindowContext } from '../../context/WindowContext';
-import { FaLock, FaUnlock, FaTrash, FaCopy } from 'react-icons/fa';
+import { FaLock, FaUnlock, FaTrash } from 'react-icons/fa';
 import './DashboardCanvasItem.css';
 import SmartChartWindow from '../charts/SmartChartWindow';
 import KpiCardWindow from './KpiCardWindow';
+import DashboardResultSnapshot from './DashboardResultSnapshot';
 
 const DashboardCanvasItem = React.forwardRef(({
   style,
@@ -24,6 +25,9 @@ const DashboardCanvasItem = React.forwardRef(({
 
   // Render the inner content based on itemType
   const renderInnerContent = () => {
+    if (item.resultSnapshot?.schemaVersion === 'ai_chat_result_snapshot_v1') {
+      return <DashboardResultSnapshot item={item} />;
+    }
     if (item.itemType === 'kpi') {
       return (
         <KpiCardWindow

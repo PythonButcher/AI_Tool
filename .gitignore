@@ -66,6 +66,7 @@ instance/
 # Uploaded or generated data
 uploads/
 Uploads/
+/backend/storage/managed_uploads/
 data/
 *.csv
 *.xlsx

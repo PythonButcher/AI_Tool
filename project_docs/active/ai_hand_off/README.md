@@ -10,7 +10,7 @@ Antigravity owns bounded frontend implementation, React/CSS, UI rendering, and f
 
 ## Active Handoffs And Goal Prompts
 
-No implementation handoff is active. The reviewed duplication handoff is preserved in `project_docs/archive/ml_studio_duplicate_draft_reviewed_2026_09_26.md`. Use the sole active gate for the next authorized outcome.
+No specialist frontend handoff is active. The AI Chat model router and composer integration are engineering-complete; the user acts next in chat. ML Studio's pending acceptance remains in chat. Consult [status](../status/project_execution_status.md) and the [sole gate](../active_gate/README.md) before acting.
 
 Completed handoffs belong outside this active folder.
 
@@ -22,7 +22,7 @@ When frontend work is needed, Codex must write a focused frontend-agent handoff 
 
 The handoff file is the automation surface. Each active handoff must contain one clear `Goal:` prompt near the top so Antigravity's `auto-handoff-execution` skill can read the file and execute the task without the user copying a prompt from chat.
 
-If the handoff is for a failed or incomplete frontend-agent implementation, it must be visibly labeled `REPAIR REQUIRED` near the top. Add a short `Repair Blocker` section that names the exact source file, broken assumption, expected contract behavior, and verification command. Keep the repair label and blocker separate from background context so Antigravity does not miss it.
+If the handoff is for a failed or incomplete frontend-agent implementation, replace the original assignment with a standalone repair handoff of at most 120 lines. Put `Goal:` first, then `REPAIR REQUIRED` and a short `Repair Blocker` section. Name the exact source file and handler, the response that owns each field, responses that omit it, one named regression test, and the return evidence. Do not retain the original long assignment beneath the repair instructions.
 
 When Codex opens or updates an active frontend handoff, the final response should name or link the handoff file and tell the user which agent owns the next step. Do not paste the full `Goal:` prompt in chat unless the user explicitly asks for it.
 

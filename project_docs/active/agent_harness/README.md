@@ -32,7 +32,11 @@ The active gate keeps WIP at one through exact current-step fields and an ordere
 
 Handoffs use `templates/ANTIGRAVITY_FRONTEND_HANDOFF_TEMPLATE.md`. The template requires a proven contract, copy-ready types, representative fixtures, all core UI states, explicit server/local/URL/asynchronous state ownership, evidence, and a stop-and-return boundary.
 
+Each active frontend handoff starts with a short `User Value` section: what the user will see or do after this slice, followed by the meaningful limit. The validator requires this section without file paths or code formatting. Codex uses the same plain-language outcome when explaining the work to the user, before mentioning APIs, tests, or agent ownership.
+
 Every frontend handoff declares whether it contains an async mutation and names preserved controls. Async mutation handoffs must specify an outcome and focused test assertion for in-flight navigation, concurrent edits, failure retry, conflict or duplicate submission, and identity change or unmount. The repository validator rejects missing cases. Codex acceptance reviews must inspect the assertions and source behavior; the validator checks handoff completeness, not runtime correctness.
+
+Repeat repairs use a short replacement handoff, not another paragraph added to the original assignment. It states the exact broken source path, which API response owns the field, which other responses omit it, one named regression test, and the return evidence. The validator caps repair handoffs at 120 lines and checks that the named test exists on return. Codex still reads the test assertion and source data flow; this check cannot prove the test is meaningful. A user can accept a frontend return despite a Codex finding. Record that decision and any known limitation, then move ownership forward without issuing the overruled repair again.
 
 Frontend returns are guarded by the status tracker. It refuses completion without a durable in-scope target diff and rejects empty files, major shrinkage, missing required target changes, forbidden inline styles, and whitespace errors. A source-loss incident stops the run; the implementer must not restore or reconstruct files before Codex audits the worktree.
 

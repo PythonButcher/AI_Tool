@@ -14,6 +14,7 @@ from backend.routes.decision_common import (
     payload_with_governance_readiness,
 )
 from backend.services.decision_support import DecisionServiceError
+from backend.services.chat_model_router import add_model_commentary, validate_model_mode
 
 
 decision_chat_bp = Blueprint(
@@ -55,6 +56,12 @@ def _compatibility_disabled_response():
 def decision_chat_turn_route():
     """Execute the stable public BI chat turn contract."""
     payload = request.get_json(silent=True) or {}
+    if not isinstance(payload, dict):
+        return jsonify(error_payload("INVALID_DECISION_CHAT_TURN_REQUEST", "Expected a JSON object.")), 400
+    try:
+        validate_model_mode(payload)
+    except DecisionServiceError as exc:
+        return jsonify(error_payload("INVALID_DECISION_CHAT_TURN_REQUEST", str(exc))), 400
     if _turn_requests_compatibility(payload) and not _compatibility_enabled():
         return _compatibility_disabled_response()
     try:
@@ -68,7 +75,8 @@ def decision_chat_turn_route():
         return blocked
     try:
         service_payload = payload_with_governance_readiness(prepared_payload, readiness)
-        return governed_response(DecisionChatService.handle_turn(service_payload), readiness)
+        result = DecisionChatService.handle_turn(service_payload)
+        return governed_response(add_model_commentary(service_payload, result), readiness)
     except DecisionServiceError as exc:
         response = error_payload("INVALID_DECISION_CHAT_TURN_REQUEST", str(exc))
         response["dataset_trust"] = DecisionChatService.build_dataset_trust_for_payload(payload)

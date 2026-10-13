@@ -12,6 +12,7 @@ import {
 import CleaningRibbon from './cleaning_components/CleaningRibbon';
 import AppliedStepsList from './cleaning_components/AppliedStepsList';
 import DataCleaningPreview from './cleaning_components/DataCleaningPreview';
+import PreparationEditor from '../../features/ml_studio/PreparationEditor';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
@@ -38,7 +39,14 @@ const columnListFromData = (dataset) => {
   return [];
 };
 
-function DataCleaningForm({ closeForm, setShowDataPreview, initialSteps = [], onApplyComplete }) {
+function DataCleaningForm(props) {
+  if (props.mlStudioMode && (props.mlStudioOpeningContext?.base_etag || props.mlStudioOpeningContext?.preparation)) {
+    return <PreparationEditor context={props.mlStudioOpeningContext} initialSteps={props.initialSteps || []} closeForm={props.closeForm} onFinished={props.onPreparationFinished} />;
+  }
+  return <LegacyDataCleaningForm {...props} />;
+}
+
+function LegacyDataCleaningForm({ closeForm, setShowDataPreview, initialSteps = [], onApplyComplete, mlStudioMode, mlStudioOpeningContext }) {
   const {
     uploadedData,
     fullData,
@@ -111,6 +119,7 @@ function DataCleaningForm({ closeForm, setShowDataPreview, initialSteps = [], on
   };
 
   const addStep = () => {
+    if (mlStudioMode) return;
     setError(null);
     setSuccess(null);
     const active = transformLookup[selectedTransform];
@@ -127,6 +136,7 @@ function DataCleaningForm({ closeForm, setShowDataPreview, initialSteps = [], on
   };
 
   const editStep = (step) => {
+    if (mlStudioMode) return;
     const category = TRANSFORM_LIBRARY.find((c) => c.transforms.some((t) => t.type === step.type))?.category;
     if (category) setSelectedCategory(category);
     setSelectedTransform(step.type);
@@ -137,6 +147,7 @@ function DataCleaningForm({ closeForm, setShowDataPreview, initialSteps = [], on
   };
 
   const deleteStep = (id) => {
+    if (mlStudioMode) return;
     setSteps((prev) => prev.filter((s) => s.id !== id));
     if (editingId === id) {
       setEditingId(null);
@@ -146,6 +157,7 @@ function DataCleaningForm({ closeForm, setShowDataPreview, initialSteps = [], on
   };
 
   const moveStep = (index, direction) => {
+    if (mlStudioMode) return;
     setSteps((prev) => {
       const newSteps = [...prev];
       const targetIndex = index + direction;
@@ -470,6 +482,7 @@ function DataCleaningForm({ closeForm, setShowDataPreview, initialSteps = [], on
     });
 
   const runCleaning = async (previewOnly = true) => {
+    if (mlStudioMode) return;
     setLoading(true);
     setError(null);
     setSuccess(null);
@@ -509,16 +522,31 @@ function DataCleaningForm({ closeForm, setShowDataPreview, initialSteps = [], on
           <div className="header-left">
             <div className="header-title">
               <h2>Power Query Editor</h2>
-              <p className="subtitle">Visual Data Transformation Interface</p>
+              {mlStudioMode ? (
+                 <p className="subtitle">
+                   Experiment: {mlStudioOpeningContext?.title} ({mlStudioOpeningContext?.experiment_id}) | Workspace: {mlStudioOpeningContext?.workspace_id} | Snapshot: {mlStudioOpeningContext?.snapshot_id}
+                 </p>
+              ) : (
+                 <p className="subtitle">Visual Data Transformation Interface</p>
+              )}
             </div>
           </div>
           <div className="header-actions">
-            <button className="preview-trigger" onClick={() => runCleaning(true)} disabled={steps.length === 0 || loading}>
-              Run Preview
-            </button>
-            <button className="apply-trigger" onClick={() => runCleaning(false)} disabled={steps.length === 0 || loading}>
-              Apply All
-            </button>
+            {!mlStudioMode && (
+              <>
+                <button className="preview-trigger" onClick={() => runCleaning(true)} disabled={steps.length === 0 || loading}>
+                  Run Preview
+                </button>
+                <button className="apply-trigger" onClick={() => runCleaning(false)} disabled={steps.length === 0 || loading}>
+                  Apply All
+                </button>
+              </>
+            )}
+            {mlStudioMode && (
+                <button className="apply-trigger" onClick={closeForm}>
+                  Return to Prepare Data
+                </button>
+            )}
             <button
               type="button"
               className="help-overlay-trigger"
@@ -532,19 +560,21 @@ function DataCleaningForm({ closeForm, setShowDataPreview, initialSteps = [], on
 
         <div className="manual-cleaning-body">
           {/* Top Ribbon */}
-          <CleaningRibbon
-            selectedCategory={selectedCategory}
-            onSelectCategory={setSelectedCategory}
-            selectedTransform={selectedTransform}
-            onSelectTransform={(type) => {
-              setSelectedTransform(type);
-              setSuccess(null);
-              setError(null);
-            }}
-          />
+          {!mlStudioMode && (
+             <CleaningRibbon
+               selectedCategory={selectedCategory}
+               onSelectCategory={setSelectedCategory}
+               selectedTransform={selectedTransform}
+               onSelectTransform={(type) => {
+                 setSelectedTransform(type);
+                 setSuccess(null);
+                 setError(null);
+               }}
+             />
+          )}
 
           {/* Configuration Panel (Collapsible/Conditional) */}
-          {activeTransform && (
+          {!mlStudioMode && activeTransform && (
              <div className="config-panel">
                <div className="config-header">
                  <h3>Configure: {activeTransform.label}</h3>
@@ -578,19 +608,44 @@ function DataCleaningForm({ closeForm, setShowDataPreview, initialSteps = [], on
 
           {/* Main Workspace: applied steps (left/right) + preview (center/bottom) */}
           <div className="workspace-area">
-             {/* Preview Container */}
-             <DataCleaningPreview previewRows={previewRows} />
-
-             {/* Right Panel: Applied Steps */}
-             <div className="sidebar-right">
-                <AppliedStepsList
-                  steps={steps}
-                  editingId={editingId}
-                  onEditStep={editStep}
-                  onDeleteStep={deleteStep}
-                  onMoveStep={moveStep}
-                />
-             </div>
+             {mlStudioMode ? (
+               <div className="ml-prep-panel">
+                  <h3>Suggested Preparation Step</h3>
+                  <div className="ml-prep-card info">
+                     <div className="ml-prep-card-header">
+                       <span className="ml-prep-card-title">Affected Column: {mlStudioOpeningContext?.field}</span>
+                     </div>
+                     <p className="ml-prep-card-reason"><strong>Action:</strong> {mlStudioOpeningContext?.action}</p>
+                     <p className="ml-prep-card-action"><strong>Explanation:</strong> {mlStudioOpeningContext?.explanation}</p>
+                  </div>
+                  {steps.length > 0 && (
+                    <div className="config-panel">
+                       <div className="config-header">
+                         <h3>Step Parameters</h3>
+                       </div>
+                       <pre className="ml-prep-card">
+                          {JSON.stringify(steps[0].params, null, 2)}
+                       </pre>
+                    </div>
+                  )}
+                  <p className="text-muted ml-prep-hint">
+                    Previewing and applying changes will arrive separately in a future update. The global dataset preview is hidden to ensure safe isolation of your saved experiment.
+                  </p>
+               </div>
+             ) : (
+               <>
+                 <DataCleaningPreview previewRows={previewRows} />
+                 <div className="sidebar-right">
+                    <AppliedStepsList
+                      steps={steps}
+                      editingId={editingId}
+                      onEditStep={editStep}
+                      onDeleteStep={deleteStep}
+                      onMoveStep={moveStep}
+                    />
+                 </div>
+               </>
+             )}
           </div>
 
           {/* ✅ Help Overlay */}

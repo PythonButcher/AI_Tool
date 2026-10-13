@@ -31,6 +31,7 @@ from .contracts import (
     TransformationStep,
 )
 from .repository import MLStudioRepository, PersistenceError
+from .configuration import assess_configuration, dependency_fingerprint
 
 
 SnapshotResolver = Callable[[str], Mapping[str, Any]]
@@ -274,6 +275,7 @@ class MLStudioService:
         run_data_resolver: RunDataResolver | None = None,
         run_evaluator: Callable[..., Any] = _default_run_evaluator,
         workspace_resolver: WorkspaceResolver | None = None,
+        artifact_store=None,
     ) -> None:
         self._repository = repository
         self._snapshot_resolver = snapshot_resolver
@@ -283,6 +285,7 @@ class MLStudioService:
         self._run_evaluator = run_evaluator
         self._run_scheduler: RunScheduler | None = None
         self._workspace_resolver = workspace_resolver
+        self._artifact_store = artifact_store
 
     def set_run_scheduler(self, scheduler: RunScheduler) -> None:
         """Attach the process-local scheduler after constructing its worker callback."""
@@ -328,23 +331,59 @@ class MLStudioService:
             raise MLStudioServiceError("workspace_not_found", "The workspace is unavailable.", "Select an existing workspace.", status_code=404)
         return workspace_id
 
-    @staticmethod
-    def _draft_workflow(draft: Mapping[str, Any]) -> dict[str, Any]:
-        """Derive only currently justified stages; later workflow steps remain locked."""
+    def _draft_workflow(self, draft: Mapping[str, Any]) -> dict[str, Any]:
+        """Derive progression from saved inputs and immutable evidence."""
         stages = ("Data & Goal", "Prepare Data", "Configure", "Train", "Review Results", "Use & Share")
         has_data_goal = bool(draft["snapshot_id"] and draft["task_type"])
         available = {"Data & Goal"}
         if has_data_goal:
-            available.add("Prepare Data")
+            available.update(("Prepare Data", "Configure"))
+        assessment = self._repository.get_draft_assessment(draft.get("latest_assessment_id"), draft["experiment_id"], draft["workspace_id"])
+        fresh = bool(assessment and assessment["input_fingerprint"] == dependency_fingerprint(draft))
+        if fresh and assessment["state"] == "ready":
+            available.add("Train")
+        runs = self._repository.list_runs(experiment_id=f"studio-{draft['experiment_id']}", workspace_id=draft["workspace_id"], run_purpose="development_comparison", limit=20)
+        complete = next((run for run in runs if run["status"] == "completed"), None)
+        current_run = next((run for run in runs if run["run_specification"]["parameters"].get("input_fingerprint") == dependency_fingerprint(draft) and run["status"] == "completed"), None)
+        if complete:
+            available.add("Review Results")
+        if runs:
+            available.add("Train")
+        selections = self._repository.list_selections(draft["experiment_id"], draft["workspace_id"])
+        selection = next((item for item in selections if item["input_fingerprint"] == dependency_fingerprint(draft)), None)
+        if selections:
+            available.update(("Review Results", "Use & Share"))
+        completed_stages = set()
+        if has_data_goal:
+            completed_stages.add("Data & Goal")
+        if fresh and assessment["state"] == "ready":
+            completed_stages.update(("Prepare Data", "Configure"))
+        if current_run or selection:
+            completed_stages.add("Train")
+        if selection:
+            completed_stages.add("Review Results")
         effective = draft["active_stage"] if isinstance(draft["active_stage"], str) and draft["active_stage"] in available else "Data & Goal"
         records = []
         for stage in stages:
-            state = "active" if stage == effective else "available" if stage in available else "locked"
-            blockers = [] if stage in available else ["data_goal_required" if not has_data_goal else "preparation_required"]
-            records.append({"stage": stage, "state": state, "blocker_codes": blockers, "stale_reason_codes": []})
+            state = "active" if stage == effective else "complete" if stage in completed_stages else "available" if stage in available else "locked"
+            stale = bool(assessment and not fresh and stage in ("Train", "Review Results", "Use & Share")) or bool(stage == "Review Results" and complete and not current_run)
+            stale = stale or bool(stage == "Use & Share" and selections and not selection)
+            if stale:
+                state = "stale"
+            blockers = [] if stage in available else ["data_goal_required" if not has_data_goal else "assessment_required" if stage == "Train" else "development_run_required" if stage == "Review Results" else "selection_required"]
+            records.append({"stage": stage, "state": state, "blocker_codes": blockers,
+                            "stale_reason_codes": ["configuration_changed"] if stale else [],
+                            "snapshot_id": draft["snapshot_id"],
+                            "configuration_id": assessment["configuration"]["configuration_id"] if fresh else None,
+                            "run_id": current_run["run_id"] if current_run else None,
+                            "selection_id": selection["selection_id"] if selection else None})
         return {
             "experiment_id": draft["experiment_id"], "draft_revision": draft["draft_revision"],
-            "active_stage": effective, "stages": records,
+            "active_stage": effective, "stages": records, "assessment_current": fresh,
+            "latest_run_id": runs[0]["run_id"] if runs else None,
+            "selection_id": selection["selection_id"] if selection else None,
+            "experiment_complete": selection is not None,
+            "active_run": next(({key: run[key] for key in ("run_id", "status", "progress_stage")} for run in runs if run["status"] in ("queued", "running", "cancel_requested")), None),
         }
 
     def _validate_draft_references(self, draft: Mapping[str, Any]) -> None:
@@ -376,7 +415,7 @@ class MLStudioService:
         except PersistenceError as exc:
             raise self._translate_persistence(exc) from exc
         return [
-            {key: draft[key] for key in ("experiment_id", "workspace_id", "draft_revision", "name", "active_stage", "task_type", "updated_at")}
+            {key: draft[key] for key in ("experiment_id", "workspace_id", "draft_revision", "etag", "name", "active_stage", "task_type", "updated_at")}
             for draft in drafts
         ]
 
@@ -385,12 +424,49 @@ class MLStudioService:
         draft = self._repository.get_draft(experiment_id, workspace_id)
         if draft is None:
             raise MLStudioServiceError("draft_not_found", "The draft is unavailable in this workspace.", "Select a draft from the current workspace.", status_code=404)
-        return {"draft": draft, "workflow_state": self._draft_workflow(draft)}
+        return {"draft": draft, "workflow_state": self._draft_workflow(draft),
+                "preparation_context": self._repository.open_preparation(experiment_id, workspace_id),
+                "assessment": self._repository.get_draft_assessment(draft.get("latest_assessment_id"), experiment_id, workspace_id)}
+
+    def assess_draft(self, experiment_id: str, workspace_id: str, etag: str, request: Any) -> dict:
+        payload = _require_object(request, label="draft assessment")
+        _exact_fields(payload, set(), set())
+        draft = self.get_draft(experiment_id, workspace_id)["draft"]
+        if not draft["snapshot_id"] or not draft["task_type"]:
+            raise MLStudioServiceError("data_goal_required", "Save the data and goal first.", "Select a governed dataset snapshot and task.")
+        snapshot = self.get_snapshot(draft["snapshot_id"])
+        self._assert_snapshot_current(_snapshot_from_dict(snapshot))
+        assessment = assess_configuration(draft, snapshot)
+        try:
+            saved, assessment = self._repository.save_draft_assessment(experiment_id, workspace_id, etag, assessment)
+        except PersistenceError as exc:
+            raise self._translate_persistence(exc) from exc
+        return {"draft": saved, "assessment": assessment, "workflow_state": self._draft_workflow(saved), "preparation_context": None}
+
+    def resolve_preparation_snapshot(self, workspace_id: str) -> DatasetSnapshotIdentity:
+        """Build validated current identity without opening a persistence transaction."""
+        truth = self._resolve_truth(workspace_id)
+        if truth.get("workspace_id") != workspace_id or (truth.get("governance_result") or {}).get("status") not in {"ready", "warning"}:
+            raise MLStudioServiceError("snapshot_governance_blocked", "The workspace identity or governance is unavailable.", "Reload the governed workspace.", status_code=409)
+        return DatasetSnapshotIdentity(
+            snapshot_id=f"snapshot-{uuid4().hex}", workspace_id=workspace_id,
+            workspace_version=int(truth["workspace_version"]), source_ids=tuple(truth["source_ids"]),
+            relationship_ids=tuple(truth["relationship_ids"]),
+            source_fingerprints=tuple(SourceFingerprint(**item) for item in truth["source_fingerprints"]),
+            schema_version=int(truth["schema_version"]), semantic_model_version=str(truth["semantic_model_version"]),
+            governance_result=dict(truth["governance_result"]), transformation_recipe_hash=str(truth["transformation_recipe_hash"]),
+            row_count=int(truth["row_count"]), column_profile=tuple(ColumnProfile(**item) for item in truth["column_profile"]),
+            created_at=self._clock(),
+        )
 
     def update_draft(self, experiment_id: str, workspace_id: str, etag: str, request: Any) -> dict[str, Any]:
         self._require_draft_workspace(workspace_id)
         payload = _require_object(request, label="experiment draft edit")
         current = self.get_draft(experiment_id, workspace_id)["draft"]
+        if "task_type" in payload and payload["task_type"] != current["task_type"]:
+            payload = dict(payload)
+            for field in ("validation", "metric", "candidate"):
+                payload.setdefault(field, {})
         self._validate_draft_references({**current, **payload})
         try:
             draft = self._repository.update_draft(experiment_id, workspace_id, etag, payload)
@@ -405,6 +481,13 @@ class MLStudioService:
         except PersistenceError as exc:
             raise self._translate_persistence(exc) from exc
         return {"draft": draft, "workflow_state": self._draft_workflow(draft)}
+
+    def delete_draft(self, experiment_id: str, workspace_id: str, etag: str) -> None:
+        self._require_draft_workspace(workspace_id)
+        try:
+            self._repository.delete_draft(experiment_id, workspace_id, etag)
+        except PersistenceError as exc:
+            raise self._translate_persistence(exc) from exc
 
     def create_snapshot(self, request: Any) -> dict[str, Any]:
         payload = _require_object(request, label="snapshot request")
@@ -741,6 +824,8 @@ class MLStudioService:
                 "Use an existing experiment identity and positive integer version.",
             ) from exc
         experiment = self._repository.get_experiment(experiment_id, specification_version)
+        if experiment and experiment.get("contract_version") == "ml_studio_configuration_v1":
+            raise MLStudioServiceError("draft_submission_required", "Use the assessed draft to start this run.", "Submit from the draft-scoped training endpoint.", status_code=409)
         if experiment is None:
             raise MLStudioServiceError(
                 "experiment_version_missing",
@@ -807,6 +892,14 @@ class MLStudioService:
         """Execute one queued run and persist only safe lifecycle evidence."""
         current = self._repository.get_run(run_id)
         if current is None or current["status"] != "queued":
+            return
+        if current["run_specification"]["parameters"].get("run_purpose") == "development_comparison":
+            from .workflow_execution import execute_development_run
+            execute_development_run(self, run_id)
+            return
+        if current["run_specification"]["parameters"].get("run_purpose") == "final_evaluation":
+            from .review import execute_final_evaluation
+            execute_final_evaluation(self, run_id)
             return
         try:
             self._repository.transition_run(run_id, "running", progress_stage="resolving_dataset")
@@ -905,8 +998,10 @@ class MLStudioService:
             failure=failure,
         )
 
-    def list_runs(self, *, limit: int = 100) -> list[dict[str, Any]]:
-        return self._repository.list_runs(limit=limit)
+    def list_runs(self, *, limit: int = 100, workspace_id: str | None = None) -> list[dict[str, Any]]:
+        if workspace_id is not None:
+            self._require_draft_workspace(workspace_id)
+        return self._repository.list_runs(limit=limit, workspace_id=workspace_id)
 
     def recover_incomplete_runs(self) -> list[str]:
         return self._repository.recover_incomplete_runs()
