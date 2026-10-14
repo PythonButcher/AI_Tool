@@ -24,7 +24,7 @@ Decision Intelligence workspaces, decision frames, readiness and capability pane
 
 Dataset identity and semantic truth remain required for every BI answer and chart.
 
-AI Chat model routing is engineering-complete and awaiting user acceptance in chat; live provider access and quality remain unverified. Conversation management, visual refinement and ML Studio retain their pending acceptance boundaries. The [active gate](active_gate/README.md) controls execution; [status](status/project_execution_status.md) records verification and ownership.
+The model selector and shared light/dark theme refinement are engineering-complete and awaiting user feedback in chat. AI Chat model routing is engineering-complete; live provider access and quality remain unverified. Conversation management and ML Studio retain their pending acceptance boundaries. The [active gate](active_gate/README.md) controls execution; [status](status/project_execution_status.md) records verification and ownership.
 
 ## Active Areas
 

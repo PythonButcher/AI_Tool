@@ -31,7 +31,8 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--text-primary);
+  background: var(--accent-teal);
+  box-shadow: 0 0 0 4px var(--accent-teal-soft);
 }
 
 .menu-bar__app-name {

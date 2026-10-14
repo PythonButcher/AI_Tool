@@ -14,52 +14,58 @@ export const MuiThemeContext = ({ children }) => {
       palette: {
         mode: isDark ? 'dark' : 'light',
         ...(isDark ? {
-          // NEUTRAL DARK THEME PALETTE
+          // Keep canvas-rendered and MUI colors aligned with index.css tokens.
           background: {
-            default: '#0e0e10', // --bg-primary
-            paper: '#18191c',   // --bg-secondary
+            default: '#111922',
+            paper: '#171f29',
           },
           primary: {
-            main: '#3b82f6',    // --accent-blue
-            contrastText: '#ffffff',
+            main: '#89adff',
+            contrastText: '#122030',
           },
           secondary: {
-            main: '#a1a1aa',    // --text-secondary
+            main: '#76c8c4',
+            contrastText: '#122030',
           },
           text: {
-            primary: '#e4e4e7', // --text-primary
-            secondary: '#a1a1aa',
+            primary: '#e5edf2',
+            secondary: '#acbdc9',
           },
-          divider: '#27272a',   // --border-color
+          divider: '#364855',
+          success: { main: '#70d3aa', contrastText: '#122030' },
+          error: { main: '#ff91a2', contrastText: '#122030' },
+          warning: { main: '#edc477', contrastText: '#122030' },
+          info: { main: '#89adff', contrastText: '#122030' },
         } : {
-          // LIGHT THEME PALETTE (Standard Defaults with brand accent)
           primary: {
-            main: '#3b82f6',
+            main: '#315fc4',
+            contrastText: '#ffffff',
           },
+          secondary: { main: '#197a7b' },
           background: {
-            default: '#ffffff',
-            paper: '#f9fafb',
+            default: '#edf2f3',
+            paper: '#fdfefd',
           },
           text: {
-            primary: '#111827',
-            secondary: '#374151',
+            primary: '#20333e',
+            secondary: '#506774',
           },
-          divider: '#d1d5db',
+          divider: '#ccdadd',
+          success: { main: '#187954' },
+          error: { main: '#bb394c' },
+          warning: { main: '#896018' },
+          info: { main: '#315fc4' },
         }),
       },
       typography: {
-        fontFamily: '"Segoe UI", "Tahoma", "Geneva", "Verdana", "sans-serif"',
-        allVariants: {
-          color: isDark ? '#e4e4e7' : '#111827',
-        },
+        fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
       },
+      shape: { borderRadius: 10 },
       components: {
         MuiPaper: {
           styleOverrides: {
             root: {
               backgroundImage: 'none',
-              backgroundColor: isDark ? '#18191c' : '#ffffff',
-              color: isDark ? '#e4e4e7' : '#111827',
             },
           },
         },
@@ -76,20 +82,20 @@ export const MuiThemeContext = ({ children }) => {
             root: {
               '& .MuiOutlinedInput-root': {
                 '& fieldset': {
-                  borderColor: isDark ? '#27272a' : '#d1d5db',
+                  borderColor: 'var(--border-color)',
                 },
                 '&:hover fieldset': {
-                  borderColor: '#3b82f6',
+                  borderColor: 'var(--accent-blue)',
                 },
                 '&.Mui-focused fieldset': {
-                  borderColor: '#3b82f6',
+                  borderColor: 'var(--accent-blue)',
                 },
               },
               '& .MuiInputLabel-root': {
-                color: isDark ? '#a1a1aa' : '#374151',
+                color: 'var(--text-secondary)',
               },
               '& .MuiInputBase-input': {
-                color: isDark ? '#e4e4e7' : '#111827',
+                color: 'var(--text-primary)',
               },
             },
           },

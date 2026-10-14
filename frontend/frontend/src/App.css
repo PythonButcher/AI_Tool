@@ -1,7 +1,7 @@
 /* App.css */
 body {
   margin: 0;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: var(--font-sans);
   background-color: var(--bg-secondary);
   color: var(--text-primary);
   overflow: hidden;
@@ -9,8 +9,8 @@ body {
 
 .app-container {
   display: flex;
-  background: var(--bg-primary);
-  background-image: radial-gradient(circle at 15% 50%, var(--bg-primary-soft), transparent 25%), radial-gradient(circle at 85% 30%, var(--bg-secondary-soft), transparent 25%);
+  background: var(--bg-secondary);
+  background-image: var(--workspace-background);
   color: var(--text-primary);
   height: 100dvh;
   min-height: 0;

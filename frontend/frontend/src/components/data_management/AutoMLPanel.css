@@ -3,7 +3,7 @@
   flex-direction: column;
   gap: 20px;
   padding: 24px;
-  background-color: #fcfcfc;
+  background-color: var(--bg-secondary);
   min-height: 400px;
   animation: fadeIn 0.3s ease-in-out;
 }
@@ -14,7 +14,7 @@
 }
 
 .automl-header {
-  border-bottom: 2px solid #eaeaea;
+  border-bottom: 2px solid var(--border-color);
   padding-bottom: 16px;
 }
 
@@ -26,23 +26,23 @@
 
 .automl-main-icon {
   font-size: 2.5rem;
-  color: #4a90e2;
+  color: var(--accent-blue);
 }
 
 .automl-header h3 {
   margin: 0;
   font-size: 1.5rem;
-  color: #333;
+  color: var(--text-primary);
 }
 
 .automl-subtitle {
   margin: 4px 0 0;
-  color: #666;
+  color: var(--text-secondary);
   font-size: 0.95rem;
 }
 
 .automl-config {
-  background: white;
+  background: var(--bg-primary);
   padding: 20px;
   border-radius: 12px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
@@ -69,23 +69,23 @@
 
 .automl-field span {
   font-weight: 600;
-  color: #444;
+  color: var(--text-secondary);
   font-size: 0.9rem;
 }
 
 .automl-field select,
 .automl-field input {
   padding: 10px 14px;
-  border: 2px solid #ddd;
+  border: 2px solid var(--border-color);
   border-radius: 8px;
   font-size: 1rem;
   transition: border-color 0.2s;
-  background-color: #fafafa;
+  background-color: var(--bg-primary);
 }
 
 .automl-field select:focus,
 .automl-field input:focus {
-  border-color: #4a90e2;
+  border-color: var(--accent-blue);
   outline: none;
 }
 
@@ -95,8 +95,8 @@
   justify-content: center;
   gap: 10px;
   padding: 12px 28px;
-  background-color: #4a90e2;
-  color: white;
+  background-color: var(--accent-blue);
+  color: var(--text-on-accent);
   border: none;
   border-radius: 8px;
   font-size: 1.1rem;
@@ -107,13 +107,13 @@
 }
 
 .automl-run-btn:hover:not(:disabled) {
-  background-color: #357abd;
+  background-color: var(--accent-blue-hover);
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(74, 144, 226, 0.3);
 }
 
 .automl-run-btn:disabled {
-  background-color: #ccc;
+  background-color: var(--border-color);
   cursor: not-allowed;
 }
 
@@ -127,16 +127,16 @@
 }
 
 .automl-alert.error {
-  background-color: #fff1f0;
-  border: 1px solid #ffa39e;
-  color: #cf1322;
+  background-color: var(--accent-red-soft);
+  border: 1px solid var(--accent-red);
+  color: var(--accent-red);
 }
 
 .results-summary-banner {
   display: flex;
   justify-content: space-around;
-  background: #2c3e50;
-  color: white;
+  background: var(--bg-secondary-soft);
+  color: var(--text-primary);
   padding: 15px;
   border-radius: 12px;
   margin-bottom: 24px;
@@ -163,13 +163,13 @@
 }
 
 .summary-item .value.type-tag {
-  background: #4a90e2;
+  background: var(--accent-blue);
   padding: 2px 8px;
   border-radius: 4px;
 }
 
 .summary-item .value.highlight {
-  color: #f1c40f;
+  color: var(--accent-warning);
 }
 
 .results-grid-container {
@@ -185,8 +185,8 @@
 }
 
 .model-card {
-  background: white;
-  border: 2px solid #eee;
+  background: var(--bg-primary);
+  border: 2px solid var(--border-color);
   border-radius: 12px;
   overflow: hidden;
   transition: all 0.2s;
@@ -195,33 +195,33 @@
 }
 
 .model-card.best-model {
-  border-color: #27ae60;
+  border-color: var(--accent-green);
   box-shadow: 0 8px 20px rgba(39, 174, 96, 0.15);
   transform: scale(1.02);
 }
 
 .model-card-header {
   padding: 15px;
-  background: #f8f9fa;
-  border-bottom: 1px solid #eee;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
 .best-model .model-card-header {
-  background: #e8f5e9;
+  background: var(--accent-green-soft);
 }
 
 .model-card-header h4 {
   margin: 0;
   font-size: 1.1rem;
-  color: #2c3e50;
+  color: var(--text-primary);
 }
 
 .best-badge {
-  background: #27ae60;
-  color: white;
+  background: var(--accent-green);
+  color: var(--text-on-accent);
   padding: 4px 8px;
   border-radius: 4px;
   font-size: 0.75rem;
@@ -242,12 +242,12 @@
   display: flex;
   justify-content: space-between;
   font-size: 0.95rem;
-  color: #555;
+  color: var(--text-secondary);
 }
 
 .metric-row.best {
   font-weight: 700;
-  color: #27ae60;
+  color: var(--accent-green);
   font-size: 1.05rem;
 }
 
@@ -264,8 +264,8 @@
 }
 
 .automl-detail-card {
-  border: 1px solid #d9dde3;
-  background: #fff;
+  border: 1px solid var(--border-color);
+  background: var(--bg-primary);
   border-radius: 10px;
   padding: 12px;
 }
@@ -273,7 +273,7 @@
 .automl-detail-card h5 {
   margin: 0 0 8px 0;
   font-size: 0.95rem;
-  color: #2c3e50;
+  color: var(--text-primary);
   display: flex;
   align-items: center;
   gap: 6px;
@@ -281,41 +281,41 @@
 
 .automl-detail-card p {
   margin: 6px 0;
-  color: #3f4956;
+  color: var(--text-secondary);
   font-size: 0.9rem;
 }
 
 .automl-detail-card ul {
   margin: 8px 0;
   padding-left: 18px;
-  color: #3f4956;
+  color: var(--text-secondary);
   font-size: 0.88rem;
 }
 
 .automl-detail-card pre {
   margin: 8px 0 0;
-  background: #f6f8fb;
-  border: 1px solid #e2e8f0;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
   border-radius: 6px;
   padding: 8px;
   max-height: 150px;
   overflow: auto;
   font-size: 0.8rem;
-  color: #334155;
+  color: var(--text-primary);
 }
 
 .automl-warning-box {
   margin-top: 10px;
   border-radius: 8px;
   padding: 8px;
-  background: #fff7e6;
-  border: 1px solid #ffd591;
+  background: var(--accent-yellow-soft);
+  border: 1px solid var(--accent-warning);
 }
 
 .automl-warning-box p {
   margin: 0;
   font-size: 0.82rem;
-  color: #8c4a00;
+  color: var(--accent-warning);
 }
 
 .automl-placeholder {
@@ -324,7 +324,7 @@
   align-items: center;
   justify-content: center;
   padding: 60px;
-  color: #aaa;
+  color: var(--text-tertiary);
   text-align: center;
 }
 
@@ -337,8 +337,8 @@
 .automl-footer-note {
   margin-top: 16px;
   padding: 12px;
-  border-top: 1px dashed #ccc;
-  color: #7f8c8d;
+  border-top: 1px dashed var(--border-color);
+  color: var(--text-secondary);
   font-style: italic;
   font-size: 0.85rem;
 }
@@ -348,7 +348,7 @@
   height: 18px;
   border: 3px solid rgba(255, 255, 255, 0.3);
   border-radius: 50%;
-  border-top-color: #fff;
+  border-top-color: var(--bg-primary);
   animation: spin 1s ease-in-out infinite;
 }
 

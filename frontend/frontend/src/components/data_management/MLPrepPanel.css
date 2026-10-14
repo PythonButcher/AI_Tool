@@ -18,9 +18,9 @@
     align-items: center;
     gap: 8px; /* Space between icon and text */
     padding: 8px 16px;
-    background-color: white; /* Contrast against the green success background */
-    color: #2e7d32; /* Match the success green text color */
-    border: 1px solid #2e7d32;
+    background-color: var(--bg-primary); /* Contrast against the green success background */
+    color: var(--accent-green); /* Match the success green text color */
+    border: 1px solid var(--accent-green);
     border-radius: 6px;
     cursor: pointer;
     font-weight: 600;
@@ -30,7 +30,7 @@
 }
 
 .ml-proceed-button:hover {
-    background-color: #e8f5e9;
+    background-color: var(--accent-green-soft);
     transform: translateY(-1px);
     box-shadow: 0 4px 6px rgba(0,0,0,0.1);
 }

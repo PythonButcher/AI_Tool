@@ -268,21 +268,24 @@ test('answer mode is sent, attributed and retained per chat across reloads', asy
   axios.post.mockResolvedValue(success({ ai_commentary: 'Consider checking seasonality.',
     model_routing: { status: 'completed', selected_mode: 'deep', model: 'gpt-5-mini', reason: 'Selected by you.' } }));
   const view = render(tree());
-  expect(screen.getByRole('combobox', { name: 'Answer mode' })).toHaveValue('auto');
-  fireEvent.change(screen.getByRole('combobox', { name: 'Answer mode' }), { target: { value: 'deep' } });
+  expect(screen.getByRole('radio', { name: 'Auto' })).toBeChecked();
+  fireEvent.click(screen.getByRole('radio', { name: 'Deep analysis' }));
   send('Revenue explanation');
+  expect(screen.getByRole('group', { name: 'Answer mode' })).toBeDisabled();
+  expect(screen.getByRole('radio', { name: 'Quick' })).toBeDisabled();
   await screen.findByText('Consider checking seasonality.');
+  expect(screen.getByRole('radio', { name: 'Quick' })).toBeEnabled();
   expect(axios.post.mock.calls[0][1].model_mode).toBe('deep');
   expect(screen.getByText('Deep analysis · gpt-5-mini')).toBeInTheDocument();
   expect(screen.getByText('Revenue is 100.')).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'New chat' }));
-  expect(screen.getByRole('combobox', { name: 'Answer mode' })).toHaveValue('auto');
+  expect(screen.getByRole('radio', { name: 'Auto' })).toBeChecked();
   fireEvent.click(screen.getByRole('button', { name: 'Show chat history' }));
   fireEvent.click(within(screen.getByRole('dialog', { name: 'Your chats' })).getByRole('button', { name: 'Open chat: Revenue explanation' }));
-  expect(screen.getByRole('combobox', { name: 'Answer mode' })).toHaveValue('deep');
+  expect(screen.getByRole('radio', { name: 'Deep analysis' })).toBeChecked();
   view.unmount();
   render(tree());
-  expect(screen.getByRole('combobox', { name: 'Answer mode' })).toHaveValue('deep');
+  expect(screen.getByRole('radio', { name: 'Deep analysis' })).toBeChecked();
   expect(screen.getByText('Deep analysis · gpt-5-mini')).toBeInTheDocument();
 });
 
@@ -292,10 +295,10 @@ test('retry keeps the original model choice and unavailable commentary preserves
       reason: 'AI explanation is temporarily unavailable. The built-in response is available.' },
   }));
   render(tree());
-  fireEvent.change(screen.getByRole('combobox', { name: 'Answer mode' }), { target: { value: 'quick' } });
+  fireEvent.click(screen.getByRole('radio', { name: 'Quick' }));
   send('Explain revenue');
   await screen.findByRole('button', { name: 'Retry last question' });
-  fireEvent.change(screen.getByRole('combobox', { name: 'Answer mode' }), { target: { value: 'deep' } });
+  fireEvent.click(screen.getByRole('radio', { name: 'Deep analysis' }));
   fireEvent.click(screen.getByRole('button', { name: 'Retry last question' }));
   await screen.findByText('Revenue is 100.');
   expect(axios.post.mock.calls[1][1].model_mode).toBe('quick');

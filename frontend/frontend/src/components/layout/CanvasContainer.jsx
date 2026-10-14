@@ -1,5 +1,6 @@
 import React, { useState, useRef, useMemo, useContext, useEffect, useCallback } from 'react';
 import { createPortal, flushSync } from 'react-dom';
+import usePortalTheme from '../../hooks/usePortalTheme';
 import './CanvasContainer.css';
 import WindowFrame from './WindowFrame';
 import MinimizedDock from './MinimizedDock';
@@ -176,6 +177,7 @@ function CanvasContainer({
   const [focusStack, setFocusStack] = useState([]);
   const [isAiChatPoppedOut, setIsAiChatPoppedOut] = useState(false);
   const [aiChatPopupRoot, setAiChatPopupRoot] = useState(null);
+  usePortalTheme(aiChatPopupRoot);
   const aiChatPopupWindowRef = useRef(null);
   const isClosingAiChatPopupRef = useRef(false);
   const windowRegistry = useRef(new Map());

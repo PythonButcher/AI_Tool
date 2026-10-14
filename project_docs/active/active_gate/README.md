@@ -1,42 +1,32 @@
-Goal: Let AI Chat use economical models for everyday explanations and deeper reasoning for detailed questions while preserving verified BI results.
+Goal: Give AI Tool a polished model selector and cohesive, expressive light and dark themes across its interface.
 
 ## User Outcome
 
-Users choose Auto, Quick or Deep analysis, see which model answered, and retain useful local results when AI is unavailable.
+Users can clearly choose Auto, Quick or Deep analysis and work in a layered light theme or softly blended dark theme with readable controls, charts, dialogs and panels.
 
 ## Scope
 
-No executable implementation step is active. Await specific user feedback before opening bounded repairs to `backend/services/chat_model_router.py`, the chat route, or `frontend/frontend/src/features/ai/`. Live provider access and quality depend on the deployment's API key and model availability.
+No executable implementation step is active. Await specific user feedback before opening bounded repairs to the AI Chat selector, shared CSS/MUI themes or concrete theme exceptions under `frontend/frontend/src/`.
 
-Preserve grounded results, dataset lineage and dashboard items. Do not extend scope to ML Studio or perform browser operations.
+Preserve backend contracts, model routing, dataset identity, chart semantics and all existing workflows. No browser operations or provider calls are in scope. Visual feedback stays in chat.
 
 ## Contracts
 
-- [AI Chat business workspace](../ai_chat/README.md)
 - [Model routing](../contracts/ai_chat_model_routing.md)
-- [BI result contracts](../contracts/decision_objects.md)
-- [Dashboard state](../contracts/dashboard_canvas_state.md)
+- [AI Chat business workspace](../ai_chat/README.md)
 
 ## Acceptance
 
-- Use existing theme tokens, responsive container layouts, keyboard focus and reduced-motion support.
-- Auto avoids paid calls for direct calculations; explicit Quick/Deep controls reasoning tier. Model IDs stay server-controlled.
-- Governance and clarification boundaries run before provider calls. AI commentary cannot alter computed artifacts or execute tools.
-- No hidden model escalation or provider retries. Failure preserves local results and reports unavailable commentary.
-- Persist selection per chat and snapshot it for submissions/retries. Deep analysis does not claim internet research.
-- Expose New Chat and Reset Chat outside the collapsible sidebar; make saved conversations available at narrow window widths.
-- Keep messages, drafts, artifacts and in-memory analytical context isolated per conversation.
-- Confirm reset/delete actions and preserve dashboard items.
-- Keep dialogs above the docked chat portal and in the same document as the chat host. Deleting an inactive conversation preserves the active draft.
-- Keep local storage additive; handle unavailable or malformed storage without claiming persistence succeeded.
-- Preserve grounded AI Chat answers, contextual follow-ups, recoverable failures and deliberate dashboard additions. Preserve dashboard storage and dataset lineage.
-- Preserve pending ML Studio acceptance. No AI Chat browser operations are authorized.
+- Model choices have distinct selection, hover, keyboard focus and disabled states, with useful descriptions.
+- Light mode remains light with subtle tinted surfaces and restrained accent color; dark mode uses a coherent slate surface hierarchy.
+- Shared CSS and MUI palettes agree. Native controls, portals and detached windows follow the active theme.
+- Review reachable pages for hardcoded surfaces and unreadable theme combinations; preserve intentional chart series colors and export backgrounds.
+- Respect reduced motion, narrow layouts and existing feature behavior.
 
 ## Verification
 
-- `python -m unittest tests.test_chat_model_router tests.test_decision_chat_service`
-
-- `npm --prefix frontend/frontend test -- --watchAll=false --runInBand --testPathPattern '(features/ai/.*test|features/dashboard/.*test|context/WindowContext.*test|utils/aiDashboard.*test)'`
+- `npm --prefix frontend/frontend test -- --watchAll=false --runInBand --testPathPattern '(features/ai/.*test|context/ThemeContext.test|context/WindowContext.*test|features/charts/ChartThemes.test)'`
+- Scoped ESLint, CSS parsing and theme-token coverage inspection.
 - `npm --prefix frontend/frontend run build`
 - `python .codex/hooks/agent_harness_check.py`
 - `python .codex/hooks/ci_harness_check.py`
@@ -45,4 +35,4 @@ Preserve grounded results, dataset lineage and dashboard items. Do not extend sc
 
 ## Owner And Control Return
 
-Owner: User, WAIT_FOR_USER. Final visual acceptance and requested refinements remain in chat. Codex resumes on specific user direction and updates the authorization and status before bounded implementation.
+Owner: User, `WAIT_FOR_USER`. Codex resumes on specific feedback and updates status and authorization before bounded implementation. Final visual acceptance remains in chat.

@@ -126,7 +126,7 @@
 .story-section h4 {
   font-family: var(--font-pixel);
   font-size: 18px;
-  color: var(--nt-accent);
+  color: var(--accent-blue);
   margin: 20px 0 6px;
 }
 .story-section p {
@@ -147,7 +147,7 @@
 }
 .charts-column::-webkit-scrollbar-thumb,
 .story-panel::-webkit-scrollbar-thumb {
-  background: var(--nt-accent);
+  background: var(--accent-blue);
   border-radius: 4px;
 }
 

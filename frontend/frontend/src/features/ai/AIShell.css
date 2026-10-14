@@ -245,11 +245,34 @@
 .ai-shell__chat-dialog .MuiButton-root { font-family: var(--font-sans); text-transform: none; }
 .ai-shell__chat-dialog button:focus-visible { outline: 2px solid var(--accent-blue); outline-offset: 2px; }
 
-.ai-shell__model-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 10px 4px 2px; border-top: 1px solid var(--chat-border); margin-top: 10px; color: var(--text-secondary); font-size: 12px; }
-.ai-shell__model-controls label { font-weight: 600; }
-.ai-shell__model-controls select { min-height: 36px; border: 1px solid var(--border-color); border-radius: 8px; padding: 6px 28px 6px 10px; background: var(--bg-primary); color: var(--text-primary); font: inherit; font-size: 13px; }
-.ai-shell__model-controls select:focus-visible { outline: 2px solid var(--accent-blue); outline-offset: 2px; }
-.ai-shell__model-controls span { flex: 1 1 200px; line-height: 1.5; }
+.ai-shell__model-controls { min-width: 0; padding: 10px 0 0; border: 0; border-top: 1px solid var(--chat-border); margin: 14px 0 0; color: var(--text-secondary); font-size: 12px; }
+.ai-shell__model-controls legend { padding-right: 10px; font-size: 10px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; }
+.ai-shell__model-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; padding: 4px; border: 1px solid var(--border-color-soft); border-radius: 14px; background: var(--bg-secondary); }
+.ai-shell__model-option { position: relative; min-width: 0; cursor: pointer; }
+/* Native radios retain arrow-key navigation and form semantics. */
+.ai-shell__model-option input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.ai-shell__model-option-content { display: flex; align-items: center; gap: 10px; min-height: 54px; padding: 9px 10px; border: 1px solid transparent; border-radius: 10px; }
+.ai-shell__model-option-content > svg { flex-shrink: 0; font-size: 15px; color: var(--text-secondary); }
+.ai-shell__model-option-copy { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 3px; }
+.ai-shell__model-option-copy strong { color: var(--text-primary); font-size: 12px; font-weight: 600; line-height: 1.4; }
+.ai-shell__model-option-copy small { color: var(--text-secondary); font-size: 10px; line-height: 1.4; }
+.ai-shell__model-indicator { width: 6px; height: 6px; flex-shrink: 0; border-radius: 50%; background: transparent; }
+.ai-shell__model-option:hover input:not(:disabled) + span { background: var(--bg-primary-soft); }
+.ai-shell__model-option input:checked + span { border-color: color-mix(in srgb, var(--accent-blue) 38%, var(--border-color)); background: linear-gradient(120deg, var(--bg-primary), var(--accent-blue-soft)); box-shadow: var(--shadow-sm); }
+.ai-shell__model-option input:checked + span > svg { color: var(--accent-blue); }
+.ai-shell__model-option input:checked + span .ai-shell__model-indicator { background: var(--accent-teal); box-shadow: 0 0 0 3px var(--accent-teal-soft); }
+.ai-shell__model-option input:focus-visible + span { outline: 2px solid var(--accent-blue); outline-offset: 2px; }
+.ai-shell__model-controls:disabled .ai-shell__model-option { cursor: wait; opacity: .6; }
+.ai-shell__model-hint { margin: 8px 4px 0; font-size: 11px; line-height: 1.5; }
+@container ai-chat (max-width: 760px) {
+  .ai-shell__model-option-copy small, .ai-shell__model-indicator { display: none; }
+  .ai-shell__model-option-content { justify-content: center; min-height: 42px; gap: 6px; padding: 8px 5px; }
+  .ai-shell__model-option-copy { flex: initial; }
+}
+@container ai-chat (max-width: 420px) {
+  .ai-shell__model-option-content > svg { display: none; }
+  .ai-shell__model-option-copy strong { font-size: 11px; }
+}
 .ai-shell__model-attribution { margin: 10px 0 0; color: var(--text-secondary); font-size: 12px; overflow-wrap: anywhere; }
 .ai-shell__ai-commentary { margin-top: 16px; padding: 16px; border: 1px solid var(--chat-border); border-radius: 12px; background: var(--chat-tint); }
 .ai-shell__ai-commentary > strong { display: block; margin-bottom: 8px; font-size: 13px; }

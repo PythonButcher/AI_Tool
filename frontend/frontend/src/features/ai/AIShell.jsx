@@ -23,6 +23,9 @@ import {
   FaShieldAlt,
   FaTimes,
   FaThumbtack,
+  FaMagic,
+  FaBolt,
+  FaBrain,
 } from 'react-icons/fa';
 import {
   Button,
@@ -1055,18 +1058,29 @@ function AIChatConversation({ onOpenDashboard, conversation, conversations, stor
                 {loading ? <div className="ai-shell__spinner" /> : <><span>Send</span><FaArrowUp className="ai-shell__send-icon" /></>}
               </button>
             </div>
-            <div className="ai-shell__model-controls">
-              <label htmlFor="ai-chat-model-mode">Answer mode</label>
-              <select id="ai-chat-model-mode" value={modelMode} disabled={loading}
-                aria-describedby="ai-chat-model-hint" onChange={event => setModelMode(event.target.value)}>
-                <option value="auto">Auto</option>
-                <option value="quick">Quick</option>
-                <option value="deep">Deep analysis</option>
-              </select>
-              <span id="ai-chat-model-hint">{modelMode === 'deep' ? 'More detailed reasoning · May take longer · No web search'
+            <fieldset className="ai-shell__model-controls" disabled={loading} aria-describedby="ai-chat-model-hint">
+              <legend>Answer mode</legend>
+              <div className="ai-shell__model-options">
+                {[
+                  { value: 'auto', label: 'Auto', detail: 'Matched to your question', Icon: FaMagic },
+                  { value: 'quick', label: 'Quick', detail: 'Concise explanations', Icon: FaBolt },
+                  { value: 'deep', label: 'Deep analysis', detail: 'More detailed reasoning', Icon: FaBrain },
+                ].map(({ value, label, detail, Icon }) => (
+                  <label key={value} className="ai-shell__model-option">
+                    <input type="radio" name="ai-chat-answer-mode" value={value} checked={modelMode === value}
+                      aria-label={label} onChange={() => setModelMode(value)} />
+                    <span className="ai-shell__model-option-content">
+                      <Icon aria-hidden="true" />
+                      <span className="ai-shell__model-option-copy"><strong>{label}</strong><small>{detail}</small></span>
+                      <span className="ai-shell__model-indicator" aria-hidden="true" />
+                    </span>
+                  </label>
+                ))}
+              </div>
+              <p id="ai-chat-model-hint" className="ai-shell__model-hint">{modelMode === 'deep' ? 'More detailed reasoning · May take longer · No web search'
                 : modelMode === 'quick' ? 'Brief explanations · Lower output budget'
-                  : 'Local calculations first · Models chosen to fit your question'}</span>
-            </div>
+                  : 'Local calculations first · Models chosen to fit your question'}</p>
+            </fieldset>
           </div>
           <div className="ai-shell__composer-hint"><FaShieldAlt /><span>Answers grounded in your data. Review the details behind each result.</span></div>
         </div>

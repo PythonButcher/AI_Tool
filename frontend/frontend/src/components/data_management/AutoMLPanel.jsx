@@ -178,7 +178,7 @@ function AutoMLPanel() {
       {results && bestModel && (
         <div className="automl-results">
           {results.governance_readiness?.status === 'warning' && (
-            <div className="automl-alert warning" style={{ backgroundColor: '#fff3cd', color: '#856404', padding: '10px', borderRadius: '4px', marginBottom: '15px' }}>
+            <div className="automl-alert warning" style={{ backgroundColor: 'var(--accent-yellow-soft)', color: 'var(--accent-warning)', padding: '10px', borderRadius: '4px', marginBottom: '15px' }}>
               <FaExclamationTriangle /> Warning ({results.governance_readiness.next_action}): {results.governance_readiness.reasons?.[0]?.message || 'Governance warnings detected.'}
             </div>
           )}

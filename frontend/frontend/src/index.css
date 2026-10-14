@@ -17,31 +17,39 @@
   --font-weight-semibold: 600;
   --font-weight-bold: 700;
 
-  /* Light theme (default) */
-  --bg-primary: #ffffff;
-  --bg-primary-soft: #fcfcfd;
-  --bg-secondary: #f8fafc;
-  --bg-secondary-soft: #f1f5f9;
-  --menu-bar-surface: rgba(255, 255, 255, 0.85);
-  --sidebar-surface: rgba(248, 250, 252, 0.85);
-  --text-primary: #0f172a;
-  --text-secondary: #475569;
-  --text-tertiary: #94a3b8;
-  --border-color: #e2e8f0; /* Softer gray */
-  --border-color-soft: #f1f5f9;
-  --accent-blue: #2563eb;
-  --accent-green: #10b981;
-  --accent-red: #ef4444;
+  /* Pearl surfaces, ink typography and a restrained mineral accent. */
+  color-scheme: light;
+  --bg-primary: #fdfefd;
+  --bg-primary-soft: #f6f9f8;
+  --bg-secondary: #edf2f3;
+  --bg-secondary-soft: #e3ebee;
+  --menu-bar-surface: rgba(248, 251, 250, 0.94);
+  --sidebar-surface: rgba(234, 242, 242, 0.94);
+  --text-primary: #20333e;
+  --text-secondary: #506774;
+  --text-tertiary: #546974;
+  --border-color: #ccdadd;
+  --border-color-soft: #e1e9eb;
+  --accent-blue: #315fc4;
+  --accent-green: #187954;
+  --accent-red: #bb394c;
+  --accent-teal: #197a7b;
+  --accent-teal-soft: rgba(25, 122, 123, 0.09);
+  --accent-warning: #896018;
+  --accent-blue-hover: #254da7;
+  --accent-red-hover: #9d2e40;
+  --workspace-glow: rgba(61, 143, 146, 0.09);
+  --workspace-glow-secondary: rgba(98, 122, 182, 0.08);
   
   /* Shadow Scale */
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  --shadow-sm: 0 1px 3px var(--shadow-color-soft);
+  --shadow-md: 0 4px 16px var(--shadow-color);
+  --shadow-lg: 0 12px 32px var(--shadow-color);
+  --shadow-xl: 0 24px 64px var(--shadow-color-strong);
 
-  --shadow-color: rgba(0, 0, 0, 0.08);
-  --shadow-color-soft: rgba(0, 0, 0, 0.04);
-  --shadow-color-strong: rgba(0, 0, 0, 0.15);
+  --shadow-color: rgba(33, 66, 79, 0.08);
+  --shadow-color-soft: rgba(33, 66, 79, 0.04);
+  --shadow-color-strong: rgba(33, 66, 79, 0.16);
   
   --overlay-color: rgba(0, 0, 0, 0.5);
   --overlay-strong: rgba(0, 0, 0, 0.6);
@@ -49,35 +57,60 @@
   --glass-overlay-medium: rgba(255, 255, 255, 0.5);
   --glass-overlay-strong: rgba(255, 255, 255, 0.85);
   --glass-overlay-bold: rgba(255, 255, 255, 0.95);
-  --accent-blue-soft: rgba(37, 99, 235, 0.1);
+  --accent-blue-soft: rgba(49, 95, 196, 0.09);
   --accent-blue-glow: rgba(37, 99, 235, 0.4);
   --accent-blue-strong: rgba(37, 99, 235, 0.5);
   --accent-green-soft: rgba(16, 185, 129, 0.1);
   --accent-green-glow: rgba(16, 185, 129, 0.4);
   --accent-red-soft: rgba(239, 68, 68, 0.2);
   --accent-red-glow: rgba(239, 68, 68, 0.4);
-  --accent-yellow-soft: rgba(255, 255, 0, 0.15);
+  --accent-yellow-soft: rgba(182, 134, 44, 0.12);
   --accent-white-soft: rgba(255, 255, 255, 0.1);
   --accent-white-medium: rgba(255, 255, 255, 0.2);
   --accent-white-strong: rgba(255, 255, 255, 0.5);
   --text-on-accent: #ffffff;
+
+  /* Compatibility aliases used by data modeling and older feature panels. */
+  --bg-surface: var(--bg-primary);
+  --bg-canvas: var(--bg-secondary);
+  --bg-hover: var(--bg-secondary-soft);
+  --bg-tertiary: var(--bg-secondary-soft);
+  --status-error: var(--accent-red);
+  --field-color-numeric: var(--accent-blue);
+  --field-color-categorical: var(--accent-teal);
+  --field-color-temporal: var(--accent-warning);
+  --text-muted: var(--text-tertiary);
+  --border-light: var(--border-color-soft);
+  --primary-color: var(--accent-blue);
+  --primary-hover: var(--accent-blue-hover);
+  --accent-color: var(--accent-blue);
+  --workspace-background: radial-gradient(ellipse at 8% 0%, var(--workspace-glow), transparent 55%), radial-gradient(ellipse at 95% 95%, var(--workspace-glow-secondary), transparent 55%);
 }
 
 [data-theme='dark'] {
-  --bg-primary: #000000; /* Pure Black Workspace */
-  --bg-primary-soft: #050505;
-  --bg-secondary: #0f172a; /* Slate 900 - Bluish Grey Sidebars */
-  --bg-secondary-soft: #1e293b;
-  --menu-bar-surface: rgba(15, 23, 42, 0.85);
-  --sidebar-surface: rgba(15, 23, 42, 0.85);
-  --text-primary: #f8fafc; /* Slate 50 */
-  --text-secondary: #94a3b8; /* Slate 400 */
-  --text-tertiary: #64748b;
-  --border-color: #1e293b; /* Slate 800 */
-  --border-color-soft: #334155;
-  --accent-blue: #3b82f6; /* Vibrant Blue */
-  --accent-green: #10b981; /* Vibrant Green */
-  --accent-red: #ef4444; /* Vibrant Red */
+  color-scheme: dark;
+  --bg-primary: #171f29;
+  --bg-primary-soft: #1b2631;
+  --bg-secondary: #111922;
+  --bg-secondary-soft: #253340;
+  --menu-bar-surface: rgba(24, 34, 44, 0.95);
+  --sidebar-surface: rgba(20, 31, 40, 0.95);
+  --text-primary: #e5edf2;
+  --text-secondary: #acbdc9;
+  --text-tertiary: #94a9b8;
+  --border-color: #364855;
+  --border-color-soft: #2b3945;
+  --accent-blue: #89adff;
+  --accent-green: #70d3aa;
+  --accent-red: #ff91a2;
+  --accent-teal: #76c8c4;
+  --accent-teal-soft: rgba(118, 200, 196, 0.1);
+  --accent-warning: #edc477;
+  --accent-blue-hover: #a6c1ff;
+  --accent-red-hover: #ffafba;
+  --text-on-accent: #122030;
+  --workspace-glow: rgba(89, 159, 158, 0.07);
+  --workspace-glow-secondary: rgba(113, 135, 190, 0.06);
 
   --shadow-color: rgba(0, 0, 0, 0.5);
   --shadow-color-soft: rgba(0, 0, 0, 0.3);
@@ -85,10 +118,10 @@
   --overlay-color: rgba(0, 0, 0, 0.75);
   --overlay-strong: rgba(0, 0, 0, 0.9);
 
-  --glass-overlay-soft: rgba(3, 7, 18, 0.5);
-  --glass-overlay-medium: rgba(3, 7, 18, 0.7);
-  --glass-overlay-strong: rgba(3, 7, 18, 0.9);
-  --glass-overlay-bold: rgba(3, 7, 18, 0.95);
+  --glass-overlay-soft: rgba(23, 31, 41, 0.5);
+  --glass-overlay-medium: rgba(23, 31, 41, 0.7);
+  --glass-overlay-strong: rgba(23, 31, 41, 0.94);
+  --glass-overlay-bold: rgba(23, 31, 41, 0.98);
 
   --accent-blue-soft: rgba(96, 165, 250, 0.1);
   --accent-blue-glow: rgba(96, 165, 250, 0.4);
@@ -115,6 +148,31 @@ body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Native widgets and focus must stay readable outside feature-specific shells. */
+:where(button, input, select, textarea) { font: inherit; }
+:where(input, select, textarea) { color: var(--text-primary); background-color: var(--bg-primary); border-color: var(--border-color); accent-color: var(--accent-blue); }
+:where(option, optgroup) { color: var(--text-primary); background: var(--bg-primary); }
+:where(button, a, input, select, textarea, summary, [tabindex]):focus-visible { outline: 2px solid var(--accent-blue); outline-offset: 3px; }
+::selection { background: var(--accent-blue-soft); color: var(--text-primary); }
+* { scrollbar-color: var(--border-color) var(--bg-secondary); scrollbar-width: thin; }
+
+/* React Flow's built-in controls otherwise keep their light-only defaults. */
+.react-flow {
+  --xy-background-color: var(--bg-secondary);
+  --xy-controls-button-background-color: var(--bg-primary);
+  --xy-controls-button-background-color-hover: var(--bg-secondary-soft);
+  --xy-controls-button-color: var(--text-primary);
+  --xy-controls-button-border-color: var(--border-color);
+  --xy-minimap-background-color: var(--bg-primary);
+}
+.react-flow__controls-button { background: var(--bg-primary); color: var(--text-primary); fill: currentColor; border-color: var(--border-color); }
+.react-flow__controls-button:hover { background: var(--bg-secondary-soft); }
+.react-flow__minimap { background: var(--bg-primary); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
 }
 
 html,

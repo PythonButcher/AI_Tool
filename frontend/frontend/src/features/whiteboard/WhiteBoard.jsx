@@ -1,9 +1,10 @@
 // File: WhiteBoard.jsx
-import React, { useRef, useCallback, useState, useEffect } from "react";
+import React, { useRef, useCallback, useState, useEffect, useContext } from "react";
 import { Excalidraw } from "@excalidraw/excalidraw";
 import WhiteboardToolbar from "./WhiteBoardToolbar";
 import { useWindowContext } from "../../context/WindowContext";
 import { useHelpOverlay } from '../../context/HelpOverlayContext';
+import { ThemeContext } from '../../context/ThemeContext';
 
 // ✅ Import our parser
 import { parseSketch } from "../../utils/sketch/SketchParser";
@@ -13,7 +14,7 @@ const Whiteboard = ({ label = "AI Whiteboard:", savedScene }) => {
   const { saveWindowContentState } = useWindowContext();
   const lastSceneRef = useRef(savedScene ? JSON.stringify(savedScene) : null);
   const [scene, setScene] = useState(savedScene || null);
-  const [theme, setTheme] = useState("light");
+  const { theme, toggleTheme } = useContext(ThemeContext);
 
    const { isHelpVisible, toggleHelp, closeHelp } = useHelpOverlay();
     const helpId = 'whiteBoard';
@@ -69,16 +70,6 @@ const Whiteboard = ({ label = "AI Whiteboard:", savedScene }) => {
     }
   };
 
-  const handleThemeChange = () => {
-    const newTheme = theme === "light" ? "dark" : "light";
-    setTheme(newTheme);
-    excalidrawRef.current.updateScene({
-      appState: {
-        viewBackgroundColor: newTheme === "light" ? "#f5f5f5" : "#1a1a1a",
-      },
-    });
-  };
-
   return (
   <div style={{ height: "100%", width: "100%", display: "flex", flexDirection: "column" }}>
     <div className="help-inline-header">
@@ -96,7 +87,7 @@ const Whiteboard = ({ label = "AI Whiteboard:", savedScene }) => {
     <WhiteboardToolbar
       excalidrawRef={excalidrawRef}
       onCompileSketch={handleCompileSketch}
-      onThemeChange={handleThemeChange}
+      onThemeChange={toggleTheme}
       theme={theme}
     />
 

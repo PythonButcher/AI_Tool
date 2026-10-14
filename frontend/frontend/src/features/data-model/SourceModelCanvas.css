@@ -16,7 +16,7 @@
 }
 
 .canvas-state.error {
-  color: #dc3545;
+  color: var(--accent-red);
 }
 
 .source-node {
@@ -35,7 +35,7 @@
 }
 
 .source-node.primary {
-  border-color: #0d6efd;
+  border-color: var(--accent-blue);
 }
 
 .node-header {
@@ -48,7 +48,7 @@
 }
 
 .source-node.primary .node-header {
-  background: rgba(13, 110, 253, 0.1);
+  background: var(--accent-blue-soft);
 }
 
 .node-title {
@@ -62,8 +62,8 @@
 }
 
 .badge {
-  background: #0d6efd;
-  color: white;
+  background: var(--accent-blue);
+  color: var(--text-on-accent);
   font-size: 10px;
   padding: 2px 6px;
   border-radius: 12px;
@@ -91,13 +91,13 @@
   width: 8px !important;
   height: 8px !important;
   border-radius: 50% !important;
-  background-color: #adb5bd !important;
-  border: 1px solid #fff !important;
+  background-color: var(--text-tertiary) !important;
+  border: 1px solid var(--bg-primary) !important;
   transition: background-color 0.2s ease;
 }
 
 .field-handle:hover, .field-handle.react-flow__handle-connecting {
-  background-color: #0d6efd !important;
+  background-color: var(--accent-blue) !important;
   transform: scale(1.2);
 }
 
@@ -114,7 +114,7 @@
 }
 
 .field-type {
-  color: var(--text-muted, #adb5bd);
+  color: var(--text-muted, var(--text-tertiary));
   font-family: monospace;
 }
 
@@ -125,11 +125,11 @@
 .react-flow__edge-text {
   font-size: 10px;
   font-family: 'Inter', sans-serif;
-  fill: #495057;
+  fill: var(--text-secondary);
 }
 
 .react-flow__edge-textbg {
-  fill: rgba(255, 255, 255, 0.85);
+  fill: var(--bg-primary);
   rx: 4px;
   ry: 4px;
 }
@@ -139,7 +139,7 @@
   bottom: 24px;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--glass-overlay-bold);
   padding: 8px 16px;
   border-radius: 20px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
@@ -154,8 +154,8 @@
   top: 16px;
   left: 50%;
   transform: translateX(-50%);
-  background: #dc3545;
-  color: white;
+  background: var(--accent-red);
+  color: var(--text-on-accent);
   padding: 8px 16px;
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4);

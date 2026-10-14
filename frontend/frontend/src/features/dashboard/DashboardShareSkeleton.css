@@ -168,10 +168,10 @@
 
 .dashboard-share-skeleton__btn--primary {
   background: var(--accent-blue);
-  color: white;
+  color: var(--text-on-accent);
   border-color: var(--accent-blue);
 }
 
 .dashboard-share-skeleton__btn--primary:hover {
-  background: #2563eb;
+  background: var(--accent-blue-hover);
 }

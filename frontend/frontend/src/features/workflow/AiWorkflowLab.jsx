@@ -10,6 +10,7 @@ import {
   addEdge,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
+import usePortalTheme from '../../hooks/usePortalTheme';
 import './AiWorkflowLab.css';
 import './AiWorkflowLabDropZone.css';
 import LibraryDrawerWrapper from './LibraryDrawerWrapper';
@@ -720,6 +721,7 @@ function AiWorkflowLab({ label = 'AI WorkFlow Lab:', savedState }) {
   // --- Library Popout Logic ---
   const [isLibraryPoppedOut, setIsLibraryPoppedOut] = useState(false);
   const [libraryPopupRoot, setLibraryPopupRoot] = useState(null);
+  usePortalTheme(libraryPopupRoot);
   const libraryPopupWindowRef = useRef(null);
   const isClosingLibraryPopupRef = useRef(false);
 

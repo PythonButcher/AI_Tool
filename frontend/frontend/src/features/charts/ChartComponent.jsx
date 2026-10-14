@@ -1,5 +1,5 @@
 // ChartComponent.jsx (new, standard component)
-import React, { useRef, useMemo, useContext } from 'react';
+import React, { useRef, useMemo } from 'react';
 import { Bar, Line, Pie, Doughnut, Scatter, Radar } from 'react-chartjs-2';
 import ChartToolbar from './ChartToolbar';
 import {
@@ -16,7 +16,7 @@ import {
   Legend,
   Filler
 } from 'chart.js';
-import { ThemeContext } from '../../context/ThemeContext';
+import { useTheme } from '@mui/material/styles';
 import { PALETTES } from './ChartColorPicker';
 
 ChartJS.register(
@@ -35,8 +35,7 @@ ChartJS.register(
 
 function ChartComponent({ chartType = 'Bar', chartData, mapping, display = {} }) {
   const chartRef = useRef(null);
-  const { theme } = useContext(ThemeContext);
-  const isDark = theme === 'dark';
+  const { palette } = useTheme();
 
   const processedData = useMemo(() => {
     if (!chartData || !chartData.datasets) return chartData;
@@ -54,7 +53,7 @@ function ChartComponent({ chartType = 'Bar', chartData, mapping, display = {} })
           backgroundColor = display?.customColors?.length
             ? display.customColors
             : Array.from({ length: dataLength }).map((_, i) => activePalette.colors[i % activePalette.colors.length]);
-          borderColor = isDark ? '#1e293b' : '#ffffff';
+          borderColor = palette.background.paper;
         } else {
           const defaultColor = activePalette.colors[index % activePalette.colors.length];
           const seriesOverride = display?.seriesColors?.[ds.label];
@@ -75,7 +74,7 @@ function ChartComponent({ chartType = 'Bar', chartData, mapping, display = {} })
         };
       }),
     };
-  }, [chartData, chartType, isDark, display]);
+  }, [chartData, chartType, palette, display]);
 
   const options = useMemo(() => ({
     responsive: true,
@@ -98,7 +97,7 @@ function ChartComponent({ chartType = 'Bar', chartData, mapping, display = {} })
           display: false,
         },
         ticks: {
-          color: isDark ? '#94a3b8' : '#64748b',
+          color: palette.text.secondary,
           font: {
             family: "'Inter', sans-serif",
             size: 11,
@@ -108,7 +107,7 @@ function ChartComponent({ chartType = 'Bar', chartData, mapping, display = {} })
       y: {
         display: chartType !== 'Pie' && chartType !== 'Doughnut' && chartType !== 'Radar',
         grid: {
-          color: isDark ? 'rgba(51, 65, 85, 0.5)' : 'rgba(226, 232, 240, 0.6)',
+          color: palette.divider,
           drawBorder: false,
           lineWidth: 1,
         },
@@ -117,7 +116,7 @@ function ChartComponent({ chartType = 'Bar', chartData, mapping, display = {} })
           dash: [4, 4],
         },
         ticks: {
-          color: isDark ? '#94a3b8' : '#64748b',
+          color: palette.text.secondary,
           font: {
             family: "'Inter', sans-serif",
             size: 11,
@@ -128,14 +127,14 @@ function ChartComponent({ chartType = 'Bar', chartData, mapping, display = {} })
       ...(chartType === 'Radar' && {
         r: {
           ticks: {
-            color: isDark ? '#94a3b8' : '#64748b',
+            color: palette.text.secondary,
             backdropColor: 'transparent',
             font: { family: "'Inter', sans-serif", size: 10 }
           },
-          grid: { color: isDark ? 'rgba(51, 65, 85, 0.5)' : 'rgba(226, 232, 240, 0.6)' },
-          angleLines: { color: isDark ? 'rgba(51, 65, 85, 0.5)' : 'rgba(226, 232, 240, 0.6)' },
+          grid: { color: palette.divider },
+          angleLines: { color: palette.divider },
           pointLabels: { 
-            color: isDark ? '#94a3b8' : '#64748b',
+            color: palette.text.secondary,
             font: { family: "'Inter', sans-serif", size: 11 }
           }
         }
@@ -149,7 +148,7 @@ function ChartComponent({ chartType = 'Bar', chartData, mapping, display = {} })
           usePointStyle: true,
           pointStyle: 'circle',
           padding: 20,
-          color: isDark ? '#f8fafc' : '#0f172a',
+          color: palette.text.primary,
           font: {
             family: "'Inter', sans-serif",
             size: 12,
@@ -158,10 +157,10 @@ function ChartComponent({ chartType = 'Bar', chartData, mapping, display = {} })
         },
       },
       tooltip: {
-        backgroundColor: isDark ? '#1e293b' : '#ffffff',
-        titleColor: isDark ? '#f8fafc' : '#0f172a',
-        bodyColor: isDark ? '#94a3b8' : '#475569',
-        borderColor: isDark ? '#334155' : '#e2e8f0',
+        backgroundColor: palette.background.paper,
+        titleColor: palette.text.primary,
+        bodyColor: palette.text.secondary,
+        borderColor: palette.divider,
         borderWidth: 1,
         padding: 12,
         cornerRadius: 8,
@@ -178,7 +177,7 @@ function ChartComponent({ chartType = 'Bar', chartData, mapping, display = {} })
         },
       },
     },
-  }), [chartType, isDark]);
+  }), [chartType, palette]);
 
   if (!chartData || !chartData.labels || !chartData.datasets) {
     return <div style={{ padding: "20px", textAlign: "center", color: "var(--text-secondary)" }}>Chart data is incomplete.</div>;

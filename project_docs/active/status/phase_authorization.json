@@ -1,10 +1,22 @@
 {
   "schema_version": 1,
   "authorized_work": {
-    "name": "AI Chat model routing"
+    "name": "Model selector and application themes"
   },
   "authorization_state": "AUTHORIZED",
   "lifecycle_state": "AWAITING USER ACCEPTANCE",
+  "theme_refinement_verification": {
+    "frontend": "37 focused frontend tests passed across AI Chat, window state, theme propagation, shared text/action contrast and chart theme switching. Scoped ESLint has no errors; existing warnings remain. All 66 application stylesheets parse.",
+    "repository": "Agent and active-gate checks, 28 hook tests, 7 policy tests and whitespace checks passed. Jest and Git fixtures required execution outside the restricted sandbox.",
+    "acceptance": "User acts next in chat. No browser operations or visual acceptance were performed. Live model access and quality remain unverified."
+  },
+  "theme_refinement_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-10-13",
+    "instruction": "Modernize the model selector, bring subtle life to light mode, soften and blend dark mode, and ensure theme coverage across all pages and elements.",
+    "scope": "Codex frontend implementation of the AI Chat selector, shared CSS and MUI themes, theme propagation, and concrete theme coverage repairs. Preserve feature behavior and backend contracts. Browser acceptance stays with the user.",
+    "codex_frontend_implementation_authorized": true
+  },
   "model_router_verification": {
     "backend": "36 router and BI regression tests passed; changed Python modules compiled. Provider calls are mocked, with no paid live calls.",
     "frontend": "27 AI Chat tests, scoped ESLint, CSS parsing and production build passed. Existing unrelated build warnings remain.",
@@ -208,6 +220,7 @@
     "scope": "Codex may implement saved experiment deletion in the ML Studio home, its backend draft route and persistence, contract, and focused tests."
   },
   "allowed_paths": [
+    "frontend/frontend/src/**",
     "backend/services/chat_model_router.py",
     "tests/test_chat_model_router.py",
     "project_docs/active/contracts/ai_chat_model_routing.md",
