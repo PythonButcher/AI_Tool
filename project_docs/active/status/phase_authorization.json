@@ -1,10 +1,22 @@
 {
   "schema_version": 1,
   "authorized_work": {
-    "name": "AI Chat model upgrade"
+    "name": "AI Chat visual modernization"
   },
   "authorization_state": "AUTHORIZED",
   "lifecycle_state": "AWAITING USER ACCEPTANCE",
+  "chat_modernization_verification": {
+    "frontend": "28 focused chat and viewport sizing tests passed; scoped ESLint has no errors; chat stylesheet parses. Production build passes with existing warnings.",
+    "repository": "CI harness passed with 28 hook tests and 7 policy tests. Active-gate validation and whitespace checks pass. Jest cache and temporary Git fixtures required execution outside the restricted sandbox.",
+    "acceptance": "User acts next in chat. No browser operations or visual acceptance were performed."
+  },
+  "chat_modernization_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-10-21",
+    "instruction": "Clean up and modernize AI Chat, remove excessive boxes, improve layout and open at a larger size while keeping the application tone.",
+    "codex_frontend_implementation_authorized": true,
+    "scope": "AI Chat shell markup and styling, responsive docked and popout opening sizes, focused verification and governing documentation. Preserve BI behavior and existing themes."
+  },
   "model_upgrade_verification": {
     "backend": "38 router and BI regression tests passed, including installed-SDK transport checks for Luna low reasoning, Sol medium reasoning, completion caps, timeout and no retries. Changed Python compiled.",
     "repository": "CI harness, active-gate validation, 28 hook tests, 7 policy tests and whitespace checks passed.",

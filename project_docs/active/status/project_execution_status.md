@@ -1,23 +1,23 @@
 # Project Execution Status
 
-## Current Gate: AI Chat model upgrade
+## Current Gate: AI Chat visual modernization
 
-- **Current Gate**: AI Chat model upgrade
+- **Current Gate**: AI Chat visual modernization
 - **Roadmap Phase**: Phase 14 — AI Chat Business Workspace
 - **Phase State**: `AWAITING USER ACCEPTANCE`
-- **What This State Means**: Quick now defaults to GPT-5.6 Luna with low reasoning; Deep defaults to GPT-5.6 Sol with medium reasoning. Engineering verification is complete; live model access/quality remains unverified.
+- **What This State Means**: AI Chat has a border-light layout, compact answer modes, a centered welcome/composer flow and larger screen-aware opening sizes. Engineering verification is complete; visual acceptance remains with the user.
 - **Current Milestone**: Engineering verification complete
 - **Automatic Continuation**: `WAIT_FOR_USER`
 - **Current Owner**: User
 - **Backend Readiness**: `backend_contract_ready`
 - **Frontend Readiness**: `backend_contract_ready`
-- **Next Action**: User tries Quick and Deep analysis and provides feedback in chat.
-- **Required Action**: Await user feedback. Explicit deployment model overrides retain precedence; none were found in the inspected local environment/config files.
+- **Next Action**: User reviews the refreshed AI Chat and provides feedback in chat.
+- **Required Action**: Await user feedback. Model provider access/quality and ML Studio acceptance remain unverified.
 - **Active Gate**: `project_docs/active/active_gate/README.md`
 - **Authorization Record**: `project_docs/active/status/phase_authorization.json`
 - **Roadmap**: `project_docs/active/ai_chat/README.md`
 - **Active Handoff**: None. Codex frontend implementation is explicitly authorized for this assignment.
-- **Latest Verification**: 38 backend router and BI tests passed, including real installed-SDK serialization with simulated provider responses for both new defaults, completion budgets, timeout and no retries. Changed Python compiled. CI harness, active-gate validation, 28 hook tests, 7 policy tests and whitespace checks passed. No frontend files changed; theme verification remains preserved in the authorization record. No paid calls or browser operations were performed; live model access/quality and final acceptance remain unverified.
+- **Latest Verification**: 28 focused chat and window-sizing tests passed. Scoped ESLint has no errors; chat CSS parses; production build passes with existing warnings. CI harness, active-gate validation, 28 hook tests, 7 policy tests and whitespace checks passed. Jest and Git fixtures required execution outside the restricted sandbox. No browser operations or visual acceptance were performed. Model-upgrade verification is preserved in the authorization record.
 
 ## Preserved Interface Verification
 
@@ -31,4 +31,4 @@ The [ML Studio contract](../contracts/ml_studio.md) retains capability limitatio
 
 ## Completion Rule
 
-Verify new default routing, model-specific request parameters, configured override compatibility, BI regressions, Python compilation and repository gates. Existing theme, conversation and ML Studio acceptance remains with the user.
+Verify AI Chat regressions, viewport-aware opening dimensions, scoped lint, production build and repository gates. Final visual acceptance remains with the user.

@@ -1,30 +1,30 @@
-Goal: Give AI Chat economical GPT-5.6 Luna answers and stronger GPT-5.6 Sol reasoning through the existing router.
+Goal: Modernize AI Chat with a calmer layout and a generously sized opening window.
 
 ## User Outcome
 
-Users choose Quick for GPT-5.6 Luna with low reasoning or Deep analysis for GPT-5.6 Sol with medium reasoning; Auto uses those tiers when commentary is needed.
+A spacious BI conversation workspace with fewer framed elements, clearer hierarchy, a compact answer selector and a larger initial window that fits the available screen.
 
 ## Scope
 
-No executable implementation step is active. Await specific user feedback before opening bounded repairs to `backend/services/chat_model_router.py`, its tests or the routing contract. Live provider availability and quality depend on deployment access.
+No executable implementation step is active. Specific user feedback may open bounded refinements to `frontend/frontend/src/features/ai/AIShell.jsx`, `AIShell.css`, `frontend/frontend/src/components/layout/CanvasContainer.jsx` or `frontend/frontend/src/utils/aiChatWindowSizing.js`. Preserve conversation behavior, BI contracts and existing themes.
 
 ## Contracts
 
-- [Model routing](../contracts/ai_chat_model_routing.md)
 - [AI Chat business workspace](../ai_chat/README.md)
+- [Model routing](../contracts/ai_chat_model_routing.md)
 
 ## Acceptance
 
-- Quick defaults to `gpt-5.6-luna`, low reasoning and a 2000-token completion cap including reasoning.
-- Deep defaults to `gpt-5.6-sol`, medium reasoning and a 6000-token completion cap including reasoning.
-- Request parameters match official model documentation and the installed SDK. Keep existing explicit supported overrides available.
-- Preserve BI results, governance, one-call budgets, local Auto calculations and failure disclosure.
-- No frontend changes, browser operations or paid provider calls are required.
+- Header, sidebar, dataset context, starting prompts and composer retain functionality with less visual framing.
+- Auto, Quick and Deep analysis remain accessible native radio controls.
+- Docked and separate chat windows open larger within available screen bounds.
+- Theme variables apply throughout; narrow windows retain usable controls.
+- No backend or ML Studio behavior changes.
 
 ## Verification
 
-- `python -m unittest tests.test_chat_model_router tests.test_decision_chat_service tests.test_decision_chat_workspace`
-- `python -m py_compile backend/services/chat_model_router.py`
+- `npm --prefix frontend/frontend test -- --watchAll=false --runInBand --runTestsByPath src/features/ai/AIShell.test.jsx src/utils/aiChatWindowSizing.test.js`
+- `npm --prefix frontend/frontend run build`
 - `python .codex/hooks/agent_harness_check.py`
 - `python .codex/hooks/ci_harness_check.py`
 - `python C:/Users/18022/.codex/skills/active-gate-governance/scripts/check_active_gate.py project_docs/active/active_gate .`
@@ -32,4 +32,4 @@ No executable implementation step is active. Await specific user feedback before
 
 ## Owner And Control Return
 
-Owner: User, WAIT_FOR_USER. Codex resumes on specific feedback and updates authorization and status before bounded implementation. Live model access and final acceptance remain in chat.
+Owner: User, WAIT_FOR_USER. Feedback and final visual acceptance stay in chat. Codex updates authorization and status before implementing bounded feedback. Browser operations require a specific user request.

@@ -906,9 +906,9 @@ function AIChatConversation({ onOpenDashboard, conversation, conversations, stor
           {userMessages.length === 0 && (
             <div className="ai-shell__welcome-hero">
               <div className="ai-shell__hero-eyebrow"><span className="ai-shell__hero-icon"><FaChartLine /></span>Your data, a little clearer</div>
-              <Typography component="h2" className="ai-shell__hero-title">What would you like<br />to understand?</Typography>
+              <Typography component="h2" className="ai-shell__hero-title">A clearer view of<br /><span>your business.</span></Typography>
               <Typography variant="body1" className="ai-shell__hero-subtitle">
-                Explore a metric, spot a trend, or turn a question into a dashboard. Start with what matters to your business.
+                Ask a question. Explore a trend. Find the story in your data.
               </Typography>
               {suggestions.length > 0 ? <>
                 <div className="ai-shell__section-label">A few places to start</div>
@@ -1059,20 +1059,19 @@ function AIChatConversation({ onOpenDashboard, conversation, conversations, stor
               </button>
             </div>
             <fieldset className="ai-shell__model-controls" disabled={loading} aria-describedby="ai-chat-model-hint">
-              <legend>Answer mode</legend>
+              <legend className="ai-shell__visually-hidden">Answer mode</legend>
               <div className="ai-shell__model-options">
                 {[
                   { value: 'auto', label: 'Auto', detail: 'Matched to your question', Icon: FaMagic },
                   { value: 'quick', label: 'Quick', detail: 'Concise explanations', Icon: FaBolt },
                   { value: 'deep', label: 'Deep analysis', detail: 'More detailed reasoning', Icon: FaBrain },
                 ].map(({ value, label, detail, Icon }) => (
-                  <label key={value} className="ai-shell__model-option">
+                  <label key={value} className="ai-shell__model-option" title={detail}>
                     <input type="radio" name="ai-chat-answer-mode" value={value} checked={modelMode === value}
                       aria-label={label} onChange={() => setModelMode(value)} />
                     <span className="ai-shell__model-option-content">
                       <Icon aria-hidden="true" />
-                      <span className="ai-shell__model-option-copy"><strong>{label}</strong><small>{detail}</small></span>
-                      <span className="ai-shell__model-indicator" aria-hidden="true" />
+                      <span className="ai-shell__model-option-copy"><strong>{label}</strong></span>
                     </span>
                   </label>
                 ))}
