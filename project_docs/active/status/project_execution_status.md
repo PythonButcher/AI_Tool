@@ -1,23 +1,23 @@
 # Project Execution Status
 
-## Current Gate: Model selector and application themes
+## Current Gate: AI Chat model upgrade
 
-- **Current Gate**: Model selector and application themes
+- **Current Gate**: AI Chat model upgrade
 - **Roadmap Phase**: Phase 14 — AI Chat Business Workspace
 - **Phase State**: `AWAITING USER ACCEPTANCE`
-- **What This State Means**: Selector and shared theme refinement are engineering-complete; visual acceptance remains with the user in chat.
+- **What This State Means**: Quick now defaults to GPT-5.6 Luna with low reasoning; Deep defaults to GPT-5.6 Sol with medium reasoning. Engineering verification is complete; live model access/quality remains unverified.
 - **Current Milestone**: Engineering verification complete
 - **Automatic Continuation**: `WAIT_FOR_USER`
 - **Current Owner**: User
 - **Backend Readiness**: `backend_contract_ready`
 - **Frontend Readiness**: `backend_contract_ready`
-- **Next Action**: User provides visual feedback in chat on the selector and both themes.
-- **Required Action**: Await user feedback before opening further bounded repairs.
+- **Next Action**: User tries Quick and Deep analysis and provides feedback in chat.
+- **Required Action**: Await user feedback. Explicit deployment model overrides retain precedence; none were found in the inspected local environment/config files.
 - **Active Gate**: `project_docs/active/active_gate/README.md`
 - **Authorization Record**: `project_docs/active/status/phase_authorization.json`
 - **Roadmap**: `project_docs/active/ai_chat/README.md`
 - **Active Handoff**: None. Codex frontend implementation is explicitly authorized for this assignment.
-- **Latest Verification**: 37 focused frontend tests passed across AI Chat, window state, theme propagation, shared text/action contrast and chart theme switching. Scoped ESLint has no errors; all 66 application stylesheets parse. Production build, agent and active-gate checks, 28 hook tests, 7 policy tests and whitespace checks passed with existing lint/dependency/bundle warnings. No browser operations were performed; final visual acceptance and live model access/quality remain unverified.
+- **Latest Verification**: 38 backend router and BI tests passed, including real installed-SDK serialization with simulated provider responses for both new defaults, completion budgets, timeout and no retries. Changed Python compiled. CI harness, active-gate validation, 28 hook tests, 7 policy tests and whitespace checks passed. No frontend files changed; theme verification remains preserved in the authorization record. No paid calls or browser operations were performed; live model access/quality and final acceptance remain unverified.
 
 ## Preserved Interface Verification
 
@@ -31,4 +31,4 @@ The [ML Studio contract](../contracts/ml_studio.md) retains capability limitatio
 
 ## Completion Rule
 
-Verify selector interaction, theme propagation, shared token coverage and affected frontend regressions; run production build and repository gates. Final visual acceptance belongs to the user in chat.
+Verify new default routing, model-specific request parameters, configured override compatibility, BI regressions, Python compilation and repository gates. Existing theme, conversation and ML Studio acceptance remains with the user.

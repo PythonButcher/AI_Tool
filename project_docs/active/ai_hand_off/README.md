@@ -10,7 +10,7 @@ Antigravity owns bounded frontend implementation, React/CSS, UI rendering, and f
 
 ## Active Handoffs And Goal Prompts
 
-No specialist frontend handoff is active. The AI Chat model router and composer integration are engineering-complete; the user acts next in chat. ML Studio's pending acceptance remains in chat. Consult [status](../status/project_execution_status.md) and the [sole gate](../active_gate/README.md) before acting.
+No specialist frontend handoff is active. The AI Chat model upgrade is engineering-complete; the user acts next in chat. Theme and ML Studio acceptance remain with the user. Consult [status](../status/project_execution_status.md) and the [sole gate](../active_gate/README.md) before acting.
 
 Completed handoffs belong outside this active folder.
 

@@ -1,14 +1,12 @@
-Goal: Give AI Tool a polished model selector and cohesive, expressive light and dark themes across its interface.
+Goal: Give AI Chat economical GPT-5.6 Luna answers and stronger GPT-5.6 Sol reasoning through the existing router.
 
 ## User Outcome
 
-Users can clearly choose Auto, Quick or Deep analysis and work in a layered light theme or softly blended dark theme with readable controls, charts, dialogs and panels.
+Users choose Quick for GPT-5.6 Luna with low reasoning or Deep analysis for GPT-5.6 Sol with medium reasoning; Auto uses those tiers when commentary is needed.
 
 ## Scope
 
-No executable implementation step is active. Await specific user feedback before opening bounded repairs to the AI Chat selector, shared CSS/MUI themes or concrete theme exceptions under `frontend/frontend/src/`.
-
-Preserve backend contracts, model routing, dataset identity, chart semantics and all existing workflows. No browser operations or provider calls are in scope. Visual feedback stays in chat.
+No executable implementation step is active. Await specific user feedback before opening bounded repairs to `backend/services/chat_model_router.py`, its tests or the routing contract. Live provider availability and quality depend on deployment access.
 
 ## Contracts
 
@@ -17,17 +15,16 @@ Preserve backend contracts, model routing, dataset identity, chart semantics and
 
 ## Acceptance
 
-- Model choices have distinct selection, hover, keyboard focus and disabled states, with useful descriptions.
-- Light mode remains light with subtle tinted surfaces and restrained accent color; dark mode uses a coherent slate surface hierarchy.
-- Shared CSS and MUI palettes agree. Native controls, portals and detached windows follow the active theme.
-- Review reachable pages for hardcoded surfaces and unreadable theme combinations; preserve intentional chart series colors and export backgrounds.
-- Respect reduced motion, narrow layouts and existing feature behavior.
+- Quick defaults to `gpt-5.6-luna`, low reasoning and a 2000-token completion cap including reasoning.
+- Deep defaults to `gpt-5.6-sol`, medium reasoning and a 6000-token completion cap including reasoning.
+- Request parameters match official model documentation and the installed SDK. Keep existing explicit supported overrides available.
+- Preserve BI results, governance, one-call budgets, local Auto calculations and failure disclosure.
+- No frontend changes, browser operations or paid provider calls are required.
 
 ## Verification
 
-- `npm --prefix frontend/frontend test -- --watchAll=false --runInBand --testPathPattern '(features/ai/.*test|context/ThemeContext.test|context/WindowContext.*test|features/charts/ChartThemes.test)'`
-- Scoped ESLint, CSS parsing and theme-token coverage inspection.
-- `npm --prefix frontend/frontend run build`
+- `python -m unittest tests.test_chat_model_router tests.test_decision_chat_service tests.test_decision_chat_workspace`
+- `python -m py_compile backend/services/chat_model_router.py`
 - `python .codex/hooks/agent_harness_check.py`
 - `python .codex/hooks/ci_harness_check.py`
 - `python C:/Users/18022/.codex/skills/active-gate-governance/scripts/check_active_gate.py project_docs/active/active_gate .`
@@ -35,4 +32,4 @@ Preserve backend contracts, model routing, dataset identity, chart semantics and
 
 ## Owner And Control Return
 
-Owner: User, `WAIT_FOR_USER`. Codex resumes on specific feedback and updates status and authorization before bounded implementation. Final visual acceptance remains in chat.
+Owner: User, WAIT_FOR_USER. Codex resumes on specific feedback and updates authorization and status before bounded implementation. Live model access and final acceptance remain in chat.

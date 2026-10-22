@@ -13,7 +13,11 @@ from backend.services.decision_support import DecisionServiceError
 
 LOGGER = logging.getLogger(__name__)
 MODES = {"auto", "quick", "deep"}
+DEFAULT_MODELS = {"quick": "gpt-5.6-luna", "deep": "gpt-5.6-sol"}
 PROFILES = {
+    "gpt-5.6-luna": {"max_completion_tokens": 2000, "reasoning_effort": "low"},
+    "gpt-5.6-sol": {"max_completion_tokens": 6000, "reasoning_effort": "medium"},
+    # Keep supported explicit deployment overrides compatible with older setups.
     "gpt-4.1-mini": {"max_completion_tokens": 900, "temperature": 0.3},
     "gpt-4.1": {"max_completion_tokens": 900, "temperature": 0.3},
     "gpt-5-mini": {"max_completion_tokens": 6000, "reasoning_effort": "medium"},
@@ -104,7 +108,7 @@ def add_model_commentary(payload: dict[str, Any], result: dict[str, Any]) -> dic
     output = {**result, "model_routing": route}
     if selected == "local":
         return output
-    model = os.getenv(f"AI_CHAT_{selected.upper()}_MODEL", "gpt-4.1-mini" if selected == "quick" else "gpt-5-mini")
+    model = os.getenv(f"AI_CHAT_{selected.upper()}_MODEL", DEFAULT_MODELS[selected])
     route["status"] = "unavailable"
     if model not in PROFILES:
         route["reason"] = "AI model configuration is unsupported. The built-in response is available."

@@ -1,10 +1,21 @@
 {
   "schema_version": 1,
   "authorized_work": {
-    "name": "Model selector and application themes"
+    "name": "AI Chat model upgrade"
   },
   "authorization_state": "AUTHORIZED",
   "lifecycle_state": "AWAITING USER ACCEPTANCE",
+  "model_upgrade_verification": {
+    "backend": "38 router and BI regression tests passed, including installed-SDK transport checks for Luna low reasoning, Sol medium reasoning, completion caps, timeout and no retries. Changed Python compiled.",
+    "repository": "CI harness, active-gate validation, 28 hook tests, 7 policy tests and whitespace checks passed.",
+    "acceptance": "Engineering-complete; User acts next in chat. Provider transport was simulated; no paid calls or browser operations. Live model access/quality remains unverified."
+  },
+  "model_upgrade_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-10-21",
+    "instruction": "Choose GPT-5.6 Luna and a better reasoning model.",
+    "scope": "Upgrade chat router defaults to GPT-5.6 Luna low reasoning and GPT-5.6 Sol medium reasoning, preserve configured overrides and BI contracts, and verify SDK parameters and regressions."
+  },
   "theme_refinement_verification": {
     "frontend": "37 focused frontend tests passed across AI Chat, window state, theme propagation, shared text/action contrast and chart theme switching. Scoped ESLint has no errors; existing warnings remain. All 66 application stylesheets parse.",
     "repository": "Agent and active-gate checks, 28 hook tests, 7 policy tests and whitespace checks passed. Jest and Git fixtures required execution outside the restricted sandbox.",
