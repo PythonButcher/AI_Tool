@@ -24,7 +24,7 @@ Decision Intelligence workspaces, decision frames, readiness and capability pane
 
 Dataset identity and semantic truth remain required for every BI answer and chart.
 
-The AI Chat defaults use GPT-5.6 Luna for Quick and GPT-5.6 Sol for Deep analysis; engineering verification is complete and live provider access/quality remains unverified. The selector, shared themes, conversation management and ML Studio retain their pending acceptance boundaries. The [active gate](active_gate/README.md) controls execution; [status](status/project_execution_status.md) records verification and ownership.
+The user accepted the shared dark theme. AI Chat's model routing, layout and conversation management are engineering-complete. Live provider access and quality remain unverified, and AI Chat and ML Studio retain their separate acceptance boundaries. The [active gate](active_gate/README.md) controls execution. [Status](status/project_execution_status.md) records verification and ownership.
 
 ## Active Areas
 

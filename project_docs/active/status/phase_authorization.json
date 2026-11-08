@@ -4,11 +4,17 @@
     "name": "Application dark theme"
   },
   "authorization_state": "AUTHORIZED",
-  "lifecycle_state": "AWAITING USER ACCEPTANCE",
+  "lifecycle_state": "COMPLETE",
+  "dark_theme_acceptance": {
+    "accepted_by": "User",
+    "accepted_at": "2026-11-07",
+    "instruction": "accepted",
+    "scope": "Application dark theme only"
+  },
   "dark_theme_verification": {
     "frontend": "Seven theme and chart tests passed, including graphite and blue-gray contrast, CSS and MUI palette parity, detached-window theme propagation and chart switching. Scoped lint, parsing for all eight affected stylesheets and the production build passed. Existing build warnings remain.",
     "repository": "Repository CI, active-gate validation and whitespace checks passed. Jest and temporary Git fixtures required execution outside the restricted sandbox.",
-    "acceptance": "User acts next in chat. Browser appearance remains unverified."
+    "acceptance": "User accepted the dark theme in chat. Codex did not perform browser verification."
   },
   "dark_theme_authorization": {
     "approved_by": "User",
