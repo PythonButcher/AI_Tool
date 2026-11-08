@@ -16,8 +16,8 @@ export const MuiThemeContext = ({ children }) => {
         ...(isDark ? {
           // Keep canvas-rendered and MUI colors aligned with index.css tokens.
           background: {
-            default: '#111922',
-            paper: '#171f29',
+            default: '#040506',
+            paper: '#11161e',
           },
           primary: {
             main: '#89adff',
@@ -28,10 +28,10 @@ export const MuiThemeContext = ({ children }) => {
             contrastText: '#122030',
           },
           text: {
-            primary: '#e5edf2',
-            secondary: '#acbdc9',
+            primary: '#edf2f8',
+            secondary: '#b5c0d0',
           },
-          divider: '#364855',
+          divider: '#3a4555',
           success: { main: '#70d3aa', contrastText: '#122030' },
           error: { main: '#ff91a2', contrastText: '#122030' },
           warning: { main: '#edc477', contrastText: '#122030' },
@@ -65,7 +65,7 @@ export const MuiThemeContext = ({ children }) => {
         MuiPaper: {
           styleOverrides: {
             root: {
-              backgroundImage: 'none',
+              backgroundImage: isDark ? 'var(--dark-surface-finish, none)' : 'none',
             },
           },
         },

@@ -11,6 +11,10 @@
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+[data-theme='dark'] .menu-bar {
+  background-image: var(--dark-surface-finish);
+}
+
 .menu-bar__topline {
   display: flex;
   align-items: center;

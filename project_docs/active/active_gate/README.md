@@ -1,29 +1,27 @@
-Goal: Modernize AI Chat with a calmer layout and a generously sized opening window.
+Goal: Give dark mode a jet-black foundation that transitions smoothly into graphite and deep blue-gray, with a restrained gloss on raised surfaces.
 
 ## User Outcome
 
-A spacious BI conversation workspace with fewer framed elements, clearer hierarchy, a compact answer selector and a larger initial window that fits the available screen.
+A cohesive dark workspace with clear separation between the canvas, navigation, panels and controls.
 
 ## Scope
 
-No executable implementation step is active. Specific user feedback may open bounded refinements to `frontend/frontend/src/features/ai/AIShell.jsx`, `AIShell.css`, `frontend/frontend/src/components/layout/CanvasContainer.jsx` or `frontend/frontend/src/utils/aiChatWindowSizing.js`. Preserve conversation behavior, BI contracts and existing themes.
+No executable implementation step is active. User feedback may open a bounded refinement to the shared dark palette or surface styling under `frontend/frontend/src/`. Preserve light mode and feature behavior.
 
 ## Contracts
 
 - [AI Chat business workspace](../ai_chat/README.md)
-- [Model routing](../contracts/ai_chat_model_routing.md)
 
 ## Acceptance
 
-- Header, sidebar, dataset context, starting prompts and composer retain functionality with less visual framing.
-- Auto, Quick and Deep analysis remain accessible native radio controls.
-- Docked and separate chat windows open larger within available screen bounds.
-- Theme variables apply throughout; narrow windows retain usable controls.
-- No backend or ML Studio behavior changes.
+- Dark mode blends jet black into blue-gray using static gradients and subtle highlights.
+- Text and action contrast remains readable, and CSS and MUI palettes agree.
+- Chat, dialogs and detached windows follow the application theme.
+- Preserve light mode and existing interactions.
 
 ## Verification
 
-- `npm --prefix frontend/frontend test -- --watchAll=false --runInBand --runTestsByPath src/features/ai/AIShell.test.jsx src/utils/aiChatWindowSizing.test.js`
+- `npm --prefix frontend/frontend test -- --watchAll=false --runInBand --runTestsByPath src/context/ThemeContext.test.jsx src/features/charts/ChartThemes.test.jsx`
 - `npm --prefix frontend/frontend run build`
 - `python .codex/hooks/agent_harness_check.py`
 - `python .codex/hooks/ci_harness_check.py`
@@ -32,4 +30,4 @@ No executable implementation step is active. Specific user feedback may open bou
 
 ## Owner And Control Return
 
-Owner: User, WAIT_FOR_USER. Feedback and final visual acceptance stay in chat. Codex updates authorization and status before implementing bounded feedback. Browser operations require a specific user request.
+Owner: User, WAIT_FOR_USER. Codex resumes on specific feedback and records the authorized scope before editing. Visual acceptance stays in chat. Browser operations require a specific user request.

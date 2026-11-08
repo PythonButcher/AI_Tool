@@ -1,10 +1,22 @@
 {
   "schema_version": 1,
   "authorized_work": {
-    "name": "AI Chat visual modernization"
+    "name": "Application dark theme"
   },
   "authorization_state": "AUTHORIZED",
   "lifecycle_state": "AWAITING USER ACCEPTANCE",
+  "dark_theme_verification": {
+    "frontend": "Seven theme and chart tests passed, including graphite and blue-gray contrast, CSS and MUI palette parity, detached-window theme propagation and chart switching. Scoped lint, parsing for all eight affected stylesheets and the production build passed. Existing build warnings remain.",
+    "repository": "Repository CI, active-gate validation and whitespace checks passed. Jest and temporary Git fixtures required execution outside the restricted sandbox.",
+    "acceptance": "User acts next in chat. Browser appearance remains unverified."
+  },
+  "dark_theme_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-11-07",
+    "instruction": "Redo dark mode with bold, glossy jet black and a smooth transition into dark gray-blue.",
+    "scope": "Shared dark palette, workspace gradients, dark surface finishes, MUI palette alignment and focused verification. Preserve light mode and feature behavior.",
+    "codex_frontend_implementation_authorized": true
+  },
   "chat_modernization_verification": {
     "frontend": "28 focused chat and viewport sizing tests passed; scoped ESLint has no errors; chat stylesheet parses. Production build passes with existing warnings.",
     "repository": "CI harness passed with 28 hook tests and 7 policy tests. Active-gate validation and whitespace checks pass. Jest cache and temporary Git fixtures required execution outside the restricted sandbox.",

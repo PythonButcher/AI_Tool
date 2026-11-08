@@ -5,6 +5,14 @@
   position: relative;
 }
 
+[data-theme='dark'] .source-model-canvas {
+  background-image: var(--workspace-background);
+}
+
+[data-theme='dark'] .source-model-canvas .react-flow {
+  --xy-background-color: transparent;
+}
+
 .canvas-state {
   display: flex;
   justify-content: center;

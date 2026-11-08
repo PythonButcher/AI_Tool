@@ -621,6 +621,14 @@
   background-color: var(--wfs-bg-canvas);
 }
 
+[data-theme='dark'] .wf-canvas-region {
+  background: var(--workspace-background), var(--wfs-bg-canvas);
+}
+
+[data-theme='dark'] .wf-canvas-region .react-flow {
+  --xy-background-color: transparent;
+}
+
 .wf-canvas-surface {
   flex: 1;
   position: relative;

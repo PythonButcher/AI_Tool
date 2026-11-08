@@ -1,23 +1,23 @@
 # Project Execution Status
 
-## Current Gate: AI Chat visual modernization
+## Current Gate: Application dark theme
 
-- **Current Gate**: AI Chat visual modernization
+- **Current Gate**: Application dark theme
 - **Roadmap Phase**: Phase 14 — AI Chat Business Workspace
 - **Phase State**: `AWAITING USER ACCEPTANCE`
-- **What This State Means**: AI Chat has a border-light layout, compact answer modes, a centered welcome/composer flow and larger screen-aware opening sizes. Engineering verification is complete; visual acceptance remains with the user.
+- **What This State Means**: The shared dark theme uses a jet-black base, a blue-gray gradient and a restrained sheen on raised surfaces. Engineering checks passed. Visual acceptance remains with the user.
 - **Current Milestone**: Engineering verification complete
 - **Automatic Continuation**: `WAIT_FOR_USER`
 - **Current Owner**: User
 - **Backend Readiness**: `backend_contract_ready`
 - **Frontend Readiness**: `backend_contract_ready`
-- **Next Action**: User reviews the refreshed AI Chat and provides feedback in chat.
-- **Required Action**: Await user feedback. Model provider access/quality and ML Studio acceptance remain unverified.
+- **Next Action**: User reviews dark mode and provides feedback in chat.
+- **Required Action**: Await feedback. The AI Chat layout and ML Studio retain their pending acceptance boundaries.
 - **Active Gate**: `project_docs/active/active_gate/README.md`
 - **Authorization Record**: `project_docs/active/status/phase_authorization.json`
 - **Roadmap**: `project_docs/active/ai_chat/README.md`
 - **Active Handoff**: None. Codex frontend implementation is explicitly authorized for this assignment.
-- **Latest Verification**: 28 focused chat and window-sizing tests passed. Scoped ESLint has no errors; chat CSS parses; production build passes with existing warnings. CI harness, active-gate validation, 28 hook tests, 7 policy tests and whitespace checks passed. Jest and Git fixtures required execution outside the restricted sandbox. No browser operations or visual acceptance were performed. Model-upgrade verification is preserved in the authorization record.
+- **Latest Verification**: Seven focused theme and chart tests, scoped lint, parsing of eight affected stylesheets, the production build and repository checks passed. Existing build warnings remain. Browser appearance remains unverified. Chat layout and model-upgrade evidence remains in the authorization record.
 
 ## Preserved Interface Verification
 
@@ -31,4 +31,4 @@ The [ML Studio contract](../contracts/ml_studio.md) retains capability limitatio
 
 ## Completion Rule
 
-Verify AI Chat regressions, viewport-aware opening dimensions, scoped lint, production build and repository gates. Final visual acceptance remains with the user.
+Verify palette contrast and theme propagation, parse the affected styles, and run the production build and repository gates. Final visual acceptance remains with the user.

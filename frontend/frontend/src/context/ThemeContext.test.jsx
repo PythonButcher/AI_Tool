@@ -75,7 +75,10 @@ test.each(['light', 'dark'])('%s shared text and action colors remain legible an
   expect(palette.text.secondary).toBe(t['--text-secondary']);
   expect(palette.primary.main).toBe(t['--accent-blue']);
   expect(palette.primary.contrastText).toBe(t['--text-on-accent']);
-  for (const surface of ['--bg-primary', '--bg-primary-soft', '--bg-secondary', '--bg-secondary-soft']) {
+  expect(palette.divider).toBe(t['--border-color']);
+  const surfaces = ['--bg-primary', '--bg-primary-soft', '--bg-secondary', '--bg-secondary-soft'];
+  if (mode === 'dark') surfaces.push('--dark-graphite', '--dark-blue-gray');
+  for (const surface of surfaces) {
     for (const text of ['--text-primary', '--text-secondary', '--text-tertiary']) {
       expect(contrast(t[text], t[surface])).toBeGreaterThanOrEqual(4.5);
     }

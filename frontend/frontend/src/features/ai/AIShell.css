@@ -552,6 +552,24 @@
   box-shadow: 0 0 0 3px var(--accent-blue-soft), 0 4px 18px var(--shadow-color-soft);
 }
 
+/* Let the workspace finish run under the conversation and composer. */
+[data-theme='dark'] .ai-shell {
+  background-image: var(--workspace-background);
+}
+
+[data-theme='dark'] .ai-shell :is(.ai-shell__workspace, .ai-shell__footer) {
+  background: transparent;
+}
+
+[data-theme='dark'] .ai-shell :is(.ai-shell__header, .ai-shell__left-rail, .ai-shell__results-pane) {
+  background-color: var(--sidebar-surface);
+}
+
+[data-theme='dark'] .ai-shell__input-wrapper {
+  background-color: var(--bg-secondary-soft);
+  background-image: var(--dark-surface-finish);
+}
+
 .ai-shell__input-bar {
   display: flex;
   align-items: flex-end;
