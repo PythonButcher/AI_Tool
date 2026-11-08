@@ -40,6 +40,7 @@ The user accepted the shared dark theme. AI Chat's model routing, layout and con
 | Dashboard canvas state contract | `project_docs/active/contracts/dashboard_canvas_state.md` | Local-first dashboard canvas, layout, and sharing skeleton state |
 | Dataset governance contract | `project_docs/active/contracts/data_catalog_lineage.md` | Readiness policy and enforcement truth |
 | Multiple-source workspace contract | `project_docs/active/contracts/multiple_data_source_workspace.md` | Source, workspace membership, and analysis-context truth |
+| PostgreSQL workspace | `project_docs/active/contracts/postgres_workspace.md` | Database discovery, selected snapshots, and reopening saved models |
 | Multiple-source relationship contract | `project_docs/active/contracts/multiple_data_source_relationships.md` | Relationship persistence, validation, diagnostics, and activation truth |
 | Project active gate | `project_docs/active/active_gate/README.md` | The only active work workspace |
 | ML Studio roadmap | `project_docs/active/ml_studio/README.md` | Durable whole-product requirements and acceptance boundaries; status owns delivery truth |

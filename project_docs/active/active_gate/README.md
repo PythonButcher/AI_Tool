@@ -6,7 +6,7 @@ One clearly scoped priority with an owner, observable acceptance criteria and ap
 
 ## Scope
 
-No executable implementation step or specialist handoff is active. Await a product decision in chat.
+No executable implementation step or specialist handoff is active. Await direction in chat.
 
 ## Contracts
 
@@ -14,7 +14,7 @@ No executable implementation step or specialist handoff is active. Await a produ
 
 ## Acceptance
 
-- The user chooses the outcome and authorizes any implementation.
+- The user chooses the outcome and authorizes implementation.
 - Status and the authorization record agree with the next active gate.
 
 ## Verification
@@ -26,4 +26,4 @@ No executable implementation step or specialist handoff is active. Await a produ
 
 ## Owner And Control Return
 
-Next decision owner is the user. Codex records the chosen scope before implementation.
+The user owns the next decision in chat. Codex records the chosen scope before implementation.

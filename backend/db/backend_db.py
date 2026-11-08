@@ -64,10 +64,13 @@ def _ensure_schema(conn):
             primary_source_id TEXT,
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL,
+            workspace_kind TEXT NOT NULL DEFAULT 'general',
             FOREIGN KEY (primary_source_id) REFERENCES datahub_datasets(id) ON DELETE SET NULL
         )
         '''
     )
+    if 'workspace_kind' not in {row[1] for row in conn.execute('PRAGMA table_info(data_workspaces)')}:
+        conn.execute("ALTER TABLE data_workspaces ADD COLUMN workspace_kind TEXT NOT NULL DEFAULT 'general'")
     conn.execute(
         '''
         CREATE TABLE IF NOT EXISTS workspace_sources (

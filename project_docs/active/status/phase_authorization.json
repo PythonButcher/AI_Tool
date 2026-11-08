@@ -1,10 +1,21 @@
 {
   "schema_version": 1,
   "authorized_work": {
-    "name": "Application dark theme"
+    "name": "PostgreSQL workspace"
   },
   "authorization_state": "AUTHORIZED",
-  "lifecycle_state": "COMPLETE",
+  "lifecycle_state": "AWAITING USER ACCEPTANCE",
+  "postgres_workspace_verification": {
+    "backend": "61 focused tests passed, including real PostgreSQL 17.4 import, rollback, relationship and filtered Auto chat totals, reopening, Data Hub, semantic metrics, and ML Studio snapshot resolution.",
+    "frontend": "30 focused React tests and the production build passed. The build reports existing warnings. Final browser acceptance belongs to the user."
+  },
+  "user_implementation_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-11-07",
+    "evidence": "Direct instruction and explicit frontend authorization in the PostgreSQL verification chat.",
+    "instruction": "Deliver a working end-to-end PostgreSQL workflow for choosing a database, tables and optional columns, creating relationships, and reusing the saved dataset or semantic model.",
+    "codex_frontend_implementation_authorized": true
+  },
   "dark_theme_acceptance": {
     "accepted_by": "User",
     "accepted_at": "2026-11-07",
@@ -135,7 +146,7 @@
     "scope": "Codex may redesign the AI Chat window hierarchy, header, conversation, composer, results panel and responsive styling while retaining implemented BI and dashboard behavior.",
     "codex_frontend_implementation_authorized": true
   },
-  "diff_baseline": "2e3670e9bc26a3a6b4749baebf6e25c7032e9475",
+  "diff_baseline": "815c37008bd83465eb12af73bfb085aa431efd8b",
   "authority_kind": "direct_user_instruction",
   "ai_chat_improvement_authorization": {
     "approved_by": "User",
@@ -214,7 +225,7 @@
     "instruction": "Implement this work — project_docs/active/active_gate/README.md",
     "scope": "Inspect source and contracts, write and verify one bounded Stay/Open Power Query opening handoff, and transfer ownership to Antigravity. Codex frontend implementation remains excluded."
   },
-  "user_implementation_authorization": {
+  "ml_studio_user_implementation_authorization": {
     "approved_by": "User",
     "approved_at": "2026-09-27",
     "evidence": "Direct user message in this Codex session referencing the sole active gate.",
@@ -261,6 +272,12 @@
     "scope": "Codex may implement saved experiment deletion in the ML Studio home, its backend draft route and persistence, contract, and focused tests."
   },
   "allowed_paths": [
+    "backend/routes/sql_fetch.py",
+    "backend/routes/datahub_routes.py",
+    "backend/services/postgres_workspace.py",
+    "backend/repositories/source_workspace_repository.py",
+    "tests/test_postgres_workspace.py",
+    "project_docs/active/contracts/postgres_workspace.md",
     "frontend/frontend/src/**",
     "backend/services/chat_model_router.py",
     "tests/test_chat_model_router.py",

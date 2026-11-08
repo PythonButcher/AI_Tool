@@ -1,23 +1,23 @@
 # Project Execution Status
 
-## Current Gate: Application dark theme
+## Current Gate: PostgreSQL workspace
 
-- **Current Gate**: Application dark theme
-- **Roadmap Phase**: Phase 14 — AI Chat Business Workspace
-- **Phase State**: `COMPLETE`
-- **What This State Means**: The user accepted the application dark theme. This closes the bounded theme gate within Phase 14.
-- **Current Milestone**: Dark theme accepted
-- **Automatic Continuation**: `COMPLETE`
-- **Current Owner**: None
+- **Current Gate**: PostgreSQL workspace
+- **Roadmap Phase**: Phase 15 — PostgreSQL Workspace
+- **Phase State**: `AWAITING USER ACCEPTANCE`
+- **What This State Means**: Engineering verification is complete for the PostgreSQL import and saved model workflow.
+- **Current Milestone**: PostgreSQL workspace workflow verified
+- **Automatic Continuation**: `WAIT_FOR_USER`
+- **Current Owner**: User
 - **Backend Readiness**: `backend_contract_ready`
 - **Frontend Readiness**: `backend_contract_ready`
-- **Next Action**: User chooses the next project priority in chat.
-- **Required Action**: Await direction. AI Chat layout and conversation management, live model validation, and ML Studio retain their separate acceptance or verification boundaries.
+- **Next Action**: User browser acceptance in chat.
+- **Required Action**: Await user acceptance or feedback in chat.
 - **Active Gate**: `project_docs/active/active_gate/README.md`
 - **Authorization Record**: `project_docs/active/status/phase_authorization.json`
-- **Roadmap**: `project_docs/active/ai_chat/README.md`
+- **Roadmap**: `project_docs/active/contracts/postgres_workspace.md`
 - **Active Handoff**: None.
-- **Latest Verification**: Seven focused theme and chart tests, scoped lint, parsing of eight affected stylesheets, the production build and repository checks passed. Existing build warnings remain. User accepted the dark theme in chat. AI Chat layout and model-upgrade evidence remains in the authorization record.
+- **Latest Verification**: The 61 focused backend tests, 30 frontend tests, Python compilation, frontend production build, and repository harness passed. A disposable PostgreSQL 17.4 fixture verified projected imports, catalog rollback, reopening, AI Chat totals and lineage, Data Hub, semantic metrics, and ML Studio snapshot resolution.
 
 ## Preserved Interface Verification
 
