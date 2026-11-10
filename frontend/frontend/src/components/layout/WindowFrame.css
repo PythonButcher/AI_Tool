@@ -26,6 +26,10 @@
   overflow: hidden;
 }
 
+[data-theme='dark'] .window-surface {
+  background-image: var(--dark-surface-finish);
+}
+
 .window-frame.active .window-surface {
   box-shadow: var(--shadow-xl);
   border-color: color-mix(in srgb, var(--accent-blue) 30%, var(--border-color));

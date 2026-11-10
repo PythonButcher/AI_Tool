@@ -1,0 +1,14 @@
+/* view-json-react ships CSS modules with a fixed light palette and no theme API.
+   Scope its stable class prefixes to this adapter, independent of build hashes. */
+.json-data-preview [class*='_viewer_'] { color: var(--text-primary); }
+.json-data-preview [class*='_node_']::before { border-color: var(--border-color); }
+.json-data-preview [class*='_node_'] [class*='_key_'][class*='_collapsible_']:hover { background: var(--bg-secondary-soft); }
+.json-data-preview [class*='_primitiveValue_'][class] { color: var(--text-primary); }
+.json-data-preview [class*='_primitiveValue_'][class*='_string_'] { color: var(--accent-green); }
+.json-data-preview [class*='_primitiveValue_'][class*='_number_'] { color: var(--accent-blue); }
+.json-data-preview [class*='_primitiveValue_'][class*='_boolean_'],
+.json-data-preview [class*='_dots_'] { color: var(--accent-warning); }
+.json-data-preview [class*='_primitiveValue_'][class*='_null_'] { color: var(--accent-red); }
+.json-data-preview [class*='_arrow_'] { border-left-color: var(--accent-teal); }
+.json-data-preview [class*='_copyButton_'] { background: var(--bg-secondary-soft); color: var(--text-primary); }
+.json-data-preview [class*='_copySuccess_'] { background: var(--accent-green-soft); color: var(--accent-green); }

@@ -221,7 +221,7 @@ function FileUpload({
                 <div key={ds.id} className="dataset-card">
                   <div>
                     <p className="dataset-name">{ds.name}</p>
-                    <p className="dataset-path">{ds.path}</p>
+                    <p className="dataset-path">{ds.source_kind === 'sql' ? 'PostgreSQL snapshot' : ds.path}</p>
                   </div>
                   <button className="ghost-button">Open</button>
                 </div>

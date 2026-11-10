@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from contextlib import ExitStack
+from datetime import datetime, timedelta, timezone
 from copy import deepcopy
 from hashlib import sha256
 import math
@@ -24,6 +25,7 @@ from backend.repositories.source_workspace_repository import (
     get_workspace,
     register_source_with_workspace,
     register_source_in_workspace,
+    register_sources_with_workspace,
     replace_workspace_primary,
     require_workspace_sources,
     update_workspace_source_position,
@@ -176,6 +178,84 @@ def build_analysis_context(
     }
 
 
+def _managed_source(*, filename, file_bytes, dataframe, semantic_model, governance_policy,
+                    governance_readiness, preview, timestamp, source_kind="upload", schema_version=1,
+                    name=None):
+    """Allocate a managed-file locator and describe the corresponding catalog source."""
+    source_id = f"src_{uuid4().hex}"
+    safe_name = secure_filename(filename) or "dataset"
+    suffix = ".table.json" if filename.endswith(".table.json") else Path(safe_name).suffix.lower()
+    storage_key = f"{source_id}{suffix}"
+    managed_root = MANAGED_UPLOAD_ROOT.resolve()
+    managed_root.mkdir(parents=True, exist_ok=True)
+    managed_path = (managed_root / storage_key).resolve()
+    if managed_root not in managed_path.parents:
+        raise WorkspaceContextError("managed_source_unavailable", "Unable to allocate managed source storage.")
+    name = name or filename
+    source_model = deepcopy(semantic_model)
+    source_model.setdefault("dataset", {}).update(id=source_id, name=name)
+    return managed_path, {
+        "source_id": source_id,
+        "name": name,
+        "private_path": str(managed_path),
+        "source_kind": source_kind,
+        "locator_kind": "managed_file",
+        "private_locator": {"storage_key": storage_key, "file_name": safe_name, "format": suffix.lstrip(".") or None},
+        "content_fingerprint": f"sha256:{sha256(file_bytes).hexdigest()}",
+        "schema_version": schema_version,
+        "schema": dataframe_schema(dataframe),
+        "row_count": int(dataframe.shape[0]),
+        "column_count": int(dataframe.shape[1]),
+        "preview": preview,
+        "semantic_model": source_model,
+        "governance_policy": governance_policy,
+        "governance_readiness": governance_readiness,
+        "created_at": timestamp,
+        "updated_at": timestamp,
+    }
+
+
+def register_managed_postgres_workspace(*, name: str, snapshots: list[Dict[str, Any]]) -> Dict[str, Any]:
+    """Save ordered snapshots with the primary first and roll back files on catalog failure."""
+    workspace_id = f"ws_{uuid4().hex}"
+    created = datetime.now(timezone.utc)
+    timestamp = created.isoformat().replace("+00:00", "Z")
+    aliases = set()
+    records = []
+    with ExitStack() as cleanup:
+        for position, snapshot in enumerate(snapshots):
+            base_alias = _source_alias(f'{snapshot["table"]}.table')
+            alias = base_alias
+            index = 2
+            while alias in aliases:
+                alias = f"{base_alias}_{index}"
+                index += 1
+            aliases.add(alias)
+            path, source = _managed_source(
+                filename=f'{snapshot["table"]}.table.json', name=snapshot["name"], timestamp=timestamp,
+                source_kind="sql", file_bytes=snapshot["file_bytes"], dataframe=snapshot["dataframe"],
+                semantic_model=snapshot["semantic_model"], governance_policy=snapshot["readiness"]["policy"],
+                governance_readiness=snapshot["readiness"], preview=snapshot["preview"],
+            )
+            with path.open("xb") as managed_file:
+                cleanup.callback(path.unlink, missing_ok=True)
+                managed_file.write(snapshot["file_bytes"])
+            # Membership reads sort by added_at. Keep the user's source order stable.
+            added_at = (created + timedelta(microseconds=position)).isoformat().replace("+00:00", "Z")
+            records.append((source, {
+                "workspace_id": workspace_id, "source_id": source["source_id"], "alias": alias,
+                "role": "lookup" if position else "primary", "added_at": added_at,
+            }))
+        workspace = {
+            "workspace_id": workspace_id, "name": name, "version": 1, "workspace_kind": "postgres",
+            "primary_source_id": records[0][0]["source_id"], "created_at": timestamp, "updated_at": timestamp,
+        }
+        sources, workspace = register_sources_with_workspace(workspace=workspace, sources_and_memberships=records)
+        cleanup.pop_all()
+    return {"source": sources[0], "sources": sources, "workspace": workspace,
+            "analysis_context": build_analysis_context(workspace, [workspace["primary_source_id"]])}
+
+
 def register_managed_upload(
     *,
     file_bytes: bytes,
@@ -193,7 +273,6 @@ def register_managed_upload(
     preparation_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Persist accepted bytes and atomically register the requested membership."""
-    source_id = f"src_{uuid4().hex}"
     if replace_source is not None and not workspace_id:
         raise WorkspaceContextError("workspace_not_found", "Source replacement requires an existing workspace.")
     target_workspace_id = workspace_id.strip() if workspace_id else None
@@ -211,47 +290,13 @@ def register_managed_upload(
         membership_alias = _source_alias(filename)
 
     new_workspace_id = f"ws_{uuid4().hex}"
-    safe_name = secure_filename(filename) or "dataset"
-    suffix = ".table.json" if filename.endswith(".table.json") else Path(safe_name).suffix.lower()
-    storage_key = f"{source_id}{suffix}"
-    managed_root = MANAGED_UPLOAD_ROOT.resolve()
-    managed_root.mkdir(parents=True, exist_ok=True)
-    managed_path = (managed_root / storage_key).resolve()
-
-    # Defense in depth: the generated key must remain beneath the configured
-    # managed root even if this function is changed later.
-    if managed_root not in managed_path.parents:
-        raise WorkspaceContextError(
-            "managed_source_unavailable", "Unable to allocate managed source storage."
-        )
-
     timestamp = _utc_now()
-    source_semantic_model = deepcopy(semantic_model)
-    source_semantic_model.setdefault("dataset", {})["id"] = source_id
-    source_semantic_model["dataset"]["name"] = filename
-    source_record = {
-        "source_id": source_id,
-        "name": filename,
-        "private_path": str(managed_path),
-        "source_kind": "upload",
-        "locator_kind": "managed_file",
-        "private_locator": {
-            "storage_key": storage_key,
-            "file_name": safe_name,
-            "format": suffix.lstrip(".") or None,
-        },
-        "content_fingerprint": f"sha256:{sha256(file_bytes).hexdigest()}",
-        "schema_version": replace_source["schema_version"] + 1 if replace_source else 1,
-        "schema": dataframe_schema(dataframe),
-        "row_count": int(dataframe.shape[0]),
-        "column_count": int(dataframe.shape[1]),
-        "preview": preview,
-        "semantic_model": source_semantic_model,
-        "governance_policy": governance_policy,
-        "governance_readiness": governance_readiness,
-        "created_at": timestamp,
-        "updated_at": timestamp,
-    }
+    managed_path, source_record = _managed_source(
+        filename=filename, file_bytes=file_bytes, dataframe=dataframe, semantic_model=semantic_model,
+        governance_policy=governance_policy, governance_readiness=governance_readiness, preview=preview,
+        timestamp=timestamp, schema_version=replace_source["schema_version"] + 1 if replace_source else 1,
+    )
+    source_id = source_record["source_id"]
     workspace_record = {
         "workspace_id": new_workspace_id,
         "name": f"{Path(filename).stem or 'Dataset'} workspace",

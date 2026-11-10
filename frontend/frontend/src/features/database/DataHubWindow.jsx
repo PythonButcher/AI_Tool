@@ -181,7 +181,7 @@ function DataHubWindow() {
               {sortedDatasets.map((dataset) => (
                 <tr key={dataset.id}>
                   <td className="datahub-td-name">{dataset.name}</td>
-                  <td className="truncate datahub-td-path">{dataset.path}</td>
+                  <td className="truncate datahub-td-path">{dataset.source_kind === 'sql' ? 'PostgreSQL snapshot' : dataset.path}</td>
                   <td>
                     <button
                       className="datahub-delete-btn"

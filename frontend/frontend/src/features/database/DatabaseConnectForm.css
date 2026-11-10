@@ -1,5 +1,5 @@
 .db-connect-content {
-  padding: 24px;
+  padding: 12px;
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -9,8 +9,8 @@
 
 .db-form__grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
 }
 
 .db-form__field--wide {
@@ -21,6 +21,7 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  min-width: 0;
 }
 
 .db-form__label {
@@ -33,6 +34,7 @@
 
 .db-form__input {
   width: 100%;
+  box-sizing: border-box;
   padding: 10px 14px;
   border-radius: 6px;
   border: 1px solid var(--border-color);
@@ -49,9 +51,7 @@
 }
 
 .db-form__submit {
-  grid-column: span 2;
-  margin-top: 12px;
-  padding: 14px;
+  padding: 10px 12px;
   border: none;
   border-radius: 6px;
   background: var(--text-primary);
@@ -82,15 +82,105 @@
   border-radius: 6px;
 }
 
-.db-form__tables {
-  margin-top: 24px;
+.db-saved-models {
+  color: var(--text-primary);
   border-top: 1px solid var(--border-color);
-  padding-top: 20px;
+  padding-top: 12px;
 }
 
-.db-form__tables-label {
-  font-size: 0.85rem;
+.db-saved-models h3,
+.db-saved-models p {
+  margin: 0 0 8px;
+}
+
+.db-saved-models ul,
+.db-form__column-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.db-saved-models li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-block: 4px;
+}
+
+.db-form__fields {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.db-form__fields legend {
+  padding: 0 0 10px;
   font-weight: 700;
   color: var(--text-primary);
-  margin-bottom: 12px;
+}
+
+.db-form__actions,
+.db-form__check {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.db-form__secondary {
+  padding: 7px 9px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+
+.db-form__database,
+.db-form__check strong {
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+
+.db-form__status,
+.db-form__check small {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+}
+
+.db-form__table-list,
+.db-form__column-list {
+  max-height: 20rem;
+  overflow: auto;
+}
+
+.db-form__table {
+  padding: 8px 4px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.db-form__table details {
+  margin: 8px 0 0 12px;
+  color: var(--text-primary);
+}
+
+.db-form__table summary {
+  margin-bottom: 8px;
+  cursor: pointer;
+}
+
+.db-form__column-list {
+  max-height: 12rem;
+  margin-top: 8px;
+}
+
+.db-form__column-list li {
+  padding-block: 3px;
+  overflow-wrap: anywhere;
 }

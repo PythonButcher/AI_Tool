@@ -42,7 +42,7 @@
   min-height: 0;
   font-size: 14px;
 }
-[data-theme='dark'] .ml-studio-shell { background: var(--bg-secondary); }
+[data-theme='dark'] .ml-studio-shell { background: var(--workspace-background), var(--bg-secondary); }
 .ml-studio-shell *, .ml-studio-shell *::before, .ml-studio-shell *::after { box-sizing: border-box; }
 .ml-studio-shell :is(h2, h3, h4, p) { overflow-wrap: anywhere; }
 .ml-studio-shell :is(button, input, select, textarea, summary):focus-visible { outline: 3px solid var(--accent-blue); outline-offset: 3px; }
