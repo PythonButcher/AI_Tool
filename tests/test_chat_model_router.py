@@ -2,14 +2,17 @@
 
 import copy
 import json
+import os
 import unittest
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 from flask import Flask, jsonify
+import httpx
 
 from backend.routes.decision_chat import decision_chat_bp
 from backend.services.chat_model_router import add_model_commentary, _provider_messages
+from backend.services.chat_model_router import _create_client as create_provider_client
 from tests.test_decision_chat_service import DATASET, SEMANTIC_MODEL
 
 
@@ -41,6 +44,47 @@ class ChatModelRouterTests(unittest.TestCase):
         for payload in ({"user_message": "Revenue total"}, {"model_mode": "auto", "user_message": "Revenue total"}):
             self.assertEqual(add_model_commentary(payload, RESULT)["model_routing"]["status"], "local")
         self.factory.assert_not_called()
+
+    def test_new_defaults_work_through_installed_sdk_without_network(self):
+        def respond(client, request, **kwargs):
+            body = json.loads(request.content)
+            self.assertFalse(body["store"])
+            self.assertNotIn("temperature", body)
+            self.assertEqual(request.extensions["timeout"]["read"], 45.0)
+            return httpx.Response(200, request=request, json={
+                "id": "test-completion", "object": "chat.completion", "created": 1,
+                "model": body["model"], "choices": [{"index": 0, "finish_reason": "stop",
+                    "message": {"role": "assistant", "content": "An explanation of the computed result."}}],
+            })
+
+        self.factory.side_effect = create_provider_client
+        with patch.dict(os.environ):
+            os.environ.pop("AI_CHAT_QUICK_MODEL", None)
+            os.environ.pop("AI_CHAT_DEEP_MODEL", None)
+            with patch("httpx.Client.send", autospec=True, side_effect=respond) as transport:
+                for mode, model, effort, budget in (("quick", "gpt-5.6-luna", "low", 2000),
+                                                     ("deep", "gpt-5.6-sol", "medium", 6000)):
+                    reply = add_model_commentary({"model_mode": mode, "user_message": "Explain revenue"}, RESULT)
+                    self.assertEqual(reply["model_routing"]["status"], "completed")
+                    self.assertEqual(reply["model_routing"]["model"], model)
+                    body = json.loads(transport.call_args.args[1].content)
+                    self.assertEqual(body["reasoning_effort"], effort)
+                    self.assertEqual(body["max_completion_tokens"], budget)
+                self.assertEqual(transport.call_count, 2)
+
+    def test_real_sdk_does_not_retry_or_escalate_when_provider_rejects_model(self):
+        self.factory.side_effect = create_provider_client
+        def unavailable(client, request, **kwargs):
+            return httpx.Response(503, request=request, json={"error": {"message": "Unavailable", "type": "server_error"}})
+        with patch.dict(os.environ):
+            os.environ.pop("AI_CHAT_QUICK_MODEL", None)
+            with patch("httpx.Client.send", autospec=True, side_effect=unavailable) as transport:
+                reply = add_model_commentary({"model_mode": "quick", "user_message": "Explain revenue"}, RESULT)
+                self.assertEqual(reply["model_routing"]["status"], "unavailable")
+                self.assertEqual(reply["model_routing"]["attempted_model"], "gpt-5.6-luna")
+                self.assertIsNone(reply["model_routing"]["model"])
+                self.assertEqual(reply["artifacts"], RESULT["artifacts"])
+                transport.assert_called_once()
 
     def test_quick_preserves_all_verified_results(self):
         baseline = copy.deepcopy(RESULT)

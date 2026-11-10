@@ -24,7 +24,7 @@ Decision Intelligence workspaces, decision frames, readiness and capability pane
 
 Dataset identity and semantic truth remain required for every BI answer and chart.
 
-AI Chat model routing is engineering-complete and awaiting user acceptance in chat; live provider access and quality remain unverified. Conversation management, visual refinement and ML Studio retain their pending acceptance boundaries. The [active gate](active_gate/README.md) controls execution; [status](status/project_execution_status.md) records verification and ownership.
+The user accepted the shared dark theme. AI Chat's model routing, layout and conversation management are engineering-complete. Live provider access and quality remain unverified, and AI Chat and ML Studio retain their separate acceptance boundaries. The [active gate](active_gate/README.md) controls execution. [Status](status/project_execution_status.md) records verification and ownership.
 
 ## Active Areas
 
@@ -40,6 +40,7 @@ AI Chat model routing is engineering-complete and awaiting user acceptance in ch
 | Dashboard canvas state contract | `project_docs/active/contracts/dashboard_canvas_state.md` | Local-first dashboard canvas, layout, and sharing skeleton state |
 | Dataset governance contract | `project_docs/active/contracts/data_catalog_lineage.md` | Readiness policy and enforcement truth |
 | Multiple-source workspace contract | `project_docs/active/contracts/multiple_data_source_workspace.md` | Source, workspace membership, and analysis-context truth |
+| PostgreSQL workspace | `project_docs/active/contracts/postgres_workspace.md` | Database discovery, selected snapshots, and reopening saved models |
 | Multiple-source relationship contract | `project_docs/active/contracts/multiple_data_source_relationships.md` | Relationship persistence, validation, diagnostics, and activation truth |
 | Project active gate | `project_docs/active/active_gate/README.md` | The only active work workspace |
 | ML Studio roadmap | `project_docs/active/ml_studio/README.md` | Durable whole-product requirements and acceptance boundaries; status owns delivery truth |

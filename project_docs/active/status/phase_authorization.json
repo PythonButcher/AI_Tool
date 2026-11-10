@@ -1,10 +1,74 @@
 {
   "schema_version": 1,
   "authorized_work": {
-    "name": "AI Chat model routing"
+    "name": "PostgreSQL workspace"
   },
   "authorization_state": "AUTHORIZED",
   "lifecycle_state": "AWAITING USER ACCEPTANCE",
+  "postgres_workspace_verification": {
+    "backend": "61 focused tests passed, including real PostgreSQL 17.4 import, rollback, relationship and filtered Auto chat totals, reopening, Data Hub, semantic metrics, and ML Studio snapshot resolution.",
+    "frontend": "30 focused React tests and the production build passed. The build reports existing warnings. Final browser acceptance belongs to the user."
+  },
+  "user_implementation_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-11-07",
+    "evidence": "Direct instruction and explicit frontend authorization in the PostgreSQL verification chat.",
+    "instruction": "Deliver a working end-to-end PostgreSQL workflow for choosing a database, tables and optional columns, creating relationships, and reusing the saved dataset or semantic model.",
+    "codex_frontend_implementation_authorized": true
+  },
+  "dark_theme_acceptance": {
+    "accepted_by": "User",
+    "accepted_at": "2026-11-07",
+    "instruction": "accepted",
+    "scope": "Application dark theme only"
+  },
+  "dark_theme_verification": {
+    "frontend": "Seven theme and chart tests passed, including graphite and blue-gray contrast, CSS and MUI palette parity, detached-window theme propagation and chart switching. Scoped lint, parsing for all eight affected stylesheets and the production build passed. Existing build warnings remain.",
+    "repository": "Repository CI, active-gate validation and whitespace checks passed. Jest and temporary Git fixtures required execution outside the restricted sandbox.",
+    "acceptance": "User accepted the dark theme in chat. Codex did not perform browser verification."
+  },
+  "dark_theme_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-11-07",
+    "instruction": "Redo dark mode with bold, glossy jet black and a smooth transition into dark gray-blue.",
+    "scope": "Shared dark palette, workspace gradients, dark surface finishes, MUI palette alignment and focused verification. Preserve light mode and feature behavior.",
+    "codex_frontend_implementation_authorized": true
+  },
+  "chat_modernization_verification": {
+    "frontend": "28 focused chat and viewport sizing tests passed; scoped ESLint has no errors; chat stylesheet parses. Production build passes with existing warnings.",
+    "repository": "CI harness passed with 28 hook tests and 7 policy tests. Active-gate validation and whitespace checks pass. Jest cache and temporary Git fixtures required execution outside the restricted sandbox.",
+    "acceptance": "User acts next in chat. No browser operations or visual acceptance were performed."
+  },
+  "chat_modernization_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-10-21",
+    "instruction": "Clean up and modernize AI Chat, remove excessive boxes, improve layout and open at a larger size while keeping the application tone.",
+    "codex_frontend_implementation_authorized": true,
+    "scope": "AI Chat shell markup and styling, responsive docked and popout opening sizes, focused verification and governing documentation. Preserve BI behavior and existing themes."
+  },
+  "model_upgrade_verification": {
+    "backend": "38 router and BI regression tests passed, including installed-SDK transport checks for Luna low reasoning, Sol medium reasoning, completion caps, timeout and no retries. Changed Python compiled.",
+    "repository": "CI harness, active-gate validation, 28 hook tests, 7 policy tests and whitespace checks passed.",
+    "acceptance": "Engineering-complete; User acts next in chat. Provider transport was simulated; no paid calls or browser operations. Live model access/quality remains unverified."
+  },
+  "model_upgrade_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-10-21",
+    "instruction": "Choose GPT-5.6 Luna and a better reasoning model.",
+    "scope": "Upgrade chat router defaults to GPT-5.6 Luna low reasoning and GPT-5.6 Sol medium reasoning, preserve configured overrides and BI contracts, and verify SDK parameters and regressions."
+  },
+  "theme_refinement_verification": {
+    "frontend": "37 focused frontend tests passed across AI Chat, window state, theme propagation, shared text/action contrast and chart theme switching. Scoped ESLint has no errors; existing warnings remain. All 66 application stylesheets parse.",
+    "repository": "Agent and active-gate checks, 28 hook tests, 7 policy tests and whitespace checks passed. Jest and Git fixtures required execution outside the restricted sandbox.",
+    "acceptance": "User acts next in chat. No browser operations or visual acceptance were performed. Live model access and quality remain unverified."
+  },
+  "theme_refinement_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-10-13",
+    "instruction": "Modernize the model selector, bring subtle life to light mode, soften and blend dark mode, and ensure theme coverage across all pages and elements.",
+    "scope": "Codex frontend implementation of the AI Chat selector, shared CSS and MUI themes, theme propagation, and concrete theme coverage repairs. Preserve feature behavior and backend contracts. Browser acceptance stays with the user.",
+    "codex_frontend_implementation_authorized": true
+  },
   "model_router_verification": {
     "backend": "36 router and BI regression tests passed; changed Python modules compiled. Provider calls are mocked, with no paid live calls.",
     "frontend": "27 AI Chat tests, scoped ESLint, CSS parsing and production build passed. Existing unrelated build warnings remain.",
@@ -82,7 +146,7 @@
     "scope": "Codex may redesign the AI Chat window hierarchy, header, conversation, composer, results panel and responsive styling while retaining implemented BI and dashboard behavior.",
     "codex_frontend_implementation_authorized": true
   },
-  "diff_baseline": "2e3670e9bc26a3a6b4749baebf6e25c7032e9475",
+  "diff_baseline": "815c37008bd83465eb12af73bfb085aa431efd8b",
   "authority_kind": "direct_user_instruction",
   "ai_chat_improvement_authorization": {
     "approved_by": "User",
@@ -161,7 +225,7 @@
     "instruction": "Implement this work — project_docs/active/active_gate/README.md",
     "scope": "Inspect source and contracts, write and verify one bounded Stay/Open Power Query opening handoff, and transfer ownership to Antigravity. Codex frontend implementation remains excluded."
   },
-  "user_implementation_authorization": {
+  "ml_studio_user_implementation_authorization": {
     "approved_by": "User",
     "approved_at": "2026-09-27",
     "evidence": "Direct user message in this Codex session referencing the sole active gate.",
@@ -208,6 +272,13 @@
     "scope": "Codex may implement saved experiment deletion in the ML Studio home, its backend draft route and persistence, contract, and focused tests."
   },
   "allowed_paths": [
+    "backend/routes/sql_fetch.py",
+    "backend/routes/datahub_routes.py",
+    "backend/services/postgres_workspace.py",
+    "backend/repositories/source_workspace_repository.py",
+    "tests/test_postgres_workspace.py",
+    "project_docs/active/contracts/postgres_workspace.md",
+    "frontend/frontend/src/**",
     "backend/services/chat_model_router.py",
     "tests/test_chat_model_router.py",
     "project_docs/active/contracts/ai_chat_model_routing.md",

@@ -369,7 +369,7 @@ const SourceModelCanvas = ({ workspaceId }) => {
         onEdgeClick={onEdgeClick}
         onPaneClick={onPaneClick}
       >
-        <Background gap={20} color="#e0e0e0" />
+        <Background gap={20} color="var(--border-color)" />
         <Controls showInteractive={false} />
       </ReactFlow>
 

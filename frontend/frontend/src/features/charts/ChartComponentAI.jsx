@@ -1,6 +1,7 @@
 import React, { useRef } from 'react';
 import { Bar, Line, Pie, Doughnut, Scatter } from 'react-chartjs-2';
 import ChartToolbar from './ChartToolbar';
+import { useTheme } from '@mui/material/styles';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -31,6 +32,8 @@ ChartJS.register(
 
 function ChartComponentAI({ normalizedChartType = 'Bar', aiChartData, onExportPdf }) {
   const chartRef = useRef(null);
+  const { palette } = useTheme();
+  const axisStyle = { ticks: { color: palette.text.secondary }, grid: { color: palette.divider } };
 
   if (!aiChartData || !aiChartData.datasets) {
     console.warn("⚠ Chart data is missing required properties.", aiChartData);
@@ -51,17 +54,19 @@ function ChartComponentAI({ normalizedChartType = 'Bar', aiChartData, onExportPd
       return null;
     }
     const xTitle = axisLabels.x
-      ? { display: true, text: axisLabels.x }
+      ? { display: true, text: axisLabels.x, color: palette.text.secondary }
       : undefined;
     const yTitle = axisLabels.y
-      ? { display: true, text: axisLabels.y }
+      ? { display: true, text: axisLabels.y, color: palette.text.secondary }
       : undefined;
     return {
       x: {
+        ...axisStyle,
         type: meta.xScaleType || 'category',
         title: xTitle,
       },
       y: {
+        ...axisStyle,
         beginAtZero: meta.beginAtZero !== undefined ? meta.beginAtZero : true,
         title: yTitle,
       },
@@ -75,10 +80,11 @@ function ChartComponentAI({ normalizedChartType = 'Bar', aiChartData, onExportPd
       padding: 10,
     },
     plugins: {
-      legend: { display: showLegend, position: legendPosition },
-      tooltip: { enabled: true },
-      backgroundColor: {
-        color: 'white', // fallback if we use a plugin, optional
+      legend: { display: showLegend, position: legendPosition, labels: { color: palette.text.primary } },
+      tooltip: {
+        enabled: true, backgroundColor: palette.background.paper,
+        titleColor: palette.text.primary, bodyColor: palette.text.secondary,
+        borderColor: palette.divider, borderWidth: 1,
       },
     },
     interaction: {
@@ -93,7 +99,7 @@ function ChartComponentAI({ normalizedChartType = 'Bar', aiChartData, onExportPd
           const ctx = chart.ctx;
           ctx.save();
           ctx.globalCompositeOperation = 'destination-over';
-          ctx.fillStyle = '#ffffff'; // white background
+          ctx.fillStyle = palette.background.paper;
           ctx.fillRect(0, 0, chart.width, chart.height);
           ctx.restore();
         }
@@ -104,16 +110,16 @@ function ChartComponentAI({ normalizedChartType = 'Bar', aiChartData, onExportPd
   const resolvedOptions = (() => {
     if (resolvedChartType === 'Scatter') {
       const xTitle = axisLabels.x
-        ? { display: true, text: axisLabels.x }
+        ? { display: true, text: axisLabels.x, color: palette.text.secondary }
         : undefined;
       const yTitle = axisLabels.y
-        ? { display: true, text: axisLabels.y }
+        ? { display: true, text: axisLabels.y, color: palette.text.secondary }
         : undefined;
       return {
         ...options,
         scales: {
-          x: { type: 'linear', position: 'bottom', title: xTitle },
-          y: { type: 'linear', title: yTitle },
+          x: { ...axisStyle, type: 'linear', position: 'bottom', title: xTitle },
+          y: { ...axisStyle, type: 'linear', title: yTitle },
         },
       };
     }

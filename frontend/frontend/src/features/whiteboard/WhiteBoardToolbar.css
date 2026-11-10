@@ -6,19 +6,19 @@
   border-radius: 10px;
   margin-bottom: 10px;
   align-items: center;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
-  border: 1px solid rgba(0, 0, 0, 0.04);
+  box-shadow: 0 6px 18px var(--border-color);
+  border: 1px solid var(--border-color);
 }
 
 .whiteboard-toolbar.light {
-  background: linear-gradient(135deg, #f9fafb, #eef2ff);
-  color: #0f172a;
+  background: var(--workspace-background), var(--bg-primary);
+  color: var(--text-primary);
 }
 
 .whiteboard-toolbar.dark {
-  background: linear-gradient(135deg, #111827, #1f2937);
-  color: #e5e7eb;
-  border-color: rgba(255, 255, 255, 0.08);
+  background: var(--workspace-background), var(--bg-primary);
+  color: var(--text-primary);
+  border-color: var(--border-color);
 }
 
 .toolbar-section {
@@ -43,8 +43,8 @@
 }
 
 .tool-button {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
   color: inherit;
   border-radius: 8px;
   padding: 8px 10px;
@@ -59,12 +59,13 @@
 .tool-button:focus-visible {
   transform: translateY(-1px);
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.12);
-  outline: none;
+  outline: 2px solid var(--accent-blue);
+  outline-offset: 2px;
 }
 
 .tool-button.active {
-  background: linear-gradient(135deg, #6366f1, #2563eb);
-  color: #f8fafc;
+  background: var(--accent-blue);
+  color: var(--text-on-accent);
   border-color: rgba(37, 99, 235, 0.35);
   box-shadow: 0 10px 20px rgba(37, 99, 235, 0.35);
 }
@@ -93,7 +94,7 @@
   width: 44px;
   height: 34px;
   padding: 0;
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   background: transparent;
   cursor: pointer;
@@ -102,20 +103,20 @@
 .style-controls select {
   padding: 6px 10px;
   border-radius: 8px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid var(--border-color);
+  background: var(--bg-primary);
   color: inherit;
   min-width: 88px;
 }
 
 .whiteboard-toolbar.dark .style-controls select {
-  background: rgba(17, 24, 39, 0.7);
-  border-color: rgba(255, 255, 255, 0.08);
+  background: var(--bg-primary);
+  border-color: var(--border-color);
 }
 
 .action-button {
-  background: linear-gradient(135deg, #2563eb, #1d4ed8);
-  color: #f8fafc;
+  background: var(--accent-blue);
+  color: var(--text-on-accent);
   border: none;
   border-radius: 8px;
   padding: 8px 12px;
@@ -129,13 +130,14 @@
 .action-button:focus-visible {
   transform: translateY(-1px);
   box-shadow: 0 12px 24px rgba(37, 99, 235, 0.3);
-  outline: none;
+  outline: 2px solid var(--accent-blue);
+  outline-offset: 2px;
   background-position: 100% 0;
 }
 
 .whiteboard-toolbar.dark .action-button {
-  background: linear-gradient(135deg, #4f46e5, #0ea5e9);
-  color: #e5e7eb;
+  background: var(--accent-blue);
+  color: var(--text-on-accent);
 }
 
 .excalidraw .App-toolbar {

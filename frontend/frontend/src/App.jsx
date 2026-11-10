@@ -10,7 +10,7 @@ import { transformToChartData } from './utils/chartDataUtils';
 import AIChat from './features/ai/AIChat';
 import { DataContext } from './context/DataContext';
 import { ThemeContext, ThemeProvider } from './context/ThemeContext';
-import { WarehouseProvider } from './context/WarehouseContext';
+import { WarehouseContext, WarehouseProvider } from './context/WarehouseContext';
 import { HelpOverlayProvider } from './context/HelpOverlayContext';
 import useLoadRawData from './hooks/useLoadRawData';
 import Snowfall from 'react-snowfall';
@@ -48,6 +48,7 @@ function AppContent() {
     uploadedData, setUploadedData,
     setFullData,
     cleanedData, setCleanedData,
+    setFilteredData,
     pipelineResults, setPipelineResults,
     aiReportReady, setAiReportReady,
     showAiReport, setShowAiReport,
@@ -55,6 +56,7 @@ function AppContent() {
     refreshSemanticModelFromDataset,
     setWorkspaceEnvelope,
   } = useContext(DataContext);
+  const { setDatasets } = useContext(WarehouseContext);
 
   const { theme } = useContext(ThemeContext);
   const {
@@ -164,6 +166,7 @@ function AppContent() {
       data_preview: previewRows,
       semantic_model: raw?.semantic_model || null,
       source: raw?.source || null,
+      governance_readiness: raw?.governance_readiness || null,
     });
     setFullData(finalDataset);
     setCleanedData(finalDataset);
@@ -186,7 +189,16 @@ function AppContent() {
 
 
   const handleApiData = (data) => handleFileUpload(data);
-  const handleDatabaseData = (data) => handleFileUpload(data);
+  const handleDatabaseData = (data) => {
+    setRawUploadFile(null);
+    setFilteredData(null);
+    const sources = data.sources || [data.source];
+    setDatasets(previous => [
+      ...previous.filter(dataset => dataset.source_kind !== 'sql' && !sources.some(source => source.source_id === dataset.id)),
+      ...sources.map(source => ({ id: source.source_id, name: source.name, source_kind: source.source_kind })),
+    ]);
+    handleFileUpload(data);
+  };
 
   const handleClosePreview = useCallback(() => setShowDataPreview(false), []);
   const handleCloseRawViewer = useCallback(() => setShowRawViewer(false), []);

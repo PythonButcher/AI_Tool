@@ -12,7 +12,7 @@ from backend.services.data_catalog_lineage import (
     is_blocked,
     normalize_governance_policy,
 )
-from backend.services.dataset_context import read_dataset_file
+from backend.services.dataset_context import read_dataset_file, safe_json_records
 from backend.services.semantic_model import infer_semantic_model_from_dataframe
 from backend.services.workspace_context import (
     WorkspaceContextError,
@@ -25,6 +25,9 @@ datahub_bp = Blueprint('datahub_bp', __name__, url_prefix='/api/datahub')
 
 def _deserialize_dataset_record(row):
     record = dict(row)
+    if record.get('source_kind') == 'sql':
+        record.pop('path', None)
+        record.pop('locator_json', None)
     if record.get('schema_json'):
         record['schema'] = json.loads(record['schema_json'])
     if record.get('preview_json'):
@@ -94,7 +97,7 @@ def register_dataset():
             readiness = None
 
         conn = get_db_connection()
-        conn.execute(
+        cursor = conn.execute(
             '''
             INSERT INTO datahub_datasets
             (id, name, path, uploadedAt, numRows, numCols, schema_json, preview_json, semantic_model_json, governance_policy_json, governance_readiness_json)
@@ -110,6 +113,7 @@ def register_dataset():
                 semantic_model_json = COALESCE(excluded.semantic_model_json, datahub_datasets.semantic_model_json),
                 governance_policy_json = excluded.governance_policy_json,
                 governance_readiness_json = excluded.governance_readiness_json
+            WHERE datahub_datasets.source_kind <> 'sql'
             ''',
             (
                 dataset_id,
@@ -128,6 +132,8 @@ def register_dataset():
         conn.commit()
         conn.close()
 
+        if cursor.rowcount == 0:
+            return jsonify({'error': 'A managed PostgreSQL source cannot be overwritten through path registration.'}), 409
         response = {'message': 'Dataset registered successfully', 'governance_policy': policy}
         if readiness:
             response['governance_readiness'] = readiness
@@ -272,7 +278,7 @@ def fetch_dataset_rows():
         conn.row_factory = sqlite3.Row
         placeholders = ','.join('?' for _ in dataset_ids)
         query = (
-            'SELECT id, name, path, semantic_model_json, governance_policy_json '
+            'SELECT id, name, path, source_kind, semantic_model_json, governance_policy_json '
             f'FROM datahub_datasets WHERE id IN ({placeholders})'
         )
         rows = conn.execute(query, dataset_ids).fetchall()
@@ -282,6 +288,7 @@ def fetch_dataset_rows():
             row['id']: {
                 'name': row['name'],
                 'path': row['path'],
+                'source_kind': row['source_kind'],
                 'semantic_model': json.loads(row['semantic_model_json']) if row['semantic_model_json'] else None,
                 'governance_policy': json.loads(row['governance_policy_json']) if row['governance_policy_json'] else None,
             }
@@ -323,7 +330,10 @@ def fetch_dataset_rows():
                     dataframe = dataframe.head(max_rows)
                     truncated = True
 
-                records = dataframe.to_dict(orient='records')
+                records = (
+                    safe_json_records(dataframe)
+                    if record['source_kind'] == 'sql' else dataframe.to_dict(orient='records')
+                )
                 results[dataset_id] = {
                     'data': records,
                     'truncated': truncated,

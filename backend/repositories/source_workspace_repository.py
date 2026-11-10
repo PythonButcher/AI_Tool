@@ -91,6 +91,7 @@ def _serialize_workspace(row, memberships: Iterable[Any]) -> Dict[str, Any]:
         "contract_version": CONTRACT_VERSION,
         "workspace_id": row["workspace_id"],
         "name": row["name"],
+        "workspace_kind": row["workspace_kind"],
         "version": row["version"],
         "primary_source_id": row["primary_source_id"],
         "source_count": len(serialized_memberships),
@@ -161,15 +162,26 @@ def register_source_with_workspace(
     membership: Dict[str, Any],
 ) -> tuple[Dict[str, Any], Dict[str, Any]]:
     """Atomically register one source and its initial one-source workspace."""
+    sources, registered_workspace = register_sources_with_workspace(
+        workspace=workspace, sources_and_memberships=[(source, membership)]
+    )
+    return sources[0], registered_workspace
+
+
+def register_sources_with_workspace(
+    *, workspace: Dict[str, Any], sources_and_memberships: list[tuple[Dict[str, Any], Dict[str, Any]]],
+) -> tuple[list[Dict[str, Any]], Dict[str, Any]]:
+    """Publish all sources and their shared workspace in a single catalog transaction."""
     conn = get_db_connection()
     try:
         conn.execute("BEGIN")
-        _insert_source(conn, source)
+        for source, _ in sources_and_memberships:
+            _insert_source(conn, source)
         conn.execute(
             """
             INSERT INTO data_workspaces (
-                workspace_id, name, version, primary_source_id, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?)
+                workspace_id, name, version, primary_source_id, created_at, updated_at, workspace_kind
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 workspace["workspace_id"],
@@ -178,16 +190,40 @@ def register_source_with_workspace(
                 workspace["primary_source_id"],
                 workspace["created_at"],
                 workspace["updated_at"],
+                workspace.get("workspace_kind", "general"),
             ),
         )
-        _insert_membership(conn, membership)
+        for _, membership in sources_and_memberships:
+            _insert_membership(conn, membership)
+        registered_sources = [
+            get_source(source["source_id"], connection=conn) for source, _ in sources_and_memberships
+        ]
+        registered_workspace = get_workspace(workspace["workspace_id"], connection=conn)
         conn.commit()
-        return get_source(source["source_id"], connection=conn), get_workspace(
-            workspace["workspace_id"], connection=conn
-        )
+        return registered_sources, registered_workspace
     except Exception:
         conn.rollback()
         raise
+    finally:
+        conn.close()
+
+
+def list_sql_workspaces() -> list[Dict[str, Any]]:
+    """Find saved PostgreSQL models even if preparation has replaced their primary source."""
+    conn = get_db_connection()
+    try:
+        rows = conn.execute(
+            """
+            SELECT w.workspace_id, w.name, w.version, w.primary_source_id, w.updated_at,
+                   COUNT(m.source_id) AS source_count
+            FROM data_workspaces w
+            JOIN workspace_sources m ON m.workspace_id = w.workspace_id
+            WHERE w.workspace_kind = 'postgres'
+            GROUP BY w.workspace_id
+            ORDER BY w.updated_at DESC, w.workspace_id
+            """
+        ).fetchall()
+        return [dict(row) for row in rows]
     finally:
         conn.close()
 

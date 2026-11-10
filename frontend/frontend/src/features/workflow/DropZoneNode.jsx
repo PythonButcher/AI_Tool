@@ -3,8 +3,7 @@ import { FiTarget, FiZap } from 'react-icons/fi';
 
 /**
  * DropZoneNode — execution trigger zone on the canvas.
- * Updated for the dark canvas studio aesthetic with glassmorphic container
- * and animated glow when the execute node hovers over it.
+ * Uses shared theme colors with an animated glow during a compatible drag.
  */
 const DropZoneNode = ({ data }) => {
   const { hovering } = data;
@@ -13,10 +12,10 @@ const DropZoneNode = ({ data }) => {
     <div
       style={{
         backgroundColor: hovering
-          ? 'rgba(37, 99, 235, 0.12)'
-          : 'rgba(255, 255, 255, 0.04)',
+          ? 'var(--accent-blue-soft)'
+          : 'var(--bg-primary-soft)',
         padding: '28px',
-        border: `2px dashed ${hovering ? '#3b82f6' : '#334155'}`,
+        border: `2px dashed ${hovering ? 'var(--accent-blue)' : 'var(--border-color)'}`,
         borderRadius: '20px',
         width: '300px',
         display: 'flex',
@@ -40,9 +39,9 @@ const DropZoneNode = ({ data }) => {
           height: '52px',
           borderRadius: '14px',
           background: hovering
-            ? 'linear-gradient(135deg, #2563eb, #7c3aed)'
-            : 'rgba(100, 116, 139, 0.15)',
-          color: hovering ? '#ffffff' : '#94a3b8',
+            ? 'var(--accent-blue)'
+            : 'var(--bg-secondary-soft)',
+          color: hovering ? 'var(--text-on-accent)' : 'var(--text-secondary)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -59,7 +58,7 @@ const DropZoneNode = ({ data }) => {
           style={{
             fontWeight: 700,
             fontSize: '15px',
-            color: hovering ? '#93c5fd' : '#e2e8f0',
+            color: hovering ? 'var(--accent-blue)' : 'var(--text-primary)',
             marginBottom: '5px',
             letterSpacing: '-0.01em',
           }}
@@ -69,7 +68,7 @@ const DropZoneNode = ({ data }) => {
         <div
           style={{
             fontSize: '12px',
-            color: hovering ? '#60a5fa' : '#64748b',
+            color: 'var(--text-secondary)',
             lineHeight: 1.4,
           }}
         >

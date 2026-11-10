@@ -107,7 +107,7 @@
 
 .datahub-delete-btn:hover {
   background: var(--accent-red);
-  color: white;
+  color: var(--text-on-accent);
 }
 
 .datahub-form-section {

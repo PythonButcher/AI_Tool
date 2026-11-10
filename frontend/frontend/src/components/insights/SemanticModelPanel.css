@@ -26,7 +26,7 @@
 
 .semantic-model-panel__pill-btn:hover:not(:disabled) {
   background: var(--accent-blue);
-  color: white;
+  color: var(--text-on-accent);
   border-color: var(--accent-blue);
   box-shadow: 0 4px 12px color-mix(in srgb, var(--accent-blue) 30%, transparent);
 }

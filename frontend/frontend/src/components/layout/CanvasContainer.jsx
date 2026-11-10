@@ -1,5 +1,6 @@
 import React, { useState, useRef, useMemo, useContext, useEffect, useCallback } from 'react';
 import { createPortal, flushSync } from 'react-dom';
+import usePortalTheme from '../../hooks/usePortalTheme';
 import './CanvasContainer.css';
 import WindowFrame from './WindowFrame';
 import MinimizedDock from './MinimizedDock';
@@ -25,6 +26,7 @@ import DashboardCommandBar from '../../features/dashboard/DashboardCommandBar';
 import DashboardCanvas from '../../features/dashboard/DashboardCanvas';
 import KpiCardWindow from '../../features/dashboard/KpiCardWindow';
 import { WINDOW_SIZING } from '../../utils/windowSizing';
+import { getAiChatWindowState, getAiChatPopupFeatures } from '../../utils/aiChatWindowSizing';
 import DestinationHome from './DestinationHome';
 import SourceModelCanvas from '../../features/data-model/SourceModelCanvas';
 import MLStudioShell from '../../features/ml_studio/MLStudioShell';
@@ -176,6 +178,7 @@ function CanvasContainer({
   const [focusStack, setFocusStack] = useState([]);
   const [isAiChatPoppedOut, setIsAiChatPoppedOut] = useState(false);
   const [aiChatPopupRoot, setAiChatPopupRoot] = useState(null);
+  usePortalTheme(aiChatPopupRoot);
   const aiChatPopupWindowRef = useRef(null);
   const isClosingAiChatPopupRef = useRef(false);
   const windowRegistry = useRef(new Map());
@@ -802,7 +805,7 @@ function CanvasContainer({
     const popupWindow = window.open(
       '',
       'ai-chat-popout',
-      'popup=yes,width=1200,height=850,left=160,top=80,resizable=yes,scrollbars=no'
+      getAiChatPopupFeatures(window.screen)
     );
 
     if (!popupWindow) {
@@ -887,12 +890,13 @@ function CanvasContainer({
     </button>
   );
 
+  const aiChatOpeningState = getAiChatWindowState(containerBounds, getWindowState('aiChat'));
   const aiChatElement = showAiChat ? (
     <WindowFrame
       {...getWindowProps('aiChat', '🤖 AI Analysis Suite', handleCloseAiChat, handleMinimizeAiChat)}
-      initialState={getInitialState('aiChat', 10, 25, 1100, 800)}
-      minWidth={800}
-      minHeight={600}
+      initialState={aiChatOpeningState}
+      minWidth={Math.min(800, aiChatOpeningState.w)}
+      minHeight={Math.min(500, aiChatOpeningState.h)}
       headerActions={aiChatHeaderActions}
       isMinimized={!!minimizedWindows.aiChat}
       isExternalWindow={isAiChatPoppedOut && !!aiChatPopupRoot}

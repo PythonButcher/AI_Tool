@@ -37,8 +37,9 @@ const AIReporter = ({ summary, outliers, insights, execution, chartType, chartDa
   return (
     <div
       style={{
-        background: '#f9f9f9',
-        border: '1px solid #ccc',
+        background: 'var(--bg-primary)',
+        color: 'var(--text-primary)',
+        border: '1px solid var(--border-color)',
         borderRadius: '16px',
         padding: '32px',
         maxWidth: '960px',

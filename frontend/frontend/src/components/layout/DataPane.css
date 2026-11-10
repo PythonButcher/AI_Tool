@@ -51,7 +51,7 @@
   border-radius: 12px;
   width: 36px;
   background: var(--accent-blue);
-  color: white;
+  color: var(--text-on-accent);
   box-shadow: -4px 0 15px color-mix(in srgb, var(--accent-blue) 40%, transparent);
 }
 
@@ -62,7 +62,7 @@
 
 .data-pane.is-collapsed .data-pane__toggle:hover {
   background: color-mix(in srgb, var(--accent-blue) 90%, black);
-  color: white;
+  color: var(--text-on-accent);
 }
 
 .data-pane__header {
