@@ -2,7 +2,7 @@ Goal: Establish the next user-authorized project outcome before opening implemen
 
 ## User Outcome
 
-One clearly scoped priority with an owner, observable acceptance criteria and appropriate verification.
+One clearly scoped priority with an owner and appropriate verification.
 
 ## Scope
 

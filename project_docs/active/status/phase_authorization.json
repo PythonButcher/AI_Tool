@@ -1,10 +1,32 @@
 {
   "schema_version": 1,
   "authorized_work": {
-    "name": "Application dark theme"
+    "name": "AI Chat visual redesign"
   },
   "authorization_state": "AUTHORIZED",
-  "lifecycle_state": "COMPLETE",
+  "lifecycle_state": "AWAITING USER ACCEPTANCE",
+  "chat_design_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-11-14",
+    "instruction": "no this is messy, the placement is find but the look of the ai chat needs a design now",
+    "scope": "Codex may redesign the docked AI Chat interface while preserving the accepted placement, existing chat features, and shared themes.",
+    "codex_frontend_implementation_authorized": true
+  },
+  "chat_design_verification": {
+    "frontend": "31 focused tests and the production build passed with existing build warnings.",
+    "browser": "Codex inspected the local Chrome layout in light and dark themes, checked the empty results view, resized to the minimum dock width, and restored the original theme and width. User acceptance remains pending."
+  },
+  "chat_dock_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-11-13",
+    "instruction": "go ahead and make this change, make sure you make it clean, do not lose feature and the feel relevant to the theme.",
+    "scope": "Codex may implement and verify an adjustable docked AI Chat panel with collapse, expansion, optional pop-out, and shared theme styling.",
+    "codex_frontend_implementation_authorized": true
+  },
+  "chat_dock_verification": {
+    "frontend": "39 focused tests passed for AI Chat, the dock, window sizing, theme propagation, and window state. The production build passed with existing warnings.",
+    "acceptance": "User browser acceptance is pending in chat."
+  },
   "dark_theme_acceptance": {
     "accepted_by": "User",
     "accepted_at": "2026-11-07",
