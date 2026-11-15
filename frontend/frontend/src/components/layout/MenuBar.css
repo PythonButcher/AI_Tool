@@ -26,25 +26,22 @@
 .menu-bar__identity {
   display: flex;
   align-items: center;
+  flex-shrink: 0;
   gap: 10px;
   padding-right: 16px;
   border-right: 1px solid var(--border-color);
 }
 
-.menu-bar__app-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--accent-teal);
-  box-shadow: 0 0 0 4px var(--accent-teal-soft);
+.menu-bar__brand-logo {
+  display: block;
+  height: 24px;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
 }
 
-.menu-bar__app-name {
-  font-size: 0.85rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--text-primary);
+[data-theme='dark'] .menu-bar__brand-logo {
+  filter: brightness(0) invert(0.94);
 }
 
 .menu-bar__context {
@@ -283,4 +280,24 @@
 
 .ribbon-inline-panel__body {
   padding: 0; /* Let components handle their own padding or use a standard one */
+}
+
+@media (max-width: 540px) {
+  .menu-bar__topline {
+    padding: 0 10px;
+    gap: 8px;
+  }
+
+  .menu-bar__identity {
+    padding-right: 8px;
+  }
+
+  .menu-bar__brand-logo {
+    height: 19px;
+  }
+
+  .menu-bar__setup-trigger {
+    padding: 0 9px;
+    font-size: 0.75rem;
+  }
 }

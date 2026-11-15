@@ -8,7 +8,7 @@ Paste the prompt as plain text. Do not wrap it in a code block.
 
 ## Prompt
 
-You are running an Agent Council for the AI_Tool project. This is a planning and handoff exercise only. Do not modify runtime application behavior. Do not change frontend or backend contracts. Do not remove, hide, simplify, or downgrade existing functionality. Your output must be a single valid JSON object matching `project_docs/active/agent_council/council_output_schema.json`.
+You are running an Agent Council for the Datastream project. This is a planning and handoff exercise only. Do not modify runtime application behavior. Do not change frontend or backend contracts. Do not remove, hide, simplify, or downgrade existing functionality. Your output must be a single valid JSON object matching `project_docs/active/agent_council/council_output_schema.json`.
 
 Before debating, review the current project context. Start with `project_docs/INDEX.md`, then `project_docs/active/README.md`, the current status, the active frontend guardrail, and `project_docs/active/active_gate/README.md`. Read completed plans, completed handoffs, or archive files only when the planning topic explicitly needs historical evidence.
 

@@ -909,28 +909,40 @@ function AIChatConversation({ onOpenDashboard, windowActions, windowNotice, conv
 
         <div className="ai-shell__conversation" ref={chatBodyRef} aria-label="Conversation">
           {storageError && <div className="ai-shell__alert-bar" role="alert"><FaInfoCircle />{storageError}</div>}
-          {userMessages.length === 0 && (
+          {userMessages.length === 0 && !loading && (
             <div className="ai-shell__welcome-hero">
-              <Typography component="h2" className="ai-shell__hero-title">Ask about your data</Typography>
-              <Typography variant="body1" className="ai-shell__hero-subtitle">
-                Compare metrics, explore trends, or draft a dashboard from your data.
-              </Typography>
-              {suggestions.length > 0 ? <>
-                <div className="ai-shell__section-label">Suggested questions</div>
-                <div className="ai-shell__starter-grid" aria-label="Suggested business questions">
-                  {suggestions.map(question => {
-                    const kind = question.startsWith('Build') ? 'dashboard' : question.includes('monthly') ? 'trend' : question.includes('as a chart') ? 'breakdown' : 'metric';
-                    const QuestionIcon = { dashboard: FaLayerGroup, trend: FaChartLine, breakdown: FaChartBar, metric: FaDatabase }[kind];
-                    return <button key={question} type="button" aria-label={question} onClick={() => { setUserInput(question); inputRef.current?.focus(); }}>
-                      <QuestionIcon aria-hidden="true" />
-                      <span className="ai-shell__starter-question">{question}</span>
-                      <FaArrowRight aria-hidden="true" />
-                    </button>;
-                  })}
-                </div>
-              </> : <button type="button" className="ai-shell__choose-dataset" onClick={chooseData}>
-                <FaDatabase aria-hidden="true" /> Choose Dataset <FaArrowRight aria-hidden="true" />
-              </button>}
+              <div className="ai-shell__welcome-intro">
+                <Typography component="h2" className="ai-shell__hero-title">Ask about your data</Typography>
+                <Typography variant="body1" className="ai-shell__hero-subtitle">
+                  Compare metrics, explore trends, or draft a dashboard from your data.
+                </Typography>
+              </div>
+              <div className="ai-shell__empty-brand" data-testid="ai-chat-empty-brand" aria-hidden="true">
+                <img
+                  className="ai-shell__empty-brand-logo"
+                  src="/datastream-mark.png"
+                  alt=""
+                />
+                <span className="ai-shell__empty-brand-name">Datastream</span>
+              </div>
+              <div className="ai-shell__welcome-actions">
+                {suggestions.length > 0 ? <>
+                  <div className="ai-shell__section-label">Suggested questions</div>
+                  <div className="ai-shell__starter-grid" aria-label="Suggested business questions">
+                    {suggestions.map(question => {
+                      const kind = question.startsWith('Build') ? 'dashboard' : question.includes('monthly') ? 'trend' : question.includes('as a chart') ? 'breakdown' : 'metric';
+                      const QuestionIcon = { dashboard: FaLayerGroup, trend: FaChartLine, breakdown: FaChartBar, metric: FaDatabase }[kind];
+                      return <button key={question} type="button" aria-label={question} onClick={() => { setUserInput(question); inputRef.current?.focus(); }}>
+                        <QuestionIcon aria-hidden="true" />
+                        <span className="ai-shell__starter-question">{question}</span>
+                        <FaArrowRight aria-hidden="true" />
+                      </button>;
+                    })}
+                  </div>
+                </> : <button type="button" className="ai-shell__choose-dataset" onClick={chooseData}>
+                  <FaDatabase aria-hidden="true" /> Choose Dataset <FaArrowRight aria-hidden="true" />
+                </button>}
+              </div>
             </div>
           )}
 

@@ -2,7 +2,7 @@
 
 Created: 2026-07-07
 
-This is a deferred planning note, not an active implementation gate. It captures the idea that AI_Tool should eventually add login-based memory and context engineering for AI Chat. The current active gate is `project_docs/active/active_gate/README.md`.
+This is a deferred planning note, not an active implementation gate. It captures the idea that Datastream should eventually add login-based memory and context engineering for AI Chat. The current active gate is `project_docs/active/active_gate/README.md`.
 
 ## Idea To Preserve
 
@@ -16,7 +16,7 @@ LangChain frames context engineering as the work of filling the model context wi
 
 OpenAI's current API guidance treats conversation state, retrieval, and compaction as separate but related mechanisms. The important product lesson is that long-running conversations need state management, vector or semantic retrieval can pull in external knowledge, and compaction can reduce context size while preserving key state for later turns. Source: [OpenAI, Conversation state](https://platform.openai.com/docs/guides/conversation-state), [OpenAI, Retrieval](https://platform.openai.com/docs/guides/retrieval), and [OpenAI, Compaction](https://platform.openai.com/docs/guides/compaction).
 
-Anthropic's agent guidance is a useful constraint: add agentic complexity only when it demonstrably improves outcomes, keep the design transparent, ground agent progress in environment feedback, and use guardrails because long-running autonomous systems can compound errors. For AI_Tool, that argues for a measured context layer with traceable memory selection and evaluations before loosening AI Chat behavior. Source: [Anthropic, Building Effective AI Agents](https://www.anthropic.com/engineering/building-effective-agents).
+Anthropic's agent guidance is a useful constraint: add agentic complexity only when it demonstrably improves outcomes, keep the design transparent, ground agent progress in environment feedback, and use guardrails because long-running autonomous systems can compound errors. For Datastream, that argues for a measured context layer with traceable memory selection and evaluations before loosening AI Chat behavior. Source: [Anthropic, Building Effective AI Agents](https://www.anthropic.com/engineering/building-effective-agents).
 
 ## Current Application Fit
 
@@ -94,7 +94,7 @@ The first implementation should favor conservative retrieval over surprising per
 
 ## Open Design Questions
 
-Should AI_Tool support anonymous local mode after login exists, or should all Decision Intelligence persistence require sign-in?
+Should Datastream support anonymous local mode after login exists, or should all Decision Intelligence persistence require sign-in?
 
 Should memory be stored relationally first, with embeddings added later, or should the initial context store include vector search immediately?
 

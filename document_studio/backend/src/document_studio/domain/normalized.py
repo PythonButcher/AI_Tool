@@ -2,7 +2,7 @@
 
 All objects are frozen standard-library dataclasses with ``__post_init__``
 validation.  No FastAPI, Flask, Pydantic, SQLAlchemy, parser libraries,
-or AI_Tool imports are permitted in this module.
+or Datastream imports are permitted in this module.
 
 Public serialization (``to_dict``) produces JSON-compatible dictionaries:
 enums as strings, tuples as arrays, and no unserializable Python objects.

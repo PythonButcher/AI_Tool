@@ -3,7 +3,7 @@
 These abstract interfaces define the boundaries between the application
 layer and infrastructure adapters.  They may import domain objects but
 must not import SQLite, filesystem implementations, FastAPI, Flask, or
-AI_Tool state.
+Datastream state.
 """
 
 from __future__ import annotations

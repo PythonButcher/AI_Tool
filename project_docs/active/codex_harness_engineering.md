@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This file defines how Codex should run efficiently on AI_Tool without lowering implementation quality.
+This file defines how Codex should run efficiently on Datastream without lowering implementation quality.
 
 The main goal is to prevent a single implementation session from spending excessive context on broad file reads, full diffs, noisy browser logs, repeated verification attempts, or unrelated exploration. Codex should still do careful work, but every expensive read, test, browser run, artifact inspection, and diff must have a clear reason.
 

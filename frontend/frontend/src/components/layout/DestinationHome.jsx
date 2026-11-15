@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  FaRobot, FaChartLine, FaTachometerAlt, FaLightbulb, FaDatabase,
+  FaRobot, FaChartLine, FaTachometerAlt, FaLightbulb,
   FaPlus, FaArrowRight, FaMagic, FaChartBar, FaBrain
 } from 'react-icons/fa';
 import './DestinationHome.css';
@@ -37,18 +37,18 @@ const DestinationHome = ({ activeDestination, onAction, readiness }) => {
    * Proactively nudges toward Decisions if data is loaded and ready.
    */
   const renderWorkspaceHome = () => (
-    <div className="dest-home">
-      <div className="dest-home__icon-orbit">
-        <FaDatabase className="dest-home__main-icon" />
-      </div>
-      <h2 className="dest-home__title">Welcome to your Workspace</h2>
+    <div className="dest-home dest-home--workspace">
+      <h2 className="dest-home__title dest-home__title--brand">
+        <span className="dest-home__welcome-text">Welcome to</span>
+        <img className="dest-home__brand-logo" src="/datastream-logo.png" alt="Datastream" />
+      </h2>
       <p className="dest-home__description">
-        Manage your data lifecycle. Upload new datasets, connect to live sources,
-        or refine your existing data hub.
+        Upload a file or connect a data source to get started. Review your tables
+        in Data Hub, then explore your data, build dashboards, or train a model.
       </p>
       <div className="dest-home__actions">
         <button className="dest-home__button dest-home__button--primary" onClick={() => onAction('upload')}>
-          <FaPlus /> Upload
+          <FaPlus /> Upload data
         </button>
         <button className="dest-home__button" onClick={() => onAction('hub')}>
           Data Hub <FaArrowRight />

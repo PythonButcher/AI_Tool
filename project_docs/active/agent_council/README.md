@@ -2,7 +2,7 @@
 
 ## Purpose
 
-The Agent Council is a lightweight planning and debate framework for AI_Tool. It lets multiple AI agents challenge one another before the project commits to a direction, then leaves behind a strict JSON artifact that another AI can inspect, rank, compare, or turn into a handoff later.
+The Agent Council is a lightweight planning and debate framework for Datastream. It lets multiple AI agents challenge one another before the project commits to a direction, then leaves behind a strict JSON artifact that another AI can inspect, rank, compare, or turn into a handoff later.
 
 This is not a runtime feature. It does not add backend endpoints, frontend UI, database state, or product contracts. It lives in project documentation so it can support future planning debates without changing application behavior.
 

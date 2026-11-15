@@ -1,4 +1,4 @@
-# AI_Tool Documentation Map
+# Datastream Documentation Map
 
 Give Codex and frontend agents a map, not a 1000 page instruction manual.
 
@@ -44,7 +44,7 @@ AI Chat is a BI-first NLP workspace. Existing grounded answers, semantic-model r
 
 Decision Intelligence output has been removed from the AI Chat product path. Isolated backend services remain for compatibility only and must not be treated as active UI scope.
 
-Phase 13 establishes ML Studio as a first-class AI Tool destination. All five local task workflows and the theme-aligned frontend are engineering-complete; final browser acceptance belongs to the user. Status records verification and remaining limitations.
+Phase 13 establishes ML Studio as a first-class Datastream destination. All five local task workflows and the theme-aligned frontend are engineering-complete; final browser acceptance belongs to the user. Status records verification and remaining limitations.
 
 ## Ownership
 
@@ -56,7 +56,7 @@ Phase 13 establishes ML Studio as a first-class AI Tool destination. All five lo
 
 Codex must not edit frontend files unless the user explicitly authorizes Codex frontend edits in the current session.
 
-Codex manages the current gate for the broader AI Tool and AI Chat. After substantial work, Codex states whether backend work, an Antigravity UI handoff, Codex integration review, or user verification is required next. Do not make the user infer who acts next.
+Codex manages the current gate for the broader Datastream platform and AI Chat. After substantial work, Codex states whether backend work, an Antigravity UI handoff, Codex integration review, or user verification is required next. Do not make the user infer who acts next.
 
 ## Do Not Do This
 

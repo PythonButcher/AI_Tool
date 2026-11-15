@@ -194,8 +194,7 @@ function MenuBar({
     <header ref={barRef} className={`menu-bar ${isRibbonCollapsed ? 'is-collapsed' : ''}`}>
       <div className="menu-bar__topline">
         <div className="menu-bar__identity" onClick={() => onDestinationSelect(DESTINATIONS.WORKSPACE)} style={{ cursor: 'pointer' }}>
-          <span className="menu-bar__app-dot" />
-          <span className="menu-bar__app-name">AI Tool</span>
+          <img className="menu-bar__brand-logo" src="/datastream-logo.png" alt="Datastream" />
         </div>
         <div className="menu-bar__context">
           <span className="menu-bar__breadcrumb-sep">/</span>
