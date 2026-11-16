@@ -4,6 +4,7 @@ This folder contains deferred Codex-authored audits, plans, and goal records. Th
 
 | Area | File | Purpose |
 | --- | --- | --- |
+| Analytics workspace | [Analytics workspace overhaul](analytics_workspace_overhaul_plan.md) | Deferred roadmap for unifying Dashboards and Explore and expanding both workflows. |
 | Context and login memory | `context_engineering_and_login_memory_plan.md` | Deferred product planning note. |
 | Agent handoff orchestration | `codex_antigravity_handoff_orchestration_plan.md` | Deferred harness protocol for Codex and Antigravity coordination. |
 | Guided Exploration definition | `guided_exploration_definition_goal.md` | Deferred Codex proposal; do not execute unless the user explicitly promotes it. |
