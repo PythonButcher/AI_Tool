@@ -53,6 +53,7 @@ import useChatConversations from './useChatConversations';
 import { restoreConversation } from './chatConversations';
 import { buildChatSuggestions } from './chatSuggestions';
 import { canSaveResult, resultKey } from '../../utils/aiDashboardResults';
+import { analyticsChatPrompt, analyticsChatRequest, CHAT_CONTEXT_KEY } from '../analytics/analyticsChatBridge';
 import './AIShell.css';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
@@ -216,9 +217,12 @@ function AIChatConversation({ onOpenDashboard, windowActions, windowNotice, conv
     refreshSemanticModelFromDataset,
   } = useContext(DataContext);
   const { datasets = [] } = useContext(WarehouseContext);
-  const { addDashboardResults, openDashboard, dashboardItems = [] } = useWindowContext();
+  const { addDashboardResults, openDashboard, dashboardItems: currentDashboardItems = [], analyticsWorkspace } = useWindowContext();
+  const [saveTarget, setSaveTarget] = useState('');
+  const [analyticsContext, setAnalyticsContext] = useState(null);
+  const dashboardItems = analyticsWorkspace?.dashboards.find(board => board.state.id === (saveTarget || analyticsWorkspace.activeDashboardId))?.items || currentDashboardItems;
 
-  const dataScope = useMemo(() => ({ workspaceId: activeWorkspace?.workspace_id, version: activeWorkspace?.version, semanticModel, cleanedData, fullData }), [activeWorkspace?.workspace_id, activeWorkspace?.version, semanticModel, cleanedData, fullData]);
+  const dataScope = useMemo(() => ({ workspaceId: activeWorkspace?.workspace_id, version: activeWorkspace?.version, semanticModel, cleanedData, fullData, analyticsContext }), [activeWorkspace?.workspace_id, activeWorkspace?.version, semanticModel, cleanedData, fullData, analyticsContext]);
   const [initial] = useState(() => restoreConversation(conversation, dataScope));
   const [userMessages, setUserMessages] = useState(initial.messages);
   const [userInput, setUserInput] = useState(initial.draft);
@@ -261,6 +265,21 @@ function AIChatConversation({ onOpenDashboard, windowActions, windowNotice, conv
     awaitingCleanInstructions, failedRequest, error, governanceWarning, notice]);
 
   useEffect(() => { inputRef.current?.focus(); }, []);
+  useEffect(() => {
+    const receive = () => {
+      try {
+        const raw = sessionStorage.getItem(CHAT_CONTEXT_KEY);
+        if (!raw) return;
+        const context = JSON.parse(raw);
+        if (!context.source || !context.query) throw new Error('Invalid Analytics context.');
+        sessionStorage.removeItem(CHAT_CONTEXT_KEY);
+        setAnalyticsContext(context);
+        setUserInput(previous => [previous, analyticsChatPrompt(context)].filter(Boolean).join('\n\n'));
+      } catch (failure) { setError(failure.message); }
+    };
+    receive(); window.addEventListener(CHAT_CONTEXT_KEY, receive);
+    return () => window.removeEventListener(CHAT_CONTEXT_KEY, receive);
+  }, []);
 
   const navigationSnapshot = () => {
     const pending = requestRef.current;
@@ -686,12 +705,14 @@ function AIChatConversation({ onOpenDashboard, windowActions, windowNotice, conv
     }
 
     try {
+      if (analyticsContext && ((AICommands.isCommand(message) && message.startsWith('/clean')) || awaitingCleanInstructions)) throw new Error('Clear the Analytics context before using dataset-cleaning commands.');
       if ((AICommands.isCommand(message) && message.split(' ')[0] === '/clean') || awaitingCleanInstructions) {
         const reply = await runCleanCommand(message, resolveDatasetForNlp(), awaitingCleanInstructions, controller.signal, isCurrent);
         if (isCurrent()) setUserMessages(previous => [...previous, { role: 'assistant', content: reply, scope: dataScope }]);
         return;
       }
       const { payloadDataset, payloadSemanticModel, datasetRef } = resolveRequestContext(biSessionState, tokens);
+      const analyticsPayload = analyticsContext ? analyticsChatRequest(analyticsContext, resolveDatasetForNlp(), semanticModel) : null;
       const response = await axios.post(`${API_URL}/api/decision/chat/turns`, {
         workspace_id: tokens.length || datasetRef?.source === 'datahub' ? undefined : activeWorkspace?.workspace_id,
         user_message: message,
@@ -704,6 +725,8 @@ function AIChatConversation({ onOpenDashboard, windowActions, windowNotice, conv
         conversation_history: userMessages.filter(item => item.scope === dataScope)
           .map(({ role, content, ai_commentary }) => ({ role, content, ...(ai_commentary ? { ai_commentary } : {}) })).slice(-10),
         session_state: biSessionState,
+        ...(analyticsPayload ? { workspace_id: undefined, dataset: undefined, semantic_model: undefined, dataset_ref: undefined,
+          ...analyticsPayload, resolved_datasets: [], session_state: { active_mode: 'explore' }, requested_mode: 'explore' } : {}),
         ...(refinement ? { analytics_refinement: refinement } : {}),
       }, { signal: controller.signal, timeout: 120000 });
       if (!isCurrent()) return;
@@ -767,7 +790,7 @@ function AIChatConversation({ onOpenDashboard, windowActions, windowNotice, conv
 
   const saveResult = artifact => {
     try {
-      const result = addDashboardResults([{ artifact }]);
+      const result = addDashboardResults([{ artifact }], saveTarget || analyticsWorkspace?.activeDashboardId);
       setError(null);
       setPinFeedbackIds(previous => ({ ...previous, [resultKey(artifact)]: true }));
       setNotice(result.added.length ? 'Result saved to your dashboard.' : 'This result is already on your dashboard.');
@@ -968,7 +991,7 @@ function AIChatConversation({ onOpenDashboard, windowActions, windowNotice, conv
                   <p>Interpretation may contain errors. Check the calculated results and source data.</p>
                 </section>}
 
-                {message.dashboard_draft && <DashboardDraft draft={message.dashboard_draft} onAdd={addDashboardResults} onInspect={handleInspect} onOpenDashboard={viewDashboard} />}
+                {message.dashboard_draft && <DashboardDraft draft={message.dashboard_draft} onAdd={selections => addDashboardResults(selections, saveTarget || analyticsWorkspace?.activeDashboardId)} onInspect={handleInspect} onOpenDashboard={viewDashboard} />}
 
                 {!message.dashboard_draft && message.artifacts?.length > 0 && (
                   <div className="ai-shell__artifact-container">
@@ -1028,6 +1051,8 @@ function AIChatConversation({ onOpenDashboard, windowActions, windowNotice, conv
         </div>
 
         <div className="ai-shell__footer">
+          {analyticsWorkspace && <label>Save results to <select aria-label="AI result dashboard" value={saveTarget || analyticsWorkspace.activeDashboardId} onChange={event => { setSaveTarget(event.target.value); setPinFeedbackIds({}); }}>{analyticsWorkspace.dashboards.map(board => <option key={board.state.id} value={board.state.id}>{board.state.name}</option>)}</select></label>}
+          {analyticsContext && <div role="status">Analytics context: {analyticsContext.title} · {analyticsContext.source.name || analyticsContext.source.id}<button type="button" onClick={() => setAnalyticsContext(null)}>Clear Analytics context</button></div>}
           <div className="ai-shell__input-wrapper">
             {isMentionOpen && (
               <MentionDropdown

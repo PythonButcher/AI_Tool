@@ -1,10 +1,17 @@
 {
   "schema_version": 1,
   "authorized_work": {
-    "name": "AI Chat visual redesign"
+    "name": "Activate Analytics visual polish"
   },
   "authorization_state": "AUTHORIZED",
-  "lifecycle_state": "AWAITING USER ACCEPTANCE",
+  "lifecycle_state": "IN PROGRESS",
+  "analytics_implementation_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-11-16",
+    "instruction": "I want you to get this all up and running with a shell for the UI, then have antigravity give it a completely polish end to end, go",
+    "scope": "Codex implements and verifies Analytics backend, persistence, functional frontend shell and integration; Antigravity then polishes the working product through bounded assignments.",
+    "codex_frontend_implementation_authorized": true
+  },
   "chat_design_authorization": {
     "approved_by": "User",
     "approved_at": "2026-11-14",
@@ -157,7 +164,7 @@
     "scope": "Codex may redesign the AI Chat window hierarchy, header, conversation, composer, results panel and responsive styling while retaining implemented BI and dashboard behavior.",
     "codex_frontend_implementation_authorized": true
   },
-  "diff_baseline": "2e3670e9bc26a3a6b4749baebf6e25c7032e9475",
+  "diff_baseline": "e0275d7cd31bb0ea035f05a50741124d80b68083",
   "authority_kind": "direct_user_instruction",
   "ai_chat_improvement_authorization": {
     "approved_by": "User",
@@ -240,10 +247,10 @@
     "approved_by": "User",
     "approved_at": "2026-09-27",
     "evidence": "Direct user message in this Codex session referencing the sole active gate.",
-    "instruction": "accepted, proceed to the step step",
-    "scope": "Codex in the receiving chat may complete ML Studio backend and frontend, all five task journeys and the theme-aligned UI makeover under the completion gate.",
-    "current_instruction": "Execute the completion plan continuously through meaningful, verified steps until engineering completion or a concrete blocker, including backend, frontend and the whole-studio redesign.",
-    "current_approved_at": "2026-10-04"
+    "instruction": "Get Analytics all up and running with a UI shell, then have Antigravity polish it end to end.",
+    "scope": "Codex implements and verifies the full functional Analytics product, backend, persistence, UI shell and integrations; Antigravity follows with end-to-end visual polish through bounded assignments.",
+    "current_instruction": "Codex implements the full functional Analytics product and UI shell before transferring visual polish to Antigravity.",
+    "current_approved_at": "2026-11-16"
   },
   "preparation_authorization": {
     "approved_by": "User",
@@ -283,6 +290,14 @@
     "scope": "Codex may implement saved experiment deletion in the ML Studio home, its backend draft route and persistence, contract, and focused tests."
   },
   "allowed_paths": [
+    "backend/analytics/**",
+    "backend/routes/analytics.py",
+    "backend/app.py",
+    "tests/test_analytics*.py",
+    "project_docs/active/analytics/**",
+    "project_docs/active/contracts/analytics_workspace.md",
+    "project_docs/active/future/codex/analytics_workspace_overhaul_plan.md",
+    "project_docs/active/ai_hand_off/analytics_polish.md",
     "frontend/frontend/src/**",
     "backend/services/chat_model_router.py",
     "tests/test_chat_model_router.py",

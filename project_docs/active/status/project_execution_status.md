@@ -1,23 +1,23 @@
 # Project Execution Status
 
-## Current Gate: AI Chat visual redesign
+## Current Gate: Activate Analytics visual polish
 
-- **Current Gate**: AI Chat visual redesign
-- **Roadmap Phase**: Phase 14 — AI Chat Business Workspace
-- **Phase State**: `AWAITING USER ACCEPTANCE`
-- **What This State Means**: The user approved the dock placement. The redesigned AI Chat panel is ready for user review.
-- **Current Milestone**: Visual redesign verified
-- **Automatic Continuation**: `WAIT_FOR_USER`
-- **Current Owner**: User
+- **Current Gate**: Activate Analytics visual polish
+- **Roadmap Phase**: Phase 1 — Analytics Product Rebuild
+- **Phase State**: `IN PROGRESS`
+- **What This State Means**: The functional shell and enterprise UI visual polish (`AnalyticsShell`, `AnalyticsBuilder`, `AnalyticsResult`, `AnalyticsDashboard`, and `AnalyticsShell.css`) are mounted and verified. Concurrent ML Studio edits remain preserved outside the Analytics polish scope.
+- **Current Milestone**: Step 1: Establish the isolated polish baseline
+- **Automatic Continuation**: `CONTINUE`
+- **Current Owner**: Codex
 - **Backend Readiness**: `backend_contract_ready`
 - **Frontend Readiness**: `backend_contract_ready`
-- **Next Action**: User returns the AI Chat design decision in chat.
-- **Required Action**: Await the user's browser acceptance or feedback.
+- **Next Action**: Execute `project_docs/active/active_gate/README.md`.
+- **Required Action**: Review the completed Analytics visual polish and present the workspace for user browser acceptance.
 - **Active Gate**: `project_docs/active/active_gate/README.md`
 - **Authorization Record**: `project_docs/active/status/phase_authorization.json`
-- **Roadmap**: `project_docs/active/ai_chat/README.md`
-- **Active Handoff**: None.
-- **Latest Verification**: 31 focused frontend tests and the production build passed with existing warnings. Codex inspected the local Chrome layout in both themes, including the compact dock and empty results state.
+- **Roadmap**: `project_docs/active/analytics/README.md`
+- **Active Handoff**: None. Prepared brief: `project_docs/active/analytics/analytics_polish.md`. Visual polish applied and verified; ready for integration review and user browser acceptance.
+- **Latest Verification**: 36 Analytics backend query tests and 26 focused Analytics/WindowContext frontend tests (6 suites) passed. Zero ESLint warnings in `src/features/analytics/`. Frontend production build, `agent_harness_check.py`, `ci_harness_check.py`, `check_active_gate.py` and `git diff --check` passed.
 
 ## Preserved Interface Verification
 

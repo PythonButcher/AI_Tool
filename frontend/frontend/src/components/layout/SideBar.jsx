@@ -3,7 +3,6 @@ import {
   FaChartBar,
   FaDatabase,
   FaRobot,
-  FaTachometerAlt,
   FaProjectDiagram,
   FaFlask,
 } from 'react-icons/fa';
@@ -21,9 +20,8 @@ const DESTINATIONS = {
 const navigationItems = [
   { id: DESTINATIONS.WORKSPACE, label: 'Workspace', icon: <FaDatabase /> },
   { id: DESTINATIONS.DATA_MODEL, label: 'Data Model', icon: <FaProjectDiagram /> },
-  { id: DESTINATIONS.EXPLORE, label: 'Explore', icon: <FaChartBar /> },
+  { id: 'analytics', label: 'Analytics', icon: <FaChartBar /> },
   { id: DESTINATIONS.ML_STUDIO, label: 'ML Studio', icon: <FaFlask /> },
-  { id: DESTINATIONS.DASHBOARDS, label: 'Dashboards', icon: <FaTachometerAlt /> },
 ];
 
 /**

@@ -31,13 +31,28 @@ const send = message => {
   fireEvent.click(screen.getByRole('button', { name: 'Send Message' }));
 };
 const deferred = () => { let resolve, reject; const promise = new Promise((yes, no) => { resolve = yes; reject = no; }); return { promise, resolve, reject }; };
-beforeEach(() => { localStorage.clear(); jest.clearAllMocks(); });
+beforeEach(() => { localStorage.clear(); sessionStorage.clear(); jest.clearAllMocks(); });
 
 test('suggestions use real model fields and preserve a draft for editing', () => {
   render(tree());
   fireEvent.click(screen.getByRole('button', { name: 'What is Revenue?' }));
   expect(screen.getByRole('textbox', { name: 'Business question' })).toHaveValue('What is Revenue?');
   expect(axios.post).not.toHaveBeenCalled();
+});
+
+test('Analytics context fills the composer and sends only the explicitly chosen Data Hub source', async () => {
+  sessionStorage.setItem('analytics:chat-context', JSON.stringify({ source: { kind: 'datahub', id: 'other', name: 'Other orders' }, title: 'Selected segment', query: { measures: [{ id: 'value', aggregation: 'count_rows' }] } }));
+  axios.post.mockResolvedValue(success());
+  render(tree());
+  expect(screen.getByRole('textbox', { name: 'Business question' }).value).toContain('Selected segment');
+  expect(axios.post).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: 'Send Message' }));
+  await screen.findByText('Revenue is 100.');
+  const request = axios.post.mock.calls[0][1];
+  expect(request.dataset_ref).toMatchObject({ source: 'datahub', dataset_id: 'other' });
+  expect(request.dataset).toBeUndefined();
+  expect(request.workspace_id).toBeUndefined();
+  expect(request.session_state).toEqual({ active_mode: 'explore' });
 });
 
 test('grounded answer supports a contextual refinement and dashboard save', async () => {
@@ -52,7 +67,7 @@ test('grounded answer supports a contextual refinement and dashboard save', asyn
   await waitFor(() => expect(screen.queryByText('Analyzing your data…')).not.toBeInTheDocument());
   fireEvent.click(screen.getAllByRole('button', { name: 'Open chart' })[0]);
   fireEvent.click(screen.getByRole('button', { name: 'Save to Dashboard' }));
-  const saved = JSON.parse(localStorage.getItem('chartStudioDashboard:v1')).items;
+  const saved = JSON.parse(localStorage.getItem('analyticsWorkspace:v1')).dashboards[0].items;
   expect(saved).toHaveLength(1);
   expect(saved[0].resultSnapshot.artifact.bi_grounding.dataset.dataset_id).toBe('sales');
 });
@@ -120,7 +135,7 @@ test('review draft supports title edits, selection and duplicate-safe additions'
   fireEvent.change(within(draft).getByLabelText('Title for Regional breakdown'), { target: { value: 'My regional revenue' } });
   fireEvent.click(within(draft).getByRole('button', { name: 'Add 1 selected to dashboard' }));
   fireEvent.click(within(draft).getByRole('button', { name: 'Add 1 selected to dashboard' }));
-  const saved = JSON.parse(localStorage.getItem('chartStudioDashboard:v1')).items;
+  const saved = JSON.parse(localStorage.getItem('analyticsWorkspace:v1')).dashboards[0].items;
   expect(saved).toHaveLength(1);
   expect(saved[0].title).toBe('My regional revenue');
   expect(within(draft).getByText(/already present/)).toBeInTheDocument();

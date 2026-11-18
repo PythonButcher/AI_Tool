@@ -20,6 +20,7 @@ import './App.css';
 import { MuiThemeContext } from './context/MuiThemeContext';
 import { useWindowContext } from './context/WindowContext';
 import GlobalDragOverlay from './components/layout/GlobalDragOverlay';
+import { resolveAnalyticsDestination } from './features/analytics/analyticsNavigation';
 
 const parseRecords = (source) => {
   if (!source) return [];
@@ -70,6 +71,7 @@ function AppContent() {
     addDashboardKpi,
     addDashboardChart,
     setDashboardFilters,
+    updateAnalyticsWorkspace,
   } = useWindowContext();
 
   // Navigation & Workflow State
@@ -127,15 +129,16 @@ function AppContent() {
   const handleStatsSelect = useCallback((statType) => setSelectedStat(statType), []);
 
   const handleDestinationSelect = useCallback((destination) => {
-    setActiveDestination(destination);
-    
-    if (destination === DESTINATIONS.EXPLORE) {
-      setActiveWorkflow('explore');
-      closeDashboard();
-    } else if (destination === DESTINATIONS.DASHBOARDS) {
-      setActiveWorkflow('dashboard');
+    const target = resolveAnalyticsDestination(destination);
+    setActiveDestination(target.destination);
+    if (target.destination === 'analytics') {
+      if (target.view) updateAnalyticsWorkspace(workspace => ({ ...workspace, lastView: target.view }));
+      setActiveWorkflow('analytics');
       openDashboard();
-    } else if (destination === DESTINATIONS.AI) {
+      return;
+    }
+
+    if (destination === DESTINATIONS.AI) {
       setActiveWorkflow('ai');
       closeDashboard();
       handleOpenAiChat();
@@ -143,7 +146,7 @@ function AppContent() {
       setActiveWorkflow(null);
       closeDashboard();
     }
-  }, [openDashboard, closeDashboard, handleOpenAiChat]);
+  }, [openDashboard, closeDashboard, handleOpenAiChat, updateAnalyticsWorkspace]);
 
   const handleOpenCleaningForm = useCallback((props) => {
     if (props && props.closeOverlay) {
@@ -201,10 +204,11 @@ function AppContent() {
     setAiReportReady(false);
   }, [setAiReportReady, setShowAiReport]);
   const handleChartSelection = useCallback((chartType) => {
-    setSelectedChartType(chartType);
-    setShowChartWindow(true);
+    const views = { Bar: 'bar', Line: 'line', Pie: 'pie', Doughnut: 'doughnut', Scatter: 'scatter', Histogram: 'histogram' };
+    updateAnalyticsWorkspace(workspace => ({ ...workspace, lastView: 'explore', pendingAction: { type: 'chart', view: views[chartType] || 'bar', id: Date.now() } }));
+    setActiveDestination('analytics');
     setShowDataVisual(false);
-  }, []);
+  }, [updateAnalyticsWorkspace]);
   const handleCloseChartWindow = useCallback(() => setShowChartWindow(false), []);
 
   const handleCreateSemanticChart = useCallback((semanticOverrides = {}) => {

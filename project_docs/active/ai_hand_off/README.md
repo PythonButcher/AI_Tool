@@ -10,7 +10,7 @@ Antigravity owns bounded frontend implementation, React/CSS, UI rendering, and f
 
 ## Active Handoffs And Goal Prompts
 
-No specialist frontend handoff is active. The user chooses the next project priority in chat. Consult [status](../status/project_execution_status.md) and the [sole gate](../active_gate/README.md) before acting.
+No frontend handoff is active. The [prepared Analytics polish brief](../analytics/analytics_polish.md) awaits a clean baseline and transfer to this folder. Concurrent ML Studio edits must remain untouched. Consult [status](../status/project_execution_status.md) and the [sole gate](../active_gate/README.md) before acting.
 
 Completed handoffs belong outside this active folder.
 

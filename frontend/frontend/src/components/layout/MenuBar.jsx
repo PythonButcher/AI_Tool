@@ -41,6 +41,7 @@ const DESTINATIONS = {
   EXPLORE: 'explore',
   DASHBOARDS: 'dashboards',
   AI: 'ai',
+  ANALYTICS: 'analytics',
 };
 
 const inlinePanelMeta = {
@@ -215,6 +216,13 @@ function MenuBar({
         <div className="menu-ribbon">
           <div className="menu-ribbon__groups">
             {/* Contextual Groups */}
+            {activeDestination === DESTINATIONS.ANALYTICS && (
+              <RibbonGroup title="Analytics">
+                <RibbonCommand icon={<FaChartBar />} label="Gallery" onClick={onOpenChartGallery} emphasized />
+                <RibbonCommand icon={<FaDatabase />} label="Data" onClick={() => setIsDataPaneOpen(true)} />
+                <RibbonCommand icon={<FaRobot />} label="AI Chat" onClick={onOpenAiChat} />
+              </RibbonGroup>
+            )}
             {activeDestination === DESTINATIONS.WORKSPACE && (
               <RibbonGroup title="Workspace">
                 <RibbonCommand icon={<TbCloudDataConnection />} label="Catalog" onClick={() => setShowDataPreview(true)} emphasized />

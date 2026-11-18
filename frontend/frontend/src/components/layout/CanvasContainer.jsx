@@ -27,6 +27,7 @@ import { WINDOW_SIZING } from '../../utils/windowSizing';
 import DestinationHome from './DestinationHome';
 import SourceModelCanvas from '../../features/data-model/SourceModelCanvas';
 import MLStudioShell from '../../features/ml_studio/MLStudioShell';
+import AnalyticsShell from '../../features/analytics/AnalyticsShell';
 import {
   FaSave,
   FaUndo,
@@ -113,6 +114,7 @@ function CanvasContainer({
   } = useWindowContext();
 
   const isDashboardDest = activeDestination === DESTINATIONS.DASHBOARDS;
+  const isAnalyticsDest = activeDestination === 'analytics';
   const isExploreDest = activeDestination === DESTINATIONS.EXPLORE;
   const isWorkspaceDest = activeDestination === DESTINATIONS.WORKSPACE;
   const isDataModelDest = activeDestination === DESTINATIONS.DATA_MODEL;
@@ -778,7 +780,7 @@ function CanvasContainer({
           style={{ width: '100%', flex: 1, position: 'relative' }}
         >
           {isDashboardDest && <DashboardSlicerPanel />}
-          {shouldShowHome && (
+          {shouldShowHome && !isAnalyticsDest && (
             <DestinationHome
               activeDestination={activeDestination}
               onAction={handleDestinationHomeAction}
@@ -787,14 +789,15 @@ function CanvasContainer({
           )}
 
           {/* Render relevant windows for the active destination */}
+          {isAnalyticsDest && <AnalyticsShell onOpenAiChat={onOpenAiChat} onOpenGallery={() => setShowDataVisual(true)} onOpenAiChart={() => { setShowAIChart(true); restoreWindow('aiChartWindow'); }} />}
           {(isAiDest || isWorkspaceDest) && workflowElements}
           {(isWorkspaceDest || isExploreDest) && dataPreviewElement}
           {isWorkspaceDest && rawDataElement}
           {isWorkspaceDest && machineLearningElement}
-          {(isExploreDest || isAiDest) && aiChartElement}
+          {(isExploreDest || isAiDest || isAnalyticsDest) && aiChartElement}
           {isAiDest && workflowLabElement}
-          {isAiDest && whiteBoardElement}
-          {isAiDest && storyPanelElement}
+          {(isAiDest || isAnalyticsDest) && whiteBoardElement}
+          {(isAiDest || isAnalyticsDest) && storyPanelElement}
           {isExploreDest && chartElements}
           {isDashboardDest && (dashboardItems.length > 0 || dashboardState.isVisible) && (
             <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1 }}>
