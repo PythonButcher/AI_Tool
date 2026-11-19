@@ -1,23 +1,23 @@
 # Project Execution Status
 
-## Current Gate: Repair Analytics Focus and tool access
+## Current Gate: Unify Analytics tools and explain metric change
 
-- **Current Gate**: Repair Analytics Focus and tool access
+- **Current Gate**: Unify Analytics tools and explain metric change
 - **Roadmap Phase**: Phase 1 — Analytics Product Rebuild
 - **Phase State**: `AWAITING USER ACCEPTANCE`
-- **What This State Means**: Focus exit and the labeled Analytics tools have passed engineering verification.
+- **What This State Means**: The unified drawer and Change Explorer have passed focused engineering verification.
 - **Current Milestone**: Analytics Studio user acceptance
 - **Automatic Continuation**: `WAIT_FOR_USER`
 - **Current Owner**: User
 - **Backend Readiness**: `complete`
 - **Frontend Readiness**: `backend_contract_ready`
 - **Next Action**: User browser acceptance in chat.
-- **Required Action**: User decision on the revised Focus and tools experience.
+- **Required Action**: User decision on the drawer and Change Explorer experience.
 - **Active Gate**: `project_docs/active/active_gate/README.md`
 - **Authorization Record**: `project_docs/active/status/phase_authorization.json`
 - **Roadmap**: `project_docs/active/analytics/README.md`
 - **Active Handoff**: None.
-- **Latest Verification**: 55 frontend tests, Analytics ESLint, and the production build passed. Chrome with a fixture dataset confirmed the five labeled tool panels, command search, PDF export, and Focus exit by click and Escape at 1536, 720, and 400 px. The analysis canvas remained mounted throughout.
+- **Latest Verification**: 74 backend tests and 56 frontend tests passed. Analytics ESLint, Python compilation, and the production build passed. Chrome with a fixture dataset confirmed the docked drawer, Change Explorer waterfall and offsetting segment drivers, retained tool state, exact Analysis drilldown, and narrow Focus exit.
 
 ## Preserved Interface Verification
 

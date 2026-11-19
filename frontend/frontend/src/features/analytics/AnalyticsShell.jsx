@@ -1,28 +1,32 @@
 import React, { useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
-  FaArrowLeft, FaBolt, FaBookmark, FaChartBar, FaChartLine, FaChevronDown,
+  FaArrowLeft, FaBookmark, FaChartBar, FaChartLine, FaChevronDown,
   FaCode, FaColumns, FaCopy, FaDatabase, FaDownload,
-  FaCompress, FaEllipsisH, FaExpand, FaFilePdf, FaFolderOpen, FaHistory, FaLayerGroup,
+  FaCompress, FaEllipsisH, FaExpand, FaFilePdf, FaFolderOpen, FaHashtag, FaHeading, FaHistory, FaLayerGroup,
   FaPalette, FaPlay, FaPlus, FaPrint, FaRedo, FaRobot, FaSearch,
-  FaTable, FaThLarge, FaThumbtack, FaTimes, FaTrash, FaUndo, FaUpload,
+  FaSlidersH, FaStickyNote, FaSyncAlt, FaTable, FaThLarge, FaThumbtack, FaTimes, FaTrash, FaUndo, FaUpload,
 } from 'react-icons/fa';
 import { DataContext, normalizeDatasetRows, useActiveDataset, useSemanticModel } from '../../context/DataContext';
 import { useWindowContext } from '../../context/WindowContext';
 import AnalyticsBuilder from './AnalyticsBuilder';
-import AnalyticsDashboard from './AnalyticsDashboard';
+import AnalyticsDashboard, { AnalyticsDashboardFilters } from './AnalyticsDashboard';
 import AnalyticsResult from './AnalyticsResult';
 import AnalyticsAppearance from './AnalyticsAppearance';
-import { API, defaultAnalysis, download, inlineIdentity, overviewTiles, queryAnalytics, querySignature, sourceKey, tableCsv, withDashboardFilters } from './analyticsModel';
+import AnalyticsChangeExplorer from './AnalyticsChangeExplorer';
+import { API, analyzeMetricChange, defaultAnalysis, download, filtersForTile, inlineIdentity, overviewTiles, queryAnalytics, querySignature, sourceKey, tableCsv, withDashboardFilters } from './analyticsModel';
 import { checkpoint, clone, copyDashboard, emptyDashboard, importCollection, newId } from './analyticsStorage';
 import './AnalyticsShell.css';
 
 const TOOLS = [
+  { id: 'actions', label: 'Actions', icon: FaSlidersH, description: 'Build, run, and manage the current workspace' },
+  { id: 'change', label: 'Change Explorer', icon: FaChartLine, description: 'Explain metric changes by segment, volume, and value' },
   { id: 'library', label: 'Library', icon: FaFolderOpen, description: 'Saved dashboards, analyses, drafts, and templates' },
   { id: 'format', label: 'Format', icon: FaPalette, description: 'Chart appearance and tile properties' },
   { id: 'reports', label: 'Reports', icon: FaDownload, description: 'Export and print reports or back up the workspace' },
   { id: 'ai', label: 'AI & Charts', icon: FaRobot, description: 'Chart gallery, AI Chart, and AI Chat' },
   { id: 'history', label: 'History', icon: FaHistory, description: 'Undo, redo, and restore saved revisions' },
 ];
+const TOOL_DIRECTORY = { id: 'all', label: 'Analytics tools', icon: FaLayerGroup, description: 'Choose a tool for this workspace' };
 
 export default function AnalyticsShell({ onOpenAiChat, onOpenGallery, onOpenAiChart }) {
   const { analyticsWorkspace: workspace, updateAnalyticsWorkspace: commit, analyticsStorage } = useWindowContext();
@@ -45,8 +49,6 @@ export default function AnalyticsShell({ onOpenAiChat, onOpenGallery, onOpenAiCh
   const [notice, setNotice] = useState('');
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState('recent');
-  const [actionSearch, setActionSearch] = useState('');
-  const [actionsOpen, setActionsOpen] = useState(false);
   const [favorites, setFavorites] = useState(false);
   const [toolPanel, setToolPanel] = useState(null);
   const [activeMenuId, setActiveMenuId] = useState(null);
@@ -57,6 +59,7 @@ export default function AnalyticsShell({ onOpenAiChat, onOpenGallery, onOpenAiCh
   const [targetBoard, setTargetBoard] = useState(workspace.activeDashboardId);
   const [history, setHistory] = useState({ past: [], future: [] });
   const [boardHistory, setBoardHistory] = useState({ past: [], future: [] });
+  const [dashboardRefresh, setDashboardRefresh] = useState(0);
   const [drillHistory, setDrillHistory] = useState([]);
   const request = useRef(null);
   const sequence = useRef(0);
@@ -67,9 +70,10 @@ export default function AnalyticsShell({ onOpenAiChat, onOpenGallery, onOpenAiCh
   const focusButtonRef = useRef(null);
   const importRef = useRef(null);
   const switcherRef = useRef(null);
-  const commandRef = useRef(null);
   const toolRailRef = useRef(null);
   const panelHeadingRef = useRef(null);
+  const drawerScrollRef = useRef(null);
+  const dashboardFiltersRef = useRef(null);
   const board = workspace.dashboards.find(d => d.state.id === workspace.activeDashboardId);
   const mode = workspace.lastView;
   const allSources = useMemo(() => [defaultSource, analysisContext && { kind: 'workspace', id: analysisContext.workspace_id, name: 'Active governed workspace', analysis_context: analysisContext }, ...sources].filter(Boolean), [defaultSource, analysisContext, sources]);
@@ -104,6 +108,7 @@ export default function AnalyticsShell({ onOpenAiChat, onOpenGallery, onOpenAiCh
     };
   }, [focus]);
   useLayoutEffect(() => {
+    if (drawerScrollRef.current) drawerScrollRef.current.scrollTop = 0;
     panelHeadingRef.current?.focus({ preventScroll: true });
   }, [toolPanel]);
   const cancel = useCallback(() => { request.current?.abort(); sequence.current += 1; setStatus('idle'); }, []);
@@ -155,23 +160,12 @@ export default function AnalyticsShell({ onOpenAiChat, onOpenGallery, onOpenAiCh
   }, [sourceSignature, attachments]);
   useEffect(() => {
     const dismiss = event => {
-      if (event.type === 'keydown' && event.key !== 'Escape') return;
-      const onEscape = event.type === 'keydown';
-      if (switcherRef.current?.open && (onEscape || !switcherRef.current.contains(event.target))) {
+      if (switcherRef.current?.open && !switcherRef.current.contains(event.target)) {
         switcherRef.current.open = false;
-        if (onEscape) switcherRef.current.querySelector('summary')?.focus();
-      }
-      if (!commandRef.current?.contains(event.target) || onEscape) {
-        if (onEscape && commandRef.current?.contains(event.target)) commandRef.current.querySelector('button')?.focus();
-        setActionsOpen(false);
       }
     };
     document.addEventListener('pointerdown', dismiss);
-    document.addEventListener('keydown', dismiss);
-    return () => {
-      document.removeEventListener('pointerdown', dismiss);
-      document.removeEventListener('keydown', dismiss);
-    };
+    return () => document.removeEventListener('pointerdown', dismiss);
   }, []);
   useEffect(() => {
     if (!dirty || mode !== 'explore') return undefined;
@@ -200,11 +194,12 @@ export default function AnalyticsShell({ onOpenAiChat, onOpenGallery, onOpenAiCh
     if (analysis.requiresSourceReview) setError('Review the imported source and select a dataset before running.');
   };
   const startAnalysis = (view = 'bar', title, starter) => {
-    if (!commit(next => ({ ...preserveDraft(next, true), lastView: 'explore', activeAnalysisId: null }))) return;
+    if (!commit(next => ({ ...preserveDraft(next, true), lastView: 'explore', activeAnalysisId: null }))) return false;
     cancel();
     setDraft(starter || { ...defaultAnalysis(selectedSource), view, ...(title ? { title } : {}) });
     setResult(null); setResultConfig(null); setDirty(!!(starter || title)); setOrigin(null); setHistory({ past: [], future: [] }); setDrillHistory([]); setError('');
     if (mode === 'dashboards') setTargetBoard(board.state.id);
+    return true;
   };
   const saveAnalysis = useCallback(() => {
     if (!draftRef.current.title.trim()) { setError('Give this analysis a name.'); return; }
@@ -231,20 +226,31 @@ export default function AnalyticsShell({ onOpenAiChat, onOpenGallery, onOpenAiCh
       if (commit(next => ({ ...next, dashboards: next.dashboards.map(b => b.state.id === board.state.id ? value : b) }))) setBoardHistory({ past: redo ? [...boardHistory.past, clone(board)] : boardHistory.past.slice(0, -1), future: redo ? boardHistory.future.slice(0, -1) : [...boardHistory.future, clone(board)] });
     }
   }, [mode, history, draft, cancel, boardHistory, commit, board]);
+  const closeTool = useCallback(() => {
+    toolRailRef.current?.querySelector(`[data-tool="${toolPanel}"]`)?.focus();
+    setToolPanel(null);
+  }, [toolPanel]);
   useEffect(() => {
     const listener = event => {
-      if (event.key === 'Escape' && focus) {
-        event.preventDefault();
-        setFocus(false);
+      if (event.key === 'Escape') {
+        if (focus) {
+          event.preventDefault();
+          setFocus(false);
+        } else if (switcherRef.current?.open) {
+          switcherRef.current.open = false;
+          switcherRef.current.querySelector('summary')?.focus();
+        } else if (toolPanel && shellRef.current?.contains(event.target)) {
+          event.preventDefault();
+          closeTool();
+        }
         return;
       }
       if (!(event.ctrlKey || event.metaKey)) return;
-      if (event.key === 'k') { event.preventDefault(); setActionsOpen(value => !value); }
       if (event.key === 's') { event.preventDefault(); if (mode === 'explore') saveAnalysis(); }
       if (event.key === 'z' && !['INPUT', 'TEXTAREA'].includes(event.target.tagName)) { event.preventDefault(); undo(event.shiftKey); }
     };
     window.addEventListener('keydown', listener); return () => window.removeEventListener('keydown', listener);
-  }, [focus, mode, saveAnalysis, undo]);
+  }, [closeTool, focus, mode, saveAnalysis, toolPanel, undo]);
   const changeBoard = nextBoard => {
     const saved = commit(next => ({ ...next, dashboards: next.dashboards.map(b => b.state.id === nextBoard.state.id ? { ...nextBoard, state: { ...nextBoard.state, updatedAt: new Date().toISOString() }, revisions: checkpoint(b) } : b) }));
     if (saved) {
@@ -377,15 +383,34 @@ export default function AnalyticsShell({ onOpenAiChat, onOpenGallery, onOpenAiCh
   const appearance = mode === 'explore' ? draft.appearance || {} : inspected?.analysis?.appearance || inspected?.display || {};
   const changeAppearance = patch => mode === 'explore' ? changeDraft({ ...draft, appearance: { ...appearance, ...patch } }) : inspected && changeBoard({ ...board, items: board.items.map(item => item.id === inspected.id ? { ...item, analysis: item.analysis ? { ...item.analysis, appearance: { ...appearance, ...patch } } : undefined, display: { ...item.display, ...patch } } : item) });
   const currentHistory = mode === 'explore' ? history : boardHistory;
-  const activeTool = TOOLS.find(tool => tool.id === toolPanel);
+  const activeTool = toolPanel === 'all' ? TOOL_DIRECTORY : TOOLS.find(tool => tool.id === toolPanel);
   const revisions = (mode === 'explore' ? saved?.revisions : board.revisions) || [];
   const showTool = (id, toggle = false) => {
     setFocus(false);
     setToolPanel(previous => toggle && previous === id ? null : id);
   };
-  const closeTool = () => {
-    toolRailRef.current?.querySelector(`[data-tool="${toolPanel}"]`)?.focus();
-    setToolPanel(null);
+  const selectTile = id => { setSelectedTile(id); showTool('format'); };
+  const refreshDashboard = () => setDashboardRefresh(value => value + 1);
+  const hasLiveTiles = board.items.some(item => item.analysis && !item.requiresSourceReview);
+  const addDashboardText = type => {
+    const id = newId('dashboard-tile');
+    const y = Math.max(0, ...board.items.map(item => (item.layout?.y || 0) + (item.layout?.h || 6)));
+    if (changeBoard({ ...board, state: { ...board.state, mode: 'edit' }, items: [...board.items, {
+      id, itemType: type, title: type === 'section' ? 'Section' : 'Notes', text: '',
+      layout: { x: 0, y, w: type === 'section' ? 12 : 6, h: type === 'section' ? 2 : 4 },
+    }] })) selectTile(id);
+  };
+  const setDashboardMode = nextMode => {
+    if (board.state.mode !== nextMode) changeBoard({ ...board, state: { ...board.state, mode: nextMode } });
+  };
+  const showDashboardFilters = () => {
+    showTool('actions');
+    requestAnimationFrame(() => dashboardFiltersRef.current?.focus());
+  };
+  const backToOrigin = () => openDashboard(workspace.dashboards.some(value => value.state.id === origin.boardId) ? origin.boardId : workspace.activeDashboardId);
+  const goBackOneDrill = () => {
+    changeDraft(drillHistory[drillHistory.length - 1]);
+    setDrillHistory(list => list.slice(0, -1));
   };
   const launchTool = launch => {
     setFocus(false);
@@ -410,27 +435,34 @@ export default function AnalyticsShell({ onOpenAiChat, onOpenGallery, onOpenAiCh
     download('analytics-definitions.json', JSON.stringify(definitions, null, 2), 'application/json');
   };
   const exportCsv = () => download('analytics-result.csv', tableCsv(result), 'text/csv;charset=utf-8');
-  const actionGroups = [
-    { label: 'Tool panels', actions: TOOLS.map(tool => ({ name: tool.label, detail: tool.description, run: () => showTool(tool.id) })) },
-    { label: 'Workspace actions', actions: [
-      { name: 'New analysis', run: () => startAnalysis() }, { name: 'New dashboard', run: () => createBoard(false) },
-      ...(mode === 'explore' ? [{ name: 'Run analysis', run, disabled: status === 'loading' || !draft.source }, { name: 'Save analysis', detail: 'Ctrl/Cmd+S', run: saveAnalysis }, { name: 'Inspect detail rows', run: detail }] : []),
-      { name: 'Undo', run: () => undo(false), disabled: !currentHistory.past.length },
-      { name: 'Redo', run: () => undo(true), disabled: !currentHistory.future.length },
-      { name: dense ? 'Comfortable density' : 'Compact density', run: () => setDense(value => !value) },
-      { name: focus ? 'Exit focus' : 'Enter focus', run: () => setFocus(value => !value) },
-    ] },
-    { label: 'Export and open', actions: [
-      { name: 'Export report PDF', run: exportPdf },
-      { name: 'Export result CSV', run: exportCsv, disabled: mode !== 'explore' || !result },
-      { name: 'Print presentation', run: () => window.print() },
-      { name: 'Chart gallery', run: () => launchTool(onOpenGallery) },
-      { name: 'AI Chart', run: () => launchTool(onOpenAiChart) },
-      { name: 'Discuss in AI Chat', run: discussInChat },
-    ] },
-  ];
-  const matchingGroups = actionGroups.map(group => ({ ...group, actions: group.actions.filter(action =>
-    `${action.name} ${action.detail || ''}`.toLowerCase().includes(actionSearch.trim().toLowerCase())) })).filter(group => group.actions.length);
+  const changeFilters = mode === 'explore' ? draft.query.filters || [] :
+    filtersForTile({ analysis: { source: selectedSource } }, board.state.analyticsFilters || []).map(filter => filter.rule);
+  const changeDefaults = mode === 'explore' ? {
+    dateField: draft.query.period?.field || draft.query.group_by.find(group => group.grain)?.field,
+    segmentField: draft.query.group_by.find(group => !group.grain)?.field,
+    metricField: draft.query.measures.find(measure => measure.aggregation === 'sum' && !measure.metric_id && !measure.formula)?.field,
+  } : {};
+  const openChangeSegment = (request, driver) => {
+    const label = driver.kind === 'missing' ? 'Missing segment' : String(driver.segment);
+    const base = defaultAnalysis(request.source);
+    const rule = { field: request.segment_field, operator: 'eq', type: 'segment', value: driver.segment };
+    const filters = Array.isArray(request.filters) ? [...request.filters, rule] :
+      request.filters?.op === 'and' && Array.isArray(request.filters.rules)
+        ? { ...request.filters, rules: [...request.filters.rules, rule] }
+        : { op: 'and', rules: [request.filters, rule] };
+    const config = {
+      ...base, view: 'line', title: `Change Explorer · ${label}`,
+      query: {
+        ...base.query,
+        measures: [{ id: request.date_field === 'value' ? 'metric_value' : 'value', ...request.metric, label: request.metric.field || 'Records' }],
+        group_by: [{ field: request.date_field, grain: 'day' }],
+        period: { field: request.date_field, ...request.current },
+        comparison: { kind: 'custom', ...request.baseline },
+        filters,
+      },
+    };
+    if (startAnalysis(config.view, config.title, config)) closeTool();
+  };
 
   return <section ref={shellRef} className={`analytics-shell ${focus ? 'is-focus' : ''} ${dense ? 'is-dense' : ''}`} aria-label="Analytics workspace">
     <header className="analytics-header">
@@ -493,28 +525,6 @@ export default function AnalyticsShell({ onOpenAiChat, onOpenGallery, onOpenAiCh
         {mode === 'explore' && <button type="button" className="is-primary analytics-run-btn" onClick={run} disabled={status === 'loading' || !draft.source} aria-label="Run analysis" title="Run analysis">
           <FaPlay /><span>{status === 'loading' ? 'Running…' : 'Run analysis'}</span>
         </button>}
-        <button type="button" className="analytics-icon-btn analytics-history-btn" onClick={() => undo(false)} aria-label="Undo" disabled={!currentHistory.past.length} title="Undo (Ctrl/Cmd+Z)"><FaUndo /></button>
-        <button type="button" className="analytics-icon-btn analytics-history-btn" onClick={() => undo(true)} aria-label="Redo" disabled={!currentHistory.future.length} title="Redo (Ctrl/Cmd+Shift+Z)"><FaRedo /></button>
-        <div className="analytics-command-wrap" ref={commandRef}>
-          <button type="button" className="analytics-header-command" onClick={() => setActionsOpen(value => !value)} aria-label="Commands" aria-keyshortcuts="Control+K Meta+K" title="Commands (Ctrl/Cmd+K)" aria-expanded={actionsOpen}><FaSearch /><span>Commands</span></button>
-          {actionsOpen && <div className="analytics-command-popover" role="search">
-            <div className="analytics-search-box">
-              <FaSearch className="analytics-search-icon" />
-              <input autoFocus aria-label="Search Analytics actions" placeholder="Find a tool or action…" value={actionSearch} onChange={e => setActionSearch(e.target.value)} />
-            </div>
-            <div className="analytics-command-list">
-              {matchingGroups.map(group => <div key={group.label}>
-                <div className="analytics-menu-heading">{group.label}</div>
-                {group.actions.map(action => (
-                  <button type="button" key={action.name} disabled={action.disabled} onClick={() => { action.run(); setActionsOpen(false); setActionSearch(''); }}>
-                    <FaBolt /><span>{action.name}{action.detail && <small>{action.detail}</small>}</span>
-                  </button>
-                ))}
-              </div>)}
-              {!matchingGroups.length && <p className="analytics-empty-hint">No matching tools or actions.</p>}
-            </div>
-          </div>}
-        </div>
         <button ref={focusButtonRef} type="button" className={`analytics-focus-button ${focus ? 'is-primary' : ''}`}
           title={focus ? 'Exit focus (Esc)' : 'Enter focus mode'} aria-pressed={focus} onClick={() => setFocus(value => !value)}>
           {focus ? <FaCompress /> : <FaExpand />}<span>{focus ? 'Exit focus' : 'Focus'}</span>
@@ -523,86 +533,217 @@ export default function AnalyticsShell({ onOpenAiChat, onOpenGallery, onOpenAiCh
       </div>
     </header>
 
-    {!focus && <nav ref={toolRailRef} className="analytics-tool-rail" aria-label="Analytics tools">
-      {TOOLS.map(({ id, label, icon: Icon, description }) => (
-        <button type="button" className="analytics-tool-trigger" key={id} data-tool={id} title={description}
-          aria-expanded={toolPanel === id} aria-controls={toolPanel === id ? 'analytics-tool-panel' : undefined} onClick={() => showTool(id, true)}>
-          <Icon /><span>{label}</span>
-        </button>
-      ))}
-    </nav>}
+    <div className="analytics-tool-dock" hidden={focus}>
+      <nav ref={toolRailRef} className="analytics-tool-rail" aria-label="Analytics tools">
+        {[TOOL_DIRECTORY, ...TOOLS].map(({ id, label, icon: Icon, description }) => (
+          <button type="button" className={`analytics-tool-trigger ${id === 'all' ? 'analytics-tool-home' : ''}`} key={id}
+            data-tool={id} title={description} aria-expanded={toolPanel === id} aria-controls={toolPanel === id ? 'analytics-tool-panel' : undefined}
+            onClick={() => showTool(id, true)}>
+            <Icon /><span>{id === 'all' ? 'Tools' : label}</span>{id === 'all' && <FaChevronDown className="analytics-tool-chevron" />}
+          </button>
+        ))}
+      </nav>
+
+      <aside id="analytics-tool-panel" className="analytics-drawer" hidden={!activeTool} aria-label={toolPanel === 'all' ? 'Analytics tool drawer' : `Analytics ${activeTool?.label || 'tools'}`}>
+        {activeTool && <header className="analytics-drawer-header">
+          <div>
+            <h2 ref={panelHeadingRef} tabIndex={-1}>{activeTool.label}</h2>
+            <small>{toolPanel === 'library' ? `${workspace.dashboards.length + workspace.explorations.length} saved assets` : activeTool.description}</small>
+          </div>
+          <button type="button" className="analytics-drawer-close" onClick={closeTool}><FaTimes /><span>Close tools</span></button>
+        </header>}
+        <div className="analytics-drawer-scroll" ref={drawerScrollRef}>
+          <div hidden={toolPanel !== 'change'}>
+            <AnalyticsChangeExplorer key={JSON.stringify([sourceSignature, mode, changeFilters])}
+              source={selectedSource} fields={fields} loadingFields={!!selectedSource && !sourceMetadata}
+              sourceNeedsReview={mode === 'explore' && draft.requiresSourceReview} contextFilters={changeFilters} defaults={changeDefaults}
+              requestChange={(request, signal) => analyzeMetricChange(request, attachments, signal)} openAnalysis={openChangeSegment} />
+          </div>
+          {toolPanel === 'all' && <div className="analytics-drawer-grid analytics-tool-directory">
+            {TOOLS.map(({ id, label, icon: Icon, description }) => (
+              <button type="button" key={id} onClick={() => showTool(id)}>
+                <span className="analytics-directory-icon"><Icon /></span><span><strong>{label}</strong><small>{description}</small></span>
+              </button>
+            ))}
+          </div>}
+
+          {toolPanel === 'actions' && <div className="analytics-drawer-grid analytics-workspace-actions">
+            {mode === 'explore' ? <>
+              <div className="analytics-inspector-card analytics-tool-actions">
+                <h3>Analysis</h3>
+                <button type="button" onClick={run} disabled={status === 'loading' || !draft.source}><FaPlay /> Run analysis</button>
+                {status === 'loading' && <button type="button" onClick={cancel}><FaTimes /> Cancel query</button>}
+                <button type="button" onClick={saveAnalysis}><FaBookmark /> Save analysis</button>
+                <button type="button" onClick={() => { detail(); closeTool(); }}><FaTable /> Inspect detail rows</button>
+                {!!drillHistory.length && <button type="button" onClick={goBackOneDrill}><FaArrowLeft /> Back one drill</button>}
+              </div>
+              <div className="analytics-inspector-card analytics-tool-actions">
+                <h3>Dashboard destination</h3>
+                <label>Pin destination<select value={targetBoard} onChange={e => setTargetBoard(e.target.value)}>{workspace.dashboards.map(value => <option key={value.state.id} value={value.state.id}>{value.state.name}</option>)}</select></label>
+                <button type="button" disabled={!result} onClick={() => pin(false)}><FaThumbtack /> Pin copy</button>
+                {origin && <button type="button" onClick={() => pin(true)}><FaThumbtack /> Update original</button>}
+                {origin && <button type="button" onClick={backToOrigin}><FaArrowLeft /> Back to dashboard</button>}
+              </div>
+            </> : <>
+              <div className="analytics-inspector-card analytics-tool-actions">
+                <h3>Add to dashboard</h3>
+                {!board.items.length && <button type="button" onClick={generateOverview} disabled={!canGenerateOverview}><FaLayerGroup /> Generate overview</button>}
+                <button type="button" onClick={() => { startAnalysis(); closeTool(); }}><FaChartBar /> Build a chart</button>
+                <button type="button" onClick={() => { startAnalysis('kpi'); closeTool(); }}><FaHashtag /> Build a KPI</button>
+                <button type="button" onClick={() => addDashboardText('text')}><FaStickyNote /> Add notes</button>
+                <button type="button" onClick={() => addDashboardText('section')}><FaHeading /> Add section</button>
+              </div>
+              <div className="analytics-inspector-card analytics-tool-actions">
+                <h3>Dashboard layout</h3>
+                <button type="button" onClick={() => setDashboardMode('edit')} aria-pressed={board.state.mode !== 'view'}>Edit layout</button>
+                <button type="button" onClick={() => setDashboardMode('view')} aria-pressed={board.state.mode === 'view'}>View layout</button>
+                <button type="button" onClick={refreshDashboard} disabled={!hasLiveTiles}><FaSyncAlt /> Refresh live tiles</button>
+              </div>
+              <div className="analytics-inspector-card analytics-workspace-filters">
+                <h3 ref={dashboardFiltersRef} tabIndex={-1}>Dashboard filters</h3>
+                <AnalyticsDashboardFilters board={board} source={selectedSource} fields={fields} onChange={changeBoard} />
+              </div>
+            </>}
+            <div className="analytics-inspector-card analytics-tool-actions">
+              <h3>Workspace display</h3>
+              <button type="button" onClick={() => setDense(value => !value)} aria-pressed={dense}><FaSlidersH /> Compact spacing</button>
+              <button type="button" onClick={() => setFocus(true)}><FaExpand /> Enter focus</button>
+            </div>
+          </div>}
+
+          {toolPanel === 'library' && <div className="analytics-drawer-grid analytics-library">
+            <section className="analytics-library-assets" aria-label="Saved assets">
+              <div className="analytics-search-box">
+                <FaSearch className="analytics-search-icon" />
+                <input aria-label="Search Analytics library" placeholder="Search names and tags…" value={search} onChange={e => setSearch(e.target.value)} />
+              </div>
+
+              <div className="analytics-control-row">
+                <select aria-label="Library sort" value={sort} onChange={e => setSort(e.target.value)}><option value="recent">Recently updated</option><option value="name">Name</option></select>
+                <label className="analytics-checkbox-row"><input type="checkbox" checked={favorites} onChange={e => setFavorites(e.target.checked)} />Favorites only</label>
+              </div>
+
+              {recoveredDrafts.map(([key, value]) => <div className="analytics-draft-card" key={key}>
+                <button type="button" onClick={() => restoreDraft(key, value)}>Recover draft: {value.config.title}</button>
+                <button type="button" aria-label={`Discard draft ${value.config.title}`} onClick={() => {
+                  if (window.confirm(`Discard recovered draft ${value.config.title}?`)) commit(next => ({ ...next, drafts: { ...next.drafts, [key]: null } }));
+                }}>×</button>
+              </div>)}
+
+              <div className="analytics-library-list">
+                {objects.map(item => (
+                  <article key={item.id} className={(item.kind === 'dashboard' && mode === 'dashboards' && workspace.activeDashboardId === item.id) || (item.kind === 'analysis' && mode === 'explore' && workspace.activeAnalysisId === item.id) ? 'is-active' : ''}>
+                    <div className="analytics-asset-row">
+                      <button type="button" className="analytics-library-open" onClick={() => item.kind === 'dashboard' ? openDashboard(item.id) : openAnalysis(item)}>
+                        <small>{item.kind}{workspace.recent?.includes(item.id) ? ' · recent' : ''}</small>
+                        <strong>{item.name}</strong>
+                        {!!item.tags?.length && <small className="analytics-tag-line">{item.tags.join(', ')}</small>}
+                      </button>
+                      <div className="analytics-asset-btns">
+                        <button type="button" className="analytics-icon-btn" aria-label={`Favorite ${item.name}`} aria-pressed={!!item.favorite} onClick={() => manageObject(item.kind, item.id, 'favorite')}>{item.favorite ? '★' : '☆'}</button>
+                        <button type="button" className="analytics-icon-btn" aria-label={`Manage ${item.name}`} onClick={() => setActiveMenuId(activeMenuId === item.id ? null : item.id)}><FaEllipsisH /></button>
+                      </div>
+                    </div>
+                    {activeMenuId === item.id && (
+                      <div className="analytics-context-menu">
+                        {['rename', 'duplicate', 'tags', 'delete'].map(action => (
+                          <button type="button" key={action} onClick={() => { manageObject(item.kind, item.id, action); setActiveMenuId(null); }}>{action}</button>
+                        ))}
+                      </div>
+                    )}
+                  </article>
+                ))}
+              </div>
+              {!objects.length && <p className="analytics-empty-hint">No saved assets match these filters.</p>}
+            </section>
+            <section className="analytics-library-utilities" aria-label="Create and import">
+              <div className="analytics-library-create">
+                <button type="button" className="is-primary" onClick={() => startAnalysis()}><FaPlus /><span>New analysis</span></button>
+                <button type="button" onClick={() => createBoard(false)}><FaThLarge /><span>New dashboard</span></button>
+                <button type="button" onClick={() => createBoard(true)} disabled={!canGenerateOverview}><FaLayerGroup /><span>Overview template</span></button>
+                <button type="button" onClick={() => importRef.current.click()}><FaUpload /><span>Import workspace JSON</span></button>
+              </div>
+              <div className="analytics-inspector-card">
+                <div className="analytics-card-title"><FaLayerGroup /><span>Local templates</span></div>
+                <button type="button" className="analytics-icon-pill" onClick={saveTemplate}><FaPlus /><span>Save current dashboard as template</span></button>
+                {workspace.templates.map(template => (
+                  <div className="analytics-control-row" key={template.id}>
+                    <button type="button" onClick={() => instantiateTemplate(template)}>Use {template.name} with selected dataset</button>
+                    <button type="button" aria-label={`Delete template ${template.name}`} onClick={() => { if (window.confirm(`Delete template ${template.name}?`)) commit(next => ({ ...next, templates: next.templates.filter(t => t.id !== template.id) })); }}><FaTrash /></button>
+                  </div>
+                ))}
+              </div>
+            </section>
+          </div>}
+
+          <div className={`analytics-drawer-grid analytics-drawer-grid--${toolPanel}`}>
+            {toolPanel === 'format' && <>
+              {mode === 'dashboards' && (inspected ? (
+                <div className="analytics-inspector-card">
+                  <label>Tile title<input value={inspected.title} onChange={e => changeBoard({ ...board, items: board.items.map(item => item.id === inspected.id ? { ...item, title: e.target.value } : item) })} /></label>
+                  {['text', 'section'].includes(inspected.itemType) && <label>Text<textarea value={inspected.text || ''} onChange={e => changeBoard({ ...board, items: board.items.map(item => item.id === inspected.id ? { ...item, text: e.target.value } : item) })} /></label>}
+                  <label className="analytics-checkbox-row"><input type="checkbox" checked={!!inspected.locked} onChange={e => changeBoard({ ...board, items: board.items.map(item => item.id === inspected.id ? { ...item, locked: e.target.checked } : item) })} />Lock position</label>
+                </div>
+              ) : <p className="analytics-empty-hint">{board.items.length ? 'Choose a tile to format.' : 'Add a tile to customize its appearance.'}</p>)}
+              {mode === 'dashboards' && board.items.length > 0 && (
+                <label className="analytics-format-target">Dashboard tile
+                  <select value={inspected?.id || ''} onChange={event => setSelectedTile(event.target.value || null)}>
+                    <option value="">Choose a tile</option>
+                    {board.items.map(item => <option key={item.id} value={item.id}>{item.title}</option>)}
+                  </select>
+                </label>
+              )}
+              {(mode === 'explore' || (inspected && !['text', 'section'].includes(inspected.itemType))) &&
+                <AnalyticsAppearance appearance={appearance} measures={mode === 'explore' ? draft.query.measures : inspected?.analysis?.query.measures} onChange={changeAppearance} />}
+            </>}
+
+            {toolPanel === 'reports' && <>
+              <div className="analytics-inspector-card analytics-tool-actions">
+                <h3>Report output</h3>
+                <button type="button" onClick={exportPdf}><FaFilePdf /><span>Export report PDF</span></button>
+                <button type="button" onClick={() => window.print()}><FaPrint /><span>Print presentation</span></button>
+                {mode === 'explore' && <button type="button" onClick={exportCsv} disabled={!result} title={result ? undefined : 'Run an analysis to export its results'}><FaTable /><span>Export result CSV</span></button>}
+              </div>
+              <div className="analytics-inspector-card analytics-tool-actions">
+                <h3>Workspace files</h3>
+                <button type="button" onClick={exportWorkspace}><FaDownload /><span>Export workspace JSON</span></button>
+                <button type="button" onClick={exportDefinitions}><FaCopy /><span>Export definitions JSON</span></button>
+              </div>
+            </>}
+
+            {toolPanel === 'ai' && <div className="analytics-inspector-card analytics-tool-actions">
+              <button type="button" onClick={() => launchTool(onOpenGallery)}><FaColumns /><span>Chart gallery<small>Start with a visualization</small></span></button>
+              <button type="button" onClick={() => launchTool(onOpenAiChart)}><FaChartBar /><span>AI Chart<small>Describe the chart you want to build</small></span></button>
+              <button type="button" onClick={discussInChat}><FaRobot /><span>Discuss in AI Chat<small>Open a chat draft with the selected dataset</small></span></button>
+            </div>}
+
+            {toolPanel === 'history' && <>
+              <div className="analytics-inspector-card analytics-tool-actions">
+                <h3>Recent edits</h3>
+                <button type="button" disabled={!currentHistory.past.length} onClick={() => undo(false)}><FaUndo /><span>Undo</span><kbd>Ctrl/Cmd+Z</kbd></button>
+                <button type="button" disabled={!currentHistory.future.length} onClick={() => undo(true)}><FaRedo /><span>Redo</span><kbd>Ctrl/Cmd+Shift+Z</kbd></button>
+              </div>
+              <div className="analytics-inspector-card analytics-tool-actions">
+                <h3>Saved revisions</h3>
+                {[...revisions].reverse().map((revision, index) => (
+                  <button type="button" key={index} onClick={() => {
+                    if (!window.confirm('Restore this saved revision?')) return;
+                    if (mode === 'explore') changeDraft(clone(revision.value.config));
+                    else changeBoard({ ...clone(revision.value), revisions: board.revisions });
+                  }}><FaHistory /><span>Restore revision<small><time dateTime={revision.savedAt}>{new Date(revision.savedAt).toLocaleString()}</time></small></span></button>
+                ))}
+                {!revisions.length && <small>No saved revisions yet.</small>}
+              </div>
+            </>}
+          </div>
+        </div>
+      </aside>
+    </div>
 
     {analyticsStorage.error && <div role="alert" className="analytics-error">{analyticsStorage.error}<button type="button" onClick={analyticsStorage.retry}>Retry save</button><button type="button" onClick={() => download('analytics-recovery.json', JSON.stringify(analyticsStorage.pending || workspace, null, 2), 'application/json')}>Export retained work</button><button type="button" onClick={analyticsStorage.discard}>Discard pending save</button>{analyticsStorage.status === 'recovery_required' && <button type="button" onClick={() => { if (window.confirm('Preserve the damaged primary value as a recovery copy and restore the displayed backup?')) analyticsStorage.recover(); }}>Recover backup</button>}</div>}
     {(error || sourceMetadata?.error) && <p role="alert" className="analytics-error">{error || sourceMetadata.error}</p>}{notice && <p role="status" className="analytics-notice">{notice}<button type="button" aria-label="Dismiss notification" onClick={() => setNotice('')}>×</button></p>}
 
     <div className="analytics-body">
-      {toolPanel === 'library' && !focus && <aside id="analytics-tool-panel" className="analytics-drawer analytics-library" aria-label="Analytics library">
-        <div className="analytics-drawer-header">
-          <div><h2 ref={panelHeadingRef} tabIndex={-1}>Library</h2><small>{workspace.dashboards.length + workspace.explorations.length} saved assets</small></div>
-          <button type="button" className="analytics-icon-btn" onClick={closeTool} aria-label="Close Library"><FaTimes /></button>
-        </div>
-
-        <div className="analytics-library-create">
-          <button type="button" className="is-primary" onClick={() => startAnalysis()}><FaPlus /><span>New analysis</span></button>
-          <button type="button" onClick={() => createBoard(false)}><FaThLarge /><span>New dashboard</span></button>
-          <button type="button" onClick={() => createBoard(true)} disabled={!canGenerateOverview}><FaLayerGroup /><span>Overview template</span></button>
-          <button type="button" onClick={() => importRef.current.click()}><FaUpload /><span>Import workspace JSON</span></button>
-        </div>
-
-        <div className="analytics-search-box">
-          <FaSearch className="analytics-search-icon" />
-          <input aria-label="Search Analytics library" placeholder="Search names and tags…" value={search} onChange={e => setSearch(e.target.value)} />
-        </div>
-
-        <div className="analytics-control-row">
-          <select aria-label="Library sort" value={sort} onChange={e => setSort(e.target.value)}><option value="recent">Recently updated</option><option value="name">Name</option></select>
-          <label className="analytics-checkbox-row"><input type="checkbox" checked={favorites} onChange={e => setFavorites(e.target.checked)} />Favorites only</label>
-        </div>
-
-        {recoveredDrafts.map(([key, value]) => <div className="analytics-draft-card" key={key}>
-          <button type="button" onClick={() => restoreDraft(key, value)}>Recover draft: {value.config.title}</button>
-          <button type="button" aria-label={`Discard draft ${value.config.title}`} onClick={() => {
-            if (window.confirm(`Discard recovered draft ${value.config.title}?`)) commit(next => ({ ...next, drafts: { ...next.drafts, [key]: null } }));
-          }}>×</button>
-        </div>)}
-
-        <div className="analytics-library-list">
-          {objects.map(item => (
-            <article key={item.id} className={(item.kind === 'dashboard' && mode === 'dashboards' && workspace.activeDashboardId === item.id) || (item.kind === 'analysis' && mode === 'explore' && workspace.activeAnalysisId === item.id) ? 'is-active' : ''}>
-              <div className="analytics-asset-row">
-                <button type="button" className="analytics-library-open" onClick={() => item.kind === 'dashboard' ? openDashboard(item.id) : openAnalysis(item)}>
-                  <small>{item.kind}{workspace.recent?.includes(item.id) ? ' · recent' : ''}</small>
-                  <strong>{item.name}</strong>
-                  {!!item.tags?.length && <small className="analytics-tag-line">{item.tags.join(', ')}</small>}
-                </button>
-                <div className="analytics-asset-btns">
-                  <button type="button" className="analytics-icon-btn" aria-label={`Favorite ${item.name}`} aria-pressed={!!item.favorite} onClick={() => manageObject(item.kind, item.id, 'favorite')}>{item.favorite ? '★' : '☆'}</button>
-                  <button type="button" className="analytics-icon-btn" aria-label={`Manage ${item.name}`} onClick={() => setActiveMenuId(activeMenuId === item.id ? null : item.id)}><FaEllipsisH /></button>
-                </div>
-              </div>
-              {activeMenuId === item.id && (
-                <div className="analytics-context-menu">
-                  {['rename', 'duplicate', 'tags', 'delete'].map(action => (
-                    <button type="button" key={action} onClick={() => { manageObject(item.kind, item.id, action); setActiveMenuId(null); }}>{action}</button>
-                  ))}
-                </div>
-              )}
-            </article>
-          ))}
-        </div>
-
-        <div className="analytics-inspector-card">
-          <div className="analytics-card-title"><FaLayerGroup /><span>Local templates</span></div>
-          <button type="button" className="analytics-icon-pill" onClick={saveTemplate}><FaPlus /><span>Save current dashboard as template</span></button>
-          {workspace.templates.map(template => (
-            <div className="analytics-control-row" key={template.id}>
-              <button type="button" onClick={() => instantiateTemplate(template)}>Use {template.name} with selected dataset</button>
-              <button type="button" aria-label={`Delete template ${template.name}`} onClick={() => { if (window.confirm(`Delete template ${template.name}?`)) commit(next => ({ ...next, templates: next.templates.filter(t => t.id !== template.id) })); }}><FaTrash /></button>
-            </div>
-          ))}
-        </div>
-
-      </aside>}
 
       <main className={`analytics-main analytics-main--${mode}`}>
         {mode === 'explore' ? <>
@@ -627,9 +768,9 @@ export default function AnalyticsShell({ onOpenAiChat, onOpenGallery, onOpenAiCh
               </span>
               {origin && <>
                 <button type="button" className="is-primary" onClick={() => pin(true)}>Update original</button>
-                <button type="button" className="analytics-icon-pill" onClick={() => openDashboard(workspace.dashboards.some(b => b.state.id === origin.boardId) ? origin.boardId : workspace.activeDashboardId)}><FaArrowLeft /><span>Back to dashboard</span></button>
+                <button type="button" className="analytics-icon-pill" onClick={backToOrigin}><FaArrowLeft /><span>Back to dashboard</span></button>
               </>}
-              {!!drillHistory.length && <button type="button" className="analytics-icon-pill" onClick={() => { changeDraft(drillHistory[drillHistory.length - 1]); setDrillHistory(list => list.slice(0, -1)); }}><FaArrowLeft /><span>Back one drill</span></button>}
+              {!!drillHistory.length && <button type="button" className="analytics-icon-pill" onClick={goBackOneDrill}><FaArrowLeft /><span>Back one drill</span></button>}
             </div>
           </div>
 
@@ -657,79 +798,13 @@ export default function AnalyticsShell({ onOpenAiChat, onOpenGallery, onOpenAiCh
           </div>
         </> : (
           <AnalyticsDashboard key={board.state.id} board={board} attachments={attachments} onChange={changeBoard} onInvestigate={investigate}
-            onNewAnalysis={startAnalysis} selectedTile={selectedTile} onSelectTile={id => { setSelectedTile(id); showTool('format'); }}
-            source={selectedSource} fields={fields} sourceLoading={!!selectedSource && !sourceMetadata} canGenerateOverview={canGenerateOverview} onGenerateOverview={generateOverview} />
+            onNewAnalysis={startAnalysis} selectedTile={selectedTile} onSelectTile={selectTile}
+            source={selectedSource} fields={fields} sourceLoading={!!selectedSource && !sourceMetadata} canGenerateOverview={canGenerateOverview} onGenerateOverview={generateOverview}
+            refresh={dashboardRefresh} onRefresh={refreshDashboard} onOpenFilters={showDashboardFilters} filtersOpen={toolPanel === 'actions' && !focus}
+            onAddText={addDashboardText} onSelectMode={setDashboardMode} />
         )}
       </main>
 
-      {activeTool && toolPanel !== 'library' && !focus && <aside id="analytics-tool-panel" className="analytics-drawer analytics-inspector" aria-label={`Analytics ${activeTool.label}`}>
-        <div className="analytics-drawer-header">
-          <div>
-            <h2 ref={panelHeadingRef} tabIndex={-1}>{activeTool.label}</h2>
-            <small>{activeTool.description}</small>
-          </div>
-          <button type="button" className="analytics-icon-btn" onClick={closeTool} aria-label={`Close ${activeTool.label}`}><FaTimes /></button>
-        </div>
-
-        {toolPanel === 'format' && <>
-          {mode === 'dashboards' && (inspected ? (
-            <div className="analytics-inspector-card">
-              <label>Tile title<input value={inspected.title} onChange={e => changeBoard({ ...board, items: board.items.map(item => item.id === inspected.id ? { ...item, title: e.target.value } : item) })} /></label>
-              {['text', 'section'].includes(inspected.itemType) && <label>Text<textarea value={inspected.text || ''} onChange={e => changeBoard({ ...board, items: board.items.map(item => item.id === inspected.id ? { ...item, text: e.target.value } : item) })} /></label>}
-              <label className="analytics-checkbox-row"><input type="checkbox" checked={!!inspected.locked} onChange={e => changeBoard({ ...board, items: board.items.map(item => item.id === inspected.id ? { ...item, locked: e.target.checked } : item) })} />Lock position</label>
-            </div>
-          ) : <p className="analytics-empty-hint">{board.items.length ? 'Choose a tile to format.' : 'Add a tile to customize its appearance.'}</p>)}
-          {mode === 'dashboards' && board.items.length > 0 && (
-            <label className="analytics-format-target">Dashboard tile
-              <select value={inspected?.id || ''} onChange={event => setSelectedTile(event.target.value || null)}>
-                <option value="">Choose a tile</option>
-                {board.items.map(item => <option key={item.id} value={item.id}>{item.title}</option>)}
-              </select>
-            </label>
-          )}
-          {(mode === 'explore' || (inspected && !['text', 'section'].includes(inspected.itemType))) &&
-            <AnalyticsAppearance appearance={appearance} measures={mode === 'explore' ? draft.query.measures : inspected?.analysis?.query.measures} onChange={changeAppearance} />}
-        </>}
-
-        {toolPanel === 'reports' && <>
-          <div className="analytics-inspector-card analytics-tool-actions">
-            <h3>Report output</h3>
-            <button type="button" onClick={exportPdf}><FaFilePdf /><span>Export report PDF</span></button>
-            <button type="button" onClick={() => window.print()}><FaPrint /><span>Print presentation</span></button>
-            {mode === 'explore' && <button type="button" onClick={exportCsv} disabled={!result} title={result ? undefined : 'Run an analysis to export its results'}><FaTable /><span>Export result CSV</span></button>}
-          </div>
-          <div className="analytics-inspector-card analytics-tool-actions">
-            <h3>Workspace files</h3>
-            <button type="button" onClick={exportWorkspace}><FaDownload /><span>Export workspace JSON</span></button>
-            <button type="button" onClick={exportDefinitions}><FaCopy /><span>Export definitions JSON</span></button>
-          </div>
-        </>}
-
-        {toolPanel === 'ai' && <div className="analytics-inspector-card analytics-tool-actions">
-          <button type="button" onClick={() => launchTool(onOpenGallery)}><FaColumns /><span>Chart gallery<small>Start with a visualization</small></span></button>
-          <button type="button" onClick={() => launchTool(onOpenAiChart)}><FaChartBar /><span>AI Chart<small>Describe the chart you want to build</small></span></button>
-          <button type="button" onClick={discussInChat}><FaRobot /><span>Discuss in AI Chat<small>Open a chat draft with the selected dataset</small></span></button>
-        </div>}
-
-        {toolPanel === 'history' && <>
-          <div className="analytics-inspector-card analytics-tool-actions">
-            <h3>Recent edits</h3>
-            <button type="button" disabled={!currentHistory.past.length} onClick={() => undo(false)}><FaUndo /><span>Undo</span><kbd>Ctrl/Cmd+Z</kbd></button>
-            <button type="button" disabled={!currentHistory.future.length} onClick={() => undo(true)}><FaRedo /><span>Redo</span><kbd>Ctrl/Cmd+Shift+Z</kbd></button>
-          </div>
-          <div className="analytics-inspector-card analytics-tool-actions">
-            <h3>Saved revisions</h3>
-            {[...revisions].reverse().map((revision, index) => (
-              <button type="button" key={index} onClick={() => {
-                if (!window.confirm('Restore this saved revision?')) return;
-                if (mode === 'explore') changeDraft(clone(revision.value.config));
-                else changeBoard({ ...clone(revision.value), revisions: board.revisions });
-              }}><FaHistory /><span>Restore revision<small><time dateTime={revision.savedAt}>{new Date(revision.savedAt).toLocaleString()}</time></small></span></button>
-            ))}
-            {!revisions.length && <small>No saved revisions yet.</small>}
-          </div>
-        </>}
-      </aside>}
     </div>
     <input ref={importRef} type="file" accept="application/json,.json" hidden onChange={async event => {
       const input = event.currentTarget;

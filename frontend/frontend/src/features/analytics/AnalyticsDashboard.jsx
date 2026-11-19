@@ -138,80 +138,19 @@ const FILTER_OPERATORS = [
   ['lt', 'Less than'], ['lte', 'At most'], ['contains', 'Contains'],
 ];
 
-export default function AnalyticsDashboard({ board, attachments, onChange, onInvestigate, onNewAnalysis, selectedTile, onSelectTile,
-  source, fields, sourceLoading, canGenerateOverview, onGenerateOverview }) {
-  const [refresh, setRefresh] = useState(0);
-  const [filterDrawer, setFilterDrawer] = useState(false);
+export function AnalyticsDashboardFilters({ board, source, fields, onChange }) {
   const [field, setField] = useState('');
   const [value, setValue] = useState('');
   const [operator, setOperator] = useState('eq');
   const [filterType, setFilterType] = useState('auto');
   const [tileScope, setTileScope] = useState('all');
   const filters = board.state.analyticsFilters || [];
-  const setFilters = next => onChange({ ...board, state: { ...board.state, analyticsFilters: next } });
-  const nextRow = Math.max(0, ...board.items.map(item => (item.layout?.y || 0) + (item.layout?.h || 6)));
-  const addText = type => {
-    const id = newId('dashboard-tile');
-    if (onChange({ ...board, state: { ...board.state, mode: 'edit' }, items: [...board.items, {
-      id, itemType: type, title: type === 'section' ? 'Section' : 'Notes', text: '',
-      layout: { x: 0, y: nextRow, w: type === 'section' ? 12 : 6, h: type === 'section' ? 2 : 4 },
-    }] })) onSelectTile(id);
-  };
-  const selectMode = mode => {
-    if (board.state.mode !== mode) onChange({ ...board, state: { ...board.state, mode } });
-  };
-  const isView = board.state.mode === 'view';
-  const liveTiles = board.items.filter(item => item.analysis && !item.requiresSourceReview);
-  const compatibleTiles = liveTiles.filter(item => sourceKey(item.analysis.source) === sourceKey(source));
+  const compatibleTiles = board.items.filter(item => item.analysis && !item.requiresSourceReview &&
+    sourceKey(item.analysis.source) === sourceKey(source));
   const selectedField = fields.find(option => option.name === field);
   const selectedScope = compatibleTiles.some(item => item.id === tileScope) ? tileScope : 'all';
-
-  if (!board.items.length) return <DashboardBlueprint source={source} fields={fields} sourceLoading={sourceLoading} canGenerateOverview={canGenerateOverview}
-    onGenerateOverview={onGenerateOverview} onNewAnalysis={onNewAnalysis} addText={addText} />;
-
-  return <div className={`analytics-dashboard ${isView ? 'is-view' : ''}`}>
-    <div className="analytics-dashboard-toolbar" aria-label="Dashboard canvas actions">
-      <div className="analytics-actions">
-        {!isView && <details className="analytics-add-tile">
-          <summary><FaPlus /><span>Add tile</span><FaChevronDown /></summary>
-          <div className="analytics-switcher-menu">
-            {[
-              ['Chart', FaChartBar, () => onNewAnalysis()],
-              ['KPI', FaHashtag, () => onNewAnalysis('kpi')],
-              ['Note', FaStickyNote, () => addText('text')],
-              ['Section', FaHeading, () => addText('section')],
-            ].map(([label, Icon, action]) => <button key={label} type="button" onClick={event => {
-              event.currentTarget.closest('details').open = false;
-              action();
-            }}><Icon /> {label}</button>)}
-          </div>
-        </details>}
-        <button type="button" className={`analytics-icon-pill ${filterDrawer ? 'is-selected' : ''}`} onClick={() => setFilterDrawer(open => !open)}
-          aria-expanded={filterDrawer} disabled={!liveTiles.length && !filters.length}><FaFilter /> Filters {filters.length || ''}</button>
-      </div>
-      <div className="analytics-actions">
-        <button type="button" className="analytics-icon-btn" aria-label="Refresh live tiles" title="Refresh live tiles" disabled={!liveTiles.length}
-          onClick={() => setRefresh(value => value + 1)}><FaSyncAlt /></button>
-        <div className="analytics-mode-switch" role="group" aria-label="Board editing mode">
-          <button type="button" aria-pressed={!isView} onClick={() => selectMode('edit')}><FaEdit /> Edit layout</button>
-          <button type="button" aria-pressed={isView} onClick={() => selectMode('view')}><FaEye /> View</button>
-        </div>
-      </div>
-    </div>
-
-    {!!filters.length && <div className="analytics-filter-chips" aria-label="Active dashboard filters">
-      {filters.map((filter, index) => {
-        const label = filter.rule.field ? `${filter.rule.field} ${FILTER_OPERATORS.find(([id]) => id === filter.rule.operator)?.[1]?.toLowerCase() || filter.rule.operator} ${String(filter.rule.value ?? '')}` : 'Selected category or period';
-        const scope = [filter.sourceName || filter.sourceId, filter.tileIds?.length ? 'Selected tiles' : 'Matching tiles'].filter(Boolean).join(' · ');
-        return <button type="button" className="analytics-chip" key={index} title={scope} aria-label={`Remove filter ${label} (${scope})`}
-          onClick={() => setFilters(filters.filter((_, i) => i !== index))}>
-          {label}{filter.sourceName && <small>{filter.sourceName}</small>} <FaTimes />
-        </button>;
-      })}
-      <button type="button" className="analytics-icon-btn" onClick={() => setFilters([])}>Reset filters</button>
-    </div>}
-
-    {filterDrawer && <form className="analytics-popover-tray analytics-board-filters" onSubmit={event => {
+  const setFilters = next => onChange({ ...board, state: { ...board.state, analyticsFilters: next } });
+  return <form className="analytics-popover-tray analytics-board-filters" onSubmit={event => {
       event.preventDefault();
       if (!selectedField || !compatibleTiles.length || (filterType === 'date' && !value)) return;
       setFilters([...filters, { sourceId: source.id, sourceKind: source.kind, sourceName: source.name,
@@ -235,7 +174,63 @@ export default function AnalyticsDashboard({ board, attachments, onChange, onInv
       </select></label>
       <button type="submit" className="is-primary" disabled={!selectedField || !compatibleTiles.length || (filterType === 'date' && !value)}>Apply filter</button>
       {!compatibleTiles.length && <p className="analytics-scope">Select a dataset used by a live tile to add filters.</p>}
-    </form>}
+  </form>;
+}
+
+export default function AnalyticsDashboard({ board, attachments, onChange, onInvestigate, onNewAnalysis, selectedTile, onSelectTile,
+  source, fields, sourceLoading, canGenerateOverview, onGenerateOverview, refresh, onRefresh, onOpenFilters,
+  filtersOpen, onAddText, onSelectMode }) {
+  const filters = board.state.analyticsFilters || [];
+  const setFilters = next => onChange({ ...board, state: { ...board.state, analyticsFilters: next } });
+  const nextRow = Math.max(0, ...board.items.map(item => (item.layout?.y || 0) + (item.layout?.h || 6)));
+  const isView = board.state.mode === 'view';
+  const liveTiles = board.items.filter(item => item.analysis && !item.requiresSourceReview);
+
+  if (!board.items.length) return <DashboardBlueprint source={source} fields={fields} sourceLoading={sourceLoading} canGenerateOverview={canGenerateOverview}
+    onGenerateOverview={onGenerateOverview} onNewAnalysis={onNewAnalysis} addText={onAddText} />;
+
+  return <div className={`analytics-dashboard ${isView ? 'is-view' : ''}`}>
+    <div className="analytics-dashboard-toolbar" aria-label="Dashboard canvas actions">
+      <div className="analytics-actions">
+        {!isView && <details className="analytics-add-tile">
+          <summary><FaPlus /><span>Add tile</span><FaChevronDown /></summary>
+          <div className="analytics-switcher-menu">
+            {[
+              ['Chart', FaChartBar, () => onNewAnalysis()],
+              ['KPI', FaHashtag, () => onNewAnalysis('kpi')],
+              ['Note', FaStickyNote, () => onAddText('text')],
+              ['Section', FaHeading, () => onAddText('section')],
+            ].map(([label, Icon, action]) => <button key={label} type="button" onClick={event => {
+              event.currentTarget.closest('details').open = false;
+              action();
+            }}><Icon /> {label}</button>)}
+          </div>
+        </details>}
+        <button type="button" className={`analytics-icon-pill ${filtersOpen ? 'is-selected' : ''}`} onClick={onOpenFilters}
+          aria-expanded={filtersOpen} disabled={!liveTiles.length && !filters.length}><FaFilter /> Filters {filters.length || ''}</button>
+      </div>
+      <div className="analytics-actions">
+        <button type="button" className="analytics-icon-btn" aria-label="Refresh live tiles" title="Refresh live tiles" disabled={!liveTiles.length}
+          onClick={onRefresh}><FaSyncAlt /></button>
+        <div className="analytics-mode-switch" role="group" aria-label="Board editing mode">
+          <button type="button" aria-pressed={!isView} onClick={() => onSelectMode('edit')}><FaEdit /> Edit layout</button>
+          <button type="button" aria-pressed={isView} onClick={() => onSelectMode('view')}><FaEye /> View</button>
+        </div>
+      </div>
+    </div>
+
+    {!!filters.length && <div className="analytics-filter-chips" aria-label="Active dashboard filters">
+      {filters.map((filter, index) => {
+        const label = filter.rule.field ? `${filter.rule.field} ${FILTER_OPERATORS.find(([id]) => id === filter.rule.operator)?.[1]?.toLowerCase() || filter.rule.operator} ${String(filter.rule.value ?? '')}` : 'Selected category or period';
+        const scope = [filter.sourceName || filter.sourceId, filter.tileIds?.length ? 'Selected tiles' : 'Matching tiles'].filter(Boolean).join(' · ');
+        return <button type="button" className="analytics-chip" key={index} title={scope} aria-label={`Remove filter ${label} (${scope})`}
+          onClick={() => setFilters(filters.filter((_, i) => i !== index))}>
+          {label}{filter.sourceName && <small>{filter.sourceName}</small>} <FaTimes />
+        </button>;
+      })}
+      <button type="button" className="analytics-icon-btn" onClick={() => setFilters([])}>Reset filters</button>
+    </div>}
+
 
     <Grid
       className="analytics-grid"

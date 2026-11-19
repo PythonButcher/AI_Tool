@@ -44,6 +44,10 @@ Dashboard state can carry an `analyticsSource` for overview creation and the fil
 
 ## Integration and reporting
 
+The Tools row opens one docked drawer for workspace actions, Change Explorer, library, formatting, reports, AI and charts, and revisions. Dashboard toolbar actions and the drawer share the dashboard state, filter editor, and refresh operation.
+
+[Change Explorer](../analytics/change_explorer.md) compares record count or a numeric sum over two disjoint UTC periods. Opening a driver in Analysis carries over the exact source, periods, metric, and filters. The generated equality filter uses `type: "segment"` to preserve typed segment identity, including null labels. Editing the generated clause in the ordinary builder switches it to the selected filter's normal semantics.
+
 Legacy destination requests `explore` and `dashboards` resolve to `analytics` with the corresponding inner view. The sidebar has one Analytics entry. Gallery selection opens an independent analysis draft. AI Chart remains reachable. Chart Pin inserts a real tile in a chosen dashboard. AI Chat saves verified immutable snapshots to a chosen dashboard, deduplicating by grounded result key within that dashboard. Write failures do not report success. Opening the dashboard selects the saved target.
 
 Analytics-to-chat context is a deliberate composer draft, never an automatic provider call. Explicit Data Hub/workspace context excludes unrelated attached rows; inline context checks the exact attachment. The source is visible and can be cleared. Earlier chat session context cannot override that selection. AI answers remain subject to existing grounding rules.

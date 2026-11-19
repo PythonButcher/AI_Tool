@@ -83,12 +83,28 @@ export async function queryAnalytics(config, attachments, { signal, metadataOnly
   if (!source) throw new Error('Choose a dataset.');
   if (!metadataOnly && config.view === 'scatter' && (config.query.measures.length !== 2 || config.query.measures.some(m => !m.field))) throw new Error('Scatter needs exactly two numeric fields as measures.');
   if (!metadataOnly && ['pie', 'doughnut'].includes(config.view) && (config.query.measures.length !== 1 || config.query.group_by.length !== 1)) throw new Error('Pie and doughnut charts need one measure and one category.');
+  return postAnalytics('query', source, attachments, { query: executionQuery(config), metadata_only: metadataOnly }, signal);
+}
+
+export async function analyzeMetricChange(request, attachments, signal) {
+  const { source, ...parameters } = request;
+  const result = await postAnalytics('change-explorer', source, attachments, parameters, signal);
+  if (result.schema_version !== 1 || !result.totals || !Array.isArray(result.drivers)) {
+    throw new Error('Change Explorer returned an unexpected response.');
+  }
+  return result;
+}
+
+async function postAnalytics(endpoint, source, attachments, parameters, signal) {
   if (source.kind === 'inline' && source.id !== attachments.inlineId) throw new Error('This analysis belongs to a different upload. Choose the current dataset to rebind it explicitly.');
-  const response = await fetch(`${API}/api/analytics/query`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, signal,
-    body: JSON.stringify({ source, query: executionQuery(config), metadata_only: metadataOnly,
+  const response = await fetch(`${API}/api/analytics/${endpoint}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, signal,
+    body: JSON.stringify({ source, ...parameters,
       dataset: source.kind === 'inline' ? attachments.rows : undefined,
       semantic_model: source.kind === 'inline' ? attachments.model : undefined }) });
-  const payload = await response.json();
+  const payload = await response.json().catch(error => {
+    if (signal?.aborted) throw error;
+    throw new Error('Analytics did not return a valid response. Check that the backend is running.');
+  });
   if (!response.ok) throw new Error(payload.error || 'The query could not run.');
   return payload;
 }

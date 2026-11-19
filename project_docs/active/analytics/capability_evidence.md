@@ -20,10 +20,11 @@ This maps the required [catalogue](README.md) to implementation and verification
 | Connected sources | inline/DataHub/workspace source resolver and field remapper | Governed workspace identity and Data Hub policy fixtures pass; real-data smoke check required. |
 | AI integration | analyticsChatBridge; AIShell; WindowContext; SmartChartWindow | AI regression suite, explicit target/deduplication and bridge tests pass; receiver integration assertions required. |
 | Reporting/portability | CSV/PNG/PDF/print, validated collection imports/exports | Chrome verified PDF generation from rendered results. CSV safety and remapping have focused tests. |
-| Professional usability | Actions search, shortcuts, typed fields, density, focus, and confirmations | Dashboard and Analysis expose Library, Format, Reports, AI & Charts, and History by name. Chrome verified Focus exit by button and Escape at desktop and narrow widths while retaining the analysis. |
+| Professional usability | Docked tools drawer, shortcuts, typed fields, density, focus, and confirmations | Dashboard and Analysis share one drawer with labeled tool groups. Chrome verified narrow Focus exit and the drawer's placement below the tools row. |
+| Change attribution | Change Explorer endpoint, waterfall, factor details, and typed segment drill | Chrome with fixture data verified a flat total with offsetting segment movements and opened the exact segment and periods in Analysis. |
 
 ## Current engineering evidence
 
-- 40 Analytics backend query tests passed, and the changed Python module compiled.
-- 55 frontend tests across Analytics, WindowContext, and AI Chat passed.
+- 74 focused Analytics backend tests passed, and the changed Python modules compiled.
+- 56 frontend tests across Analytics, WindowContext, and AI Chat passed.
 - The production build passed. Chrome on an isolated retail-orders fixture confirmed the overview, investigation, responsive header, theme switching, and PDF generation. Browser acceptance belongs to the user.

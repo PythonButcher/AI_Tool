@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "authorized_work": {
-    "name": "Repair Analytics Focus and tool access"
+    "name": "Unify Analytics tools and explain metric change"
   },
   "authorization_state": "AUTHORIZED",
   "lifecycle_state": "AWAITING USER ACCEPTANCE",
@@ -246,10 +246,10 @@
   "user_implementation_authorization": {
     "approved_by": "User",
     "approved_at": "2026-11-18",
-    "evidence": "Direct user authorization for Analytics changes and a follow-up request to repair Focus mode and clarify tool access.",
+    "evidence": "Direct user request to consolidate Analytics tools in a drawer, remove Commands, and coordinate a new feature in a separate backend chat.",
     "instruction": "Redesign Analytics Studio and keep its features available.",
     "scope": "Codex owns the Analytics frontend redesign, related backend repairs, and focused integration verification.",
-    "current_instruction": "Fix leaving Focus mode and make Analytics tools clearly visible and easier to find.",
+    "current_instruction": "Build a unified Analytics drawer, remove Commands, and delegate and integrate a new Analytics feature.",
     "current_approved_at": "2026-11-18"
   },
   "preparation_authorization": {

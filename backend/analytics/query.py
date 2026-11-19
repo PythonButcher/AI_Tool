@@ -5,7 +5,7 @@ import ast
 import hashlib
 import json
 import math
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from typing import Any
 
 import pandas as pd
@@ -113,6 +113,16 @@ def date_value(value: Any) -> pd.Timestamp:
     return parsed.tz_localize("UTC") if parsed.tzinfo is None else parsed.tz_convert("UTC")
 
 
+def segment_label(value: Any, name: str) -> str | bool | int | float | None:
+    message = f"'{name}' contains a segment label that is not a finite scalar."
+    fail(not pd.api.types.is_scalar(value), message, "invalid_segment")
+    if pd.isna(value):
+        return None
+    label = value.isoformat() if isinstance(value, date) else clean(value)
+    fail(type(label) not in (str, bool, int, float), message, "invalid_segment")
+    return label
+
+
 def filter_mask(frame: pd.DataFrame, node: Any, depth: int = 0) -> pd.Series:
     fail(depth > 5, "Filter groups may be nested at most five levels.")
     if node is None or node == []:
@@ -132,6 +142,15 @@ def filter_mask(frame: pd.DataFrame, node: Any, depth: int = 0) -> pd.Series:
     name = field(frame, node.get("field"))
     series = frame[name]
     op, value = node.get("operator", "eq"), node.get("value")
+    if node.get("type") == "segment":
+        fail(op != "eq", "A segment drill requires an equality filter.")
+        expected = segment_label(value, name)
+
+        def matches(raw: Any) -> bool:
+            label = segment_label(raw, name)
+            return isinstance(label, bool) == isinstance(expected, bool) and label == expected
+
+        return series.map(matches).astype(bool)
     if node.get("type") == "date":
         series = dates(series)
         if op not in ("is_null", "not_null", "in", "not_in", "contains"):

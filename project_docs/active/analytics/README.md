@@ -6,6 +6,8 @@
 
 ## Product outcome
 
+[Change Explorer](change_explorer.md) extends the Analytics tools drawer with metric-change attribution and segment investigation.
+
 Replace both old destinations with one **Analytics** entry and a full-width workbench. Dashboards and analyses are objects inside the same workspace, with a shared library, dataset selector, query engine, filters and inspector. Users move from monitoring to investigation to reporting without relaunching windows, rebuilding charts or reselecting data.
 
 Provide a compact shared header, searchable library/fields rail, large dashboard or analysis canvas, contextual inspector and expandable results table. A first visit offers a useful dashboard-starting workspace; return visits restore the selected object and mode. Empty states create real work. Existing dashboards survive. AI Chat and ML Studio remain separate products with direct Analytics entry points.

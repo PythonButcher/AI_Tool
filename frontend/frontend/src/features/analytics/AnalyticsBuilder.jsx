@@ -47,6 +47,9 @@ export default function AnalyticsBuilder({ config, fields, metrics = [], sourceL
   const choices = <><option value="">Choose field</option>{fields.map(f => <option key={f.name} value={f.name}>{f.name}</option>)}</>;
   const rules = Array.isArray(query.filters) ? query.filters : query.filters?.rules || [];
   const setRules = next => changeQuery({ filters: { op: query.filters?.op || 'and', rules: next } });
+  const editRule = (index, patch) => setRules(rules.map((rule, position) => position === index
+    ? { ...rule, ...patch, type: rule.type === 'segment' ? undefined : rule.type }
+    : rule));
   const toggleTray = name => setOpenTray(prev => prev === name ? null : name);
 
   const visibleFields = fields.filter(f =>
@@ -227,9 +230,9 @@ export default function AnalyticsBuilder({ config, fields, metrics = [], sourceL
               <span key={index} className="analytics-filter-pill">Nested group <button type="button" onClick={() => setRules(rules.filter((_, i) => i !== index))}>×</button></span>
             ) : (
               <div key={index} className="analytics-filter-pill">
-                <select aria-label={`Filter ${index + 1} field`} value={rule.field || ''} onChange={e => setRules(rules.map((r, i) => i === index ? { ...r, field: e.target.value } : r))}>{choices}</select>
-                <select aria-label={`Filter ${index + 1} operator`} value={rule.operator || 'eq'} onChange={e => setRules(rules.map((r, i) => i === index ? { ...r, operator: e.target.value } : r))}>{['eq', 'neq', 'gt', 'gte', 'lt', 'lte', 'in', 'not_in', 'contains', 'is_null', 'not_null'].map(op => <option key={op}>{op}</option>)}</select>
-                <input aria-label={`Filter ${index + 1} value`} placeholder="Value…" value={rule.values?.join(',') ?? rule.value ?? ''} onChange={e => setRules(rules.map((r, i) => i === index ? { ...r, value: e.target.value, values: ['in', 'not_in'].includes(r.operator) ? e.target.value.split(',').map(v => v.trim()) : undefined } : r))} />
+                <select aria-label={`Filter ${index + 1} field`} value={rule.field || ''} onChange={e => editRule(index, { field: e.target.value })}>{choices}</select>
+                <select aria-label={`Filter ${index + 1} operator`} value={rule.operator || 'eq'} onChange={e => editRule(index, { operator: e.target.value })}>{['eq', 'neq', 'gt', 'gte', 'lt', 'lte', 'in', 'not_in', 'contains', 'is_null', 'not_null'].map(op => <option key={op}>{op}</option>)}</select>
+                <input aria-label={`Filter ${index + 1} value`} placeholder="Value…" value={rule.values?.join(',') ?? rule.value ?? ''} onChange={e => editRule(index, { value: e.target.value, values: ['in', 'not_in'].includes(rule.operator) ? e.target.value.split(',').map(v => v.trim()) : undefined })} />
                 <button type="button" className="analytics-pill-remove" onClick={() => setRules(rules.filter((_, i) => i !== index))} title="Remove filter">×</button>
               </div>
             )

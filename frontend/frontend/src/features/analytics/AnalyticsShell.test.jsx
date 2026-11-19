@@ -135,7 +135,8 @@ test('empty dashboard generates real overview tiles from the dashboard dataset a
   expect(stored().drafts.current.config.source.id).toBe(source.id);
   await screen.findByLabelText('Dashboard canvas actions');
   await waitFor(() => expect(fetch.mock.calls.filter(([, options]) => options?.body && !JSON.parse(options.body).metadata_only)).toHaveLength(5));
-  fireEvent.click(screen.getByRole('button', { name: 'Undo' }));
+  fireEvent.click(screen.getByRole('button', { name: 'History' }));
+  fireEvent.click(screen.getByRole('button', { name: /^Undo/ }));
   expect(stored().dashboards[0].items).toHaveLength(0);
 });
 
@@ -210,7 +211,64 @@ test('named tool panels expose exports, chart tools, and history from the dashbo
     if (tool === 'AI & Charts') fireEvent.click(within(panel).getByRole('button', { name: /Chart gallery/ }));
   }
   expect(onOpenGallery).toHaveBeenCalledTimes(1);
-  fireEvent.keyDown(window, { key: 'k', ctrlKey: true });
-  fireEvent.change(screen.getByRole('textbox', { name: 'Search Analytics actions' }), { target: { value: 'revisions' } });
-  expect(within(screen.getByRole('search')).getByRole('button', { name: /History/ })).toBeVisible();
+  expect(screen.queryByRole('button', { name: 'Commands' })).not.toBeInTheDocument();
+  const toolsButton = toolRail.getByRole('button', { name: 'Tools' });
+  fireEvent.click(toolsButton);
+  const directory = screen.getByRole('complementary', { name: 'Analytics tool drawer' });
+  fireEvent.click(within(directory).getByRole('button', { name: /^Actions/ }));
+  const actions = screen.getByRole('complementary', { name: 'Analytics Actions' });
+  expect(within(actions).getByRole('button', { name: 'Add notes' })).toBeVisible();
+  fireEvent.keyDown(within(actions).getByRole('button', { name: 'Close tools' }), { key: 'Escape' });
+  expect(screen.queryByRole('complementary')).not.toBeInTheDocument();
+  expect(toolRail.getByRole('button', { name: 'Actions' })).toHaveFocus();
+});
+
+test('Change Explorer keeps its result across drawer sections and opens an exact segment comparison', async () => {
+  const changeValue = { baseline_value: 20, current_value: 60, delta: 40, baseline_count: 2, current_count: 3, volume_effect: 15, rate_effect: 25 };
+  const changeResult = { schema_version: 1, dataset: { scope: 'full' }, totals: changeValue, segment_count: 1,
+    drivers: [{ ...changeValue, kind: 'segment', segment: 'East' }] };
+  fetch.mockImplementation(async (url, options) => ({ ok: true, json: async () => {
+    if (!options?.body) return [];
+    if (url.endsWith('/change-explorer')) return changeResult;
+    if (JSON.parse(options.body).metadata_only) return { fields: [
+      { name: 'date', type: 'date' }, { name: 'sales', type: 'number' }, { name: 'region', type: 'string' },
+    ] };
+    return result;
+  } }));
+  mount();
+  const tools = within(screen.getByRole('navigation', { name: 'Analytics tools' }));
+  fireEvent.click(tools.getByRole('button', { name: 'Change Explorer' }));
+  const drawer = within(screen.getByRole('complementary', { name: 'Analytics Change Explorer' }));
+  await drawer.findByRole('option', { name: 'date' });
+  fireEvent.change(drawer.getByLabelText('Metric'), { target: { value: 'sum' } });
+  fireEvent.change(drawer.getByLabelText('Numeric field'), { target: { value: 'sales' } });
+  for (const [label, day] of [
+    ['Baseline start', '2026-01-01'], ['Baseline end', '2026-01-02'],
+    ['Current start', '2026-02-01'], ['Current end', '2026-02-02'],
+  ]) fireEvent.change(drawer.getByLabelText(label), { target: { value: day } });
+  fireEvent.click(drawer.getByRole('button', { name: 'Explain change' }));
+  await drawer.findByText('Contribution by segment');
+  const changeRequest = fetch.mock.calls.find(([url]) => url.endsWith('/change-explorer'))[1];
+  expect(JSON.parse(changeRequest.body)).toMatchObject({
+    source, dataset: mockRows, date_field: 'date', segment_field: 'region', metric: { aggregation: 'sum', field: 'sales' },
+    baseline: { start: '2026-01-01', end: '2026-01-02' }, current: { start: '2026-02-01', end: '2026-02-02' },
+  });
+
+  fireEvent.click(tools.getByRole('button', { name: 'Reports' }));
+  fireEvent.click(tools.getByRole('button', { name: 'Change Explorer' }));
+  fireEvent.click(drawer.getByRole('button', { name: 'Open segment in Analysis' }));
+  expect(screen.getByLabelText('Analysis name')).toHaveValue('Change Explorer · East');
+  fireEvent.click(screen.getByRole('button', { name: 'Run analysis' }));
+  await screen.findByText('line:12');
+  const queryRequest = fetch.mock.calls.filter(([url, options]) => url.endsWith('/query') && !JSON.parse(options.body).metadata_only).pop()[1];
+  expect(JSON.parse(queryRequest.body).query).toMatchObject({
+    filters: [{ field: 'region', operator: 'eq', type: 'segment', value: 'East' }],
+    period: { field: 'date', start: '2026-02-01', end: '2026-02-02' },
+    comparison: { kind: 'custom', start: '2026-01-01', end: '2026-01-02' },
+  });
+  fireEvent.change(screen.getByLabelText('Filter 1 operator'), { target: { value: 'contains' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Run analysis' }));
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Run analysis' })).toBeEnabled());
+  const edited = fetch.mock.calls.filter(([url, options]) => url.endsWith('/query') && !JSON.parse(options.body).metadata_only).pop()[1];
+  expect(JSON.parse(edited.body).query.filters.rules).toEqual([{ field: 'region', operator: 'contains', value: 'East' }]);
 });
