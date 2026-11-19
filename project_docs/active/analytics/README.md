@@ -2,7 +2,7 @@
 
 **Direction** — Replace Explore and Business Monitoring with one substantial Analytics product. The user requires an aggressive feature and interface expansion. The catalogue below is required release scope, not optional enhancements. Migration or a navigation merge alone cannot complete this plan.
 
-**Execution ownership** — The user authorizes Codex to get the full functional product running with a UI shell, then transfer end-to-end visual polish to Antigravity. This overrides the default frontend lead named in the phases below for functional implementation. Status and the sole active gate record delivery truth. Assignment size controls risk, not product ambition.
+**Execution ownership** — The user authorizes Codex to implement and verify the Analytics backend and frontend redesign directly. Status and the sole active gate record current ownership. Final browser acceptance belongs to the user.
 
 ## Product outcome
 

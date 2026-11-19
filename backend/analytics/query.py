@@ -87,6 +87,32 @@ def dates(series: pd.Series) -> pd.Series:
     return parsed
 
 
+def describe_field(series: pd.Series) -> dict:
+    values = series.dropna()
+    examples = values.head(3)
+    dtype = series.dtype
+    if pd.api.types.is_datetime64_any_dtype(dtype):
+        kind = "date"
+    elif pd.api.types.is_numeric_dtype(dtype) and not pd.api.types.is_bool_dtype(dtype):
+        kind = "number"
+    else:
+        kind = "string"
+        # ISO dates are common in CSV/JSON uploads. Require a date-shaped sample
+        # and validate the entire column before offering it for a trend.
+        if len(examples) and examples.astype("string").str.match(r"^\d{4}-\d{2}-\d{2}(?:$|[T ])").all():
+            shaped = values.astype("string").str.match(r"^\d{4}-\d{2}-\d{2}(?:$|[T ])").all()
+            if shaped and pd.to_datetime(values, format="mixed", utc=True, errors="coerce").notna().all():
+                kind = "date"
+    return {"name": str(series.name), "type": kind, "examples": clean(examples.tolist())}
+
+
+def date_value(value: Any) -> pd.Timestamp:
+    parsed = pd.Timestamp(value)
+    if pd.isna(parsed):
+        raise ValueError("A date is required.")
+    return parsed.tz_localize("UTC") if parsed.tzinfo is None else parsed.tz_convert("UTC")
+
+
 def filter_mask(frame: pd.DataFrame, node: Any, depth: int = 0) -> pd.Series:
     fail(depth > 5, "Filter groups may be nested at most five levels.")
     if node is None or node == []:
@@ -108,17 +134,23 @@ def filter_mask(frame: pd.DataFrame, node: Any, depth: int = 0) -> pd.Series:
     op, value = node.get("operator", "eq"), node.get("value")
     if node.get("type") == "date":
         series = dates(series)
-        if op not in ("is_null", "not_null"):
+        if op not in ("is_null", "not_null", "in", "not_in", "contains"):
             try:
-                value = pd.Timestamp(value)
-                value = value.tz_localize("UTC") if value.tzinfo is None else value.tz_convert("UTC")
-                if op == "lte" and len(str(node.get("value"))) == 10:
-                    op, value = "lt", value + pd.Timedelta(days=1)
+                value = date_value(value)
+                if len(str(node.get("value"))) == 10:
+                    tomorrow = value + pd.Timedelta(days=1)
+                    if op in ("eq", "neq"):
+                        matches = series.ge(value) & series.lt(tomorrow)
+                        return matches if op == "eq" else series.notna() & ~matches
+                    if op in ("lte", "gt"):
+                        op, value = ("lt" if op == "lte" else "gte"), tomorrow
             except (ValueError, TypeError) as exc:
                 raise AnalyticsError("Invalid date filter.", "invalid_dates") from exc
-    elif pd.api.types.is_numeric_dtype(series) and op not in ("in", "not_in", "is_null", "not_null"):
+    elif pd.api.types.is_numeric_dtype(series) and op in ("eq", "neq", "gt", "gte", "lt", "lte"):
         try:
             value = float(value)
+            if not math.isfinite(value):
+                raise ValueError("Expected a finite value.")
         except (TypeError, ValueError) as exc:
             raise AnalyticsError(f"'{name}' requires a numeric filter.") from exc
     if op in ("eq", "neq", "gt", "gte", "lt", "lte"):
@@ -130,7 +162,12 @@ def filter_mask(frame: pd.DataFrame, node: Any, depth: int = 0) -> pd.Series:
     if op in ("in", "not_in"):
         values = node.get("values", value)
         fail(not isinstance(values, list) or len(values) > 1000, "Membership filters require a bounded value list.")
-        if pd.api.types.is_numeric_dtype(series):
+        if node.get("type") == "date":
+            try:
+                values = [date_value(v) for v in values]
+            except (ValueError, TypeError) as exc:
+                raise AnalyticsError("Invalid date membership value.", "invalid_dates") from exc
+        elif pd.api.types.is_numeric_dtype(series):
             try:
                 values = [float(v) for v in values]
             except (ValueError, TypeError) as exc:
@@ -246,6 +283,11 @@ def aggregate(frame: pd.DataFrame, query: dict, model: dict) -> tuple[list, dict
         fail(not isinstance(measure, dict), "Measures must be objects.")
         name = measure.get("id")
         fail(not isinstance(name, str) or not name.isidentifier() or len(name) > 64 or name in ids, "Measure IDs must be unique identifiers.")
+        post = measure.get("post", "none")
+        fail(post not in POST, "Unsupported post-aggregation calculation.")
+        if post == "moving_average":
+            window = measure.get("window", 3)
+            fail(type(window) is not int or not 1 <= window <= 100, "Moving average window must be 1–100.")
         ids.append(name)
     grouped, names = prepare_groups(frame, groups)
     fail(bool(set(names) & set(ids)), "Measure IDs cannot equal grouping field names.")
@@ -266,7 +308,8 @@ def aggregate(frame: pd.DataFrame, query: dict, model: dict) -> tuple[list, dict
         output = pd.DataFrame(rows).sort_values(sort["field"], ascending=sort.get("direction") != "desc", na_position="last", kind="stable")
         for measure in measures:
             post = measure.get("post", "none")
-            fail(post not in POST, "Unsupported post-aggregation calculation.")
+            if post == "none":
+                continue
             col = measure["id"]
             values = pd.to_numeric(output[col], errors="coerce")
             denominator = values.sum(min_count=1)
@@ -275,9 +318,7 @@ def aggregate(frame: pd.DataFrame, query: dict, model: dict) -> tuple[list, dict
             elif post == "running_total":
                 output[col] = values.cumsum()
             elif post == "moving_average":
-                window = measure.get("window", 3)
-                fail(type(window) is not int or not 1 <= window <= 100, "Moving average window must be 1–100.")
-                output[col] = values.rolling(window, min_periods=1).mean()
+                output[col] = values.rolling(measure.get("window", 3), min_periods=1).mean()
             elif post == "rank":
                 output[col] = values.rank(method="min", ascending=False)
             elif post == "cumulative_percent":
@@ -304,8 +345,7 @@ def execute_query(payload: dict) -> dict:
     fingerprint = hashlib.sha256(pd.util.hash_pandas_object(frame, index=False).values.tobytes() + str(list(frame.columns)).encode()).hexdigest()
     expected = payload.get("expected_fingerprint")
     fail(bool(expected and expected != fingerprint), "Dataset contents changed. Revalidate and run again.", "dataset_changed")
-    fields = [{"name": str(name), "type": "number" if pd.api.types.is_numeric_dtype(frame[name]) else "date" if pd.api.types.is_datetime64_any_dtype(frame[name]) else "string",
-               "examples": clean(frame[name].dropna().head(3).tolist())} for name in frame.columns]
+    fields = [describe_field(frame[name]) for name in frame.columns]
     dataset = {**{k: v for k, v in bundle["dataset_ref"].items() if k != "path"}, "fingerprint": fingerprint,
                "source_row_count": len(frame), "scope": payload.get("source", {}).get("row_scope", "full" if payload["source"]["kind"] != "inline" else "unknown")}
     base = {"schema_version": 1, "dataset": dataset, "fields": fields, "metrics": model.get("metrics", []),
@@ -321,12 +361,12 @@ def execute_query(payload: dict) -> dict:
         fail(not isinstance(period, dict), "period must be an object.")
         period_field = field(frame, period.get("field"))
         try:
-            end = pd.Timestamp(period.get("end") or datetime.now(timezone.utc).date(), tz="UTC").normalize()
+            end = date_value(period.get("end") or datetime.now(timezone.utc).date()).normalize()
             relative = period.get("last_days")
             if relative is not None:
                 fail(type(relative) is not int or not 1 <= relative <= 3660, "Relative period must be 1–3660 days.")
-            start = end - pd.Timedelta(days=relative - 1) if relative else pd.Timestamp(period.get("start"), tz="UTC").normalize()
-            fail(pd.isna(start) or pd.isna(end) or start > end, "Invalid period boundaries.")
+            start = end - pd.Timedelta(days=relative - 1) if relative else date_value(period.get("start")).normalize()
+            fail(start > end, "Invalid period boundaries.")
         except (ValueError, TypeError) as exc:
             raise AnalyticsError("Use valid YYYY-MM-DD period boundaries.") from exc
     def select_period(data, left, right):
@@ -345,6 +385,7 @@ def execute_query(payload: dict) -> dict:
         fail(not isinstance(columns, list) or len(columns) > 100, "Choose at most 100 detail columns.")
         for name in columns:
             field(current, name)
+        fail(len(set(columns)) != len(columns), "Detail columns must be unique.")
         detail = current[columns].copy()
         numeric_columns = query.get("numeric_columns", [])
         fail(not isinstance(numeric_columns, list) or len(numeric_columns) > 2, "Select at most two scatter fields.")
@@ -355,6 +396,7 @@ def execute_query(payload: dict) -> dict:
             detail[name] = numeric
         sort = query.get("sort")
         if sort:
+            fail(not isinstance(sort, dict) or sort.get("direction", "asc") not in ("asc", "desc"), "Invalid sort field or direction.")
             field(detail, sort.get("field"))
             detail = detail.sort_values(sort["field"], ascending=sort.get("direction") != "desc", kind="stable")
         total = len(detail)
@@ -407,7 +449,7 @@ def execute_query(payload: dict) -> dict:
             prior_start, prior_end = start - pd.DateOffset(years=1), end - pd.DateOffset(years=1)
         elif kind == "custom":
             try:
-                prior_start, prior_end = pd.Timestamp(compare["start"], tz="UTC"), pd.Timestamp(compare["end"], tz="UTC")
+                prior_start, prior_end = date_value(compare["start"]).normalize(), date_value(compare["end"]).normalize()
                 fail(prior_start > prior_end, "Comparison start exceeds end.")
             except (KeyError, ValueError, TypeError) as exc:
                 raise AnalyticsError("Invalid custom comparison dates.") from exc

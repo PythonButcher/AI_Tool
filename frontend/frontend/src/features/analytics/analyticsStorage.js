@@ -115,11 +115,27 @@ export function checkpoint(record) {
   return [...(revisions || []).slice(-9), { savedAt: new Date().toISOString(), value: clone(saved) }];
 }
 
+export function copyDashboard(board, name, sourceReview = false) {
+  const tileIds = new Map(board.items.map(tile => [tile.id, newId('dashboard-tile')]));
+  const copy = clone(board);
+  copy.state = { ...copy.state, id: newId('dashboard'), name };
+  if (copy.state.analyticsFilters) {
+    copy.state.analyticsFilters = copy.state.analyticsFilters.flatMap(filter => {
+      if (!filter.tileIds?.length) return [filter];
+      const remapped = filter.tileIds.map(id => tileIds.get(id)).filter(Boolean);
+      return remapped.length ? [{ ...filter, tileIds: remapped }] : [];
+    });
+  }
+  copy.items = copy.items.map(item => ({ ...item, id: tileIds.get(item.id),
+    requiresSourceReview: sourceReview || item.requiresSourceReview }));
+  copy.revisions = [];
+  return copy;
+}
+
 export function importCollection(input, current) {
   const imported = normalizeWorkspace(input);
   // Import creates distinct objects, never overwrites existing work or executes queries.
-  const dashboards = imported.dashboards.map(board => ({ ...clone(board), state: { ...board.state, id: newId('dashboard'), name: `${board.state.name} (imported)` },
-    items: board.items.map(item => ({ ...clone(item), id: newId('dashboard-tile'), requiresSourceReview: true })), revisions: [] }));
+  const dashboards = imported.dashboards.map(board => copyDashboard(board, `${board.state.name} (imported)`, true));
   const explorations = imported.explorations.map(analysis => ({ ...clone(analysis), id: newId('analysis'), name: `${analysis.name} (imported)`,
     requiresSourceReview: true, revisions: [] }));
   return { ...current, dashboards: [...current.dashboards, ...dashboards], explorations: [...current.explorations, ...explorations] };

@@ -1,13 +1,28 @@
-import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import {
+  FaArrowLeft, FaBolt, FaBookmark, FaChartBar, FaChartLine, FaChevronDown,
+  FaCode, FaColumns, FaCopy, FaDatabase, FaDownload,
+  FaCompress, FaEllipsisH, FaExpand, FaFilePdf, FaFolderOpen, FaHistory, FaLayerGroup,
+  FaPalette, FaPlay, FaPlus, FaPrint, FaRedo, FaRobot, FaSearch,
+  FaTable, FaThLarge, FaThumbtack, FaTimes, FaTrash, FaUndo, FaUpload,
+} from 'react-icons/fa';
 import { DataContext, normalizeDatasetRows, useActiveDataset, useSemanticModel } from '../../context/DataContext';
 import { useWindowContext } from '../../context/WindowContext';
 import AnalyticsBuilder from './AnalyticsBuilder';
 import AnalyticsDashboard from './AnalyticsDashboard';
 import AnalyticsResult from './AnalyticsResult';
 import AnalyticsAppearance from './AnalyticsAppearance';
-import { API, defaultAnalysis, download, inlineIdentity, queryAnalytics, querySignature, tableCsv } from './analyticsModel';
-import { checkpoint, clone, emptyDashboard, importCollection, newId } from './analyticsStorage';
+import { API, defaultAnalysis, download, inlineIdentity, overviewTiles, queryAnalytics, querySignature, sourceKey, tableCsv, withDashboardFilters } from './analyticsModel';
+import { checkpoint, clone, copyDashboard, emptyDashboard, importCollection, newId } from './analyticsStorage';
 import './AnalyticsShell.css';
+
+const TOOLS = [
+  { id: 'library', label: 'Library', icon: FaFolderOpen, description: 'Saved dashboards, analyses, drafts, and templates' },
+  { id: 'format', label: 'Format', icon: FaPalette, description: 'Chart appearance and tile properties' },
+  { id: 'reports', label: 'Reports', icon: FaDownload, description: 'Export and print reports or back up the workspace' },
+  { id: 'ai', label: 'AI & Charts', icon: FaRobot, description: 'Chart gallery, AI Chart, and AI Chat' },
+  { id: 'history', label: 'History', icon: FaHistory, description: 'Undo, redo, and restore saved revisions' },
+];
 
 export default function AnalyticsShell({ onOpenAiChat, onOpenGallery, onOpenAiChart }) {
   const { analyticsWorkspace: workspace, updateAnalyticsWorkspace: commit, analyticsStorage } = useWindowContext();
@@ -23,8 +38,7 @@ export default function AnalyticsShell({ onOpenAiChat, onOpenGallery, onOpenAiCh
   const [resultConfig, setResultConfig] = useState(() => workspace.drafts.current?.resultConfig || saved?.config || null);
   const [dirty, setDirty] = useState(!!workspace.drafts.current);
   const [origin, setOrigin] = useState(workspace.drafts.current?.origin || null);
-  const [fields, setFields] = useState([]);
-  const [metrics, setMetrics] = useState([]);
+  const [metadata, setMetadata] = useState(null);
   const [sources, setSources] = useState([]);
   const [status, setStatus] = useState('idle');
   const [error, setError] = useState('');
@@ -34,8 +48,9 @@ export default function AnalyticsShell({ onOpenAiChat, onOpenGallery, onOpenAiCh
   const [actionSearch, setActionSearch] = useState('');
   const [actionsOpen, setActionsOpen] = useState(false);
   const [favorites, setFavorites] = useState(false);
-  const [libraryOpen, setLibraryOpen] = useState(() => window.innerWidth > 760);
-  const [inspectorOpen, setInspectorOpen] = useState(() => window.innerWidth > 1200);
+  const [toolPanel, setToolPanel] = useState(null);
+  const [activeMenuId, setActiveMenuId] = useState(null);
+  const [lineageOpen, setLineageOpen] = useState(false);
   const [focus, setFocus] = useState(false);
   const [dense, setDense] = useState(false);
   const [selectedTile, setSelectedTile] = useState(null);
@@ -49,11 +64,48 @@ export default function AnalyticsShell({ onOpenAiChat, onOpenGallery, onOpenAiCh
   const draftSnapshot = useRef(null);
   draftSnapshot.current = dirty ? { config: draft, resultConfig, result, origin, analysisId: workspace.activeAnalysisId, savedAt: new Date().toISOString() } : null;
   const shellRef = useRef(null);
+  const focusButtonRef = useRef(null);
   const importRef = useRef(null);
+  const switcherRef = useRef(null);
+  const commandRef = useRef(null);
+  const toolRailRef = useRef(null);
+  const panelHeadingRef = useRef(null);
   const board = workspace.dashboards.find(d => d.state.id === workspace.activeDashboardId);
   const mode = workspace.lastView;
-  const attachments = useMemo(() => ({ rows, inlineId, model, selectedSource: draft.source }), [rows, inlineId, model, draft.source]);
   const allSources = useMemo(() => [defaultSource, analysisContext && { kind: 'workspace', id: analysisContext.workspace_id, name: 'Active governed workspace', analysis_context: analysisContext }, ...sources].filter(Boolean), [defaultSource, analysisContext, sources]);
+  const dashboardSource = board.state.analyticsSource || defaultSource;
+  const selectedSource = mode === 'explore' ? draft.source : dashboardSource;
+  const attachments = useMemo(() => ({ rows, inlineId, model }), [rows, inlineId, model]);
+  const sourceSignature = selectedSource ? JSON.stringify(selectedSource) : '';
+  const sourceMetadata = metadata?.signature === sourceSignature && metadata.attachments === attachments ? metadata : null;
+  const fields = sourceMetadata?.fields || [];
+  const metrics = sourceMetadata?.metrics || [];
+  useLayoutEffect(() => {
+    if (!focus) return undefined;
+    const shell = shellRef.current;
+    const focusButton = focusButtonRef.current;
+    // Move the same workspace into the browser's top layer without remounting
+    // the canvas, queries, or draft. A browser without popovers keeps it inline.
+    if (typeof shell.showPopover === 'function' && typeof shell.hidePopover === 'function') {
+      shell.setAttribute('popover', 'manual');
+      try {
+        shell.showPopover();
+      } catch {
+        shell.removeAttribute('popover');
+      }
+    }
+    focusButton.focus({ preventScroll: true });
+    return () => {
+      if (shell.hasAttribute('popover')) {
+        shell.hidePopover();
+        shell.removeAttribute('popover');
+      }
+      if (focusButton.isConnected) focusButton.focus({ preventScroll: true });
+    };
+  }, [focus]);
+  useLayoutEffect(() => {
+    panelHeadingRef.current?.focus({ preventScroll: true });
+  }, [toolPanel]);
   const cancel = useCallback(() => { request.current?.abort(); sequence.current += 1; setStatus('idle'); }, []);
   const preserveDraft = useCallback((next, archive = false) => {
     if (!draftSnapshot.current) return next;
@@ -93,16 +145,34 @@ export default function AnalyticsShell({ onOpenAiChat, onOpenGallery, onOpenAiCh
     if (!draft.source && defaultSource) setDraft(previous => ({ ...previous, source: defaultSource }));
   }, [defaultSource, draft.source]);
   useEffect(() => {
-    if (!draft.source) { setFields([]); setMetrics([]); return undefined; }
+    if (!sourceSignature) return undefined;
+    const source = JSON.parse(sourceSignature);
     const controller = new AbortController();
-    setFields([]); setMetrics([]);
-    queryAnalytics(draft, attachments, { signal: controller.signal, metadataOnly: true }).then(data => {
-      if (!controller.signal.aborted) { setFields(data.fields); setMetrics(data.metrics || []); }
-    }).catch(failure => { if (!controller.signal.aborted) setError(failure.message); });
+    queryAnalytics(defaultAnalysis(source), attachments, { signal: controller.signal, metadataOnly: true }).then(data => {
+      if (!controller.signal.aborted) setMetadata({ signature: sourceSignature, attachments, fields: data.fields, metrics: data.metrics });
+    }).catch(failure => { if (!controller.signal.aborted) setMetadata({ signature: sourceSignature, attachments, error: failure.message }); });
     return () => controller.abort();
-    // Metadata follows source identity, not each builder keystroke.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [draft.source, attachments.inlineId, attachments.model]);
+  }, [sourceSignature, attachments]);
+  useEffect(() => {
+    const dismiss = event => {
+      if (event.type === 'keydown' && event.key !== 'Escape') return;
+      const onEscape = event.type === 'keydown';
+      if (switcherRef.current?.open && (onEscape || !switcherRef.current.contains(event.target))) {
+        switcherRef.current.open = false;
+        if (onEscape) switcherRef.current.querySelector('summary')?.focus();
+      }
+      if (!commandRef.current?.contains(event.target) || onEscape) {
+        if (onEscape && commandRef.current?.contains(event.target)) commandRef.current.querySelector('button')?.focus();
+        setActionsOpen(false);
+      }
+    };
+    document.addEventListener('pointerdown', dismiss);
+    document.addEventListener('keydown', dismiss);
+    return () => {
+      document.removeEventListener('pointerdown', dismiss);
+      document.removeEventListener('keydown', dismiss);
+    };
+  }, []);
   useEffect(() => {
     if (!dirty || mode !== 'explore') return undefined;
     const timer = setTimeout(() => commit(next => preserveDraft(next)), 800);
@@ -119,13 +189,23 @@ export default function AnalyticsShell({ onOpenAiChat, onOpenGallery, onOpenAiCh
     } catch (failure) { if (!controller.signal.aborted && id === sequence.current) { setError(failure.message); setStatus('error'); } }
   };
   const remember = (next, id) => ({ ...next, recent: [id, ...(next.recent || []).filter(v => v !== id)].slice(0, 30) });
-  const switchMode = nextMode => { cancel(); commit(next => ({ ...preserveDraft(next), lastView: nextMode })); };
+  const switchMode = nextMode => { if (nextMode === mode) return; cancel(); setError(''); commit(next => ({ ...preserveDraft(next), lastView: nextMode })); };
+  const openDashboard = id => {
+    cancel(); setError('');
+    commit(next => remember({ ...preserveDraft(next), activeDashboardId: id, lastView: 'dashboards' }, id));
+  };
   const openAnalysis = analysis => {
     if (!commit(next => remember({ ...preserveDraft(next, true), lastView: 'explore', activeAnalysisId: analysis.id }, analysis.id))) return;
     cancel(); setDraft({ ...clone(analysis.config), requiresSourceReview: !!analysis.requiresSourceReview }); setResult(analysis.result || null); setResultConfig(analysis.config); setDirty(false); setOrigin(null); setHistory({ past: [], future: [] });
     if (analysis.requiresSourceReview) setError('Review the imported source and select a dataset before running.');
   };
-  const startAnalysis = () => { if (!commit(next => ({ ...preserveDraft(next, true), lastView: 'explore', activeAnalysisId: null }))) return; cancel(); setDraft(defaultAnalysis(defaultSource || allSources[0])); setResult(null); setResultConfig(null); setDirty(false); setOrigin(null); setHistory({ past: [], future: [] }); };
+  const startAnalysis = (view = 'bar', title, starter) => {
+    if (!commit(next => ({ ...preserveDraft(next, true), lastView: 'explore', activeAnalysisId: null }))) return;
+    cancel();
+    setDraft(starter || { ...defaultAnalysis(selectedSource), view, ...(title ? { title } : {}) });
+    setResult(null); setResultConfig(null); setDirty(!!(starter || title)); setOrigin(null); setHistory({ past: [], future: [] }); setDrillHistory([]); setError('');
+    if (mode === 'dashboards') setTargetBoard(board.state.id);
+  };
   const saveAnalysis = useCallback(() => {
     if (!draftRef.current.title.trim()) { setError('Give this analysis a name.'); return; }
     const id = workspace.activeAnalysisId || newId('analysis');
@@ -153,24 +233,36 @@ export default function AnalyticsShell({ onOpenAiChat, onOpenGallery, onOpenAiCh
   }, [mode, history, draft, cancel, boardHistory, commit, board]);
   useEffect(() => {
     const listener = event => {
+      if (event.key === 'Escape' && focus) {
+        event.preventDefault();
+        setFocus(false);
+        return;
+      }
       if (!(event.ctrlKey || event.metaKey)) return;
       if (event.key === 'k') { event.preventDefault(); setActionsOpen(value => !value); }
       if (event.key === 's') { event.preventDefault(); if (mode === 'explore') saveAnalysis(); }
       if (event.key === 'z' && !['INPUT', 'TEXTAREA'].includes(event.target.tagName)) { event.preventDefault(); undo(event.shiftKey); }
     };
     window.addEventListener('keydown', listener); return () => window.removeEventListener('keydown', listener);
-  }, [mode, saveAnalysis, undo]);
+  }, [focus, mode, saveAnalysis, undo]);
   const changeBoard = nextBoard => {
-    if (commit(next => ({ ...next, dashboards: next.dashboards.map(b => b.state.id === nextBoard.state.id ? { ...nextBoard, state: { ...nextBoard.state, updatedAt: new Date().toISOString() }, revisions: checkpoint(b) } : b) }))) {
+    const saved = commit(next => ({ ...next, dashboards: next.dashboards.map(b => b.state.id === nextBoard.state.id ? { ...nextBoard, state: { ...nextBoard.state, updatedAt: new Date().toISOString() }, revisions: checkpoint(b) } : b) }));
+    if (saved) {
       setBoardHistory(h => ({ past: [...h.past.slice(-19), clone(board)], future: [] }));
     }
+    return saved;
+  };
+  const makeOverviewItems = () => overviewTiles(selectedSource, fields).map(item => ({ ...item, id: newId('dashboard-tile') }));
+  const canGenerateOverview = !!sourceMetadata?.fields && !(mode === 'explore' && draft.requiresSourceReview);
+  const generateOverview = () => {
+    if (!canGenerateOverview || board.items.length) return;
+    changeBoard({ ...board, state: { ...board.state, mode: 'edit', analyticsSource: selectedSource }, items: makeOverviewItems() });
   };
   const createBoard = template => {
     const name = window.prompt('Dashboard name', template ? 'Business overview' : 'New dashboard'); if (!name?.trim()) return;
     const value = emptyDashboard(name.trim());
-    if (template) value.items = ['Key metric', 'Trend', 'Breakdown'].map((title, i) => ({ id: newId('dashboard-tile'), itemType: 'chart', title,
-      analysis: { ...defaultAnalysis(defaultSource || allSources[0]), title, view: i ? 'bar' : 'kpi' }, result: null,
-      layout: { x: i === 2 ? 6 : 0, y: i ? 4 : 0, w: i ? 6 : 12, h: i ? 7 : 4 } }));
+    value.state.analyticsSource = selectedSource;
+    if (template && canGenerateOverview) value.items = makeOverviewItems();
     commit(next => ({ ...preserveDraft(next), dashboards: [...next.dashboards, value], activeDashboardId: value.state.id, lastView: 'dashboards' }));
   };
   const saveTemplate = () => {
@@ -179,10 +271,11 @@ export default function AnalyticsShell({ onOpenAiChat, onOpenGallery, onOpenAiCh
     if (commit(next => ({ ...next, templates: [...next.templates, template] }))) setNotice('Reusable layout saved. Fixed AI snapshots are excluded; live definitions and notes are retained.');
   };
   const instantiateTemplate = template => {
-    if (!draft.source) { setError('Choose the dataset for this template first.'); return; }
+    if (!selectedSource || (mode === 'explore' && draft.requiresSourceReview)) { setError('Choose and confirm the dataset for this template first.'); return; }
     const value = emptyDashboard(`${template.name} dashboard`);
+    value.state.analyticsSource = selectedSource;
     value.items = template.items.map(item => ({ ...clone(item), id: newId('dashboard-tile'), requiresSourceReview: false,
-      analysis: item.analysis ? { ...item.analysis, source: clone(draft.source), requiresSourceReview: false } : undefined }));
+      analysis: item.analysis ? { ...item.analysis, source: clone(selectedSource), requiresSourceReview: false } : undefined }));
     commit(next => ({ ...preserveDraft(next), dashboards: [...next.dashboards, value], activeDashboardId: value.state.id, lastView: 'dashboards' }));
   };
   const manageObject = (kind, id, action) => {
@@ -199,10 +292,12 @@ export default function AnalyticsShell({ onOpenAiChat, onOpenGallery, onOpenAiCh
         if (next.activeDashboardId === id) next.activeDashboardId = next.dashboards[0].state.id;
         if (next.activeAnalysisId === id) next.activeAnalysisId = null;
       } else if (action === 'duplicate') {
-        const copied = clone(value); const newIdentity = newId(kind);
-        if (kind === 'dashboard') { copied.state.id = newIdentity; copied.state.name += ' (copy)'; copied.items = copied.items.map(item => ({ ...item, id: newId('dashboard-tile') })); }
-        else { copied.id = newIdentity; copied.name += ' (copy)'; copied.config.title = copied.name; }
-        copied.revisions = []; next[key].push(copied);
+        if (kind === 'dashboard') next[key].push(copyDashboard(value, `${meta.name} (copy)`));
+        else {
+          const copied = { ...clone(value), id: newId(kind), name: `${meta.name} (copy)`, revisions: [] };
+          copied.config.title = copied.name;
+          next[key].push(copied);
+        }
       } else {
         next[key] = next[key].map(v => {
           const m = kind === 'dashboard' ? v.state : v; if (m.id !== id) return v;
@@ -213,14 +308,15 @@ export default function AnalyticsShell({ onOpenAiChat, onOpenGallery, onOpenAiCh
       return next;
     });
   };
-  const investigate = (item, filters) => {
+  const investigate = (item, filters, liveResult) => {
     if (!commit(next => ({ ...preserveDraft(next, true), lastView: 'explore', activeAnalysisId: null }))) return;
-    const config = clone(item.analysis || { ...defaultAnalysis(defaultSource), title: item.title,
+    const base = clone(item.analysis || { ...defaultAnalysis(defaultSource), title: item.title,
       query: { ...defaultAnalysis(defaultSource).query, measures: [{ id: 'value', field: item.mapping?.['Y-Axis'], aggregation: item.mapping?.['Y-Axis'] ? 'sum' : 'count_rows', metric_id: item.semanticConfig?.metricId || undefined }], group_by: item.mapping?.['X-Axis'] ? [{ field: item.mapping['X-Axis'] }] : [] } });
-    config.query.filters = { op: 'and', rules: [config.query.filters || [], ...filters.filter(f => !f.sourceId || f.sourceId === config.source?.id).map(f => f.rule)] };
+    const config = withDashboardFilters(base, filters);
     config.requiresSourceReview = !!item.requiresSourceReview;
     setOrigin({ boardId: board.state.id, itemId: item.id, original: JSON.stringify(item) });
-    cancel(); setDraft(config); setResult(item.result || null); setResultConfig(item.result ? item.analysis : null); setDirty(true); setDrillHistory([]);
+    const retained = liveResult || item.result || null;
+    cancel(); setDraft(config); setResult(retained); setResultConfig(liveResult ? config : item.result ? item.analysis : null); setDirty(true); setDrillHistory([]); setHistory({ past: [], future: [] });
   };
   const pin = update => {
     if (!result || querySignature(resultConfig) !== querySignature(draft) || draft.requiresSourceReview) { setError('Run the current analysis before saving a dashboard result.'); return; }
@@ -233,8 +329,9 @@ export default function AnalyticsShell({ onOpenAiChat, onOpenGallery, onOpenAiCh
         const original = b.items.find(item => item.id === origin.itemId);
         if (!original || JSON.stringify(original) !== origin.original) throw new Error('The original tile changed or was removed. Pin a copy instead.');
       }
-      const item = { ...(update ? b.items.find(i => i.id === origin.itemId) : {}), id: update ? origin.itemId : newId('dashboard-tile'), itemType: 'chart', title: draft.title, analysis: clone(draft), result: clone(result), requiresSourceReview: false,
-        layout: update ? b.items.find(i => i.id === origin.itemId).layout : { x: 0, y: Math.max(0, ...b.items.map(i => (i.layout?.y || 0) + (i.layout?.h || 7))), w: 6, h: 7 }, updatedAt: new Date().toISOString() };
+      const kpi = draft.view === 'kpi';
+      const item = { ...(update ? b.items.find(i => i.id === origin.itemId) : {}), id: update ? origin.itemId : newId('dashboard-tile'), itemType: kpi ? 'kpi' : 'chart', title: draft.title, analysis: clone(draft), result: clone(result), requiresSourceReview: false,
+        layout: update ? b.items.find(i => i.id === origin.itemId).layout : { x: 0, y: Math.max(0, ...b.items.map(i => (i.layout?.y || 0) + (i.layout?.h || 7))), w: kpi ? 4 : 6, h: kpi ? 4 : 7 }, updatedAt: new Date().toISOString() };
       updatedItem = item;
       return { ...b, revisions: checkpoint(b), items: update ? b.items.map(i => i.id === item.id ? item : i) : [...b.items, item] };
     }) }));
@@ -264,119 +361,390 @@ export default function AnalyticsShell({ onOpenAiChat, onOpenGallery, onOpenAiCh
   const objects = [...workspace.dashboards.map(b => ({ ...b.state, kind: 'dashboard' })), ...workspace.explorations.map(a => ({ ...a, kind: 'analysis' }))]
     .filter(item => (!favorites || item.favorite) && `${item.name} ${(item.tags || []).join(' ')}`.toLowerCase().includes(search.toLowerCase()))
     .sort((a, b) => sort === 'name' ? a.name.localeCompare(b.name) : String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')));
+  const recoveredDrafts = Object.entries(workspace.drafts).filter(([key, value]) => key !== 'current' && value);
+  const restoreDraft = (key, value) => {
+    if (!commit(next => {
+      const drafts = { ...next.drafts };
+      delete drafts[key];
+      const retained = preserveDraft({ ...next, drafts }, key !== 'current');
+      return { ...retained, drafts: { ...retained.drafts, current: clone(value) }, activeAnalysisId: value.analysisId || null, lastView: 'explore' };
+    })) return;
+    cancel(); setDraft(clone(value.config)); setResult(value.result); setResultConfig(value.resultConfig);
+    setDirty(true); setOrigin(value.origin || null); setHistory({ past: [], future: [] }); setDrillHistory([]); setError('');
+  };
   const inspected = board.items.find(item => item.id === selectedTile);
+  const resultIsCurrent = !!result && querySignature(resultConfig) === querySignature(draft);
   const appearance = mode === 'explore' ? draft.appearance || {} : inspected?.analysis?.appearance || inspected?.display || {};
   const changeAppearance = patch => mode === 'explore' ? changeDraft({ ...draft, appearance: { ...appearance, ...patch } }) : inspected && changeBoard({ ...board, items: board.items.map(item => item.id === inspected.id ? { ...item, analysis: item.analysis ? { ...item.analysis, appearance: { ...appearance, ...patch } } : undefined, display: { ...item.display, ...patch } } : item) });
-  const actions = [{ name: 'New analysis', run: startAnalysis }, { name: 'New dashboard', run: () => createBoard(false) },
-    { name: 'Save analysis', run: saveAnalysis }, { name: 'Undo', run: () => undo(false) }, { name: 'Redo', run: () => undo(true) },
-    { name: 'Export report PDF', run: exportPdf }, { name: 'Toggle focus', run: () => setFocus(value => !value) },
-    { name: 'Chart gallery', run: onOpenGallery }, { name: 'AI Chart', run: onOpenAiChart }];
+  const currentHistory = mode === 'explore' ? history : boardHistory;
+  const activeTool = TOOLS.find(tool => tool.id === toolPanel);
+  const revisions = (mode === 'explore' ? saved?.revisions : board.revisions) || [];
+  const showTool = (id, toggle = false) => {
+    setFocus(false);
+    setToolPanel(previous => toggle && previous === id ? null : id);
+  };
+  const closeTool = () => {
+    toolRailRef.current?.querySelector(`[data-tool="${toolPanel}"]`)?.focus();
+    setToolPanel(null);
+  };
+  const launchTool = launch => {
+    setFocus(false);
+    launch?.();
+  };
+  const discussInChat = () => {
+    const config = mode === 'explore' ? draft : { ...defaultAnalysis(selectedSource), title: board.state.name };
+    try {
+      if (!config.source || config.requiresSourceReview) throw new Error('Confirm the selected dataset first.');
+      sessionStorage.setItem('analytics:chat-context', JSON.stringify({ source: config.source, query: config.query, title: config.title }));
+      launchTool(onOpenAiChat);
+      window.dispatchEvent(new Event('analytics:chat-context'));
+    } catch (failure) {
+      setError(failure.message);
+    }
+  };
+  const exportWorkspace = () => download('analytics-workspace.json', JSON.stringify(workspace, null, 2), 'application/json');
+  const exportDefinitions = () => {
+    const definitions = { ...workspace, drafts: {},
+      dashboards: workspace.dashboards.map(value => ({ ...value, revisions: [], items: value.items.map(item => ({ ...item, result: null })) })),
+      explorations: workspace.explorations.map(value => ({ ...value, result: null, revisions: [] })) };
+    download('analytics-definitions.json', JSON.stringify(definitions, null, 2), 'application/json');
+  };
+  const exportCsv = () => download('analytics-result.csv', tableCsv(result), 'text/csv;charset=utf-8');
+  const actionGroups = [
+    { label: 'Tool panels', actions: TOOLS.map(tool => ({ name: tool.label, detail: tool.description, run: () => showTool(tool.id) })) },
+    { label: 'Workspace actions', actions: [
+      { name: 'New analysis', run: () => startAnalysis() }, { name: 'New dashboard', run: () => createBoard(false) },
+      ...(mode === 'explore' ? [{ name: 'Run analysis', run, disabled: status === 'loading' || !draft.source }, { name: 'Save analysis', detail: 'Ctrl/Cmd+S', run: saveAnalysis }, { name: 'Inspect detail rows', run: detail }] : []),
+      { name: 'Undo', run: () => undo(false), disabled: !currentHistory.past.length },
+      { name: 'Redo', run: () => undo(true), disabled: !currentHistory.future.length },
+      { name: dense ? 'Comfortable density' : 'Compact density', run: () => setDense(value => !value) },
+      { name: focus ? 'Exit focus' : 'Enter focus', run: () => setFocus(value => !value) },
+    ] },
+    { label: 'Export and open', actions: [
+      { name: 'Export report PDF', run: exportPdf },
+      { name: 'Export result CSV', run: exportCsv, disabled: mode !== 'explore' || !result },
+      { name: 'Print presentation', run: () => window.print() },
+      { name: 'Chart gallery', run: () => launchTool(onOpenGallery) },
+      { name: 'AI Chart', run: () => launchTool(onOpenAiChart) },
+      { name: 'Discuss in AI Chat', run: discussInChat },
+    ] },
+  ];
+  const matchingGroups = actionGroups.map(group => ({ ...group, actions: group.actions.filter(action =>
+    `${action.name} ${action.detail || ''}`.toLowerCase().includes(actionSearch.trim().toLowerCase())) })).filter(group => group.actions.length);
+
   return <section ref={shellRef} className={`analytics-shell ${focus ? 'is-focus' : ''} ${dense ? 'is-dense' : ''}`} aria-label="Analytics workspace">
     <header className="analytics-header">
-      <div className="analytics-title-block">
-        <span className="analytics-eyebrow">Analytics · {mode === 'explore' ? 'Analysis Workbench' : 'Dashboard Monitor'}</span>
-        <h1>{mode === 'explore' ? draft.title : board.state.name}</h1>
-      </div>
-      <div className="analytics-header-controls">
-        <button type="button" onClick={() => setLibraryOpen(!libraryOpen)} aria-expanded={libraryOpen}>Library</button>
-        <div className="analytics-mode-switch" role="group" aria-label="Analytics view mode">
-          <button type="button" onClick={() => switchMode('dashboards')} aria-pressed={mode === 'dashboards'}>Dashboard</button>
-          <button type="button" onClick={() => switchMode('explore')} aria-pressed={mode === 'explore'}>Analysis</button>
+      <details className="analytics-switcher" ref={switcherRef}>
+        <summary aria-label={`Workspace switcher: ${mode === 'explore' ? draft.title : board.state.name}`}>
+          <span className="analytics-brand-badge"><FaChartLine /></span>
+          <span className="analytics-title-block">
+            <span className="analytics-eyebrow">Analytics Studio</span>
+            <span className="analytics-workspace-name">{mode === 'explore' ? draft.title || 'Untitled analysis' : board.state.name}</span>
+          </span>
+          <FaChevronDown className="analytics-switcher-chevron" />
+        </summary>
+        <div className="analytics-switcher-menu">
+          <div className="analytics-menu-heading">{mode === 'explore' ? 'Saved analyses' : 'Dashboards'}</div>
+          <div className="analytics-switcher-assets">
+            {mode === 'explore' ? workspace.explorations.map(analysis => (
+              <button type="button" key={analysis.id} aria-current={analysis.id === workspace.activeAnalysisId ? 'true' : undefined}
+                onClick={() => { switcherRef.current.open = false; openAnalysis(analysis); }}>
+                <FaChartBar /><span>{analysis.name}</span>
+              </button>
+            )) : workspace.dashboards.map(({ state }) => (
+              <button type="button" key={state.id} aria-current={state.id === workspace.activeDashboardId ? 'true' : undefined}
+                onClick={() => { switcherRef.current.open = false; openDashboard(state.id); }}>
+                <FaThLarge /><span>{state.name}</span>
+              </button>
+            ))}
+          </div>
+          <div className="analytics-switcher-actions">
+            <button type="button" onClick={() => { switcherRef.current.open = false; startAnalysis(); }}><FaPlus /><span>New analysis</span></button>
+            <button type="button" onClick={() => { switcherRef.current.open = false; createBoard(false); }}><FaThLarge /><span>New dashboard</span></button>
+            <button type="button" aria-expanded={toolPanel === 'library' && !focus} onClick={() => { switcherRef.current.open = false; showTool('library'); }}>
+              <FaFolderOpen /><span>Open Library</span>{recoveredDrafts.length > 0 && <small>{recoveredDrafts.length} recoverable</small>}
+            </button>
+          </div>
         </div>
-        <button type="button" onClick={() => setInspectorOpen(!inspectorOpen)} aria-expanded={inspectorOpen}>Inspector</button>
-        <button type="button" onClick={() => setFocus(!focus)}>{focus ? 'Exit focus' : 'Focus'}</button>
-        <div className="analytics-command-wrap">
-          <button type="button" onClick={() => setActionsOpen(value => !value)} aria-expanded={actionsOpen}>Search actions · Ctrl/Cmd+K</button>
+      </details>
+
+      <div className="analytics-header-context">
+        <div className="analytics-mode-switch" role="group" aria-label="Analytics view mode">
+          <button type="button" onClick={() => switchMode('dashboards')} aria-label="Dashboard" title="Dashboard" aria-pressed={mode === 'dashboards'}><FaThLarge /><span>Dashboard</span></button>
+          <button type="button" onClick={() => switchMode('explore')} aria-label="Analysis" title="Analysis" aria-pressed={mode === 'explore'}><FaChartBar /><span>Analysis</span></button>
+        </div>
+        <div className="analytics-dataset-pill" title={selectedSource?.name || 'Choose a dataset'}>
+          <FaDatabase className="analytics-dataset-icon" />
+          <select aria-label="Analytics dataset" value={sourceKey(selectedSource)} onChange={event => {
+            const source = allSources.find(option => sourceKey(option) === event.target.value);
+            if (!source) return;
+            setError('');
+            if (mode === 'explore') changeDraft({ ...draft, source, requiresSourceReview: false });
+            else changeBoard({ ...board, state: { ...board.state, analyticsSource: source } });
+          }}>
+            <option value="" disabled>Choose a dataset</option>
+            {selectedSource && !allSources.some(source => sourceKey(source) === sourceKey(selectedSource)) && <option value={sourceKey(selectedSource)}>{selectedSource.name || selectedSource.id} (unavailable)</option>}
+            {allSources.map(source => <option key={sourceKey(source)} value={sourceKey(source)}>{source.name}</option>)}
+          </select>
+        </div>
+      </div>
+
+      <div className="analytics-header-tools">
+        {mode === 'explore' && <button type="button" className="is-primary analytics-run-btn" onClick={run} disabled={status === 'loading' || !draft.source} aria-label="Run analysis" title="Run analysis">
+          <FaPlay /><span>{status === 'loading' ? 'Running…' : 'Run analysis'}</span>
+        </button>}
+        <button type="button" className="analytics-icon-btn analytics-history-btn" onClick={() => undo(false)} aria-label="Undo" disabled={!currentHistory.past.length} title="Undo (Ctrl/Cmd+Z)"><FaUndo /></button>
+        <button type="button" className="analytics-icon-btn analytics-history-btn" onClick={() => undo(true)} aria-label="Redo" disabled={!currentHistory.future.length} title="Redo (Ctrl/Cmd+Shift+Z)"><FaRedo /></button>
+        <div className="analytics-command-wrap" ref={commandRef}>
+          <button type="button" className="analytics-header-command" onClick={() => setActionsOpen(value => !value)} aria-label="Commands" aria-keyshortcuts="Control+K Meta+K" title="Commands (Ctrl/Cmd+K)" aria-expanded={actionsOpen}><FaSearch /><span>Commands</span></button>
           {actionsOpen && <div className="analytics-command-popover" role="search">
-            <input autoFocus aria-label="Search Analytics actions" placeholder="Type a command…" value={actionSearch} onChange={e => setActionSearch(e.target.value)} onKeyDown={e => { if (e.key === 'Escape') setActionsOpen(false); }} />
-            {actions.filter(action => action.name.toLowerCase().includes(actionSearch.toLowerCase())).map(action => <button type="button" key={action.name} onClick={() => { action.run?.(); setActionsOpen(false); }}>{action.name}</button>)}
+            <div className="analytics-search-box">
+              <FaSearch className="analytics-search-icon" />
+              <input autoFocus aria-label="Search Analytics actions" placeholder="Find a tool or action…" value={actionSearch} onChange={e => setActionSearch(e.target.value)} />
+            </div>
+            <div className="analytics-command-list">
+              {matchingGroups.map(group => <div key={group.label}>
+                <div className="analytics-menu-heading">{group.label}</div>
+                {group.actions.map(action => (
+                  <button type="button" key={action.name} disabled={action.disabled} onClick={() => { action.run(); setActionsOpen(false); setActionSearch(''); }}>
+                    <FaBolt /><span>{action.name}{action.detail && <small>{action.detail}</small>}</span>
+                  </button>
+                ))}
+              </div>)}
+              {!matchingGroups.length && <p className="analytics-empty-hint">No matching tools or actions.</p>}
+            </div>
           </div>}
         </div>
+        <button ref={focusButtonRef} type="button" className={`analytics-focus-button ${focus ? 'is-primary' : ''}`}
+          title={focus ? 'Exit focus (Esc)' : 'Enter focus mode'} aria-pressed={focus} onClick={() => setFocus(value => !value)}>
+          {focus ? <FaCompress /> : <FaExpand />}<span>{focus ? 'Exit focus' : 'Focus'}</span>
+          {focus && <kbd aria-hidden="true">Esc</kbd>}
+        </button>
       </div>
     </header>
-    <div className="analytics-context">
-      <div className="analytics-context-left">
-        <label>Dataset<select aria-label="Analytics dataset" value={draft.source ? `${draft.source.kind}:${draft.source.id}` : ''} onChange={e => { const source = allSources.find(s => `${s.kind}:${s.id}` === e.target.value); if (source) changeDraft({ ...draft, source, requiresSourceReview: false }); }}><option value="">Choose a dataset</option>{draft.source && !allSources.some(s => s.kind === draft.source.kind && s.id === draft.source.id) && <option value={`${draft.source.kind}:${draft.source.id}`}>{draft.source.name || draft.source.id} (reattach source)</option>}{allSources.map(s => <option key={`${s.kind}:${s.id}`} value={`${s.kind}:${s.id}`}>{s.name}</option>)}</select></label>
-        {draft.requiresSourceReview && <button type="button" className="is-primary" onClick={() => { const source = allSources.find(s => s.kind === draft.source?.kind && s.id === draft.source?.id); if (source) changeDraft({ ...draft, source, requiresSourceReview: false }); else setError('Reattach this source or choose an available dataset.'); }}>Confirm imported dataset</button>}
-        {!!fields.length && <span className="analytics-status-pill">{fields.length} fields{metrics.length ? ` · ${metrics.length} governed metrics` : ''}</span>}
-      </div>
-      <div className="analytics-context-right">
-        <span className={`analytics-status-pill ${mode === 'explore' && dirty ? 'is-dirty' : ''}`}>{mode === 'explore' ? dirty ? 'Unsaved analysis · draft autosaves locally' : 'Saved analysis' : 'Dashboard changes save locally'}</span>
-        <button type="button" onClick={() => undo(false)}>Undo</button>
-        <button type="button" onClick={() => undo(true)}>Redo</button>
-        <button type="button" onClick={() => setDense(!dense)}>{dense ? 'Comfortable' : 'Compact'} density</button>
-      </div>
-    </div>
+
+    {!focus && <nav ref={toolRailRef} className="analytics-tool-rail" aria-label="Analytics tools">
+      {TOOLS.map(({ id, label, icon: Icon, description }) => (
+        <button type="button" className="analytics-tool-trigger" key={id} data-tool={id} title={description}
+          aria-expanded={toolPanel === id} aria-controls={toolPanel === id ? 'analytics-tool-panel' : undefined} onClick={() => showTool(id, true)}>
+          <Icon /><span>{label}</span>
+        </button>
+      ))}
+    </nav>}
+
     {analyticsStorage.error && <div role="alert" className="analytics-error">{analyticsStorage.error}<button type="button" onClick={analyticsStorage.retry}>Retry save</button><button type="button" onClick={() => download('analytics-recovery.json', JSON.stringify(analyticsStorage.pending || workspace, null, 2), 'application/json')}>Export retained work</button><button type="button" onClick={analyticsStorage.discard}>Discard pending save</button>{analyticsStorage.status === 'recovery_required' && <button type="button" onClick={() => { if (window.confirm('Preserve the damaged primary value as a recovery copy and restore the displayed backup?')) analyticsStorage.recover(); }}>Recover backup</button>}</div>}
-    {error && <p role="alert" className="analytics-error">{error}</p>}{notice && <p role="status" className="analytics-notice">{notice}<button type="button" aria-label="Dismiss notification" onClick={() => setNotice('')}>×</button></p>}
+    {(error || sourceMetadata?.error) && <p role="alert" className="analytics-error">{error || sourceMetadata.error}</p>}{notice && <p role="status" className="analytics-notice">{notice}<button type="button" aria-label="Dismiss notification" onClick={() => setNotice('')}>×</button></p>}
+
     <div className="analytics-body">
-      {libraryOpen && !focus && <aside className="analytics-library" aria-label="Analytics library">
-        <div className="analytics-tile-meta"><h2>Your workspace</h2><small>{objects.length} saved</small></div>
-        <div className="analytics-library-create">
-          <button type="button" className="is-primary" onClick={startAnalysis}>New analysis</button>
-          <button type="button" onClick={() => createBoard(false)}>New dashboard</button>
-          <button type="button" onClick={() => createBoard(true)}>Overview template</button>
+      {toolPanel === 'library' && !focus && <aside id="analytics-tool-panel" className="analytics-drawer analytics-library" aria-label="Analytics library">
+        <div className="analytics-drawer-header">
+          <div><h2 ref={panelHeadingRef} tabIndex={-1}>Library</h2><small>{workspace.dashboards.length + workspace.explorations.length} saved assets</small></div>
+          <button type="button" className="analytics-icon-btn" onClick={closeTool} aria-label="Close Library"><FaTimes /></button>
         </div>
-        <input aria-label="Search Analytics library" placeholder="Search names and tags" value={search} onChange={e => setSearch(e.target.value)} />
+
+        <div className="analytics-library-create">
+          <button type="button" className="is-primary" onClick={() => startAnalysis()}><FaPlus /><span>New analysis</span></button>
+          <button type="button" onClick={() => createBoard(false)}><FaThLarge /><span>New dashboard</span></button>
+          <button type="button" onClick={() => createBoard(true)} disabled={!canGenerateOverview}><FaLayerGroup /><span>Overview template</span></button>
+          <button type="button" onClick={() => importRef.current.click()}><FaUpload /><span>Import workspace JSON</span></button>
+        </div>
+
+        <div className="analytics-search-box">
+          <FaSearch className="analytics-search-icon" />
+          <input aria-label="Search Analytics library" placeholder="Search names and tags…" value={search} onChange={e => setSearch(e.target.value)} />
+        </div>
+
         <div className="analytics-control-row">
           <select aria-label="Library sort" value={sort} onChange={e => setSort(e.target.value)}><option value="recent">Recently updated</option><option value="name">Name</option></select>
           <label className="analytics-checkbox-row"><input type="checkbox" checked={favorites} onChange={e => setFavorites(e.target.checked)} />Favorites only</label>
         </div>
-        {Object.entries(workspace.drafts).filter(([, value]) => value).map(([key, value]) => <div className="analytics-draft-card" key={key}><button type="button" onClick={() => {
-          if (!commit(next => ({ ...preserveDraft(next, true), activeAnalysisId: value.analysisId || null, lastView: 'explore' }))) return;
-          cancel(); setDraft(clone(value.config)); setResult(value.result); setResultConfig(value.resultConfig); setDirty(true); setOrigin(value.origin || null);
-        }}>Recover draft: {value.config.title}</button><button type="button" aria-label={`Discard draft ${value.config.title}`} onClick={() => { if (window.confirm(`Discard recovered draft ${value.config.title}?`)) commit(next => ({ ...next, drafts: { ...next.drafts, [key]: null } })); }}>×</button></div>)}
-        {objects.map(item => <article key={item.id} className={(item.kind === 'dashboard' && mode === 'dashboards' && workspace.activeDashboardId === item.id) || (item.kind === 'analysis' && mode === 'explore' && workspace.activeAnalysisId === item.id) ? 'is-active' : ''}>
-          <button type="button" className="analytics-library-open" onClick={() => item.kind === 'dashboard' ? commit(next => remember({ ...preserveDraft(next), activeDashboardId: item.id, lastView: 'dashboards' }, item.id)) : openAnalysis(item)}><small>{item.kind}{workspace.recent?.includes(item.id) ? ' · recent' : ''}</small><strong>{item.name}</strong>{!!item.tags?.length && <small>{item.tags.join(', ')}</small>}</button>
-          <div className="analytics-actions"><button type="button" aria-label={`Favorite ${item.name}`} aria-pressed={!!item.favorite} onClick={() => manageObject(item.kind, item.id, 'favorite')}>{item.favorite ? '★' : '☆'}</button><details><summary>Manage</summary><div className="analytics-actions">{['rename', 'duplicate', 'tags', 'delete'].map(action => <button type="button" key={action} onClick={() => manageObject(item.kind, item.id, action)}>{action}</button>)}</div></details></div>
-        </article>)}
-        <details><summary>Local templates</summary><div className="analytics-actions"><button type="button" onClick={saveTemplate}>Save current dashboard as template</button>{workspace.templates.map(template => <div className="analytics-control-row" key={template.id}><button type="button" onClick={() => instantiateTemplate(template)}>Use {template.name} with selected dataset</button><button type="button" aria-label={`Delete template ${template.name}`} onClick={() => { if (window.confirm(`Delete template ${template.name}?`)) commit(next => ({ ...next, templates: next.templates.filter(t => t.id !== template.id) })); }}>×</button></div>)}</div></details>
-        <details><summary>Import and export</summary><div className="analytics-actions"><button type="button" onClick={() => download('analytics-workspace.json', JSON.stringify(workspace, null, 2), 'application/json')}>Export workspace JSON</button><button type="button" onClick={() => download('analytics-definitions.json', JSON.stringify({ ...workspace, drafts: {}, dashboards: workspace.dashboards.map(b => ({ ...b, revisions: [], items: b.items.map(i => ({ ...i, result: null })) })), explorations: workspace.explorations.map(a => ({ ...a, result: null, revisions: [] })) }, null, 2), 'application/json')}>Export definitions JSON</button><button type="button" onClick={() => importRef.current.click()}>Import workspace JSON</button></div><input ref={importRef} type="file" accept="application/json,.json" hidden onChange={async e => { const file = e.target.files[0]; if (!file) return; try { if (file.size > 10000000) throw new Error('Import is limited to 10 MB.'); const value = JSON.parse(await file.text()); if (!commit(next => importCollection(value, next))) throw new Error('Import could not be saved.'); setNotice('Imported objects require source review before refresh.'); } catch (failure) { setError(failure.message); } e.target.value = ''; }} /></details>
+
+        {recoveredDrafts.map(([key, value]) => <div className="analytics-draft-card" key={key}>
+          <button type="button" onClick={() => restoreDraft(key, value)}>Recover draft: {value.config.title}</button>
+          <button type="button" aria-label={`Discard draft ${value.config.title}`} onClick={() => {
+            if (window.confirm(`Discard recovered draft ${value.config.title}?`)) commit(next => ({ ...next, drafts: { ...next.drafts, [key]: null } }));
+          }}>×</button>
+        </div>)}
+
+        <div className="analytics-library-list">
+          {objects.map(item => (
+            <article key={item.id} className={(item.kind === 'dashboard' && mode === 'dashboards' && workspace.activeDashboardId === item.id) || (item.kind === 'analysis' && mode === 'explore' && workspace.activeAnalysisId === item.id) ? 'is-active' : ''}>
+              <div className="analytics-asset-row">
+                <button type="button" className="analytics-library-open" onClick={() => item.kind === 'dashboard' ? openDashboard(item.id) : openAnalysis(item)}>
+                  <small>{item.kind}{workspace.recent?.includes(item.id) ? ' · recent' : ''}</small>
+                  <strong>{item.name}</strong>
+                  {!!item.tags?.length && <small className="analytics-tag-line">{item.tags.join(', ')}</small>}
+                </button>
+                <div className="analytics-asset-btns">
+                  <button type="button" className="analytics-icon-btn" aria-label={`Favorite ${item.name}`} aria-pressed={!!item.favorite} onClick={() => manageObject(item.kind, item.id, 'favorite')}>{item.favorite ? '★' : '☆'}</button>
+                  <button type="button" className="analytics-icon-btn" aria-label={`Manage ${item.name}`} onClick={() => setActiveMenuId(activeMenuId === item.id ? null : item.id)}><FaEllipsisH /></button>
+                </div>
+              </div>
+              {activeMenuId === item.id && (
+                <div className="analytics-context-menu">
+                  {['rename', 'duplicate', 'tags', 'delete'].map(action => (
+                    <button type="button" key={action} onClick={() => { manageObject(item.kind, item.id, action); setActiveMenuId(null); }}>{action}</button>
+                  ))}
+                </div>
+              )}
+            </article>
+          ))}
+        </div>
+
+        <div className="analytics-inspector-card">
+          <div className="analytics-card-title"><FaLayerGroup /><span>Local templates</span></div>
+          <button type="button" className="analytics-icon-pill" onClick={saveTemplate}><FaPlus /><span>Save current dashboard as template</span></button>
+          {workspace.templates.map(template => (
+            <div className="analytics-control-row" key={template.id}>
+              <button type="button" onClick={() => instantiateTemplate(template)}>Use {template.name} with selected dataset</button>
+              <button type="button" aria-label={`Delete template ${template.name}`} onClick={() => { if (window.confirm(`Delete template ${template.name}?`)) commit(next => ({ ...next, templates: next.templates.filter(t => t.id !== template.id) })); }}><FaTrash /></button>
+            </div>
+          ))}
+        </div>
+
       </aside>}
-      <main className="analytics-main">
+
+      <main className={`analytics-main analytics-main--${mode}`}>
         {mode === 'explore' ? <>
           <div className="analytics-actions analytics-query-actions">
             <div className="analytics-query-primary">
               <input aria-label="Analysis name" value={draft.title} onChange={e => changeDraft({ ...draft, title: e.target.value })} />
-              <button type="button" className="is-primary" onClick={run} disabled={status === 'loading' || !draft.source}>{status === 'loading' ? 'Running…' : 'Run analysis'}</button>
-              {status === 'loading' && <button type="button" onClick={cancel}>Cancel query</button>}
-              <button type="button" onClick={saveAnalysis}>Save analysis</button>
-              <button type="button" onClick={detail}>Inspect detail rows</button>
+              {status === 'loading' && <button type="button" onClick={cancel}><FaTimes /><span>Cancel query</span></button>}
+              {draft.requiresSourceReview && <button type="button" onClick={() => {
+                const source = allSources.find(option => sourceKey(option) === sourceKey(draft.source));
+                if (source) changeDraft({ ...draft, source, requiresSourceReview: false });
+                else setError('Reattach this source or choose an available dataset.');
+              }}>Confirm imported dataset</button>}
+              <button type="button" className="analytics-icon-pill" onClick={saveAnalysis}><FaBookmark /><span>Save analysis</span></button>
+              {dirty && <small>Draft autosaves locally</small>}
+              <button type="button" className="analytics-icon-pill" onClick={detail}><FaTable /><span>Inspect detail rows</span></button>
             </div>
             <div className="analytics-query-pin">
-              <select aria-label="Pin target dashboard" value={targetBoard} onChange={e => setTargetBoard(e.target.value)}>{workspace.dashboards.map(b => <option key={b.state.id} value={b.state.id}>{b.state.name}</option>)}</select>
-              <button type="button" disabled={!result} onClick={() => pin(false)}>Pin copy</button>
-              {origin && <><button type="button" onClick={() => pin(true)}>Update original</button><button type="button" onClick={() => commit(next => ({ ...next, activeDashboardId: next.dashboards.some(b => b.state.id === origin.boardId) ? origin.boardId : next.activeDashboardId, lastView: 'dashboards' }))}>Back to dashboard</button></>}
-              {!!drillHistory.length && <button type="button" onClick={() => { changeDraft(drillHistory[drillHistory.length - 1]); setDrillHistory(list => list.slice(0, -1)); }}>Back one drill</button>}
+              <span className="analytics-pin-group">
+                <FaThumbtack className="analytics-pin-icon" />
+                <select aria-label="Pin target dashboard" value={targetBoard} onChange={e => setTargetBoard(e.target.value)}>{workspace.dashboards.map(b => <option key={b.state.id} value={b.state.id}>{b.state.name}</option>)}</select>
+                <button type="button" disabled={!result} onClick={() => pin(false)}>Pin copy</button>
+              </span>
+              {origin && <>
+                <button type="button" className="is-primary" onClick={() => pin(true)}>Update original</button>
+                <button type="button" className="analytics-icon-pill" onClick={() => openDashboard(workspace.dashboards.some(b => b.state.id === origin.boardId) ? origin.boardId : workspace.activeDashboardId)}><FaArrowLeft /><span>Back to dashboard</span></button>
+              </>}
+              {!!drillHistory.length && <button type="button" className="analytics-icon-pill" onClick={() => { changeDraft(drillHistory[drillHistory.length - 1]); setDrillHistory(list => list.slice(0, -1)); }}><FaArrowLeft /><span>Back one drill</span></button>}
             </div>
           </div>
-          {result && querySignature(resultConfig) !== querySignature(draft) && <p className="analytics-notice">Builder changed. Showing the last result; run again to apply edits.</p>}
-          <div className="analytics-analysis">
-            <aside className="analytics-build-panel"><AnalyticsBuilder config={draft} fields={fields} metrics={metrics} onChange={changeDraft} /></aside>
+
+          {result && !resultIsCurrent && <p className="analytics-notice">Builder changed. Run the analysis to apply your edits to the result.</p>}
+
+          <div className="analytics-workbench-grid">
+            <AnalyticsBuilder config={draft} fields={fields} metrics={metrics} sourceLoading={!!selectedSource && !sourceMetadata} onChange={changeDraft} />
             <div className="analytics-result-panel">
-              <AnalyticsResult result={result} config={resultConfig ? { ...resultConfig, view: querySignature(resultConfig) === querySignature(draft) ? draft.view : resultConfig.view, appearance: draft.appearance } : draft} onSelect={drill} />
-              {result && <details><summary>Source, filters and execution details</summary><p>Computed {result.executed_at}. This is query time, not source freshness.</p><pre>{JSON.stringify({ dataset: result.dataset, filters: result.filters, period: result.period, metrics: result.metrics, lineage: result.analysis_lineage }, null, 2)}</pre></details>}
+              <h2 className="analytics-result-heading">Results</h2>
+              <AnalyticsResult result={result} config={resultConfig ? { ...resultConfig, view: resultIsCurrent ? draft.view : resultConfig.view, appearance: draft.appearance } : draft} onSelect={resultIsCurrent ? drill : undefined} />
+              {result && (
+                <div className="analytics-lineage-footer">
+                  <button type="button" className={`analytics-icon-pill ${lineageOpen ? 'is-selected' : ''}`} onClick={() => setLineageOpen(v => !v)}>
+                    <FaCode /><span>Source, filters and execution details</span>
+                  </button>
+                  {lineageOpen && (
+                    <div className="analytics-popover-tray">
+                      <p className="analytics-scope">Computed {result.executed_at}. This is query time, not source freshness.</p>
+                      <pre>{JSON.stringify({ dataset: result.dataset, filters: result.filters, period: result.period, metrics: result.metrics, lineage: result.analysis_lineage }, null, 2)}</pre>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
-        </> : <AnalyticsDashboard board={board} attachments={attachments} onChange={changeBoard} onInvestigate={investigate} onNewAnalysis={startAnalysis} selectedTile={selectedTile} onSelectTile={setSelectedTile} />}
+        </> : (
+          <AnalyticsDashboard key={board.state.id} board={board} attachments={attachments} onChange={changeBoard} onInvestigate={investigate}
+            onNewAnalysis={startAnalysis} selectedTile={selectedTile} onSelectTile={id => { setSelectedTile(id); showTool('format'); }}
+            source={selectedSource} fields={fields} sourceLoading={!!selectedSource && !sourceMetadata} canGenerateOverview={canGenerateOverview} onGenerateOverview={generateOverview} />
+        )}
       </main>
-      {inspectorOpen && !focus && <aside className="analytics-inspector" aria-label="Analytics inspector">
-        <h2>{mode === 'explore' ? 'Appearance' : inspected?.title || 'Select a tile'}</h2>
-        {mode === 'dashboards' && inspected && <>
-          <label>Tile title<input value={inspected.title} onChange={e => changeBoard({ ...board, items: board.items.map(item => item.id === inspected.id ? { ...item, title: e.target.value } : item) })} /></label>
-          {['text', 'section'].includes(inspected.itemType) && <label>Text<textarea value={inspected.text || ''} onChange={e => changeBoard({ ...board, items: board.items.map(item => item.id === inspected.id ? { ...item, text: e.target.value } : item) })} /></label>}
-          <label className="analytics-checkbox-row"><input type="checkbox" checked={!!inspected.locked} onChange={e => changeBoard({ ...board, items: board.items.map(item => item.id === inspected.id ? { ...item, locked: e.target.checked } : item) })} />Lock position</label>
-        </>}
-        <AnalyticsAppearance appearance={appearance} measures={mode === 'explore' ? draft.query.measures : inspected?.analysis?.query.measures} onChange={changeAppearance} />
-        <div className="analytics-actions">
-          <button type="button" onClick={exportPdf}>Export report PDF</button>
-          <button type="button" onClick={() => window.print()}>Print presentation</button>
-          {result && mode === 'explore' && <button type="button" onClick={() => download('analytics-result.csv', tableCsv(result), 'text/csv;charset=utf-8')}>Export result CSV</button>}
+
+      {activeTool && toolPanel !== 'library' && !focus && <aside id="analytics-tool-panel" className="analytics-drawer analytics-inspector" aria-label={`Analytics ${activeTool.label}`}>
+        <div className="analytics-drawer-header">
+          <div>
+            <h2 ref={panelHeadingRef} tabIndex={-1}>{activeTool.label}</h2>
+            <small>{activeTool.description}</small>
+          </div>
+          <button type="button" className="analytics-icon-btn" onClick={closeTool} aria-label={`Close ${activeTool.label}`}><FaTimes /></button>
         </div>
-        <details><summary>Saved revisions</summary><div className="analytics-actions">{(mode === 'explore' ? saved?.revisions || [] : board.revisions || []).map((revision, index) => <button type="button" key={index} onClick={() => { if (!window.confirm('Restore this saved revision?')) return; if (mode === 'explore') changeDraft(clone(revision.value.config)); else changeBoard({ ...clone(revision.value), revisions: board.revisions }); }}>{revision.savedAt}</button>)}</div></details>
-        <details><summary>Connected tools</summary><div className="analytics-actions"><button type="button" onClick={onOpenGallery}>Chart gallery</button><button type="button" onClick={onOpenAiChart}>AI Chart</button><button type="button" onClick={() => { try { if (!draft.source || draft.requiresSourceReview) throw new Error('Confirm the selected dataset first.'); sessionStorage.setItem('analytics:chat-context', JSON.stringify({ source: draft.source, query: draft.query, title: draft.title })); onOpenAiChat?.(); window.dispatchEvent(new Event('analytics:chat-context')); } catch (failure) { setError(failure.message); } }}>Discuss in AI Chat</button></div></details>
-        <small>Shortcuts: Ctrl/Cmd+S saves an analysis. Ctrl/Cmd+Z undoes, Shift+Z redoes outside text inputs. Local device storage; no team sharing.</small>
+
+        {toolPanel === 'format' && <>
+          {mode === 'dashboards' && (inspected ? (
+            <div className="analytics-inspector-card">
+              <label>Tile title<input value={inspected.title} onChange={e => changeBoard({ ...board, items: board.items.map(item => item.id === inspected.id ? { ...item, title: e.target.value } : item) })} /></label>
+              {['text', 'section'].includes(inspected.itemType) && <label>Text<textarea value={inspected.text || ''} onChange={e => changeBoard({ ...board, items: board.items.map(item => item.id === inspected.id ? { ...item, text: e.target.value } : item) })} /></label>}
+              <label className="analytics-checkbox-row"><input type="checkbox" checked={!!inspected.locked} onChange={e => changeBoard({ ...board, items: board.items.map(item => item.id === inspected.id ? { ...item, locked: e.target.checked } : item) })} />Lock position</label>
+            </div>
+          ) : <p className="analytics-empty-hint">{board.items.length ? 'Choose a tile to format.' : 'Add a tile to customize its appearance.'}</p>)}
+          {mode === 'dashboards' && board.items.length > 0 && (
+            <label className="analytics-format-target">Dashboard tile
+              <select value={inspected?.id || ''} onChange={event => setSelectedTile(event.target.value || null)}>
+                <option value="">Choose a tile</option>
+                {board.items.map(item => <option key={item.id} value={item.id}>{item.title}</option>)}
+              </select>
+            </label>
+          )}
+          {(mode === 'explore' || (inspected && !['text', 'section'].includes(inspected.itemType))) &&
+            <AnalyticsAppearance appearance={appearance} measures={mode === 'explore' ? draft.query.measures : inspected?.analysis?.query.measures} onChange={changeAppearance} />}
+        </>}
+
+        {toolPanel === 'reports' && <>
+          <div className="analytics-inspector-card analytics-tool-actions">
+            <h3>Report output</h3>
+            <button type="button" onClick={exportPdf}><FaFilePdf /><span>Export report PDF</span></button>
+            <button type="button" onClick={() => window.print()}><FaPrint /><span>Print presentation</span></button>
+            {mode === 'explore' && <button type="button" onClick={exportCsv} disabled={!result} title={result ? undefined : 'Run an analysis to export its results'}><FaTable /><span>Export result CSV</span></button>}
+          </div>
+          <div className="analytics-inspector-card analytics-tool-actions">
+            <h3>Workspace files</h3>
+            <button type="button" onClick={exportWorkspace}><FaDownload /><span>Export workspace JSON</span></button>
+            <button type="button" onClick={exportDefinitions}><FaCopy /><span>Export definitions JSON</span></button>
+          </div>
+        </>}
+
+        {toolPanel === 'ai' && <div className="analytics-inspector-card analytics-tool-actions">
+          <button type="button" onClick={() => launchTool(onOpenGallery)}><FaColumns /><span>Chart gallery<small>Start with a visualization</small></span></button>
+          <button type="button" onClick={() => launchTool(onOpenAiChart)}><FaChartBar /><span>AI Chart<small>Describe the chart you want to build</small></span></button>
+          <button type="button" onClick={discussInChat}><FaRobot /><span>Discuss in AI Chat<small>Open a chat draft with the selected dataset</small></span></button>
+        </div>}
+
+        {toolPanel === 'history' && <>
+          <div className="analytics-inspector-card analytics-tool-actions">
+            <h3>Recent edits</h3>
+            <button type="button" disabled={!currentHistory.past.length} onClick={() => undo(false)}><FaUndo /><span>Undo</span><kbd>Ctrl/Cmd+Z</kbd></button>
+            <button type="button" disabled={!currentHistory.future.length} onClick={() => undo(true)}><FaRedo /><span>Redo</span><kbd>Ctrl/Cmd+Shift+Z</kbd></button>
+          </div>
+          <div className="analytics-inspector-card analytics-tool-actions">
+            <h3>Saved revisions</h3>
+            {[...revisions].reverse().map((revision, index) => (
+              <button type="button" key={index} onClick={() => {
+                if (!window.confirm('Restore this saved revision?')) return;
+                if (mode === 'explore') changeDraft(clone(revision.value.config));
+                else changeBoard({ ...clone(revision.value), revisions: board.revisions });
+              }}><FaHistory /><span>Restore revision<small><time dateTime={revision.savedAt}>{new Date(revision.savedAt).toLocaleString()}</time></small></span></button>
+            ))}
+            {!revisions.length && <small>No saved revisions yet.</small>}
+          </div>
+        </>}
       </aside>}
     </div>
+    <input ref={importRef} type="file" accept="application/json,.json" hidden onChange={async event => {
+      const input = event.currentTarget;
+      const file = input.files[0];
+      if (!file) return;
+      try {
+        if (file.size > 10000000) throw new Error('Import is limited to 10 MB.');
+        const value = JSON.parse(await file.text());
+        if (!commit(next => importCollection(value, next))) throw new Error('Import could not be saved.');
+        setNotice('Imported objects require source review before refresh.');
+      } catch (failure) {
+        setError(failure.message);
+      } finally {
+        input.value = '';
+      }
+    }} />
   </section>;
 }

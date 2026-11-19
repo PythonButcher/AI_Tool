@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
   "authorized_work": {
-    "name": "Activate Analytics visual polish"
+    "name": "Repair Analytics Focus and tool access"
   },
   "authorization_state": "AUTHORIZED",
-  "lifecycle_state": "IN PROGRESS",
+  "lifecycle_state": "AWAITING USER ACCEPTANCE",
   "analytics_implementation_authorization": {
     "approved_by": "User",
     "approved_at": "2026-11-16",
@@ -245,12 +245,12 @@
   },
   "user_implementation_authorization": {
     "approved_by": "User",
-    "approved_at": "2026-09-27",
-    "evidence": "Direct user message in this Codex session referencing the sole active gate.",
-    "instruction": "Get Analytics all up and running with a UI shell, then have Antigravity polish it end to end.",
-    "scope": "Codex implements and verifies the full functional Analytics product, backend, persistence, UI shell and integrations; Antigravity follows with end-to-end visual polish through bounded assignments.",
-    "current_instruction": "Codex implements the full functional Analytics product and UI shell before transferring visual polish to Antigravity.",
-    "current_approved_at": "2026-11-16"
+    "approved_at": "2026-11-18",
+    "evidence": "Direct user authorization for Analytics changes and a follow-up request to repair Focus mode and clarify tool access.",
+    "instruction": "Redesign Analytics Studio and keep its features available.",
+    "scope": "Codex owns the Analytics frontend redesign, related backend repairs, and focused integration verification.",
+    "current_instruction": "Fix leaving Focus mode and make Analytics tools clearly visible and easier to find.",
+    "current_approved_at": "2026-11-18"
   },
   "preparation_authorization": {
     "approved_by": "User",

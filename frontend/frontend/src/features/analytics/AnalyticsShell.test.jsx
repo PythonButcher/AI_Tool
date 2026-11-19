@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { WindowProvider, useWindowContext } from '../../context/WindowContext';
 import AnalyticsShell from './AnalyticsShell';
@@ -14,14 +14,15 @@ jest.mock('../../context/DataContext', () => ({
   useSemanticModel: () => null,
 }));
 jest.mock('./AnalyticsResult', () => ({ result, config }) => <div data-testid="result">{result ? `${config.view}:${result.summary.value}` : 'No result'}</div>);
-jest.mock('./AnalyticsDashboard', () => ({ board, onInvestigate }) => <div>{board.items.map(item => <button key={item.id} onClick={() => onInvestigate(item, [])}>Investigate {item.title}</button>)}</div>);
+jest.mock('../charts/SmartChartWindow', () => () => null);
+jest.mock('../dashboard/KpiCardWindow', () => () => null);
 
 const source = { kind: 'inline', id: inlineIdentity(mockRows), name: 'Orders' };
 const result = { rows: [{ value: 12 }], summary: { value: 12 }, row_count: 1, columns: ['value'], dataset: {}, executed_at: 'now' };
 const stored = () => JSON.parse(localStorage.getItem(STORAGE_KEY));
 let windowContext;
 function Probe() { windowContext = useWindowContext(); return null; }
-const mount = () => render(<WindowProvider><Probe /><AnalyticsShell /></WindowProvider>);
+const mount = (props = {}) => render(<WindowProvider><Probe /><AnalyticsShell {...props} /></WindowProvider>);
 beforeEach(() => {
   localStorage.clear(); sessionStorage.clear();
   window.confirm = jest.fn(() => true);
@@ -59,10 +60,13 @@ test('chart modes requiring a different query retain the last compatible visuali
 
 test('navigation before autosave preserves independent drafts immediately', async () => {
   mount(); fireEvent.change(screen.getByLabelText('Analysis name'), { target: { value: 'Unfinished investigation' } });
+  fireEvent.click(screen.getByLabelText(/Workspace switcher/));
   fireEvent.click(screen.getByText('New analysis'));
   expect(Object.values(stored().drafts).filter(Boolean).some(draft => draft.config.title === 'Unfinished investigation')).toBe(true);
+  fireEvent.click(within(screen.getByRole('navigation', { name: 'Analytics tools' })).getByRole('button', { name: 'Library' }));
   fireEvent.click(screen.getByText('Recover draft: Unfinished investigation'));
   expect(screen.getByLabelText('Analysis name')).toHaveValue('Unfinished investigation');
+  expect(Object.keys(stored().drafts)).toEqual(['current']);
   await screen.findByRole('button', { name: 'Measure sales' });
 });
 
@@ -95,7 +99,7 @@ test('investigation does not mutate its origin until explicit update and conflic
   const workspace = stored(); workspace.lastView = 'dashboards'; workspace.drafts = {};
   workspace.dashboards[0].items = [{ id: 'tile', title: 'Original', itemType: 'chart', analysis: { ...defaultAnalysis(source), title: 'Original' }, result, layout: { x: 6, y: 3, w: 6, h: 7 } }];
   localStorage.setItem(STORAGE_KEY, JSON.stringify(workspace));
-  mount(); fireEvent.click(screen.getByText('Investigate Original'));
+  mount(); fireEvent.click(screen.getByRole('button', { name: 'Investigate' }));
   fireEvent.change(screen.getByLabelText('Analysis name'), { target: { value: 'Investigation' } });
   expect(stored().dashboards[0].items[0].title).toBe('Original');
   fireEvent.click(screen.getByText('Run analysis')); await screen.findByText('bar:12');
@@ -105,4 +109,108 @@ test('investigation does not mutate its origin until explicit update and conflic
   act(() => windowContext.updateDashboardItem('tile', { title: 'Concurrent edit' }));
   fireEvent.click(screen.getByText('Update original'));
   expect(screen.getByRole('alert')).toHaveTextContent('original tile changed');
+});
+
+test('empty dashboard generates real overview tiles from the dashboard dataset and can undo as one edit', async () => {
+  const workspace = stored();
+  workspace.lastView = 'dashboards';
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(workspace));
+  fetch.mockImplementation(async (_url, options) => ({ ok: true, json: async () => !options?.body ? [{ id: 'sales-data', name: 'Sales data' }]
+    : JSON.parse(options.body).metadata_only ? { fields: [
+      { name: 'sales', type: 'number' }, { name: 'region', type: 'string' }, { name: 'order_date', type: 'date' },
+    ] } : result }));
+  mount();
+  expect(screen.queryByLabelText('Dashboard canvas actions')).not.toBeInTheDocument();
+  await screen.findByRole('option', { name: 'Sales data' });
+  fireEvent.change(screen.getByLabelText('Analytics dataset'), { target: { value: 'datahub:sales-data' } });
+  const generate = screen.getByRole('button', { name: /Generate overview/ });
+  await waitFor(() => expect(generate).toBeEnabled());
+  fireEvent.click(generate);
+
+  const items = stored().dashboards[0].items;
+  expect(items.map(item => item.analysis.view)).toEqual(['kpi', 'kpi', 'kpi', 'line', 'horizontal']);
+  expect(items.every(item => item.analysis.source.id === 'sales-data')).toBe(true);
+  expect(items[3].analysis.query.group_by).toEqual([{ field: 'order_date', grain: 'month' }]);
+  expect(items[4].analysis.query.group_by).toEqual([{ field: 'region' }]);
+  expect(stored().drafts.current.config.source.id).toBe(source.id);
+  await screen.findByLabelText('Dashboard canvas actions');
+  await waitFor(() => expect(fetch.mock.calls.filter(([, options]) => options?.body && !JSON.parse(options.body).metadata_only)).toHaveLength(5));
+  fireEvent.click(screen.getByRole('button', { name: 'Undo' }));
+  expect(stored().dashboards[0].items).toHaveLength(0);
+});
+
+test('dashboard filters scope both segment populations and leave unrelated datasets alone', async () => {
+  const workspace = stored();
+  workspace.lastView = 'dashboards';
+  const alternate = { id: source.id, kind: 'datahub', name: 'Another dataset' };
+  const baseline = { field: 'region', value: 'West' };
+  const sourceConfig = defaultAnalysis(source);
+  workspace.dashboards[0].items = [source, alternate].map((tileSource, index) => ({
+    id: `tile-${index}`, title: tileSource.name, itemType: 'chart',
+    analysis: { ...sourceConfig, source: tileSource, query: { ...sourceConfig.query, comparison: { kind: 'segment', filters: [baseline] } } },
+  }));
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(workspace));
+  mount();
+  const requests = () => fetch.mock.calls.flatMap(([, options]) => options?.body ? [JSON.parse(options.body)] : []).filter(request => !request.metadata_only);
+  await waitFor(() => expect(requests()).toHaveLength(2));
+  fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
+  await screen.findByRole('option', { name: 'region' });
+  fireEvent.change(screen.getByLabelText('Filter field'), { target: { value: 'region' } });
+  fireEvent.change(screen.getByLabelText('Dashboard filter value'), { target: { value: 'East' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Apply filter' }));
+
+  await waitFor(() => expect(requests()).toHaveLength(3));
+  const [filtered] = requests().slice(-1);
+  expect(filtered.source.kind).toBe('inline');
+  const rule = { field: 'region', operator: 'eq', value: 'East' };
+  expect(filtered.query.filters.rules).toContainEqual(rule);
+  expect(filtered.query.comparison.filters.rules).toEqual([[baseline], rule]);
+});
+
+test('exit focus works by button and Escape and restores tools without remounting the analysis', async () => {
+  mount();
+  const title = screen.getByLabelText('Analysis name');
+  fireEvent.change(title, { target: { value: 'Focus draft' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Run analysis' }));
+  await screen.findByText('bar:12');
+
+  const toolRail = () => screen.queryByRole('navigation', { name: 'Analytics tools' });
+  fireEvent.click(within(toolRail()).getByRole('button', { name: 'Format' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Focus' }));
+  const exit = screen.getByRole('button', { name: 'Exit focus' });
+  expect(exit).toHaveFocus();
+  expect(toolRail()).not.toBeInTheDocument();
+  expect(screen.queryByRole('complementary', { name: 'Analytics Format' })).not.toBeInTheDocument();
+
+  fireEvent.click(exit);
+  expect(screen.getByRole('button', { name: 'Focus' })).toHaveFocus();
+  expect(screen.getByRole('complementary', { name: 'Analytics Format' })).toBeVisible();
+  fireEvent.click(screen.getByRole('button', { name: 'Focus' }));
+  fireEvent.keyDown(screen.getByRole('button', { name: 'Exit focus' }), { key: 'Escape' });
+  expect(toolRail()).toBeVisible();
+  expect(screen.getByLabelText('Analysis name')).toBe(title);
+  expect(title).toHaveValue('Focus draft');
+  expect(screen.getByTestId('result')).toHaveTextContent('bar:12');
+});
+
+test('named tool panels expose exports, chart tools, and history from the dashboard', async () => {
+  const workspace = stored();
+  workspace.lastView = 'dashboards';
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(workspace));
+  const onOpenGallery = jest.fn();
+  mount({ onOpenGallery });
+  const toolRail = within(screen.getByRole('navigation', { name: 'Analytics tools' }));
+  for (const [tool, action] of [
+    ['Library', 'Import workspace JSON'], ['Reports', 'Export report PDF'],
+    ['AI & Charts', 'Chart gallery'], ['History', 'Undo'],
+  ]) {
+    fireEvent.click(toolRail.getByRole('button', { name: tool }));
+    const panel = screen.getByRole('complementary', { name: new RegExp(`^Analytics ${tool}$`, 'i') });
+    expect(within(panel).getByRole('button', { name: new RegExp(action) })).toBeVisible();
+    if (tool === 'AI & Charts') fireEvent.click(within(panel).getByRole('button', { name: /Chart gallery/ }));
+  }
+  expect(onOpenGallery).toHaveBeenCalledTimes(1);
+  fireEvent.keyDown(window, { key: 'k', ctrlKey: true });
+  fireEvent.change(screen.getByRole('textbox', { name: 'Search Analytics actions' }), { target: { value: 'revisions' } });
+  expect(within(screen.getByRole('search')).getByRole('button', { name: /History/ })).toBeVisible();
 });

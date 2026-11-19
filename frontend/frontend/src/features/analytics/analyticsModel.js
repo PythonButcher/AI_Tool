@@ -21,6 +21,62 @@ export function executionQuery(config) {
 }
 
 export const querySignature = config => config ? JSON.stringify({ source: config.source, query: executionQuery(config) }) : '';
+export const sourceKey = source => source ? `${source.kind}:${source.id}` : '';
+
+export function filtersForTile(item, filters) {
+  const source = item.analysis?.source;
+  const sourceId = source?.id;
+  return filters.filter(filter =>
+    (!filter.tileIds?.length || filter.tileIds.includes(item.id)) &&
+    (!filter.sourceId || (filter.sourceId === sourceId && (!filter.sourceKind || filter.sourceKind === source.kind)))
+  );
+}
+
+export function withDashboardFilters(config, filters) {
+  if (!filters.length) return config;
+  const intersect = existing => ({ op: 'and', rules: [existing || [], ...filters.map(filter => filter.rule)] });
+  const query = { ...config.query, filters: intersect(config.query.filters) };
+  if (query.comparison?.kind === 'segment') {
+    query.comparison = { ...query.comparison, filters: intersect(query.comparison.filters) };
+  }
+  return { ...config, query };
+}
+
+export function overviewTiles(source, fields) {
+  const numeric = fields.find(field => field.type === 'number' && !/(?:^|[ _-])id$/i.test(field.name));
+  const date = fields.find(field => field.type === 'date');
+  const category = fields.find(field => field.type === 'string' && !/(?:^|[ _-])id$/i.test(field.name))
+    || fields.find(field => field.type === 'string');
+  const measured = numeric || category || date;
+  const tiles = [];
+  const add = (title, view, query, layout) => {
+    const base = defaultAnalysis(source);
+    const ids = new Set((query.group_by || []).map(group => group.field));
+    let measureId = 'value';
+    while (ids.has(measureId)) measureId += '_';
+    const measures = (query.measures || base.query.measures).map(measure => ({ ...measure, id: measureId }));
+    const sort = query.sort ? { ...query.sort, field: measureId } : undefined;
+    tiles.push({ title, itemType: view === 'kpi' ? 'kpi' : 'chart', result: null, layout,
+      analysis: { ...base, title, view, query: { ...base.query, ...query, measures, sort } } });
+  };
+  add('Total records', 'kpi', {}, { x: 0, y: 0, w: measured ? 4 : 12, h: 4 });
+  if (measured) {
+    const metric = (aggregation, label) => [{ field: measured.name, aggregation, label }];
+    add(numeric ? `Total ${measured.name}` : `Distinct ${measured.name}`, 'kpi',
+      { measures: metric(numeric ? 'sum' : 'count_distinct', measured.name) }, { x: 4, y: 0, w: 4, h: 4 });
+    add(numeric ? `Average ${measured.name}` : `Records with ${measured.name}`, 'kpi',
+      { measures: metric(numeric ? 'avg' : 'count', measured.name) }, { x: 8, y: 0, w: 4, h: 4 });
+  }
+  if (date) add('Records over time', 'line', { group_by: [{ field: date.name, grain: 'month' }] },
+    { x: 0, y: 4, w: category || numeric ? 6 : 12, h: 7 });
+  if (category) add(`Records by ${category.name}`, 'horizontal', {
+    group_by: [{ field: category.name }], limit: 12,
+    sort: { field: 'value', direction: 'desc' },
+  }, { x: date ? 6 : 0, y: 4, w: date || numeric ? 6 : 12, h: 7 });
+  if (numeric && (!category || !date)) add(`${numeric.name} distribution`, 'histogram', { field: numeric.name, bins: 12 },
+    { x: date || category ? 6 : 0, y: 4, w: date || category ? 6 : 12, h: 7 });
+  return tiles;
+}
 
 export async function queryAnalytics(config, attachments, { signal, metadataOnly = false } = {}) {
   const source = config.source;

@@ -1,23 +1,23 @@
 # Project Execution Status
 
-## Current Gate: Activate Analytics visual polish
+## Current Gate: Repair Analytics Focus and tool access
 
-- **Current Gate**: Activate Analytics visual polish
+- **Current Gate**: Repair Analytics Focus and tool access
 - **Roadmap Phase**: Phase 1 — Analytics Product Rebuild
-- **Phase State**: `IN PROGRESS`
-- **What This State Means**: The functional shell and enterprise UI visual polish (`AnalyticsShell`, `AnalyticsBuilder`, `AnalyticsResult`, `AnalyticsDashboard`, and `AnalyticsShell.css`) are mounted and verified. Concurrent ML Studio edits remain preserved outside the Analytics polish scope.
-- **Current Milestone**: Step 1: Establish the isolated polish baseline
-- **Automatic Continuation**: `CONTINUE`
-- **Current Owner**: Codex
-- **Backend Readiness**: `backend_contract_ready`
+- **Phase State**: `AWAITING USER ACCEPTANCE`
+- **What This State Means**: Focus exit and the labeled Analytics tools have passed engineering verification.
+- **Current Milestone**: Analytics Studio user acceptance
+- **Automatic Continuation**: `WAIT_FOR_USER`
+- **Current Owner**: User
+- **Backend Readiness**: `complete`
 - **Frontend Readiness**: `backend_contract_ready`
-- **Next Action**: Execute `project_docs/active/active_gate/README.md`.
-- **Required Action**: Review the completed Analytics visual polish and present the workspace for user browser acceptance.
+- **Next Action**: User browser acceptance in chat.
+- **Required Action**: User decision on the revised Focus and tools experience.
 - **Active Gate**: `project_docs/active/active_gate/README.md`
 - **Authorization Record**: `project_docs/active/status/phase_authorization.json`
 - **Roadmap**: `project_docs/active/analytics/README.md`
-- **Active Handoff**: None. Prepared brief: `project_docs/active/analytics/analytics_polish.md`. Visual polish applied and verified; ready for integration review and user browser acceptance.
-- **Latest Verification**: 36 Analytics backend query tests and 26 focused Analytics/WindowContext frontend tests (6 suites) passed. Zero ESLint warnings in `src/features/analytics/`. Frontend production build, `agent_harness_check.py`, `ci_harness_check.py`, `check_active_gate.py` and `git diff --check` passed.
+- **Active Handoff**: None.
+- **Latest Verification**: 55 frontend tests, Analytics ESLint, and the production build passed. Chrome with a fixture dataset confirmed the five labeled tool panels, command search, PDF export, and Focus exit by click and Escape at 1536, 720, and 400 px. The analysis canvas remained mounted throughout.
 
 ## Preserved Interface Verification
 

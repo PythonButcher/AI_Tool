@@ -106,6 +106,37 @@ def test_fingerprint_detects_changed_source_and_metadata_returns_no_rows():
         run(dataset=rows, expected_fingerprint=metadata["dataset"]["fingerprint"])
 
 
+def test_iso_metadata_only_offers_valid_date_columns_for_trends():
+    rows = [{**row, "mixed": row["date"] if index < 3 else "2026-02-31"}
+            for index, row in enumerate(ROWS)]
+    fields = {entry["name"]: entry["type"] for entry in run(dataset=rows, metadata_only=True)["fields"]}
+    assert fields["date"] == "date"
+    assert fields["mixed"] == "string"
+    assert fields["sales"] == "number"
+
+
+def test_date_membership_accepts_utc_instants():
+    result = run({"filters": [{"field": "date", "operator": "in", "type": "date",
+                               "values": ["2026-01-01", "2026-01-02T07:00:00-05:00"]}]})
+    assert result["row_count"] == 2
+    assert result["summary"]["revenue"] == 10
+
+
+def test_date_only_filter_matches_the_entire_calendar_day():
+    rule = {"field": "date", "type": "date", "value": "2026-01-02"}
+    assert run({"filters": [{**rule, "operator": "eq"}]})["summary"]["revenue"] == 30
+    assert run({"filters": [{**rule, "operator": "gt"}]})["row_count"] == 1
+
+
+def test_empty_result_still_validates_post_calculation_and_custom_period():
+    with pytest.raises(AnalyticsError, match="Moving average window"):
+        run({"measures": [{**MEASURE, "post": "moving_average", "window": 0}],
+             "filters": [{"field": "region", "value": "Missing"}]})
+    with pytest.raises(AnalyticsError, match="Invalid custom comparison dates"):
+        run({"period": {"field": "date", "start": "2026-01-01", "end": "2026-01-02"},
+             "comparison": {"kind": "custom", "start": None, "end": "2026-01-02"}})
+
+
 def test_missing_explicit_source_never_queries_active_data():
     with patch("backend.services.dataset_context.resolve_active_dataframe") as active:
         with pytest.raises(AnalyticsError):
