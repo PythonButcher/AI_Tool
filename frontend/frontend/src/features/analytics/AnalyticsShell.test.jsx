@@ -50,12 +50,71 @@ test('run, save, pin and reopen use one persisted query result', async () => {
 
 test('chart modes requiring a different query retain the last compatible visualization and refuse stale pins', async () => {
   mount(); fireEvent.click(screen.getByText('Run analysis')); await screen.findByText('bar:12');
-  fireEvent.change(screen.getByLabelText('Visualization'), { target: { value: 'histogram' } });
+  fireEvent.click(screen.getByRole('button', { name: /^Change visual/ }));
+  fireEvent.click(screen.getByRole('button', { name: 'Histogram' }));
   expect(screen.getByTestId('result')).toHaveTextContent('bar:12');
   expect(screen.getByText(/Builder changed/)).toBeInTheDocument();
   fireEvent.click(screen.getByText('Pin copy'));
   expect(screen.getByRole('alert')).toHaveTextContent('Run the current analysis');
   expect(stored().dashboards[0].items).toHaveLength(0);
+});
+
+test('adding a dashboard chart guides drag and click assignment and keeps measure controls collapsed', async () => {
+  const workspace = stored();
+  workspace.lastView = 'dashboards';
+  workspace.dashboards[0].items = [{ id: 'note', title: 'Notes', itemType: 'text', text: 'Context', layout: { x: 0, y: 0, w: 4, h: 4 } }];
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(workspace));
+  mount();
+  const canvas = within(screen.getByLabelText('Dashboard canvas actions'));
+  fireEvent.click(canvas.getByText('Add tile'));
+  fireEvent.click(canvas.getByRole('button', { name: 'Chart' }));
+  const region = await screen.findByRole('button', { name: 'Select field region' });
+  const category = screen.getByRole('region', { name: 'Category axis' });
+  const values = within(screen.getByRole('region', { name: 'Values' }));
+
+  const mime = new Map();
+  const dataTransfer = { setData: (type, data) => mime.set(type, data), getData: type => mime.get(type) || '' };
+  fireEvent.dragStart(region, { dataTransfer });
+  expect(category).toHaveAttribute('data-drop-state', 'ready');
+  fireEvent.dragOver(category, { dataTransfer });
+  expect(category).toHaveAttribute('data-drop-state', 'over');
+  expect(within(category).getByRole('button', { name: 'Drop region' })).toBeVisible();
+  fireEvent.drop(category, { dataTransfer });
+  expect(category).toHaveAttribute('data-drop-state', 'idle');
+  expect(within(category).getByText('region')).toBeVisible();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Select field sales' }));
+  fireEvent.click(values.getByRole('button', { name: 'Replace with sales' }));
+  expect(values.queryByLabelText('Measure 1 aggregation')).not.toBeInTheDocument();
+  fireEvent.click(values.getByRole('button', { name: 'Configure measure sales' }));
+  fireEvent.change(values.getByLabelText('Measure 1 aggregation'), { target: { value: 'avg' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Run analysis' }));
+  await screen.findByText('bar:12');
+  const calls = fetch.mock.calls.filter(([, options]) => options?.body && !JSON.parse(options.body).metadata_only);
+  expect(JSON.parse(calls.pop()[1].body).query).toMatchObject({
+    group_by: [{ field: 'region' }],
+    measures: [{ id: 'value', label: 'sales', field: 'sales', aggregation: 'avg' }],
+  });
+});
+
+test('Scatter exposes two numeric targets and rejects duplicate and categorical assignments', async () => {
+  mount();
+  const region = await screen.findByRole('button', { name: 'Select field region' });
+  fireEvent.click(screen.getByRole('button', { name: /^Change visual/ }));
+  expect(within(screen.getByLabelText('Visual gallery')).getAllByRole('button', { pressed: false })).toHaveLength(14);
+  fireEvent.click(screen.getByRole('button', { name: 'Scatter' }));
+  const x = screen.getByRole('region', { name: 'X axis' });
+  const y = screen.getByRole('region', { name: 'Y axis' });
+  fireEvent.click(region);
+  expect(x).toHaveAttribute('data-drop-state', 'blocked');
+  expect(y).toHaveAttribute('data-drop-state', 'blocked');
+  const sales = screen.getByRole('button', { name: 'Select field sales' });
+  fireEvent.click(sales);
+  fireEvent.click(within(x).getByRole('button', { name: 'Add sales' }));
+  fireEvent.click(sales);
+  expect(y).toHaveAttribute('data-drop-state', 'blocked');
+  fireEvent.click(screen.getByRole('button', { name: 'Run analysis' }));
+  await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('two different numeric fields'));
 });
 
 test('navigation before autosave preserves independent drafts immediately', async () => {
@@ -67,7 +126,7 @@ test('navigation before autosave preserves independent drafts immediately', asyn
   fireEvent.click(screen.getByText('Recover draft: Unfinished investigation'));
   expect(screen.getByLabelText('Analysis name')).toHaveValue('Unfinished investigation');
   expect(Object.keys(stored().drafts)).toEqual(['current']);
-  await screen.findByRole('button', { name: 'Measure sales' });
+  await screen.findByRole('button', { name: 'Select field sales' });
 });
 
 test('late query responses cannot overwrite an edited draft', async () => {
@@ -266,6 +325,7 @@ test('Change Explorer keeps its result across drawer sections and opens an exact
     period: { field: 'date', start: '2026-02-01', end: '2026-02-02' },
     comparison: { kind: 'custom', start: '2026-01-01', end: '2026-01-02' },
   });
+  fireEvent.click(within(screen.getByRole('region', { name: 'Query options' })).getByRole('button', { name: /^Filters/ }));
   fireEvent.change(screen.getByLabelText('Filter 1 operator'), { target: { value: 'contains' } });
   fireEvent.click(screen.getByRole('button', { name: 'Run analysis' }));
   await waitFor(() => expect(screen.getByRole('button', { name: 'Run analysis' })).toBeEnabled());

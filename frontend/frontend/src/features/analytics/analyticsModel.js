@@ -15,8 +15,11 @@ export function inlineIdentity(rows) {
 
 export function executionQuery(config) {
   const query = { ...config.query };
-  if (config.view === 'histogram') return { ...query, mode: 'histogram', field: query.field || query.measures[0]?.field, bins: query.bins || 10 };
-  if (config.view === 'scatter') return { ...query, mode: 'rows', columns: query.measures.map(m => m.field).filter(Boolean), numeric_columns: query.measures.map(m => m.field).filter(Boolean), sort: undefined };
+  if (config.view === 'histogram') return { ...query, mode: 'histogram', field: query.field ?? query.measures[0]?.field, bins: query.bins || 10 };
+  if (config.view === 'scatter') {
+    const axes = query.measures.slice(0, 2).map(measure => measure.field).filter(Boolean);
+    return { ...query, mode: 'rows', columns: axes, numeric_columns: axes, sort: undefined };
+  }
   return { ...query, normalize_stack: config.view === 'percent_stacked', mode: config.view === 'pivot' ? 'pivot' : query.mode === 'rows' ? 'rows' : 'aggregate' };
 }
 
@@ -81,9 +84,11 @@ export function overviewTiles(source, fields) {
 export async function queryAnalytics(config, attachments, { signal, metadataOnly = false } = {}) {
   const source = config.source;
   if (!source) throw new Error('Choose a dataset.');
-  if (!metadataOnly && config.view === 'scatter' && (config.query.measures.length !== 2 || config.query.measures.some(m => !m.field))) throw new Error('Scatter needs exactly two numeric fields as measures.');
+  const query = executionQuery(config);
+  if (!metadataOnly && config.view === 'scatter' && new Set(query.numeric_columns).size !== 2) throw new Error('Choose two different numeric fields for the X and Y axes.');
+  if (!metadataOnly && config.view === 'histogram' && !query.field) throw new Error('Choose a numeric field for the histogram.');
   if (!metadataOnly && ['pie', 'doughnut'].includes(config.view) && (config.query.measures.length !== 1 || config.query.group_by.length !== 1)) throw new Error('Pie and doughnut charts need one measure and one category.');
-  return postAnalytics('query', source, attachments, { query: executionQuery(config), metadata_only: metadataOnly }, signal);
+  return postAnalytics('query', source, attachments, { query, metadata_only: metadataOnly }, signal);
 }
 
 export async function analyzeMetricChange(request, attachments, signal) {

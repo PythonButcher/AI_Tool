@@ -32,6 +32,8 @@ Response fields are `dataset` (identity, fingerprint, source_row_count, scope), 
 
 Validation failures return 400 `{error,code}`; unexpected failures return a safe 500 message and are logged. Missing, stale and unavailable sources never select another source automatically. Frontend cancellation aborts waiting and rejects stale responses; it does not promise termination of synchronous server computation.
 
+The chart composer maps Scatter's X and Y axes to the first two measure positions and requests only those two numeric fields. Other configured measures remain in the draft for aggregate visuals. A histogram can explicitly select its numeric input. In a newly started blank chart, the composer identifies the initial row count as a default and replaces it when the user assigns their first value.
+
 ## Collection and recovery
 
 The sole collection owner is `useAnalyticsWorkspace`, exposed through WindowContext. Local storage key `analyticsWorkspace:v1` contains `schemaVersion:1`, increasing `revision`, `activeDashboardId`, `activeAnalysisId`, `lastView`, `dashboards`, `explorations`, `drafts`, `templates`, `recent`. Dashboard records contain `state`, `items`, and bounded `revisions`; analyses contain identity/name/config, optional cached result, tags/favorite/timestamps and revisions. Analyses store source identities, not full attached source tables.

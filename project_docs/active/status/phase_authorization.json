@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "authorized_work": {
-    "name": "Unify Analytics tools and explain metric change"
+    "name": "Rebuild Analytics chart authoring"
   },
   "authorization_state": "AUTHORIZED",
   "lifecycle_state": "AWAITING USER ACCEPTANCE",
@@ -246,11 +246,11 @@
   "user_implementation_authorization": {
     "approved_by": "User",
     "approved_at": "2026-11-18",
-    "evidence": "Direct user request to consolidate Analytics tools in a drawer, remove Commands, and coordinate a new feature in a separate backend chat.",
+    "evidence": "Direct user request to rebuild the chart authoring experience, simplify measure controls, and highlight valid field drop targets.",
     "instruction": "Redesign Analytics Studio and keep its features available.",
     "scope": "Codex owns the Analytics frontend redesign, related backend repairs, and focused integration verification.",
-    "current_instruction": "Build a unified Analytics drawer, remove Commands, and delegate and integrate a new Analytics feature.",
-    "current_approved_at": "2026-11-18"
+    "current_instruction": "Rebuild the Analytics chart composer with a visual picker, clear field mapping targets, and cohesive controls.",
+    "current_approved_at": "2026-11-19"
   },
   "preparation_authorization": {
     "approved_by": "User",

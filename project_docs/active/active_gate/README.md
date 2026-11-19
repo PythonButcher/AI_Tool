@@ -2,7 +2,7 @@ Goal: Keep Analytics Studio aligned with the next user-authorized product change
 
 ## User Outcome
 
-Users retain one workspace for dashboard monitoring, visual analysis, and metric-change investigation while directing any follow-up in chat.
+Users retain one workspace for dashboard monitoring, chart authoring, and metric-change investigation while directing any follow-up in chat.
 
 ## Scope
 
@@ -11,7 +11,6 @@ The user directs product changes. A requested implementation outcome requires a 
 ## Contracts
 
 - [Analytics workspace](../contracts/analytics_workspace.md)
-- [Change Explorer](../analytics/change_explorer.md)
 
 ## Acceptance
 

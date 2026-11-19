@@ -61,6 +61,7 @@ export default function AnalyticsShell({ onOpenAiChat, onOpenGallery, onOpenAiCh
   const [boardHistory, setBoardHistory] = useState({ past: [], future: [] });
   const [dashboardRefresh, setDashboardRefresh] = useState(0);
   const [drillHistory, setDrillHistory] = useState([]);
+  const [composerSession, setComposerSession] = useState({ id: 0, replaceDefaultValue: false });
   const request = useRef(null);
   const sequence = useRef(0);
   const draftRef = useRef(draft); draftRef.current = draft;
@@ -84,6 +85,9 @@ export default function AnalyticsShell({ onOpenAiChat, onOpenGallery, onOpenAiCh
   const sourceMetadata = metadata?.signature === sourceSignature && metadata.attachments === attachments ? metadata : null;
   const fields = sourceMetadata?.fields || [];
   const metrics = sourceMetadata?.metrics || [];
+  const resetComposer = useCallback((replaceDefaultValue = false) => {
+    setComposerSession(previous => ({ id: previous.id + 1, replaceDefaultValue }));
+  }, []);
   useLayoutEffect(() => {
     if (!focus) return undefined;
     const shell = shellRef.current;
@@ -135,10 +139,11 @@ export default function AnalyticsShell({ onOpenAiChat, onOpenGallery, onOpenAiCh
     if (!workspace.pendingAction) return;
     const action = workspace.pendingAction;
     if (commit(next => ({ ...preserveDraft(next, true), pendingAction: null, activeAnalysisId: null, lastView: 'explore' }))) {
+      resetComposer(!action.view || action.view === 'bar');
       cancel(); setDraft({ ...defaultAnalysis(defaultSource), view: action.view || 'bar' });
       setResult(null); setResultConfig(null); setDirty(true); setOrigin(null);
     }
-  }, [workspace.pendingAction, commit, preserveDraft, defaultSource, cancel]);
+  }, [workspace.pendingAction, commit, preserveDraft, defaultSource, cancel, resetComposer]);
   useEffect(() => {
     const controller = new AbortController();
     fetch(`${API}/api/datahub/list`, { signal: controller.signal }).then(r => { if (!r.ok) throw new Error('Data Hub list unavailable'); return r.json(); })
@@ -190,11 +195,13 @@ export default function AnalyticsShell({ onOpenAiChat, onOpenGallery, onOpenAiCh
   };
   const openAnalysis = analysis => {
     if (!commit(next => remember({ ...preserveDraft(next, true), lastView: 'explore', activeAnalysisId: analysis.id }, analysis.id))) return;
+    resetComposer();
     cancel(); setDraft({ ...clone(analysis.config), requiresSourceReview: !!analysis.requiresSourceReview }); setResult(analysis.result || null); setResultConfig(analysis.config); setDirty(false); setOrigin(null); setHistory({ past: [], future: [] });
     if (analysis.requiresSourceReview) setError('Review the imported source and select a dataset before running.');
   };
   const startAnalysis = (view = 'bar', title, starter) => {
     if (!commit(next => ({ ...preserveDraft(next, true), lastView: 'explore', activeAnalysisId: null }))) return false;
+    resetComposer(!starter && !title && view === 'bar');
     cancel();
     setDraft(starter || { ...defaultAnalysis(selectedSource), view, ...(title ? { title } : {}) });
     setResult(null); setResultConfig(null); setDirty(!!(starter || title)); setOrigin(null); setHistory({ past: [], future: [] }); setDrillHistory([]); setError('');
@@ -322,6 +329,7 @@ export default function AnalyticsShell({ onOpenAiChat, onOpenGallery, onOpenAiCh
     config.requiresSourceReview = !!item.requiresSourceReview;
     setOrigin({ boardId: board.state.id, itemId: item.id, original: JSON.stringify(item) });
     const retained = liveResult || item.result || null;
+    resetComposer();
     cancel(); setDraft(config); setResult(retained); setResultConfig(liveResult ? config : item.result ? item.analysis : null); setDirty(true); setDrillHistory([]); setHistory({ past: [], future: [] });
   };
   const pin = update => {
@@ -375,6 +383,7 @@ export default function AnalyticsShell({ onOpenAiChat, onOpenGallery, onOpenAiCh
       const retained = preserveDraft({ ...next, drafts }, key !== 'current');
       return { ...retained, drafts: { ...retained.drafts, current: clone(value) }, activeAnalysisId: value.analysisId || null, lastView: 'explore' };
     })) return;
+    resetComposer();
     cancel(); setDraft(clone(value.config)); setResult(value.result); setResultConfig(value.resultConfig);
     setDirty(true); setOrigin(value.origin || null); setHistory({ past: [], future: [] }); setDrillHistory([]); setError('');
   };
@@ -777,7 +786,8 @@ export default function AnalyticsShell({ onOpenAiChat, onOpenGallery, onOpenAiCh
           {result && !resultIsCurrent && <p className="analytics-notice">Builder changed. Run the analysis to apply your edits to the result.</p>}
 
           <div className="analytics-workbench-grid">
-            <AnalyticsBuilder config={draft} fields={fields} metrics={metrics} sourceLoading={!!selectedSource && !sourceMetadata} onChange={changeDraft} />
+            <AnalyticsBuilder key={composerSession.id} config={draft} fields={fields} metrics={metrics} sourceLoading={!!selectedSource && !sourceMetadata}
+              replaceDefaultValue={composerSession.replaceDefaultValue} onChange={changeDraft} />
             <div className="analytics-result-panel">
               <h2 className="analytics-result-heading">Results</h2>
               <AnalyticsResult result={result} config={resultConfig ? { ...resultConfig, view: resultIsCurrent ? draft.view : resultConfig.view, appearance: draft.appearance } : draft} onSelect={resultIsCurrent ? drill : undefined} />

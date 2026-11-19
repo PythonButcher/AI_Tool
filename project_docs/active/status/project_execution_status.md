@@ -1,23 +1,23 @@
 # Project Execution Status
 
-## Current Gate: Unify Analytics tools and explain metric change
+## Current Gate: Rebuild Analytics chart authoring
 
-- **Current Gate**: Unify Analytics tools and explain metric change
+- **Current Gate**: Rebuild Analytics chart authoring
 - **Roadmap Phase**: Phase 1 — Analytics Product Rebuild
 - **Phase State**: `AWAITING USER ACCEPTANCE`
-- **What This State Means**: The unified drawer and Change Explorer have passed focused engineering verification.
-- **Current Milestone**: Analytics Studio user acceptance
+- **What This State Means**: The rebuilt chart composer passed focused engineering verification.
+- **Current Milestone**: Analytics chart authoring user acceptance
 - **Automatic Continuation**: `WAIT_FOR_USER`
 - **Current Owner**: User
 - **Backend Readiness**: `complete`
 - **Frontend Readiness**: `backend_contract_ready`
 - **Next Action**: User browser acceptance in chat.
-- **Required Action**: User decision on the drawer and Change Explorer experience.
+- **Required Action**: User decision on the chart authoring experience.
 - **Active Gate**: `project_docs/active/active_gate/README.md`
 - **Authorization Record**: `project_docs/active/status/phase_authorization.json`
 - **Roadmap**: `project_docs/active/analytics/README.md`
 - **Active Handoff**: None.
-- **Latest Verification**: 74 backend tests and 56 frontend tests passed. Analytics ESLint, Python compilation, and the production build passed. Chrome with a fixture dataset confirmed the docked drawer, Change Explorer waterfall and offsetting segment drivers, retained tool state, exact Analysis drilldown, and narrow Focus exit.
+- **Latest Verification**: 74 backend tests, 58 frontend regression tests, Analytics ESLint, and the production build passed. The focused Analytics and WindowContext suites passed again on the final layout. Chrome with fixture data verified Dashboard Add Tile → Chart, 15 visuals, native drag highlighting and assignment, keyboard assignment, measure editing, light and dark layouts, and chart rendering through Flask.
 
 ## Preserved Interface Verification
 

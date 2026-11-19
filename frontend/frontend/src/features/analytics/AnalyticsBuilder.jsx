@@ -1,307 +1,299 @@
 import React, { useState } from 'react';
 import {
-  FaCalendarAlt, FaChartArea, FaChartBar, FaChartLine, FaChartPie,
-  FaCog, FaExchangeAlt, FaFilter, FaHashtag, FaLayerGroup, FaMagic,
-  FaPlus, FaSearch, FaSortAmountDown, FaTable, FaTimes, FaUsers,
-} from 'react-icons/fa';
-import { AGGREGATIONS, POSTS, VIEWS } from './analyticsModel';
-import { validateFilters } from './analyticsStorage';
+  TbCalendar, TbChevronRight, TbColumns, TbDatabase, TbGripVertical, TbHash, TbLetterCase,
+  TbPlus, TbSearch, TbSwitchHorizontal, TbX,
+} from 'react-icons/tb';
+import AnalyticsMeasureEditor, { AGGREGATION_LABELS } from './AnalyticsMeasureEditor';
+import AnalyticsQueryOptions from './AnalyticsQueryOptions';
+import AnalyticsVisualPicker from './AnalyticsVisualPicker';
 import { remapAnalysis } from './analyticsTransforms';
+import './AnalyticsBuilder.css';
 
-const VIEW_ICONS = {
-  bar: { label: 'Bar', icon: FaChartBar },
-  horizontal: { label: 'Horizontal bar', icon: FaChartBar },
-  grouped: { label: 'Grouped bar', icon: FaChartBar },
-  stacked: { label: 'Stacked bar', icon: FaLayerGroup },
-  percent_stacked: { label: '100% stacked bar', icon: FaLayerGroup },
-  line: { label: 'Line', icon: FaChartLine },
-  area: { label: 'Area', icon: FaChartArea },
-  stacked_area: { label: 'Stacked area', icon: FaChartArea },
-  scatter: { label: 'Scatter', icon: FaChartLine },
-  pie: { label: 'Pie', icon: FaChartPie },
-  doughnut: { label: 'Donut', icon: FaChartPie },
-  histogram: { label: 'Histogram', icon: FaChartBar },
-  kpi: { label: 'KPI', icon: FaHashtag },
-  pivot: { label: 'Pivot', icon: FaTable },
-  table: { label: 'Table', icon: FaTable },
-};
-const COMMON_VIEWS = ['bar', 'line', 'area', 'table', 'kpi'];
+const FIELD_DRAG_TYPE = 'application/x-datastream-analytics-field';
+const FIELD_TYPES = [['all', 'All'], ['number', 'Numbers'], ['string', 'Text'], ['date', 'Dates']];
+const GRAINS = ['day', 'week', 'month', 'quarter', 'year'];
+const FIELD_MARKS = { number: TbHash, date: TbCalendar, string: TbLetterCase };
 
-export default function AnalyticsBuilder({ config, fields, metrics = [], sourceLoading, onChange }) {
+function FieldWell({ target, active, over, choosing, onChoose, onAssign, onDragOver, onDragLeave, onDrop }) {
+  const accepts = !!active && target.candidates.some(field => field.name === active.name);
+  const state = !active ? 'idle' : accepts ? over ? 'over' : 'ready' : 'blocked';
+  const action = accepts
+    ? `${over ? target.replace ? 'Drop to replace with' : 'Drop' : target.replace ? 'Replace with' : 'Add'} ${active.name}`
+    : active ? `Cannot place ${active.name} in ${target.title}` : `Drop a field or click to add to ${target.title}`;
+
+  return <section className="analytics-field-well" aria-label={target.title} data-drop-state={state}
+    onDragEnter={onDragOver} onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}>
+    <div className="analytics-well-heading">
+      <target.icon aria-hidden="true" /><h3>{target.title}</h3>
+      {target.count > 0 && <span>{target.count}</span>}
+    </div>
+    {target.entries}
+    <button type="button" className="analytics-well-add" aria-label={action} aria-expanded={choosing ? true : undefined}
+      disabled={active ? !accepts : !target.candidates.length}
+      onClick={() => accepts ? onAssign(active) : onChoose()}>
+      <TbPlus aria-hidden="true" /><span>{active ? accepts ? action : 'Field unavailable here' : 'Drop a field or click to add'}</span>
+    </button>
+    {choosing && <label className="analytics-well-picker">Field for {target.title}
+      <select autoFocus value="" onChange={event => {
+        const field = target.candidates.find(option => option.name === event.target.value);
+        if (field) onAssign(field);
+      }}>
+        <option value="" disabled>Choose a field</option>
+        {target.candidates.map(field => <option key={field.name}>{field.name}</option>)}
+      </select>
+    </label>}
+    <small className="analytics-well-hint">{active && !accepts ? target.blocked : target.hint}</small>
+    {target.footer}
+  </section>;
+}
+
+function MeasureRow({ measure, index, editing, fallback, fields, metrics, onToggle, onChange, onRemove }) {
+  const governed = metrics.find(metric => metric.id === measure.metric_id);
+  const label = measure.label || governed?.label || governed?.name || measure.metric_id ||
+    (measure.formula ? measure.id : measure.aggregation === 'count_rows' ? 'Rows' : measure.field || 'Unnamed measure');
+  const method = measure.metric_id ? 'Governed metric' : measure.formula ? 'Formula' : AGGREGATION_LABELS[measure.aggregation || 'sum'];
+  return <div className={`analytics-author-measure ${editing ? 'is-editing' : ''}`}>
+    <div className="analytics-author-assignment">
+      <button type="button" className="analytics-author-measure-toggle" aria-expanded={editing} aria-label={`Configure measure ${label}`} onClick={onToggle}>
+        <span className="analytics-author-measure-mark" aria-hidden="true">Σ</span>
+        <span className="analytics-author-measure-name"><strong>{label}</strong><small>{fallback ? 'Default row count' : method}</small></span>
+        <TbChevronRight className="analytics-author-measure-chevron" aria-hidden="true" />
+      </button>
+      <button type="button" className="analytics-author-icon" disabled={!onRemove} aria-label={`Remove measure ${label}`} onClick={onRemove}><TbX /></button>
+    </div>
+    {editing && <AnalyticsMeasureEditor measure={measure} index={index} fields={fields} metrics={metrics} onChange={onChange} />}
+  </div>;
+}
+
+export default function AnalyticsBuilder({ config, fields, metrics = [], sourceLoading, replaceDefaultValue = false, onChange }) {
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
-  const [activeMeasureIdx, setActiveMeasureIdx] = useState(null);
-  const [openTray, setOpenTray] = useState(null); // 'time' | 'filters' | 'segment' | 'sort' | 'remap'
-  const [filterText, setFilterText] = useState(null);
-  const [filterError, setFilterError] = useState('');
-  const [segmentText, setSegmentText] = useState(null);
+  const [selectedName, setSelectedName] = useState(null);
+  const [draggedName, setDraggedName] = useState(null);
+  const [hovered, setHovered] = useState(null);
+  const [choosing, setChoosing] = useState(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [editingMeasure, setEditingMeasure] = useState(null);
+  const [showRemap, setShowRemap] = useState(false);
   const [oldField, setOldField] = useState('');
   const [newField, setNewField] = useState('');
+  const [announcement, setAnnouncement] = useState('');
 
-  const query = config.query;
+  const { query, view } = config;
+  const activeField = fields.find(field => field.name === (draggedName || selectedName));
+  const groups = query.group_by || [];
+  const measures = query.measures || [];
+  const firstMeasure = measures[0];
+  const fallback = replaceDefaultValue && measures.length === 1 && firstMeasure.id === 'value' && firstMeasure.label === 'Rows' &&
+    firstMeasure.aggregation === 'count_rows' && !firstMeasure.field && !firstMeasure.metric_id && !firstMeasure.formula &&
+    (!firstMeasure.post || firstMeasure.post === 'none');
+  const singleSeries = view === 'pie' || view === 'doughnut';
+  const detailRows = view === 'table' && query.mode === 'rows';
+  const timeAxis = ['line', 'area', 'stacked_area'].includes(view);
+  const columns = query.columns || [];
+  const histogramField = query.field ?? measures[0]?.field;
+  const visibleFields = fields.filter(field =>
+    (typeFilter === 'all' || field.type === typeFilter) && field.name.toLowerCase().includes(search.trim().toLowerCase()));
+
   const changeQuery = patch => onChange({ ...config, query: { ...query, ...patch } });
-  const changeView = view => onChange({ ...config, view, query: { ...query, mode: 'aggregate' } });
-  const updateMeasure = (index, patch) => changeQuery({ measures: query.measures.map((m, i) => i === index ? { ...m, ...patch } : m) });
-  const addGroup = name => { if (name && !(query.group_by || []).some(g => g.field === name)) changeQuery({ group_by: [...(query.group_by || []), { field: name }] }); };
-  const nextMeasure = () => { const ids = new Set(query.measures.map(m => m.id)); let i = 1; while (ids.has(`m${i}`)) i++; return `m${i}`; };
-  const choices = <><option value="">Choose field</option>{fields.map(f => <option key={f.name} value={f.name}>{f.name}</option>)}</>;
-  const rules = Array.isArray(query.filters) ? query.filters : query.filters?.rules || [];
-  const setRules = next => changeQuery({ filters: { op: query.filters?.op || 'and', rules: next } });
-  const editRule = (index, patch) => setRules(rules.map((rule, position) => position === index
-    ? { ...rule, ...patch, type: rule.type === 'segment' ? undefined : rule.type }
-    : rule));
-  const toggleTray = name => setOpenTray(prev => prev === name ? null : name);
+  const nextMeasureId = (list = measures) => {
+    const reserved = new Set([...fields.map(field => field.name), ...list.map(measure => measure.id)]);
+    let index = 1;
+    while (reserved.has(`m${index}`)) index += 1;
+    return `m${index}`;
+  };
+  const fromField = (field, id = nextMeasureId()) => ({
+    id, label: field.name, field: field.name, aggregation: field.type === 'number' ? 'sum' : 'count_distinct',
+  });
+  const replaceSort = (oldName, nextName) => query.sort && query.sort.field === oldName
+    ? { sort: nextName ? { ...query.sort, field: nextName } : undefined } : {};
+  const removeGroup = name => changeQuery({ group_by: groups.filter(group => group.field !== name), ...replaceSort(name) });
+  const removeMeasure = index => {
+    changeQuery({ measures: measures.filter((_, position) => position !== index), ...replaceSort(measures[index].id) });
+    setEditingMeasure(null);
+  };
+  const chooseView = nextView => {
+    if (nextView !== view) onChange({ ...config, view: nextView, query: { ...query, mode: 'aggregate' } });
+    setPickerOpen(false);
+    setEditingMeasure(null);
+    setChoosing(null);
+  };
+  const assign = (target, field) => {
+    if (!target.candidates.some(candidate => candidate.name === field?.name)) return;
+    target.assign(field);
+    setAnnouncement(`${field.name} assigned to ${target.title}.`);
+    setSelectedName(null);
+    setDraggedName(null);
+    setHovered(null);
+    setChoosing(null);
+  };
+  const scalarRow = (name, clear) => name && <div className="analytics-author-assignment analytics-author-scalar">
+    <span>{name}</span><button type="button" className="analytics-author-icon" aria-label={`Remove ${name}`} onClick={clear}><TbX /></button>
+  </div>;
 
-  const visibleFields = fields.filter(f =>
-    (typeFilter === 'all' || f.type === typeFilter) &&
-    f.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const groupTarget = {
+    id: 'categories', icon: TbColumns,
+    title: view === 'pivot' ? 'Grouping fields' : ['kpi', 'table'].includes(view) ? 'Group rows' : timeAxis ? 'Time or category axis' : 'Category axis',
+    hint: view === 'pivot' ? 'Add at least two fields. The last becomes columns.' : timeAxis ? 'Add a date or an ordered category.' : 'Add fields to group records together.',
+    blocked: 'Choose an unused field or remove an assignment to make room.',
+    count: groups.length,
+    replace: singleSeries && groups.length === 1,
+    candidates: groups.length >= (singleSeries ? 2 : 4) ? [] : fields.filter(field => !groups.some(group => group.field === field.name)),
+    assign: field => {
+      const group = { field: field.name, ...(field.type === 'date' && timeAxis ? { grain: 'day' } : {}) };
+      if (singleSeries && groups.length) changeQuery({ group_by: [group], ...replaceSort(groups[0].field, field.name) });
+      else changeQuery({ group_by: [...groups, group] });
+    },
+    entries: groups.map((group, index) => <div className="analytics-author-assignment analytics-author-group" key={group.field}>
+      <div><strong>{group.field}</strong>{view === 'pivot' && groups.length > 1 && <small>{index === groups.length - 1 ? 'Columns' : 'Rows'}</small>}</div>
+      <select aria-label={`Date grain for ${group.field}`} title="Date grouping" value={group.grain || ''}
+        onChange={event => changeQuery({ group_by: groups.map((item, position) => position === index ? { ...item, grain: event.target.value || undefined } : item) })}>
+        <option value="">As is</option>{GRAINS.map(grain => <option key={grain}>{grain}</option>)}
+      </select>
+      <button type="button" className="analytics-author-icon" aria-label={`Remove grouping ${group.field}`} onClick={() => removeGroup(group.field)}><TbX /></button>
+    </div>),
+  };
+  const measureTarget = {
+    id: 'values', title: singleSeries ? 'Value' : 'Values', icon: TbHash,
+    hint: fallback ? 'Add a field to replace the default row count.' : singleSeries ? 'Use one measure. Add a field to replace the value.' : 'Add fields to summarize or configure a measure.',
+    blocked: 'Remove a measure before adding another.',
+    count: measures.length,
+    replace: fallback || (singleSeries && measures.length === 1),
+    candidates: measures.length >= (singleSeries ? 2 : 12) ? [] : fields,
+    assign: field => {
+      if (fallback || (singleSeries && measures.length)) changeQuery({ measures: [fromField(field, measures[0].id)] });
+      else changeQuery({ measures: [...measures, fromField(field)] });
+    },
+    entries: measures.map((measure, index) => <MeasureRow key={index} measure={measure} index={index} editing={editingMeasure === index} fallback={fallback}
+      fields={fields} metrics={metrics} onToggle={() => setEditingMeasure(previous => previous === index ? null : index)}
+      onRemove={measures.length > 1 ? () => removeMeasure(index) : undefined}
+      onChange={patch => changeQuery({
+        measures: measures.map((item, position) => position === index ? { ...item, ...patch } : item),
+        ...(patch.id === undefined ? {} : replaceSort(measure.id, patch.id)),
+      })} />),
+    footer: !singleSeries && measures.length < 12 && <button type="button" className="analytics-author-link" onClick={() => {
+      changeQuery({ measures: [...measures, { id: nextMeasureId(), aggregation: 'count_rows' }] });
+      setEditingMeasure(measures.length);
+    }}>New measure <TbChevronRight aria-hidden="true" /></button>,
+  };
+  const scatterTargets = () => ['X axis', 'Y axis'].map((title, index) => {
+    const fieldName = measures[index]?.field;
+    const update = field => {
+      const list = [...measures];
+      while (list.length <= index) list.push({ id: nextMeasureId(list), aggregation: 'count_rows' });
+      const { id } = list[index];
+      list[index] = field ? fromField(field, id) : { id, aggregation: 'count_rows' };
+      changeQuery({ measures: list });
+    };
+    return {
+      id: `scatter-${index}`, title, icon: TbHash, hint: 'Use a numeric field.', blocked: 'Choose a different numeric field.',
+      replace: !!fieldName, count: fieldName ? 1 : 0,
+      candidates: fields.filter(field => field.type === 'number' && field.name !== measures[1 - index]?.field),
+      assign: update, entries: scalarRow(fieldName, () => update(null)),
+    };
+  });
+  const histogramTarget = {
+    id: 'histogram', title: 'Numeric field', icon: TbHash,
+    hint: 'Values are grouped into intervals.', blocked: 'This visual only accepts numeric fields.',
+    replace: !!histogramField,
+    count: histogramField ? 1 : 0,
+    candidates: fields.filter(field => field.type === 'number'),
+    assign: field => changeQuery({ field: field.name }),
+    entries: scalarRow(histogramField, () => changeQuery({ field: '' })),
+    footer: <label className="analytics-author-bins">Bins<input type="number" min="1" max="100" value={query.bins ?? 10}
+      onChange={event => changeQuery({ bins: Number(event.target.value) })} /></label>,
+  };
+  const detailTarget = {
+    id: 'columns', title: 'Columns', icon: TbColumns,
+    hint: 'Add the fields to show in the table. An empty list shows all fields.', blocked: 'Choose a field that is not already listed.',
+    count: columns.length,
+    candidates: columns.length >= 100 ? [] : fields.filter(field => !columns.includes(field.name)),
+    assign: field => changeQuery({ columns: [...columns, field.name] }),
+    entries: columns.map(name => <React.Fragment key={name}>{scalarRow(name, () => changeQuery({ columns: columns.filter(field => field !== name), ...replaceSort(name) }))}</React.Fragment>),
+  };
+  const targets = view === 'scatter' ? scatterTargets() : view === 'histogram' ? [histogramTarget] :
+    detailRows ? [detailTarget] : view === 'kpi' ? [measureTarget, groupTarget] : [groupTarget, measureTarget];
+  const assignmentAvailable = activeField && targets.some(target => target.candidates.some(field => field.name === activeField.name));
+  const note = activeField
+    ? assignmentAvailable ? `${activeField.name} selected. Choose a highlighted target.` : `${activeField.name} does not fit the available targets.`
+    : 'Drag a field or select it to choose a target.';
+  const canDrop = target => !!draggedName && target.candidates.some(field => field.name === draggedName);
 
   return <div className="analytics-builder-studio">
-    {/* Schema & Fields Dock */}
-    <section className="analytics-schema-panel">
-      <div className="analytics-schema-header">
-        <div className="analytics-card-title"><FaLayerGroup /><span>Fields</span><small>{fields.length}</small></div>
-        <button type="button" className={`analytics-icon-pill ${openTray === 'remap' ? 'is-selected' : ''}`} onClick={() => toggleTray('remap')} title="Remap imported or renamed field">
-          <FaExchangeAlt /><span>Remap</span>
-        </button>
-      </div>
-
-      {openTray === 'remap' && <div className="analytics-popover-tray">
-        <div className="analytics-builder-grid">
-          <label>Original field<input placeholder="Old name" value={oldField} onChange={e => setOldField(e.target.value)} /></label>
-          <label>Replacement field<select value={newField} onChange={e => setNewField(e.target.value)}>{choices}</select></label>
-        </div>
-        <button type="button" className="is-primary" disabled={!oldField || !newField} onClick={() => { onChange(remapAnalysis(config, { [oldField]: newField })); setOpenTray(null); }}>Remap field throughout query</button>
+    <section className="analytics-author-fields" aria-label="Dataset fields">
+      <header className="analytics-author-heading">
+        <span className="analytics-author-heading-mark"><TbDatabase aria-hidden="true" /></span>
+        <div><h2>Fields</h2><small>{sourceLoading ? 'Loading schema' : `${fields.length} available`}</small></div>
+        <button type="button" className="analytics-author-icon" aria-label="Remap fields" title="Remap fields"
+          aria-expanded={showRemap} onClick={() => setShowRemap(value => !value)}><TbSwitchHorizontal /></button>
+      </header>
+      {showRemap && <div className="analytics-author-option-editor">
+        <label>Original field<input value={oldField} onChange={event => setOldField(event.target.value)} /></label>
+        <label>Replacement field<select value={newField} onChange={event => setNewField(event.target.value)}>
+          <option value="">Choose field</option>{fields.map(field => <option key={field.name}>{field.name}</option>)}
+        </select></label>
+        <button type="button" disabled={!oldField || !newField} onClick={() => { onChange(remapAnalysis(config, { [oldField]: newField })); setShowRemap(false); }}>Remap field</button>
       </div>}
-
-      <div className="analytics-search-box">
-        <FaSearch className="analytics-search-icon" />
-        <input aria-label="Search fields" placeholder="Search fields…" value={search} onChange={e => setSearch(e.target.value)} />
+      <div className="analytics-author-field-controls">
+        <div className="analytics-search-box"><TbSearch className="analytics-search-icon" /><input aria-label="Search fields" placeholder="Search fields" value={search} onChange={event => setSearch(event.target.value)} /></div>
+        <div className="analytics-author-field-types" role="group" aria-label="Filter fields by type">
+          {FIELD_TYPES.map(([type, label]) => <button key={type} type="button" aria-pressed={typeFilter === type} onClick={() => setTypeFilter(type)}>{label}</button>)}
+        </div>
       </div>
-
-      <div className="analytics-type-pills" role="group" aria-label="Filter fields by type">
-        {[['all', 'All'], ['number', '# Num'], ['string', 'Abc'], ['date', 'Date']].map(([key, label]) => (
-          <button type="button" key={key} className={typeFilter === key ? 'is-selected' : ''} onClick={() => setTypeFilter(key)}>{label}</button>
-        ))}
-      </div>
-
-      <div className="analytics-field-list">
-        {visibleFields.map(f => (
-          <div
-            key={f.name}
-            className={`analytics-field-item is-type-${f.type}`}
-            draggable
-            title={`Examples: ${(f.examples || []).join(', ')}`}
-            onDragStart={e => e.dataTransfer.setData('text/plain', f.name)}
-          >
-            <span className="analytics-field-badge" aria-label={f.type}>{f.type === 'number' ? '#' : f.type === 'date' ? <FaCalendarAlt /> : 'Aa'}</span>
-            <span className="analytics-field-name">{f.name}</span>
-            <div className="analytics-field-quick">
-              <button type="button" onClick={() => addGroup(f.name)} aria-label={`Group by ${f.name}`} title={`Group by ${f.name}`}>+G</button>
-              <button type="button" disabled={query.measures.length >= 12} onClick={() => changeQuery({ measures: [...query.measures, { id: nextMeasure(), field: f.name, aggregation: f.type === 'number' ? 'sum' : 'count_distinct' }] })} aria-label={`Measure ${f.name}`} title={`Add ${f.name} as measure`}>+M</button>
-            </div>
-          </div>
-        ))}
+      <div className="analytics-author-field-list">
+        {visibleFields.map(field => {
+          const Icon = FIELD_MARKS[field.type] || TbLetterCase;
+          return <button key={field.name} type="button" className={`analytics-author-field is-${field.type}`}
+            draggable aria-pressed={selectedName === field.name || draggedName === field.name} aria-label={`Select field ${field.name}`}
+            title={field.examples?.length ? `${field.name} · ${field.examples.join(', ')}` : field.name}
+            onClick={() => { setSelectedName(previous => previous === field.name ? null : field.name); setChoosing(null); setAnnouncement(''); }}
+            onDragStart={event => {
+              event.dataTransfer.setData(FIELD_DRAG_TYPE, field.name);
+              event.dataTransfer.setData('text/plain', field.name);
+              event.dataTransfer.effectAllowed = 'copy';
+              setSelectedName(null); setDraggedName(field.name); setChoosing(null); setAnnouncement('');
+            }}
+            onDragEnd={() => { setDraggedName(null); setHovered(null); }}>
+            <TbGripVertical className="analytics-author-grip" aria-hidden="true" /><span className="analytics-author-field-mark"><Icon aria-hidden="true" /></span>
+            <span className="analytics-author-field-name">{field.name}</span>
+          </button>;
+        })}
         {!visibleFields.length && <p className="analytics-empty-hint">{sourceLoading ? 'Loading fields…' : config.source ? 'No matching fields.' : 'Choose a dataset to browse fields.'}</p>}
       </div>
+      {fields.length > 0 && <p className="analytics-author-field-note" role="status">{announcement || note}</p>}
     </section>
 
-    {/* Visual Query Shelves (Chart Type Strip + Measure/Dimension/Filter Pill Shelves) */}
-    <div className="analytics-shelves-stack">
-      {/* Visualization Type Strip */}
-      <section className="analytics-viz-ribbon">
-        <div className="analytics-viz-strip" role="group" aria-label="Chart type selector">
-          {COMMON_VIEWS.map(view => {
-            const meta = VIEW_ICONS[view];
-            const Icon = meta.icon;
-            return (
-              <button
-                type="button"
-                key={view}
-                className={`analytics-viz-tile ${config.view === view ? 'is-selected' : ''}`}
-                onClick={() => changeView(view)}
-                aria-pressed={config.view === view}
-              >
-                <Icon /><span>{meta.label}</span>
-              </button>
-            );
-          })}
+    <section className="analytics-author-panel" aria-label="Visual builder">
+      <header className="analytics-author-heading"><div><h2>Visual builder</h2></div></header>
+      <AnalyticsVisualPicker view={view} open={pickerOpen} onToggle={() => setPickerOpen(value => !value)} onSelect={chooseView}
+        onSuggest={() => chooseView(groups.some(group => group.grain) ? 'line' : groups.length ? 'bar' : 'kpi')} />
+      <div className="analytics-author-mapping">
+        <div className="analytics-author-mapping-title">
+          <h3>Field mapping</h3>
+          {activeField && <button type="button" className="analytics-author-icon" aria-label="Clear field selection" onClick={() => setSelectedName(null)}><TbX /></button>}
         </div>
-        <div className="analytics-viz-controls">
-          <label className="analytics-inline-select">Visualization<select value={config.view} onChange={e => changeView(e.target.value)}>{VIEWS.map(view => <option key={view} value={view}>{VIEW_ICONS[view].label}</option>)}</select></label>
-          <button type="button" className="analytics-icon-btn" aria-label="Suggest chart from fields" title="Suggest chart from fields" onClick={() => changeView(query.group_by.some(g => g.grain) ? 'line' : query.group_by.length ? 'bar' : 'kpi')}><FaMagic /></button>
-          <button type="button" className={`analytics-icon-pill ${openTray === 'sort' ? 'is-selected' : ''}`} aria-expanded={openTray === 'sort'} onClick={() => toggleTray('sort')}><FaSortAmountDown /><span>Sort & limit</span></button>
-        </div>
-      </section>
-
-      {/* Measures Shelf */}
-      <section
-        className="analytics-shelf-row"
-        onDragOver={e => e.preventDefault()}
-        onDrop={e => { e.preventDefault(); const name = e.dataTransfer.getData('text/plain'); const field = fields.find(f => f.name === name); if (field && query.measures.length < 12) changeQuery({ measures: [...query.measures, { id: nextMeasure(), field: name, aggregation: field.type === 'number' ? 'sum' : 'count_distinct' }] }); }}
-      >
-        <span className="analytics-shelf-label"><FaHashtag /> Measures</span>
-        <div className="analytics-shelf-pills">
-          {query.measures.map((measure, index) => {
-            const isEditing = activeMeasureIdx === index;
-            return (
-              <div key={index} className={`analytics-measure-pill ${isEditing ? 'is-open' : ''}`}>
-                <span className="analytics-pill-agg">{(measure.metric_id ? 'METRIC' : measure.formula ? 'FX' : measure.aggregation || 'sum').toUpperCase()}</span>
-                {!measure.metric_id ? (
-                  <select aria-label={`Measure ${index + 1} field`} value={measure.field || ''} onChange={e => updateMeasure(index, { field: e.target.value })}>
-                    <option value="">{measure.aggregation === 'count_rows' ? 'All rows' : 'Choose field'}</option>
-                    {fields.map(f => <option key={f.name} value={f.name}>{f.name}</option>)}
-                  </select>
-                ) : (
-                  <span className="analytics-pill-name">{measure.metric_id}</span>
-                )}
-                <select aria-label={`Measure ${index + 1} aggregation`} value={measure.aggregation || 'sum'} onChange={e => updateMeasure(index, { aggregation: e.target.value })}>
-                  {AGGREGATIONS.map(agg => <option key={agg} value={agg}>{agg}</option>)}
-                </select>
-                <button type="button" className="analytics-pill-gear" onClick={() => setActiveMeasureIdx(isEditing ? null : index)} title="Configure formula, post-calculation or label"><FaCog /></button>
-                <button type="button" className="analytics-pill-remove" disabled={query.measures.length === 1} onClick={() => { changeQuery({ measures: query.measures.filter((_, i) => i !== index) }); if (isEditing) setActiveMeasureIdx(null); }} title="Remove measure"><FaTimes /></button>
-              </div>
-            );
-          })}
-          <button type="button" className="analytics-add-pill" disabled={query.measures.length >= 12} onClick={() => { const nextIdx = query.measures.length; changeQuery({ measures: [...query.measures, { id: nextMeasure(), aggregation: 'count_rows' }] }); setActiveMeasureIdx(nextIdx); }}><FaPlus /><span>Add measure</span></button>
-        </div>
-      </section>
-
-      {/* Active Measure Popover Drawer */}
-      {activeMeasureIdx !== null && query.measures[activeMeasureIdx] && (() => {
-        const index = activeMeasureIdx;
-        const measure = query.measures[index];
-        return (
-          <div className="analytics-popover-tray analytics-measure-editor">
-            <div className="analytics-tile-meta">
-              <strong>Configure Measure #{index + 1} ({measure.id})</strong>
-              <button type="button" onClick={() => setActiveMeasureIdx(null)}>Done</button>
-            </div>
-            <div className="analytics-builder-grid4">
-              <label>ID<input value={measure.id} onChange={e => updateMeasure(index, { id: e.target.value })} /></label>
-              <label>Label<input placeholder="Display label" value={measure.label || ''} onChange={e => updateMeasure(index, { label: e.target.value })} /></label>
-              <label>Governed metric<select value={measure.metric_id || ''} onChange={e => updateMeasure(index, { metric_id: e.target.value, formula: '' })}><option value="">Field or calculation</option>{metrics.map(m => <option key={m.id} value={m.id}>{m.label || m.name || m.id}</option>)}</select></label>
-              <label>Calculation<select value={measure.post || 'none'} onChange={e => updateMeasure(index, { post: e.target.value })}>{POSTS.map(post => <option key={post}>{post}</option>)}</select></label>
-            </div>
-            {!measure.metric_id && <div className="analytics-builder-grid">
-              <label>Formula over earlier measure IDs<input placeholder="(revenue - cost) / revenue" value={measure.formula || ''} onChange={e => updateMeasure(index, { formula: e.target.value })} /></label>
-              {measure.aggregation === 'percentile' && <label>Percentile (0–1)<input type="number" min="0" max="1" step="0.01" value={measure.percentile ?? .5} onChange={e => updateMeasure(index, { percentile: Number(e.target.value) })} /></label>}
-              {measure.post === 'moving_average' && <label>Window<input type="number" min="1" max="100" value={measure.window || 3} onChange={e => updateMeasure(index, { window: Number(e.target.value) })} /></label>}
-            </div>}
-          </div>
-        );
-      })()}
-
-      {/* Group By & Time Intelligence Shelf */}
-      <section
-        className="analytics-shelf-row"
-        onDragOver={e => e.preventDefault()}
-        onDrop={e => { e.preventDefault(); const name = e.dataTransfer.getData('text/plain'); if (fields.some(f => f.name === name)) addGroup(name); }}
-      >
-        <span className="analytics-shelf-label"><FaLayerGroup /> Group & Time</span>
-        <div className="analytics-shelf-pills">
-          {(query.group_by || []).map((group, index) => (
-            <div className="analytics-group-pill" key={group.field}>
-              <span className="analytics-pill-name">{group.field}</span>
-              <select aria-label={`Date grain for ${group.field}`} value={group.grain || ''} onChange={e => changeQuery({ group_by: query.group_by.map((g, i) => i === index ? { ...g, grain: e.target.value || undefined } : g) })}>
-                <option value="">Categories</option>
-                {['day', 'week', 'month', 'quarter', 'year'].map(grain => <option key={grain}>{grain}</option>)}
-              </select>
-              <button type="button" className="analytics-pill-remove" aria-label={`Remove grouping ${group.field}`} onClick={() => changeQuery({ group_by: query.group_by.filter((_, i) => i !== index) })}>×</button>
-            </div>
-          ))}
-          <select className="analytics-add-select" aria-label="Add grouping field" value="" onChange={e => addGroup(e.target.value)}>
-            <option value="">+ Add dimension…</option>
-            {fields.map(f => <option key={f.name} value={f.name}>{f.name}</option>)}
-          </select>
-          <button type="button" className={`analytics-icon-pill ${openTray === 'time' || query.period ? 'is-selected' : ''}`} onClick={() => toggleTray('time')}>
-            <FaCalendarAlt /><span>{query.period ? `${query.period.field} (${query.period.last_days ? `${query.period.last_days}d` : 'range'})` : 'Time range & compare'}</span>
-          </button>
-        </div>
-      </section>
-
-      {/* Filters & Segment Shelf */}
-      <section className="analytics-shelf-row">
-        <span className="analytics-shelf-label"><FaFilter /> Filters</span>
-        <div className="analytics-shelf-pills">
-          {rules.map((rule, index) => (
-            Array.isArray(rule) || rule.rules ? (
-              <span key={index} className="analytics-filter-pill">Nested group <button type="button" onClick={() => setRules(rules.filter((_, i) => i !== index))}>×</button></span>
-            ) : (
-              <div key={index} className="analytics-filter-pill">
-                <select aria-label={`Filter ${index + 1} field`} value={rule.field || ''} onChange={e => editRule(index, { field: e.target.value })}>{choices}</select>
-                <select aria-label={`Filter ${index + 1} operator`} value={rule.operator || 'eq'} onChange={e => editRule(index, { operator: e.target.value })}>{['eq', 'neq', 'gt', 'gte', 'lt', 'lte', 'in', 'not_in', 'contains', 'is_null', 'not_null'].map(op => <option key={op}>{op}</option>)}</select>
-                <input aria-label={`Filter ${index + 1} value`} placeholder="Value…" value={rule.values?.join(',') ?? rule.value ?? ''} onChange={e => editRule(index, { value: e.target.value, values: ['in', 'not_in'].includes(rule.operator) ? e.target.value.split(',').map(v => v.trim()) : undefined })} />
-                <button type="button" className="analytics-pill-remove" onClick={() => setRules(rules.filter((_, i) => i !== index))} title="Remove filter">×</button>
-              </div>
-            )
-          ))}
-          <button type="button" className="analytics-add-pill" onClick={() => setRules([...rules, { field: fields[0]?.name || '', operator: 'eq', value: '' }])}><FaPlus /><span>Add filter</span></button>
-          {rules.length > 1 && (
-            <select className="analytics-add-select" aria-label="Filter match logic" value={query.filters?.op || 'and'} onChange={e => changeQuery({ filters: { op: e.target.value, rules } })}>
-              <option value="and">Match ALL (AND)</option>
-              <option value="or">Match ANY (OR)</option>
-            </select>
-          )}
-          <button type="button" className={`analytics-icon-pill ${openTray === 'filters' ? 'is-selected' : ''}`} onClick={() => toggleTray('filters')}>Advanced JSON</button>
-          <button type="button" className={`analytics-icon-pill ${openTray === 'segment' || query.comparison?.kind === 'segment' ? 'is-selected' : ''}`} onClick={() => toggleTray('segment')}><FaUsers /><span>Segment compare</span></button>
-        </div>
-      </section>
-
-      {/* Expandable Studio Trays (Time, Sort, Advanced Filters, Segment Comparison) */}
-      {openTray === 'time' && (
-        <div className="analytics-popover-tray">
-          <div className="analytics-builder-grid4">
-            <label>Date field<select value={query.period?.field || ''} onChange={e => changeQuery({ period: e.target.value ? { field: e.target.value, last_days: 30 } : undefined, comparison: undefined })}>{choices}</select></label>
-            {query.period && <>
-              <label>Period mode<select value={query.period.last_days ? 'relative' : 'absolute'} onChange={e => changeQuery({ period: { field: query.period.field, ...(e.target.value === 'relative' ? { last_days: 30 } : { start: '', end: '' }) } })}><option value="relative">Last N days</option><option value="absolute">Date range</option></select></label>
-              {query.period.last_days ? (
-                <label>Days<input type="number" min="1" max="3660" value={query.period.last_days} onChange={e => changeQuery({ period: { ...query.period, last_days: Number(e.target.value) } })} /></label>
-              ) : (
-                <>
-                  <label>From<input type="date" value={query.period.start || ''} onChange={e => changeQuery({ period: { ...query.period, start: e.target.value } })} /></label>
-                  <label>Through<input type="date" value={query.period.end || ''} onChange={e => changeQuery({ period: { ...query.period, end: e.target.value } })} /></label>
-                </>
-              )}
-              <label>Compare<select value={query.comparison?.kind || ''} onChange={e => changeQuery({ comparison: e.target.value ? { kind: e.target.value } : undefined })}><option value="">No comparison</option><option value="previous_period">Previous period</option><option value="previous_year">Previous year</option><option value="custom">Custom range</option></select></label>
-              {query.comparison?.kind === 'custom' && ['start', 'end'].map(key => <label key={key}>Comparison {key}<input type="date" value={query.comparison[key] || ''} onChange={e => changeQuery({ comparison: { ...query.comparison, [key]: e.target.value } })} /></label>)}
-            </>}
-          </div>
-        </div>
-      )}
-
-      {openTray === 'sort' && (
-        <div className="analytics-popover-tray">
-          <div className="analytics-builder-grid4">
-            <label>Sort field<select value={query.sort?.field || ''} onChange={e => changeQuery({ sort: e.target.value ? { field: e.target.value, direction: query.sort?.direction || 'asc' } : undefined })}><option value="">Default order</option>{[...query.group_by.map(g => g.field), ...query.measures.map(m => m.id)].map(name => <option key={name}>{name}</option>)}</select></label>
-            <label>Direction<select value={query.sort?.direction || 'asc'} onChange={e => changeQuery({ sort: { field: query.sort?.field || query.measures[0].id, direction: e.target.value } })}><option value="asc">Ascending</option><option value="desc">Descending</option></select></label>
-            <label>Top N / result limit<input type="number" min="1" max="10000" value={query.limit} onChange={e => changeQuery({ limit: Number(e.target.value) })} /></label>
-            {config.view === 'histogram' && <label>Bins<input type="number" min="1" max="100" value={query.bins || 10} onChange={e => changeQuery({ bins: Number(e.target.value) })} /></label>}
-          </div>
-        </div>
-      )}
-
-      {openTray === 'filters' && (
-        <div className="analytics-popover-tray">
-          <label>Nested filter group JSON<textarea aria-label="Filter group JSON" value={filterText ?? JSON.stringify(query.filters, null, 2)} onChange={e => setFilterText(e.target.value)} /></label>
-          <div className="analytics-actions">
-            <button type="button" className="is-primary" onClick={() => { try { const filters = JSON.parse(filterText ?? JSON.stringify(query.filters)); validateFilters(filters); changeQuery({ filters }); setFilterText(null); setFilterError(''); setOpenTray(null); } catch (failure) { setFilterError(failure.message); } }}>Apply filter group</button>
-            {filterError && <p role="alert">{filterError}</p>}
-          </div>
-        </div>
-      )}
-
-      {openTray === 'segment' && (
-        <div className="analytics-popover-tray">
-          <label className="analytics-checkbox-row"><input type="checkbox" checked={query.comparison?.kind === 'segment'} onChange={e => changeQuery({ comparison: e.target.checked ? { kind: 'segment', filters: [] } : undefined })} />Compare with a separately filtered population</label>
-          {query.comparison?.kind === 'segment' && <>
-            <p className="analytics-scope">The current filters define the main segment. The baseline uses these filters and the same date range.</p>
-            <textarea aria-label="Baseline segment filters" value={segmentText ?? JSON.stringify(query.comparison.filters, null, 2)} onChange={e => setSegmentText(e.target.value)} />
-            <button type="button" className="is-primary" onClick={() => { try { const filters = JSON.parse(segmentText ?? '[]'); validateFilters(filters); changeQuery({ comparison: { kind: 'segment', filters } }); setSegmentText(null); setFilterError(''); } catch (failure) { setFilterError(failure.message); } }}>Apply baseline filters</button>
-          </>}
-        </div>
-      )}
-    </div>
+        {targets.map(target => <FieldWell key={target.id} target={target} active={activeField} over={hovered === target.id} choosing={choosing === target.id}
+          onChoose={() => setChoosing(previous => previous === target.id ? null : target.id)} onAssign={field => assign(target, field)}
+          onDragOver={event => {
+            if (!canDrop(target)) return;
+            event.preventDefault();
+            event.dataTransfer.dropEffect = 'copy';
+            if (hovered !== target.id) setHovered(target.id);
+          }}
+          onDragLeave={event => {
+            if (!(event.relatedTarget instanceof Node) || !event.currentTarget.contains(event.relatedTarget)) setHovered(null);
+          }}
+          onDrop={event => {
+            event.preventDefault();
+            const name = event.dataTransfer.getData(FIELD_DRAG_TYPE);
+            assign(target, fields.find(field => field.name === name));
+            setDraggedName(null);
+            setHovered(null);
+          }} />)}
+        {singleSeries && (groups.length !== 1 || measures.length !== 1) &&
+          <p className="analytics-author-requirement">This visual uses exactly one category and one value.</p>}
+      </div>
+      <AnalyticsQueryOptions query={query} view={view} fields={fields} onChange={changeQuery} />
+    </section>
   </div>;
 }

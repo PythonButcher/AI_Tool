@@ -6,8 +6,8 @@ This maps the required [catalogue](README.md) to implementation and verification
 | --- | --- | --- |
 | Unified application | AnalyticsShell, analyticsNavigation, and app navigation | One 52 px Analytics bar with a workspace switcher, mode, dataset, and contextual actions. Focused navigation tests cover the mounted destination and legacy aliases. |
 | Asset library | Shell collection CRUD/search/tags/favorites/recents and independent drafts | Shell save/reload/draft tests pass; broader lifecycle assertions in progress. |
-| Visual builder | AnalyticsBuilder; backend query | Multiple fields/measures, drag/click roles, nested filters, grains and limits; numerical fixtures pass. |
-| Visualizations | AnalyticsResult; executionQuery | Fifteen views, role validation and suggestions; renderer fixtures and final build required. |
+| Visual builder | AnalyticsBuilder, AnalyticsMeasureEditor, AnalyticsQueryOptions, and backend query | Field wells display compatible, active, and unavailable assignment states. Focused tests cover dragging, click assignment, measure editing, and invalid Scatter assignments. |
+| Visualizations | AnalyticsVisualPicker, AnalyticsResult, and executionQuery | One grouped gallery presents fifteen visuals. Chart-specific wells map categories, values, Scatter axes, histogram input, and detail columns to query fields. |
 | Tables/pivots | ResultTable/PivotTable; aggregate/pivot execution | Correct average totals and paging fixtures pass; display/export assertions in progress. |
 | Metrics/calculations | query.py aggregation/formula/post-calculation pipeline | Nine aggregation fixtures, unsafe-expression cases and post-calculation tests pass. Definitions exposed in builder/source inspector. |
 | Time intelligence | query.py period/comparison/alignment; Builder and Result | Inclusive dates, grains, zero baseline and aligned-series fixtures pass. Partial bucket notice is explicit. |
@@ -26,5 +26,5 @@ This maps the required [catalogue](README.md) to implementation and verification
 ## Current engineering evidence
 
 - 74 focused Analytics backend tests passed, and the changed Python modules compiled.
-- 56 frontend tests across Analytics, WindowContext, and AI Chat passed.
+- 58 frontend tests across Analytics, WindowContext, and AI Chat passed.
 - The production build passed. Chrome on an isolated retail-orders fixture confirmed the overview, investigation, responsive header, theme switching, and PDF generation. Browser acceptance belongs to the user.
