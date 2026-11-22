@@ -140,7 +140,7 @@ export default function AnalyticsShell({ onOpenAiChat, onOpenGallery, onOpenAiCh
     const action = workspace.pendingAction;
     if (commit(next => ({ ...preserveDraft(next, true), pendingAction: null, activeAnalysisId: null, lastView: 'explore' }))) {
       resetComposer(!action.view || action.view === 'bar');
-      cancel(); setDraft({ ...defaultAnalysis(defaultSource), view: action.view || 'bar' });
+      cancel(); setDraft({ ...defaultAnalysis(action.source || defaultSource), view: action.view || 'bar' });
       setResult(null); setResultConfig(null); setDirty(true); setOrigin(null);
     }
   }, [workspace.pendingAction, commit, preserveDraft, defaultSource, cancel, resetComposer]);

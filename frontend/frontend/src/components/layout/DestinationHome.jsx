@@ -43,8 +43,8 @@ const DestinationHome = ({ activeDestination, onAction, readiness }) => {
         <img className="dest-home__brand-logo" src="/datastream-logo.png" alt="Datastream" />
       </h2>
       <p className="dest-home__description">
-        Upload a file or connect a data source to get started. Review your tables
-        in Data Hub, then explore your data, build dashboards, or train a model.
+        Browse saved datasets in Data Hub, define relationships in Data Model,
+        or explore your data in Analytics.
       </p>
       <div className="dest-home__actions">
         <button className="dest-home__button dest-home__button--primary" onClick={() => onAction('upload')}>

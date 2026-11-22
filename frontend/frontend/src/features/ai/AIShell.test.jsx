@@ -8,7 +8,7 @@ import { DataContext } from '../../context/DataContext';
 import { WarehouseContext } from '../../context/WarehouseContext';
 import { WindowProvider } from '../../context/WindowContext';
 
-jest.mock('axios', () => ({ post: jest.fn() }));
+jest.mock('axios', () => ({ get: jest.fn(), post: jest.fn() }));
 jest.mock('../../context/DataContext', () => ({ DataContext: require('react').createContext({}) }));
 jest.mock('../../context/WarehouseContext', () => ({ WarehouseContext: require('react').createContext({}) }));
 jest.mock('../../components/data_management/MentionDropdown', () => () => null);
@@ -155,15 +155,43 @@ test('unmount aborts the request and IME Enter does not submit', async () => {
   await act(async () => pending.resolve(success()));
 });
 
-test('explicit catalog selection omits an unrelated active workspace and inline data', async () => {
+test('the toolbar dropdown adds a saved dataset to the draft and sends its catalog reference', async () => {
+  const catalog = deferred();
+  axios.get.mockReturnValue(catalog.promise);
   axios.post.mockResolvedValue(success());
-  render(tree(context, {}, [{ id: 'other', name: 'Other' }]));
-  send('Show revenue @Other');
+  function ChatWithCatalog() {
+    const [datasets, refreshDatasets] = React.useState([]);
+    return (
+      <WindowProvider>
+        <DataContext.Provider value={context}>
+          <WarehouseContext.Provider value={{ datasets, refreshDatasets }}>
+            <AIShell />
+          </WarehouseContext.Provider>
+        </DataContext.Provider>
+      </WindowProvider>
+    );
+  }
+  render(<ChatWithCatalog />);
+  const trigger = screen.getByRole('button', { name: 'Choose dataset' });
+  expect(screen.getByRole('button', { name: 'New chat' }).nextElementSibling).toBe(trigger);
+  const input = screen.getByRole('textbox', { name: 'Business question' });
+  fireEvent.change(input, { target: { value: 'Show revenue @' } });
+  fireEvent.click(trigger);
+  const menu = screen.getByRole('menu', { name: 'Choose dataset' });
+  expect(within(menu).getByText('Loading saved datasets…')).toBeVisible();
+  expect(axios.get).toHaveBeenCalledWith(expect.stringContaining('/api/data-sources'), expect.any(Object));
+  await act(async () => catalog.resolve({ data: { sources: [{ source_id: 'other', name: 'Other orders' }] } }));
+  fireEvent.click(within(menu).getByRole('menuitem', { name: 'Other orders' }));
+  expect(trigger).toHaveAttribute('aria-expanded', 'false');
+  expect(input).toHaveValue('Show revenue @Other orders ');
+  expect(input).toHaveFocus();
+  expect(axios.post).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: 'Send Message' }));
   await screen.findByText('Revenue is 100.');
   const payload = axios.post.mock.calls[0][1];
   expect(payload.workspace_id).toBeUndefined();
   expect(payload.dataset).toBeUndefined();
-  expect(payload.dataset_ref).toEqual({ source: 'datahub', dataset_id: 'other', dataset_name: 'Other' });
+  expect(payload.dataset_ref).toEqual({ source: 'datahub', dataset_id: 'other', dataset_name: 'Other orders' });
 });
 
 test('dashboard control delegates to the live app navigation', () => {

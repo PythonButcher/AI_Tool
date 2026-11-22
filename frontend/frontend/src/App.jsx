@@ -1,19 +1,17 @@
-import React, { useState, useCallback, useEffect, useContext } from 'react';
+import React, { useState, useCallback, useEffect, useContext, useMemo } from 'react';
 import MenuBar from './components/layout/MenuBar';
 import CanvasContainer from './components/layout/CanvasContainer';
 import DatasetInfo from './components/insights/DatasetInfo';
-import SideBar from './components/layout/SideBar';
 import DataPane from './components/layout/DataPane';
 import { DndContext, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import DataVisualizations from './features/charts/DataVisualization';
 import { transformToChartData } from './utils/chartDataUtils';
 import AIChat from './features/ai/AIChat';
-import { DataContext } from './context/DataContext';
-import { ThemeContext, ThemeProvider } from './context/ThemeContext';
+import { DataContext, normalizeDatasetRows, useActiveDataset } from './context/DataContext';
+import { ThemeProvider } from './context/ThemeContext';
 import { WarehouseProvider } from './context/WarehouseContext';
 import { HelpOverlayProvider } from './context/HelpOverlayContext';
 import useLoadRawData from './hooks/useLoadRawData';
-import Snowfall from 'react-snowfall';
 import DataFilterPanel from './components/data_management/DataFilterPanel';
 import DataCleaningForm from './components/data_management/DataCleaningForm';
 import './App.css';
@@ -38,6 +36,7 @@ const parseRecords = (source) => {
 
 const DESTINATIONS = {
   WORKSPACE: 'workspace',
+  DATA_HUB: 'data_hub',
   DATA_MODEL: 'data_model',
   EXPLORE: 'explore',
   DASHBOARDS: 'dashboards',
@@ -57,19 +56,16 @@ function AppContent() {
     setWorkspaceEnvelope,
   } = useContext(DataContext);
 
-  const { theme } = useContext(ThemeContext);
   const {
     charts,
     updateChart,
     dashboardItems,
-    dashboardState,
     updateDashboardItem,
     openDashboard,
     closeDashboard,
     restoreWindow,
     addChart,
     addDashboardKpi,
-    addDashboardChart,
     setDashboardFilters,
     updateAnalyticsWorkspace,
   } = useWindowContext();
@@ -79,13 +75,13 @@ function AppContent() {
   const [activeWorkflow, setActiveWorkflow] = useState(null);
   
   // UI & Layout State
-  const [selectedStat, setSelectedStat] = useState(null);
   const [chartData, setChartData] = useState(null);
   const [chartMapping, setChartMapping] = useState({});
-  const [isSnowing, setIsSnowing] = useState(false);
-  const [menuBarHeight, setMenuBarHeight] = useState(64);
   const [isDataPaneOpen, setIsDataPaneOpen] = useState(false);
   const [activeDataPaneTab, setActiveDataPaneTab] = useState('catalog');
+  const [activeSource, setActiveSource] = useState(null);
+  const dataset = useActiveDataset();
+  const previewData = useMemo(() => normalizeDatasetRows(dataset).slice(0, 100), [dataset]);
 
   // Feature Windows & Visibility State
   const [showWhiteBoard, setShowWhiteBoard] = useState(null);
@@ -111,7 +107,6 @@ function AppContent() {
   // Panel states moved from Sidebar
   const [showCleaningForm, setShowCleaningForm] = useState(false);
   const [cleaningFormProps, setCleaningFormProps] = useState(null);
-  const [showExportPanel, setShowExportPanel] = useState(false);
 
   // AI State
   const [aiChartData, setAiChartData] = useState(null);
@@ -126,11 +121,24 @@ function AppContent() {
     restoreWindow('aiChat');
   }, [restoreWindow]);
 
-  const handleStatsSelect = useCallback((statType) => setSelectedStat(statType), []);
+  const openSourcePanel = useCallback((source) => {
+    setActiveSource(source);
+    setActiveDataPaneTab('sources');
+    setIsDataPaneOpen(true);
+  }, []);
+
+  const handleOpenPreview = useCallback(() => {
+    setShowDataPreview(true);
+    restoreWindow('dataPreview');
+  }, [restoreWindow]);
 
   const handleDestinationSelect = useCallback((destination) => {
     const target = resolveAnalyticsDestination(destination);
     setActiveDestination(target.destination);
+    if (target.destination === DESTINATIONS.DATA_HUB) {
+      setIsDataPaneOpen(false);
+      setActiveSource(null);
+    }
     if (target.destination === 'analytics') {
       if (target.view) updateAnalyticsWorkspace(workspace => ({ ...workspace, lastView: target.view }));
       setActiveWorkflow('analytics');
@@ -147,6 +155,19 @@ function AppContent() {
       closeDashboard();
     }
   }, [openDashboard, closeDashboard, handleOpenAiChat, updateAnalyticsWorkspace]);
+
+  const openDataHub = useCallback(() => {
+    handleDestinationSelect(DESTINATIONS.DATA_HUB);
+  }, [handleDestinationSelect]);
+
+  const openSourceInAnalytics = useCallback((source) => {
+    const queued = updateAnalyticsWorkspace(workspace => ({
+      ...workspace,
+      pendingAction: { type: 'source', source: { kind: 'datahub', id: source.source_id, name: source.name } },
+    }));
+    if (queued) handleDestinationSelect('analytics');
+    return queued;
+  }, [handleDestinationSelect, updateAnalyticsWorkspace]);
 
   const handleOpenCleaningForm = useCallback((props) => {
     if (props && props.closeOverlay) {
@@ -183,9 +204,9 @@ function AppContent() {
         source: 'app_handle_upload',
       });
     }
-    setShowDataPreview(true);
+    handleOpenPreview();
     if (file) setRawUploadFile(file);
-  }, [setUploadedData, setFullData, setCleanedData, setSemanticModel, refreshSemanticModelFromDataset, setWorkspaceEnvelope]);
+  }, [setUploadedData, setFullData, setCleanedData, setSemanticModel, refreshSemanticModelFromDataset, setWorkspaceEnvelope, handleOpenPreview]);
 
 
   const handleApiData = (data) => handleFileUpload(data);
@@ -278,11 +299,6 @@ function AppContent() {
     });
   }, []);
 
-  const handleDashboardToggle = useCallback(() => {
-    if (dashboardState.isVisible) closeDashboard();
-    else openDashboard();
-  }, [closeDashboard, dashboardState.isVisible, openDashboard]);
-
   const handleDragEnd = useCallback(({ active, over }) => {
     if (!over) return;
     const activePayload = active.data?.current;
@@ -355,63 +371,51 @@ function AppContent() {
     <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
       <GlobalDragOverlay />
       <div className="app-container">
-        {theme === 'dark' && isSnowing && <Snowfall style={{ zIndex: 1000, pointerEvents: 'none' }} />}
-        <SideBar
+        <MenuBar
           activeDestination={activeDestination}
           onDestinationSelect={handleDestinationSelect}
+          onOpenPreview={() => {
+            handleDestinationSelect(DESTINATIONS.WORKSPACE);
+            handleOpenPreview();
+          }}
+          canPreview={previewData.length > 0}
+          onOpenSourcePanel={openSourcePanel}
+          onOpenFields={() => {
+            setActiveDataPaneTab('catalog');
+            setIsDataPaneOpen(true);
+          }}
+          onInspectRows={() => {
+            setShowRawViewer(true);
+            restoreWindow('rawViewer');
+          }}
+          onFilterRows={() => setOpenDataFilter(true)}
+          onRefine={() => setShowCleaningForm(previous => !previous)}
+          showCleaningForm={showCleaningForm}
+          aiReportReady={aiReportReady}
+          onAiReportClick={handleAiReportOpen}
+          onOpenAiChat={handleOpenAiChat}
+          onOpenAiWorkflow={() => {
+            setShowAiWorkflow(true);
+            restoreWindow('aiWorkflowLab');
+          }}
+          onOpenStoryboard={() => {
+            setStoryData(null);
+            setShowStoryPanel(true);
+            restoreWindow('storyPanel');
+            handleDestinationSelect(DESTINATIONS.EXPLORE);
+          }}
+          onOpenWhiteboard={() => {
+            setShowWhiteBoard(true);
+            restoreWindow('whiteBoard');
+            handleDestinationSelect(DESTINATIONS.EXPLORE);
+          }}
+          onOpenChartGallery={() => {
+            setShowDataVisual(true);
+            handleDestinationSelect(DESTINATIONS.EXPLORE);
+          }}
         />
 
-        <div className="main-content">
-          <MenuBar
-            activeDestination={activeDestination}
-            onDestinationSelect={handleDestinationSelect}
-            onFileUploadSuccess={handleFileUpload}
-            onStatsSelect={handleStatsSelect}
-            setShowDataPreview={setShowDataPreview}
-            setShowRawViewer={setShowRawViewer}
-            handleApiData={handleApiData}
-            handleDatabaseData={handleDatabaseData}
-            setOpenDataFilter={setOpenDataFilter}
-            aiReportReady={aiReportReady}
-            onAiReportClick={handleAiReportOpen}
-            isSnowing={isSnowing}
-            onSnowToggle={() => setIsSnowing((prev) => !prev)}
-            onDashboardToggle={handleDashboardToggle}
-            isDashboardVisible={dashboardState.isVisible}
-            onOpenAiChat={handleOpenAiChat}
-            onOpenAiWorkflow={() => {
-              setShowAiWorkflow(true);
-              restoreWindow('aiWorkflowLab');
-            }}
-            onOpenStoryboard={() => {
-              setStoryData(null);
-              setShowStoryPanel(true);
-              restoreWindow('storyPanel');
-              handleDestinationSelect(DESTINATIONS.EXPLORE);
-            }}
-            onOpenWhiteboard={() => {
-              setShowWhiteBoard(true);
-              restoreWindow('whiteBoard');
-              handleDestinationSelect(DESTINATIONS.EXPLORE);
-            }}
-            onOpenChartGallery={() => {
-              setShowDataVisual(true);
-              handleDestinationSelect(DESTINATIONS.EXPLORE);
-            }}
-            onHeightChange={setMenuBarHeight}
-            // Consolidated Props
-            showCleaningForm={showCleaningForm}
-            setShowCleaningForm={setShowCleaningForm}
-            showExportPanel={showExportPanel}
-            setShowExportPanel={setShowExportPanel}
-
-            addChart={addChart}
-            addDashboardKpi={addDashboardKpi}
-            addDashboardChart={addDashboardChart}
-            setIsDataPaneOpen={setIsDataPaneOpen}
-            setActiveDataPaneTab={setActiveDataPaneTab}
-          />
-
+        <main className="main-content">
           <DataFilterPanel openDataFilter={openDataFilter} setOpenDataFilter={setOpenDataFilter} />
 
           {showCleaningForm && (
@@ -449,9 +453,9 @@ function AppContent() {
               setShowAiWorkflow={setShowAiWorkflow}
               uploadedData={uploadedData || null}
               showDataPreview={showDataPreview}
+              previewData={previewData}
               previewMode={previewMode}
               setPreviewMode={setPreviewMode}
-              setShowDataPreview={setShowDataPreview}
               handleClosePreview={handleClosePreview}
               handleCloseCanvas={handleCloseCanvas}
               cleanedData={cleanedData}
@@ -495,12 +499,15 @@ function AppContent() {
               onDestinationSelect={handleDestinationSelect}
               setShowDataVisual={setShowDataVisual}
               setIsDataPaneOpen={setIsDataPaneOpen}
+              onOpenSourcePanel={openSourcePanel}
+              onOpenDataHub={openDataHub}
+              onOpenSourceInAnalytics={openSourceInAnalytics}
               onOpenAiChat={handleOpenAiChat}
             >
-              <DatasetInfo selectedStat={selectedStat} />
+              <DatasetInfo />
             </CanvasContainer>
           )}
-        </div>
+        </main>
 
         <DataPane
           activeDestination={activeDestination}
@@ -515,6 +522,9 @@ function AppContent() {
           handleDatabaseData={handleDatabaseData}
           activeTab={activeDataPaneTab}
           setActiveTab={setActiveDataPaneTab}
+          activeSource={activeSource}
+          setActiveSource={setActiveSource}
+          onOpenDataHub={openDataHub}
         />
       </div>
     </DndContext>

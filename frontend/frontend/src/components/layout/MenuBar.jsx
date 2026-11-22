@@ -1,297 +1,128 @@
-import React, { useCallback, useContext, useEffect, useRef, useState } from 'react';
-import './MenuBar.css';
-import FileUpload from '../data_management/FileUpload';
-import ApiDataForm from '../../features/api/APiDataForm';
-import DatabaseConnectForm from '../../features/database/DatabaseConnectForm';
-import DataHubWindow from '../../features/database/DataHubWindow';
-import {
-  FaBook,
-  FaBrain,
-  FaBroom,
-  FaChartBar,
-  FaChevronDown,
-  FaChevronUp,
-  FaCogs,
-  FaDatabase,
-  FaFileAlt,
-  FaFileExport,
-  FaFilter,
-  FaLightbulb,
-  FaMagic,
-  FaMoon,
-  FaPen,
-  FaPlus,
-  FaRedoAlt,
-  FaRobot,
-  FaServer,
-  FaSnowflake,
-  FaSun,
-  FaTable,
-  FaTachometerAlt,
-  FaTimes,
-  FaUpload,
-  FaShieldAlt,
-} from 'react-icons/fa';
-import { TbCloudDataConnection } from 'react-icons/tb';
+import React, { useContext, useEffect, useRef } from 'react';
+import { FaEllipsisH, FaRobot, FaTable, FaUpload } from 'react-icons/fa';
 import { ThemeContext } from '../../context/ThemeContext';
-
-const DESTINATIONS = {
-  WORKSPACE: 'workspace',
-  DATA_MODEL: 'data_model',
-  EXPLORE: 'explore',
-  DASHBOARDS: 'dashboards',
-  AI: 'ai',
-  ANALYTICS: 'analytics',
-};
-
-const inlinePanelMeta = {
-  upload: {
-    eyebrow: 'Data Intake',
-    title: 'Upload File',
-    badge: 'Import',
-  },
-  hub: {
-    eyebrow: 'Catalog',
-    title: 'Open Data Hub',
-    badge: 'Managed',
-  },
-  api: {
-    eyebrow: 'External Source',
-    title: 'Connect API',
-    badge: 'Live',
-  },
-  db: {
-    eyebrow: 'Warehouse',
-    title: 'Connect Database',
-    badge: 'Secure',
-  },
-};
-
-/**
- * RibbonCommand
- * Simplified for high-density professional UI.
- * Shows only icon and concise label.
- */
-function RibbonCommand({
-  icon,
-  label,
-  description,
-  onClick,
-  active,
-  emphasized,
-  disabled,
-}) {
-  return (
-    <button
-      type="button"
-      className={`ribbon-command ${active ? 'is-active' : ''} ${emphasized ? 'is-emphasized' : ''}`}
-      onClick={onClick}
-      disabled={disabled}
-      title={description || label}
-    >
-      <span className="ribbon-command__icon" aria-hidden="true">{icon}</span>
-      <span className="ribbon-command__label">{label}</span>
-    </button>
-  );
-}
-
-function RibbonGroup({ title, children }) {
-  return (
-    <section className="ribbon-group">
-      <div className="ribbon-group__body">{children}</div>
-      <div className="ribbon-group__footer">
-        <span className="ribbon-group__title">{title}</span>
-      </div>
-    </section>
-  );
-}
+import DestinationNav from './SideBar';
+import './MenuBar.css';
 
 function MenuBar({
   activeDestination,
   onDestinationSelect,
-  onFileUploadSuccess,
-  setShowDataPreview,
-  setShowRawViewer,
-  handleApiData,
-  handleDatabaseData,
-  setOpenDataFilter,
-  aiReportReady,
-  onAiReportClick,
-  onDashboardToggle,
-  isDashboardVisible,
+  onOpenSourcePanel,
+  onOpenFields,
+  onOpenPreview,
+  canPreview,
+  onInspectRows,
+  onFilterRows,
+  onRefine,
+  showCleaningForm,
   onOpenAiChat,
   onOpenAiWorkflow,
   onOpenStoryboard,
   onOpenWhiteboard,
   onOpenChartGallery,
-  onHeightChange,
-  setShowCleaningForm,
-  showCleaningForm,
-  setShowExportPanel,
-  showExportPanel,
-  addChart,
-  addDashboardKpi,
-  addDashboardChart,
-  setIsDataPaneOpen,
-  setActiveDataPaneTab,
+  aiReportReady,
+  onAiReportClick,
 }) {
-  const [activeSurface, setActiveSurface] = useState(null);
-  const [isRibbonCollapsed, setIsRibbonCollapsed] = useState(true);
   const { theme, toggleTheme } = useContext(ThemeContext);
-  const barRef = useRef(null);
-
-  const handleReset = useCallback(() => window.location.reload(), []);
-
-  const toggleSurface = useCallback((surfaceId) => {
-    setActiveSurface((prev) => (prev === surfaceId ? null : surfaceId));
-  }, []);
+  const more = useRef(null);
 
   useEffect(() => {
-    if (!onHeightChange || !barRef.current) return;
-    const updateHeight = () => {
-      if (barRef.current) onHeightChange(Math.ceil(barRef.current.getBoundingClientRect().height));
+    const closeFromOutside = event => {
+      if (more.current?.open && !more.current.contains(event.target)) more.current.open = false;
     };
-    updateHeight();
-    const observer = new ResizeObserver(updateHeight);
-    observer.observe(barRef.current);
-    return () => observer.disconnect();
-  }, [activeSurface, activeDestination, isRibbonCollapsed, onHeightChange]);
+    document.addEventListener('pointerdown', closeFromOutside);
+    return () => document.removeEventListener('pointerdown', closeFromOutside);
+  }, []);
 
-  const renderInlinePanel = () => {
-    if (!activeSurface) return null;
-    const meta = inlinePanelMeta[activeSurface];
-    let content = null;
+  function closeMore() {
+    more.current.open = false;
+    more.current.querySelector('summary')?.focus();
+  }
 
-    if (activeSurface === 'hub') {
-      content = <DataHubWindow />;
-    }
-
-    if (!content || !meta) return null;
-
-    return (
-      <div className="ribbon-inline-panel">
-        <div className="ribbon-inline-panel__header">
-          <div className="ribbon-inline-panel__title-group">
-            <span className="ribbon-inline-panel__badge">{meta.badge}</span>
-            <h3 className="ribbon-inline-panel__title">{meta.title}</h3>
-          </div>
-          <button
-            type="button"
-            className="ribbon-inline-panel__close"
-            onClick={() => setActiveSurface(null)}
-            title="Close Panel"
-          >
-            <FaTimes />
-          </button>
-        </div>
-        <div className="ribbon-inline-panel__body">
-          {content}
-        </div>
-      </div>
-    );
-  };
+  function run(action) {
+    return () => {
+      closeMore();
+      action();
+    };
+  }
 
   return (
-    <header ref={barRef} className={`menu-bar ${isRibbonCollapsed ? 'is-collapsed' : ''}`}>
-      <div className="menu-bar__topline">
-        <div className="menu-bar__identity" onClick={() => onDestinationSelect(DESTINATIONS.WORKSPACE)} style={{ cursor: 'pointer' }}>
-          <img className="menu-bar__brand-logo" src="/datastream-logo.png" alt="Datastream" />
-        </div>
-        <div className="menu-bar__context">
-          <span className="menu-bar__breadcrumb-sep">/</span>
-          <span className="menu-bar__active-dest">
-            {Object.entries(DESTINATIONS).find(([_, v]) => v === activeDestination)?.[0].toLowerCase() || 'workspace'}
-          </span>
-        </div>
-        <div className="menu-bar__utility">
-          <button type="button" className={`menu-bar__setup-trigger ${!isRibbonCollapsed ? 'is-active' : ''}`} onClick={() => setIsRibbonCollapsed(!isRibbonCollapsed)}>
-            <FaCogs /> <span>Commands</span>
-          </button>
-          <div className="menu-bar__divider" />
-          {aiReportReady && <button type="button" className="menu-bar__utility-pill" onClick={onAiReportClick}><FaFileAlt /> Report</button>}
-        </div>
-      </div>
+    <header className="app-banner" aria-label="Datastream">
+      <button type="button" className="app-banner__brand" aria-label="Datastream home" onClick={() => onDestinationSelect('workspace')}>
+        <img className="app-banner__logo" src="/datastream-logo.png" alt="" />
+      </button>
 
-      {!isRibbonCollapsed && (
-        <div className="menu-ribbon">
-          <div className="menu-ribbon__groups">
-            {/* Contextual Groups */}
-            {activeDestination === DESTINATIONS.ANALYTICS && (
-              <RibbonGroup title="Analytics">
-                <RibbonCommand icon={<FaChartBar />} label="Gallery" onClick={onOpenChartGallery} emphasized />
-                <RibbonCommand icon={<FaDatabase />} label="Data" onClick={() => setIsDataPaneOpen(true)} />
-                <RibbonCommand icon={<FaRobot />} label="AI Chat" onClick={onOpenAiChat} />
-              </RibbonGroup>
-            )}
-            {activeDestination === DESTINATIONS.WORKSPACE && (
-              <RibbonGroup title="Workspace">
-                <RibbonCommand icon={<TbCloudDataConnection />} label="Catalog" onClick={() => setShowDataPreview(true)} emphasized />
-                <RibbonCommand icon={<FaTable />} label="Inspect" onClick={() => setShowRawViewer(true)} />
-                <RibbonCommand icon={<FaBroom />} label="Refine" onClick={() => setShowCleaningForm(!showCleaningForm)} active={showCleaningForm} />
-                <RibbonCommand icon={<FaFileExport />} label="Export" onClick={() => setShowExportPanel(!showExportPanel)} active={showExportPanel} />
-              </RibbonGroup>
-            )}
-            {activeDestination === DESTINATIONS.EXPLORE && (
-              <RibbonGroup title="Explore">
-                <RibbonCommand icon={<FaChartBar />} label="Library" onClick={onOpenChartGallery} emphasized />
-                <RibbonCommand icon={<FaPen />} label="Board" onClick={onOpenWhiteboard} />
-                <div className="ribbon-divider-v" />
-                <RibbonCommand icon={<FaPlus />} label="Bar" onClick={() => addChart({ type: 'Bar' })} />
-                <RibbonCommand icon={<FaPlus />} label="Line" onClick={() => addChart({ type: 'Line' })} />
-              </RibbonGroup>
-            )}
-            {activeDestination === DESTINATIONS.DASHBOARDS && (
-              <RibbonGroup title="Dashboards">
-                <RibbonCommand icon={<FaTachometerAlt />} label={isDashboardVisible ? 'Hide' : 'Show'} onClick={onDashboardToggle} active={isDashboardVisible} emphasized />
-                <RibbonCommand icon={<FaPlus />} label="KPI" onClick={() => addDashboardKpi()} />
-                <RibbonCommand icon={<FaChartBar />} label="Chart" onClick={() => addDashboardChart({ chartType: 'Bar' })} />
-                <RibbonCommand icon={<FaFilter />} label="Filters" onClick={() => setOpenDataFilter(true)} />
-              </RibbonGroup>
-            )}
-            {activeDestination === DESTINATIONS.AI && (
-              <RibbonGroup title="AI Suite">
-                <RibbonCommand icon={<FaRobot />} label="Chat" onClick={onOpenAiChat} emphasized />
-                <RibbonCommand icon={<FaPlus />} label="Automation" onClick={onOpenAiWorkflow} />
-                <RibbonCommand icon={<FaFileAlt />} label="Report" onClick={onAiReportClick} disabled={!aiReportReady} />
-                <RibbonCommand icon={<FaBook />} label="Narrative" onClick={onOpenStoryboard} />
-              </RibbonGroup>
-            )}
+      <DestinationNav activeDestination={activeDestination} onDestinationSelect={onDestinationSelect} />
 
-            <RibbonGroup title="Sources">
-              <RibbonCommand
-                icon={<FaUpload />}
-                label="Upload"
-                onClick={() => {
-                  setIsDataPaneOpen(true);
-                  if (setActiveDataPaneTab) setActiveDataPaneTab('sources');
-                }}
-              />
-              <RibbonCommand
-                icon={<FaServer />}
-                label="API"
-                onClick={() => {
-                  setIsDataPaneOpen(true);
-                  if (setActiveDataPaneTab) setActiveDataPaneTab('sources');
-                }}
-              />
-              <RibbonCommand
-                icon={<FaDatabase />}
-                label="DB"
-                onClick={() => {
-                  setIsDataPaneOpen(true);
-                  if (setActiveDataPaneTab) setActiveDataPaneTab('sources');
-                }}
-              />
-            </RibbonGroup>
+      <div className="app-banner__actions">
+        <button type="button" className="app-banner__upload" onClick={() => onOpenSourcePanel('upload')}>
+          <FaUpload aria-hidden="true" /> Upload data
+        </button>
+        <button
+          type="button"
+          className="app-banner__action"
+          aria-label="Data Preview"
+          title={canPreview ? 'Data Preview' : 'Upload or connect data to preview rows'}
+          disabled={!canPreview}
+          onClick={onOpenPreview}
+        >
+          <FaTable aria-hidden="true" /><span>Data Preview</span>
+        </button>
+        <button type="button" className="app-banner__action" aria-label="AI Chat" title="AI Chat" onClick={onOpenAiChat}>
+          <FaRobot aria-hidden="true" /><span>AI Chat</span>
+        </button>
 
-            <RibbonGroup title="System">
-              <RibbonCommand icon={theme === 'dark' ? <FaSun /> : <FaMoon />} label="Theme" onClick={toggleTheme} />
-              <RibbonCommand icon={<FaRedoAlt />} label="Reload" onClick={handleReset} />
-            </RibbonGroup>
+        <details
+          className="app-banner__more"
+          ref={more}
+          onKeyDown={event => {
+            if (event.key === 'Escape' && more.current.open) {
+              event.preventDefault();
+              closeMore();
+            }
+          }}
+          onBlur={event => {
+            if (!event.currentTarget.contains(event.relatedTarget)) event.currentTarget.open = false;
+          }}
+        >
+          <summary className="app-banner__action" aria-label="More actions" title="More actions">
+            <FaEllipsisH aria-hidden="true" />
+          </summary>
+          <div className="app-banner__overflow">
+            <div role="group" aria-label="Data tools">
+              <button type="button" onClick={run(() => onOpenSourcePanel('api'))}>Connect API</button>
+              <button type="button" onClick={run(() => onOpenSourcePanel('db'))}>Connect database</button>
+              <button type="button" onClick={run(onOpenFields)}>Data fields</button>
+              {activeDestination === 'workspace' && (
+                <>
+                  <button type="button" onClick={run(onInspectRows)} disabled={!canPreview}>Inspect or download rows</button>
+                  <button type="button" onClick={run(onFilterRows)} disabled={!canPreview}>Filter rows</button>
+                  <button type="button" onClick={run(onRefine)} aria-pressed={showCleaningForm} disabled={!canPreview}>Refine data</button>
+                </>
+              )}
+              {activeDestination === 'analytics' && (
+                <>
+                  <button type="button" onClick={run(onOpenChartGallery)}>Chart gallery</button>
+                  <button type="button" onClick={run(onOpenWhiteboard)}>Whiteboard</button>
+                </>
+              )}
+            </div>
+            <div role="group" aria-label="Application tools">
+              {aiReportReady && <button type="button" onClick={run(onAiReportClick)}>AI report</button>}
+              {activeDestination === 'ai' ? (
+                <>
+                  <button type="button" onClick={run(onOpenAiWorkflow)}>AI automation</button>
+                  <button type="button" onClick={run(onOpenStoryboard)}>Narrative</button>
+                </>
+              ) : (
+                <button type="button" onClick={run(() => onDestinationSelect('ai'))}>AI Suite</button>
+              )}
+              <button type="button" onClick={run(toggleTheme)}>Switch to {theme === 'dark' ? 'light' : 'dark'} theme</button>
+              <button type="button" onClick={run(() => window.location.reload())}>Reload</button>
+            </div>
           </div>
-          {renderInlinePanel()}
-        </div>
-      )}
+        </details>
+      </div>
     </header>
   );
 }

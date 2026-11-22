@@ -1,10 +1,19 @@
 {
   "schema_version": 1,
   "authorized_work": {
-    "name": "Customize the Analytics workbench layout"
+    "name": "Navigate Datastream from the application header"
   },
   "authorization_state": "AUTHORIZED",
-  "lifecycle_state": "AWAITING USER ACCEPTANCE",
+  "lifecycle_state": "COMPLETE",
+  "chat_dataset_dropdown_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-11-22",
+    "instruction": "in the ai chat, fix the Choose Dataset next to New Chat, make it nice looking dropdown",
+    "owner": "Codex",
+    "scope": "AI Chat toolbar and its dataset picker. Selecting a saved dataset uses the existing draft mention and BI request flow.",
+    "acceptance": "A compact, keyboard-accessible dropdown opens beside New Chat, lists saved datasets, and adds a dataset to the current question without sending it.",
+    "codex_frontend_implementation_authorized": true
+  },
   "analytics_implementation_authorization": {
     "approved_by": "User",
     "approved_at": "2026-11-16",
@@ -243,14 +252,27 @@
     "instruction": "Implement this work — project_docs/active/active_gate/README.md",
     "scope": "Inspect source and contracts, write and verify one bounded Stay/Open Power Query opening handoff, and transfer ownership to Antigravity. Codex frontend implementation remains excluded."
   },
+  "pending_analytics_workbench_acceptance": {
+    "gate": "Customize the Analytics workbench layout",
+    "state": "AWAITING USER ACCEPTANCE",
+    "owner": "User",
+    "verification": "34 focused Analytics and WindowContext tests, scoped ESLint, production build, and Chrome fixture verification passed. The user owns the browser decision.",
+    "implementation_authorization": {
+      "approved_by": "User",
+      "approved_at": "2026-11-18",
+      "evidence": "Direct user request for movable, resizable, and individually lockable Analysis workbench panels.",
+      "instruction": "Redesign Analytics Studio and keep its features available.",
+      "scope": "Codex owns the Analytics frontend redesign, related backend repairs, and focused integration verification.",
+      "current_instruction": "Implement a snapping layout for Fields, Visual Builder, and Results with per-panel locks.",
+      "current_approved_at": "2026-11-19"
+    }
+  },
   "user_implementation_authorization": {
     "approved_by": "User",
-    "approved_at": "2026-11-18",
-    "evidence": "Direct user request for movable, resizable, and individually lockable Analysis workbench panels.",
-    "instruction": "Redesign Analytics Studio and keep its features available.",
-    "scope": "Codex owns the Analytics frontend redesign, related backend repairs, and focused integration verification.",
-    "current_instruction": "Implement a snapping layout for Fields, Visual Builder, and Results with per-panel locks.",
-    "current_approved_at": "2026-11-19"
+    "approved_at": "2026-11-21",
+    "evidence": "The user explicitly assigned frontend implementation to Codex in the Data Hub rebuild chat.",
+    "instruction": "just do the frontend yourself",
+    "scope": "Codex implements and verifies the Welcome actions, full Data Hub destination, and persistent header in the roadmap order. The current gate authorizes one phase at a time. The user owns final browser acceptance."
   },
   "preparation_authorization": {
     "approved_by": "User",
@@ -293,6 +315,17 @@
     "approved_by": "User",
     "approved_at": "2026-11-21",
     "scope": "Review Datastream, Context Ledger, and Slipstream together and record the ranked product recommendations in Codex future planning. Documentation only."
+  },
+  "data_hub_rebuild_planning_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-11-21",
+    "scope": "Prepare the Data Hub, landing-action, and header rebuild roadmap and give it to a separate Codex chat. This record permits the planning document and its index entry."
+  },
+  "data_hub_rebuild_verification": {
+    "frontend": "28 focused shell, Data Hub, Analytics, and WindowContext tests passed. The production build passed with existing warnings.",
+    "backend_contract": "Six focused tests passed for catalog migration and public source metadata, dependency-safe deletion, and explicit Analytics source resolution.",
+    "browser": "Chrome fixture checks passed at 1440, 390, and 320 pixels. The existing external Whiteboard asset was unavailable in the isolated browser.",
+    "acceptance": "Accepted by the user in chat on 2026-11-22."
   },
   "allowed_paths": [
     "backend/analytics/**",
@@ -339,6 +372,8 @@
     "project_docs/active/future/codex/ml_studio_power_query_preview_cancel.md",
     "project_docs/active/future/codex/README.md",
     "project_docs/active/future/codex/three_project_data_platform_review.md",
+    "project_docs/archive/data_hub_navigation_rebuild_accepted_2026_11_22.md",
+    "project_docs/archive/README.md",
     "project_docs/archive/ml_studio_power_query_opening_superseded_2026_10_01.md",
     "project_docs/active/ai_hand_off/ml_studio_power_query_opening.md",
     "frontend/frontend/src/App.jsx",

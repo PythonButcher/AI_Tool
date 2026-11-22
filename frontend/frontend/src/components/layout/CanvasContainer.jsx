@@ -12,7 +12,6 @@ import DataTablePreview from '../../features/viewing/DataTablePreview';
 import DataStoryPanel from '../insights/DataStoryPanel';
 import Whiteboard from '../../features/whiteboard/WhiteBoard';
 import { JsonViewer } from 'view-json-react';
-import { useActiveDataset } from '../../context/DataContext';
 import AIReporter from '../../features/workflow/AIReporter';
 import { getWorkflowWindows } from '../../utils/workflow_output_router';
 import { useWindowContext } from '../../context/WindowContext';
@@ -28,6 +27,7 @@ import DestinationHome from './DestinationHome';
 import SourceModelCanvas from '../../features/data-model/SourceModelCanvas';
 import MLStudioShell from '../../features/ml_studio/MLStudioShell';
 import AnalyticsShell from '../../features/analytics/AnalyticsShell';
+import DataHubWindow from '../../features/database/DataHubWindow';
 import {
   FaSave,
   FaUndo,
@@ -42,6 +42,7 @@ import {
 
 const DESTINATIONS = {
   WORKSPACE: 'workspace',
+  DATA_HUB: 'data_hub',
   EXPLORE: 'explore',
   DATA_MODEL: 'data_model',
   DASHBOARDS: 'dashboards',
@@ -54,6 +55,7 @@ function CanvasContainer({
   children,
   uploadedData,
   showDataPreview,
+  previewData,
   handleClosePreview,
   cleanedData,
   selectedChartType,
@@ -73,7 +75,6 @@ function CanvasContainer({
   chartMapping,
   previewMode,
   setPreviewMode,
-  setShowDataPreview,
   showWhiteBoard,
   setShowWhiteBoard,
   pipelineResults,
@@ -92,6 +93,9 @@ function CanvasContainer({
   onDestinationSelect,
   setShowDataVisual,
   setIsDataPaneOpen,
+  onOpenSourcePanel,
+  onOpenDataHub,
+  onOpenSourceInAnalytics,
   onOpenCleaningForm,
 }) {
   const {
@@ -117,6 +121,7 @@ function CanvasContainer({
   const isAnalyticsDest = activeDestination === 'analytics';
   const isExploreDest = activeDestination === DESTINATIONS.EXPLORE;
   const isWorkspaceDest = activeDestination === DESTINATIONS.WORKSPACE;
+  const isDataHubDest = activeDestination === DESTINATIONS.DATA_HUB;
   const isDataModelDest = activeDestination === DESTINATIONS.DATA_MODEL;
   const isMlStudioDest = activeDestination === DESTINATIONS.ML_STUDIO;
   const isAiDest = activeDestination === DESTINATIONS.AI;
@@ -133,10 +138,11 @@ function CanvasContainer({
         setShowAiWorkflow(true);
         restoreWindow('aiWorkflowLab');
         break;
+      case 'upload':
+        onOpenSourcePanel('upload');
+        break;
       case 'hub':
-        // In the new shell, 'hub' is basically the data preview/management window
-        setShowDataPreview(true);
-        restoreWindow('dataPreview');
+        onOpenDataHub();
         break;
       case 'definitions':
         // Orient user toward the semantic definitions in the DataPane
@@ -159,9 +165,8 @@ function CanvasContainer({
     onOpenAiChat,
     setShowAiWorkflow,
     restoreWindow,
-    onDestinationSelect,
-    activeDestination,
-    setShowDataPreview,
+    onOpenSourcePanel,
+    onOpenDataHub,
     addDashboardKpi,
     addDashboardChart,
     isDashboardDest,
@@ -200,21 +205,6 @@ function CanvasContainer({
   }, []);
 
   const { fullData, activeWorkspace } = useContext(DataContext);
-  const dataset = useActiveDataset();
-
-  const previewData = useMemo(() => {
-    if (Array.isArray(dataset)) return dataset.slice(0, 100);
-    if (typeof dataset?.data_preview === 'string') {
-      try {
-        const arr = JSON.parse(dataset.data_preview);
-        return arr.slice(0, 100);
-      } catch (error) {
-        console.error('Failed to parse dataset data_preview', error);
-      }
-    }
-    return [];
-  }, [dataset]);
-
   let outputWindows = getWorkflowWindows(pipelineResults || {});
   if (!showAiReport) {
     outputWindows = outputWindows.filter((windowItem) => windowItem.type !== 'report');
@@ -589,7 +579,7 @@ function CanvasContainer({
       );
     });
 
-  const dataPreviewElement = (dataset && previewData.length > 0 && showDataPreview && !minimizedWindows.dataPreview) ? (
+  const dataPreviewElement = (previewData.length > 0 && showDataPreview && !minimizedWindows.dataPreview) ? (
     <WindowFrame
       {...getWindowProps('dataPreview', '📄 Data Preview', handleClosePreview, () => minimizeWindow('dataPreview', 'Data Preview'))}
       initialState={getInitialState('dataPreview', 8, 20, WINDOW_SIZING.DATA_PREVIEW.defW, WINDOW_SIZING.DATA_PREVIEW.defH, WINDOW_SIZING.DATA_PREVIEW.minW, WINDOW_SIZING.DATA_PREVIEW.minH)}
@@ -741,8 +731,8 @@ function CanvasContainer({
   );
 
   const shouldShowHome = useMemo(() => {
-    if (isWorkspaceDest) return !showDataPreview && !showRawViewer && !showMachineLearning;
-    if (isDataModelDest) return false; // Data model has its own canvas UI
+    if (isWorkspaceDest) return !(showDataPreview && previewData.length) && !showRawViewer && !showMachineLearning;
+    if (isDataModelDest || isDataHubDest) return false;
     if (isMlStudioDest) return false; // ML Studio has its own full-canvas shell
     if (isExploreDest) return charts.length === 0 && !showDataPreview;
     if (isDashboardDest) return dashboardItems.length === 0;
@@ -753,7 +743,9 @@ function CanvasContainer({
     return true;
   }, [
     isWorkspaceDest,
+    previewData.length,
     isDataModelDest,
+    isDataHubDest,
     isExploreDest,
     isDashboardDest,
     isMlStudioDest,
@@ -789,6 +781,13 @@ function CanvasContainer({
           )}
 
           {/* Render relevant windows for the active destination */}
+          {isDataHubDest && (
+            <DataHubWindow
+              onUpload={() => onOpenSourcePanel('upload')}
+              onOpenInAnalytics={onOpenSourceInAnalytics}
+              latestUploadId={uploadedData?.source?.source_id}
+            />
+          )}
           {isAnalyticsDest && <AnalyticsShell onOpenAiChat={onOpenAiChat} onOpenGallery={() => setShowDataVisual(true)} onOpenAiChart={() => { setShowAIChart(true); restoreWindow('aiChartWindow'); }} />}
           {(isAiDest || isWorkspaceDest) && workflowElements}
           {(isWorkspaceDest || isExploreDest) && dataPreviewElement}

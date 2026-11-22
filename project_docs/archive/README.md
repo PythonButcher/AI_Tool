@@ -16,6 +16,8 @@ Use that folder only when historical detail is explicitly needed.
 
 ## Recent Status History
 
+The accepted Data Hub and navigation rebuild is preserved in its [delivery plan](data_hub_navigation_rebuild_accepted_2026_11_22.md).
+
 Completed Decision Intelligence slice records moved out of active status on June 1, 2026:
 
 `project_docs/archive/decision_intelligence_status_history_2026_06_01.md`

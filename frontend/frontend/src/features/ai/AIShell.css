@@ -365,6 +365,81 @@
   color: var(--accent-blue);
 }
 
+.ai-shell__dataset-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 32px;
+  padding: 0 9px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.ai-shell__dataset-trigger > svg { flex: none; color: var(--accent-teal); font-size: 12px; }
+.ai-shell__dataset-trigger .ai-shell__dataset-trigger-chevron { color: var(--text-secondary); font-size: 9px; }
+.ai-shell__dataset-trigger:disabled { cursor: default; opacity: .6; }
+.ai-shell__dataset-trigger:hover:not(:disabled),
+.ai-shell__dataset-trigger[aria-expanded='true'] {
+  border-color: color-mix(in srgb, var(--accent-teal) 45%, var(--border-color));
+  background: color-mix(in srgb, var(--accent-teal) 8%, var(--bg-primary));
+}
+.ai-shell__dataset-trigger[aria-expanded='true'] .ai-shell__dataset-trigger-chevron { transform: rotate(180deg); }
+
+/* The portal sits above the chat dock and shares its document's theme. */
+.ai-shell__dataset-menu.MuiModal-root { z-index: 1650; }
+.ai-shell__dataset-menu .MuiPaper-root {
+  width: min(288px, calc(100vw - 32px));
+  max-height: min(342px, calc(100% - 32px));
+  margin-top: 6px;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-lg);
+}
+.ai-shell__dataset-menu .MuiMenu-list { padding: 6px; }
+.ai-shell__dataset-menu .MuiListSubheader-root {
+  padding: 6px 9px 8px;
+  border-bottom: 1px solid var(--border-color-soft);
+  margin-bottom: 4px;
+  background: transparent;
+  color: var(--text-secondary);
+  font: 600 12px/1.4 var(--font-sans);
+}
+.ai-shell__dataset-menu .MuiMenuItem-root {
+  gap: 9px;
+  min-height: 37px;
+  padding: 4px 8px;
+  border-radius: 7px;
+  font: 500 13px/1.4 var(--font-sans);
+  white-space: normal;
+}
+.ai-shell__dataset-menu .MuiMenuItem-root.Mui-disabled { color: var(--text-secondary); opacity: 1; }
+.ai-shell__dataset-menu .MuiMenuItem-root:hover,
+.ai-shell__dataset-menu .MuiMenuItem-root.Mui-focusVisible { background: var(--bg-secondary-soft); }
+.ai-shell__dataset-menu .MuiMenuItem-root.Mui-selected { background: var(--accent-blue-soft); color: var(--accent-blue); }
+.ai-shell__dataset-menu .MuiMenuItem-root.Mui-focusVisible { outline: 2px solid var(--accent-blue); outline-offset: -2px; }
+.ai-shell__dataset-menu-icon {
+  display: grid;
+  flex: 0 0 25px;
+  height: 25px;
+  place-items: center;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--accent-teal) 11%, var(--bg-primary));
+  color: var(--accent-teal);
+  font-size: 11px;
+}
+.ai-shell__dataset-menu-name { min-width: 0; overflow-wrap: anywhere; }
+.ai-shell__dataset-menu-check { flex: none; margin-inline-start: auto; }
+
 .ai-shell__external-icon { font-size: 10px !important; opacity: .65; }
 .ai-shell__result-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent-blue); flex-shrink: 0; }
 
@@ -1253,25 +1328,6 @@
 .ai-shell__starter-grid button > svg:last-child { color: var(--text-secondary); font-size: 11px; }
 .ai-shell__starter-question { font-size: 13px; font-weight: 500; line-height: 1.4; overflow-wrap: anywhere; }
 
-.ai-shell__choose-dataset {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 38px;
-  padding: 8px 14px;
-  border: 1px solid color-mix(in srgb, var(--accent-blue) 28%, transparent);
-  border-radius: 8px;
-  color: var(--accent-blue);
-  background: var(--accent-blue-soft);
-  font: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.ai-shell__choose-dataset svg { display: block; font-size: 12px; }
-.ai-shell__choose-dataset:hover:not(:disabled) { border-color: var(--accent-blue); background: color-mix(in srgb, var(--accent-blue) 14%, var(--bg-primary)); }
-
 .ai-shell button:focus-visible, .ai-shell summary:focus-visible, .ai-shell input:focus-visible { outline: 2px solid var(--accent-blue); outline-offset: 2px; }
 .ai-shell button:disabled { opacity: .5; cursor: not-allowed; }
 .ai-shell__preview-info { flex: 1; min-width: 0; padding: 2px 0; border: 0; text-align: left; color: inherit; background: transparent; cursor: pointer; }
@@ -1353,14 +1409,26 @@
   .ai-shell__draft-heading { flex-wrap: wrap; }
 }
 
-@container ai-chat (max-width: 420px) {
+@container ai-chat (max-width: 520px) {
+  .ai-shell__dataset-trigger-verb { display: none; }
+  .ai-shell__dataset-trigger-label { text-transform: capitalize; }
+}
+
+@container ai-chat (max-width: 480px) {
   .ai-shell__header-action > span:not(.ai-shell__result-dot) { display: none; }
   .ai-shell__header-action { min-width: 32px; width: 32px; padding: 0; }
+}
+
+@container ai-chat (max-width: 420px) {
   .ai-shell__header-right { gap: 4px; }
   .ai-shell__conversation-title { max-width: 160px; }
   .ai-shell__composer-toolbar { flex-wrap: wrap; gap: 6px; }
   .ai-shell__composer-tool { padding: 0 7px; }
   .ai-shell__send-btn { margin-left: auto; }
+}
+
+@container ai-chat (max-width: 360px) {
+  .ai-shell__dataset-trigger-label { display: none; }
 }
 
 @container ai-chat (max-width: 320px) {

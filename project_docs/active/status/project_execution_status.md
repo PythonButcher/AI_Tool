@@ -1,23 +1,27 @@
 # Project Execution Status
 
-## Current Gate: Customize the Analytics workbench layout
+## Current Gate: Navigate Datastream from the application header
 
-- **Current Gate**: Customize the Analytics workbench layout
-- **Roadmap Phase**: Phase 1 — Analytics Product Rebuild
-- **Phase State**: `AWAITING USER ACCEPTANCE`
-- **What This State Means**: The customizable Analysis layout passed focused engineering verification.
-- **Current Milestone**: Analysis workbench layout user acceptance
-- **Automatic Continuation**: `WAIT_FOR_USER`
-- **Current Owner**: User
+- **Current Gate**: Navigate Datastream from the application header
+- **Roadmap Phase**: Phase 3 — Replace Commands with a persistent banner menu
+- **Phase State**: `COMPLETE`
+- **What This State Means**: The user accepted the Welcome actions, Data Hub destination, and persistent header on November 22, 2026.
+- **Current Milestone**: Data Hub and navigation accepted
+- **Automatic Continuation**: `COMPLETE`
+- **Current Owner**: None
 - **Backend Readiness**: `complete`
 - **Frontend Readiness**: `backend_contract_ready`
-- **Next Action**: User browser acceptance in chat.
-- **Required Action**: User decision on the customizable layout.
+- **Next Action**: User selects the next product outcome in chat.
+- **Required Action**: None for the Data Hub and navigation rebuild.
 - **Active Gate**: `project_docs/active/active_gate/README.md`
 - **Authorization Record**: `project_docs/active/status/phase_authorization.json`
-- **Roadmap**: `project_docs/active/analytics/README.md`
+- **Roadmap**: `project_docs/archive/data_hub_navigation_rebuild_accepted_2026_11_22.md`
 - **Active Handoff**: None.
-- **Latest Verification**: 34 focused Analytics and WindowContext tests, scoped ESLint, and the production build passed. Chrome with fixture data verified pointer and keyboard snapping, visible resize handles and placement preview, per-panel locks, chart and draft preservation, compact stacking, reload, reset, and print layout.
+- **Latest Verification**: 28 focused frontend tests, six focused backend contract tests, the production build, and the repository harness passed. Chrome fixture checks verified navigation, catalog selection, removal confirmation, and upload entry at 1440, 390, and 320 pixels. The isolated browser could not load the existing external Whiteboard asset.
+
+## Pending Analytics Workbench Acceptance
+
+The customizable Analysis workbench remains **awaiting user acceptance** in chat. The user owns the browser decision. Engineering verification passed 34 focused Analytics and WindowContext tests, scoped ESLint, and the production build. Chrome with fixture data verified pointer and keyboard snapping, visible resize handles and placement preview, per-panel locks, chart and draft preservation, compact stacking, reload, reset, and print layout. See the [Analytics roadmap](../analytics/README.md) and the preserved authorization in [phase_authorization.json](phase_authorization.json).
 
 ## Preserved Interface Verification
 
@@ -31,4 +35,4 @@ The [ML Studio contract](../contracts/ml_studio.md) retains capability limitatio
 
 ## Completion Rule
 
-New implementation requires a user-authorized outcome and a matching active gate.
+The next implementation phase begins with a direct user instruction and a matching authorization record.

@@ -1,20 +1,21 @@
-Goal: Keep Analytics Studio aligned with the next user-authorized product change.
+Goal: Select the next Datastream product outcome from the platform roadmap.
 
 ## User Outcome
 
-Users can work in a customizable Analysis workspace while directing any follow-up in chat.
+Users can choose a bounded improvement that makes Datastream data reusable across modeling and analysis.
 
 ## Scope
 
-The user directs product changes. A requested implementation outcome requires a matching authorization record and an executable gate.
+The user directs product changes in chat. The platform review recommends starting with named business objects and their source relationships in Data Model. An implementation assignment requires a matching authorization record and a bounded gate.
 
 ## Contracts
 
-- [Analytics workspace](../contracts/analytics_workspace.md)
+- [Three-project platform roadmap](../future/codex/three_project_data_platform_review.md)
+- [Data Model relationship contract](../contracts/multiple_data_source_relationships.md)
 
 ## Acceptance
 
-- Any follow-up gate identifies one authorized outcome, its owner, and observable engineering acceptance checks.
+- Any follow-up gate identifies one authorized outcome, its owner, and observable engineering checks.
 
 ## Verification
 
@@ -24,4 +25,4 @@ The user directs product changes. A requested implementation outcome requires a 
 
 ## Owner And Control Return
 
-The user owns product direction. Codex acts when the user assigns a follow-up outcome.
+The user directs any follow-up in chat. Codex acts on the next authorized outcome.

@@ -1,4 +1,4 @@
-import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useContext, useEffect, useId, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
 import {
   FaChartBar,
@@ -35,6 +35,9 @@ import {
   DialogTitle,
   Chip,
   IconButton,
+  ListSubheader,
+  Menu,
+  MenuItem,
   TextField,
   Tooltip,
   Typography,
@@ -216,7 +219,7 @@ function AIChatConversation({ onOpenDashboard, windowActions, windowNotice, conv
     semanticModel,
     refreshSemanticModelFromDataset,
   } = useContext(DataContext);
-  const { datasets = [] } = useContext(WarehouseContext);
+  const { datasets = [], refreshDatasets } = useContext(WarehouseContext);
   const { addDashboardResults, openDashboard, dashboardItems: currentDashboardItems = [], analyticsWorkspace } = useWindowContext();
   const [saveTarget, setSaveTarget] = useState('');
   const [analyticsContext, setAnalyticsContext] = useState(null);
@@ -241,6 +244,9 @@ function AIChatConversation({ onOpenDashboard, windowActions, windowNotice, conv
   const [chatAction, setChatAction] = useState(null);
   const [isChatActionOpen, setIsChatActionOpen] = useState(false);
   const [chatName, setChatName] = useState('');
+  const [datasetMenuAnchor, setDatasetMenuAnchor] = useState(null);
+  const [datasetMenuStatus, setDatasetMenuStatus] = useState('idle');
+  const datasetMenuId = useId();
 
   const [mentionQuery, setMentionQuery] = useState(null);
   const [isMentionOpen, setIsMentionOpen] = useState(false);
@@ -265,6 +271,20 @@ function AIChatConversation({ onOpenDashboard, windowActions, windowNotice, conv
     awaitingCleanInstructions, failedRequest, error, governanceWarning, notice]);
 
   useEffect(() => { inputRef.current?.focus(); }, []);
+  useEffect(() => {
+    if (!datasetMenuAnchor || !refreshDatasets) return undefined;
+    const controller = new AbortController();
+    axios.get(`${API_URL}/api/data-sources`, { signal: controller.signal }).then(({ data }) => {
+      if (controller.signal.aborted) return;
+      if (!Array.isArray(data?.sources)) throw new Error('Invalid catalog response');
+      refreshDatasets(data.sources.map(({ source_id, name }) => ({ id: source_id, name })));
+      setDatasetMenuStatus('ready');
+    }).catch(() => {
+      if (!controller.signal.aborted) setDatasetMenuStatus('error');
+    });
+    return () => controller.abort();
+  }, [datasetMenuAnchor, refreshDatasets]);
+
   useEffect(() => {
     const receive = () => {
       try {
@@ -635,6 +655,31 @@ function AIChatConversation({ onOpenDashboard, windowActions, windowNotice, conv
     inputRef.current?.focus();
   };
 
+  const openDatasetMenu = (event) => {
+    setIsMentionOpen(false);
+    setDatasetMenuStatus(refreshDatasets ? 'loading' : 'idle');
+    setDatasetMenuAnchor(event.currentTarget);
+  };
+
+  const closeDatasetMenu = () => {
+    setDatasetMenuAnchor(null);
+    datasetMenuAnchor?.focus();
+  };
+
+  const addDatasetToQuestion = (name) => {
+    setUserInput(current => {
+      if (extractTokens(current, datasets).includes(name)) return current;
+      const draft = current.trimEnd().replace(/(^|\s)@$/, '$1').trimEnd();
+      return `${draft}${draft ? ' ' : ''}@${name} `;
+    });
+    setMentionStartIndex(-1);
+    setDatasetMenuAnchor(null);
+    inputRef.current?.focus();
+  };
+
+  const isDatasetMenuOpen = Boolean(datasetMenuAnchor);
+  const draftDatasets = isDatasetMenuOpen ? extractTokens(userInput, datasets) : [];
+
   const handleInputChange = (event) => {
     const value = event.target.value;
     const cursorPosition = event.target.selectionStart;
@@ -864,6 +909,15 @@ function AIChatConversation({ onOpenDashboard, windowActions, windowNotice, conv
                 <FaPlus /><span>New chat</span>
               </button>
             </Tooltip>
+            <button type="button" className="ai-shell__dataset-trigger" id={`${datasetMenuId}-trigger`}
+              aria-label="Choose dataset" aria-haspopup="menu" aria-expanded={isDatasetMenuOpen}
+              aria-controls={isDatasetMenuOpen ? datasetMenuId : undefined}
+              disabled={Boolean(analyticsContext)} title={analyticsContext ? 'Clear the Analytics context to choose a dataset' : 'Choose dataset'}
+              onClick={openDatasetMenu}>
+              <FaDatabase aria-hidden="true" />
+              <span className="ai-shell__dataset-trigger-label"><span className="ai-shell__dataset-trigger-verb">Choose </span>dataset</span>
+              <FaChevronDown className="ai-shell__dataset-trigger-chevron" aria-hidden="true" />
+            </button>
             <Tooltip title="Reset this chat and start fresh">
               <span><button type="button" className="ai-shell__header-action ai-shell__reset-chat" aria-label="Reset current chat"
                 disabled={!userMessages.length && !userInput.trim()} onClick={() => prepareChatAction('reset')}><FaRedo /></button></span>
@@ -948,8 +1002,8 @@ function AIChatConversation({ onOpenDashboard, windowActions, windowNotice, conv
                 />
                 <span className="ai-shell__empty-brand-name">Datastream</span>
               </div>
-              <div className="ai-shell__welcome-actions">
-                {suggestions.length > 0 ? <>
+              {suggestions.length > 0 && (
+                <div className="ai-shell__welcome-actions">
                   <div className="ai-shell__section-label">Suggested questions</div>
                   <div className="ai-shell__starter-grid" aria-label="Suggested business questions">
                     {suggestions.map(question => {
@@ -962,10 +1016,8 @@ function AIChatConversation({ onOpenDashboard, windowActions, windowNotice, conv
                       </button>;
                     })}
                   </div>
-                </> : <button type="button" className="ai-shell__choose-dataset" onClick={chooseData}>
-                  <FaDatabase aria-hidden="true" /> Choose Dataset <FaArrowRight aria-hidden="true" />
-                </button>}
-              </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -1147,6 +1199,27 @@ function AIChatConversation({ onOpenDashboard, windowActions, windowNotice, conv
         </div>
       </aside>
       </div>
+
+      <Menu anchorEl={datasetMenuAnchor} open={isDatasetMenuOpen} onClose={closeDatasetMenu}
+        container={() => shellRef.current?.ownerDocument.body} className="ai-shell__dataset-menu"
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }} transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+        disableScrollLock disableRestoreFocus disableEnforceFocus
+        slotProps={{ list: { id: datasetMenuId, 'aria-labelledby': `${datasetMenuId}-trigger` } }}>
+        <ListSubheader disableSticky>Datasets for this question</ListSubheader>
+        {datasetMenuStatus === 'loading' ? (
+          <MenuItem disabled>Loading saved datasets…</MenuItem>
+        ) : [
+          datasetMenuStatus === 'error' && <MenuItem key="error" disabled>Couldn’t load saved datasets.</MenuItem>,
+          datasets.length === 0 && datasetMenuStatus !== 'error' && <MenuItem key="empty" disabled>No saved datasets yet.</MenuItem>,
+          ...datasets.map(({ id, name }) => (
+            <MenuItem key={id} selected={draftDatasets.includes(name)} onClick={() => addDatasetToQuestion(name)}>
+              <span className="ai-shell__dataset-menu-icon"><FaDatabase aria-hidden="true" /></span>
+              <span className="ai-shell__dataset-menu-name">{name}</span>
+              {draftDatasets.includes(name) && <FaCheckCircle className="ai-shell__dataset-menu-check" aria-hidden="true" />}
+            </MenuItem>
+          )),
+        ]}
+      </Menu>
 
       <Dialog open={isHistoryOpen} onClose={() => setIsHistoryOpen(false)} fullWidth maxWidth="sm"
         container={() => shellRef.current?.ownerDocument.body}
