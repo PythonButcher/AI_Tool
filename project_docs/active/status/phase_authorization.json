@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "authorized_work": {
-    "name": "Rebuild Analytics chart authoring"
+    "name": "Customize the Analytics workbench layout"
   },
   "authorization_state": "AUTHORIZED",
   "lifecycle_state": "AWAITING USER ACCEPTANCE",
@@ -246,10 +246,10 @@
   "user_implementation_authorization": {
     "approved_by": "User",
     "approved_at": "2026-11-18",
-    "evidence": "Direct user request to rebuild the chart authoring experience, simplify measure controls, and highlight valid field drop targets.",
+    "evidence": "Direct user request for movable, resizable, and individually lockable Analysis workbench panels.",
     "instruction": "Redesign Analytics Studio and keep its features available.",
     "scope": "Codex owns the Analytics frontend redesign, related backend repairs, and focused integration verification.",
-    "current_instruction": "Rebuild the Analytics chart composer with a visual picker, clear field mapping targets, and cohesive controls.",
+    "current_instruction": "Implement a snapping layout for Fields, Visual Builder, and Results with per-panel locks.",
     "current_approved_at": "2026-11-19"
   },
   "preparation_authorization": {
@@ -288,6 +288,11 @@
     "instruction": "add a delete button for each workspace while you're there",
     "clarification": "Saved ML Studio experiments",
     "scope": "Codex may implement saved experiment deletion in the ML Studio home, its backend draft route and persistence, contract, and focused tests."
+  },
+  "data_platform_review_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-11-21",
+    "scope": "Review Datastream, Context Ledger, and Slipstream together and record the ranked product recommendations in Codex future planning. Documentation only."
   },
   "allowed_paths": [
     "backend/analytics/**",
@@ -333,6 +338,7 @@
     "project_docs/active/ai_hand_off/ml_studio_power_query_preview_cancel.md",
     "project_docs/active/future/codex/ml_studio_power_query_preview_cancel.md",
     "project_docs/active/future/codex/README.md",
+    "project_docs/active/future/codex/three_project_data_platform_review.md",
     "project_docs/archive/ml_studio_power_query_opening_superseded_2026_10_01.md",
     "project_docs/active/ai_hand_off/ml_studio_power_query_opening.md",
     "frontend/frontend/src/App.jsx",

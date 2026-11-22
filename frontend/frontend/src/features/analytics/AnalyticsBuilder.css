@@ -1,24 +1,4 @@
-.analytics-author-fields,
-.analytics-author-panel {
-  min-width: 0;
-  background: var(--bg-panel);
-  border: 1px solid var(--border-subtle);
-  border-radius: 10px;
-}
-
-.analytics-author-fields { grid-area: fields; }
-.analytics-author-panel { grid-area: settings; }
-.analytics-author-heading {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  padding: 13px 14px;
-  border-bottom: 1px solid var(--border-subtle);
-}
-.analytics-author-heading > div { flex: 1; min-width: 0; }
-.analytics-author-heading h2 { margin: 0; font-size: 14px; font-weight: 700; line-height: 1.25; }
-.analytics-author-heading small { display: block; margin-top: 2px; }
-.analytics-author-heading-mark, .analytics-author-field-mark, .analytics-author-measure-mark {
+.analytics-author-field-mark, .analytics-author-measure-mark {
   display: grid;
   flex: none;
   place-items: center;
@@ -75,9 +55,7 @@
 .analytics-author-field-list {
   display: grid;
   gap: 3px;
-  max-height: clamp(165px, 46vh, 540px);
   padding: 2px 12px 9px;
-  overflow-y: auto;
 }
 .analytics-shell .analytics-author-field {
   display: grid;
@@ -318,7 +296,3 @@
 .analytics-author-filter-title { display: flex; justify-content: space-between; align-items: center; }
 .analytics-author-panel label,
 .analytics-author-panel select { min-width: 0; }
-
-@container analytics (max-width: 680px) {
-  .analytics-author-field-list { max-height: 145px; }
-}

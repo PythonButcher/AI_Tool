@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import {
-  TbCalendar, TbChevronRight, TbColumns, TbDatabase, TbGripVertical, TbHash, TbLetterCase,
+  TbCalendar, TbChevronRight, TbColumns, TbGripVertical, TbHash, TbLetterCase,
   TbPlus, TbSearch, TbSwitchHorizontal, TbX,
 } from 'react-icons/tb';
 import AnalyticsMeasureEditor, { AGGREGATION_LABELS } from './AnalyticsMeasureEditor';
 import AnalyticsQueryOptions from './AnalyticsQueryOptions';
 import AnalyticsVisualPicker from './AnalyticsVisualPicker';
+import AnalyticsWorkbench from './AnalyticsWorkbench';
 import { remapAnalysis } from './analyticsTransforms';
 import './AnalyticsBuilder.css';
 
@@ -65,7 +66,7 @@ function MeasureRow({ measure, index, editing, fallback, fields, metrics, onTogg
   </div>;
 }
 
-export default function AnalyticsBuilder({ config, fields, metrics = [], sourceLoading, replaceDefaultValue = false, onChange }) {
+export default function AnalyticsBuilder({ config, fields, metrics = [], sourceLoading, replaceDefaultValue = false, onChange, results }) {
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [selectedName, setSelectedName] = useState(null);
@@ -219,14 +220,7 @@ export default function AnalyticsBuilder({ config, fields, metrics = [], sourceL
     : 'Drag a field or select it to choose a target.';
   const canDrop = target => !!draggedName && target.candidates.some(field => field.name === draggedName);
 
-  return <div className="analytics-builder-studio">
-    <section className="analytics-author-fields" aria-label="Dataset fields">
-      <header className="analytics-author-heading">
-        <span className="analytics-author-heading-mark"><TbDatabase aria-hidden="true" /></span>
-        <div><h2>Fields</h2><small>{sourceLoading ? 'Loading schema' : `${fields.length} available`}</small></div>
-        <button type="button" className="analytics-author-icon" aria-label="Remap fields" title="Remap fields"
-          aria-expanded={showRemap} onClick={() => setShowRemap(value => !value)}><TbSwitchHorizontal /></button>
-      </header>
+  const fieldContents = <div className="analytics-author-fields">
       {showRemap && <div className="analytics-author-option-editor">
         <label>Original field<input value={oldField} onChange={event => setOldField(event.target.value)} /></label>
         <label>Replacement field<select value={newField} onChange={event => setNewField(event.target.value)}>
@@ -261,10 +255,9 @@ export default function AnalyticsBuilder({ config, fields, metrics = [], sourceL
         {!visibleFields.length && <p className="analytics-empty-hint">{sourceLoading ? 'Loading fields…' : config.source ? 'No matching fields.' : 'Choose a dataset to browse fields.'}</p>}
       </div>
       {fields.length > 0 && <p className="analytics-author-field-note" role="status">{announcement || note}</p>}
-    </section>
+  </div>;
 
-    <section className="analytics-author-panel" aria-label="Visual builder">
-      <header className="analytics-author-heading"><div><h2>Visual builder</h2></div></header>
+  const builderContents = <div className="analytics-author-panel">
       <AnalyticsVisualPicker view={view} open={pickerOpen} onToggle={() => setPickerOpen(value => !value)} onSelect={chooseView}
         onSuggest={() => chooseView(groups.some(group => group.grain) ? 'line' : groups.length ? 'bar' : 'kpi')} />
       <div className="analytics-author-mapping">
@@ -294,6 +287,10 @@ export default function AnalyticsBuilder({ config, fields, metrics = [], sourceL
           <p className="analytics-author-requirement">This visual uses exactly one category and one value.</p>}
       </div>
       <AnalyticsQueryOptions query={query} view={view} fields={fields} onChange={changeQuery} />
-    </section>
   </div>;
+
+  return <AnalyticsWorkbench fields={fieldContents} builder={builderContents} results={results}
+    fieldDetails={sourceLoading ? 'Loading schema' : `${fields.length} available`}
+    fieldActions={<button type="button" className="analytics-author-icon" aria-label="Remap fields" title="Remap fields"
+      aria-expanded={showRemap} onClick={() => setShowRemap(value => !value)}><TbSwitchHorizontal aria-hidden="true" /></button>} />;
 }

@@ -785,11 +785,8 @@ export default function AnalyticsShell({ onOpenAiChat, onOpenGallery, onOpenAiCh
 
           {result && !resultIsCurrent && <p className="analytics-notice">Builder changed. Run the analysis to apply your edits to the result.</p>}
 
-          <div className="analytics-workbench-grid">
-            <AnalyticsBuilder key={composerSession.id} config={draft} fields={fields} metrics={metrics} sourceLoading={!!selectedSource && !sourceMetadata}
-              replaceDefaultValue={composerSession.replaceDefaultValue} onChange={changeDraft} />
-            <div className="analytics-result-panel">
-              <h2 className="analytics-result-heading">Results</h2>
+          <AnalyticsBuilder key={composerSession.id} config={draft} fields={fields} metrics={metrics} sourceLoading={!!selectedSource && !sourceMetadata}
+            replaceDefaultValue={composerSession.replaceDefaultValue} onChange={changeDraft} results={<div className="analytics-result-panel">
               <AnalyticsResult result={result} config={resultConfig ? { ...resultConfig, view: resultIsCurrent ? draft.view : resultConfig.view, appearance: draft.appearance } : draft} onSelect={resultIsCurrent ? drill : undefined} />
               {result && (
                 <div className="analytics-lineage-footer">
@@ -804,8 +801,7 @@ export default function AnalyticsShell({ onOpenAiChat, onOpenGallery, onOpenAiCh
                   )}
                 </div>
               )}
-            </div>
-          </div>
+            </div>} />
         </> : (
           <AnalyticsDashboard key={board.state.id} board={board} attachments={attachments} onChange={changeBoard} onInvestigate={investigate}
             onNewAnalysis={startAnalysis} selectedTile={selectedTile} onSelectTile={selectTile}

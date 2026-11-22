@@ -1,23 +1,23 @@
 # Project Execution Status
 
-## Current Gate: Rebuild Analytics chart authoring
+## Current Gate: Customize the Analytics workbench layout
 
-- **Current Gate**: Rebuild Analytics chart authoring
+- **Current Gate**: Customize the Analytics workbench layout
 - **Roadmap Phase**: Phase 1 — Analytics Product Rebuild
 - **Phase State**: `AWAITING USER ACCEPTANCE`
-- **What This State Means**: The rebuilt chart composer passed focused engineering verification.
-- **Current Milestone**: Analytics chart authoring user acceptance
+- **What This State Means**: The customizable Analysis layout passed focused engineering verification.
+- **Current Milestone**: Analysis workbench layout user acceptance
 - **Automatic Continuation**: `WAIT_FOR_USER`
 - **Current Owner**: User
 - **Backend Readiness**: `complete`
 - **Frontend Readiness**: `backend_contract_ready`
 - **Next Action**: User browser acceptance in chat.
-- **Required Action**: User decision on the chart authoring experience.
+- **Required Action**: User decision on the customizable layout.
 - **Active Gate**: `project_docs/active/active_gate/README.md`
 - **Authorization Record**: `project_docs/active/status/phase_authorization.json`
 - **Roadmap**: `project_docs/active/analytics/README.md`
 - **Active Handoff**: None.
-- **Latest Verification**: 74 backend tests, 58 frontend regression tests, Analytics ESLint, and the production build passed. The focused Analytics and WindowContext suites passed again on the final layout. Chrome with fixture data verified Dashboard Add Tile → Chart, 15 visuals, native drag highlighting and assignment, keyboard assignment, measure editing, light and dark layouts, and chart rendering through Flask.
+- **Latest Verification**: 34 focused Analytics and WindowContext tests, scoped ESLint, and the production build passed. Chrome with fixture data verified pointer and keyboard snapping, visible resize handles and placement preview, per-panel locks, chart and draft preservation, compact stacking, reload, reset, and print layout.
 
 ## Preserved Interface Verification
 

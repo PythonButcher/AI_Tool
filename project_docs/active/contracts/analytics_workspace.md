@@ -42,6 +42,8 @@ Migration reads `chartStudioDashboard:v1`, then `businessMonitoringDashboard`, p
 
 Drafts autosave after 800 ms and are preserved synchronously before switching analyses. Saved objects and editing drafts are independent. Query undo retains 30 entries, dashboard undo 20 and saved revisions ten. Revisions restore through ordinary persistence and failure handling. Import validates the version and object identities, creates new IDs, retains current work, and marks imported sources for deliberate confirmation. Field remapping updates groups, measures, filters, dates and detail columns without changing metric or measure identities. Live execution stays blocked until source confirmation; backend validation then checks every field.
 
+Analysis panel placement is a browser preference shared across drafts, stored separately under `analytics:workbench-layout:v1`. The array records `i`, `x`, `y`, `w`, `h`, and `locked` for Fields, Visual Builder, and Results. Positions and sizes use a 24-column snap grid and cannot overlap. Layout editing supports drag grips, resize handles, and keyboard movement. Each panel can be locked in place, and Reset layout restores the initial arrangement and unlocks all three. Narrow workspaces stack the panels in reading order and preserve their saved desktop arrangement. Malformed preferences fall back to the default geometry.
+
 Dashboard state can carry an `analyticsSource` for overview creation and the filter editor. Each tile retains its own query source. Starter layouts use the selected dataset's measures, dates and categories where available, with a numeric distribution when appropriate. Live tiles without cached results query on open.
 
 ## Integration and reporting

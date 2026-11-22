@@ -2,7 +2,7 @@ Goal: Keep Analytics Studio aligned with the next user-authorized product change
 
 ## User Outcome
 
-Users retain one workspace for dashboard monitoring, chart authoring, and metric-change investigation while directing any follow-up in chat.
+Users can work in a customizable Analysis workspace while directing any follow-up in chat.
 
 ## Scope
 

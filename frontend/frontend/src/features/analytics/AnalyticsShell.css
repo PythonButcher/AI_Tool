@@ -618,17 +618,6 @@
 }
 .analytics-pin-group button { border-radius: 5px !important; padding: 3px 8px !important; white-space: nowrap; }
 
-/* Analysis workbench */
-.analytics-workbench-grid {
-  display: grid;
-  grid-template-columns: clamp(195px, 16cqw, 245px) clamp(315px, 25cqw, 390px) minmax(0, 1fr);
-  grid-template-areas: 'fields settings result';
-  gap: 12px;
-  align-items: start;
-}
-
-.analytics-builder-studio { display: contents; }
-
 .analytics-card-title {
   display: inline-flex;
   align-items: center;
@@ -666,19 +655,12 @@
 
 /* Result Canvas & Executive Headline Ribbon */
 .analytics-result-panel {
-  grid-area: result;
   min-width: 0;
-  min-height: 390px;
-  background: var(--bg-panel);
-  border: 1px solid var(--border-subtle);
   padding: 13px;
-  border-radius: 8px;
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
-.analytics-result-heading { margin: 0; font-size: 14px; font-weight: 700; }
-.analytics-result-panel .analytics-empty-canvas { min-height: 320px; }
 
 .analytics-summary-ribbon {
   display: flex;
@@ -1302,12 +1284,6 @@
   border: 0;
 }
 
-@container analytics (max-width: 1040px) {
-  .analytics-workbench-grid {
-    grid-template-columns: minmax(185px, 0.7fr) minmax(0, 1fr);
-    grid-template-areas: 'fields settings' 'result result';
-  }
-}
 @container analytics (max-width: 1160px) {
   .analytics-header { grid-template-columns: minmax(0, 1fr) minmax(0, auto) max-content; gap: 8px; }
 }
@@ -1324,10 +1300,6 @@
 }
 @container analytics (max-width: 680px) {
   .analytics-shell .analytics-main.analytics-main--explore { padding-inline-end: 38px; }
-  .analytics-workbench-grid {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-areas: 'fields' 'settings' 'result';
-  }
   .analytics-header .analytics-mode-switch button span { display: none; }
   .analytics-workspace-filters { grid-column: 1 / -1; }
   .analytics-drawer-grid.analytics-library { grid-template-columns: minmax(0, 1fr); }
@@ -1353,6 +1325,5 @@
   .analytics-main,
   .analytics-main * { visibility: visible; }
   .analytics-main { position: fixed; inset: 0; overflow: visible; background: #fff; }
-  .analytics-main button,
-  .analytics-builder-studio { display: none; }
+  .analytics-main button { display: none; }
 }

@@ -5,6 +5,7 @@ import { WindowProvider, useWindowContext } from '../../context/WindowContext';
 import AnalyticsShell from './AnalyticsShell';
 import { STORAGE_KEY, emptyWorkspace } from './analyticsStorage';
 import { defaultAnalysis, inlineIdentity } from './analyticsModel';
+import { WORKBENCH_LAYOUT_KEY, defaultWorkbenchLayout } from './analyticsWorkbenchLayout';
 
 const mockRows = [{ sales: 12, region: 'East' }];
 jest.mock('../../context/DataContext', () => ({
@@ -46,6 +47,34 @@ test('run, save, pin and reopen use one persisted query result', async () => {
   view.unmount(); mount();
   expect(screen.getByLabelText('Analysis name')).toHaveValue('Revenue');
   expect(screen.getByTestId('result')).toHaveTextContent('bar:12');
+});
+
+test('the workbench arranges, locks, and restores panels independently of the analysis', async () => {
+  jest.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(1440);
+  const view = mount();
+  fireEvent.change(screen.getByLabelText('Analysis name'), { target: { value: 'Revenue' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Run analysis' }));
+  const result = await screen.findByText('bar:12');
+  const saved = () => JSON.parse(localStorage.getItem(WORKBENCH_LAYOUT_KEY));
+  fireEvent.click(screen.getByRole('button', { name: 'Edit layout' }));
+  const results = screen.getByRole('button', { name: 'Move or resize Results' });
+  fireEvent.keyDown(results, { key: 'ArrowLeft' });
+  expect(saved()).toBeNull();
+  fireEvent.keyDown(results, { key: 'ArrowLeft', shiftKey: true });
+  fireEvent.keyDown(results, { key: 'ArrowDown' });
+  fireEvent.click(screen.getByRole('button', { name: 'Lock Results layout' }));
+  expect(saved().find(panel => panel.i === 'results')).toMatchObject({ x: 10, y: 1, w: 13, locked: true });
+  expect(screen.queryByRole('button', { name: 'Move or resize Results' })).not.toBeInTheDocument();
+  expect(screen.getByText('bar:12')).toBe(result);
+  expect(screen.getByLabelText('Analysis name')).toHaveValue('Revenue');
+  view.unmount();
+  mount();
+  expect(screen.getByRole('img', { name: 'Results layout locked' })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Edit layout' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Unlock Results layout' }));
+  expect(screen.getByRole('button', { name: 'Move or resize Results' })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Reset layout' }));
+  expect(saved()).toEqual(defaultWorkbenchLayout());
 });
 
 test('chart modes requiring a different query retain the last compatible visualization and refuse stale pins', async () => {
