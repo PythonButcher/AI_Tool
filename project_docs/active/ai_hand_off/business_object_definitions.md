@@ -1,28 +1,33 @@
-Goal: Let users save a configurable Business Object and see its saved definition in Data Model.
+Goal: Make the Business Objects panel keep confirmed saves visible and recover from changed source fields or relationships.
+
+REPAIR REQUIRED
+
+## Repair Blocker
+
+**Observed Source**: In BusinessObjectsPanel.jsx, loadDefinitions replaces the current list when GET resolves, including when that GET started before handleSubmit added a confirmed save. The save failure branch shows a 409 message but refreshes neither source fields nor relationships. SourceModelCanvas passes no model refresh callback to the panel.
+
+**Expected Contract**: POST 201 owns the newly saved business_object. GET 200 owns the business_objects snapshot at read time. A read started before a confirmed save cannot erase that save. POST 409 carries error.code and error.message, with no fresh model metadata. Refresh choices through the existing canvas workspace, source, and relationship loading flow so the user can correct the draft.
+
+**Regression Test**: `frontend/frontend/src/features/data-model/BusinessObjectsPanel.test.jsx` — `keeps a confirmed save when an older list request resolves last`; defer a list response with an empty snapshot, resolve POST 201 first, then resolve the GET and assert that the newly saved item remains visible exactly once.
+
+**Return Evidence**: Report source lines for list and save ordering, metadata refresh after a conflict, and draft reconciliation. Return the named regression tests, focused test command, build, and whitespace results.
 
 ## User Value
 
-Users can name a Business Object, choose a source and the fields that identify and label its records, and select the relationships it uses. They can reopen Business Objects to see saved definitions and any configuration that needs attention. Record browsing and the Analytics action come later.
-
-## Readiness Evidence
-
-**Frontend Readiness**: `backend_contract_ready`
-
-Ten Business Object tests verify two distinct configurations, reload and workspace isolation, the public API, reference changes, and failed-write rollback. The focused Business Object, workspace, relationship, and Analytics query run passed 75 tests. The Data Model canvas already loads workspace source schemas and relationship definitions. Its header currently exposes Create Relationship and Add Source, so add a Business Objects entry there.
+A new definition stays visible after Save succeeds. If the source or its relationships change while the form is open, users can refresh their choices and correct the same draft.
 
 ## Required Context
 
-- [Active gate](../active_gate/README.md), [execution status](../status/project_execution_status.md), [authorization](../status/phase_authorization.json), and [frontend guardrail](../rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md).
-- [Definition API](../business_objects/README.md#definition-api), `backend/routes/data_workspaces.py`, and `tests/test_business_objects.py`.
+- [Active gate](../active_gate/README.md), [execution status](../status/project_execution_status.md), [frontend guardrail](../rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md), and [definition API](../business_objects/README.md#definition-api).
 
 ## Scope And Target Files
 
-- `frontend/frontend/src/features/data-model/SourceModelCanvas.jsx` — add the entry and pass the current model metadata to the panel.
-- `frontend/frontend/src/features/data-model/BusinessObjectsPanel.jsx` — display saved definitions and provide the create form within the same panel.
-- `frontend/frontend/src/features/data-model/BusinessObjectsPanel.css` — style the panel and entry with the shared theme.
-- `frontend/frontend/src/features/data-model/BusinessObjectsPanel.test.jsx` — cover the user flow and the canvas integration.
+- `frontend/frontend/src/features/data-model/BusinessObjectsPanel.jsx`
+- `frontend/frontend/src/features/data-model/SourceModelCanvas.jsx`
+- `frontend/frontend/src/features/data-model/BusinessObjectsPanel.test.jsx`
+- `frontend/frontend/src/features/data-model/BusinessObjectsPanel.css` remains in the handoff scope for the existing panel styling.
 
-**Required Change Coverage**: all target files
+**Required Change Coverage**: the panel, its canvas integration, and the focused tests.
 
 **Maximum Diff Lines**: 600
 
@@ -30,84 +35,29 @@ Ten Business Object tests verify two distinct configurations, reload and workspa
 
 **Async Mutation**: yes
 
-**Preserved Controls**: Create Relationship and Add Source remain visible and open their existing panels after closing Business Objects. Test: open and close Business Objects, then activate each existing control and assert its original panel renders.
+**Preserved Controls**: Create Relationship and Add Source retain their original interactions, and closing Business Objects returns keyboard focus to its entry. Test: keep the existing canvas interaction and focus-return assertions passing.
 
-Keep the canvas, existing data-fetching behavior, and relationship workflows in place. Keep membership, source and relationship edits, definition editing and deletion, record browsing, Analytics, and changes outside the four target files out of this assignment.
+Keep the existing panel layout, labeled fields, straight checkbox list, and primary Save action. Work on save and refresh behavior in this panel. Keep records, Analytics, backend, and status files outside the implementation.
 
-## Proven API Contract
+## Proven Contract And Required Behavior
 
-Use the existing API base. URL-encode the active canvas `workspaceId` as a path segment. `GET /api/data-workspaces/<workspace_id>/business-objects` has no query or body and returns `200` with `{ business_objects: BusinessObject[] }`. `POST` to the same path uses `Content-Type: application/json` and returns `201` with `{ business_object: BusinessObject }`. The workspace routes use the existing app access boundary and require no new headers. The panel needs only these two operations.
-
-`type CreateBusinessObject = { display_name: string, source_id: string, record_key_field: string, display_field?: string | null, relationship_ids: string[] }`
-
-`type ConfigurationErrorCode = 'source_not_found' | 'relationship_not_found' | 'source_not_in_workspace' | 'managed_source_unavailable' | 'source_schema_unavailable' | 'source_field_not_found' | 'relationship_not_applicable' | 'relationship_field_not_found'`
-
-`type ErrorBody<Code extends string> = { code: Code, message: string }`
-
-`type BusinessObject = { contract_version: 'business_object_definition_v1', object_id: string, workspace_id: string, display_name: string, source_id: string, record_key_field: string, display_field: string | null, relationship_ids: string[], created_at: string, configuration_error: ErrorBody<ConfigurationErrorCode> | null }`
-
-`type ListResponse = { business_objects: BusinessObject[] }`
-
-`type CreateResponse = { business_object: BusinessObject }`
-
-`type ErrorResponse = { error: ErrorBody<ConfigurationErrorCode | 'workspace_not_found' | 'invalid_request' | 'invalid_definition' | 'business_object_storage_error'> }`
-
-List order is `created_at`, then `object_id`. A list response can carry `configuration_error` for an individual definition while other entries remain valid. Use server `object_id` for identity. Names may repeat. A successful POST always creates a new ID. Send only the five configuration fields, with `[]` for zero relationships and `null` or omission for no label field. Exact field names and explicit relationship IDs carry through to the response. The server trims the display name.
-
-Use the canvas's hydrated workspace members (`workspace_id`, `source_id`, `alias`, `name`, `schema[].name`) and relationship definitions (`workspace_id`, `relationship_id`, `left_source_id`, `right_source_id`, `field_pairs[].left_field`, `field_pairs[].right_field`). Offer a relationship if either endpoint is the selected source and the other is a member. Drafts can be selected. Use the other member's alias or name and enough key information to distinguish multiple relationships to the same source. A source change clears selections that no longer apply. Show the saved configuration error message on its own entry and keep that entry visible.
-
-## Representative JSON Fixtures
-
-Create request `{"display_name":"Customer","source_id":"src_customer","record_key_field":"customer_id","display_field":"name","relationship_ids":["rel_orders"]}`.
-
-Create success `{"business_object":{"contract_version":"business_object_definition_v1","object_id":"obj_customer","workspace_id":"ws_demo","display_name":"Customer","source_id":"src_customer","record_key_field":"customer_id","display_field":"name","relationship_ids":["rel_orders"],"created_at":"2026-11-22T15:00:00Z","configuration_error":null}}`. For list success, put the returned definition in `business_objects`. Empty list `{"business_objects":[]}`.
-
-For a saved definition with a removed field, set its `configuration_error` to `{"code":"source_field_not_found","message":"Field 'name' is missing from the object source."}` inside the successful list.
-
-All route failure fixtures use `{"error":{"code":"...","message":"..."}}`. The table supplies exact example payload values. Only `workspace_not_found` and `business_object_storage_error` apply to the collection GET. All listed codes can apply to POST.
-
-| HTTP | `code` | `message` |
-| --- | --- | --- |
-| 400 | `invalid_request` | Supply a JSON object with definition fields only. |
-| 400 | `invalid_definition` | Select each relationship only once. |
-| 404 | `workspace_not_found` | Workspace 'ws_demo' was not found. |
-| 404 | `source_not_found` | Source 'src_customer' was not found. |
-| 404 | `relationship_not_found` | Relationship 'rel_orders' was not found in this workspace. |
-| 409 | `source_not_in_workspace` | Source 'src_customer' is not in this workspace. |
-| 409 | `managed_source_unavailable` | Managed storage for source 'src_customer' is unavailable. |
-| 409 | `source_schema_unavailable` | Source 'src_customer' has no catalog schema. |
-| 409 | `source_field_not_found` | Field 'name' is missing from the object source. |
-| 409 | `relationship_not_applicable` | Relationship 'rel_orders' must directly connect the object source. |
-| 409 | `relationship_field_not_found` | Relationship 'rel_orders' references a missing source field. |
-| 500 | `business_object_storage_error` | Business Object storage is unavailable. |
-
-## Required UI States
-
-Keep the entry in the canvas header and open a labeled, keyboard-accessible panel with a close action. Show initial loading, empty state with a create action, a retryable list error, and the saved list. The form shows display name, member source, exact record key, optional label, and direct relationship choices. Show an announced validation message and preserve the draft on a failed save. While saving, disable form changes and repeated submission. Keep a safe close action available and restore focus to the entry. If a configured source or relationship disappears, show its saved definition with the server message. Preserve the theme and existing controls at compact widths.
-
-## State Ownership
-
-Keep API responses keyed by `workspace_id` within the panel. Reopen by reading the collection again. Use the `201` response to add the saved definition by `object_id`, with server list ordering, without another POST. List retry reads the collection again. A save conflict surfaces the server message and lets the user correct the draft after refreshing workspace data. After a network error with an unknown save outcome, let the user refresh the saved list before explicitly retrying. Keep fields and panel visibility local to the current workspace, with no URL or background job state. Scope async results to the current workspace and mounted panel. Offer source and relationship choices only from metadata belonging to that workspace.
+- Panel list uses GET /api/data-workspaces/<workspace_id>/business-objects and receives a 200 with business_objects. The create form POSTs to the same path and uses the 201 business_object identified by object_id. Keep the server's created_at and object_id ordering. Apply a list refresh without silently dropping an acknowledged save.
+- On a 409 reference conflict, show the server's message and provide an explicit way to refresh the model choices while keeping the draft open. Reload member sources and their schemas and workspace relationships through the canvas's existing loading flow. Keep valid selections and the typed display name. Make removed selections visible as needing correction or clear them with a clear explanation. In either case, keep unavailable selections out of a new save request and require a valid key before saving.
+- Keep saved-list refresh for uncertain network failures independent from refreshing model choices after a conflict. Scope both to the active workspace and ignore late results after close or workspace changes. Preserve errors and the draft if refresh fails.
 
 ## Async Mutation Acceptance
 
-**In-Flight Navigation**: Closing with a pending save returns to the canvas. Reopening requests the authoritative list for the current workspace. Test: close during a deferred POST, reopen, resolve the old request, and confirm it cannot append to or replace the reopened list.
+**In-Flight Navigation**: Closing or reopening during a save does not let a pending response change the reopened list. Test: keep the deferred close and reopen assertion passing.
 
-**Concurrent Edits**: Keep form controls disabled until the current save settles. Use the sent draft and its workspace throughout. Test: defer the first save, attempt a field change and second save, and verify controls are disabled and only the original payload was submitted.
+**Concurrent Edits**: Keep form edits and additional submissions disabled while a save is pending. Test: retain the disabled-control and one-request checks and add the named regression for a late list read after a successful save.
 
-**Failure Retry**: A failed save leaves the draft and reports the error. A network failure offers list refresh before an explicit retry. Test: reject the deferred POST, verify the draft and error, refresh the list, and assert exactly one additional POST occurs after the user retries.
+**Failure Retry**: A failed save leaves the draft and offers a list refresh after an uncertain network result. Test: keep the network failure assertion for preserved input, list refresh, and a single explicit retry.
 
-**Conflict Or Duplicate**: A `409` preserves the draft and reports the returned message. Pending saves reject repeated submissions, including keyboard submission. Test: trigger two submissions before a deferred `409` and assert one POST, the conflict message, and the unchanged draft.
+**Conflict Or Duplicate**: A 409 keeps the draft open, shows the server message, and lets the user refresh the model and replace invalid choices before a retry. Test: return a 409 for a removed key, refresh with a schema containing a replacement, then verify the next POST uses the replacement and no removed relationship IDs.
 
-**Identity And Unmount**: Workspace changes clear local selection and prevent late reads or saves from applying to the new workspace. Test: switch workspace while a response is pending and assert the old definitions and source choices never appear under the new workspace.
+**Identity And Unmount**: A late save or model read from another workspace cannot change the active draft or choices. Test: preserve the workspace-switch test and prove that a deferred model refresh cannot apply its old choices after switching workspace.
 
-## Non-Negotiables And Creative Latitude
+## Verification And Stop Point
 
-Use the exact routes, fields, and source boundary above. Keep private storage details out of the UI. Use theme tokens and accessible controls. Compose and style the panel to fit the existing canvas while meeting the required interactions. Use reviewable edits and preserve existing work. If a target becomes empty or unexpectedly smaller, stop and return the incident. Leave backend, rules, authorization, contracts, and `GEMINI.md` files outside the implementation.
-
-## Acceptance And Return
-
-- Verify an empty list, two distinct datasets with different key and label fields through the same form, saved definitions after reopen, and a broken reference message alongside a valid definition.
-- Verify loading, failure and explicit retry, keyboard access, focus return, duplicate submission prevention, workspace changes, and the preserved canvas controls in the named test file.
-- Run `npm --prefix frontend/frontend test -- --watchAll=false --runInBand BusinessObjectsPanel.test.jsx`, `npm --prefix frontend/frontend run build`, `git diff --check`, and `git diff --name-only`. Include untracked new files in the changed-file report.
-- Return through `python .gemini/skills/status-tracker-skill/scripts/update_status.py return --handoff business_object_definitions.md --summary "Business Object definition panel verification and changed-file summary"`, using the actual evidence in the summary. Report the exact files, commands and results, and any contract mismatch. Stop for Codex integration review.
+- Run `npm --prefix frontend/frontend test -- --watchAll=false --runInBand BusinessObjectsPanel.test.jsx`, `npm --prefix frontend/frontend run build`, and `git diff --check`.
+- Return through `python .gemini/skills/status-tracker-skill/scripts/update_status.py return --handoff business_object_definitions.md --summary "Save and model refresh verification"` with the actual evidence in the summary. Report exact changed files, named test results, and source lines, then stop for Codex review.

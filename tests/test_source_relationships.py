@@ -8,6 +8,7 @@ import unittest
 from flask import Flask
 
 from backend.db import backend_db
+from backend.repositories.source_workspace_repository import get_source, get_workspace
 from backend.routes.datahub_routes import datahub_bp
 from backend.routes.source_relationships import source_relationships_bp
 from backend.routes.upload import upload_bp
@@ -311,29 +312,82 @@ class SourceRelationshipTests(unittest.TestCase):
         self.assertTrue(candidates[0]["confirmation_required"])
         self.assertIn("do not prove", candidates[0]["explanation"])
 
-    def test_source_deletion_reports_relationship_dependencies_without_cascade(self):
-        """Dependency refusal must preserve the relationship and both memberships."""
+    def test_source_deletion_cleans_up_shared_memberships_and_relationships(self):
         workspace_id, source_ids = self._workspace(
             [
                 ("orders.csv", b"customer_id,amount\n1,10\n2,20\n"),
                 ("customers.csv", b"customer_id,name\n1,Ada\n2,Lin\n"),
+                ("regions.csv", b"customer_id,name\n1,North\n2,South\n"),
             ]
         )
-        created = self._create(workspace_id, *source_ids).get_json()["relationship"]
+        removed_id, customers_id, regions_id = source_ids
+        field_pairs = [{"left_field": "customer_id", "right_field": "customer_id"}]
+        self.assertEqual(self._create(workspace_id, removed_id, customers_id, field_pairs=field_pairs).status_code, 201)
+        self.assertEqual(self._create(workspace_id, regions_id, removed_id, field_pairs=field_pairs).status_code, 201)
+        retained = self._create(workspace_id, customers_id, regions_id, field_pairs=field_pairs)
+        self.assertEqual(retained.status_code, 201, retained.get_json())
+        unrelated_workspace = self._upload("unrelated.csv", b"id,name\n1,Other\n")["workspace"]
+        shared_workspace = self._upload("products.csv", b"customer_id,name\n1,Product\n")["workspace"]
+        shared_workspace_id = shared_workspace["workspace_id"]
+        self._add_member(shared_workspace_id, removed_id, "orders")
+        shared_relationship = self._create(
+            shared_workspace_id, shared_workspace["primary_source_id"], removed_id, field_pairs=field_pairs,
+        )
+        self.assertEqual(shared_relationship.status_code, 201, shared_relationship.get_json())
+        version = get_workspace(workspace_id)["version"]
+        shared_version = get_workspace(shared_workspace_id)["version"]
 
-        response = self.client.delete(f"/api/datahub/{source_ids[1]}")
+        response = self.client.delete(f"/api/datahub/{removed_id}")
 
-        self.assertEqual(response.status_code, 409, response.get_json())
-        details = response.get_json()["error"]["details"]
-        self.assertEqual(details["relationship_count"], 1)
-        self.assertEqual(details["relationship_ids"], [created["relationship_id"]])
-        listed = self.client.get(
+        self.assertEqual(response.status_code, 200, response.get_json())
+        self.assertIsNone(get_source(removed_id))
+        workspace = get_workspace(workspace_id)
+        self.assertEqual(workspace["version"], version + 1)
+        self.assertEqual(workspace["primary_source_id"], min(customers_id, regions_id))
+        self.assertEqual(workspace["sources"][0]["role"], "primary")
+        self.assertEqual({member["source_id"] for member in workspace["sources"]}, {customers_id, regions_id})
+        relationships = self.client.get(
             f"/api/data-workspaces/{workspace_id}/relationships"
         ).get_json()["relationships"]
-        self.assertEqual(
-            [relationship["relationship_id"] for relationship in listed],
-            [created["relationship_id"]],
-        )
+        self.assertEqual(relationships, [retained.get_json()["relationship"]])
+        updated_shared_workspace = get_workspace(shared_workspace_id)
+        self.assertEqual(updated_shared_workspace["version"], shared_version + 1)
+        self.assertEqual(updated_shared_workspace["primary_source_id"], shared_workspace["primary_source_id"])
+        self.assertEqual(updated_shared_workspace["sources"], shared_workspace["sources"])
+        shared_relationships = self.client.get(f"/api/data-workspaces/{shared_workspace_id}/relationships")
+        self.assertEqual(shared_relationships.get_json()["relationships"], [])
+        self.assertEqual(get_workspace(unrelated_workspace["workspace_id"]), unrelated_workspace)
+
+    def test_bulk_deletion_clears_catalog_and_updates_each_workspace_once(self):
+        workspace_id, source_ids = self._workspace([
+            ("orders.csv", b"id,amount\n1,10\n2,20\n"),
+            ("customers.csv", b"id,name\n1,Ada\n2,Lin\n"),
+        ])
+        created = self._create(workspace_id, *source_ids)
+        self.assertEqual(created.status_code, 201, created.get_json())
+        workspace = get_workspace(workspace_id)
+        managed_files = list(workspace_context.MANAGED_UPLOAD_ROOT.iterdir())
+        registered = self.client.post("/api/datahub/register", json={
+            "id": "legacy",
+            "name": "Registered file",
+            "path": str(managed_files[0]),
+        })
+        self.assertEqual(registered.status_code, 201, registered.get_json())
+
+        response = self.client.delete("/api/datahub")
+
+        self.assertEqual(response.status_code, 200, response.get_json())
+        self.assertEqual(response.get_json(), {"deleted_count": 3})
+        self.assertEqual(self.client.get("/api/datahub/list").get_json(), [])
+        emptied = get_workspace(workspace_id)
+        self.assertEqual(emptied["version"], workspace["version"] + 1)
+        self.assertIsNone(emptied["primary_source_id"])
+        self.assertEqual(emptied["sources"], [])
+        relationships = self.client.get(f"/api/data-workspaces/{workspace_id}/relationships")
+        self.assertEqual(relationships.get_json()["relationships"], [])
+        self.assertTrue(all(path.is_file() for path in managed_files))
+        self.assertEqual(self.client.delete("/api/datahub").get_json(), {"deleted_count": 0})
+        self.assertEqual(get_workspace(workspace_id), emptied)
 
 
 if __name__ == "__main__":

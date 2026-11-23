@@ -2,7 +2,7 @@ from datetime import datetime
 import json
 import sqlite3
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, current_app, jsonify, request
 
 from backend.db.backend_db import get_db_connection
 from backend.services.data_catalog_lineage import (
@@ -16,6 +16,7 @@ from backend.services.dataset_context import read_dataset_file
 from backend.services.semantic_model import infer_semantic_model_from_dataframe
 from backend.services.workspace_context import (
     WorkspaceContextError,
+    delete_all_catalog_sources,
     delete_catalog_source,
 )
 
@@ -139,19 +140,34 @@ def register_dataset():
         return jsonify({'error': f'Failed to register dataset: {str(e)}'}), 500
 
 
+@datahub_bp.route('', methods=['DELETE'])
+def delete_all_datasets():
+    try:
+        deleted_count = delete_all_catalog_sources()
+    except sqlite3.Error:
+        current_app.logger.exception("Data Hub catalog deletion failed")
+        return jsonify({
+            "error": {
+                "code": "catalog_deletion_failed",
+                "message": "Could not delete saved datasets. Try again.",
+            }
+        }), 500
+
+    return jsonify({"deleted_count": deleted_count}), 200
+
+
 @datahub_bp.route('/<dataset_id>', methods=['DELETE'])
 def delete_dataset(dataset_id):
     try:
         deleted = delete_catalog_source(dataset_id)
     except WorkspaceContextError as exc:
-        status_code = 409 if exc.code == "source_has_dependencies" else 400
         return jsonify({
             "error": {
                 "code": exc.code,
                 "message": str(exc),
                 **({"details": exc.details} if exc.details else {}),
             }
-        }), status_code
+        }), 400
 
     if not deleted:
         return jsonify({

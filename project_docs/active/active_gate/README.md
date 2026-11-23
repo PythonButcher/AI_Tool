@@ -1,16 +1,16 @@
-Goal: Let users create and view Business Object definitions in Data Model.
+Goal: Keep confirmed Business Object saves visible and let users recover from changed source choices.
 
 ## User Outcome
 
-Users can name an object in Data Model, select the source, key, optional record label field, and direct relationships, then see the saved definition in the workspace.
+Users see a definition after saving it in Data Model. If a field or relationship changes while the form is open, they can refresh their choices and continue with the same draft.
 
 ## Scope
 
-**Current Step**: Step 1: Implement the Business Objects definition panel
+**Current Step**: Step 1: Repair Business Object save and refresh behavior
 
 **Target Files**: The four Data Model files listed in the [Antigravity handoff](../ai_hand_off/business_object_definitions.md).
 
-**Step Acceptance**: Save and reopen a definition through the panel using verified workspace APIs. Show unavailable references on the saved entry and preserve the existing canvas controls.
+**Step Acceptance**: Keep a confirmed save visible when an older list response arrives. Refresh a conflicted draft's source and relationship choices without discarding the draft.
 
 **Step Verification**: Run the focused test, build, and governed return in the handoff.
 
@@ -20,7 +20,7 @@ Users can name an object in Data Model, select the source, key, optional record 
 
 **Stop Condition**: Stop at the governed handoff return or a concrete implementation blocker.
 
-- [ ] **Step 1: Implement the Business Objects definition panel** — [IN PROGRESS]
+- [ ] **Step 1: Repair Business Object save and refresh behavior** — [IN PROGRESS]
 - [ ] **Step 2: Review the Business Objects definition panel** — [PENDING]
 
 ## Contracts
@@ -30,9 +30,9 @@ Users can name an object in Data Model, select the source, key, optional record 
 
 ## Acceptance
 
-- Two distinct object configurations use the same form and appear in the saved list after reopen.
-- Invalid references and save failures preserve the draft and display a clear message. Existing canvas controls remain usable.
-- Focused tests prove pending submission and workspace isolation using the handoff scenarios.
+- A list request that started before a successful save preserves the new definition when it finishes.
+- A stale-field or relationship conflict lets the user refresh valid choices in the same draft and retry explicitly.
+- Focused tests prove pending submission, workspace isolation, and the existing canvas controls using the handoff scenarios.
 
 ## Verification
 
@@ -44,4 +44,4 @@ Users can name an object in Data Model, select the source, key, optional record 
 
 ## Owner And Control Return
 
-Antigravity owns the bounded definition panel. Return changed files and verification to Codex for integration review. The user owns final browser acceptance.
+Antigravity owns the panel repair. Return changed files and verification to Codex for integration review. The user owns final browser acceptance.

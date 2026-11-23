@@ -212,10 +212,10 @@ def _require_membership_write(
     alias: str,
     expected_version: int,
     require_existing_source: bool = True,
-) -> None:
-    """Validate stable membership errors before performing a write."""
+) -> Optional[str]:
+    """Validate the membership write and return the current primary source ID."""
     workspace = conn.execute(
-        "SELECT version FROM data_workspaces WHERE workspace_id = ?",
+        "SELECT version, primary_source_id FROM data_workspaces WHERE workspace_id = ?",
         (workspace_id,),
     ).fetchone()
     if workspace is None:
@@ -248,6 +248,33 @@ def _require_membership_write(
         raise SourceWorkspaceRepositoryError(
             "workspace_version_conflict",
             f"Workspace '{workspace_id}' has changed; refresh it and retry.",
+        )
+    return workspace["primary_source_id"]
+
+
+def _attach_workspace_membership(
+    conn,
+    *,
+    workspace_id: str,
+    source_id: str,
+    alias: str,
+    role: str,
+    added_at: str,
+    primary_source_id: Optional[str],
+) -> None:
+    """Attach a member and restore the primary source of an empty workspace."""
+    _insert_membership(conn, {
+        "workspace_id": workspace_id,
+        "source_id": source_id,
+        "alias": alias,
+        "role": "primary" if primary_source_id is None else role,
+        "position": None,
+        "added_at": added_at,
+    })
+    if primary_source_id is None:
+        conn.execute(
+            "UPDATE data_workspaces SET primary_source_id = ? WHERE workspace_id = ?",
+            (source_id, workspace_id),
         )
 
 
@@ -283,23 +310,21 @@ def attach_source_to_workspace(
     conn = get_db_connection()
     try:
         conn.execute("BEGIN")
-        _require_membership_write(
+        primary_source_id = _require_membership_write(
             conn,
             workspace_id=workspace_id,
             source_id=source_id,
             alias=alias,
             expected_version=expected_version,
         )
-        _insert_membership(
+        _attach_workspace_membership(
             conn,
-            {
-                "workspace_id": workspace_id,
-                "source_id": source_id,
-                "alias": alias,
-                "role": role,
-                "position": None,
-                "added_at": added_at,
-            },
+            workspace_id=workspace_id,
+            source_id=source_id,
+            alias=alias,
+            role=role,
+            added_at=added_at,
+            primary_source_id=primary_source_id,
         )
         _advance_workspace_version(
             conn,
@@ -307,10 +332,12 @@ def attach_source_to_workspace(
             expected_version=expected_version,
             updated_at=added_at,
         )
-        conn.commit()
-        return get_source(source_id, connection=conn), get_workspace(
-            workspace_id, connection=conn
+        result = (
+            get_source(source_id, connection=conn),
+            get_workspace(workspace_id, connection=conn),
         )
+        conn.commit()
+        return result
     except sqlite3.IntegrityError as exc:
         conn.rollback()
         raise SourceWorkspaceRepositoryError(
@@ -399,7 +426,7 @@ def register_source_in_workspace(
     try:
         conn.execute("BEGIN")
         # Validate the workspace version and alias before inserting the source.
-        _require_membership_write(
+        primary_source_id = _require_membership_write(
             conn,
             workspace_id=workspace_id,
             source_id=source["source_id"],
@@ -408,16 +435,14 @@ def register_source_in_workspace(
             require_existing_source=False,
         )
         _insert_source(conn, source)
-        _insert_membership(
+        _attach_workspace_membership(
             conn,
-            {
-                "workspace_id": workspace_id,
-                "source_id": source["source_id"],
-                "alias": alias,
-                "role": role,
-                "position": None,
-                "added_at": added_at,
-            },
+            workspace_id=workspace_id,
+            source_id=source["source_id"],
+            alias=alias,
+            role=role,
+            added_at=added_at,
+            primary_source_id=primary_source_id,
         )
         _advance_workspace_version(
             conn,
@@ -425,10 +450,12 @@ def register_source_in_workspace(
             expected_version=expected_version,
             updated_at=added_at,
         )
-        conn.commit()
-        return get_source(source["source_id"], connection=conn), get_workspace(
-            workspace_id, connection=conn
+        result = (
+            get_source(source["source_id"], connection=conn),
+            get_workspace(workspace_id, connection=conn),
         )
+        conn.commit()
+        return result
     except sqlite3.IntegrityError as exc:
         conn.rollback()
         raise SourceWorkspaceRepositoryError(
@@ -518,87 +545,95 @@ def get_source(source_id: str, *, connection=None) -> Optional[Dict[str, Any]]:
             conn.close()
 
 
-def delete_source_if_unreferenced(source_id: str) -> bool:
-    """Delete one catalog source only when no workspace/model depends on it.
-
-    ``BEGIN IMMEDIATE`` makes the dependency check and delete one atomic write
-    decision. A concurrent membership or relationship write therefore cannot
-    race between the dependency check and the catalog mutation.
-    """
+def delete_source(source_id: str, *, updated_at: str) -> bool:
+    """Remove a catalog source and reconcile each affected workspace atomically."""
     conn = get_db_connection()
     try:
         conn.execute("BEGIN IMMEDIATE")
-        source = conn.execute(
-            "SELECT id FROM datahub_datasets WHERE id = ?",
-            (source_id,),
-        ).fetchone()
-        if source is None:
-            conn.rollback()
-            return False
-
-        memberships = conn.execute(
+        workspaces = conn.execute(
             """
-            SELECT workspace_id, role
-            FROM workspace_sources
-            WHERE source_id = ?
-            ORDER BY workspace_id
-            """,
-            (source_id,),
-        ).fetchall()
-        relationships = conn.execute(
-            """
-            SELECT relationship_id, workspace_id
-            FROM workspace_relationships
-            WHERE left_source_id = ? OR right_source_id = ?
-            ORDER BY workspace_id, relationship_id
-            """,
-            (source_id, source_id),
-        ).fetchall()
-        primary_workspaces = conn.execute(
-            """
-            SELECT workspace_id
+            SELECT workspace_id, primary_source_id, version
             FROM data_workspaces
             WHERE primary_source_id = ?
-            ORDER BY workspace_id
+               OR workspace_id IN (
+                   SELECT workspace_id FROM workspace_sources WHERE source_id = ?
+                   UNION
+                   SELECT workspace_id FROM workspace_relationships
+                   WHERE left_source_id = ? OR right_source_id = ?
+               )
             """,
-            (source_id,),
+            (source_id, source_id, source_id, source_id),
         ).fetchall()
 
-        if memberships or relationships or primary_workspaces:
-            details = {
-                "workspace_ids": list(
-                    dict.fromkeys(
-                        [
-                            *[row["workspace_id"] for row in memberships],
-                            *[row["workspace_id"] for row in primary_workspaces],
-                        ]
-                    )
-                ),
-                "membership_count": len(memberships),
-                "relationship_ids": [
-                    row["relationship_id"] for row in relationships
-                ],
-                "relationship_count": len(relationships),
-                "primary_workspace_count": len(primary_workspaces),
-            }
-            conn.rollback()
-            raise SourceWorkspaceRepositoryError(
-                "source_has_dependencies",
-                (
-                    f"Source '{source_id}' is still used by a workspace or "
-                    "relationship and cannot be deleted safely."
-                ),
-                details,
-            )
-
+        # Foreign keys remove memberships and relationships and clear deleted primaries.
         cursor = conn.execute(
             "DELETE FROM datahub_datasets WHERE id = ?",
             (source_id,),
         )
+        if cursor.rowcount == 0:
+            conn.rollback()
+            return False
+
+        for workspace in workspaces:
+            workspace_id = workspace["workspace_id"]
+            if workspace["primary_source_id"] == source_id:
+                replacement = conn.execute(
+                    """
+                    SELECT source_id FROM workspace_sources WHERE workspace_id = ?
+                    ORDER BY added_at, source_id LIMIT 1
+                    """,
+                    (workspace_id,),
+                ).fetchone()
+                if replacement is not None:
+                    replacement_id = replacement["source_id"]
+                    conn.execute(
+                        """
+                        UPDATE workspace_sources SET role = 'primary'
+                        WHERE workspace_id = ? AND source_id = ?
+                        """,
+                        (workspace_id, replacement_id),
+                    )
+                    conn.execute(
+                        "UPDATE data_workspaces SET primary_source_id = ? WHERE workspace_id = ?",
+                        (replacement_id, workspace_id),
+                    )
+            _advance_workspace_version(
+                conn,
+                workspace_id=workspace_id,
+                expected_version=workspace["version"],
+                updated_at=updated_at,
+            )
         conn.commit()
-        return cursor.rowcount == 1
-    except SourceWorkspaceRepositoryError:
+        return True
+    except Exception:
+        conn.rollback()
         raise
+    finally:
+        conn.close()
+
+
+def delete_all_sources(*, updated_at: str) -> int:
+    """Remove the catalog and advance each affected workspace once."""
+    conn = get_db_connection()
+    try:
+        conn.execute("BEGIN IMMEDIATE")
+        conn.execute(
+            """
+            UPDATE data_workspaces
+            SET version = version + 1, updated_at = ?
+            WHERE primary_source_id IS NOT NULL
+               OR workspace_id IN (
+                   SELECT workspace_id FROM workspace_sources
+                   UNION
+                   SELECT workspace_id FROM workspace_relationships
+               )
+            """,
+            (updated_at,),
+        )
+        # The catalog foreign keys clear primaries, memberships, and relationships.
+        deleted_count = conn.execute("DELETE FROM datahub_datasets").rowcount
+        conn.commit()
+        return deleted_count
     except Exception:
         conn.rollback()
         raise

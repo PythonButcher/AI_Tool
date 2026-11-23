@@ -4,6 +4,7 @@ import '@xyflow/react/dist/style.css';
 import './SourceModelCanvas.css';
 import RelationshipInspector from './RelationshipInspector';
 import AddSourcePanel from './AddSourcePanel';
+import BusinessObjectsPanel from './BusinessObjectsPanel';
 import { DataContext } from '../../context/DataContext';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
@@ -40,6 +41,8 @@ const SourceModelCanvas = ({ workspaceId }) => {
   const { activeWorkspace, refreshWorkspace, setWorkspaceEnvelope, recordWorkspaceMutationConflict } = useContext(DataContext);
   const workspace = activeWorkspace;
   const [showAddSource, setShowAddSource] = useState(false);
+  const [showBusinessObjects, setShowBusinessObjects] = useState(false);
+  const businessObjectsBtnRef = useRef(null);
 
   const [draftRelationship, setDraftRelationship] = useState(null);
   const [selectedRelationship, setSelectedRelationship] = useState(null);
@@ -97,13 +100,14 @@ const SourceModelCanvas = ({ workspaceId }) => {
         const workspaceSources = currentWorkspace?.sources || [];
 
         const mergedSources = await Promise.all(workspaceSources.map(async (wsSrc) => {
+          const memberSource = { workspace_id: currentWorkspace?.workspace_id || workspaceId, ...wsSrc };
           try {
             const res = await fetch(`${API_URL}/api/data-sources/${wsSrc.source_id}`, { signal });
             const data = await res.json();
-            if (!res.ok) return wsSrc;
-            return { ...data.source, ...wsSrc };
+            if (!res.ok) return memberSource;
+            return { ...data.source, ...memberSource };
           } catch (e) {
-            return wsSrc;
+            return memberSource;
           }
         }));
 
@@ -112,7 +116,10 @@ const SourceModelCanvas = ({ workspaceId }) => {
         if (!relRes.ok) {
            throw new Error(relData.error?.message || 'Failed to fetch relationships');
         }
-        const fetchedRelationships = relData.relationships || [];
+        const fetchedRelationships = (relData.relationships || []).map((rel) => ({
+          workspace_id: currentWorkspace?.workspace_id || workspaceId,
+          ...rel,
+        }));
 
         if (currentFetchId !== fetchIdRef.current) return fetchPromiseRef.current;
 
@@ -149,7 +156,7 @@ const SourceModelCanvas = ({ workspaceId }) => {
   useEffect(() => {
     fetchWorkspaceData().catch(() => {});
     return () => {
-      fetchIdRef.current = -1;
+      fetchIdRef.current += 1;
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
@@ -338,6 +345,16 @@ const SourceModelCanvas = ({ workspaceId }) => {
     <div className="source-model-canvas">
       {workspace && (
         <div className="canvas-header" style={{ position: 'absolute', top: 16, right: 16, zIndex: 10 }}>
+          <button
+            ref={businessObjectsBtnRef}
+            type="button"
+            className="btn btn-secondary bo-entry-btn"
+            onClick={() => setShowBusinessObjects(true)}
+            aria-label="Business Objects"
+            aria-expanded={showBusinessObjects}
+          >
+            Business Objects
+          </button>
           <button className="btn btn-secondary" style={{ marginRight: 8 }} onClick={() => {
             setDraftRelationship({
               _draftId: Date.now(),
@@ -402,6 +419,17 @@ const SourceModelCanvas = ({ workspaceId }) => {
           existingSources={sources}
           onClose={() => setShowAddSource(false)}
           onSuccess={handleAddSourceSuccess}
+        />
+      )}
+
+      {showBusinessObjects && (
+        <BusinessObjectsPanel
+          workspaceId={workspaceId}
+          sources={sources}
+          relationships={relationships}
+          onRefreshModel={fetchWorkspaceData}
+          triggerRef={businessObjectsBtnRef}
+          onClose={() => setShowBusinessObjects(false)}
         />
       )}
     </div>

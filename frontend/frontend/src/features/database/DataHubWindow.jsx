@@ -74,16 +74,18 @@ export default function DataHubWindow({ onUpload, onOpenInAnalytics, latestUploa
   const [revision, setRevision] = useState(0);
   const [search, setSearch] = useState('');
   const [selectedId, setSelectedId] = useState(null);
-  const [removeTarget, setRemoveTarget] = useState(null);
+  const [removal, setRemoval] = useState(null);
   const [registration, setRegistration] = useState(INITIAL_REGISTRATION);
   const [mutation, setMutation] = useState(null);
   const [mutationError, setMutationError] = useState('');
   const [notice, setNotice] = useState('');
   const heading = useRef(null);
+  const catalogRequest = useRef(null);
 
   useEffect(() => { heading.current?.focus({ preventScroll: true }); }, []);
   useEffect(() => {
     const controller = new AbortController();
+    catalogRequest.current = controller;
     setLoading(true);
     setLoadError('');
     axios.get(`${API_URL}/api/data-sources`, { signal: controller.signal }).then(({ data }) => {
@@ -104,22 +106,30 @@ export default function DataHubWindow({ onUpload, onOpenInAnalytics, latestUploa
     [source.name, source.source_id, sourceType(source)].some(value => value.toLocaleLowerCase().includes(query))
   );
   const selectedSource = sources.find(source => source.source_id === selectedId);
+  const removeTarget = removal?.target;
+  const deleteAll = removeTarget === 'all';
+  const removalOpen = removal?.open ?? false;
+  const confirmLabel = deleteAll ? 'Yes' : 'Remove dataset';
+  const pendingLabel = deleteAll ? 'Deleting…' : 'Removing…';
   const reload = () => setRevision(value => value + 1);
 
-  function chooseRemoval(source) {
+  function chooseRemoval(target) {
     setMutationError('');
     setNotice('');
-    setRemoveTarget(source);
+    setRemoval({ open: true, target });
   }
+
+  // Keep the target visible while the dialog fades out.
+  const closeRemoval = () => setRemoval(previous => ({ ...previous, open: false }));
 
   function dismissRemoval() {
     if (mutation) return;
-    setRemoveTarget(null);
+    closeRemoval();
     setMutationError('');
   }
 
   async function confirmRemoval() {
-    if (!removeTarget || mutation) return;
+    if (!removalOpen || deleteAll || mutation) return;
     const { source_id: id, name } = removeTarget;
     setMutation('removing');
     setMutationError('');
@@ -127,19 +137,40 @@ export default function DataHubWindow({ onUpload, onOpenInAnalytics, latestUploa
       await axios.delete(`${API_URL}/api/datahub/${encodeURIComponent(id)}`);
       setSources(previous => previous.filter(source => source.source_id !== id));
       removeDataset(id);
-      setRemoveTarget(null);
+      closeRemoval();
       setNotice(`Removed ${name}.`);
       reload();
     } catch (error) {
       if (error.response?.status === 404) {
         setSources(previous => previous.filter(source => source.source_id !== id));
         removeDataset(id);
-        setRemoveTarget(null);
+        closeRemoval();
         setNotice(`${name} is no longer in Data Hub.`);
         reload();
       } else {
         setMutationError(errorMessage(error, 'Could not remove the dataset. Try again.'));
       }
+    } finally {
+      setMutation(null);
+    }
+  }
+
+  async function confirmDeleteAll() {
+    if (!removalOpen || !deleteAll || mutation) return;
+    setMutation('deleting-all');
+    setMutationError('');
+    try {
+      await axios.delete(`${API_URL}/api/datahub`);
+      catalogRequest.current?.abort();
+      setSources([]);
+      refreshDatasets([]);
+      setSelectedId(null);
+      setSearch('');
+      closeRemoval();
+      setNotice('Deleted all saved datasets.');
+      reload();
+    } catch (error) {
+      setMutationError(errorMessage(error, 'Could not delete saved datasets. Try again.'));
     } finally {
       setMutation(null);
     }
@@ -194,16 +225,26 @@ export default function DataHubWindow({ onUpload, onOpenInAnalytics, latestUploa
                 <h2 id="datahub-library-heading">Saved datasets</h2>
                 {!loading && !loadError && <p role="status">{visibleSources.length} of {sources.length} datasets</p>}
               </div>
-              <label className="datahub-search">
-                <FaSearch aria-hidden="true" />
-                <input
-                  type="search"
-                  aria-label="Search datasets"
-                  placeholder="Search by name, type, or ID"
-                  value={search}
-                  onChange={event => setSearch(event.target.value)}
-                />
-              </label>
+              <div className="datahub-library__actions">
+                <label className="datahub-search">
+                  <FaSearch aria-hidden="true" />
+                  <input
+                    type="search"
+                    aria-label="Search datasets"
+                    placeholder="Search by name, type, or ID"
+                    value={search}
+                    onChange={event => setSearch(event.target.value)}
+                  />
+                </label>
+                <button
+                  type="button"
+                  className="datahub-remove"
+                  onClick={() => chooseRemoval('all')}
+                  disabled={loading || !!loadError || sources.length === 0 || !!mutation}
+                >
+                  Delete All
+                </button>
+              </div>
             </div>
 
             {loading && <p className="datahub-message" role="status">Loading saved datasets…</p>}
@@ -214,7 +255,7 @@ export default function DataHubWindow({ onUpload, onOpenInAnalytics, latestUploa
               </div>
             )}
             {notice && <p className="datahub-message" role="status">{notice}</p>}
-            {mutationError && !removeTarget && <p className="datahub-message datahub-error" role="alert">{mutationError}</p>}
+            {mutationError && !removalOpen && <p className="datahub-message datahub-error" role="alert">{mutationError}</p>}
 
             {!loading && !loadError && visibleSources.length === 0 && (
               <div className="datahub-empty">
@@ -282,20 +323,24 @@ export default function DataHubWindow({ onUpload, onOpenInAnalytics, latestUploa
       </div>
 
       <Dialog
-        open={!!removeTarget}
+        open={removalOpen}
         onClose={dismissRemoval}
         aria-labelledby="datahub-remove-title"
         aria-describedby="datahub-remove-message"
       >
-        <DialogTitle id="datahub-remove-title">Remove dataset?</DialogTitle>
+        <DialogTitle id="datahub-remove-title">{deleteAll ? 'Are you sure?' : 'Remove dataset?'}</DialogTitle>
         <DialogContent sx={{ overflowWrap: 'anywhere' }}>
-          <p id="datahub-remove-message">Remove <strong>{removeTarget?.name}</strong> (ID {removeTarget?.source_id}) from Data Hub?</p>
+          <p id="datahub-remove-message">
+            {deleteAll
+              ? 'Delete all saved datasets from Data Hub, including datasets hidden by search? Backing files will be kept.'
+              : <>Remove <strong>{removeTarget?.name}</strong> (ID {removeTarget?.source_id}) from Data Hub?</>}
+          </p>
           {mutationError && <p className="datahub-error" role="alert">{mutationError}</p>}
         </DialogContent>
         <DialogActions>
-          <Button autoFocus disabled={!!mutation} onClick={dismissRemoval}>Cancel</Button>
-          <Button color="error" variant="contained" disabled={!!mutation} onClick={confirmRemoval}>
-            {mutation === 'removing' ? 'Removing…' : 'Remove dataset'}
+          <Button autoFocus disabled={!!mutation} onClick={dismissRemoval}>{deleteAll ? 'No' : 'Cancel'}</Button>
+          <Button color="error" variant="contained" disabled={!!mutation} onClick={deleteAll ? confirmDeleteAll : confirmRemoval}>
+            {mutation ? pendingLabel : confirmLabel}
           </Button>
         </DialogActions>
       </Dialog>

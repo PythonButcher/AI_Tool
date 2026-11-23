@@ -72,6 +72,16 @@
   margin-top: 4px;
 }
 
+.datahub-library__actions {
+  display: flex;
+  flex: 0 1 370px;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 0;
+}
+
 .datahub-search {
   display: flex;
   align-items: center;
@@ -352,6 +362,10 @@
   .datahub-details dd,
   .datahub-details dd + dt {
     margin-top: 0;
+  }
+
+  .datahub-library__actions {
+    flex-basis: 100%;
   }
 
   .datahub-search {

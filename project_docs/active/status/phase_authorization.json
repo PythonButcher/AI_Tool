@@ -5,6 +5,19 @@
   },
   "authorization_state": "AUTHORIZED",
   "lifecycle_state": "IN PROGRESS",
+  "data_hub_delete_all_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-11-22",
+    "instruction": "create a delete all button the the Data Hub for deleting everything, have it be followed up with an Are you sure yes or no",
+    "scope": "Implement and verify catalog-wide removal using the Data Hub Delete All button and its Yes or No confirmation.",
+    "codex_frontend_implementation_authorized": true
+  },
+  "data_hub_dataset_deletion_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-11-22",
+    "instruction": "this error in data hub where I try to delete a dataset needs to stop, it makes no sense remove the restrictions for this",
+    "scope": "Allow confirmed Data Hub dataset removal when the source belongs to workspaces or relationships. Includes workspace cleanup, focused tests, and contract updates."
+  },
   "chat_dataset_dropdown_authorization": {
     "approved_by": "User",
     "approved_at": "2026-11-22",
@@ -341,6 +354,11 @@
     "acceptance": "Accepted by the user in chat on 2026-11-22."
   },
   "allowed_paths": [
+    "backend/routes/datahub_routes.py",
+    "tests/test_source_workspace_context.py",
+    "tests/test_source_relationships.py",
+    "project_docs/active/contracts/multiple_data_source_workspace.md",
+    "project_docs/active/contracts/multiple_data_source_relationships.md",
     "project_docs/active/business_objects/README.md",
     "project_docs/active/ai_hand_off/business_object_definitions.md",
     "backend/repositories/business_object_repository.py",

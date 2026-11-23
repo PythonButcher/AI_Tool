@@ -5,19 +5,19 @@
 - **Current Gate**: Configure Business Objects in Data Model
 - **Roadmap Phase**: Phase 1 — Business Object definitions
 - **Phase State**: `IN PROGRESS`
-- **What This State Means**: Antigravity can implement the Data Model definition panel against the verified API.
-- **Current Milestone**: Step 1: Implement the Business Objects definition panel
+- **What This State Means**: The panel needs to reconcile confirmed saves with list reads and refresh the model choices after a reference conflict.
+- **Current Milestone**: Step 1: Repair Business Object save and refresh behavior
 - **Automatic Continuation**: `WAIT_FOR_AGENT`
 - **Current Owner**: Antigravity
 - **Backend Readiness**: `backend_contract_ready`
-- **Frontend Readiness**: `backend_contract_ready`
-- **Next Action**: Antigravity implements the bounded [Business Object definitions handoff](../ai_hand_off/business_object_definitions.md) and returns its evidence to Codex.
-- **Required Action**: Antigravity runs the focused frontend test, build, and governed return.
+- **Frontend Readiness**: `frontend_repair_only`
+- **Next Action**: Antigravity implements the bounded [Business Object repair handoff](../ai_hand_off/business_object_definitions.md) and returns the regression evidence to Codex.
+- **Required Action**: Antigravity proves the late-list and conflict-recovery cases in focused tests.
 - **Active Gate**: `project_docs/active/active_gate/README.md`
 - **Authorization Record**: `project_docs/active/status/phase_authorization.json`
 - **Roadmap**: `project_docs/active/business_objects/README.md`
 - **Active Handoff**: `project_docs/active/ai_hand_off/business_object_definitions.md`
-- **Latest Verification**: 75 backend tests passed across Business Objects, workspace context, relationships, and Analytics queries. Changed Python modules compile.
+- **Latest Verification**: Antigravity reported five focused tests and a production build passing. Codex source review identified a late-list race and a missing refresh path after a save conflict.
 
 ## Pending Analytics Workbench Acceptance
 

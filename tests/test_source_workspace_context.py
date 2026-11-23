@@ -509,22 +509,71 @@ class SourceWorkspaceContextTests(unittest.TestCase):
         ]
         self.assertEqual(source_ids, [orders["source"]["source_id"]])
 
-    def test_source_deletion_refuses_workspace_dependencies_atomically(self):
-        """Catalog deletion must not cascade through workspace/model truth."""
+    def test_source_deletion_leaves_an_empty_workspace_that_can_be_reused(self):
         uploaded = self._upload().get_json()
         source_id = uploaded["source"]["source_id"]
         workspace_id = uploaded["workspace"]["workspace_id"]
+        managed_file = self.managed_root / uploaded["source"]["managed_locator"]["storage_key"]
 
         response = self.client.delete(f"/api/datahub/{source_id}")
 
-        self.assertEqual(response.status_code, 409, response.get_json())
-        error = response.get_json()["error"]
-        self.assertEqual(error["code"], "source_has_dependencies")
-        self.assertEqual(error["details"]["workspace_ids"], [workspace_id])
-        self.assertEqual(error["details"]["membership_count"], 1)
-        self.assertEqual(error["details"]["primary_workspace_count"], 1)
+        self.assertEqual(response.status_code, 200, response.get_json())
+        self.assertEqual(response.get_json()["source_id"], source_id)
+        self.assertIsNone(get_source(source_id))
+        self.assertEqual(self.client.get("/api/data-sources").get_json()["sources"], [])
+        self.assertTrue(managed_file.is_file())
+        workspace = get_workspace(workspace_id)
+        self.assertEqual(workspace["version"], uploaded["workspace"]["version"] + 1)
+        self.assertEqual(workspace["sources"], [])
+        self.assertIsNone(workspace["primary_source_id"])
+        retried = self.client.delete(f"/api/datahub/{source_id}")
+        self.assertEqual(retried.status_code, 404)
+        self.assertEqual(retried.get_json()["error"]["code"], "source_not_found")
+        self.assertEqual(get_workspace(workspace_id), workspace)
+
+        new_source_id = self._upload("replacement.csv").get_json()["source"]["source_id"]
+        attached = self.client.post(f"/api/data-workspaces/{workspace_id}/sources", json={
+            "source_id": new_source_id,
+            "version": workspace["version"],
+        })
+        self.assertEqual(attached.status_code, 200, attached.get_json())
+        body = attached.get_json()
+        self.assertEqual(body["workspace"]["primary_source_id"], new_source_id)
+        self.assertEqual(body["workspace"]["sources"][0]["role"], "primary")
+        self.assertEqual(body["analysis_context"]["source_ids"], [new_source_id])
+
+    def test_source_deletion_rolls_back_if_workspace_update_fails(self):
+        uploaded = self._upload().get_json()
+        source_id = uploaded["source"]["source_id"]
+        workspace = uploaded["workspace"]
+        self.client.application.testing = True
+
+        with patch(
+            "backend.repositories.source_workspace_repository._advance_workspace_version",
+            side_effect=RuntimeError("forced workspace update failure"),
+        ), self.assertRaisesRegex(RuntimeError, "forced workspace update failure"):
+            self.client.delete(f"/api/datahub/{source_id}")
+
         self.assertIsNotNone(get_source(source_id))
-        self.assertEqual(get_workspace(workspace_id)["source_count"], 1)
+        self.assertEqual(get_workspace(workspace["workspace_id"]), workspace)
+
+    def test_bulk_deletion_rolls_back_workspace_updates_if_catalog_delete_fails(self):
+        uploaded = self._upload().get_json()
+        workspace = uploaded["workspace"]
+        connection = backend_db.get_db_connection()
+        connection.execute("""
+            CREATE TRIGGER reject_catalog_delete BEFORE DELETE ON datahub_datasets
+            BEGIN SELECT RAISE(ABORT, 'test catalog deletion failure'); END
+        """)
+        connection.close()
+
+        with patch.object(self.client.application.logger, "exception"):
+            response = self.client.delete("/api/datahub")
+
+        self.assertEqual(response.status_code, 500)
+        self.assertEqual(response.get_json()["error"]["code"], "catalog_deletion_failed")
+        self.assertIsNotNone(get_source(uploaded["source"]["source_id"]))
+        self.assertEqual(get_workspace(workspace["workspace_id"]), workspace)
 
     def test_source_deletion_removes_only_an_unreferenced_catalog_record(self):
         """A standalone legacy catalog record remains safely deletable."""

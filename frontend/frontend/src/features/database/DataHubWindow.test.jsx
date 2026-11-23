@@ -72,3 +72,54 @@ test('successful removal retains other records with the same name', async () => 
   expect(screen.queryByRole('button', { name: 'View details for Orders (orders-1)' })).not.toBeInTheDocument();
   expect(await screen.findByRole('button', { name: 'View details for Orders (orders-2)' })).toBeVisible();
 });
+
+test('Delete All requires Yes and clears the entire catalog even with a search filter', async () => {
+  axios.get.mockResolvedValueOnce(records([first, second])).mockResolvedValue(records([]));
+  axios.delete.mockResolvedValue({ data: { deleted_count: 2 } });
+  mount();
+  const target = await screen.findByRole('button', { name: 'View details for Orders (orders-2)' });
+  fireEvent.click(target);
+  fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'orders-2' } });
+  const deleteAll = screen.getByRole('button', { name: 'Delete All' });
+
+  fireEvent.click(deleteAll);
+  const dialog = within(screen.getByRole('dialog', { name: 'Are you sure?' }));
+  expect(dialog.getByRole('button', { name: 'No' })).toHaveFocus();
+  expect(axios.delete).not.toHaveBeenCalled();
+  fireEvent.click(dialog.getByRole('button', { name: 'No' }));
+  expect(await screen.findByRole('button', { name: 'Delete All' })).toBeEnabled();
+  expect(target).toBeVisible();
+  expect(axios.delete).not.toHaveBeenCalled();
+
+  fireEvent.click(deleteAll);
+  fireEvent.click(screen.getByRole('button', { name: 'Yes' }));
+
+  expect(axios.delete).toHaveBeenCalledTimes(1);
+  expect(axios.delete).toHaveBeenCalledWith(expect.stringMatching(/\/api\/datahub$/));
+  expect(await screen.findByText('No saved datasets yet')).toBeVisible();
+  expect(screen.getByText('Select a dataset to see its metadata and readiness.')).toBeVisible();
+  expect(await screen.findByRole('button', { name: 'Delete All' })).toBeDisabled();
+});
+
+test('Delete All prevents duplicate requests and allows retry after an error', async () => {
+  axios.get.mockResolvedValueOnce(records([first])).mockResolvedValue(records([]));
+  let rejectDeletion;
+  axios.delete.mockImplementationOnce(() => new Promise((resolve, reject) => {
+    rejectDeletion = reject;
+  })).mockResolvedValueOnce({ data: { deleted_count: 1 } });
+  mount();
+  const target = await screen.findByRole('button', { name: 'View details for Orders (orders-1)' });
+  fireEvent.click(screen.getByRole('button', { name: 'Delete All' }));
+  const dialog = within(screen.getByRole('dialog', { name: 'Are you sure?' }));
+
+  fireEvent.click(dialog.getByRole('button', { name: 'Yes' }));
+  expect(dialog.getByRole('button', { name: 'Deleting…' })).toBeDisabled();
+  expect(dialog.getByRole('button', { name: 'No' })).toBeDisabled();
+  expect(axios.delete).toHaveBeenCalledTimes(1);
+  rejectDeletion(new Error('offline'));
+
+  expect(await dialog.findByRole('alert')).toHaveTextContent('Could not delete saved datasets. Try again.');
+  expect(target).toBeInTheDocument();
+  fireEvent.click(dialog.getByRole('button', { name: 'Yes' }));
+  expect(await screen.findByText('No saved datasets yet')).toBeVisible();
+});
