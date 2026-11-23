@@ -606,9 +606,10 @@ def delete_source_if_unreferenced(source_id: str) -> bool:
         conn.close()
 
 
-def get_source_private_locator(source_id: str) -> Optional[Dict[str, Any]]:
+def get_source_private_locator(source_id: str, *, connection=None) -> Optional[Dict[str, Any]]:
     """Retrieve storage details for trusted backend services only."""
-    conn = get_db_connection()
+    owns_connection = connection is None
+    conn = connection or get_db_connection()
     try:
         row = conn.execute(
             "SELECT path, locator_kind, locator_json FROM datahub_datasets WHERE id = ?",
@@ -622,7 +623,8 @@ def get_source_private_locator(source_id: str) -> Optional[Dict[str, Any]]:
             **_load_json(row["locator_json"], {}),
         }
     finally:
-        conn.close()
+        if owns_connection:
+            conn.close()
 
 
 def get_workspace(workspace_id: str, *, connection=None) -> Optional[Dict[str, Any]]:

@@ -140,6 +140,29 @@ def _ensure_schema(conn):
         '''
     )
 
+    # Keep broken references visible in saved definitions after catalog or model edits.
+    conn.execute(
+        '''
+        CREATE TABLE IF NOT EXISTS workspace_business_objects (
+            object_id TEXT PRIMARY KEY,
+            workspace_id TEXT NOT NULL,
+            display_name TEXT NOT NULL,
+            source_id TEXT NOT NULL,
+            record_key_field TEXT NOT NULL,
+            display_field TEXT,
+            relationship_ids_json TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            FOREIGN KEY (workspace_id) REFERENCES data_workspaces(workspace_id) ON DELETE CASCADE
+        )
+        '''
+    )
+    conn.execute(
+        '''
+        CREATE INDEX IF NOT EXISTS idx_workspace_business_objects_workspace
+        ON workspace_business_objects (workspace_id, created_at, object_id)
+        '''
+    )
+
     conn.execute(
         '''
         CREATE TABLE IF NOT EXISTS decision_assets (

@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
   "authorized_work": {
-    "name": "Navigate Datastream from the application header"
+    "name": "Configure Business Objects in Data Model"
   },
   "authorization_state": "AUTHORIZED",
-  "lifecycle_state": "COMPLETE",
+  "lifecycle_state": "IN PROGRESS",
   "chat_dataset_dropdown_authorization": {
     "approved_by": "User",
     "approved_at": "2026-11-22",
@@ -267,12 +267,20 @@
       "current_approved_at": "2026-11-19"
     }
   },
-  "user_implementation_authorization": {
+  "data_hub_rebuild_implementation_authorization": {
     "approved_by": "User",
     "approved_at": "2026-11-21",
     "evidence": "The user explicitly assigned frontend implementation to Codex in the Data Hub rebuild chat.",
     "instruction": "just do the frontend yourself",
     "scope": "Codex implements and verifies the Welcome actions, full Data Hub destination, and persistent header in the roadmap order. The current gate authorizes one phase at a time. The user owns final browser acceptance."
+  },
+  "user_implementation_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-11-22",
+    "evidence": "The user confirmed the configurable Business Objects proposal and directly asked to start it in a brand-new Codex chat.",
+    "instruction": "Ok not in the other chat u started but in a brand new chat, get them started and setup with this new work",
+    "scope": "Codex owns the first Business Objects backend slice, tests, contract, and implementation coordination. Phase 1 covers workspace-scoped definitions and their API. Frontend ownership follows the project guardrail. The user owns browser acceptance.",
+    "codex_frontend_implementation_authorized": false
   },
   "preparation_authorization": {
     "approved_by": "User",
@@ -328,6 +336,12 @@
     "acceptance": "Accepted by the user in chat on 2026-11-22."
   },
   "allowed_paths": [
+    "project_docs/active/business_objects/README.md",
+    "project_docs/active/ai_hand_off/business_object_definitions.md",
+    "backend/repositories/business_object_repository.py",
+    "backend/services/business_objects.py",
+    "backend/routes/data_workspaces.py",
+    "tests/test_business_objects.py",
     "backend/analytics/**",
     "backend/routes/analytics.py",
     "backend/app.py",
@@ -453,5 +467,5 @@
     "project_docs/archive/ml_studio_duplicate_draft_reviewed_2026_09_26.md"
   ],
   "accepted_change_snapshot": "project_docs/active/status/accepted_change_snapshot.json",
-  "codex_frontend_edits_allowed": true
+  "codex_frontend_edits_allowed": false
 }
