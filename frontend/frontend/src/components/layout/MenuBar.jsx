@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useRef } from 'react';
-import { FaEllipsisH, FaRobot, FaTable, FaUpload } from 'react-icons/fa';
+import { FaEllipsisH, FaRobot, FaSave, FaTable, FaUpload } from 'react-icons/fa';
 import { ThemeContext } from '../../context/ThemeContext';
 import DestinationNav from './SideBar';
 import './MenuBar.css';
@@ -11,9 +11,12 @@ function MenuBar({
   onOpenFields,
   onOpenPreview,
   canPreview,
+  canSaveDataset,
+  onSaveDataset,
   onInspectRows,
   onFilterRows,
   onRefine,
+  canRefine = true,
   showCleaningForm,
   onOpenAiChat,
   onOpenAiWorkflow,
@@ -58,6 +61,11 @@ function MenuBar({
         <button type="button" className="app-banner__upload" onClick={() => onOpenSourcePanel('upload')}>
           <FaUpload aria-hidden="true" /> Upload data
         </button>
+        {canSaveDataset && (
+          <button type="button" className="app-banner__action app-banner__save" onClick={onSaveDataset}>
+            <FaSave aria-hidden="true" /> Save Dataset
+          </button>
+        )}
         <button
           type="button"
           className="app-banner__action"
@@ -97,7 +105,8 @@ function MenuBar({
                 <>
                   <button type="button" onClick={run(onInspectRows)} disabled={!canPreview}>Inspect or download rows</button>
                   <button type="button" onClick={run(onFilterRows)} disabled={!canPreview}>Filter rows</button>
-                  <button type="button" onClick={run(onRefine)} aria-pressed={showCleaningForm} disabled={!canPreview}>Refine data</button>
+                  <button type="button" onClick={run(onRefine)} aria-pressed={showCleaningForm} disabled={!canPreview || !canRefine}
+                    title={canRefine ? undefined : 'Refine is available for a dataset with one source and no relationships'}>Refine data</button>
                 </>
               )}
               {activeDestination === 'analytics' && (

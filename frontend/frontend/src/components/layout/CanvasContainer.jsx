@@ -95,7 +95,8 @@ function CanvasContainer({
   setIsDataPaneOpen,
   onOpenSourcePanel,
   onOpenDataHub,
-  onOpenSourceInAnalytics,
+  onOpenDataset,
+  workingDatasetName,
   onOpenCleaningForm,
 }) {
   const {
@@ -579,7 +580,7 @@ function CanvasContainer({
       );
     });
 
-  const dataPreviewElement = (previewData.length > 0 && showDataPreview && !minimizedWindows.dataPreview) ? (
+  const dataPreviewElement = (showDataPreview && !minimizedWindows.dataPreview && (previewData.length > 0 || activeWorkspace?.primary_source_id)) ? (
     <WindowFrame
       {...getWindowProps('dataPreview', '📄 Data Preview', handleClosePreview, () => minimizeWindow('dataPreview', 'Data Preview'))}
       initialState={getInitialState('dataPreview', 8, 20, WINDOW_SIZING.DATA_PREVIEW.defW, WINDOW_SIZING.DATA_PREVIEW.defH, WINDOW_SIZING.DATA_PREVIEW.minW, WINDOW_SIZING.DATA_PREVIEW.minH)}
@@ -784,11 +785,10 @@ function CanvasContainer({
           {isDataHubDest && (
             <DataHubWindow
               onUpload={() => onOpenSourcePanel('upload')}
-              onOpenInAnalytics={onOpenSourceInAnalytics}
-              latestUploadId={uploadedData?.source?.source_id}
+              onOpenDataset={onOpenDataset}
             />
           )}
-          {isAnalyticsDest && <AnalyticsShell onOpenAiChat={onOpenAiChat} onOpenGallery={() => setShowDataVisual(true)} onOpenAiChart={() => { setShowAIChart(true); restoreWindow('aiChartWindow'); }} />}
+          {isAnalyticsDest && <AnalyticsShell workingDatasetName={workingDatasetName} onOpenAiChat={onOpenAiChat} onOpenGallery={() => setShowDataVisual(true)} onOpenAiChart={() => { setShowAIChart(true); restoreWindow('aiChartWindow'); }} />}
           {(isAiDest || isWorkspaceDest) && workflowElements}
           {(isWorkspaceDest || isExploreDest) && dataPreviewElement}
           {isWorkspaceDest && rawDataElement}

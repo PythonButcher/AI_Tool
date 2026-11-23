@@ -159,11 +159,12 @@ def register_source_with_workspace(
     source: Dict[str, Any],
     workspace: Dict[str, Any],
     membership: Dict[str, Any],
+    before_commit=None,
 ) -> tuple[Dict[str, Any], Dict[str, Any]]:
     """Atomically register one source and its initial one-source workspace."""
     conn = get_db_connection()
     try:
-        conn.execute("BEGIN")
+        conn.execute("BEGIN IMMEDIATE")
         _insert_source(conn, source)
         conn.execute(
             """
@@ -181,10 +182,12 @@ def register_source_with_workspace(
             ),
         )
         _insert_membership(conn, membership)
+        saved_source = get_source(source['source_id'], connection=conn)
+        saved_workspace = get_workspace(workspace['workspace_id'], connection=conn)
+        if before_commit is not None:
+            before_commit(conn, saved_source, saved_workspace)
         conn.commit()
-        return get_source(source["source_id"], connection=conn), get_workspace(
-            workspace["workspace_id"], connection=conn
-        )
+        return saved_source, saved_workspace
     except Exception:
         conn.rollback()
         raise
@@ -545,6 +548,17 @@ def get_source(source_id: str, *, connection=None) -> Optional[Dict[str, Any]]:
             conn.close()
 
 
+def _promote_first_source(conn, workspace_id):
+    replacement = conn.execute('''
+        SELECT source_id FROM workspace_sources WHERE workspace_id = ? ORDER BY added_at, source_id LIMIT 1
+    ''', (workspace_id,)).fetchone()
+    if replacement is None:
+        return
+    replacement_id = replacement['source_id']
+    conn.execute("UPDATE workspace_sources SET role = 'primary' WHERE workspace_id = ? AND source_id = ?", (workspace_id, replacement_id))
+    conn.execute('UPDATE data_workspaces SET primary_source_id = ? WHERE workspace_id = ?', (replacement_id, workspace_id))
+
+
 def delete_source(source_id: str, *, updated_at: str) -> bool:
     """Remove a catalog source and reconcile each affected workspace atomically."""
     conn = get_db_connection()
@@ -577,26 +591,7 @@ def delete_source(source_id: str, *, updated_at: str) -> bool:
         for workspace in workspaces:
             workspace_id = workspace["workspace_id"]
             if workspace["primary_source_id"] == source_id:
-                replacement = conn.execute(
-                    """
-                    SELECT source_id FROM workspace_sources WHERE workspace_id = ?
-                    ORDER BY added_at, source_id LIMIT 1
-                    """,
-                    (workspace_id,),
-                ).fetchone()
-                if replacement is not None:
-                    replacement_id = replacement["source_id"]
-                    conn.execute(
-                        """
-                        UPDATE workspace_sources SET role = 'primary'
-                        WHERE workspace_id = ? AND source_id = ?
-                        """,
-                        (workspace_id, replacement_id),
-                    )
-                    conn.execute(
-                        "UPDATE data_workspaces SET primary_source_id = ? WHERE workspace_id = ?",
-                        (replacement_id, workspace_id),
-                    )
+                _promote_first_source(conn, workspace_id)
             _advance_workspace_version(
                 conn,
                 workspace_id=workspace_id,
@@ -613,25 +608,28 @@ def delete_source(source_id: str, *, updated_at: str) -> bool:
 
 
 def delete_all_sources(*, updated_at: str) -> int:
-    """Remove the catalog and advance each affected workspace once."""
+    """Remove saved entries and registrations while retaining managed working data."""
     conn = get_db_connection()
     try:
         conn.execute("BEGIN IMMEDIATE")
-        conn.execute(
+        workspaces = conn.execute(
             """
-            UPDATE data_workspaces
-            SET version = version + 1, updated_at = ?
-            WHERE primary_source_id IS NOT NULL
-               OR workspace_id IN (
-                   SELECT workspace_id FROM workspace_sources
-                   UNION
-                   SELECT workspace_id FROM workspace_relationships
-               )
+            SELECT workspace_id, primary_source_id, version FROM data_workspaces
+            WHERE primary_source_id IN (SELECT id FROM datahub_datasets WHERE locator_kind <> 'managed_file')
+               OR workspace_id IN (SELECT member.workspace_id FROM workspace_sources member
+                                   JOIN datahub_datasets source ON source.id = member.source_id
+                                   WHERE source.locator_kind <> 'managed_file')
             """,
-            (updated_at,),
-        )
-        # The catalog foreign keys clear primaries, memberships, and relationships.
-        deleted_count = conn.execute("DELETE FROM datahub_datasets").rowcount
+        ).fetchall()
+        deleted_count = conn.execute("DELETE FROM saved_datasets").rowcount
+        deleted_count += conn.execute("DELETE FROM datahub_datasets WHERE locator_kind <> 'managed_file'").rowcount
+        for workspace in workspaces:
+            workspace_id = workspace['workspace_id']
+            if workspace['primary_source_id'] is not None:
+                current = conn.execute('SELECT primary_source_id FROM data_workspaces WHERE workspace_id = ?', (workspace_id,)).fetchone()
+                if current['primary_source_id'] is None:
+                    _promote_first_source(conn, workspace_id)
+            _advance_workspace_version(conn, workspace_id=workspace_id, expected_version=workspace['version'], updated_at=updated_at)
         conn.commit()
         return deleted_count
     except Exception:

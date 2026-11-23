@@ -192,9 +192,12 @@ def register_managed_upload(
     role: Optional[str] = None,
     replace_source: Optional[Dict[str, Any]] = None,
     preparation_id: Optional[str] = None,
+    before_commit=None,
 ) -> Dict[str, Any]:
     """Persist accepted bytes and atomically register the requested membership."""
     source_id = f"src_{uuid4().hex}"
+    if before_commit is not None and workspace_id is not None:
+        raise ValueError('The registration hook requires a new standalone source workspace.')
     if replace_source is not None and not workspace_id:
         raise WorkspaceContextError("workspace_not_found", "Source replacement requires an existing workspace.")
     target_workspace_id = workspace_id.strip() if workspace_id else None
@@ -270,10 +273,12 @@ def register_managed_upload(
         "added_at": timestamp,
     }
 
+    created_file = False
     try:
         # Exclusive creation prevents an accidental overwrite even though the
         # storage key contains a random server-generated source identity.
         with managed_path.open("xb") as managed_file:
+            created_file = True
             managed_file.write(file_bytes)
         if replace_source:
             source, workspace = replace_workspace_primary(
@@ -297,12 +302,15 @@ def register_managed_upload(
                 source=source_record,
                 workspace=workspace_record,
                 membership=membership_record,
+                before_commit=before_commit,
             )
     except SourceWorkspaceRepositoryError as exc:
-        managed_path.unlink(missing_ok=True)
+        if created_file:
+            managed_path.unlink(missing_ok=True)
         raise WorkspaceContextError(exc.code, str(exc)) from exc
     except Exception:
-        managed_path.unlink(missing_ok=True)
+        if created_file:
+            managed_path.unlink(missing_ok=True)
         raise
 
     return {

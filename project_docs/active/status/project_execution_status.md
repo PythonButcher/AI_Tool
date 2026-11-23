@@ -1,23 +1,25 @@
 # Project Execution Status
 
-## Current Gate: Configure Business Objects in Data Model
+## Current Gate: Explicitly save and fully reopen working datasets
 
-- **Current Gate**: Configure Business Objects in Data Model
-- **Roadmap Phase**: Phase 1 — Business Object definitions
-- **Phase State**: `IN PROGRESS`
-- **What This State Means**: The panel needs to reconcile confirmed saves with list reads and refresh the model choices after a reference conflict.
-- **Current Milestone**: Step 1: Repair Business Object save and refresh behavior
-- **Automatic Continuation**: `WAIT_FOR_AGENT`
-- **Current Owner**: Antigravity
-- **Backend Readiness**: `backend_contract_ready`
-- **Frontend Readiness**: `frontend_repair_only`
-- **Next Action**: Antigravity implements the bounded [Business Object repair handoff](../ai_hand_off/business_object_definitions.md) and returns the regression evidence to Codex.
-- **Required Action**: Antigravity proves the late-list and conflict-recovery cases in focused tests.
+- **Current Gate**: Explicitly save and fully reopen working datasets
+- **Roadmap Phase**: Phase 2 — Opt-in save and full activation
+- **Phase State**: `AWAITING USER ACCEPTANCE`
+- **What This State Means**: Explicit save and full Workspace activation are implemented and engineering-verified.
+- **Current Milestone**: User accepts the saved-dataset workflow in chat
+- **Automatic Continuation**: `WAIT_FOR_USER`
+- **Current Owner**: User
+- **Backend Readiness**: `complete`
+- **Frontend Readiness**: `backend_contract_ready`
+- **Next Action**: The user reviews the integrated workflow in the browser and responds in chat.
+- **Required Action**: Record the user's browser decision.
 - **Active Gate**: `project_docs/active/active_gate/README.md`
 - **Authorization Record**: `project_docs/active/status/phase_authorization.json`
-- **Roadmap**: `project_docs/active/business_objects/README.md`
-- **Active Handoff**: `project_docs/active/ai_hand_off/business_object_definitions.md`
-- **Latest Verification**: Antigravity reported five focused tests and a production build passing. Codex source review identified a late-list race and a missing refresh path after a save conflict.
+- **Roadmap**: `project_docs/active/saved_datasets/README.md`
+- **Active Handoff**: None
+- **Latest Verification**: 133 focused backend and 40 frontend tests passed. The production build passed with existing warnings. Focused coverage includes upload and Refine staying outside the catalog, named save, full reopen, Business Objects, exact Analytics scope, same names, stale dependencies, retry, and rollback.
+
+The [Business Object repair](../../archive/business_object_definitions_repair_paused_2026_11_22.md) is paused. Antigravity retains its assignment and the [authorization record](phase_authorization.json) records the outstanding review.
 
 ## Pending Analytics Workbench Acceptance
 
@@ -35,4 +37,4 @@ The [ML Studio contract](../contracts/ml_studio.md) retains capability limitatio
 
 ## Completion Rule
 
-The current gate requires Codex integration review of the returned definition panel before user browser acceptance.
+The user owns the final browser decision in chat.

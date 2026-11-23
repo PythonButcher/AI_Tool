@@ -7,31 +7,54 @@ import DataHubWindow from './DataHubWindow';
 
 jest.mock('axios', () => ({ get: jest.fn(), delete: jest.fn(), post: jest.fn() }));
 
-const first = { source_id: 'orders-1', name: 'Orders', source_kind: 'catalog' };
-const second = { source_id: 'orders-2', name: 'Orders', source_kind: 'upload', row_count: 42 };
-const records = sources => ({ data: { sources } });
+const first = { dataset_id: 'orders-1', source_id: 'orders-1', name: 'Orders', kind: 'legacy' };
+const second = { dataset_id: 'orders-2', name: 'Orders', kind: 'source', revision: 1, row_count: 42 };
+const records = datasets => ({ data: { datasets } });
 
 beforeEach(() => jest.resetAllMocks());
 
 function mount() {
-  const openInAnalytics = jest.fn(() => true);
-  render(<WarehouseProvider><DataHubWindow onUpload={jest.fn()} onOpenInAnalytics={openInAnalytics} /></WarehouseProvider>);
-  return openInAnalytics;
+  const onOpenDataset = jest.fn();
+  const view = render(<WarehouseProvider><DataHubWindow onUpload={jest.fn()} onOpenDataset={onOpenDataset} /></WarehouseProvider>);
+  return { onOpenDataset, ...view };
 }
 
 test('loads, filters, and opens the exact record when names match', async () => {
   axios.get.mockResolvedValue(records([first, second]));
-  const openInAnalytics = mount();
+  const opened = { dataset: second, workspace: { workspace_id: 'working-2' }, analysis_context: {}, full_data: [{ id: 42 }] };
+  axios.post.mockResolvedValue({ data: opened });
+  const { onOpenDataset } = mount();
   expect(screen.getByText('Loading saved datasets…')).toBeVisible();
   const target = await screen.findByRole('button', { name: 'View details for Orders (orders-2)' });
   fireEvent.change(screen.getByRole('searchbox', { name: 'Search datasets' }), { target: { value: 'orders-2' } });
   expect(screen.queryByRole('button', { name: 'View details for Orders (orders-1)' })).not.toBeInTheDocument();
   fireEvent.click(target);
   const details = within(screen.getByRole('complementary', { name: 'Dataset details' }));
-  expect(details.getByText('orders-2')).toBeVisible();
   expect(details.getByText('42')).toBeVisible();
-  fireEvent.click(screen.getByRole('button', { name: 'Open in Analytics' }));
-  expect(openInAnalytics).toHaveBeenCalledWith(second);
+  expect(screen.queryByRole('button', { name: 'Open in Analytics' })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Open dataset' }));
+  await waitFor(() => expect(onOpenDataset).toHaveBeenCalledWith(opened));
+  expect(axios.post).toHaveBeenCalledWith(expect.stringMatching(/\/orders-2\/open$/), {}, { signal: expect.anything() });
+});
+
+test('open errors keep the catalog visible and leaving aborts a retry', async () => {
+  axios.get.mockResolvedValue(records([second]));
+  axios.post.mockRejectedValueOnce({ response: { data: { error: { message: 'Source file changed.' } } } });
+  let resolve;
+  axios.post.mockImplementationOnce(() => new Promise(finish => { resolve = finish; }));
+  const { onOpenDataset, unmount } = mount();
+  const open = await screen.findByRole('button', { name: 'Open dataset' });
+  fireEvent.click(open);
+  expect(await screen.findByRole('alert')).toHaveTextContent('Source file changed.');
+  fireEvent.click(open);
+  fireEvent.click(open);
+  expect(axios.post).toHaveBeenCalledTimes(2);
+  const signal = axios.post.mock.calls[1][2].signal;
+  unmount();
+  expect(signal.aborted).toBe(true);
+  resolve({ data: { dataset: second, workspace: { workspace_id: 'working-2' }, analysis_context: {}, full_data: [] } });
+  await Promise.resolve();
+  expect(onOpenDataset).not.toHaveBeenCalled();
 });
 
 test('retries a failed list request and displays an empty catalog', async () => {
@@ -51,11 +74,11 @@ test('removal confirms the exact ID and reports dependency refusals without remo
   const target = await screen.findByRole('button', { name: 'View details for Orders (orders-2)' });
   fireEvent.click(within(target.closest('li')).getByRole('button', { name: 'Remove', exact: true }));
   const dialog = within(screen.getByRole('dialog', { name: 'Remove dataset?' }));
-  expect(dialog.getByText(/ID orders-2/)).toBeVisible();
+  expect(dialog.getByText('Orders')).toBeVisible();
   expect(axios.delete).not.toHaveBeenCalled();
   fireEvent.click(dialog.getByRole('button', { name: 'Remove dataset' }));
   expect(await dialog.findByRole('alert')).toHaveTextContent('still used by a workspace or relationship');
-  expect(axios.delete).toHaveBeenCalledWith(expect.stringMatching(/\/api\/datahub\/orders-2$/));
+  expect(axios.delete).toHaveBeenCalledWith(expect.stringMatching(/\/api\/datahub\/saved-datasets\/orders-2$/));
   fireEvent.click(dialog.getByRole('button', { name: 'Cancel' }));
   await waitFor(() => expect(target).toBeVisible());
   expect(target).toBeInTheDocument();

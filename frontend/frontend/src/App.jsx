@@ -11,9 +11,10 @@ import { DataContext, normalizeDatasetRows, useActiveDataset } from './context/D
 import { ThemeProvider } from './context/ThemeContext';
 import { WarehouseProvider } from './context/WarehouseContext';
 import { HelpOverlayProvider } from './context/HelpOverlayContext';
-import useLoadRawData from './hooks/useLoadRawData';
 import DataFilterPanel from './components/data_management/DataFilterPanel';
 import DataCleaningForm from './components/data_management/DataCleaningForm';
+import SaveDatasetDialog from './features/database/SaveDatasetDialog';
+import Snackbar from '@mui/material/Snackbar';
 import './App.css';
 import { MuiThemeContext } from './context/MuiThemeContext';
 import { useWindowContext } from './context/WindowContext';
@@ -48,12 +49,14 @@ function AppContent() {
     uploadedData, setUploadedData,
     setFullData,
     cleanedData, setCleanedData,
+    filteredData, setFilteredData,
     pipelineResults, setPipelineResults,
     aiReportReady, setAiReportReady,
     showAiReport, setShowAiReport,
     setSemanticModel,
     refreshSemanticModelFromDataset,
     setWorkspaceEnvelope,
+    activeWorkspace, analysisContext,
   } = useContext(DataContext);
 
   const {
@@ -100,7 +103,12 @@ function AppContent() {
   const [storyData, setStoryData] = useState(undefined);
   const [storyModel] = useState('openai');
   const [showStoryPanel, setShowStoryPanel] = useState(false);
-  const [rawUploadFile, setRawUploadFile] = useState(null);
+  const [workingName, setWorkingName] = useState('');
+  const [savedDataset, setSavedDataset] = useState(null);
+  const [savedScope, setSavedScope] = useState(null);
+  const [refineAllowed, setRefineAllowed] = useState(true);
+  const [showSaveDataset, setShowSaveDataset] = useState(false);
+  const [datasetNotice, setDatasetNotice] = useState('');
   const [showMachineLearning, setShowMachineLearning] = useState(false);
   const [outputWindows, setOutputWindows] = useState([]);
   
@@ -160,15 +168,6 @@ function AppContent() {
     handleDestinationSelect(DESTINATIONS.DATA_HUB);
   }, [handleDestinationSelect]);
 
-  const openSourceInAnalytics = useCallback((source) => {
-    const queued = updateAnalyticsWorkspace(workspace => ({
-      ...workspace,
-      pendingAction: { type: 'source', source: { kind: 'datahub', id: source.source_id, name: source.name } },
-    }));
-    if (queued) handleDestinationSelect('analytics');
-    return queued;
-  }, [handleDestinationSelect, updateAnalyticsWorkspace]);
-
   const handleOpenCleaningForm = useCallback((props) => {
     if (props && props.closeOverlay) {
       setShowCleaningForm(false);
@@ -179,7 +178,7 @@ function AppContent() {
     setShowCleaningForm(true);
   }, []);
 
-  const handleFileUpload = useCallback((raw, file = null) => {
+  const installWorkingDataset = useCallback((raw, name, saved = null) => {
     const previewRows = parseRecords(raw?.data_preview);
     const datasetRows = parseRecords(raw?.full_data ?? raw?.raw_data);
     const finalDataset = datasetRows.length ? datasetRows : previewRows;
@@ -191,22 +190,47 @@ function AppContent() {
     });
     setFullData(finalDataset);
     setCleanedData(finalDataset);
-
-    if (raw?.workspace && raw?.analysis_context) {
-      setWorkspaceEnvelope({ workspace: raw.workspace, analysis_context: raw.analysis_context });
-    }
+    setFilteredData(null);
+    setWorkingName(name || '');
+    setSavedDataset(saved?.revision ? saved : null);
+    setSavedScope(saved?.kind === 'model' ? raw.analysis_context : null);
+    setRefineAllowed(raw?.capabilities?.refine ?? true);
+    setShowSaveDataset(false);
+    setShowRawViewer(false);
+    setDatasetNotice('');
+    setOpenDataFilter(false);
+    setShowCleaningForm(false);
+    setCleaningFormProps(null);
+    setWorkspaceEnvelope({ workspace: raw?.workspace ?? null, analysis_context: raw?.analysis_context ?? null });
 
     if (raw?.semantic_model) {
       setSemanticModel(raw.semantic_model);
     } else if (finalDataset.length > 0) {
       refreshSemanticModelFromDataset(finalDataset, {
-        datasetName: file?.name || raw?.name,
+        datasetName: name,
         source: 'app_handle_upload',
       });
+    } else {
+      setSemanticModel(null);
     }
     handleOpenPreview();
-    if (file) setRawUploadFile(file);
-  }, [setUploadedData, setFullData, setCleanedData, setSemanticModel, refreshSemanticModelFromDataset, setWorkspaceEnvelope, handleOpenPreview]);
+  }, [setUploadedData, setFullData, setCleanedData, setFilteredData, setSemanticModel, refreshSemanticModelFromDataset, setWorkspaceEnvelope, handleOpenPreview]);
+
+  const handleFileUpload = useCallback((raw, file = null) => {
+    installWorkingDataset(raw, file?.name || raw?.source?.name || raw?.name);
+    if (activeDestination === DESTINATIONS.DATA_HUB) handleDestinationSelect(DESTINATIONS.WORKSPACE);
+  }, [activeDestination, handleDestinationSelect, installWorkingDataset]);
+
+  const handleOpenDataset = useCallback(raw => {
+    installWorkingDataset(raw, raw.dataset.name, raw.dataset);
+    handleDestinationSelect(DESTINATIONS.WORKSPACE);
+  }, [installWorkingDataset, handleDestinationSelect]);
+
+  const handleWorkingRefine = useCallback(raw => {
+    installWorkingDataset(raw, workingName, savedDataset);
+    setSavedScope(null);
+    setDatasetNotice('Refine changes applied. Use Save Dataset to keep them in Data Hub.');
+  }, [installWorkingDataset, workingName, savedDataset]);
 
 
   const handleApiData = (data) => handleFileUpload(data);
@@ -272,7 +296,6 @@ function AppContent() {
 
   // Legacy decision workspace functions removed in Phase 10
 
-  useLoadRawData(showRawViewer, rawUploadFile, setFullData);
 
   useEffect(() => {
     if (pipelineResults?.ai_report?.status === 'completed' || pipelineResults?.ai_report?.status === 'success') {
@@ -378,7 +401,9 @@ function AppContent() {
             handleDestinationSelect(DESTINATIONS.WORKSPACE);
             handleOpenPreview();
           }}
-          canPreview={previewData.length > 0}
+          canPreview={previewData.length > 0 || Boolean(activeWorkspace?.primary_source_id)}
+          canSaveDataset={Boolean(activeWorkspace?.primary_source_id) && ['workspace', 'data_model'].includes(activeDestination)}
+          onSaveDataset={() => setShowSaveDataset(true)}
           onOpenSourcePanel={openSourcePanel}
           onOpenFields={() => {
             setActiveDataPaneTab('catalog');
@@ -389,7 +414,8 @@ function AppContent() {
             restoreWindow('rawViewer');
           }}
           onFilterRows={() => setOpenDataFilter(true)}
-          onRefine={() => setShowCleaningForm(previous => !previous)}
+          canRefine={!activeWorkspace || (refineAllowed && activeWorkspace.sources?.length === 1 && Boolean(cleanedData?.length))}
+          onRefine={() => handleOpenCleaningForm(null)}
           showCleaningForm={showCleaningForm}
           aiReportReady={aiReportReady}
           onAiReportClick={handleAiReportOpen}
@@ -416,10 +442,31 @@ function AppContent() {
         />
 
         <main className="main-content">
-          <DataFilterPanel openDataFilter={openDataFilter} setOpenDataFilter={setOpenDataFilter} />
+          <DataFilterPanel key={activeWorkspace?.workspace_id || 'local'} openDataFilter={openDataFilter} setOpenDataFilter={setOpenDataFilter} />
+
+          {showSaveDataset && activeWorkspace?.primary_source_id && (
+            <SaveDatasetDialog
+              workspace={activeWorkspace}
+              savedDataset={savedDataset}
+              datasetName={workingName}
+              hasPreviewFilter={filteredData != null}
+              analysisContext={savedScope?.workspace_id === analysisContext?.workspace_id && savedScope?.workspace_version === activeWorkspace.version ? savedScope : null}
+              onClose={() => setShowSaveDataset(false)}
+              onSaved={record => {
+                setSavedDataset(record);
+                setWorkingName(record.name);
+                setShowSaveDataset(false);
+                setDatasetNotice(`Saved “${record.name}” to Data Hub.`);
+              }}
+            />
+          )}
+          <Snackbar open={Boolean(datasetNotice)} message={datasetNotice} autoHideDuration={6000} onClose={() => setDatasetNotice('')} />
 
           {showCleaningForm && (
             <DataCleaningForm
+              key={cleaningFormProps?.mlStudioMode ? 'ml-studio' : activeWorkspace?.workspace_id || 'local'}
+              workingWorkspace={cleaningFormProps?.mlStudioMode ? null : activeWorkspace}
+              onWorkingRefine={handleWorkingRefine}
               closeForm={() => {
                 if (cleaningFormProps && cleaningFormProps.onClose) {
                   cleaningFormProps.onClose();
@@ -501,7 +548,8 @@ function AppContent() {
               setIsDataPaneOpen={setIsDataPaneOpen}
               onOpenSourcePanel={openSourcePanel}
               onOpenDataHub={openDataHub}
-              onOpenSourceInAnalytics={openSourceInAnalytics}
+              onOpenDataset={handleOpenDataset}
+              workingDatasetName={workingName}
               onOpenAiChat={handleOpenAiChat}
             >
               <DatasetInfo />

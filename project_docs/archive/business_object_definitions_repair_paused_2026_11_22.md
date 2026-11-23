@@ -1,3 +1,5 @@
+Paused reference. Antigravity retains the Business Object repair assignment when the user resumes it. See the [authorization record](../active/status/phase_authorization.json).
+
 Goal: Make the Business Objects panel keep confirmed saves visible and recover from changed source fields or relationships.
 
 REPAIR REQUIRED
@@ -18,7 +20,7 @@ A new definition stays visible after Save succeeds. If the source or its relatio
 
 ## Required Context
 
-- [Active gate](../active_gate/README.md), [execution status](../status/project_execution_status.md), [frontend guardrail](../rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md), and [definition API](../business_objects/README.md#definition-api).
+- [Active gate](../active/active_gate/README.md), [execution status](../active/status/project_execution_status.md), [frontend guardrail](../active/rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md), and [definition API](../active/business_objects/README.md#definition-api).
 
 ## Scope And Target Files
 

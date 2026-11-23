@@ -200,6 +200,45 @@ def _ensure_schema(conn):
             FOREIGN KEY (workspace_id) REFERENCES data_workspaces(workspace_id) ON DELETE CASCADE
         )
     ''')
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS saved_datasets (
+            dataset_id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            kind TEXT NOT NULL CHECK (kind IN ('source', 'model', 'refined')),
+            revision INTEGER NOT NULL CHECK (revision > 0),
+            workspace_id TEXT NOT NULL,
+            definition_json TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+    ''')
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS saved_dataset_operations (
+            request_id TEXT PRIMARY KEY,
+            request_hash TEXT NOT NULL,
+            dataset_id TEXT NOT NULL REFERENCES saved_datasets(dataset_id) ON DELETE CASCADE,
+            receipt_json TEXT NOT NULL
+        )
+    ''')
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS dataset_activation_workspaces (
+            workspace_id TEXT PRIMARY KEY REFERENCES data_workspaces(workspace_id) ON DELETE CASCADE,
+            dependencies_json TEXT
+        )
+    ''')
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS saved_dataset_derivations (
+            source_id TEXT PRIMARY KEY REFERENCES datahub_datasets(id) ON DELETE CASCADE,
+            lineage_json TEXT NOT NULL
+        )
+    ''')
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS workspace_refine_operations (
+            request_id TEXT PRIMARY KEY,
+            request_hash TEXT NOT NULL,
+            workspace_id TEXT NOT NULL REFERENCES data_workspaces(workspace_id) ON DELETE CASCADE
+        )
+    ''')
     conn.commit()
 
 

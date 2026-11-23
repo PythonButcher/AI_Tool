@@ -71,6 +71,11 @@
   background: var(--accent-blue-hover);
 }
 
+.app-banner__save {
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
 .app-banner__action:hover:not(:disabled),
 .app-banner__more[open] > summary {
   border-color: var(--border-color);

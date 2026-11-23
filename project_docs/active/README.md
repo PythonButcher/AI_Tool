@@ -42,6 +42,7 @@ The user accepted the shared dark theme. AI Chat's model routing, layout and con
 | Multiple-source workspace contract | `project_docs/active/contracts/multiple_data_source_workspace.md` | Source, workspace membership, and analysis-context truth |
 | Multiple-source relationship contract | `project_docs/active/contracts/multiple_data_source_relationships.md` | Relationship persistence, validation, diagnostics, and activation truth |
 | Project active gate | `project_docs/active/active_gate/README.md` | The only active work workspace |
+| Saved datasets | `project_docs/active/saved_datasets/README.md` | Named persistence, governed activation, and integration order |
 | Analytics product rebuild | `project_docs/active/analytics/README.md` | Product requirements and verification scope |
 | Business Objects | `project_docs/active/business_objects/README.md` | Configurable definitions, record browsing, and Analytics integration |
 | ML Studio roadmap | `project_docs/active/ml_studio/README.md` | Durable whole-product requirements and acceptance boundaries; status owns delivery truth |

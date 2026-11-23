@@ -557,14 +557,22 @@ class SourceWorkspaceContextTests(unittest.TestCase):
         self.assertIsNotNone(get_source(source_id))
         self.assertEqual(get_workspace(workspace["workspace_id"]), workspace)
 
-    def test_bulk_deletion_rolls_back_workspace_updates_if_catalog_delete_fails(self):
+    def test_bulk_deletion_rolls_back_named_entries_if_registration_delete_fails(self):
         uploaded = self._upload().get_json()
         workspace = uploaded["workspace"]
+        saved = self.client.post('/api/datahub/saved-datasets', json={
+            'name': 'Orders', 'kind': 'current', 'request_id': 'save-for-deletion',
+            'workspace_id': workspace['workspace_id'], 'workspace_version': workspace['version'],
+            'source_id': workspace['primary_source_id'],
+        })
+        self.assertEqual(saved.status_code, 201)
         connection = backend_db.get_db_connection()
+        connection.execute("INSERT INTO datahub_datasets (id, name, path) VALUES ('legacy', 'Legacy', 'legacy.csv')")
         connection.execute("""
             CREATE TRIGGER reject_catalog_delete BEFORE DELETE ON datahub_datasets
             BEGIN SELECT RAISE(ABORT, 'test catalog deletion failure'); END
         """)
+        connection.commit()
         connection.close()
 
         with patch.object(self.client.application.logger, "exception"):
@@ -574,6 +582,7 @@ class SourceWorkspaceContextTests(unittest.TestCase):
         self.assertEqual(response.get_json()["error"]["code"], "catalog_deletion_failed")
         self.assertIsNotNone(get_source(uploaded["source"]["source_id"]))
         self.assertEqual(get_workspace(workspace["workspace_id"]), workspace)
+        self.assertEqual(len(self.client.get('/api/datahub/datasets').get_json()['datasets']), 2)
 
     def test_source_deletion_removes_only_an_unreferenced_catalog_record(self):
         """A standalone legacy catalog record remains safely deletable."""

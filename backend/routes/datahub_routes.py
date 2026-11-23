@@ -1,3 +1,4 @@
+from contextlib import closing
 from datetime import datetime
 import json
 import sqlite3
@@ -5,6 +6,7 @@ import sqlite3
 from flask import Blueprint, current_app, jsonify, request
 
 from backend.db.backend_db import get_db_connection
+from backend.services import saved_datasets
 from backend.services.data_catalog_lineage import (
     GovernancePolicyError,
     evaluate_dataset_readiness,
@@ -22,6 +24,93 @@ from backend.services.workspace_context import (
 
 
 datahub_bp = Blueprint('datahub_bp', __name__, url_prefix='/api/datahub')
+
+
+def _saved_dataset_error(exc):
+    details = dict(exc.details)
+    readiness = details.pop('governance_readiness', None)
+    payload = {'error': {'code': exc.code, 'message': str(exc), **details}}
+    if readiness is not None:
+        payload['governance_readiness'] = readiness
+    return jsonify(payload), exc.status
+
+
+def _saved_dataset_unavailable():
+    current_app.logger.exception('Saved dataset operation failed')
+    return jsonify({'error': {
+        'code': 'saved_dataset_unavailable', 'message': 'The saved dataset could not be accessed. Try again.',
+    }}), 500
+
+
+@datahub_bp.get('/datasets')
+def discover_datasets():
+    try:
+        return jsonify({'datasets': saved_datasets.list_datasets()}), 200
+    except sqlite3.Error:
+        return _saved_dataset_unavailable()
+
+
+@datahub_bp.post('/saved-datasets')
+def save_working_dataset():
+    try:
+        dataset, replayed = saved_datasets.save_dataset(request.get_json(silent=True))
+        return jsonify({'dataset': dataset, 'replayed': replayed}), 200 if replayed else 201
+    except saved_datasets.SavedDatasetError as exc:
+        return _saved_dataset_error(exc)
+    except (sqlite3.Error, OSError):
+        return _saved_dataset_unavailable()
+
+
+@datahub_bp.post('/refine-preview')
+def preview_working_dataset_refine():
+    try:
+        return jsonify(saved_datasets.preview_refine(request.get_json(silent=True))), 200
+    except saved_datasets.SavedDatasetError as exc:
+        return _saved_dataset_error(exc)
+    except sqlite3.Error:
+        return _saved_dataset_unavailable()
+
+
+@datahub_bp.post('/refine-working')
+def refine_working_dataset():
+    try:
+        return jsonify(saved_datasets.apply_refine(request.get_json(silent=True))), 200
+    except saved_datasets.SavedDatasetError as exc:
+        return _saved_dataset_error(exc)
+    except (sqlite3.Error, OSError):
+        return _saved_dataset_unavailable()
+
+
+@datahub_bp.delete('/saved-datasets/<dataset_id>')
+def remove_working_dataset(dataset_id):
+    try:
+        saved_datasets.delete_saved_dataset(dataset_id)
+        return '', 204
+    except saved_datasets.SavedDatasetError as exc:
+        return _saved_dataset_error(exc)
+    except sqlite3.Error:
+        return _saved_dataset_unavailable()
+
+
+@datahub_bp.post('/datasets/<dataset_id>/open')
+def open_working_dataset(dataset_id):
+    options = request.get_json(silent=True) if request.data else {}
+    if not isinstance(options, dict) or options.keys() - {'offset', 'limit', 'expected_revision'}:
+        return _saved_dataset_error(saved_datasets.SavedDatasetError('invalid_open_request', 'Supply optional offset, limit and expected revision.', 400))
+    offset, limit = options.get('offset', 0), options.get('limit', 100)
+    expected = options.get('expected_revision')
+    if (type(offset) is not int or offset < 0 or type(limit) is not int or not 1 <= limit <= 200
+            or expected is not None and (type(expected) is not int or expected < 1)):
+        return _saved_dataset_error(saved_datasets.SavedDatasetError('invalid_open_request', 'Use a nonnegative offset, a limit from 1 to 200, and a positive revision when supplied.', 400))
+    try:
+        return jsonify(saved_datasets.open_dataset(
+            dataset_id, offset=offset, limit=limit, expected_revision=expected,
+            include_full=not ({'offset', 'limit'} & options.keys()),
+        )), 200
+    except saved_datasets.SavedDatasetError as exc:
+        return _saved_dataset_error(exc)
+    except sqlite3.Error:
+        return _saved_dataset_unavailable()
 
 
 def _deserialize_dataset_record(row):
@@ -47,7 +136,7 @@ def _deserialize_dataset_record(row):
 def get_all_datasets():
     conn = get_db_connection()
     conn.row_factory = sqlite3.Row
-    rows = conn.execute('SELECT * FROM datahub_datasets').fetchall()
+    rows = conn.execute("SELECT * FROM datahub_datasets WHERE locator_kind <> 'managed_file'").fetchall()
     conn.close()
 
     datasets = [_deserialize_dataset_record(row) for row in rows]
@@ -76,7 +165,7 @@ def register_dataset():
         name = data.get('name')
         path = data.get('path')
 
-        if not all([dataset_id, name, path]):
+        if any(not isinstance(value, str) or not value.strip() for value in (dataset_id, name, path)):
             return jsonify({'error': 'Missing required fields: id, name, path'}), 400
 
         uploaded_at = data.get('uploadedAt', datetime.utcnow().isoformat())
@@ -94,40 +183,44 @@ def register_dataset():
             # In that case, retain the policy and evaluate before any use.
             readiness = None
 
-        conn = get_db_connection()
-        conn.execute(
-            '''
-            INSERT INTO datahub_datasets
-            (id, name, path, uploadedAt, numRows, numCols, schema_json, preview_json, semantic_model_json, governance_policy_json, governance_readiness_json)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT(id) DO UPDATE SET
-                name = excluded.name,
-                path = excluded.path,
-                uploadedAt = excluded.uploadedAt,
-                numRows = excluded.numRows,
-                numCols = excluded.numCols,
-                schema_json = excluded.schema_json,
-                preview_json = excluded.preview_json,
-                semantic_model_json = COALESCE(excluded.semantic_model_json, datahub_datasets.semantic_model_json),
-                governance_policy_json = excluded.governance_policy_json,
-                governance_readiness_json = excluded.governance_readiness_json
-            ''',
-            (
-                dataset_id,
-                name,
-                path,
-                uploaded_at,
-                num_rows,
-                num_cols,
-                json.dumps(schema),
-                json.dumps(preview),
-                json.dumps(semantic_model) if semantic_model else None,
-                json.dumps(policy),
-                json.dumps(readiness) if readiness else None,
-            ),
-        )
-        conn.commit()
-        conn.close()
+        with closing(get_db_connection()) as conn, conn:
+            conn.execute('BEGIN IMMEDIATE')
+            existing = conn.execute('SELECT locator_kind FROM datahub_datasets WHERE id = ?', (dataset_id,)).fetchone()
+            if (existing and existing['locator_kind'] != 'legacy_path') or conn.execute(
+                'SELECT 1 FROM saved_datasets WHERE dataset_id = ?', (dataset_id,),
+            ).fetchone():
+                return jsonify({'error': 'This ID belongs to a managed source or saved dataset.'}), 409
+            conn.execute(
+                '''
+                INSERT INTO datahub_datasets
+                (id, name, path, uploadedAt, numRows, numCols, schema_json, preview_json, semantic_model_json, governance_policy_json, governance_readiness_json)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(id) DO UPDATE SET
+                    name = excluded.name,
+                    path = excluded.path,
+                    uploadedAt = excluded.uploadedAt,
+                    numRows = excluded.numRows,
+                    numCols = excluded.numCols,
+                    schema_json = excluded.schema_json,
+                    preview_json = excluded.preview_json,
+                    semantic_model_json = COALESCE(excluded.semantic_model_json, datahub_datasets.semantic_model_json),
+                    governance_policy_json = excluded.governance_policy_json,
+                    governance_readiness_json = excluded.governance_readiness_json
+                ''',
+                (
+                    dataset_id,
+                    name,
+                    path,
+                    uploaded_at,
+                    num_rows,
+                    num_cols,
+                    json.dumps(schema),
+                    json.dumps(preview),
+                    json.dumps(semantic_model) if semantic_model else None,
+                    json.dumps(policy),
+                    json.dumps(readiness) if readiness else None,
+                ),
+            )
 
         response = {'message': 'Dataset registered successfully', 'governance_policy': policy}
         if readiness:

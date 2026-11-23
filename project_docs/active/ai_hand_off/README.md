@@ -10,7 +10,7 @@ Antigravity owns bounded frontend implementation, React/CSS, UI rendering, and f
 
 ## Active Handoffs And Goal Prompts
 
-[Business Object definitions](business_object_definitions.md) is the active Antigravity handoff. Consult [status](../status/project_execution_status.md) and the [sole gate](../active_gate/README.md) before acting.
+Consult [status](../status/project_execution_status.md) and the [sole gate](../active_gate/README.md) for the current owner.
 
 Completed handoffs belong outside this active folder.
 

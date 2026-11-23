@@ -1,10 +1,26 @@
 {
   "schema_version": 1,
   "authorized_work": {
-    "name": "Configure Business Objects in Data Model"
+    "name": "Explicitly save and fully reopen working datasets"
   },
   "authorization_state": "AUTHORIZED",
-  "lifecycle_state": "IN PROGRESS",
+  "lifecycle_state": "AWAITING USER ACCEPTANCE",
+  "saved_dataset_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-11-22",
+    "instruction": "Uploads should enter Data Hub only when a user chooses Save Dataset. Opening a saved dataset restores its full working state. Remove the Open in Analytics button from Data Hub. Just perform the frontend stuff after yourself.",
+    "scope": "Codex owns the saved-dataset backend, Data Hub and working dataset frontend, and integration verification. The user owns browser acceptance.",
+    "codex_frontend_implementation_authorized": true
+  },
+  "paused_business_object_repair": {
+    "gate": "Configure Business Objects in Data Model",
+    "roadmap_phase": "Phase 1 — Business Object definitions",
+    "milestone": "Step 1: Repair Business Object save and refresh behavior",
+    "owner": "Antigravity",
+    "state": "Paused for the saved-dataset priority",
+    "handoff": "project_docs/archive/business_object_definitions_repair_paused_2026_11_22.md",
+    "verification": "Antigravity reported five focused tests and a production build passing. Codex identified a late-list race and missing model-choice refresh after a save conflict. The repair and browser acceptance are outstanding."
+  },
   "data_hub_delete_all_authorization": {
     "approved_by": "User",
     "approved_at": "2026-11-22",
@@ -354,6 +370,15 @@
     "acceptance": "Accepted by the user in chat on 2026-11-22."
   },
   "allowed_paths": [
+    "backend/routes/analysis.py",
+    "backend/repositories/saved_dataset_repository.py",
+    "backend/services/saved_datasets.py",
+    "backend/services/relationship_execution.py",
+    "tests/test_saved_datasets.py",
+    "project_docs/active/saved_datasets/README.md",
+    "project_docs/active/ai_hand_off/saved_dataset_open.md",
+    "project_docs/archive/business_object_definitions_repair_paused_2026_11_22.md",
+    "project_docs/archive/saved_dataset_activation_handoff_superseded_2026_11_22.md",
     "backend/routes/datahub_routes.py",
     "tests/test_source_workspace_context.py",
     "tests/test_source_relationships.py",
@@ -491,5 +516,5 @@
     "project_docs/archive/ml_studio_duplicate_draft_reviewed_2026_09_26.md"
   ],
   "accepted_change_snapshot": "project_docs/active/status/accepted_change_snapshot.json",
-  "codex_frontend_edits_allowed": false
+  "codex_frontend_edits_allowed": true
 }

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
 import './DataCleaningForm.css';
 import CloseButton from '../buttons/CloseButton';
@@ -46,7 +46,7 @@ function DataCleaningForm(props) {
   return <LegacyDataCleaningForm {...props} />;
 }
 
-function LegacyDataCleaningForm({ closeForm, setShowDataPreview, initialSteps = [], onApplyComplete, mlStudioMode, mlStudioOpeningContext }) {
+function LegacyDataCleaningForm({ closeForm, setShowDataPreview, initialSteps = [], onApplyComplete, mlStudioMode, mlStudioOpeningContext, workingWorkspace, onWorkingRefine }) {
   const {
     uploadedData,
     fullData,
@@ -64,6 +64,10 @@ function LegacyDataCleaningForm({ closeForm, setShowDataPreview, initialSteps = 
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [editingId, setEditingId] = useState(null);
+  const refineInFlight = useRef(null);
+  const refinePreview = useRef(null);
+  const refineOperation = useRef(null);
+  useEffect(() => () => refineInFlight.current?.abort(), []);
   const { isHelpVisible, toggleHelp, closeHelp } = useHelpOverlay();
 
   const helpId = 'dataCleaning';
@@ -481,11 +485,51 @@ function LegacyDataCleaningForm({ closeForm, setShowDataPreview, initialSteps = 
       return { type, params };
     });
 
+  const runWorkingRefine = async (steps, previewOnly) => {
+    const controller = new AbortController();
+    refineInFlight.current = controller;
+    const fields = {
+      workspace_id: workingWorkspace.workspace_id, workspace_version: workingWorkspace.version,
+      source_id: workingWorkspace.primary_source_id, steps,
+    };
+    const signature = JSON.stringify(fields);
+    const fingerprint = refinePreview.current?.signature === signature ? refinePreview.current.fingerprint : undefined;
+    if (!previewOnly && (refineOperation.current?.signature !== signature || refineOperation.current?.fingerprint !== fingerprint)) {
+      refineOperation.current = { signature, fingerprint, id: window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}` };
+    }
+    const payload = previewOnly ? fields : { ...fields, request_id: refineOperation.current.id, ...(fingerprint && { source_fingerprint: fingerprint }) };
+    const endpoint = previewOnly ? 'refine-preview' : 'refine-working';
+    try {
+      const { data } = await axios.post(`${API_URL}/api/datahub/${endpoint}`, payload, { signal: controller.signal });
+      if (controller.signal.aborted) return;
+      if (previewOnly) {
+        refinePreview.current = { signature, fingerprint: data.source_fingerprint };
+        setPreviewRows(data.preview || []);
+        setSuccess('Preview updated');
+      } else {
+        if (!data.workspace?.workspace_id || !data.analysis_context || !Array.isArray(data.full_data)) throw new Error('Incomplete Refine result. Try again.');
+        onWorkingRefine(data);
+      }
+    } catch (err) {
+      if (!controller.signal.aborted) setError(err.response?.data?.error?.message || err.message || 'Failed to apply cleaning steps.');
+    } finally {
+      if (!controller.signal.aborted) {
+        refineInFlight.current = null;
+        setLoading(false);
+      }
+    }
+  };
+
   const runCleaning = async (previewOnly = true) => {
     if (mlStudioMode) return;
+    if (refineInFlight.current) return;
     setLoading(true);
     setError(null);
     setSuccess(null);
+    if (workingWorkspace && onWorkingRefine) {
+      await runWorkingRefine(buildStepPayload(), previewOnly);
+      return;
+    }
     try {
       const response = await axios.post(`${API_URL}/api/manual_cleaning`, {
         steps: buildStepPayload(),

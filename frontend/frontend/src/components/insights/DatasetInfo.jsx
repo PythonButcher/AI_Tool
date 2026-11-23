@@ -13,38 +13,39 @@ function DatasetInfo({ selectedStat, className = '' }) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const dataset = useActiveDataset();
-  const { semanticModel, semanticModelStatus } = useContext(DataContext);
+  const { semanticModel, semanticModelStatus, analysisContext } = useContext(DataContext);
   const { addChart, addDashboardKpi, openDashboard } = useWindowContext();
 
   useEffect(() => {
-    if (dataset) {
-      fetchDataInfo();
+    if (!dataset) return undefined;
+    const controller = new AbortController();
+    setDataInfo(null);
+    setError(null);
+    setIsLoading(true);
+    const options = { signal: controller.signal };
+    async function loadDataInfo() {
+      try {
+        const { data } = analysisContext?.primary_source_id
+          ? await axios.post(`${API_URL}/api/numbers`, { analysis_context: analysisContext }, options)
+          : await axios.get(`${API_URL}/api/numbers`, options);
+        if (controller.signal.aborted) return;
+        if (data?.data_info) setDataInfo(data.data_info);
+        else setError('No data information returned from backend.');
+      } catch (error) {
+        if (!controller.signal.aborted) setError('Failed to fetch data information.');
+      } finally {
+        if (!controller.signal.aborted) setIsLoading(false);
+      }
     }
-  }, [dataset]);
+    loadDataInfo();
+    return () => controller.abort();
+  }, [dataset, analysisContext]);
 
   useEffect(() => {
     if (selectedStat) {
       fetchStatData(selectedStat);
     }
   }, [selectedStat]);
-
-  const fetchDataInfo = async () => {
-    setIsLoading(true);
-    try {
-      const response = await axios.get(`${API_URL}/api/numbers`);
-      if (response.data && response.data.data_info) {
-        setDataInfo(response.data.data_info);
-        setError(null);
-      } else {
-        setError('No data information returned from backend.');
-      }
-    } catch (err) {
-      setError('Failed to fetch data information.');
-      console.error('Error fetching data info:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const fetchStatData = async (statType) => {
     setIsLoading(true);

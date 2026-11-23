@@ -27,6 +27,7 @@ function DataFilterPanel({ openDataFilter, setOpenDataFilter }) {
     setFilteredData,
     setSemanticModel,
     refreshSemanticModelFromDataset,
+    activeWorkspace,
   } = useContext(DataContext);
 
   const [field, setField] = useState('');
@@ -91,6 +92,11 @@ function DataFilterPanel({ openDataFilter, setOpenDataFilter }) {
     const result = applyRules(filterDataset, rules);
     setFilteredData(result);
 
+    if (activeWorkspace) {
+      setOpenDataFilter(false);
+      return;
+    }
+
     try {
       const response = await axios.post(`${API_URL}/api/filtered-upload`, { data_preview: result });
       await syncSemanticModel(result, response.data?.semantic_model, 'filter_apply');
@@ -105,6 +111,11 @@ function DataFilterPanel({ openDataFilter, setOpenDataFilter }) {
   const handleClearFilters = async () => {
     setRules([]);
     setFilteredData(null);
+
+    if (activeWorkspace) {
+      setOpenDataFilter(false);
+      return;
+    }
 
     const original = fullDataset.length ? fullDataset : dropdownDataset;
 
@@ -122,7 +133,8 @@ function DataFilterPanel({ openDataFilter, setOpenDataFilter }) {
   return (
     <Drawer anchor="right" open={openDataFilter} onClose={toggleDrawer(false)}>
       <div style={{ width: 300, padding: 20 }}>
-        <Typography variant="h6" gutterBottom>Filters</Typography>
+        <Typography variant="h6" gutterBottom>{activeWorkspace ? 'Preview filters' : 'Filters'}</Typography>
+        {activeWorkspace && <Typography variant="body2" gutterBottom>To save a row change, apply it in Refine.</Typography>}
         <IconButton onClick={toggleDrawer(false)} style={{ float: 'right', marginTop: -40 }} aria-label="Close">✕</IconButton>
 
         <TextField

@@ -28,14 +28,20 @@ const TOOLS = [
 ];
 const TOOL_DIRECTORY = { id: 'all', label: 'Analytics tools', icon: FaLayerGroup, description: 'Choose a tool for this workspace' };
 
-export default function AnalyticsShell({ onOpenAiChat, onOpenGallery, onOpenAiChart }) {
+export default function AnalyticsShell({ onOpenAiChat, onOpenGallery, onOpenAiChart, workingDatasetName }) {
   const { analyticsWorkspace: workspace, updateAnalyticsWorkspace: commit, analyticsStorage } = useWindowContext();
   const activeDataset = useActiveDataset();
   const model = useSemanticModel();
   const { analysisContext } = useContext(DataContext);
   const rows = useMemo(() => normalizeDatasetRows(activeDataset), [activeDataset]);
   const inlineId = useMemo(() => inlineIdentity(rows), [rows]);
-  const defaultSource = useMemo(() => rows.length ? { kind: 'inline', id: inlineId, name: model?.dataset?.name || 'Current attached data', row_scope: 'unknown' } : null, [inlineId, model?.dataset?.name, rows.length]);
+  const defaultSource = useMemo(() => {
+    const name = workingDatasetName || model?.dataset?.name || 'Current attached data';
+    if (analysisContext?.workspace_id) {
+      return { kind: 'workspace', id: analysisContext.workspace_id, name, analysis_context: analysisContext };
+    }
+    return rows.length ? { kind: 'inline', id: inlineId, name, row_scope: 'unknown' } : null;
+  }, [analysisContext, inlineId, model?.dataset?.name, rows.length, workingDatasetName]);
   const saved = workspace.explorations.find(a => a.id === workspace.activeAnalysisId);
   const [draft, setDraft] = useState(() => clone(workspace.drafts.current?.config || saved?.config || defaultAnalysis(defaultSource)));
   const [result, setResult] = useState(() => workspace.drafts.current?.result || saved?.result || null);
@@ -77,7 +83,7 @@ export default function AnalyticsShell({ onOpenAiChat, onOpenGallery, onOpenAiCh
   const dashboardFiltersRef = useRef(null);
   const board = workspace.dashboards.find(d => d.state.id === workspace.activeDashboardId);
   const mode = workspace.lastView;
-  const allSources = useMemo(() => [defaultSource, analysisContext && { kind: 'workspace', id: analysisContext.workspace_id, name: 'Active governed workspace', analysis_context: analysisContext }, ...sources].filter(Boolean), [defaultSource, analysisContext, sources]);
+  const allSources = useMemo(() => [defaultSource, ...sources].filter(Boolean), [defaultSource, sources]);
   const dashboardSource = board.state.analyticsSource || defaultSource;
   const selectedSource = mode === 'explore' ? draft.source : dashboardSource;
   const attachments = useMemo(() => ({ rows, inlineId, model }), [rows, inlineId, model]);

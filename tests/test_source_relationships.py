@@ -358,7 +358,7 @@ class SourceRelationshipTests(unittest.TestCase):
         self.assertEqual(shared_relationships.get_json()["relationships"], [])
         self.assertEqual(get_workspace(unrelated_workspace["workspace_id"]), unrelated_workspace)
 
-    def test_bulk_deletion_clears_catalog_and_updates_each_workspace_once(self):
+    def test_bulk_deletion_clears_catalog_and_preserves_unsaved_workspace(self):
         workspace_id, source_ids = self._workspace([
             ("orders.csv", b"id,amount\n1,10\n2,20\n"),
             ("customers.csv", b"id,name\n1,Ada\n2,Lin\n"),
@@ -377,17 +377,14 @@ class SourceRelationshipTests(unittest.TestCase):
         response = self.client.delete("/api/datahub")
 
         self.assertEqual(response.status_code, 200, response.get_json())
-        self.assertEqual(response.get_json(), {"deleted_count": 3})
+        self.assertEqual(response.get_json(), {"deleted_count": 1})
         self.assertEqual(self.client.get("/api/datahub/list").get_json(), [])
-        emptied = get_workspace(workspace_id)
-        self.assertEqual(emptied["version"], workspace["version"] + 1)
-        self.assertIsNone(emptied["primary_source_id"])
-        self.assertEqual(emptied["sources"], [])
+        self.assertEqual(get_workspace(workspace_id), workspace)
         relationships = self.client.get(f"/api/data-workspaces/{workspace_id}/relationships")
-        self.assertEqual(relationships.get_json()["relationships"], [])
+        self.assertEqual(len(relationships.get_json()["relationships"]), 1)
         self.assertTrue(all(path.is_file() for path in managed_files))
         self.assertEqual(self.client.delete("/api/datahub").get_json(), {"deleted_count": 0})
-        self.assertEqual(get_workspace(workspace_id), emptied)
+        self.assertEqual(get_workspace(workspace_id), workspace)
 
 
 if __name__ == "__main__":

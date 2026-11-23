@@ -10,13 +10,14 @@ import { defaultAnalysis } from './features/analytics/analyticsModel';
 
 jest.mock('axios', () => ({ get: jest.fn(), post: jest.fn() }));
 jest.mock('./features/whiteboard/WhiteBoard', () => () => null);
-jest.mock('./features/data-model/SourceModelCanvas', () => () => null);
+jest.mock('./features/data-model/SourceModelCanvas', () => ({ workspaceId }) => workspaceId || null);
 
 const originalFetch = global.fetch;
 
 beforeEach(() => {
   localStorage.clear();
-  jest.clearAllMocks();
+  jest.resetAllMocks();
+  axios.get.mockResolvedValue({ data: { data_info: 'Data overview' } });
   global.ResizeObserver = class {
     observe() {}
     unobserve() {}
@@ -37,7 +38,7 @@ function renderApp() {
 }
 
 test('opens file import and Data Hub from an empty Workspace', async () => {
-  axios.get.mockResolvedValue({ data: { sources: [] } });
+  axios.get.mockResolvedValue({ data: { datasets: [] } });
   renderApp();
 
   const canvas = within(screen.getByRole('main'));
@@ -48,7 +49,7 @@ test('opens file import and Data Hub from an empty Workspace', async () => {
 
   fireEvent.click(canvas.getByRole('button', { name: 'Data Hub', exact: true }));
   expect(await screen.findByText('No saved datasets yet')).toBeVisible();
-  expect(axios.get).toHaveBeenCalledWith(expect.stringMatching(/\/api\/data-sources$/), { signal: expect.anything() });
+  expect(axios.get).toHaveBeenCalledWith(expect.stringMatching(/\/api\/datahub\/datasets$/), { signal: expect.anything() });
 
   const banner = within(screen.getByRole('banner', { name: 'Datastream' }));
   fireEvent.click(banner.getByRole('button', { name: 'Upload data' }));
@@ -85,37 +86,140 @@ test('an upload attaches its dataset and enables Data Preview', async () => {
   expect(screen.getByText('customer-42')).toBeVisible();
 });
 
-test('opening a saved dataset uses its identity and recovers the existing Analytics draft', async () => {
+test('upload and Refine stay out of Data Hub until Save Dataset, then the full edited rows reopen', async () => {
+  const initialRows = Array.from({ length: 132 }, (_, index) => ({ Order: `order-${index}` }));
+  const envelope = (id, rows) => ({
+    data_preview: rows.slice(0, 5), full_data: rows, source: { source_id: id, name: 'orders.csv' },
+    workspace: { workspace_id: `ws-${id}`, primary_source_id: id, version: 1, sources: [{ source_id: id }] },
+    analysis_context: { workspace_id: `ws-${id}`, workspace_version: 1, primary_source_id: id, source_ids: [id], relationship_ids: [] },
+    semantic_model: { dimensions: [], metrics: [] },
+  });
+  const original = envelope('uploaded', initialRows);
+  const refined = envelope('refined', initialRows.slice(1));
+  let entry;
+  axios.get.mockImplementation(async () => ({ data: { datasets: entry ? [entry] : [] } }));
+  axios.post.mockImplementation(async (url, payload) => {
+    if (url.endsWith('/api/upload')) return { data: original };
+    if (url.endsWith('/api/numbers')) return { data: { data_info: 'Data overview' } };
+    if (url.endsWith('/refine-working')) return { data: refined };
+    if (url.endsWith('/saved-datasets')) {
+      entry = { dataset_id: 'saved-orders', name: payload.name, revision: (entry?.revision || 0) + 1, kind: 'refined' };
+      return { data: { dataset: entry } };
+    }
+    if (url.endsWith('/saved-orders/open')) return { data: { dataset: entry, ...refined } };
+    throw new Error(url);
+  });
+  const { container, unmount } = renderApp();
+  const banner = within(screen.getByRole('banner', { name: 'Datastream' }));
+  const navigation = within(screen.getByRole('navigation', { name: 'Main navigation' }));
+  fireEvent.click(navigation.getByRole('button', { name: 'Data Hub' }));
+  expect(await screen.findByText('No saved datasets yet')).toBeVisible();
+  fireEvent.click(banner.getByRole('button', { name: 'Upload data' }));
+  const file = new File(['Order\norder-0\n'], 'orders.csv', { type: 'text/csv' });
+  fireEvent.change(container.querySelector('input[type="file"]'), { target: { files: [file] } });
+  fireEvent.click(screen.getByRole('button', { name: 'Complete Import' }));
+  expect(await screen.findByText('order-0')).toBeVisible();
+  expect(navigation.getByRole('button', { name: 'Workspace' })).toHaveAttribute('aria-current', 'page');
+  expect(banner.getByRole('button', { name: 'Save Dataset' })).toBeVisible();
+  fireEvent.click(navigation.getByRole('button', { name: 'Data Hub' }));
+  expect(await screen.findByText('No saved datasets yet')).toBeVisible();
+  fireEvent.click(navigation.getByRole('button', { name: 'Workspace' }));
+
+  fireEvent.click(banner.getByLabelText('More actions'));
+  fireEvent.click(banner.getByRole('button', { name: 'Refine data' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Missing & Rows' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Remove Top' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Add Step' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Apply All' }));
+  expect(await screen.findByText(/Refine changes applied/)).toBeVisible();
+  expect(screen.queryByText('order-0')).not.toBeInTheDocument();
+  expect(axios.post).toHaveBeenCalledWith(expect.stringMatching(/refine-working$/), expect.objectContaining({
+    source_id: 'uploaded', steps: [{ type: 'remove_top_rows', params: { count: 1 } }],
+  }), expect.any(Object));
+  fireEvent.click(navigation.getByRole('button', { name: 'Data Hub' }));
+  expect(await screen.findByText('No saved datasets yet')).toBeVisible();
+  fireEvent.click(navigation.getByRole('button', { name: 'Workspace' }));
+
+  fireEvent.click(banner.getByRole('button', { name: 'Save Dataset' }));
+  const dialog = within(screen.getByRole('dialog', { name: 'Save Dataset' }));
+  fireEvent.change(dialog.getByRole('textbox', { name: 'Dataset name' }), { target: { value: 'Refined orders' } });
+  fireEvent.click(dialog.getByRole('button', { name: 'Save to Data Hub' }));
+  expect(await screen.findByText(/Saved “Refined orders” to Data Hub/)).toBeVisible();
+  expect(axios.post).toHaveBeenCalledWith(expect.stringMatching(/saved-datasets$/), expect.objectContaining({
+    workspace_id: 'ws-refined', source_id: 'refined', kind: 'current', name: 'Refined orders',
+  }), expect.any(Object));
+
+  unmount();
+  renderApp();
+  const reopenedBanner = within(screen.getByRole('banner', { name: 'Datastream' }));
+  fireEvent.click(reopenedBanner.getByRole('button', { name: 'Data Hub' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Open dataset' }));
+  expect(await screen.findByText('order-1')).toBeVisible();
+  fireEvent.click(reopenedBanner.getByLabelText('More actions'));
+  fireEvent.click(reopenedBanner.getByRole('button', { name: 'Inspect or download rows' }));
+  expect(screen.getByText('order-131')).toBeVisible();
+  expect(screen.queryByText('order-0')).not.toBeInTheDocument();
+  fireEvent.click(reopenedBanner.getByRole('button', { name: 'Save Dataset' }));
+  const updateDialog = within(screen.getByRole('dialog', { name: 'Save Dataset' }));
+  expect(updateDialog.getByRole('button', { name: 'Save a copy' })).toBeVisible();
+  fireEvent.click(updateDialog.getByRole('button', { name: 'Update dataset' }));
+  await waitFor(() => expect(axios.post).toHaveBeenCalledWith(expect.stringMatching(/saved-datasets$/), expect.objectContaining({
+    dataset_id: 'saved-orders', expected_revision: 1,
+  }), expect.any(Object)));
+});
+
+test('opening a saved model restores full workbench data and offers its exact Analytics scope without replacing a draft', async () => {
   const previous = { kind: 'datahub', id: 'orders-1', name: 'Orders' };
-  const selected = { kind: 'datahub', id: 'orders-2', name: 'Orders' };
+  const selected = { kind: 'model', dataset_id: 'orders-2', name: 'Orders', revision: 1 };
+  const context = { workspace_id: 'saved-orders-workspace', workspace_version: 1, primary_source_id: 'orders-primary',
+    source_ids: ['orders-primary', 'orders-items'], relationship_ids: ['orders-to-items'] };
+  const rows = Array.from({ length: 131 }, (_, index) => ({ line: `restored-${index}` }));
   const workspace = emptyWorkspace();
+  workspace.lastView = 'explore';
   workspace.drafts.current = { config: { ...defaultAnalysis(previous), title: 'Existing draft' } };
   localStorage.setItem(STORAGE_KEY, JSON.stringify(workspace));
-  axios.get.mockResolvedValue({ data: { sources: [previous, selected].map(source => ({
-    source_id: source.id, name: source.name, source_kind: 'upload',
-  })) } });
+  axios.get.mockResolvedValue({ data: { datasets: [
+    { dataset_id: 'orders-1', name: 'Orders', kind: 'source', revision: 1 }, selected,
+  ] } });
+  axios.post.mockResolvedValue({ data: {
+    dataset: selected, data_preview: rows.slice(0, 5), full_data: rows,
+    source: { source_id: context.primary_source_id }, semantic_model: { dimensions: [], metrics: [] },
+    workspace: { workspace_id: context.workspace_id, primary_source_id: context.primary_source_id, version: 1, sources: [{}, {}] },
+    analysis_context: context,
+  } });
   global.fetch = jest.fn(async (url, options) => {
     const payload = options?.body && JSON.parse(options.body);
-    if (!payload) return { ok: true, json: async () => [previous, selected] };
-    if (payload.source.id === selected.id) return { ok: false, json: async () => ({ error: 'Saved dataset is unavailable.' }) };
+    if (!payload) return { ok: true, json: async () => [previous] };
     return { ok: true, json: async () => ({ fields: [], metrics: [] }) };
   });
   renderApp();
 
-  fireEvent.click(within(screen.getByRole('navigation', { name: 'Main navigation' })).getByRole('button', { name: 'Data Hub' }));
+  const banner = within(screen.getByRole('banner', { name: 'Datastream' }));
+  const navigation = within(screen.getByRole('navigation', { name: 'Main navigation' }));
+  fireEvent.click(navigation.getByRole('button', { name: 'Data Hub' }));
   const namedRecord = await screen.findByRole('button', { name: 'View details for Orders (orders-2)' });
-  fireEvent.click(within(namedRecord.closest('li')).getByRole('button', { name: 'Open in Analytics' }));
-  expect(await screen.findByText('Saved dataset is unavailable.')).toBeVisible();
-  expect(screen.getByRole('combobox', { name: 'Analytics dataset' })).toHaveValue('datahub:orders-2');
-  const request = global.fetch.mock.calls.map(([, options]) => options?.body && JSON.parse(options.body))
-    .find(payload => payload?.source.id === selected.id);
-  expect(request).toMatchObject({ source: selected, metadata_only: true });
-  expect(request).not.toHaveProperty('dataset');
+  fireEvent.click(within(namedRecord.closest('li')).getByRole('button', { name: 'Open dataset' }));
+  expect(await screen.findByText('restored-0')).toBeVisible();
+  expect(navigation.getByRole('button', { name: 'Workspace' })).toHaveAttribute('aria-current', 'page');
+  fireEvent.click(banner.getByLabelText('More actions'));
+  fireEvent.click(banner.getByRole('button', { name: 'Inspect or download rows' }));
+  expect(screen.getByText('restored-130')).toBeVisible();
+  fireEvent.click(navigation.getByRole('button', { name: 'Data Model' }));
+  expect(screen.getByText(context.workspace_id)).toBeVisible();
   const drafts = JSON.parse(localStorage.getItem(STORAGE_KEY)).drafts;
   expect(Object.values(drafts)).toContainEqual(expect.objectContaining({
     config: expect.objectContaining({ title: 'Existing draft', source: previous }),
   }));
-  expect(within(screen.getByRole('navigation', { name: 'Main navigation' })).getByRole('button', { name: 'Analytics' })).toHaveAttribute('aria-current', 'page');
+  fireEvent.click(navigation.getByRole('button', { name: 'Analytics' }));
+  const selector = await screen.findByRole('combobox', { name: 'Analytics dataset' });
+  expect(selector).toHaveValue('datahub:orders-1');
+  fireEvent.change(selector, { target: { value: `workspace:${context.workspace_id}` } });
+  await waitFor(() => {
+    const request = global.fetch.mock.calls.map(([, options]) => options?.body && JSON.parse(options.body))
+      .find(payload => payload?.source?.id === context.workspace_id);
+    expect(request).toMatchObject({ source: { kind: 'workspace', analysis_context: context }, metadata_only: true });
+    expect(request).not.toHaveProperty('dataset');
+  });
 });
 
 test('the header exposes primary destinations and dismisses secondary actions from the keyboard', () => {

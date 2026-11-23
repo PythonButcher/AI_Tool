@@ -5,6 +5,7 @@ import React, {
   useMemo,
   useContext,
   useCallback,
+  useRef,
 } from 'react';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
@@ -58,10 +59,19 @@ export const DataProvider = ({ children }) => {
   const [workspaceRefreshStatus, setWorkspaceRefreshStatus] = useState('idle');
   const [workspaceRefreshError, setWorkspaceRefreshError] = useState(null);
   const [workspaceVersionConflict, setWorkspaceVersionConflict] = useState(null);
+  const workspaceRead = useRef(0);
+  const anomalyRequest = useRef(null);
 
   const setWorkspaceEnvelope = useCallback((envelope, clearConflict = true) => {
-    if (envelope?.workspace) setActiveWorkspace(envelope.workspace);
-    if (envelope?.analysis_context) setAnalysisContext(envelope.analysis_context);
+    workspaceRead.current += 1;
+    if (envelope?.analysis_context !== undefined) {
+      anomalyRequest.current?.abort();
+      anomalyRequest.current = null;
+      setIsDetecting(false);
+      setAnomalies([]);
+    }
+    if (envelope?.workspace !== undefined) setActiveWorkspace(envelope.workspace);
+    if (envelope?.analysis_context !== undefined) setAnalysisContext(envelope.analysis_context);
     setWorkspaceRefreshStatus('idle');
     setWorkspaceRefreshError(null);
     if (clearConflict) {
@@ -80,6 +90,7 @@ export const DataProvider = ({ children }) => {
 
   const refreshWorkspace = useCallback(async (workspaceId) => {
     if (!workspaceId) return null;
+    const read = ++workspaceRead.current;
     setWorkspaceRefreshStatus('refreshing');
     setWorkspaceRefreshError(null);
     // Intentionally do not clear workspaceVersionConflict here to keep it visible during reconciliation
@@ -87,6 +98,7 @@ export const DataProvider = ({ children }) => {
     try {
       const response = await fetch(`${API_URL}/api/data-workspaces/${workspaceId}`);
       const data = await response.json();
+      if (read !== workspaceRead.current) return null;
 
       if (!response.ok) {
         const err = new Error(data.error?.message || data.error || 'Failed to refresh workspace');
@@ -114,6 +126,7 @@ export const DataProvider = ({ children }) => {
       } else {
         const acResponse = await fetch(`${API_URL}/api/data-workspaces/${workspaceId}/analysis-context`);
         const acData = await acResponse.json();
+        if (read !== workspaceRead.current) return null;
 
         if (!acResponse.ok) {
           const err = new Error(acData.error?.message || 'Failed to fetch analysis context');
@@ -126,6 +139,7 @@ export const DataProvider = ({ children }) => {
         return envelope;
       }
     } catch (error) {
+      if (read !== workspaceRead.current) return null;
       console.error('Failed to refresh workspace:', error);
       setWorkspaceRefreshError({ code: error.code || 'refresh_error', message: error.message });
       setWorkspaceRefreshStatus('error');
@@ -134,16 +148,20 @@ export const DataProvider = ({ children }) => {
   }, [analysisContext, setWorkspaceEnvelope]);
 
   const detectAnomalies = useCallback(async () => {
-    if (isDetecting) return;
+    if (anomalyRequest.current) return;
+    const controller = new AbortController();
+    anomalyRequest.current = controller;
     setIsDetecting(true);
     try {
       const response = await fetch(`${API_URL}/api/outliers`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contamination: 0.02 }),
+        body: JSON.stringify({ contamination: 0.02, ...(analysisContext && { analysis_context: analysisContext }) }),
+        signal: controller.signal,
       });
 
       const data = await response.json();
+      if (controller.signal.aborted) return;
       if (!response.ok) {
         throw new Error(data.error || 'Failed to detect anomalies');
       }
@@ -155,11 +173,14 @@ export const DataProvider = ({ children }) => {
         alert('No outliers detected.');
       }
     } catch (error) {
-      alert(`Failed to detect anomalies: ${error.message}`);
+      if (!controller.signal.aborted) alert(`Failed to detect anomalies: ${error.message}`);
     } finally {
-      setIsDetecting(false);
+      if (!controller.signal.aborted) {
+        anomalyRequest.current = null;
+        setIsDetecting(false);
+      }
     }
-  }, [isDetecting]);
+  }, [analysisContext]);
 
   const refreshSemanticModelFromDataset = useCallback(async (dataset, metadata = {}) => {
     const rows = normalizeDatasetRows(dataset);
