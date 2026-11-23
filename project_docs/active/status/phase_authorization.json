@@ -324,6 +324,11 @@
     "approved_at": "2026-11-21",
     "scope": "Review Datastream, Context Ledger, and Slipstream together and record the ranked product recommendations in Codex future planning. Documentation only."
   },
+  "publishing_portal_planning_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-11-22",
+    "scope": "Prepare and index the deferred standalone Datastream Publishing Portal build plan. This authorization covers planning documentation."
+  },
   "data_hub_rebuild_planning_authorization": {
     "approved_by": "User",
     "approved_at": "2026-11-21",
@@ -386,6 +391,7 @@
     "project_docs/active/future/codex/ml_studio_power_query_preview_cancel.md",
     "project_docs/active/future/codex/README.md",
     "project_docs/active/future/codex/three_project_data_platform_review.md",
+    "project_docs/active/future/codex/datastream_publishing_portal_standalone_application_build_plan.md",
     "project_docs/archive/data_hub_navigation_rebuild_accepted_2026_11_22.md",
     "project_docs/archive/README.md",
     "project_docs/archive/ml_studio_power_query_opening_superseded_2026_10_01.md",
