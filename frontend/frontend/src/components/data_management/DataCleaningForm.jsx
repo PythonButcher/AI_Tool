@@ -30,7 +30,10 @@ function DataCleaningForm(props) {
   return <LegacyDataCleaningForm {...props} />;
 }
 
-function LegacyDataCleaningForm({ closeForm, setShowDataPreview, initialSteps = [], onApplyComplete, mlStudioMode, mlStudioOpeningContext, workingWorkspace, workingDatasetName, onWorkingRefine }) {
+function LegacyDataCleaningForm({
+  closeForm, setShowDataPreview, initialSteps = [], onApplyComplete, mlStudioMode, mlStudioOpeningContext,
+  workingWorkspace, workingDatasetName, onWorkingRefine, onApplyingRefine, embedded = false, visible = true,
+}) {
   const {
     uploadedData,
     fullData,
@@ -521,14 +524,22 @@ function LegacyDataCleaningForm({ closeForm, setShowDataPreview, initialSteps = 
     setError(null);
     setSuccess(null);
     if (workingWorkspace && onWorkingRefine) {
-      await runWorkingRefine(buildStepPayload(), previewOnly);
+      if (!previewOnly) onApplyingRefine?.(true);
+      try {
+        await runWorkingRefine(buildStepPayload(), previewOnly);
+      } finally {
+        if (!previewOnly) onApplyingRefine?.(false);
+      }
       return;
     }
+    const controller = new AbortController();
+    refineInFlight.current = controller;
     try {
       const response = await axios.post(`${API_URL}/api/manual_cleaning`, {
         steps: buildStepPayload(),
         preview_only: previewOnly,
-      });
+      }, { signal: controller.signal });
+      if (controller.signal.aborted) return;
       const { preview, cleaned_data, semantic_model } = response.data;
       recordPreview(preview || [], response.data.row_count ?? cleaned_data?.length);
       if (!previewOnly) {
@@ -539,23 +550,34 @@ function LegacyDataCleaningForm({ closeForm, setShowDataPreview, initialSteps = 
           refreshSemanticModelFromDataset(cleaned_data, { source: 'manual_cleaning_apply', preserveUserMetrics: true });
         }
         setSuccess('Cleaning applied and dataset updated.');
+        if (embedded) {
+          setSteps([]);
+          setEditingId(null);
+          setSelectedTransform(null);
+        }
         if (setShowDataPreview) setShowDataPreview(true);
         if (onApplyComplete) onApplyComplete();
       } else {
         setSuccess('Preview updated');
       }
     } catch (err) {
-      setError(err.response?.data?.error || err.message || 'Failed to apply cleaning steps.');
+      if (!controller.signal.aborted) setError(err.response?.data?.error?.message || err.response?.data?.error || err.message || 'Failed to apply cleaning steps.');
     } finally {
-      setLoading(false);
+      if (!controller.signal.aborted) {
+        refineInFlight.current = null;
+        setLoading(false);
+      }
     }
   };
+
+  if (embedded && !visible) return null;
 
   const activeTransform = transformLookup[selectedTransform];
 
   const editor = (
-      <div className="manual-cleaning-shell" role={mlStudioMode ? undefined : 'dialog'}
-        aria-modal={mlStudioMode ? undefined : true} aria-labelledby="refine-editor-title">
+      <div className={`manual-cleaning-shell${embedded ? ' manual-cleaning-shell--embedded' : ''}`}
+        role={mlStudioMode ? undefined : embedded ? 'region' : 'dialog'}
+        aria-modal={mlStudioMode || embedded ? undefined : true} aria-labelledby="refine-editor-title">
         <div className="manual-cleaning-header">
           <div className="header-left">
             <div className="header-title">
@@ -592,7 +614,7 @@ function LegacyDataCleaningForm({ closeForm, setShowDataPreview, initialSteps = 
             >
               ❓
             </button>
-            <CloseButton onClick={closeForm} />
+            {!embedded && <CloseButton onClick={closeForm} />}
           </div>
         </div>
 
@@ -717,6 +739,7 @@ function LegacyDataCleaningForm({ closeForm, setShowDataPreview, initialSteps = 
   );
 
   if (mlStudioMode) return <div className="cleaning-form-overlay">{editor}</div>;
+  if (embedded) return editor;
 
   return <Modal open onClose={closeForm} hideBackdrop className="cleaning-form-overlay">{editor}</Modal>;
 }

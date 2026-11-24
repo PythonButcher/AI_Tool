@@ -2,8 +2,9 @@ import React, { useContext, useMemo } from 'react';
 import { createTheme, ThemeProvider as MuiThemeProvider } from '@mui/material/styles';
 import { CssBaseline } from '@mui/material';
 import { ThemeContext } from './ThemeContext';
+import { getWorkspacePortalContainer } from '../components/layout/workspacePortal';
 
-export const MuiThemeContext = ({ children }) => {
+export const MuiThemeContext = ({ children, workspaceVisible = true }) => {
   const { theme: currentTheme } = useContext(ThemeContext);
 
   const theme = useMemo(() => {
@@ -62,6 +63,15 @@ export const MuiThemeContext = ({ children }) => {
       },
       shape: { borderRadius: 10 },
       components: {
+        MuiModal: {
+          defaultProps: {
+            container: getWorkspacePortalContainer,
+            disableEnforceFocus: !workspaceVisible,
+          },
+        },
+        MuiPopover: {
+          defaultProps: { container: getWorkspacePortalContainer },
+        },
         MuiPaper: {
           styleOverrides: {
             root: {
@@ -102,7 +112,7 @@ export const MuiThemeContext = ({ children }) => {
         },
       },
     });
-  }, [currentTheme]);
+  }, [currentTheme, workspaceVisible]);
 
   return (
     <MuiThemeProvider theme={theme}>

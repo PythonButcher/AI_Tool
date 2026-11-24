@@ -4,6 +4,7 @@ import PropTypes from 'prop-types';
 import { AiOutlineBulb, AiOutlineCopy, AiOutlineSearch } from 'react-icons/ai';
 import { DataContext, normalizeDatasetRows, useActiveDataset } from '../../context/DataContext';
 import { normalizeSemanticMetric } from '../../utils/semanticObjectUtils';
+import { getWorkspacePortalContainer } from '../../components/layout/workspacePortal';
 import './SemanticMetricEditor.css';
 
 const AGGREGATION_OPTIONS = [
@@ -818,7 +819,7 @@ function SemanticMetricEditor({
     </div>
   );
 
-  return ReactDOM.createPortal(modalContent, document.body);
+  return ReactDOM.createPortal(modalContent, getWorkspacePortalContainer());
 }
 
 SemanticMetricEditor.propTypes = {

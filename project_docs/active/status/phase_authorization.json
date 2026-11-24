@@ -1,10 +1,51 @@
 {
   "schema_version": 1,
   "authorized_work": {
-    "name": "Make data tools discoverable and load the current data in Power Query"
+    "name": "Open Datastream from the platform hub",
+    "allowed_paths": [
+      "frontend/frontend/src/App.jsx",
+      "frontend/frontend/src/App.test.jsx",
+      "frontend/frontend/src/components/layout/MenuBar.jsx",
+      "frontend/frontend/src/components/layout/MenuBar.css",
+      "frontend/frontend/src/components/layout/PlatformHub.jsx",
+      "frontend/frontend/src/components/layout/PlatformHub.css",
+      "frontend/frontend/src/components/layout/PlatformHub.test.jsx",
+      "frontend/frontend/src/components/layout/PlatformShell.jsx",
+      "frontend/frontend/src/components/layout/workspacePortal.js",
+      "frontend/frontend/src/context/MuiThemeContext.jsx",
+      "frontend/frontend/src/features/ai/AIShell.jsx",
+      "frontend/frontend/src/features/analytics/AnalyticsShell.jsx",
+      "frontend/frontend/src/features/ml_studio/MLStudioShell.jsx",
+      "frontend/frontend/src/features/semantic/SemanticMetricEditor.jsx",
+      "project_docs/active/active_gate/README.md",
+      "project_docs/active/status/project_execution_status.md",
+      "project_docs/active/status/phase_authorization.json"
+    ]
   },
   "authorization_state": "AUTHORIZED",
   "lifecycle_state": "AWAITING USER ACCEPTANCE",
+  "user_implementation_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-11-23",
+    "evidence": "The user directed a separate Codex chat to implement the hub in the existing Datastream frontend and authorized the bounded edits through that chat's kickoff.",
+    "instruction": "Build the platform landing hub inside the existing Datastream app and start implementation now.",
+    "scope": "Codex owns the hub, Datastream entry and return, workspace state preservation, planned app entries, and focused verification. The user owns browser acceptance.",
+    "codex_frontend_implementation_authorized": true
+  },
+  "data_tools_expansion_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-11-23",
+    "instruction": "Add a few more relevant data tools into the tool box for data developers and the current state of the application.",
+    "scope": "Add inline value validation, key checks, and grouped row summaries using the loaded dataset. Codex owns the Data Tools components, focused tests, and feature inventory update. The platform-hub phase retains ownership of its gate. The user owns browser acceptance.",
+    "codex_frontend_implementation_authorized": true
+  },
+  "data_tools_workbench_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-11-23",
+    "instruction": "Redesign Data Tools as a toolbox, add relevant working tools, and put Power Query and the other tools on the Data Tools page.",
+    "scope": "Codex owns Data Tools and its integration. The Workspace redesign is a separate Gemini assignment. The user owns browser acceptance.",
+    "codex_frontend_implementation_authorized": true
+  },
   "data_tools_workflow_authorization": {
     "approved_by": "User",
     "approved_at": "2026-11-22",
@@ -310,7 +351,7 @@
     "instruction": "just do the frontend yourself",
     "scope": "Codex implements and verifies the Welcome actions, full Data Hub destination, and persistent header in the roadmap order. The current gate authorizes one phase at a time. The user owns final browser acceptance."
   },
-  "user_implementation_authorization": {
+  "business_object_user_implementation_authorization": {
     "approved_by": "User",
     "approved_at": "2026-11-22",
     "evidence": "The user confirmed the configurable Business Objects proposal and directly asked to start it in a brand-new Codex chat.",
@@ -443,6 +484,7 @@
     "project_docs/active/future/codex/README.md",
     "project_docs/active/future/codex/three_project_data_platform_review.md",
     "project_docs/active/future/codex/datastream_publishing_portal_standalone_application_build_plan.md",
+    "project_docs/active/future/codex/datastream_business_integration_goal.md",
     "project_docs/archive/data_hub_navigation_rebuild_accepted_2026_11_22.md",
     "project_docs/archive/README.md",
     "project_docs/archive/ml_studio_power_query_opening_superseded_2026_10_01.md",

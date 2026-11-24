@@ -785,7 +785,8 @@ function CanvasContainer({
     showWhiteBoard,
     outputWindows.length,
   ]);
-  const hideCanvas = isDataToolsDest || (isWorkspaceDest && !hasWorkingDataset && !showRawViewer && !showMachineLearning && !workflowElements.length);
+  const hasWorkspaceOverlay = Boolean(dataPreviewElement || rawDataElement || machineLearningElement || workflowElements.length);
+  const hideCanvas = isDataToolsDest || (isWorkspaceDest && !hasWorkspaceOverlay);
 
   return (
     <div className="canvas-dnd-wrapper">

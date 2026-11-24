@@ -1,0 +1,147 @@
+.platform-hub {
+  height: 100dvh;
+  overflow: auto;
+  padding: clamp(36px, 11vh, 112px) clamp(16px, 5vw, 64px) 40px;
+  background: var(--workspace-background), var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.platform-hub__content {
+  width: min(100%, 960px);
+  margin-inline: auto;
+}
+
+.platform-hub h1 {
+  margin: 0 0 clamp(22px, 4vw, 36px);
+  font-size: clamp(2.25rem, 5.6vw, 3.75rem);
+  font-weight: 700;
+  letter-spacing: -.055em;
+  line-height: 1.08;
+}
+
+.platform-hub__apps {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.platform-hub__app {
+  display: grid;
+  align-content: start;
+  gap: 20px;
+  min-width: 0;
+  padding: clamp(16px, 3vw, 28px);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  background: var(--bg-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.platform-hub__app[data-featured] {
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  padding: clamp(20px, 4vw, 36px);
+  border-color: var(--accent-blue);
+  background: linear-gradient(112deg, var(--accent-blue-soft), transparent 72%), var(--bg-primary);
+  box-shadow: var(--shadow-md);
+}
+
+.platform-hub__card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.platform-hub__app[data-featured] .platform-hub__card-header {
+  grid-column: 1 / -1;
+}
+
+.platform-hub__icon {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border-radius: 10px;
+  background: var(--bg-secondary-soft);
+  color: var(--text-primary);
+  font-size: 1.05rem;
+}
+
+.platform-hub__app[data-featured] .platform-hub__icon {
+  background: var(--accent-blue-soft);
+  color: var(--accent-blue);
+}
+
+.platform-hub__status {
+  padding: 4px 10px;
+  border-radius: 20px;
+  background: var(--bg-secondary-soft);
+  color: var(--text-secondary);
+  font-size: .75rem;
+  font-weight: 600;
+}
+
+.platform-hub__status[data-available] {
+  background: var(--accent-green-soft);
+  color: var(--accent-green);
+}
+
+.platform-hub__details h2 {
+  margin: 0 0 6px;
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -.025em;
+}
+
+.platform-hub__app[data-featured] h2 {
+  font-size: clamp(1.55rem, 3vw, 2rem);
+}
+
+.platform-hub__details p {
+  max-width: 42ch;
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.55;
+}
+
+.platform-hub__launch {
+  display: inline-flex;
+  width: fit-content;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 10px 15px;
+  border-radius: 8px;
+  background: var(--accent-blue);
+  color: var(--text-on-accent);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.platform-hub__launch:hover {
+  background: var(--accent-blue-hover);
+}
+
+.platform-hub__launch:focus-visible {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: 3px;
+}
+
+/* Tooltip poppers follow their anchor document, including detached windows. */
+body:has(#datastream-workspace[hidden]) > .MuiTooltip-popper {
+  display: none;
+}
+
+@media (max-width: 620px) {
+  .platform-hub__apps,
+  .platform-hub__app[data-featured] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .platform-hub__launch {
+    width: 100%;
+  }
+}

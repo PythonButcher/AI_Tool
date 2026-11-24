@@ -832,3 +832,38 @@
     overflow: auto;
   }
 }
+
+.manual-cleaning-shell--embedded {
+  width: 100%;
+  max-width: none;
+  height: auto;
+  min-height: 460px;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.manual-cleaning-shell--embedded .workspace-area {
+  min-height: 290px;
+}
+
+.manual-cleaning-shell--embedded .preview-container {
+  min-width: 0;
+}
+
+.manual-cleaning-shell--embedded .table-scroll {
+  max-height: 410px;
+}
+
+.manual-cleaning-shell--embedded .steps-list {
+  max-height: 385px;
+}
+
+@media (max-width: 640px) {
+  .manual-cleaning-shell--embedded .workspace-area {
+    min-height: 0;
+  }
+
+  .manual-cleaning-shell--embedded .sidebar-right {
+    max-height: 260px;
+  }
+}

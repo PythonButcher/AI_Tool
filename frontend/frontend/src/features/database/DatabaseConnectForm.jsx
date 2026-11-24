@@ -1,9 +1,8 @@
 // src/components/DatabaseConnectForm.jsx
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 import TableListDropdown from './TableListDropdown';
 import './DatabaseConnectForm.css';
-import { FaDatabase, FaTimes, FaMinus } from 'react-icons/fa';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
@@ -20,6 +19,8 @@ function DatabaseConnectForm({ handleDatabaseData, onClose }) {
   const [tables, setTables]     = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError]       = useState(null);
+  const activeRequest = useRef(null);
+  useEffect(() => () => activeRequest.current?.abort(), []);
 
   /* ─── Handlers ────────────────────────────────────── */
   const handleInputChange = (e) => {
@@ -29,25 +30,29 @@ function DatabaseConnectForm({ handleDatabaseData, onClose }) {
 
   const connectToDatabase = async (e) => {
     e.preventDefault();
+    const request = new AbortController();
+    activeRequest.current = request;
     setIsLoading(true);
     setError(null);
     setTables([]);
 
     try {
-      const { data } = await axios.post(`${API_URL}/api/db/connect`, dbConfig);
-      setTables(data.tables || []);
+      const { data } = await axios.post(`${API_URL}/api/db/connect`, dbConfig, { signal: request.signal });
+      if (!request.signal.aborted) setTables(data.tables || []);
     } catch (err) {
-      setError(
+      if (!request.signal.aborted) setError(
         err.response?.data?.error ||
         'Connection failed. Check credentials or server status.'
       );
     } finally {
-      setIsLoading(false);
+      if (!request.signal.aborted) setIsLoading(false);
     }
   };
 
   const handleSelectTable = async (tableName) => {
-    if (!tableName) return;
+    if (!tableName || isLoading) return;
+    const request = new AbortController();
+    activeRequest.current = request;
     setIsLoading(true);
     setError(null);
   
@@ -55,17 +60,17 @@ function DatabaseConnectForm({ handleDatabaseData, onClose }) {
       const { data } = await axios.post(`${API_URL}/api/preview`, {
         table: tableName,
         limit: 100,
-        dbConfig: dbConfig  // ✔ send full dbConfig for auth
-      });
+        dbConfig,
+      }, { signal: request.signal });
+      if (request.signal.aborted) return;
       handleDatabaseData(data);
       if (onClose) onClose();
     } catch (err) {
-      console.error("❌ Preview Error:", err);
-      setError(
+      if (!request.signal.aborted) setError(
         err.response?.data?.error || 'Failed to load preview for this table.'
       );
     } finally {
-      setIsLoading(false);
+      if (!request.signal.aborted) setIsLoading(false);
     }
   };
   

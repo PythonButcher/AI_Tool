@@ -9,16 +9,14 @@ import { transformToChartData } from './utils/chartDataUtils';
 import AIChat from './features/ai/AIChat';
 import { DataContext, normalizeDatasetRows, useActiveDataset } from './context/DataContext';
 import { ThemeProvider } from './context/ThemeContext';
-import { WarehouseProvider } from './context/WarehouseContext';
-import { HelpOverlayProvider } from './context/HelpOverlayContext';
-import DataFilterPanel from './components/data_management/DataFilterPanel';
 import DataCleaningForm from './components/data_management/DataCleaningForm';
 import SaveDatasetDialog from './features/database/SaveDatasetDialog';
+import DataToolsWorkbench from './features/data-tools/DataToolsWorkbench';
 import Snackbar from '@mui/material/Snackbar';
 import './App.css';
-import { MuiThemeContext } from './context/MuiThemeContext';
 import { useWindowContext } from './context/WindowContext';
 import GlobalDragOverlay from './components/layout/GlobalDragOverlay';
+import PlatformShell from './components/layout/PlatformShell';
 import WorkingDataHome from './components/layout/WorkingDataHome';
 import { resolveAnalyticsDestination } from './features/analytics/analyticsNavigation';
 
@@ -46,7 +44,7 @@ const DESTINATIONS = {
   AI: 'ai',
 };
 
-function AppContent() {
+function AppContent({ platformHubLink }) {
   const {
     uploadedData, setUploadedData,
     fullData, setFullData,
@@ -55,13 +53,14 @@ function AppContent() {
     pipelineResults, setPipelineResults,
     aiReportReady, setAiReportReady,
     showAiReport, setShowAiReport,
-    setSemanticModel,
+    semanticModel, setSemanticModel,
     refreshSemanticModelFromDataset,
     setWorkspaceEnvelope,
     activeWorkspace, analysisContext,
   } = useContext(DataContext);
 
   const {
+    minimizedWindows,
     charts,
     updateChart,
     dashboardItems,
@@ -90,7 +89,9 @@ function AppContent() {
 
   // Feature Windows & Visibility State
   const [showWhiteBoard, setShowWhiteBoard] = useState(null);
-  const [openDataFilter, setOpenDataFilter] = useState(false);
+  const [activeDataTool, setActiveDataTool] = useState('rows');
+  const [workingAttachment, setWorkingAttachment] = useState(0);
+  const [isApplyingRefine, setIsApplyingRefine] = useState(false);
   const [showDataPreview, setShowDataPreview] = useState(false);
   const [showRawViewer, setShowRawViewer] = useState(false);
   const [showCanvasContainer, setShowCanvasContainer] = useState(true);
@@ -210,7 +211,7 @@ function AppContent() {
     setShowSaveDataset(false);
     setShowRawViewer(false);
     setDatasetNotice('');
-    setOpenDataFilter(false);
+    setWorkingAttachment(attachment => attachment + 1);
     setShowCleaningForm(false);
     setCleaningFormProps(null);
     setWorkspaceEnvelope({ workspace: raw?.workspace ?? null, analysis_context: raw?.analysis_context ?? null });
@@ -225,18 +226,25 @@ function AppContent() {
     } else {
       setSemanticModel(null);
     }
-    handleOpenPreview();
-  }, [setUploadedData, setFullData, setCleanedData, setFilteredData, setSemanticModel, refreshSemanticModelFromDataset, setWorkspaceEnvelope, handleOpenPreview]);
+    if (activeDestination === DESTINATIONS.EXPLORE) {
+      handleOpenPreview();
+    } else {
+      setShowDataPreview(false);
+    }
+  }, [activeDestination, setUploadedData, setFullData, setCleanedData, setFilteredData, setSemanticModel, refreshSemanticModelFromDataset, setWorkspaceEnvelope, handleOpenPreview]);
 
   const handleFileUpload = useCallback((raw, file = null) => {
     installWorkingDataset(raw, file?.name || raw?.source?.name || raw?.name);
-    if (activeDestination === DESTINATIONS.DATA_HUB || activeDestination === DESTINATIONS.DATA_TOOLS) {
+    setActiveDataTool('rows');
+    if (activeDestination === DESTINATIONS.DATA_HUB) {
       handleDestinationSelect(DESTINATIONS.WORKSPACE);
     }
+    if (activeDestination === DESTINATIONS.DATA_TOOLS) setIsDataPaneOpen(false);
   }, [activeDestination, handleDestinationSelect, installWorkingDataset]);
 
   const handleOpenDataset = useCallback(raw => {
     installWorkingDataset(raw, raw.dataset.name, raw.dataset);
+    setActiveDataTool('rows');
     handleDestinationSelect(DESTINATIONS.WORKSPACE);
   }, [installWorkingDataset, handleDestinationSelect]);
 
@@ -244,8 +252,7 @@ function AppContent() {
     installWorkingDataset(raw, workingName, savedDataset);
     setSavedScope(null);
     setDatasetNotice('Refine changes applied. Use Save Dataset to keep them in Data Hub.');
-    if (activeDestination === DESTINATIONS.DATA_TOOLS) handleDestinationSelect(DESTINATIONS.WORKSPACE);
-  }, [installWorkingDataset, workingName, savedDataset, activeDestination, handleDestinationSelect]);
+  }, [installWorkingDataset, workingName, savedDataset]);
 
 
   const handleApiData = (data) => handleFileUpload(data);
@@ -422,30 +429,75 @@ function AppContent() {
     restoreWindow('rawViewer');
   };
 
-  const workingDataSurface = [DESTINATIONS.WORKSPACE, DESTINATIONS.DATA_TOOLS].includes(activeDestination) ? (
-    <WorkingDataHome
-      tools={activeDestination === DESTINATIONS.DATA_TOOLS}
-      dataset={hasWorkingDataset ? {
-        name: workingName || uploadedData?.source?.name || 'Current dataset',
-        savedName: savedDataset?.name,
-        rowCount: workingRows.length,
-        fieldCount: uploadedData?.schema?.length ?? Object.keys(workingRows[0] || {}).length,
-        canSave: canSaveWorkingDataset,
-        canModel: Boolean(activeWorkspace?.workspace_id && activeWorkspace?.primary_source_id),
-      } : null}
+  const openDataTool = tool => {
+    setActiveDataTool(tool);
+    handleDestinationSelect(DESTINATIONS.DATA_TOOLS);
+  };
+
+  const workingDataset = hasWorkingDataset ? {
+    name: workingName || uploadedData?.source?.name || 'Current dataset',
+    savedName: savedDataset?.name,
+    rowCount: workingRows.length,
+    fieldCount: uploadedData?.schema?.length ?? Object.keys(workingRows[0] || {}).length,
+    canSave: canSaveWorkingDataset,
+    canModel: Boolean(activeWorkspace?.workspace_id && activeWorkspace?.primary_source_id),
+  } : null;
+  const sourceContext = analysisContext?.source_ids?.length === 1 && analysisContext?.relationship_ids?.length === 0
+    && analysisContext.primary_source_id === activeWorkspace?.primary_source_id
+    && analysisContext.workspace_id === activeWorkspace?.workspace_id
+    && analysisContext.workspace_version === activeWorkspace?.version ? analysisContext : null;
+
+  const workingDataSurface = activeDestination === DESTINATIONS.DATA_TOOLS ? (
+    <DataToolsWorkbench
+      key={workingAttachment}
+      dataset={workingDataset}
+      rows={workingRows}
+      schema={uploadedData?.schema}
+      metrics={semanticModel?.metrics || []}
+      sourceContext={sourceContext}
+      filteredRows={filteredData}
+      setFilteredRows={setFilteredData}
       canRefine={canRefineWorkingDataset}
+      isApplyingRefine={isApplyingRefine}
       refineUnavailableReason={refineUnavailableReason}
+      tool={activeDataTool}
+      setTool={setActiveDataTool}
+      powerQuery={<DataCleaningForm embedded visible={activeDataTool === 'query'} workingWorkspace={activeWorkspace} workingDatasetName={workingDataset?.name}
+        onWorkingRefine={handleWorkingRefine} onApplyComplete={() => setFilteredData(null)} onApplyingRefine={setIsApplyingRefine} />}
       actions={{
-        openTools: () => handleDestinationSelect(DESTINATIONS.DATA_TOOLS),
+        save: () => setShowSaveDataset(true),
+        upload: () => openSourcePanel('upload'),
+        openHub: openDataHub,
+        openModel: () => handleDestinationSelect(DESTINATIONS.DATA_MODEL),
+        loadConnection: raw => {
+          installWorkingDataset(raw, raw?.source?.name || raw?.semantic_model?.dataset?.name || raw?.name);
+          setActiveDataTool('rows');
+        },
+      }}
+    />
+  ) : activeDestination === DESTINATIONS.WORKSPACE ? (
+    <WorkingDataHome
+      dataset={workingDataset}
+      rows={workingRows}
+      schema={uploadedData?.schema}
+      filteredRows={filteredData}
+      canRefine={canRefineWorkingDataset}
+      isApplyingRefine={isApplyingRefine}
+      refineUnavailableReason={refineUnavailableReason}
+      compact={Boolean(
+        (showDataPreview && !minimizedWindows?.dataPreview)
+        || (showRawViewer && !minimizedWindows?.rawViewer)
+        || (showMachineLearning && !minimizedWindows?.machineLearning)
+      )}
+      actions={{
+        save: () => setShowSaveDataset(true),
+        openTools: () => openDataTool('rows'),
         upload: () => openSourcePanel('upload'),
         openSources: () => openSourcePanel(null),
         openHub: openDataHub,
-        openRefine: () => handleOpenCleaningForm(null),
+        openRefine: () => openDataTool('query'),
         inspectRows: inspectWorkingRows,
-        filterRows: () => {
-          previewWorkingDataset();
-          setOpenDataFilter(true);
-        },
+        filterRows: () => openDataTool('filter'),
         preview: previewWorkingDataset,
         openFields: openWorkingFields,
         connectApi: () => openSourcePanel('api'),
@@ -460,13 +512,17 @@ function AppContent() {
       <GlobalDragOverlay />
       <div className="app-container">
         <MenuBar
+          platformHubLink={platformHubLink}
           activeDestination={activeDestination}
           onDestinationSelect={handleDestinationSelect}
-          onOpenPreview={previewWorkingDataset}
+          onOpenPreview={activeDestination === DESTINATIONS.DATA_TOOLS ? () => setActiveDataTool('rows') : previewWorkingDataset}
           canPreview={previewData.length > 0 || Boolean(activeWorkspace?.primary_source_id)}
-          canSaveDataset={canSaveWorkingDataset && [DESTINATIONS.WORKSPACE, DESTINATIONS.DATA_TOOLS, DESTINATIONS.DATA_MODEL].includes(activeDestination)}
+          canSaveDataset={canSaveWorkingDataset && [DESTINATIONS.WORKSPACE, DESTINATIONS.DATA_MODEL].includes(activeDestination)}
           onSaveDataset={() => setShowSaveDataset(true)}
-          onOpenSourcePanel={openSourcePanel}
+          onOpenSourcePanel={source => {
+            if (activeDestination === DESTINATIONS.DATA_TOOLS && ['api', 'db'].includes(source)) setActiveDataTool(source === 'db' ? 'sql' : source);
+            else openSourcePanel(source);
+          }}
           onOpenFields={openWorkingFields}
           aiReportReady={aiReportReady}
           onAiReportClick={handleAiReportOpen}
@@ -492,9 +548,7 @@ function AppContent() {
           }}
         />
 
-        <main className="main-content">
-          <DataFilterPanel key={activeWorkspace?.workspace_id || 'local'} openDataFilter={openDataFilter} setOpenDataFilter={setOpenDataFilter} />
-
+        <main className="main-content" tabIndex={-1}>
           {showSaveDataset && activeWorkspace?.primary_source_id && (
             <SaveDatasetDialog
               workspace={activeWorkspace}
@@ -636,13 +690,7 @@ function AppContent() {
 function App() {
   return (
     <ThemeProvider>
-      <MuiThemeContext>
-        <WarehouseProvider>
-          <HelpOverlayProvider>
-            <AppContent />
-          </HelpOverlayProvider>
-        </WarehouseProvider>
-      </MuiThemeContext>
+      <PlatformShell Workspace={AppContent} />
     </ThemeProvider>
   );
 }

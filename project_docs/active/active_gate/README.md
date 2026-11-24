@@ -1,34 +1,36 @@
-Goal: Make data tools discoverable and open Power Query with the current dataset already visible.
+Goal: Open Datastream from the platform hub.
 
 ## User Outcome
 
-Users see the active dataset in Workspace, find preparation actions in Data Tools, and start Refine with rows and fields from the active dataset. A source-based inventory identifies capabilities users can reach and gaps they cannot reach through the current UI.
+Users land on a platform page, can open Datastream and return to the hub, and can see the planned roles of Slipstream and Context Ledger.
 
 ## Scope
 
-Use the working dataset across Workspace, Data Tools, Power Query, and the existing save and reopen flow. Keep a source-backed inventory of visible, conditional, inert, and missing UI capabilities.
+Use the existing React entrypoint and theme. Use `?app=datastream` on the app's served path and preserve unrelated query parameters and fragments. Preserve sessions, existing Datastream destinations, tools, and detached windows across hub navigation. Show planned applications as informational entries.
 
 ## Contracts
 
-- [Saved dataset API](../saved_datasets/README.md#api-contract)
-- [UI workflow and feature inventory](../reviews/datastream_ui_workflow_inventory.md)
-- [Workspace and analysis context](../contracts/multiple_data_source_workspace.md)
+- [Datastream UI workflow inventory](../reviews/datastream_ui_workflow_inventory.md)
+- [Frontend ownership](../rules/CODEX_FRONTEND_GUARDRAIL_READ_FIRST.md)
+
+This is an entry experience using the existing app shell. Live adapters, identity and SSO, access requests, provisioning, permission enforcement, and cross-app data sharing remain deferred.
 
 ## Acceptance
 
-- Workspace identifies the current dataset and offers clear next actions.
-- Data Tools is visible in navigation and routes to the existing governed actions.
-- Power Query shows the working source and bounded rows before any transformation step. Preview and Apply retain the current workspace and source identity.
-- Upload, explicit save, full reopen, Data Model, Analytics, and existing secondary features remain reachable.
-- The inventory distinguishes top-level, secondary, conditional, and missing product entry points from backend or development-only capabilities.
+- The default app address opens the platform hub. The Open Datastream link and the direct Datastream address open the workspace.
+- Users can return through the Platform hub link or browser Back and Forward, preserving the current workspace and open tools.
+- Workspace overlays and keyboard shortcuts stay within Datastream.
+- Datastream navigation, upload, Data Tools, Power Query, saving, and reopen work through the workspace entry.
+- Slipstream and Context Ledger describe their planned purposes and offer no launch action.
+- The launch and return links support keyboard operation. The hub layout fits narrow screens.
 
 ## Verification
 
-- `python -m pytest tests/test_saved_datasets.py tests/test_workspace_cleaning.py tests/test_source_workspace_context.py tests/test_business_objects.py -q`
-- `npm --prefix frontend/frontend test -- --watchAll=false --runInBand App.test.jsx DataHubWindow.test.jsx DataContext.test.jsx DataCleaningForm.test.jsx AnalyticsShell.test.jsx BusinessObjectsPanel.test.jsx PreparationEditor.test.jsx MLStudioShell.test.jsx WindowContext.test.jsx`
+- `npm --prefix frontend/frontend test -- --watchAll=false --runInBand --testTimeout=20000 App.test.jsx PlatformHub.test.jsx DataToolsWorkbench.test.jsx DataCleaningForm.test.jsx AnalyticsShell.test.jsx AIShell.test.jsx AiChatDock.test.jsx MLStudioShell.test.jsx ThemeContext.test.jsx`
 - `npm --prefix frontend/frontend run build`
-- `python .codex/hooks/ci_harness_check.py`
+- `python .codex/hooks/agent_harness_check.py`
 - `python C:/Users/18022/.codex/skills/active-gate-governance/scripts/check_active_gate.py project_docs/active/active_gate .`
+- `python .codex/hooks/ci_harness_check.py`
 - `git diff --check`
 
 ## Owner And Control Return

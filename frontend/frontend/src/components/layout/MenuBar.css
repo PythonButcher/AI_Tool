@@ -14,6 +14,13 @@
   color: var(--text-primary);
 }
 
+.app-banner__identity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
 .app-banner__brand {
   display: flex;
   align-items: center;
@@ -33,6 +40,25 @@
 
 [data-theme='dark'] .app-banner__logo {
   filter: brightness(0) invert(.94);
+}
+
+.app-banner__hub {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 30px;
+  padding: 0 6px;
+  border-radius: 6px;
+  color: var(--text-secondary);
+  font-size: .75rem;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.app-banner__hub:hover {
+  background: var(--bg-secondary-soft);
+  color: var(--text-primary);
 }
 
 .app-banner__actions {
@@ -84,6 +110,7 @@
 }
 
 .app-banner button:focus-visible,
+.app-banner a:focus-visible,
 .app-banner summary:focus-visible {
   outline: 2px solid var(--accent-blue);
   outline-offset: 2px;
@@ -159,6 +186,12 @@
 }
 
 @media (max-width: 590px) {
+  .app-banner__identity {
+    align-items: start;
+    flex-direction: column;
+    gap: 0;
+  }
+
   .app-banner__logo {
     height: 20px;
     max-width: 106px;

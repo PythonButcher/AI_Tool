@@ -46,6 +46,7 @@ import { DataContext } from '../../context/DataContext';
 import { WarehouseContext } from '../../context/WarehouseContext';
 import { useWindowContext } from '../../context/WindowContext';
 import MentionDropdown from '../../components/data_management/MentionDropdown';
+import { getWorkspacePortalContainer } from '../../components/layout/workspacePortal';
 import { detectToken, extractTokens } from '../../utils/mentionUtils';
 import { AICommands } from '../workflow/AiCommandBlock';
 import { generateAiResultPdf } from '../../utils/aiResultPdfExport';
@@ -255,6 +256,7 @@ function AIChatConversation({ onOpenDashboard, windowActions, windowNotice, conv
   const [highlightedIndex, setHighlightedIndex] = useState(0);
 
   const shellRef = useRef(null);
+  const getOverlayContainer = () => getWorkspacePortalContainer(shellRef.current?.ownerDocument);
   const inputRef = useRef(null);
   const resultsToggleRef = useRef(null);
   const resultsHeadingRef = useRef(null);
@@ -1201,7 +1203,7 @@ function AIChatConversation({ onOpenDashboard, windowActions, windowNotice, conv
       </div>
 
       <Menu anchorEl={datasetMenuAnchor} open={isDatasetMenuOpen} onClose={closeDatasetMenu}
-        container={() => shellRef.current?.ownerDocument.body} className="ai-shell__dataset-menu"
+        container={getOverlayContainer} className="ai-shell__dataset-menu"
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }} transformOrigin={{ vertical: 'top', horizontal: 'right' }}
         disableScrollLock disableRestoreFocus disableEnforceFocus
         slotProps={{ list: { id: datasetMenuId, 'aria-labelledby': `${datasetMenuId}-trigger` } }}>
@@ -1222,7 +1224,8 @@ function AIChatConversation({ onOpenDashboard, windowActions, windowNotice, conv
       </Menu>
 
       <Dialog open={isHistoryOpen} onClose={() => setIsHistoryOpen(false)} fullWidth maxWidth="sm"
-        container={() => shellRef.current?.ownerDocument.body}
+        container={getOverlayContainer}
+        disableEnforceFocus={shellRef.current?.ownerDocument === document ? undefined : false}
         className="ai-shell__chat-dialog" aria-labelledby="ai-chat-history-title">
         <DialogTitle id="ai-chat-history-title">Your chats</DialogTitle>
         <DialogContent>
@@ -1234,7 +1237,8 @@ function AIChatConversation({ onOpenDashboard, windowActions, windowNotice, conv
       </Dialog>
 
       <Dialog open={isChatActionOpen} onClose={() => setIsChatActionOpen(false)} fullWidth maxWidth="xs"
-        container={() => shellRef.current?.ownerDocument.body}
+        container={getOverlayContainer}
+        disableEnforceFocus={shellRef.current?.ownerDocument === document ? undefined : false}
         TransitionProps={{ onExited: () => setChatAction(null) }}
         className="ai-shell__chat-dialog ai-shell__chat-action-dialog" aria-labelledby="ai-chat-action-title">
         <DialogTitle id="ai-chat-action-title">{chatAction?.kind === 'rename' ? 'Rename chat' : chatAction?.kind === 'delete' ? 'Delete this chat?' : 'Reset this chat?'}</DialogTitle>

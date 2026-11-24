@@ -245,6 +245,7 @@ export default function AnalyticsShell({ onOpenAiChat, onOpenGallery, onOpenAiCh
   }, [toolPanel]);
   useEffect(() => {
     const listener = event => {
+      if (shellRef.current?.closest('[hidden]')) return;
       if (event.key === 'Escape') {
         if (focus) {
           event.preventDefault();

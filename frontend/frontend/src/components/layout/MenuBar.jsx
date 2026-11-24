@@ -1,10 +1,11 @@
 import React, { useContext, useEffect, useRef } from 'react';
-import { FaEllipsisH, FaRobot, FaSave, FaTable, FaUpload } from 'react-icons/fa';
+import { FaArrowLeft, FaEllipsisH, FaRobot, FaSave, FaTable, FaUpload } from 'react-icons/fa';
 import { ThemeContext } from '../../context/ThemeContext';
 import DestinationNav from './SideBar';
 import './MenuBar.css';
 
 function MenuBar({
+  platformHubLink,
   activeDestination,
   onDestinationSelect,
   onOpenSourcePanel,
@@ -46,9 +47,16 @@ function MenuBar({
 
   return (
     <header className="app-banner" aria-label="Datastream">
-      <button type="button" className="app-banner__brand" aria-label="Datastream home" onClick={() => onDestinationSelect('workspace')}>
-        <img className="app-banner__logo" src="/datastream-logo.png" alt="" />
-      </button>
+      <div className="app-banner__identity">
+        <button type="button" className="app-banner__brand" aria-label="Datastream home" onClick={() => onDestinationSelect('workspace')}>
+          <img className="app-banner__logo" src="/datastream-logo.png" alt="" />
+        </button>
+        {platformHubLink && (
+          <a className="app-banner__hub" {...platformHubLink}>
+            <FaArrowLeft aria-hidden="true" /> Platform hub
+          </a>
+        )}
+      </div>
 
       <DestinationNav activeDestination={activeDestination} onDestinationSelect={onDestinationSelect} />
 
