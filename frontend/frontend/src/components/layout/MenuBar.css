@@ -5,7 +5,7 @@
   flex: 0 0 auto;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: 18px;
+  gap: 20px;
   width: 100%;
   min-height: 56px;
   padding: 8px clamp(10px, 2vw, 26px);
@@ -146,7 +146,7 @@
   background: var(--accent-blue-soft);
 }
 
-@media (max-width: 1070px) {
+@media (max-width: 1180px) {
   .app-banner {
     grid-template-columns: auto minmax(0, 1fr);
     gap: 4px 10px;

@@ -19,6 +19,7 @@ import './App.css';
 import { MuiThemeContext } from './context/MuiThemeContext';
 import { useWindowContext } from './context/WindowContext';
 import GlobalDragOverlay from './components/layout/GlobalDragOverlay';
+import WorkingDataHome from './components/layout/WorkingDataHome';
 import { resolveAnalyticsDestination } from './features/analytics/analyticsNavigation';
 
 const parseRecords = (source) => {
@@ -37,6 +38,7 @@ const parseRecords = (source) => {
 
 const DESTINATIONS = {
   WORKSPACE: 'workspace',
+  DATA_TOOLS: 'data_tools',
   DATA_HUB: 'data_hub',
   DATA_MODEL: 'data_model',
   EXPLORE: 'explore',
@@ -47,7 +49,7 @@ const DESTINATIONS = {
 function AppContent() {
   const {
     uploadedData, setUploadedData,
-    setFullData,
+    fullData, setFullData,
     cleanedData, setCleanedData,
     filteredData, setFilteredData,
     pipelineResults, setPipelineResults,
@@ -116,6 +118,15 @@ function AppContent() {
   const [showCleaningForm, setShowCleaningForm] = useState(false);
   const [cleaningFormProps, setCleaningFormProps] = useState(null);
 
+  const workingRows = useMemo(() => normalizeDatasetRows(cleanedData ?? fullData ?? uploadedData), [cleanedData, fullData, uploadedData]);
+  const hasWorkingDataset = Boolean(uploadedData || activeWorkspace?.primary_source_id || workingRows.length);
+  const canRefineWorkingDataset = hasWorkingDataset && Boolean(workingRows.length)
+    && (!activeWorkspace || (refineAllowed && activeWorkspace.sources?.length === 1));
+  const canSaveWorkingDataset = Boolean(activeWorkspace?.primary_source_id);
+  const refineUnavailableReason = workingRows.length
+    ? 'Refine is available for a dataset with one source and no relationships.'
+    : 'Refine requires a dataset with rows.';
+
   // AI State
   const [aiChartData, setAiChartData] = useState(null);
   const [aiChartType, setAiChartType] = useState('Bar');
@@ -143,7 +154,7 @@ function AppContent() {
   const handleDestinationSelect = useCallback((destination) => {
     const target = resolveAnalyticsDestination(destination);
     setActiveDestination(target.destination);
-    if (target.destination === DESTINATIONS.DATA_HUB) {
+    if (target.destination === DESTINATIONS.DATA_HUB || target.destination === DESTINATIONS.DATA_TOOLS) {
       setIsDataPaneOpen(false);
       setActiveSource(null);
     }
@@ -187,6 +198,7 @@ function AppContent() {
       data_preview: previewRows,
       semantic_model: raw?.semantic_model || null,
       source: raw?.source || null,
+      schema: raw?.schema ?? raw?.source?.schema ?? null,
     });
     setFullData(finalDataset);
     setCleanedData(finalDataset);
@@ -218,7 +230,9 @@ function AppContent() {
 
   const handleFileUpload = useCallback((raw, file = null) => {
     installWorkingDataset(raw, file?.name || raw?.source?.name || raw?.name);
-    if (activeDestination === DESTINATIONS.DATA_HUB) handleDestinationSelect(DESTINATIONS.WORKSPACE);
+    if (activeDestination === DESTINATIONS.DATA_HUB || activeDestination === DESTINATIONS.DATA_TOOLS) {
+      handleDestinationSelect(DESTINATIONS.WORKSPACE);
+    }
   }, [activeDestination, handleDestinationSelect, installWorkingDataset]);
 
   const handleOpenDataset = useCallback(raw => {
@@ -230,7 +244,8 @@ function AppContent() {
     installWorkingDataset(raw, workingName, savedDataset);
     setSavedScope(null);
     setDatasetNotice('Refine changes applied. Use Save Dataset to keep them in Data Hub.');
-  }, [installWorkingDataset, workingName, savedDataset]);
+    if (activeDestination === DESTINATIONS.DATA_TOOLS) handleDestinationSelect(DESTINATIONS.WORKSPACE);
+  }, [installWorkingDataset, workingName, savedDataset, activeDestination, handleDestinationSelect]);
 
 
   const handleApiData = (data) => handleFileUpload(data);
@@ -390,6 +405,56 @@ function AppContent() {
     else if (axis === 'y') handleFieldDrop('y', fieldName);
   }, [charts, dashboardItems, handleFieldDrop, updateChart, updateDashboardItem]);
 
+  const previewWorkingDataset = () => {
+    handleDestinationSelect(DESTINATIONS.WORKSPACE);
+    setShowRawViewer(false);
+    handleOpenPreview();
+  };
+
+  const openWorkingFields = () => {
+    setActiveDataPaneTab('catalog');
+    setIsDataPaneOpen(true);
+  };
+
+  const inspectWorkingRows = () => {
+    handleDestinationSelect(DESTINATIONS.WORKSPACE);
+    setShowRawViewer(true);
+    restoreWindow('rawViewer');
+  };
+
+  const workingDataSurface = [DESTINATIONS.WORKSPACE, DESTINATIONS.DATA_TOOLS].includes(activeDestination) ? (
+    <WorkingDataHome
+      tools={activeDestination === DESTINATIONS.DATA_TOOLS}
+      dataset={hasWorkingDataset ? {
+        name: workingName || uploadedData?.source?.name || 'Current dataset',
+        savedName: savedDataset?.name,
+        rowCount: workingRows.length,
+        fieldCount: uploadedData?.schema?.length ?? Object.keys(workingRows[0] || {}).length,
+        canSave: canSaveWorkingDataset,
+        canModel: Boolean(activeWorkspace?.workspace_id && activeWorkspace?.primary_source_id),
+      } : null}
+      canRefine={canRefineWorkingDataset}
+      refineUnavailableReason={refineUnavailableReason}
+      actions={{
+        openTools: () => handleDestinationSelect(DESTINATIONS.DATA_TOOLS),
+        upload: () => openSourcePanel('upload'),
+        openSources: () => openSourcePanel(null),
+        openHub: openDataHub,
+        openRefine: () => handleOpenCleaningForm(null),
+        inspectRows: inspectWorkingRows,
+        filterRows: () => {
+          previewWorkingDataset();
+          setOpenDataFilter(true);
+        },
+        preview: previewWorkingDataset,
+        openFields: openWorkingFields,
+        connectApi: () => openSourcePanel('api'),
+        connectDatabase: () => openSourcePanel('db'),
+        openModel: () => handleDestinationSelect(DESTINATIONS.DATA_MODEL),
+      }}
+    />
+  ) : null;
+
   return (
     <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
       <GlobalDragOverlay />
@@ -397,26 +462,12 @@ function AppContent() {
         <MenuBar
           activeDestination={activeDestination}
           onDestinationSelect={handleDestinationSelect}
-          onOpenPreview={() => {
-            handleDestinationSelect(DESTINATIONS.WORKSPACE);
-            handleOpenPreview();
-          }}
+          onOpenPreview={previewWorkingDataset}
           canPreview={previewData.length > 0 || Boolean(activeWorkspace?.primary_source_id)}
-          canSaveDataset={Boolean(activeWorkspace?.primary_source_id) && ['workspace', 'data_model'].includes(activeDestination)}
+          canSaveDataset={canSaveWorkingDataset && [DESTINATIONS.WORKSPACE, DESTINATIONS.DATA_TOOLS, DESTINATIONS.DATA_MODEL].includes(activeDestination)}
           onSaveDataset={() => setShowSaveDataset(true)}
           onOpenSourcePanel={openSourcePanel}
-          onOpenFields={() => {
-            setActiveDataPaneTab('catalog');
-            setIsDataPaneOpen(true);
-          }}
-          onInspectRows={() => {
-            setShowRawViewer(true);
-            restoreWindow('rawViewer');
-          }}
-          onFilterRows={() => setOpenDataFilter(true)}
-          canRefine={!activeWorkspace || (refineAllowed && activeWorkspace.sources?.length === 1 && Boolean(cleanedData?.length))}
-          onRefine={() => handleOpenCleaningForm(null)}
-          showCleaningForm={showCleaningForm}
+          onOpenFields={openWorkingFields}
           aiReportReady={aiReportReady}
           onAiReportClick={handleAiReportOpen}
           onOpenAiChat={handleOpenAiChat}
@@ -466,6 +517,7 @@ function AppContent() {
             <DataCleaningForm
               key={cleaningFormProps?.mlStudioMode ? 'ml-studio' : activeWorkspace?.workspace_id || 'local'}
               workingWorkspace={cleaningFormProps?.mlStudioMode ? null : activeWorkspace}
+              workingDatasetName={workingName}
               onWorkingRefine={handleWorkingRefine}
               closeForm={() => {
                 if (cleaningFormProps && cleaningFormProps.onClose) {
@@ -496,6 +548,8 @@ function AppContent() {
           {showCanvasContainer && (
             <CanvasContainer
               activeDestination={activeDestination}
+              workingDataSurface={workingDataSurface}
+              hasWorkingDataset={hasWorkingDataset}
               showAiWorkflow={showAiWorkflow}
               setShowAiWorkflow={setShowAiWorkflow}
               uploadedData={uploadedData || null}

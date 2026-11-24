@@ -1,10 +1,17 @@
 {
   "schema_version": 1,
   "authorized_work": {
-    "name": "Explicitly save and fully reopen working datasets"
+    "name": "Make data tools discoverable and load the current data in Power Query"
   },
   "authorization_state": "AUTHORIZED",
   "lifecycle_state": "AWAITING USER ACCEPTANCE",
+  "data_tools_workflow_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-11-22",
+    "instruction": "Review the app workflow and inventory features that are absent or hidden. Fix the uploaded data in Power Query and add a tab for data manipulation. Add another agent to fix half of this work.",
+    "scope": "Codex owns the source inventory, Power Query and integrated verification. The delegated Codex agent owns the application navigation, Workspace landing, and Data Tools tab. The user owns browser acceptance.",
+    "codex_frontend_implementation_authorized": true
+  },
   "saved_dataset_authorization": {
     "approved_by": "User",
     "approved_at": "2026-11-22",
@@ -370,6 +377,7 @@
     "acceptance": "Accepted by the user in chat on 2026-11-22."
   },
   "allowed_paths": [
+    "project_docs/active/reviews/datastream_ui_workflow_inventory.md",
     "backend/routes/analysis.py",
     "backend/repositories/saved_dataset_repository.py",
     "backend/services/saved_datasets.py",

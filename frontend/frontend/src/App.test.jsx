@@ -82,6 +82,9 @@ test('an upload attaches its dataset and enables Data Preview', async () => {
   expect(banner.getByRole('button', { name: 'Data Preview' })).toBeEnabled();
   fireEvent.click(screen.getByTitle('Minimize'));
   await waitFor(() => expect(screen.queryByText('customer-42')).not.toBeInTheDocument());
+  const workspace = within(screen.getByRole('region', { name: 'Workspace' }));
+  expect(workspace.getByText('orders.csv')).toBeVisible();
+  expect(workspace.getByRole('button', { name: 'Browse data tools' })).toBeVisible();
   fireEvent.click(banner.getByRole('button', { name: 'Data Preview' }));
   expect(screen.getByText('customer-42')).toBeVisible();
 });
@@ -125,13 +128,22 @@ test('upload and Refine stay out of Data Hub until Save Dataset, then the full e
   expect(await screen.findByText('No saved datasets yet')).toBeVisible();
   fireEvent.click(navigation.getByRole('button', { name: 'Workspace' }));
 
-  fireEvent.click(banner.getByLabelText('More actions'));
-  fireEvent.click(banner.getByRole('button', { name: 'Refine data' }));
+  expect(within(screen.getByRole('region', { name: 'Workspace' })).getByRole('button', { name: 'Refine data' })).toBeEnabled();
+  fireEvent.click(navigation.getByRole('button', { name: 'Data Tools' }));
+  const tools = within(screen.getByRole('region', { name: 'Data Tools' }));
+  expect(tools.getByText('orders.csv')).toBeVisible();
+  expect(tools.getByText('132')).toBeVisible();
+  fireEvent.click(tools.getByRole('button', { name: 'Refine data' }));
+  const sourcePreview = within(screen.getByRole('table', { name: 'Current data' }));
+  expect(sourcePreview.getByRole('columnheader', { name: 'Order' })).toBeVisible();
+  expect(sourcePreview.getByText('order-0')).toBeVisible();
   fireEvent.click(screen.getByRole('button', { name: 'Missing & Rows' }));
   fireEvent.click(screen.getByRole('button', { name: 'Remove Top' }));
   fireEvent.click(screen.getByRole('button', { name: 'Add Step' }));
   fireEvent.click(screen.getByRole('button', { name: 'Apply All' }));
   expect(await screen.findByText(/Refine changes applied/)).toBeVisible();
+  expect(navigation.getByRole('button', { name: 'Workspace' })).toHaveAttribute('aria-current', 'page');
+  expect(await screen.findByText('order-1')).toBeVisible();
   expect(screen.queryByText('order-0')).not.toBeInTheDocument();
   expect(axios.post).toHaveBeenCalledWith(expect.stringMatching(/refine-working$/), expect.objectContaining({
     source_id: 'uploaded', steps: [{ type: 'remove_top_rows', params: { count: 1 } }],
@@ -155,8 +167,7 @@ test('upload and Refine stay out of Data Hub until Save Dataset, then the full e
   fireEvent.click(reopenedBanner.getByRole('button', { name: 'Data Hub' }));
   fireEvent.click(await screen.findByRole('button', { name: 'Open dataset' }));
   expect(await screen.findByText('order-1')).toBeVisible();
-  fireEvent.click(reopenedBanner.getByLabelText('More actions'));
-  fireEvent.click(reopenedBanner.getByRole('button', { name: 'Inspect or download rows' }));
+  fireEvent.click(within(screen.getByRole('region', { name: 'Workspace' })).getByRole('button', { name: 'Inspect rows' }));
   expect(screen.getByText('order-131')).toBeVisible();
   expect(screen.queryByText('order-0')).not.toBeInTheDocument();
   fireEvent.click(reopenedBanner.getByRole('button', { name: 'Save Dataset' }));
@@ -201,8 +212,7 @@ test('opening a saved model restores full workbench data and offers its exact An
   fireEvent.click(within(namedRecord.closest('li')).getByRole('button', { name: 'Open dataset' }));
   expect(await screen.findByText('restored-0')).toBeVisible();
   expect(navigation.getByRole('button', { name: 'Workspace' })).toHaveAttribute('aria-current', 'page');
-  fireEvent.click(banner.getByLabelText('More actions'));
-  fireEvent.click(banner.getByRole('button', { name: 'Inspect or download rows' }));
+  fireEvent.click(within(screen.getByRole('region', { name: 'Workspace' })).getByRole('button', { name: 'Inspect rows' }));
   expect(screen.getByText('restored-130')).toBeVisible();
   fireEvent.click(navigation.getByRole('button', { name: 'Data Model' }));
   expect(screen.getByText(context.workspace_id)).toBeVisible();
@@ -227,7 +237,7 @@ test('the header exposes primary destinations and dismisses secondary actions fr
   const banner = within(screen.getByRole('banner', { name: 'Datastream' }));
   const nav = within(banner.getByRole('navigation', { name: 'Main navigation' }));
   expect(nav.getByRole('button', { name: 'Workspace' })).toHaveAttribute('aria-current', 'page');
-  for (const label of ['Data Hub', 'Data Model', 'Analytics', 'ML Studio']) {
+  for (const label of ['Data Tools', 'Data Hub', 'Data Model', 'Analytics', 'ML Studio']) {
     expect(nav.getByRole('button', { name: label })).toBeVisible();
   }
   fireEvent.click(nav.getByRole('button', { name: 'Data Model' }));
@@ -241,6 +251,24 @@ test('the header exposes primary destinations and dismisses secondary actions fr
   fireEvent.keyDown(banner.getByRole('button', { name: 'Connect API' }), { key: 'Escape' });
   expect(more.closest('details')).not.toHaveAttribute('open');
   expect(more).toHaveFocus();
+});
+
+test('Data Tools exposes the actual data work and guides an empty workspace to a source', () => {
+  renderApp();
+  const nav = within(screen.getByRole('navigation', { name: 'Main navigation' }));
+  fireEvent.click(screen.getByTitle('Expand Data Pane'));
+  expect(screen.getByTitle('Collapse Data Pane')).toBeVisible();
+  fireEvent.click(nav.getByRole('button', { name: 'Data Tools' }));
+  expect(screen.getByTitle('Expand Data Pane')).toBeVisible();
+  expect(nav.getByRole('button', { name: 'Data Tools' })).toHaveAttribute('aria-current', 'page');
+  const tools = within(screen.getByRole('region', { name: 'Data Tools' }));
+  for (const name of ['Refine data', 'Filter rows', 'Inspect rows', 'Fields and metrics', 'Data Model']) {
+    expect(tools.getByRole('button', { name })).toBeDisabled();
+  }
+  expect(tools.getByRole('button', { name: 'Upload data' })).toBeEnabled();
+  expect(tools.getByRole('button', { name: 'Open Data Hub' })).toBeEnabled();
+  fireEvent.click(tools.getByRole('button', { name: 'Connect API' }));
+  expect(screen.getByPlaceholderText('https://api.example.com/data')).toBeVisible();
 });
 
 test('a completed upload does not replace a connection panel opened while it was pending', async () => {

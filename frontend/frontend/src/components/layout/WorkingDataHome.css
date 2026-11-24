@@ -1,0 +1,212 @@
+.working-data {
+  color: var(--text-primary);
+  background: var(--bg-primary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.working-data--workspace {
+  flex: none;
+  max-height: 45%;
+  overflow: auto;
+}
+
+.working-data--empty,
+.working-data--tools {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
+  overflow: auto;
+  background: var(--bg-secondary);
+}
+
+.working-data__inner {
+  box-sizing: border-box;
+  width: min(100%, 1180px);
+  padding: 16px clamp(16px, 3vw, 32px);
+}
+
+.working-data--tools .working-data__inner,
+.working-data--empty .working-data__inner {
+  padding-block: clamp(22px, 4vw, 44px);
+  margin: 0 auto;
+}
+
+.working-data__heading h1 {
+  margin: 0 0 5px;
+  font-size: clamp(1.35rem, 2.2vw, 1.85rem);
+  line-height: 1.2;
+  font-weight: 650;
+}
+
+.working-data__heading p,
+.working-data__notice {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: .9rem;
+  line-height: 1.45;
+}
+
+.working-data__dataset {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 24px;
+  margin-block: 12px;
+}
+
+.working-data__dataset > div {
+  display: grid;
+  gap: 3px;
+  overflow-wrap: anywhere;
+}
+
+.working-data__dataset > div span {
+  font-size: .8rem;
+  color: var(--text-secondary);
+}
+
+.working-data__dataset dl {
+  margin: 0;
+  display: flex;
+  gap: 16px;
+}
+
+.working-data__dataset dl > div {
+  display: flex;
+  flex-direction: row-reverse;
+  align-items: baseline;
+  gap: 5px;
+}
+
+.working-data__dataset dt {
+  color: var(--text-secondary);
+  font-size: .82rem;
+}
+
+.working-data__dataset dd {
+  margin: 0;
+  font-size: .9rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
+}
+
+.working-data__actions,
+.working-data__empty-state {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.working-data__empty-state p {
+  flex-basis: 100%;
+  margin: 0 0 4px;
+  color: var(--text-secondary);
+}
+
+.working-data__button,
+.working-data__tool {
+  color: var(--text-primary);
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.working-data__button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 34px;
+  padding: 5px 12px;
+  font-size: .83rem;
+  font-weight: 650;
+}
+
+.working-data__button--primary {
+  background: var(--accent-blue);
+  color: var(--text-on-accent);
+  border-color: transparent;
+}
+
+.working-data__button:hover:not(:disabled),
+.working-data__tool:hover:not(:disabled) {
+  border-color: var(--accent-blue);
+}
+
+.working-data__button--primary:hover:not(:disabled) {
+  background: var(--accent-blue-hover);
+}
+
+.working-data__button:focus-visible,
+.working-data__tool:focus-visible {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: 2px;
+}
+
+.working-data button:disabled {
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+  border-color: var(--border-color);
+  cursor: default;
+}
+
+.working-data__notice {
+  margin-top: 8px;
+  font-size: .8rem;
+}
+
+.working-data__section {
+  margin-top: 24px;
+}
+
+.working-data__section h2 {
+  margin: 0 0 8px;
+  font-size: 1rem;
+  font-weight: 650;
+}
+
+.working-data__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr));
+  gap: 8px;
+}
+
+.working-data__tool {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: start;
+  gap: 9px;
+  text-align: left;
+  padding: 12px;
+  min-height: 72px;
+}
+
+.working-data__tool > svg {
+  margin-top: 3px;
+  font-size: .9rem;
+  color: var(--text-secondary);
+}
+
+.working-data__tool--primary:not(:disabled) > svg:first-child {
+  color: var(--accent-blue);
+}
+
+.working-data__tool span strong,
+.working-data__tool span span {
+  display: block;
+  font-size: .84rem;
+  line-height: 1.35;
+}
+
+.working-data__tool span span {
+  margin-top: 3px;
+  color: var(--text-secondary);
+  font-size: .8rem;
+}
+
+.working-data__tool:disabled .working-data__arrow {
+  visibility: hidden;
+}

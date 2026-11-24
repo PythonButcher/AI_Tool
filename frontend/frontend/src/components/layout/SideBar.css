@@ -10,10 +10,11 @@
 .destination-nav > span {
   display: inline-flex;
   align-items: center;
-  min-height: 34px;
-  padding: 0 10px;
-  border: 1px solid transparent;
-  border-radius: 7px;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 3px 3px 0 0;
   background: transparent;
   color: var(--text-secondary);
   font: inherit;
@@ -32,8 +33,8 @@
 }
 
 .destination-nav [aria-current='page'] {
-  background: var(--accent-blue-soft);
-  color: var(--accent-blue);
+  border-bottom-color: var(--accent-blue);
+  color: var(--text-primary);
 }
 
 @media (max-width: 590px) {

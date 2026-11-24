@@ -13,11 +13,6 @@ function MenuBar({
   canPreview,
   canSaveDataset,
   onSaveDataset,
-  onInspectRows,
-  onFilterRows,
-  onRefine,
-  canRefine = true,
-  showCleaningForm,
   onOpenAiChat,
   onOpenAiWorkflow,
   onOpenStoryboard,
@@ -97,18 +92,10 @@ function MenuBar({
             <FaEllipsisH aria-hidden="true" />
           </summary>
           <div className="app-banner__overflow">
-            <div role="group" aria-label="Data tools">
+            <div role="group" aria-label="Data connections and fields">
               <button type="button" onClick={run(() => onOpenSourcePanel('api'))}>Connect API</button>
               <button type="button" onClick={run(() => onOpenSourcePanel('db'))}>Connect database</button>
               <button type="button" onClick={run(onOpenFields)}>Data fields</button>
-              {activeDestination === 'workspace' && (
-                <>
-                  <button type="button" onClick={run(onInspectRows)} disabled={!canPreview}>Inspect or download rows</button>
-                  <button type="button" onClick={run(onFilterRows)} disabled={!canPreview}>Filter rows</button>
-                  <button type="button" onClick={run(onRefine)} aria-pressed={showCleaningForm} disabled={!canPreview || !canRefine}
-                    title={canRefine ? undefined : 'Refine is available for a dataset with one source and no relationships'}>Refine data</button>
-                </>
-              )}
               {activeDestination === 'analytics' && (
                 <>
                   <button type="button" onClick={run(onOpenChartGallery)}>Chart gallery</button>

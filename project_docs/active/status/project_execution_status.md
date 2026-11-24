@@ -1,23 +1,23 @@
 # Project Execution Status
 
-## Current Gate: Explicitly save and fully reopen working datasets
+## Current Gate: Make data tools discoverable and load the current data in Power Query
 
-- **Current Gate**: Explicitly save and fully reopen working datasets
-- **Roadmap Phase**: Phase 2 — Opt-in save and full activation
+- **Current Gate**: Make data tools discoverable and load the current data in Power Query
+- **Roadmap Phase**: Data tools and workflow repair
 - **Phase State**: `AWAITING USER ACCEPTANCE`
-- **What This State Means**: Explicit save and full Workspace activation are implemented and engineering-verified.
-- **Current Milestone**: User accepts the saved-dataset workflow in chat
+- **What This State Means**: The Data Tools tab, Workspace landing, and initial Power Query preview are engineering-verified.
+- **Current Milestone**: User reviews the repaired data workflow in the browser
 - **Automatic Continuation**: `WAIT_FOR_USER`
 - **Current Owner**: User
 - **Backend Readiness**: `complete`
 - **Frontend Readiness**: `backend_contract_ready`
-- **Next Action**: The user reviews the integrated workflow in the browser and responds in chat.
+- **Next Action**: The user owns browser acceptance in chat.
 - **Required Action**: Record the user's browser decision.
 - **Active Gate**: `project_docs/active/active_gate/README.md`
 - **Authorization Record**: `project_docs/active/status/phase_authorization.json`
-- **Roadmap**: `project_docs/active/saved_datasets/README.md`
+- **Roadmap**: `project_docs/active/active_gate/README.md`
 - **Active Handoff**: None
-- **Latest Verification**: 133 focused backend and 40 frontend tests passed. The production build passed with existing warnings. Focused coverage includes upload and Refine staying outside the catalog, named save, full reopen, Business Objects, exact Analytics scope, same names, stale dependencies, retry, and rollback.
+- **Latest Verification**: 97 focused frontend tests and 48 backend regression tests passed. All seven App tests passed again after the phone-width pane fix. Chrome fixtures passed at 1440 and 390 pixels. The production build passed with existing warnings. The [UI inventory](../reviews/datastream_ui_workflow_inventory.md) records remaining gaps.
 
 The [Business Object repair](../../archive/business_object_definitions_repair_paused_2026_11_22.md) is paused. Antigravity retains its assignment and the [authorization record](phase_authorization.json) records the outstanding review.
 

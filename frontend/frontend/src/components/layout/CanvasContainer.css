@@ -33,6 +33,10 @@
   padding: 10px;
 }
 
+.canvas-container[hidden] {
+  display: none;
+}
+
 /* Grid Item Styling */
 .grid-item {
   background-color: var(--bg-secondary);

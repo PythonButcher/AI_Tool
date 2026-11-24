@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import DataCleaningForm from './DataCleaningForm';
 import { DataContext } from '../../context/DataContext';
@@ -27,9 +27,9 @@ describe('DataCleaningForm ML Studio integration', () => {
     refreshSemanticModelFromDataset: jest.fn(),
   };
 
-  const renderWithContext = (ui) => {
+  const renderWithContext = (ui, value = mockContext) => {
     return render(
-      <DataContext.Provider value={mockContext}>
+      <DataContext.Provider value={value}>
         <HelpOverlayProvider>
           {ui}
         </HelpOverlayProvider>
@@ -105,7 +105,7 @@ describe('DataCleaningForm ML Studio integration', () => {
       />
     );
 
-    expect(screen.getByText(/Visual Data Transformation Interface/i)).toBeInTheDocument();
+    expect(screen.getByRole('table', { name: 'Current data' })).toBeVisible();
 
     const applyBtn = screen.getByRole('button', { name: /Apply All/i });
     fireEvent.click(applyBtn);
@@ -116,5 +116,48 @@ describe('DataCleaningForm ML Studio integration', () => {
       expect(mockContext.setSemanticModel).toHaveBeenCalled();
       expect(mockOnApplyComplete).toHaveBeenCalled();
     });
+  });
+
+  it('opens the current named dataset and shows its first 100 rows before any request', () => {
+    const rows = Array.from({ length: 125 }, (_, index) => ({ customer: `customer-${index + 1}`, paid: false }));
+    rows[0].details = { region: 'East' };
+    renderWithContext(
+      <DataCleaningForm closeForm={jest.fn()} workingDatasetName="Quarterly orders"
+        workingWorkspace={{ workspace_id: 'ws-orders', version: 2, primary_source_id: 'src-orders' }} onWorkingRefine={jest.fn()} />,
+      { ...mockContext, cleanedData: rows, uploadedData: { source: { name: 'prepared.table.json' } } },
+    );
+    expect(screen.getByRole('dialog', { name: 'Power Query Editor' })).toHaveTextContent('Quarterly orders');
+    expect(screen.getByText('100 of 125 rows · 3 fields')).toBeVisible();
+    const table = within(screen.getByRole('table', { name: 'Current data' }));
+    expect(table.getByRole('columnheader', { name: 'customer' })).toBeVisible();
+    expect(table.getByRole('cell', { name: 'customer-100' })).toBeVisible();
+    expect(table.getByRole('cell', { name: '{"region":"East"}' })).toBeVisible();
+    expect(table.queryByRole('cell', { name: 'customer-101' })).not.toBeInTheDocument();
+    expect(axios.post).not.toHaveBeenCalled();
+  });
+
+  it('uses the active source for preview and apply and keeps renamed fields available for later steps', async () => {
+    const workingWorkspace = { workspace_id: 'ws-orders', version: 4, primary_source_id: 'src-orders' };
+    const params = { mappings: [{ from: 'A', to: 'Name' }] };
+    const initialSteps = [{ type: 'rename_columns', label: 'Rename Columns', params, id: 'rename' }];
+    const result = { full_data: [{ Name: 1 }], workspace: { workspace_id: 'ws-result' }, analysis_context: {} };
+    axios.post.mockResolvedValueOnce({ data: { preview: [{ Name: 1 }], row_count: 1, schema: [{ name: 'Name' }], source_fingerprint: 'sha256:orders' } });
+    axios.post.mockResolvedValueOnce({ data: result });
+    const onWorkingRefine = jest.fn();
+    renderWithContext(<DataCleaningForm closeForm={jest.fn()} workingWorkspace={workingWorkspace}
+      onWorkingRefine={onWorkingRefine} initialSteps={initialSteps} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Run Preview' }));
+    const table = within(await screen.findByRole('table', { name: 'Preview of applied steps' }));
+    expect(table.getByRole('columnheader', { name: 'Name' })).toBeVisible();
+    expect(table.queryByRole('columnheader', { name: 'A' })).not.toBeInTheDocument();
+    const fields = { workspace_id: 'ws-orders', workspace_version: 4, source_id: 'src-orders',
+      steps: [{ type: 'rename_columns', params: { mappings: { A: 'Name' } } }] };
+    expect(axios.post).toHaveBeenCalledWith(expect.stringMatching(/refine-preview$/), fields, { signal: expect.anything() });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Apply All' }));
+    await waitFor(() => expect(onWorkingRefine).toHaveBeenCalledWith(result));
+    expect(axios.post).toHaveBeenLastCalledWith(expect.stringMatching(/refine-working$/),
+      { ...fields, source_fingerprint: 'sha256:orders', request_id: expect.any(String) }, { signal: expect.anything() });
   });
 });

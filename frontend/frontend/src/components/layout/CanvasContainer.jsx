@@ -42,6 +42,7 @@ import {
 
 const DESTINATIONS = {
   WORKSPACE: 'workspace',
+  DATA_TOOLS: 'data_tools',
   DATA_HUB: 'data_hub',
   EXPLORE: 'explore',
   DATA_MODEL: 'data_model',
@@ -52,6 +53,8 @@ const DESTINATIONS = {
 
 function CanvasContainer({
   activeDestination,
+  workingDataSurface,
+  hasWorkingDataset,
   children,
   uploadedData,
   showDataPreview,
@@ -122,6 +125,7 @@ function CanvasContainer({
   const isAnalyticsDest = activeDestination === 'analytics';
   const isExploreDest = activeDestination === DESTINATIONS.EXPLORE;
   const isWorkspaceDest = activeDestination === DESTINATIONS.WORKSPACE;
+  const isDataToolsDest = activeDestination === DESTINATIONS.DATA_TOOLS;
   const isDataHubDest = activeDestination === DESTINATIONS.DATA_HUB;
   const isDataModelDest = activeDestination === DESTINATIONS.DATA_MODEL;
   const isMlStudioDest = activeDestination === DESTINATIONS.ML_STUDIO;
@@ -580,12 +584,35 @@ function CanvasContainer({
       );
     });
 
-  const dataPreviewElement = (showDataPreview && !minimizedWindows.dataPreview && (previewData.length > 0 || activeWorkspace?.primary_source_id)) ? (
+  const getDataWindowLayout = (id, { defW, defH, minW, minH }) => {
+    const availableWidth = Math.max(1, containerBounds.width - 16);
+    const availableHeight = Math.max(1, containerBounds.height - 16);
+    if (availableWidth < minW || availableHeight < minH) {
+      return { fitCanvas: true, initialState: { x: 0, y: 0, w: availableWidth, h: availableHeight }, registerWindow: null };
+    }
+
+    const initial = getInitialState(id, 8, 20, defW, defH, minW, minH);
+    const w = Math.min(initial.w, availableWidth);
+    const h = Math.min(initial.h, availableHeight);
+    return {
+      initialState: {
+        ...initial,
+        x: Math.max(0, Math.min(initial.x, containerBounds.width - w)),
+        y: Math.max(0, Math.min(initial.y, containerBounds.height - h)),
+        w,
+        h,
+      },
+      minWidth: minW,
+      minHeight: minH,
+    };
+  };
+
+  const showRawDataWindow = showRawViewer && !minimizedWindows.rawViewer;
+  const rawDataWindowLayout = showRawDataWindow ? getDataWindowLayout('rawViewer', WINDOW_SIZING.RAW_VIEWER) : null;
+  const dataPreviewElement = (showDataPreview && !minimizedWindows.dataPreview && !rawDataWindowLayout?.fitCanvas && (previewData.length > 0 || activeWorkspace?.primary_source_id)) ? (
     <WindowFrame
       {...getWindowProps('dataPreview', '📄 Data Preview', handleClosePreview, () => minimizeWindow('dataPreview', 'Data Preview'))}
-      initialState={getInitialState('dataPreview', 8, 20, WINDOW_SIZING.DATA_PREVIEW.defW, WINDOW_SIZING.DATA_PREVIEW.defH, WINDOW_SIZING.DATA_PREVIEW.minW, WINDOW_SIZING.DATA_PREVIEW.minH)}
-      minWidth={WINDOW_SIZING.DATA_PREVIEW.minW}
-      minHeight={WINDOW_SIZING.DATA_PREVIEW.minH}
+      {...getDataWindowLayout('dataPreview', WINDOW_SIZING.DATA_PREVIEW)}
     >
       <div className="uploaded-data-preview">
         <div style={{ padding: '0 10px 10px 10px' }}>
@@ -609,12 +636,10 @@ function CanvasContainer({
     </WindowFrame>
   ) : null;
 
-  const rawDataElement = (showRawViewer && !minimizedWindows.rawViewer) ? (
+  const rawDataElement = showRawDataWindow ? (
     <WindowFrame
       {...getWindowProps('rawViewer', '📜 Raw Data (All Rows)', handleCloseRawViewer, () => minimizeWindow('rawViewer', 'Raw Data'))}
-      initialState={getInitialState('rawViewer', 8, 20, WINDOW_SIZING.RAW_VIEWER.defW, WINDOW_SIZING.RAW_VIEWER.defH, WINDOW_SIZING.RAW_VIEWER.minW, WINDOW_SIZING.RAW_VIEWER.minH)}
-      minWidth={WINDOW_SIZING.RAW_VIEWER.minW}
-      minHeight={WINDOW_SIZING.RAW_VIEWER.minH}
+      {...rawDataWindowLayout}
     >
       <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
         <RawDataViewer rows={fullData || []} pageSize={500} />
@@ -732,7 +757,7 @@ function CanvasContainer({
   );
 
   const shouldShowHome = useMemo(() => {
-    if (isWorkspaceDest) return !(showDataPreview && previewData.length) && !showRawViewer && !showMachineLearning;
+    if (isWorkspaceDest || isDataToolsDest) return false;
     if (isDataModelDest || isDataHubDest) return false;
     if (isMlStudioDest) return false; // ML Studio has its own full-canvas shell
     if (isExploreDest) return charts.length === 0 && !showDataPreview;
@@ -744,7 +769,7 @@ function CanvasContainer({
     return true;
   }, [
     isWorkspaceDest,
-    previewData.length,
+    isDataToolsDest,
     isDataModelDest,
     isDataHubDest,
     isExploreDest,
@@ -752,8 +777,6 @@ function CanvasContainer({
     isMlStudioDest,
     isAiDest,
     showDataPreview,
-    showRawViewer,
-    showMachineLearning,
     charts.length,
     dashboardItems.length,
     showAiWorkflow,
@@ -762,14 +785,17 @@ function CanvasContainer({
     showWhiteBoard,
     outputWindows.length,
   ]);
+  const hideCanvas = isDataToolsDest || (isWorkspaceDest && !hasWorkingDataset && !showRawViewer && !showMachineLearning && !workflowElements.length);
 
   return (
     <div className="canvas-dnd-wrapper">
       <div className="canvas-workspace">
+        {workingDataSurface}
         {isDashboardDest && <DashboardCommandBar />}
         <div
           ref={containerRef}
           className="canvas-container desktop-surface"
+          hidden={hideCanvas}
           style={{ width: '100%', flex: 1, position: 'relative' }}
         >
           {isDashboardDest && <DashboardSlicerPanel />}

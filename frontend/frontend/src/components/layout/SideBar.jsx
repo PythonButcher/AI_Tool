@@ -3,6 +3,7 @@ import './SideBar.css';
 
 const destinations = [
   { id: 'workspace', label: 'Workspace' },
+  { id: 'data_tools', label: 'Data Tools' },
   { id: 'data_hub', label: 'Data Hub' },
   { id: 'data_model', label: 'Data Model' },
   { id: 'analytics', label: 'Analytics' },
