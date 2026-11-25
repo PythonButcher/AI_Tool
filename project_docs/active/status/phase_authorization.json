@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "authorized_work": {
-    "name": "Open Datastream from the platform hub",
+    "name": "Open Devstream from the Datastream hub",
     "allowed_paths": [
       "frontend/frontend/src/App.jsx",
       "frontend/frontend/src/App.test.jsx",
@@ -24,12 +24,18 @@
   },
   "authorization_state": "AUTHORIZED",
   "lifecycle_state": "AWAITING USER ACCEPTANCE",
+  "platform_branding_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-11-24",
+    "scope": "Rename the platform to Datastream and the existing tool to Devstream across product copy, assets, code, tests, and documentation. The user owns browser acceptance.",
+    "codex_frontend_implementation_authorized": true
+  },
   "user_implementation_authorization": {
     "approved_by": "User",
     "approved_at": "2026-11-23",
-    "evidence": "The user directed a separate Codex chat to implement the hub in the existing Datastream frontend and authorized the bounded edits through that chat's kickoff.",
+    "evidence": "The user directed a separate Codex chat to implement the hub in the frontend now named Devstream and authorized the bounded edits through that chat's kickoff. The recorded instruction uses the workspace name at the time.",
     "instruction": "Build the platform landing hub inside the existing Datastream app and start implementation now.",
-    "scope": "Codex owns the hub, Datastream entry and return, workspace state preservation, planned app entries, and focused verification. The user owns browser acceptance.",
+    "scope": "Codex owns the Datastream hub, Devstream entry and return, workspace state preservation, planned app entries, and focused verification. The user owns browser acceptance.",
     "codex_frontend_implementation_authorized": true
   },
   "data_tools_expansion_authorization": {
@@ -399,7 +405,7 @@
   "data_platform_review_authorization": {
     "approved_by": "User",
     "approved_at": "2026-11-21",
-    "scope": "Review Datastream, Context Ledger, and Slipstream together and record the ranked product recommendations in Codex future planning. Documentation only."
+    "scope": "Review Devstream, Context Ledger, and Slipstream together and record the ranked product recommendations in Codex future planning. Documentation only."
   },
   "publishing_portal_planning_authorization": {
     "approved_by": "User",
@@ -418,7 +424,16 @@
     "acceptance": "Accepted by the user in chat on 2026-11-22."
   },
   "allowed_paths": [
-    "project_docs/active/reviews/datastream_ui_workflow_inventory.md",
+    "README.md",
+    "CLAUDE.md",
+    "frontend/frontend/README.md",
+    "document_studio/README.md",
+    "document_studio/backend/src/document_studio/**",
+    "frontend/frontend/public/**",
+    "project_docs/archive/data_hub_navigation_rebuild_accepted_2026_11_22.md",
+    "project_docs/active/ai_chat/claude_plain_language_bi_handoff.md",
+    "project_docs/active/future/codex/context_engineering_and_login_memory_plan.md",
+    "project_docs/active/reviews/**",
     "backend/routes/analysis.py",
     "backend/repositories/saved_dataset_repository.py",
     "backend/services/saved_datasets.py",

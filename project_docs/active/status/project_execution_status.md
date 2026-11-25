@@ -1,12 +1,12 @@
 # Project Execution Status
 
-## Current Gate: Open Datastream from the platform hub
+## Current Gate: Open Devstream from the Datastream hub
 
-- **Current Gate**: Open Datastream from the platform hub
+- **Current Gate**: Open Devstream from the Datastream hub
 - **Roadmap Phase**: Phase 0 — Platform entry
 - **Phase State**: `AWAITING USER ACCEPTANCE`
-- **What This State Means**: The platform landing hub, Datastream entry, and workspace return are engineering-verified.
-- **Current Milestone**: User reviews the platform hub in the browser
+- **What This State Means**: The Datastream hub, Devstream entry, and workspace return are engineering-verified.
+- **Current Milestone**: User reviews the Datastream hub in the browser
 - **Automatic Continuation**: `WAIT_FOR_USER`
 - **Current Owner**: User
 - **Backend Readiness**: `complete`
@@ -17,13 +17,13 @@
 - **Authorization Record**: `project_docs/active/status/phase_authorization.json`
 - **Roadmap**: `project_docs/active/active_gate/README.md`
 - **Active Handoff**: None
-- **Latest Verification**: 104 tests passed across nine focused Jest suites, including the final App and PlatformHub rerun. The production build passed with existing warnings. Isolated Chrome at 1440 pixels in dark mode and 390 pixels in light mode verified hub layout, planned entries, keyboard launch, Data Tools, Back and Forward, and the return link. Direct Datastream entry, repository CI, the gate validator, and whitespace checks passed.
+- **Latest Verification**: All 111 tests across nine focused frontend suites passed, including Devstream entry, legacy bookmarks, and hub navigation. The production build passed with existing warnings. Repository CI, active-gate validation, and whitespace checks passed.
 
 ## Pending Data Tools Acceptance
 
 The Data Tools tab, Workspace landing, and initial Power Query preview remain awaiting the user's browser decision. The repair passed 97 focused frontend tests, 48 backend regression tests, seven App tests after the phone-width pane fix, Chrome fixtures at 1440 and 390 pixels, and the production build with existing warnings.
 
-The inline Data Tools workbench also awaits the user's browser decision. It passed 101 focused frontend tests, 48 backend regression tests, and the production build with existing warnings. Chrome fixtures at 1440 and 390 pixels verified inline API and SQL, upload, quality tools, preview filters, Refine, explicit save, and reopening after reload. See the [UI workflow inventory](../reviews/datastream_ui_workflow_inventory.md).
+The inline Data Tools workbench also awaits the user's browser decision. It passed 101 focused frontend tests, 48 backend regression tests, and the production build with existing warnings. Chrome fixtures at 1440 and 390 pixels verified inline API and SQL, upload, quality tools, preview filters, Refine, explicit save, and reopening after reload. See the [UI workflow inventory](../reviews/devstream_ui_workflow_inventory.md).
 
 Validate values, Check keys, and Summarize rows are available in the toolbox and await browser acceptance. The follow-up passed 26 focused frontend tests, the production build with existing warnings, and Chrome fixture checks at 1440 and 390 pixels.
 

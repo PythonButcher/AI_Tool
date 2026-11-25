@@ -60,8 +60,8 @@ export const createAppPdf = ({ title, subtitle }) => {
 
   pdf.setProperties({
     title: logicalTitle,
-    subject: 'Datastream export',
-    creator: 'Datastream',
+    subject: 'Devstream export',
+    creator: 'Devstream',
   });
 
   const titleHeight = titleLines.length * 20;
@@ -347,7 +347,7 @@ export const addPdfImage = (pdf, image, y, options = {}) => {
   return nextY + targetHeight + 18;
 };
 
-export const addPdfFooter = (pdf, footerLabel = 'Datastream Export') => {
+export const addPdfFooter = (pdf, footerLabel = 'Devstream Export') => {
   const pageCount = pdf.getNumberOfPages();
   for (let i = 1; i <= pageCount; i += 1) {
     pdf.setPage(i);
@@ -394,7 +394,7 @@ export const exportElementToPdf = async ({
   title,
   subtitle,
   fileName = 'app_export',
-  footerLabel = 'Datastream Export',
+  footerLabel = 'Devstream Export',
   backgroundColor = '#ffffff',
   captureClassName,
   prepareClone,
@@ -464,7 +464,7 @@ export const exportStructuredPdf = ({
   title,
   subtitle,
   fileName = 'app_export',
-  footerLabel = 'Datastream Export',
+  footerLabel = 'Devstream Export',
   sections = [],
 }) => {
   const { pdf, y: startY } = createAppPdf({ title, subtitle });

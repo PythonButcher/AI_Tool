@@ -2,7 +2,7 @@
 
 **Accepted on November 22, 2026.** Historical delivery plan.
 
-Goal: Give Datastream a clearly labeled Data Hub, fix the welcome actions, and replace the Commands dropdown with a persistent application header.
+Goal: Give Devstream a clearly labeled Data Hub, fix the welcome actions, and replace the Commands dropdown with a persistent application header.
 
 ## What users should see
 
@@ -14,7 +14,7 @@ This roadmap defines the delivery order for the Data Hub and navigation rebuild.
 
 | Surface | Source finding |
 | --- | --- |
-| **Welcome to Datastream** | The two buttons emit `upload` and `hub`. The workspace handler has no `upload` case. It treats `hub` as the Data Preview window, which requires an active dataset with preview rows. [Welcome screen](../../frontend/frontend/src/components/layout/DestinationHome.jsx) · [Action dispatch and preview](../../frontend/frontend/src/components/layout/CanvasContainer.jsx) |
+| **Welcome to Devstream** | The two buttons emit `upload` and `hub`. The workspace handler has no `upload` case. It treats `hub` as the Data Preview window, which requires an active dataset with preview rows. [Welcome screen](../../frontend/frontend/src/components/layout/DestinationHome.jsx) · [Action dispatch and preview](../../frontend/frontend/src/components/layout/CanvasContainer.jsx) |
 | **Workspace command labeled Catalog** | Directly toggles Data Preview. The **Catalog** tab in the side pane is a separate field or semantic browser for the current context. The collapsed **Commands** header currently hides common actions. [Header and commands](../../frontend/frontend/src/components/layout/MenuBar.jsx) · [Side pane tabs](../../frontend/frontend/src/components/layout/DataPane.jsx) |
 | **Data Hub in the Connect pane** | This is the existing dataset catalog screen. Names are plain text. `Remove` is the only row action and sits in the rightmost column of a table clipped by the narrow pane. The search box sends a `query` parameter which the current legacy list route ignores. [Data Hub screen](../../frontend/frontend/src/features/database/DataHubWindow.jsx) · [Catalog API](../../backend/routes/datahub_routes.py) |
 | **Catalog search inside Upload** | The Upload component has a separate search tab with an **Open** button that has no handler. It can fall back to hard-coded sample entries when the dataset list is empty. This explains the second catalog-like surface. [Upload and search](../../frontend/frontend/src/components/data_management/FileUpload.jsx) |

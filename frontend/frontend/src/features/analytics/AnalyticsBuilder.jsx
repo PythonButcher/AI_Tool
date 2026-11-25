@@ -10,7 +10,7 @@ import AnalyticsWorkbench from './AnalyticsWorkbench';
 import { remapAnalysis } from './analyticsTransforms';
 import './AnalyticsBuilder.css';
 
-const FIELD_DRAG_TYPE = 'application/x-datastream-analytics-field';
+const FIELD_DRAG_TYPE = 'application/x-devstream-analytics-field';
 const FIELD_TYPES = [['all', 'All'], ['number', 'Numbers'], ['string', 'Text'], ['date', 'Dates']];
 const GRAINS = ['day', 'week', 'month', 'quarter', 'year'];
 const FIELD_MARKS = { number: TbHash, date: TbCalendar, string: TbLetterCase };

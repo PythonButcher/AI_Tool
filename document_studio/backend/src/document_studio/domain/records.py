@@ -1,7 +1,7 @@
 """Portable domain records for Document Studio.
 
 All objects are frozen standard-library dataclasses with ``__post_init__``
-validation.  No FastAPI, Flask, Pydantic, SQLAlchemy, or Datastream imports
+validation.  No FastAPI, Flask, Pydantic, SQLAlchemy, or Devstream imports
 are permitted in this module.
 
 Public serialization (``to_dict``) produces JSON-compatible dictionaries:

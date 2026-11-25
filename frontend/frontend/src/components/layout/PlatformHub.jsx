@@ -34,7 +34,7 @@ import {
 import './PlatformHub.css';
 
 const APP_ICONS = {
-  datastream: FaChartBar,
+  devstream: FaChartBar,
   slipstream: FaRegFileAlt,
   'context-ledger': FaLayerGroup,
   'publishing-portal': FaExternalLinkSquareAlt,
@@ -158,7 +158,7 @@ export default function PlatformHub({ links = {}, headingRef }) {
   const activeGuide = GUIDANCE_PLAYBOOKS.find(item => item.id === activeGuideId) || GUIDANCE_PLAYBOOKS[0];
   const featuredApp = PLATFORM_APPLICATIONS.find(item => item.featured);
   const companionApps = PLATFORM_APPLICATIONS.filter(item => !item.featured);
-  const datastreamLink = links.datastream;
+  const devstreamLink = links.devstream;
 
   return (
     <main
@@ -169,8 +169,8 @@ export default function PlatformHub({ links = {}, headingRef }) {
       {/* Full-Bleed Borderless Top Bar */}
       <header className="platform-hub__topbar" aria-label="Platform controls">
         <div className="platform-hub__brand">
-          <img className="platform-hub__brand-mark" src="/datastream-mark.png" alt="" />
-          <span className="platform-hub__brand-name">Data Platform</span>
+          <img className="platform-hub__brand-mark" src={`${process.env.PUBLIC_URL || ''}/stream-mark.png`} alt="" />
+          <span className="platform-hub__brand-name">Datastream</span>
           <span className="platform-hub__session-note">
             <span className="platform-hub__session-dot" aria-hidden="true" />
             Local workspace
@@ -301,11 +301,11 @@ export default function PlatformHub({ links = {}, headingRef }) {
               Unified Analytics &amp; Evidence Environment
             </span>
             <h1 id="platform-hub-title" ref={headingRef} tabIndex={-1}>
-              Data platform
+              Datastream
             </h1>
             <p className="platform-hub__lead">
               Prepare raw data, build governed models, explore with BI-first AI Chat, and benchmark
-              local ML workflows in Datastream—designed to scale across document evidence and
+              local ML workflows in Devstream—designed to scale across document evidence and
               published reporting.
             </p>
           </section>
@@ -327,22 +327,22 @@ export default function PlatformHub({ links = {}, headingRef }) {
                         <Icon aria-hidden="true" />
                       </span>
                       <span className="platform-hub__eyebrow-label">{featuredApp.eyebrow}</span>
-                      <span className="platform-hub__status" data-available={datastreamLink ? '' : undefined}>
-                        {datastreamLink ? 'Available' : 'Planned'}
+                      <span className="platform-hub__status" data-available={devstreamLink ? '' : undefined}>
+                        {devstreamLink ? 'Available' : 'Planned'}
                       </span>
                     </div>
 
                     <h2 id={`platform-app-${featuredApp.id}`}>{featuredApp.name}</h2>
                     <p className="platform-hub__featured-desc">{featuredApp.description}</p>
 
-                    <p className="platform-hub__cap-line" aria-label="Datastream capabilities">
+                    <p className="platform-hub__cap-line" aria-label="Devstream capabilities">
                       {featuredApp.capabilities.join('  ·  ')}
                     </p>
                   </div>
 
-                  {datastreamLink && (
+                  {devstreamLink && (
                     <div className="platform-hub__featured-action">
-                      <a className="platform-hub__launch" {...datastreamLink}>
+                      <a className="platform-hub__launch" {...devstreamLink}>
                         Open {featuredApp.name} <FaArrowRight aria-hidden="true" />
                       </a>
                     </div>

@@ -53,7 +53,7 @@ function formatPercent(numerator, denominator) {
 
 /**
  * Classifies declared schema types or inferred column types into canonical
- * analytical kinds aligned with Datastream's theme tokens.
+ * analytical kinds aligned with the shared Datastream theme tokens.
  */
 function classifyColumnKind(declaredType, values) {
   const normalized = String(declaredType || '').trim().toLowerCase();

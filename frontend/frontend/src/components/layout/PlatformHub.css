@@ -1,5 +1,5 @@
 /* PlatformHub.css
- * Full-bleed, open architectural Data Platform landing experience.
+ * Full-bleed Datastream landing page.
  * Uses tonal surface hierarchy and clean negative space instead of boxed outlines.
  * Inherits global light/dark tokens from index.css and supports scoped mineral
  * color themes via [data-hub-palette].
@@ -1061,7 +1061,7 @@
 }
 
 /* Tooltip poppers follow their anchor document, including detached windows. */
-body:has(#datastream-workspace[hidden]) > .MuiTooltip-popper {
+body:has(#devstream-workspace[hidden]) > .MuiTooltip-popper {
   display: none;
 }
 

@@ -46,14 +46,15 @@ function MenuBar({
   }
 
   return (
-    <header className="app-banner" aria-label="Datastream">
+    <header className="app-banner" aria-label="Devstream">
       <div className="app-banner__identity">
-        <button type="button" className="app-banner__brand" aria-label="Datastream home" onClick={() => onDestinationSelect('workspace')}>
-          <img className="app-banner__logo" src="/datastream-logo.png" alt="" />
+        <button type="button" className="app-banner__brand" aria-label="Devstream home" onClick={() => onDestinationSelect('workspace')}>
+          <img className="app-banner__logo" src={`${process.env.PUBLIC_URL || ''}/stream-mark.png`} alt="" />
+          <span>Devstream</span>
         </button>
         {platformHubLink && (
           <a className="app-banner__hub" {...platformHubLink}>
-            <FaArrowLeft aria-hidden="true" /> Platform hub
+            <FaArrowLeft aria-hidden="true" /> Datastream hub
           </a>
         )}
       </div>

@@ -4,7 +4,7 @@ import evidenceLineageVisual from '../../assets/platform-hub/platform-evidence-l
 
 /**
  * Structured content, mineral color themes, future roadmap placeholders,
- * topic context panels, and step-by-step guides for the Data Platform hub.
+ * topic context panels, and step-by-step guides for the Datastream hub.
  */
 
 export const HUB_PALETTE_STORAGE_KEY = 'platform_hub_palette';
@@ -34,11 +34,11 @@ export const HUB_COLOR_THEMES = [
 
 export const PLATFORM_APPLICATIONS = [
   {
-    id: 'datastream',
-    name: 'Datastream',
+    id: 'devstream',
+    name: 'Devstream',
     eyebrow: 'Active studio',
     description: 'Prepare and analyze data, explore it with AI Chat, and build models in ML Studio.',
-    iconKey: 'datastream',
+    iconKey: 'devstream',
     featured: true,
     capabilities: [
       'Workspace',
@@ -89,7 +89,7 @@ export const PLATFORM_VISUALS = [
     caption:
       'Connect raw tables, reviewed documents, and governed business definitions so teams reuse work instead of rebuilding logic.',
     highlights: [
-      'Datastream anchors live data prep, modeling, and analysis today',
+      'Devstream anchors live data prep, modeling, and analysis today',
       'Companion apps plug into shared identifiers and revision contracts',
       'Hub navigation keeps open tools and working drafts intact',
     ],
@@ -99,7 +99,7 @@ export const PLATFORM_VISUALS = [
     id: 'analytics-surface',
     index: '02',
     tabLabel: 'Analytics & ML',
-    eyebrow: 'Datastream intelligence',
+    eyebrow: 'Devstream intelligence',
     title: 'Deterministic profiling, Analytics & local ML',
     src: analyticsSurfaceVisual,
     alt: 'Minimalist glass analytical bar clusters and smooth teal confidence bands over a dark slate coordinate plane',
@@ -190,9 +190,9 @@ export const CONTEXT_TOPICS = [
     availableNow: false,
     title: 'Focused apps unified by shared data contracts',
     summary:
-      'Datastream handles preparation, modeling, analytics, AI Chat, and ML today. Planned companion apps add document evidence, governance, and published reporting without duplicating definitions.',
+      'Devstream handles preparation, modeling, analytics, AI Chat, and ML today. Planned companion apps add document evidence, governance, and published reporting without duplicating definitions.',
     points: [
-      'Datastream (available): active studio for tables, semantic models, BI Chat, and local ML.',
+      'Devstream (available): active studio for tables, semantic models, BI Chat, and local ML.',
       'Slipstream & Context Ledger (planned): document extraction and governed Blueprints with source receipts.',
       'Publishing Portal (planned): versioned Dashboard, Table, and Print consumption for business readers.',
     ],
@@ -209,7 +209,7 @@ export const CONTEXT_TOPICS = [
     points: [
       'Attach CSV, Excel, JSON, API, or SQL data to see a deterministic Workspace profile immediately.',
       'Clean, validate values, check keys, and summarize rows in Data Tools without polluting Data Hub.',
-      'Click Save Dataset in Datastream to publish a reusable revision; hub navigation preserves open drafts.',
+      'Click Save Dataset in Devstream to publish a reusable revision; hub navigation preserves open drafts.',
     ],
     relatedGuideId: 'first-dataset',
   },
@@ -282,12 +282,12 @@ export const GUIDANCE_PLAYBOOKS = [
     title: 'Import, profile, and save your first dataset',
     duration: '3 min',
     steps: [
-      { number: '01', title: 'Attach a source', detail: 'Open Datastream and click Upload data, or connect an API/SQL source in Data Tools.' },
+      { number: '01', title: 'Attach a source', detail: 'Open Devstream and click Upload data, or connect an API/SQL source in Data Tools.' },
       { number: '02', title: 'Audit profile', detail: 'Check row counts, completeness, duplicates, and unique keys on Workspace.' },
       { number: '03', title: 'Refine & validate', detail: 'Use Data Tools for Power Query steps, value checks, key checks, and summaries.' },
       { number: '04', title: 'Save Dataset', detail: 'Click Save Dataset in the top banner to store a versioned entry in Data Hub.' },
     ],
-    tip: 'Returning to Platform Hub preserves your mounted Datastream workspace and unsaved edits.',
+    tip: 'Returning to the Datastream hub preserves your mounted Devstream workspace and unsaved edits.',
   },
   {
     id: 'model-analytics',
@@ -308,11 +308,11 @@ export const GUIDANCE_PLAYBOOKS = [
     title: 'Ask grounded questions with BI-first AI Chat',
     duration: '2 min',
     steps: [
-      { number: '01', title: 'Open AI Chat', detail: 'Launch AI Chat from Datastream’s top banner in the docked pane or pop-out.' },
+      { number: '01', title: 'Open AI Chat', detail: 'Launch AI Chat from Devstream’s top banner in the docked pane or pop-out.' },
       { number: '02', title: 'Pick scope & mode', detail: 'Select a saved dataset beside New Chat and choose Auto, Quick, or Deep mode.' },
       { number: '03', title: 'Verify & draft', detail: 'Inspect returned tables, charts, and grounding metadata before turning into drafts.' },
     ],
-    tip: 'Light/dark changes on this hub sync immediately across Datastream and detached pop-outs.',
+    tip: 'Light/dark changes on this hub sync immediately across Devstream and detached pop-outs.',
   },
   {
     id: 'ml-experiment',

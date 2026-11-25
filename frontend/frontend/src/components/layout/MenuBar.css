@@ -24,18 +24,20 @@
 .app-banner__brand {
   display: flex;
   align-items: center;
+  gap: 7px;
   min-width: 0;
   padding: 4px 0;
   border: 0;
   background: none;
+  color: var(--text-primary);
+  font: 700 1.15rem var(--font-sans, sans-serif);
   cursor: pointer;
 }
 
 .app-banner__logo {
   display: block;
   height: 24px;
-  max-width: 146px;
-  object-fit: contain;
+  width: auto;
 }
 
 [data-theme='dark'] .app-banner__logo {
@@ -194,7 +196,10 @@
 
   .app-banner__logo {
     height: 20px;
-    max-width: 106px;
+  }
+
+  .app-banner__brand {
+    font-size: 1rem;
   }
 
   .app-banner__action,

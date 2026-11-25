@@ -3,25 +3,27 @@ import { HelpOverlayProvider } from '../../context/HelpOverlayContext';
 import { MuiThemeContext } from '../../context/MuiThemeContext';
 import { WarehouseProvider } from '../../context/WarehouseContext';
 import PlatformHub from './PlatformHub';
-import { DATASTREAM_WORKSPACE_ID } from './workspacePortal';
+import { DEVSTREAM_WORKSPACE_ID } from './workspacePortal';
 
 const APP_PARAMETER = 'app';
-const DATASTREAM = 'datastream';
+const DEVSTREAM_APP = 'devstream';
+const LEGACY_DEVSTREAM_APP = 'datastream';
 
-function isDatastream(href) {
-  return new URL(href).searchParams.get(APP_PARAMETER) === DATASTREAM;
+function isDevstream(href) {
+  const app = new URL(href).searchParams.get(APP_PARAMETER);
+  return app === DEVSTREAM_APP || app === LEGACY_DEVSTREAM_APP;
 }
 
-function platformHref(href, openDatastream) {
+function platformHref(href, openDevstream) {
   const url = new URL(href);
-  if (openDatastream) url.searchParams.set(APP_PARAMETER, DATASTREAM);
-  else if (isDatastream(href)) url.searchParams.delete(APP_PARAMETER);
+  if (openDevstream) url.searchParams.set(APP_PARAMETER, DEVSTREAM_APP);
+  else if (isDevstream(href)) url.searchParams.delete(APP_PARAMETER);
   return url.href;
 }
 
 export default function PlatformShell({ Workspace }) {
   const [href, setHref] = useState(() => window.location.href);
-  const showWorkspace = isDatastream(href);
+  const showWorkspace = isDevstream(href);
   const [hasOpenedWorkspace, setHasOpenedWorkspace] = useState(showWorkspace);
   const workspaceRef = useRef(null);
   const hubHeadingRef = useRef(null);
@@ -30,7 +32,7 @@ export default function PlatformShell({ Workspace }) {
 
   const syncLocation = useCallback(() => {
     const nextHref = window.location.href;
-    if (isDatastream(nextHref)) {
+    if (isDevstream(nextHref)) {
       setHasOpenedWorkspace(true);
     } else if (workspaceRef.current?.contains(document.activeElement)) {
       lastWorkspaceFocus.current = document.activeElement;
@@ -46,6 +48,10 @@ export default function PlatformShell({ Workspace }) {
       window.removeEventListener('hashchange', syncLocation);
     };
   }, [syncLocation]);
+
+  useEffect(() => {
+    document.title = showWorkspace ? 'Devstream | Datastream' : 'Datastream';
+  }, [showWorkspace]);
 
   useEffect(() => {
     if (previousView.current === showWorkspace) return;
@@ -71,14 +77,14 @@ export default function PlatformShell({ Workspace }) {
   }
 
   const hubLink = { href: platformHref(href, false), onClick: handleNavigation };
-  const datastreamLink = { href: platformHref(href, true), onClick: handleNavigation };
+  const devstreamLink = { href: platformHref(href, true), onClick: handleNavigation };
 
   return (
     <MuiThemeContext workspaceVisible={showWorkspace}>
-      {!showWorkspace && <PlatformHub links={{ datastream: datastreamLink }} headingRef={hubHeadingRef} />}
+      {!showWorkspace && <PlatformHub links={{ devstream: devstreamLink }} headingRef={hubHeadingRef} />}
       {/* Keep open tools and working data mounted across trips to the hub. */}
       {hasOpenedWorkspace && (
-        <div id={DATASTREAM_WORKSPACE_ID} ref={workspaceRef} hidden={!showWorkspace}>
+        <div id={DEVSTREAM_WORKSPACE_ID} ref={workspaceRef} hidden={!showWorkspace}>
           <WarehouseProvider>
             <HelpOverlayProvider>
               <Workspace platformHubLink={hubLink} />

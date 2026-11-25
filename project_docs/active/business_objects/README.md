@@ -2,13 +2,13 @@
 
 ## Product outcome
 
-In **Data Model → Business Objects**, a user can name an object from existing data, choose how to identify and label its records, and select the relationships to show. Datastream generates a list and record view from that configuration. The user can open the selected record and its relevant data in Analytics with the scope already set.
+In **Data Model → Business Objects**, a user can name an object from existing data, choose how to identify and label its records, and select the relationships to show. Devstream generates a list and record view from that configuration. The user can open the selected record and its relevant data in Analytics with the scope already set.
 
 Customer with Orders and Equipment with Maintenance are useful verification examples. Use the same configuration, API, and rendering path for both, with different fields and relationship IDs. The runtime behavior follows the definition supplied by the user.
 
 The [active gate](../active_gate/README.md) names the one executable step. [Execution status](../status/project_execution_status.md) records readiness and ownership. This product area implements the first capability in the [three-project platform strategy](../future/codex/three_project_data_platform_review.md).
 
-## Reuse existing Datastream behavior
+## Reuse existing Devstream behavior
 
 Data Hub remains the place to find datasets. Data Model already defines, validates, and activates relationships within a workspace. Business Objects attach a name and record identity to those sources and relationships. Analytics already accepts an explicit server-verified `analysis_context`; its default workspace selection starts with the primary dataset. The record handoff must request the exact validated scope, preserve the previous analysis draft, and make the selected object and record visible in the new analysis. [Source workspace contract](../contracts/multiple_data_source_workspace.md) · [Relationship contract](../contracts/multiple_data_source_relationships.md) · [Analytics contract](../contracts/analytics_workspace.md)
 
@@ -28,7 +28,7 @@ The definition service validates and saves configuration in one SQLite transacti
 
 ## Definition API
 
-All paths are relative to the existing workspace API on the Datastream backend. Encode IDs as path segments. These endpoints have no query parameters and use the same access boundary as other workspace routes.
+All paths are relative to the existing workspace API on the Devstream backend. Encode IDs as path segments. These endpoints have no query parameters and use the same access boundary as other workspace routes.
 
 | Method and path | Request | Success |
 | --- | --- | --- |

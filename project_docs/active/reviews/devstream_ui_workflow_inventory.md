@@ -1,4 +1,4 @@
-# Datastream UI workflow and feature inventory
+# Devstream UI workflow and feature inventory
 
 This review traces the app shell, the user actions it renders, and the data each action consumes. It covers product capabilities discoverable from the normal application. A component, API, or roadmap entry alone is insufficient evidence of a working control.
 

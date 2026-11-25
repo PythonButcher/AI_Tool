@@ -1,6 +1,6 @@
 Goal: Plan how to make the Datastream platform useful to business teams by connecting its landing hub, analysis tools, Slipstream document evidence, and Context Ledger governed context in one self-service pilot.
 
-This is a deferred planning prompt. When the user promotes it, prepare an implementation roadmap from the current repositories and verified contracts. Start from the existing platform hub and Datastream workflows. Keep the repositories and their ownership boundaries in place while the pilot tests what should be shared.
+This is a deferred planning prompt. When the user promotes it, prepare an implementation roadmap from the current repositories and verified contracts. Start from the existing platform hub and Devstream workflows. Keep the repositories and their ownership boundaries in place while the pilot tests what should be shared.
 
 ## Start with the existing platform
 
@@ -8,7 +8,7 @@ Read the [execution status](../../status/project_execution_status.md), [active g
 
 ## Design one business workflow
 
-Use one business domain, one structured source, one document collection, and one curated data product tied to related business objects. A business user starts at the hub, finds the product by a familiar term, sees its owner, coverage, and freshness, and requests access or opens an approved workspace. They explore an agreed measure in Datastream without code and can follow a material result to contributing rows or an exact Slipstream passage when permitted. A second team can reuse the same published revision in its own authorized scope. Show what happens after an input refresh and after access is revoked. Measure time to a first usable result and time to verify a figure against the teams’ existing workflow.
+Use one business domain, one structured source, one document collection, and one curated data product tied to related business objects. A business user starts at the hub, finds the product by a familiar term, sees its owner, coverage, and freshness, and requests access or opens an approved workspace. They explore an agreed measure in Devstream without code and can follow a material result to contributing rows or an exact Slipstream passage when permitted. A second team can reuse the same published revision in its own authorized scope. Show what happens after an input refresh and after access is revoked. Measure time to a first usable result and time to verify a figure against the teams’ existing workflow.
 
 Give builders a path to register and prepare the inputs, define the measure once in the semantic model, review source evidence, and publish a maintained revision. Keep the business view focused on discovery, access, and exploration. Describe workspace provisioning as a short form with the requested scope, approval outcome, and visible status. Define the pilot roles, ownership, and isolation model from onboarding through revocation.
 

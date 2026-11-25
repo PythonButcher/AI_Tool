@@ -40,7 +40,10 @@ const DestinationHome = ({ activeDestination, onAction, readiness }) => {
     <div className="dest-home dest-home--workspace">
       <h2 className="dest-home__title dest-home__title--brand">
         <span className="dest-home__welcome-text">Welcome to</span>
-        <img className="dest-home__brand-logo" src="/datastream-logo.png" alt="Datastream" />
+        <span className="dest-home__wordmark">
+          <img className="dest-home__brand-logo" src={`${process.env.PUBLIC_URL || ''}/stream-mark.png`} alt="" />
+          Devstream
+        </span>
       </h2>
       <p className="dest-home__description">
         Browse saved datasets in Data Hub, define relationships in Data Model,

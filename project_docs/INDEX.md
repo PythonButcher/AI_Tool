@@ -20,7 +20,7 @@ This is the top-level routing file. Use it to find the smallest current document
 | Check implementation authorization | `project_docs/active/status/phase_authorization.json` |
 | Work on the current project gate | `project_docs/active/active_gate/README.md` |
 | Save and reopen working datasets | `project_docs/active/saved_datasets/README.md` |
-| Find data tools and review missing UI capabilities | `project_docs/active/reviews/datastream_ui_workflow_inventory.md` |
+| Find data tools and review missing UI capabilities | `project_docs/active/reviews/devstream_ui_workflow_inventory.md` |
 | Implement Analytics | `project_docs/active/analytics/README.md` |
 | Implement configurable Business Objects in Data Model | `project_docs/active/business_objects/README.md` |
 | Improve the AI Chat business workspace | `project_docs/active/ai_chat/README.md` |
@@ -48,7 +48,7 @@ AI Chat is a BI-first NLP workspace. Existing grounded answers, semantic-model r
 
 Decision Intelligence output has been removed from the AI Chat product path. Isolated backend services remain for compatibility only and must not be treated as active UI scope.
 
-Phase 13 establishes ML Studio as a first-class Datastream destination. All five local task workflows and the theme-aligned frontend are engineering-complete; final browser acceptance belongs to the user. Status records verification and remaining limitations.
+Phase 13 establishes ML Studio as a first-class Devstream destination. All five local task workflows and the theme-aligned frontend are engineering-complete; final browser acceptance belongs to the user. Status records verification and remaining limitations.
 
 ## Ownership
 

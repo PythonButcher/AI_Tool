@@ -28,7 +28,7 @@ beforeEach(() => {
 
 afterEach(() => { global.fetch = originalFetch; });
 
-function renderApp(address = '/?app=datastream') {
+function renderApp(address = '/?app=devstream') {
   window.history.replaceState(null, '', address);
   return render(
     <DataProvider>
@@ -47,12 +47,13 @@ async function traverseBrowser(direction) {
   });
 }
 
-test('the default hub opens Datastream with the keyboard and preserves its destination across navigation', async () => {
+test('the default hub opens Devstream with the keyboard and preserves its destination across navigation', async () => {
   renderApp('/?source=example#notes');
 
-  const launch = screen.getByRole('link', { name: 'Open Datastream' });
-  expect(screen.getByRole('heading', { name: 'Data platform' })).toBeVisible();
-  expect(screen.queryByRole('banner', { name: 'Datastream' })).not.toBeInTheDocument();
+  const launch = screen.getByRole('link', { name: 'Open Devstream' });
+  expect(screen.getByRole('heading', { name: 'Datastream' })).toBeVisible();
+  expect(document.title).toBe('Datastream');
+  expect(screen.queryByRole('banner', { name: 'Devstream' })).not.toBeInTheDocument();
   expect(axios.get).not.toHaveBeenCalled();
   expect(new URL(launch.href).searchParams.get('source')).toBe('example');
   expect(new URL(launch.href).hash).toBe('#notes');
@@ -62,26 +63,42 @@ test('the default hub opens Datastream with the keyboard and preserves its desti
   }
   expect(launch).toHaveFocus();
   act(() => { userEvent.keyboard('{Enter}'); });
-  expect(window.location.search).toBe('?source=example&app=datastream');
+  expect(window.location.search).toBe('?source=example&app=devstream');
+  expect(document.title).toBe('Devstream | Datastream');
   expect(screen.getByRole('main')).toHaveFocus();
+  expect(screen.getByRole('button', { name: 'Devstream home' })).toBeVisible();
   const navigation = within(screen.getByRole('navigation', { name: 'Main navigation' }));
   expect(navigation.getByRole('button', { name: 'Workspace' })).toHaveAttribute('aria-current', 'page');
   fireEvent.click(navigation.getByRole('button', { name: 'Data Tools' }));
 
   await traverseBrowser('back');
-  expect(screen.getByRole('heading', { name: 'Data platform' })).toHaveFocus();
+  expect(screen.getByRole('heading', { name: 'Datastream' })).toHaveFocus();
   expect(screen.queryByRole('navigation', { name: 'Main navigation' })).not.toBeInTheDocument();
 
   await traverseBrowser('forward');
   expect(navigation.getByRole('button', { name: 'Data Tools' })).toHaveAttribute('aria-current', 'page');
   expect(screen.getByRole('region', { name: 'Data Tools' })).toBeVisible();
 
-  fireEvent.click(screen.getByRole('link', { name: 'Platform hub' }));
+  fireEvent.click(screen.getByRole('link', { name: 'Datastream hub' }));
   expect(window.location.search).toBe('?source=example');
   expect(window.location.hash).toBe('#notes');
-  expect(screen.getByRole('heading', { name: 'Data platform' })).toHaveFocus();
-  fireEvent.click(screen.getByRole('link', { name: 'Open Datastream' }));
+  expect(screen.getByRole('heading', { name: 'Datastream' })).toHaveFocus();
+  fireEvent.click(screen.getByRole('link', { name: 'Open Devstream' }));
   expect(navigation.getByRole('button', { name: 'Data Tools' })).toHaveAttribute('aria-current', 'page');
+});
+
+test('legacy workspace bookmarks open Devstream and the hub provides the current launch address', () => {
+  renderApp('/?app=datastream&source=example#notes');
+
+  expect(screen.getByRole('banner', { name: 'Devstream' })).toBeVisible();
+  expect(document.title).toBe('Devstream | Datastream');
+  fireEvent.click(screen.getByRole('link', { name: 'Datastream hub' }));
+
+  expect(window.location.search).toBe('?source=example');
+  expect(window.location.hash).toBe('#notes');
+  expect(screen.getByRole('link', { name: 'Open Devstream' })).toHaveAttribute(
+    'href', new URL('/?source=example&app=devstream#notes', window.location.origin).href
+  );
 });
 
 test('the hub does not handle keyboard shortcuts from retained Analytics', () => {
@@ -90,7 +107,7 @@ test('the hub does not handle keyboard shortcuts from retained Analytics', () =>
   const analytics = screen.getByRole('region', { name: 'Analytics workspace' });
   expect(fireEvent.keyDown(analytics, { key: 'z', ctrlKey: true })).toBe(false);
 
-  fireEvent.click(screen.getByRole('link', { name: 'Platform hub' }));
+  fireEvent.click(screen.getByRole('link', { name: 'Datastream hub' }));
   expect(fireEvent.keyDown(screen.getByRole('main'), { key: 'z', ctrlKey: true })).toBe(true);
 });
 
@@ -105,8 +122,8 @@ test('a workspace dialog stays off the hub and keeps its unsaved draft on browse
     analysis_context: { workspace_id: 'orders-workspace' },
   } });
   const { container } = renderApp('/');
-  fireEvent.click(screen.getByRole('link', { name: 'Open Datastream' }));
-  fireEvent.click(within(screen.getByRole('banner', { name: 'Datastream' })).getByRole('button', { name: 'Upload data' }));
+  fireEvent.click(screen.getByRole('link', { name: 'Open Devstream' }));
+  fireEvent.click(within(screen.getByRole('banner', { name: 'Devstream' })).getByRole('button', { name: 'Upload data' }));
   const file = new File(['Customer\ncustomer-42\n'], 'orders.csv', { type: 'text/csv' });
   fireEvent.change(container.querySelector('input[type="file"]'), { target: { files: [file] } });
   fireEvent.click(screen.getByRole('button', { name: 'Complete Import' }));
@@ -119,7 +136,7 @@ test('a workspace dialog stays off the hub and keeps its unsaved draft on browse
   fireEvent.change(name, { target: { value: 'Unsaved orders draft' } });
 
   await traverseBrowser('back');
-  expect(screen.getByRole('heading', { name: 'Data platform' })).toHaveFocus();
+  expect(screen.getByRole('heading', { name: 'Datastream' })).toHaveFocus();
   expect(dialog).not.toBeVisible();
 
   await traverseBrowser('forward');
@@ -142,7 +159,7 @@ test('opens file import and Data Hub from an empty Workspace', async () => {
   expect(await screen.findByText('No saved datasets yet')).toBeVisible();
   expect(axios.get).toHaveBeenCalledWith(expect.stringMatching(/\/api\/datahub\/datasets$/), { signal: expect.anything() });
 
-  const banner = within(screen.getByRole('banner', { name: 'Datastream' }));
+  const banner = within(screen.getByRole('banner', { name: 'Devstream' }));
   fireEvent.click(banner.getByRole('button', { name: 'Upload data' }));
   expect(screen.getByRole('button', { name: 'Browse Files' })).toBeVisible();
   fireEvent.click(screen.getByRole('button', { name: 'Browse saved datasets' }));
@@ -162,7 +179,7 @@ test('an upload attaches its dataset and enables Data Preview', async () => {
     analysis_context: { workspace_id: 'orders-workspace' },
   } });
   const { container } = renderApp();
-  const banner = within(screen.getByRole('banner', { name: 'Datastream' }));
+  const banner = within(screen.getByRole('banner', { name: 'Devstream' }));
   fireEvent.click(banner.getByRole('button', { name: 'Upload data' }));
   expect(banner.getByRole('button', { name: 'Data Preview' })).toBeDisabled();
   const file = new File(['Customer\ncustomer-42\n'], 'orders.csv', { type: 'text/csv' });
@@ -208,7 +225,7 @@ test('upload and Refine stay out of Data Hub until Save Dataset, then the full e
     throw new Error(url);
   });
   const { container, unmount } = renderApp();
-  const banner = within(screen.getByRole('banner', { name: 'Datastream' }));
+  const banner = within(screen.getByRole('banner', { name: 'Devstream' }));
   const navigation = within(screen.getByRole('navigation', { name: 'Main navigation' }));
   fireEvent.click(navigation.getByRole('button', { name: 'Data Hub' }));
   expect(await screen.findByText('No saved datasets yet')).toBeVisible();
@@ -268,7 +285,7 @@ test('upload and Refine stay out of Data Hub until Save Dataset, then the full e
 
   unmount();
   renderApp();
-  const reopenedBanner = within(screen.getByRole('banner', { name: 'Datastream' }));
+  const reopenedBanner = within(screen.getByRole('banner', { name: 'Devstream' }));
   fireEvent.click(reopenedBanner.getByRole('button', { name: 'Data Hub' }));
   fireEvent.click(await screen.findByRole('button', { name: 'Open dataset' }));
   expect(await within(await screen.findByRole('region', { name: 'Workspace' })).findByRole('heading', { name: 'Refined orders', level: 1 })).toBeVisible();
@@ -312,7 +329,7 @@ test('opening a saved model restores full workbench data and offers its exact An
   });
   renderApp();
 
-  const banner = within(screen.getByRole('banner', { name: 'Datastream' }));
+  const banner = within(screen.getByRole('banner', { name: 'Devstream' }));
   const navigation = within(screen.getByRole('navigation', { name: 'Main navigation' }));
   fireEvent.click(navigation.getByRole('button', { name: 'Data Hub' }));
   const namedRecord = await screen.findByRole('button', { name: 'View details for Orders (orders-2)' });
@@ -342,7 +359,7 @@ test('opening a saved model restores full workbench data and offers its exact An
 
 test('the header exposes primary destinations and dismisses secondary actions from the keyboard', () => {
   renderApp();
-  const banner = within(screen.getByRole('banner', { name: 'Datastream' }));
+  const banner = within(screen.getByRole('banner', { name: 'Devstream' }));
   const nav = within(banner.getByRole('navigation', { name: 'Main navigation' }));
   expect(nav.getByRole('button', { name: 'Workspace' })).toHaveAttribute('aria-current', 'page');
   for (const label of ['Data Tools', 'Data Hub', 'Data Model', 'Analytics', 'ML Studio']) {
@@ -415,7 +432,7 @@ test('a completed upload does not replace a connection panel opened while it was
   let finishUpload;
   axios.post.mockReturnValue(new Promise(resolve => { finishUpload = resolve; }));
   const { container } = renderApp();
-  const banner = within(screen.getByRole('banner', { name: 'Datastream' }));
+  const banner = within(screen.getByRole('banner', { name: 'Devstream' }));
   fireEvent.click(banner.getByRole('button', { name: 'Upload data' }));
   const file = new File(['Customer\ncustomer-43\n'], 'orders.csv', { type: 'text/csv' });
   fireEvent.change(container.querySelector('input[type="file"]'), { target: { files: [file] } });

@@ -1,4 +1,4 @@
-Goal: Improve how Datastream AI Chat interprets everyday requests for relative months and category comparisons, then return the implementation and verification evidence to Codex for review.
+Goal: Improve how Devstream AI Chat interprets everyday requests for relative months and category comparisons, then return the implementation and verification evidence to Codex for review.
 
 ## User Outcome
 

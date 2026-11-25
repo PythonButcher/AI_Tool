@@ -10,12 +10,12 @@ beforeEach(() => {
   document.documentElement.removeAttribute('data-theme');
 });
 
-test('Datastream is the only launchable app and planned entries explain their purpose', () => {
-  render(<PlatformHub links={{ datastream: { href: '/?app=datastream' } }} />);
+test('Devstream is the only launchable app and planned entries explain their purpose', () => {
+  render(<PlatformHub links={{ devstream: { href: '/?app=devstream' } }} />);
 
-  const datastream = within(screen.getByRole('article', { name: 'Datastream' }));
-  expect(datastream.getByText('Available')).toBeVisible();
-  expect(datastream.getByRole('link', { name: 'Open Datastream' })).toHaveAttribute('href', '/?app=datastream');
+  const devstream = within(screen.getByRole('article', { name: 'Devstream' }));
+  expect(devstream.getByText('Available')).toBeVisible();
+  expect(devstream.getByRole('link', { name: 'Open Devstream' })).toHaveAttribute('href', '/?app=devstream');
   expect(screen.getAllByRole('link')).toHaveLength(1);
 
   const planned = [
@@ -35,11 +35,11 @@ test('Datastream is the only launchable app and planned entries explain their pu
 test('supports switching light and dark mode and persisted color themes directly from the hub', () => {
   render(
     <ThemeProvider>
-      <PlatformHub links={{ datastream: { href: '/?app=datastream' } }} />
+      <PlatformHub links={{ devstream: { href: '/?app=devstream' } }} />
     </ThemeProvider>
   );
 
-  const main = screen.getByRole('main', { name: 'Data platform' });
+  const main = screen.getByRole('main', { name: 'Datastream' });
   expect(document.documentElement).toHaveAttribute('data-theme', 'dark');
   expect(main).toHaveAttribute('data-hub-palette', 'mineral');
 
@@ -57,7 +57,7 @@ test('supports switching light and dark mode and persisted color themes directly
 });
 
 test('exposes sign-in placeholder, interactive visuals, topic context, how-to guides, and roadmap tabs', () => {
-  render(<PlatformHub links={{ datastream: { href: '/?app=datastream' } }} />);
+  render(<PlatformHub links={{ devstream: { href: '/?app=devstream' } }} />);
 
   // Interactive visual switcher cycles editorial images
   expect(screen.getByRole('img', { name: /layered glass data planes/i })).toBeVisible();

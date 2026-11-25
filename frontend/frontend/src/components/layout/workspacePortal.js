@@ -1,5 +1,5 @@
-export const DATASTREAM_WORKSPACE_ID = 'datastream-workspace';
+export const DEVSTREAM_WORKSPACE_ID = 'devstream-workspace';
 
 export function getWorkspacePortalContainer(ownerDocument = document) {
-  return ownerDocument.getElementById(DATASTREAM_WORKSPACE_ID) ?? ownerDocument.body;
+  return ownerDocument.getElementById(DEVSTREAM_WORKSPACE_ID) ?? ownerDocument.body;
 }

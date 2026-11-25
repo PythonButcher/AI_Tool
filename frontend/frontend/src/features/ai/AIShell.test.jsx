@@ -444,13 +444,13 @@ test('a chat-storage failure leaves conversation switching usable in memory', as
   } finally { spy.mockRestore(); }
 });
 
-test('centered Datastream logo shows in a new chat and disappears once output is present', async () => {
+test('centered Devstream logo shows in a new chat and disappears once output is present', async () => {
   axios.post.mockResolvedValue(success());
   render(tree());
   const emptyBrand = screen.getByTestId('ai-chat-empty-brand');
   const mark = within(emptyBrand).getByAltText('');
-  expect(mark).toHaveAttribute('src', '/datastream-mark.png');
-  expect(within(emptyBrand).getByText('Datastream')).toBeInTheDocument();
+  expect(mark).toHaveAttribute('src', '/stream-mark.png');
+  expect(within(emptyBrand).getByText('Devstream')).toBeInTheDocument();
 
   send('Show revenue');
   expect(screen.queryByTestId('ai-chat-empty-brand')).not.toBeInTheDocument();

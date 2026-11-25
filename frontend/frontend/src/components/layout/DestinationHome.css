@@ -68,6 +68,12 @@
   white-space: nowrap;
 }
 
+.dest-home__wordmark {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28em;
+}
+
 .dest-home__brand-logo {
   display: block;
   height: 1.26em;

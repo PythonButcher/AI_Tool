@@ -1,4 +1,4 @@
-Goal: Build a robust, durable Workflow Reliability feature for Datastream without changing the current active project stream.
+Goal: Build a robust, durable Workflow Reliability feature for Devstream without changing the current active project stream.
 
 # Assignment
 

@@ -999,10 +999,10 @@ function AIChatConversation({ onOpenDashboard, windowActions, windowNotice, conv
               <div className="ai-shell__empty-brand" data-testid="ai-chat-empty-brand" aria-hidden="true">
                 <img
                   className="ai-shell__empty-brand-logo"
-                  src="/datastream-mark.png"
+                  src={`${process.env.PUBLIC_URL || ''}/stream-mark.png`}
                   alt=""
                 />
-                <span className="ai-shell__empty-brand-name">Datastream</span>
+                <span className="ai-shell__empty-brand-name">Devstream</span>
               </div>
               {suggestions.length > 0 && (
                 <div className="ai-shell__welcome-actions">
