@@ -51,6 +51,12 @@ const ROADMAP_ICONS = {
 
 const VALID_PALETTES = new Set(HUB_COLOR_THEMES.map(item => item.id));
 
+const DOCK_TABS = [
+  { id: 'context', label: 'Topic Context' },
+  { id: 'guides', label: 'How-To Guides' },
+  { id: 'roadmap', label: 'Planned Roadmap' },
+];
+
 function readStoredPalette() {
   try {
     const saved = localStorage.getItem(HUB_PALETTE_STORAGE_KEY);
@@ -83,6 +89,7 @@ export default function PlatformHub({ links = {}, headingRef }) {
   const hubId = useId();
   const accountPanelRef = useRef(null);
   const accountTriggerRef = useRef(null);
+  const dockTabRefs = useRef({});
 
   const currentTheme = themeContext?.theme ?? fallbackTheme;
   const isDark = currentTheme === 'dark';
@@ -227,7 +234,7 @@ export default function PlatformHub({ links = {}, headingRef }) {
               onClick={() => setAccountOpen(open => !open)}
             >
               <FaUserCircle aria-hidden="true" />
-              <span>Sign in</span>
+              <span>Sign-in preview</span>
               <span className="platform-hub__mini-tag">Planned</span>
             </button>
 
@@ -381,39 +388,37 @@ export default function PlatformHub({ links = {}, headingRef }) {
           <section className="platform-hub__knowledge" aria-label="Context, guidance, and roadmap">
             <div className="platform-hub__knowledge-bar">
               <div className="platform-hub__tabs" role="tablist" aria-label="Platform information views">
-                <button
-                  type="button"
-                  role="tab"
-                  id={`${hubId}-tab-context`}
-                  aria-selected={activeDockTab === 'context'}
-                  aria-controls={`${hubId}-panel-context`}
-                  className={`platform-hub__tab ${activeDockTab === 'context' ? 'is-active' : ''}`}
-                  onClick={() => setActiveDockTab('context')}
-                >
-                  Topic Context
-                </button>
-                <button
-                  type="button"
-                  role="tab"
-                  id={`${hubId}-tab-guides`}
-                  aria-selected={activeDockTab === 'guides'}
-                  aria-controls={`${hubId}-panel-guides`}
-                  className={`platform-hub__tab ${activeDockTab === 'guides' ? 'is-active' : ''}`}
-                  onClick={() => setActiveDockTab('guides')}
-                >
-                  How-To Guides
-                </button>
-                <button
-                  type="button"
-                  role="tab"
-                  id={`${hubId}-tab-roadmap`}
-                  aria-selected={activeDockTab === 'roadmap'}
-                  aria-controls={`${hubId}-panel-roadmap`}
-                  className={`platform-hub__tab ${activeDockTab === 'roadmap' ? 'is-active' : ''}`}
-                  onClick={() => setActiveDockTab('roadmap')}
-                >
-                  Planned Roadmap
-                </button>
+                {DOCK_TABS.map((tab, index) => {
+                  const selected = activeDockTab === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      ref={node => { dockTabRefs.current[tab.id] = node; }}
+                      type="button"
+                      role="tab"
+                      id={`${hubId}-tab-${tab.id}`}
+                      tabIndex={selected ? 0 : -1}
+                      aria-selected={selected}
+                      aria-controls={`${hubId}-panel-${tab.id}`}
+                      className={`platform-hub__tab ${selected ? 'is-active' : ''}`}
+                      onClick={() => setActiveDockTab(tab.id)}
+                      onKeyDown={event => {
+                        let nextIndex = null;
+                        if (event.key === 'ArrowRight') nextIndex = (index + 1) % DOCK_TABS.length;
+                        else if (event.key === 'ArrowLeft') nextIndex = (index - 1 + DOCK_TABS.length) % DOCK_TABS.length;
+                        else if (event.key === 'Home') nextIndex = 0;
+                        else if (event.key === 'End') nextIndex = DOCK_TABS.length - 1;
+                        if (nextIndex === null) return;
+                        event.preventDefault();
+                        const nextTab = DOCK_TABS[nextIndex];
+                        setActiveDockTab(nextTab.id);
+                        dockTabRefs.current[nextTab.id]?.focus();
+                      }}
+                    >
+                      {tab.label}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 

@@ -65,7 +65,7 @@ test('exposes sign-in placeholder, interactive visuals, topic context, how-to gu
   expect(screen.getByRole('img', { name: /glass analytical bar clusters/i })).toBeVisible();
 
   // Sign-in roadmap placeholder opens and dismisses with Escape
-  const signInBtn = screen.getByRole('button', { name: /Sign in/i });
+  const signInBtn = screen.getByRole('button', { name: /Sign-in preview/i });
   fireEvent.click(signInBtn);
   const accountRegion = screen.getByRole('region', { name: 'Account and identity preview' });
   expect(within(accountRegion).getByText('Local workspace mode')).toBeVisible();
@@ -92,4 +92,47 @@ test('exposes sign-in placeholder, interactive visuals, topic context, how-to gu
   expect(screen.getByRole('heading', { name: 'Sign-In, SSO & Access' })).toBeVisible();
   expect(screen.getByRole('heading', { name: 'AI Context Memory' })).toBeVisible();
   expect(screen.getByRole('heading', { name: 'Live Business Model' })).toBeVisible();
+});
+
+test('information tabs support ArrowLeft, ArrowRight, Home, and End keyboard navigation', () => {
+  render(<PlatformHub links={{ devstream: { href: '/?app=devstream' } }} />);
+
+  const contextTab = screen.getByRole('tab', { name: 'Topic Context' });
+  const guidesTab = screen.getByRole('tab', { name: 'How-To Guides' });
+  const roadmapTab = screen.getByRole('tab', { name: 'Planned Roadmap' });
+
+  expect(contextTab).toHaveAttribute('tabindex', '0');
+  expect(guidesTab).toHaveAttribute('tabindex', '-1');
+  expect(roadmapTab).toHaveAttribute('tabindex', '-1');
+
+  contextTab.focus();
+  fireEvent.keyDown(contextTab, { key: 'ArrowRight' });
+  expect(guidesTab).toHaveFocus();
+  expect(guidesTab).toHaveAttribute('aria-selected', 'true');
+  expect(guidesTab).toHaveAttribute('tabindex', '0');
+  expect(screen.getByRole('tabpanel', { name: 'How-To Guides' })).toBeVisible();
+
+  fireEvent.keyDown(guidesTab, { key: 'ArrowRight' });
+  expect(roadmapTab).toHaveFocus();
+  expect(roadmapTab).toHaveAttribute('aria-selected', 'true');
+  expect(screen.getByRole('tabpanel', { name: 'Planned Roadmap' })).toBeVisible();
+
+  // Wraps from last tab back to first on ArrowRight
+  fireEvent.keyDown(roadmapTab, { key: 'ArrowRight' });
+  expect(contextTab).toHaveFocus();
+  expect(contextTab).toHaveAttribute('aria-selected', 'true');
+
+  // Wraps from first tab back to last on ArrowLeft
+  fireEvent.keyDown(contextTab, { key: 'ArrowLeft' });
+  expect(roadmapTab).toHaveFocus();
+  expect(roadmapTab).toHaveAttribute('aria-selected', 'true');
+
+  // Home and End jump to first and last tabs
+  fireEvent.keyDown(roadmapTab, { key: 'Home' });
+  expect(contextTab).toHaveFocus();
+  expect(contextTab).toHaveAttribute('aria-selected', 'true');
+
+  fireEvent.keyDown(contextTab, { key: 'End' });
+  expect(roadmapTab).toHaveFocus();
+  expect(roadmapTab).toHaveAttribute('aria-selected', 'true');
 });
