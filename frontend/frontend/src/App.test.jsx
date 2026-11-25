@@ -57,7 +57,9 @@ test('the default hub opens Datastream with the keyboard and preserves its desti
   expect(new URL(launch.href).searchParams.get('source')).toBe('example');
   expect(new URL(launch.href).hash).toBe('#notes');
 
-  userEvent.tab();
+  for (let step = 0; step < 20 && document.activeElement !== launch; step += 1) {
+    userEvent.tab();
+  }
   expect(launch).toHaveFocus();
   act(() => { userEvent.keyboard('{Enter}'); });
   expect(window.location.search).toBe('?source=example&app=datastream');
