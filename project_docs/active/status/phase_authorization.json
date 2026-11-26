@@ -420,6 +420,11 @@
     "approved_at": "2026-11-22",
     "scope": "Prepare and index the deferred standalone Datastream Publishing Portal build plan. This authorization covers planning documentation."
   },
+  "publishing_portal_workflow_planning_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-11-25",
+    "scope": "Update the Publishing Portal build plan with the Analytics-to-Publishing handoff and dataset and report refresh requirements for database sources and replacement files. Documentation only."
+  },
   "data_hub_rebuild_planning_authorization": {
     "approved_by": "User",
     "approved_at": "2026-11-21",
@@ -583,6 +588,7 @@
   ],
   "review_only_allowed_paths": [
     "project_docs/active/reviews/**",
+    "project_docs/active/future/codex/datastream_publishing_portal_standalone_application_build_plan.md",
     "project_docs/active/active_gate/README.md",
     "project_docs/active/status/project_execution_status.md",
     "project_docs/active/status/phase_authorization.json",

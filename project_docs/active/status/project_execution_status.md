@@ -33,6 +33,8 @@ The [Business Object repair](../../archive/business_object_definitions_repair_pa
 
 The customizable Analysis workbench remains **awaiting user acceptance** in chat. The user owns the browser decision. Engineering verification passed 34 focused Analytics and WindowContext tests, scoped ESLint, and the production build. Chrome with fixture data verified pointer and keyboard snapping, visible resize handles and placement preview, per-panel locks, chart and draft preservation, compact stacking, reload, reset, and print layout. See the [Analytics roadmap](../analytics/README.md) and the preserved authorization in [phase_authorization.json](phase_authorization.json).
 
+The user reported that the CSV analysis using Sum of sales worked in the browser. This verifies the reported raw-field aggregation path. Governed metric and Business Object validation remain separate.
+
 ## Pending PostgreSQL Workspace Acceptance
 
 PostgreSQL imports and saved-model reopening are available from Devstream's Connect database workflow. [The PostgreSQL contract](../contracts/postgres_workspace.md) describes discovery, snapshots, and saved models. Local branch integration passed 53 focused backend tests with a disposable PostgreSQL 17 instance, 82 focused frontend tests, and the production build with warnings. The user owns browser acceptance.

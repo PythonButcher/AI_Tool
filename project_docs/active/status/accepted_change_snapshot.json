@@ -4,8 +4,8 @@
   "accepted_by": "User",
   "purpose": "Preserve the accepted Datastream Hub source while the next product outcome is being selected. The committed baseline and review-only paths are defined in phase_authorization.json.",
   "sha256": {
-    "frontend/frontend/src/components/layout/PlatformHub.jsx": "9b3619e9651ae2161c6d68d5f3533952cee1eeefc1ade289b82ab03f17d97579",
-    "frontend/frontend/src/components/layout/PlatformHub.test.jsx": "4c6f4b34a06f66920b59937902d4fc68ff473157d36962e40821048911b82797",
-    "frontend/frontend/src/components/layout/PlatformHub.css": "2ba72419df5927ad28dd48035e919021fb59cd8056dddf32d8f9e7886752613f"
+    "frontend/frontend/src/components/layout/PlatformHub.jsx": "9dbe071d4bbae2704a859169f67bee48816c18fd5833833e3062a93118bea10b",
+    "frontend/frontend/src/components/layout/PlatformHub.test.jsx": "981d4dbe325437c7f13924a06b286138326b4b66320c0148f2013ac6e29d4487",
+    "frontend/frontend/src/components/layout/PlatformHub.css": "eda6ba0cc51c5559da2a61c8fd8c1496a933f7d184b40cc64c751b469691ae51"
   }
 }
