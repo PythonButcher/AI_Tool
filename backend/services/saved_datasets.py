@@ -10,6 +10,7 @@ from backend.repositories import saved_dataset_repository as repository
 from backend.repositories.source_workspace_repository import get_source, get_workspace, serialize_source
 from backend.services.business_objects import list_business_objects
 from backend.services.data_catalog_lineage import evaluate_dataset_readiness, is_blocked
+from backend.services.dataset_context import safe_json_records
 from backend.services.relationship_execution import (
     RelationshipExecutionError, execute_analysis_context, resolve_active_model_analysis_context,
 )
@@ -380,7 +381,7 @@ def list_datasets() -> list[dict]:
             {'dataset_id': row['id'], 'kind': 'legacy', 'revision': None, **serialize_source(row)}
             for row in conn.execute('''
                 SELECT source.* FROM datahub_datasets source
-                WHERE source.locator_kind <> 'managed_file'
+                WHERE source.locator_kind <> 'managed_file' OR source.source_kind = 'sql'
                 ORDER BY COALESCE(source.created_at, source.uploadedAt) DESC, source.id
             ''')
         ]
@@ -422,15 +423,16 @@ def _open_named(conn, record):
 
 def _open_legacy(conn, dataset_id):
     source = get_source(dataset_id, connection=conn)
-    if source is None or source['locator_kind'] == 'managed_file':
+    if source is None or (source['locator_kind'] == 'managed_file' and source['source_kind'] != 'sql'):
         raise SavedDatasetError('saved_dataset_not_found', 'Dataset not found in Data Hub.', 404)
     candidates = conn.execute('''
         SELECT workspace.workspace_id FROM data_workspaces workspace
         JOIN workspace_sources member ON member.workspace_id = workspace.workspace_id AND member.source_id = ?
         LEFT JOIN dataset_activation_workspaces activation ON activation.workspace_id = workspace.workspace_id
         WHERE workspace.primary_source_id = ? AND activation.workspace_id IS NULL
+          AND (? <> 'sql' OR workspace.workspace_kind <> 'postgres')
         ORDER BY workspace.workspace_id
-    ''', (dataset_id, dataset_id)).fetchall()
+    ''', (dataset_id, dataset_id, source['source_kind'])).fetchall()
     if len(candidates) > 1:
         raise SavedDatasetError('ambiguous_dataset_workspace', 'This source is primary in multiple workspaces. Save the intended working dataset by name.')
     if candidates:
@@ -448,7 +450,10 @@ def _open_legacy(conn, dataset_id):
         else:
             workspace, _, _ = repository.restore_workspace(conn, source['name'], _single_source(source, _utc_now()), _utc_now())
             context = build_analysis_context(workspace, [dataset_id])
-    record = {'dataset_id': dataset_id, 'name': source['name'], 'kind': 'legacy', 'revision': None, 'primary_source_id': dataset_id}
+    record = {
+        'dataset_id': dataset_id, 'name': source['name'], 'kind': 'legacy', 'revision': None,
+        'primary_source_id': dataset_id, 'source_kind': source['source_kind'],
+    }
     return record, workspace, context, None
 
 
@@ -485,7 +490,9 @@ def open_dataset(dataset_id: str, *, offset: int = 0, limit: int = 100, expected
 
 def _workbench_envelope(workspace, source, bundle, *, offset=0, limit=100, include_full=False):
     dataframe = bundle['dataframe']
-    preview = json.loads(dataframe.iloc[offset:offset + limit].to_json(orient='records', date_format='iso'))
+    preview_frame = dataframe.iloc[offset:offset + limit]
+    sql_snapshot = source['source_kind'] == 'sql'
+    preview = safe_json_records(preview_frame) if sql_snapshot else json.loads(preview_frame.to_json(orient='records', date_format='iso'))
     envelope = {
         'workspace': workspace, 'source': source, 'analysis_context': bundle['analysis_context'],
         'analysis_lineage': bundle['analysis_lineage'], 'governance_readiness': bundle['governance_readiness'],
@@ -494,5 +501,5 @@ def _workbench_envelope(workspace, source, bundle, *, offset=0, limit=100, inclu
         'row_count': len(dataframe), 'offset': offset, 'has_more': offset + limit < len(dataframe),
     }
     if include_full:
-        envelope['full_data'] = json.loads(dataframe.to_json(orient='records', date_format='iso'))
+        envelope['full_data'] = safe_json_records(dataframe) if sql_snapshot else json.loads(dataframe.to_json(orient='records', date_format='iso'))
     return envelope

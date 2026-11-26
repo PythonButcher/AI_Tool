@@ -314,6 +314,17 @@ def read_dataset_file(path_or_source: Any, filename: Optional[str] = None) -> pd
     raise ValueError("Unsupported file format")
 
 
+def safe_json_records(frame: pd.DataFrame) -> list[Dict[str, Any]]:
+    """Keep browser-visible integer keys exact while preserving native storage types."""
+    records = json.loads(frame.to_json(orient="records", date_format="iso", date_unit="ns", double_precision=15))
+    max_safe_integer = (1 << 53) - 1
+    for row in records:
+        for field, value in row.items():
+            if type(value) is int and abs(value) > max_safe_integer:
+                row[field] = str(value)
+    return records
+
+
 def load_datahub_dataset(dataset_id: str) -> Dict[str, Any]:
     if not dataset_id:
         raise ValueError("dataset_id is required to load a Data Hub dataset.")

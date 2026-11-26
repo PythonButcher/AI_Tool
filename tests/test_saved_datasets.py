@@ -9,6 +9,7 @@ import subprocess
 import sys
 
 from flask import Flask
+import pandas as pd
 import pytest
 
 from backend.db import backend_db
@@ -19,7 +20,10 @@ from backend.routes.datahub_routes import datahub_bp
 from backend.routes.data_workspaces import data_workspaces_bp
 from backend.routes.upload import upload_bp
 from backend.services import business_objects, source_relationships, workspace_context
+from backend.services.data_catalog_lineage import evaluate_dataset_readiness
+from backend.services.dataset_context import safe_json_records
 from backend.services.relationship_execution import execute_analysis_context
+from backend.services.semantic_model import infer_semantic_model_from_dataframe
 
 
 @pytest.fixture
@@ -76,6 +80,36 @@ print(json.dumps(response.get_json()))
 ''', backend_db.DB_PATH, dataset_id, json.dumps(options)], capture_output=True, text=True, timeout=30)
     assert result.returncode == 0, result.stderr
     return json.loads(result.stdout)
+
+
+def test_postgres_snapshots_remain_discoverable_without_publishing_uploads(app):
+    client = app.test_client()
+    uploaded = upload(client, b'id,units\n1,3\n')
+    key = 9223372036854775806
+    dataframe = pd.DataFrame({'id': [key], 'units': [4]})
+    imported = workspace_context.register_managed_postgres_workspace(name='Orders', snapshots=[{
+        'table': 'orders',
+        'name': 'public.orders',
+        'dataframe': dataframe,
+        'file_bytes': dataframe.to_json(orient='table', index=False).encode(),
+        'readiness': evaluate_dataset_readiness(dataframe, None, operation='postgres_snapshot'),
+        'preview': safe_json_records(dataframe),
+        'semantic_model': infer_semantic_model_from_dataframe(dataframe, dataset_name='orders', source='postgres_snapshot'),
+    }])
+    source_id = imported['source']['source_id']
+    datasets = client.get('/api/datahub/datasets').get_json()['datasets']
+    assert [(item['dataset_id'], item['source_kind']) for item in datasets] == [(source_id, 'sql')]
+    legacy = client.get('/api/datahub/list').get_json()
+    assert [item['id'] for item in legacy] == [source_id]
+    assert 'path' not in legacy[0]
+    opened = reopen(client, source_id)
+    assert opened['full_data'] == [{'id': str(key), 'units': 4}]
+    assert opened['analysis_context']['source_ids'] == [source_id]
+    assert opened['workspace']['workspace_id'] != imported['workspace']['workspace_id']
+    assert client.post(f"/api/datahub/datasets/{uploaded['source']['source_id']}/open").status_code == 404
+    assert client.post('/api/datahub/register', json={'id': source_id, 'name': 'Replace', 'path': 'other.csv'}).status_code == 409
+    registered = client.post('/api/datahub/register', json={'id': 'legacy', 'name': 'Legacy file', 'path': 'other.csv'})
+    assert registered.status_code == 201, registered.get_json()
 
 
 def test_named_upload_reuses_bytes_and_reopens_all_pages_with_distinct_ids(app):

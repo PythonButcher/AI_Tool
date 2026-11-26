@@ -33,6 +33,10 @@ The [Business Object repair](../../archive/business_object_definitions_repair_pa
 
 The customizable Analysis workbench remains **awaiting user acceptance** in chat. The user owns the browser decision. Engineering verification passed 34 focused Analytics and WindowContext tests, scoped ESLint, and the production build. Chrome with fixture data verified pointer and keyboard snapping, visible resize handles and placement preview, per-panel locks, chart and draft preservation, compact stacking, reload, reset, and print layout. See the [Analytics roadmap](../analytics/README.md) and the preserved authorization in [phase_authorization.json](phase_authorization.json).
 
+## Pending PostgreSQL Workspace Acceptance
+
+PostgreSQL imports and saved-model reopening are available from Devstream's Connect database workflow. [The PostgreSQL contract](../contracts/postgres_workspace.md) describes discovery, snapshots, and saved models. Prior verification used a disposable PostgreSQL 17.4 server. The user owns browser acceptance.
+
 ## Preserved Interface Verification
 
 AI Chat retains its conversation controls, optional navigation rail, composer, model modes, and BI results. The authorization record holds the verification evidence for model routing, conversation management, and dock behavior. ML Studio's home and learning experience remains awaiting user acceptance.

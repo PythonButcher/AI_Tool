@@ -13,6 +13,7 @@ const updatedFormat = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', 
 const numberFormat = new Intl.NumberFormat();
 
 function sourceType(source) {
+  if (source.kind === 'legacy' && source.source_kind === 'sql') return 'PostgreSQL snapshot';
   return DATASET_TYPES[source.kind] || 'Saved dataset';
 }
 
@@ -98,7 +99,9 @@ export default function DataHubWindow({ onUpload, onOpenDataset }) {
       if (controller.signal.aborted) return;
       if (!Array.isArray(data?.datasets)) throw new Error('Invalid catalog response');
       setSources(data.datasets);
-      refreshDatasets(data.datasets.filter(source => source.kind === 'legacy').map(source => ({ id: source.source_id, name: source.name })));
+      refreshDatasets(data.datasets.filter(source => source.kind === 'legacy').map(source => ({
+        id: source.source_id, name: source.name, source_kind: source.source_kind,
+      })));
     }).catch(error => {
       if (!controller.signal.aborted) setLoadError(errorMessage(error, 'Could not load saved datasets.'));
     }).finally(() => {
@@ -309,7 +312,7 @@ export default function DataHubWindow({ onUpload, onOpenDataset }) {
                         >
                           {source.name}
                         </button>
-                        <span className="datahub-source__id">{source.revision ? `Revision ${source.revision}` : 'Registered file'}</span>
+                        <span className="datahub-source__id">{source.revision ? `Revision ${source.revision}` : sourceType(source)}</span>
                       </div>
                     </div>
                     <dl className="datahub-source__metadata">

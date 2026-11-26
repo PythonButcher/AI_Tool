@@ -10,6 +10,21 @@
   },
   "authorization_state": "REVIEW_ONLY",
   "lifecycle_state": "NOT STARTED",
+  "local_branch_integration_authorization": {
+    "approved_by": "User",
+    "scope": "Resolve conflicts locally on feature/platform-revisions-2 while preserving PostgreSQL and Devstream features. The user owns the GitHub merge into main-dev-branch."
+  },
+  "postgres_workspace_verification": {
+    "backend": "Before branch integration, 61 focused tests passed, including real PostgreSQL 17.4 import, rollback, relationship and filtered Auto chat totals, reopening, Data Hub, semantic metrics, and ML Studio snapshot resolution.",
+    "frontend": "Before branch integration, 30 focused React tests and the production build passed. Final browser acceptance belongs to the user."
+  },
+  "postgres_workspace_implementation_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-11-07",
+    "evidence": "Direct instruction and explicit frontend authorization in the PostgreSQL verification chat.",
+    "instruction": "Deliver a working end-to-end PostgreSQL workflow for choosing a database, tables and optional columns, creating relationships, and reusing the saved dataset or semantic model.",
+    "codex_frontend_implementation_authorized": true
+  },
   "platform_entry_acceptance": {
     "accepted_by": "User",
     "accepted_at": "2026-11-25",
@@ -416,6 +431,11 @@
     "acceptance": "Accepted by the user in chat on 2026-11-22."
   },
   "allowed_paths": [
+    "backend/routes/sql_fetch.py",
+    "backend/services/postgres_workspace.py",
+    "backend/repositories/source_workspace_repository.py",
+    "tests/test_postgres_workspace.py",
+    "project_docs/active/contracts/postgres_workspace.md",
     "README.md",
     "CLAUDE.md",
     "frontend/frontend/README.md",

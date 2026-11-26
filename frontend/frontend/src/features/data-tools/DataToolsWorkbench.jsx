@@ -292,7 +292,7 @@ export default function DataToolsWorkbench({
           {currentTool === 'outliers' && <Outliers context={sourceContext} />}
           {currentTool === 'fields' && <FieldsAndMetrics fields={fields} metrics={metrics} />}
           {currentTool === 'api' && <><header className="dt-panel__intro"><h2>Connect API</h2><p>Load a JSON response into the working grid for inspection.</p></header><ApiDataForm handleApiData={actions.loadConnection} /></>}
-          {currentTool === 'sql' && <><header className="dt-panel__intro"><h2>Connect database</h2><p>Choose a source table and open its preview in the working grid.</p></header><DatabaseConnectForm handleDatabaseData={actions.loadConnection} /></>}
+          {currentTool === 'sql' && <><header className="dt-panel__intro"><h2>Connect database</h2><p>Import selected PostgreSQL tables, reopen a saved model, or preview a table without saving.</p></header><DatabaseConnectForm handleDatabaseData={actions.loadConnection} /></>}
         </div>}
       </div>
     </section>

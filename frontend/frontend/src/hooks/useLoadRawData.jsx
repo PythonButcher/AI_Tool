@@ -7,6 +7,7 @@ const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 export default function useLoadRawData(showRawViewer, rawUploadFile, setFullData) {
   useEffect(() => {
     if (!showRawViewer || !rawUploadFile) return;
+    const controller = new AbortController();
 
     const loadRawData = async () => {
       const formData = new FormData();
@@ -14,9 +15,11 @@ export default function useLoadRawData(showRawViewer, rawUploadFile, setFullData
 
       try {
         const response = await axios.post(`${API_URL}/api/raw_upload`, formData, {
-          headers: { 'Content-Type': 'multipart/form-data' }
+          headers: { 'Content-Type': 'multipart/form-data' },
+          signal: controller.signal,
         });
 
+        if (controller.signal.aborted) return;
         if (Array.isArray(response.data?.raw_data)) {
           setFullData(response.data.raw_data);
           console.log("✅ fullData loaded for Raw Viewer:", response.data.raw_data.length);
@@ -25,10 +28,11 @@ export default function useLoadRawData(showRawViewer, rawUploadFile, setFullData
         }
 
       } catch (error) {
-        console.error("❌ Failed to fetch raw data:", error);
+        if (!controller.signal.aborted) console.error("❌ Failed to fetch raw data:", error);
       }
     };
 
     loadRawData();
+    return () => controller.abort();
   }, [showRawViewer, rawUploadFile, setFullData]);
 }

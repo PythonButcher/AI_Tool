@@ -9,6 +9,7 @@ import { transformToChartData } from './utils/chartDataUtils';
 import AIChat from './features/ai/AIChat';
 import { DataContext, normalizeDatasetRows, useActiveDataset } from './context/DataContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { WarehouseContext } from './context/WarehouseContext';
 import DataCleaningForm from './components/data_management/DataCleaningForm';
 import SaveDatasetDialog from './features/database/SaveDatasetDialog';
 import DataToolsWorkbench from './features/data-tools/DataToolsWorkbench';
@@ -58,6 +59,7 @@ function AppContent({ platformHubLink }) {
     setWorkspaceEnvelope,
     activeWorkspace, analysisContext,
   } = useContext(DataContext);
+  const { setDatasets } = useContext(WarehouseContext);
 
   const {
     minimizedWindows,
@@ -200,6 +202,7 @@ function AppContent({ platformHubLink }) {
       semantic_model: raw?.semantic_model || null,
       source: raw?.source || null,
       schema: raw?.schema ?? raw?.source?.schema ?? null,
+      governance_readiness: raw?.governance_readiness || null,
     });
     setFullData(finalDataset);
     setCleanedData(finalDataset);
@@ -256,7 +259,22 @@ function AppContent({ platformHubLink }) {
 
 
   const handleApiData = (data) => handleFileUpload(data);
-  const handleDatabaseData = (data) => handleFileUpload(data);
+  const recordDatabaseSources = (data) => {
+    const sources = data.sources || (data.source ? [data.source] : []);
+    if (data.workspace?.workspace_kind !== 'postgres' || !sources.length) return;
+    setDatasets(previous => {
+      const byId = new Map(previous.map(dataset => [dataset.id, dataset]));
+      for (const { source_id: id, name, source_kind } of sources) {
+        byId.set(id, { id, name, source_kind });
+      }
+      return Array.from(byId.values());
+    });
+  };
+
+  const handleDatabaseData = data => {
+    recordDatabaseSources(data);
+    handleFileUpload(data);
+  };
 
   const handleClosePreview = useCallback(() => setShowDataPreview(false), []);
   const handleCloseRawViewer = useCallback(() => setShowRawViewer(false), []);
@@ -470,6 +488,7 @@ function AppContent({ platformHubLink }) {
         openHub: openDataHub,
         openModel: () => handleDestinationSelect(DESTINATIONS.DATA_MODEL),
         loadConnection: raw => {
+          recordDatabaseSources(raw);
           installWorkingDataset(raw, raw?.source?.name || raw?.semantic_model?.dataset?.name || raw?.name);
           setActiveDataTool('rows');
         },

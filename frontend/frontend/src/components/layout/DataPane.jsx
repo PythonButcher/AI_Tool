@@ -44,7 +44,8 @@ const DataPane = ({
   setActiveSource,
   onOpenDataHub,
 }) => {
-  const { semanticModel, semanticModelStatus } = useContext(DataContext);
+  const { semanticModel, semanticModelStatus, uploadedData } = useContext(DataContext);
+  const postgresReadiness = uploadedData?.source?.source_kind === 'sql' ? uploadedData.governance_readiness : null;
 
   // Determine which panel to show based on destination
   const showSemantic = activeDestination === DESTINATIONS.DASHBOARDS;
@@ -86,8 +87,8 @@ const DataPane = ({
           <button className="source-card" onClick={() => setActiveSource('db')}>
             <FaDatabase className="source-card__icon" />
             <div className="source-card__info">
-              <h4>SQL Warehouse</h4>
-              <p>PostgreSQL, MySQL</p>
+              <h4>PostgreSQL</h4>
+              <p>Import tables or open a saved model</p>
             </div>
           </button>
           <button className="source-card" onClick={onOpenDataHub}>
@@ -168,6 +169,9 @@ const DataPane = ({
         </header>
 
         <div className="data-pane__body">
+          {activeTab === 'catalog' && postgresReadiness?.status === 'warning' && (
+            <p className="db-form__status" role="status">{postgresReadiness.reasons?.[0]?.message} {postgresReadiness.next_action}</p>
+          )}
           {activeTab === 'catalog' ? (
             showSemantic ? (
               <SemanticModelPanel 
