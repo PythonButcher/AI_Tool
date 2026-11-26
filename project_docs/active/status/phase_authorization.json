@@ -12,7 +12,8 @@
   "lifecycle_state": "NOT STARTED",
   "local_branch_integration_authorization": {
     "approved_by": "User",
-    "scope": "Resolve conflicts locally on feature/platform-revisions-2 while preserving PostgreSQL and Devstream features. The user owns the GitHub merge into main-dev-branch."
+    "scope": "Resolve conflicts locally on feature/platform-revisions-2 while preserving PostgreSQL and Devstream features. The user owns the GitHub merge into main-dev-branch.",
+    "verification": "53 focused backend tests passed with a disposable PostgreSQL 17 instance. All 82 tests across nine focused frontend suites passed. The production build passed with warnings."
   },
   "postgres_workspace_verification": {
     "backend": "Before branch integration, 61 focused tests passed, including real PostgreSQL 17.4 import, rollback, relationship and filtered Auto chat totals, reopening, Data Hub, semantic metrics, and ML Studio snapshot resolution.",
@@ -263,7 +264,7 @@
     "scope": "Codex may redesign the AI Chat window hierarchy, header, conversation, composer, results panel and responsive styling while retaining implemented BI and dashboard behavior.",
     "codex_frontend_implementation_authorized": true
   },
-  "diff_baseline": "32c65f2ec8784e2fece13db224600df2be80192a",
+  "diff_baseline": "d1e948b48b85e3ee94aa91299eacd980270f063e",
   "authority_kind": "product_review",
   "ai_chat_improvement_authorization": {
     "approved_by": "User",

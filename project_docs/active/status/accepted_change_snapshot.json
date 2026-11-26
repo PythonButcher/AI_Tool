@@ -6,7 +6,6 @@
   "sha256": {
     "frontend/frontend/src/components/layout/PlatformHub.jsx": "9b3619e9651ae2161c6d68d5f3533952cee1eeefc1ade289b82ab03f17d97579",
     "frontend/frontend/src/components/layout/PlatformHub.test.jsx": "4c6f4b34a06f66920b59937902d4fc68ff473157d36962e40821048911b82797",
-    "frontend/frontend/src/components/layout/PlatformHub.css": "2ba72419df5927ad28dd48035e919021fb59cd8056dddf32d8f9e7886752613f",
-    "frontend/frontend/src/App.jsx": "8a26385c2d8264c392ef38df952d07718008ba04e5f515c4dc2ed4b7a0abb671"
+    "frontend/frontend/src/components/layout/PlatformHub.css": "2ba72419df5927ad28dd48035e919021fb59cd8056dddf32d8f9e7886752613f"
   }
 }

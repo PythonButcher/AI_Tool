@@ -35,7 +35,7 @@ The customizable Analysis workbench remains **awaiting user acceptance** in chat
 
 ## Pending PostgreSQL Workspace Acceptance
 
-PostgreSQL imports and saved-model reopening are available from Devstream's Connect database workflow. [The PostgreSQL contract](../contracts/postgres_workspace.md) describes discovery, snapshots, and saved models. Prior verification used a disposable PostgreSQL 17.4 server. The user owns browser acceptance.
+PostgreSQL imports and saved-model reopening are available from Devstream's Connect database workflow. [The PostgreSQL contract](../contracts/postgres_workspace.md) describes discovery, snapshots, and saved models. Local branch integration passed 53 focused backend tests with a disposable PostgreSQL 17 instance, 82 focused frontend tests, and the production build with warnings. The user owns browser acceptance.
 
 ## Preserved Interface Verification
 
