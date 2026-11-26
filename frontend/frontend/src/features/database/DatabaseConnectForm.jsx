@@ -1,5 +1,6 @@
 import React, { useEffect, useId, useRef, useState } from 'react';
 import axios from 'axios';
+import DatabasePreviewForm from './DatabasePreviewForm';
 import './DatabaseConnectForm.css';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
@@ -14,6 +15,7 @@ const displayError = (error) => {
 };
 
 function DatabaseConnectForm({ handleDatabaseData, onClose }) {
+  const [previewOnly, setPreviewOnly] = useState(false);
   const [connection, setConnection] = useState(initialConnection);
   const [databases, setDatabases] = useState(null);
   const [catalog, setCatalog] = useState(null);
@@ -32,7 +34,11 @@ function DatabaseConnectForm({ handleDatabaseData, onClose }) {
   useEffect(() => {
     const controller = new AbortController();
     axios.get(`${POSTGRES_URL}/workspaces`, { signal: controller.signal })
-      .then(({ data }) => { if (!controller.signal.aborted) setSavedModels(data.workspaces); })
+      .then(({ data }) => {
+        if (controller.signal.aborted) return;
+        if (!Array.isArray(data?.workspaces)) throw new Error('Invalid saved models response');
+        setSavedModels(data.workspaces);
+      })
       .catch(() => { if (!controller.signal.aborted) setListError('Saved models could not be loaded. Reopen the panel to retry.'); });
     return () => {
       controller.abort();
@@ -131,8 +137,21 @@ function DatabaseConnectForm({ handleDatabaseData, onClose }) {
     table => table.columns.length && table.columns.length <= catalog?.limits.columns_per_table,
   ));
 
-  return (
+  const previewToggle = (
+    <button type="button" className="db-form__secondary" aria-pressed={previewOnly} disabled={Boolean(busy)}
+      onClick={() => setPreviewOnly(value => !value)}>
+      Preview without saving
+    </button>
+  );
+
+  return previewOnly ? (
     <div className="db-connect-content">
+      {previewToggle}
+      <DatabasePreviewForm handleDatabaseData={handleDatabaseData} onClose={onClose} />
+    </div>
+  ) : (
+    <div className="db-connect-content">
+      {previewToggle}
       {error && <p className="db-form__error" role="alert">{error}</p>}
       {busy && <p className="db-form__status" role="status">{busy}</p>}
       {!catalog ? (

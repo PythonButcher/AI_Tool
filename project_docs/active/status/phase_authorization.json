@@ -1,20 +1,138 @@
 {
   "schema_version": 1,
   "authorized_work": {
-    "name": "PostgreSQL workspace"
+    "name": "Awaiting User Epic Goal",
+    "allowed_paths": [
+      "project_docs/active/active_gate/README.md",
+      "project_docs/active/status/project_execution_status.md",
+      "project_docs/active/status/phase_authorization.json"
+    ]
   },
-  "authorization_state": "AUTHORIZED",
-  "lifecycle_state": "AWAITING USER ACCEPTANCE",
+  "authorization_state": "REVIEW_ONLY",
+  "lifecycle_state": "NOT STARTED",
+  "local_branch_integration_authorization": {
+    "approved_by": "User",
+    "scope": "Resolve conflicts locally on feature/platform-revisions-2 while preserving PostgreSQL and Devstream features. The user owns the GitHub merge into main-dev-branch.",
+    "verification": "53 focused backend tests passed with a disposable PostgreSQL 17 instance. All 82 tests across nine focused frontend suites passed. The production build passed with warnings."
+  },
   "postgres_workspace_verification": {
-    "backend": "61 focused tests passed, including real PostgreSQL 17.4 import, rollback, relationship and filtered Auto chat totals, reopening, Data Hub, semantic metrics, and ML Studio snapshot resolution.",
-    "frontend": "30 focused React tests and the production build passed. The build reports existing warnings. Final browser acceptance belongs to the user."
+    "backend": "Before branch integration, 61 focused tests passed, including real PostgreSQL 17.4 import, rollback, relationship and filtered Auto chat totals, reopening, Data Hub, semantic metrics, and ML Studio snapshot resolution.",
+    "frontend": "Before branch integration, 30 focused React tests and the production build passed. Final browser acceptance belongs to the user."
   },
-  "user_implementation_authorization": {
+  "postgres_workspace_implementation_authorization": {
     "approved_by": "User",
     "approved_at": "2026-11-07",
     "evidence": "Direct instruction and explicit frontend authorization in the PostgreSQL verification chat.",
     "instruction": "Deliver a working end-to-end PostgreSQL workflow for choosing a database, tables and optional columns, creating relationships, and reusing the saved dataset or semantic model.",
     "codex_frontend_implementation_authorized": true
+  },
+  "platform_entry_acceptance": {
+    "accepted_by": "User",
+    "accepted_at": "2026-11-25",
+    "evidence": "The user said the Datastream Hub polish was good and the project could move on.",
+    "record": "project_docs/archive/datastream_hub_platform_entry_accepted_2026_11_25.md"
+  },
+  "platform_branding_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-11-24",
+    "scope": "Rename the platform to Datastream and the existing tool to Devstream across product copy, assets, code, tests, and documentation. The user owns browser acceptance.",
+    "codex_frontend_implementation_authorized": true
+  },
+  "platform_entry_implementation_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-11-23",
+    "evidence": "The user directed a separate Codex chat to implement the hub in the frontend now named Devstream and authorized the bounded edits through that chat's kickoff. The recorded instruction uses the workspace name at the time.",
+    "instruction": "Build the platform landing hub inside the existing Datastream app and start implementation now.",
+    "scope": "Codex owns the Datastream hub, Devstream entry and return, workspace state preservation, planned app entries, and focused verification. The user owns browser acceptance.",
+    "codex_frontend_implementation_authorized": true
+  },
+  "data_tools_expansion_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-11-23",
+    "instruction": "Add a few more relevant data tools into the tool box for data developers and the current state of the application.",
+    "scope": "Add inline value validation, key checks, and grouped row summaries using the loaded dataset. Codex owns the Data Tools components, focused tests, and feature inventory update. The platform-hub phase retains ownership of its gate. The user owns browser acceptance.",
+    "codex_frontend_implementation_authorized": true
+  },
+  "data_tools_workbench_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-11-23",
+    "instruction": "Redesign Data Tools as a toolbox, add relevant working tools, and put Power Query and the other tools on the Data Tools page.",
+    "scope": "Codex owns Data Tools and its integration. The Workspace redesign is a separate Gemini assignment. The user owns browser acceptance.",
+    "codex_frontend_implementation_authorized": true
+  },
+  "data_tools_workflow_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-11-22",
+    "instruction": "Review the app workflow and inventory features that are absent or hidden. Fix the uploaded data in Power Query and add a tab for data manipulation. Add another agent to fix half of this work.",
+    "scope": "Codex owns the source inventory, Power Query and integrated verification. The delegated Codex agent owns the application navigation, Workspace landing, and Data Tools tab. The user owns browser acceptance.",
+    "codex_frontend_implementation_authorized": true
+  },
+  "saved_dataset_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-11-22",
+    "instruction": "Uploads should enter Data Hub only when a user chooses Save Dataset. Opening a saved dataset restores its full working state. Remove the Open in Analytics button from Data Hub. Just perform the frontend stuff after yourself.",
+    "scope": "Codex owns the saved-dataset backend, Data Hub and working dataset frontend, and integration verification. The user owns browser acceptance.",
+    "codex_frontend_implementation_authorized": true
+  },
+  "paused_business_object_repair": {
+    "gate": "Configure Business Objects in Data Model",
+    "roadmap_phase": "Phase 1 — Business Object definitions",
+    "milestone": "Step 1: Repair Business Object save and refresh behavior",
+    "owner": "Antigravity",
+    "state": "Paused for the saved-dataset priority",
+    "handoff": "project_docs/archive/business_object_definitions_repair_paused_2026_11_22.md",
+    "verification": "Current source contains fixes and regression tests for the late-list race and model-choice refresh. Focused Codex review and user browser acceptance are outstanding."
+  },
+  "data_hub_delete_all_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-11-22",
+    "instruction": "create a delete all button the the Data Hub for deleting everything, have it be followed up with an Are you sure yes or no",
+    "scope": "Implement and verify catalog-wide removal using the Data Hub Delete All button and its Yes or No confirmation.",
+    "codex_frontend_implementation_authorized": true
+  },
+  "data_hub_dataset_deletion_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-11-22",
+    "instruction": "this error in data hub where I try to delete a dataset needs to stop, it makes no sense remove the restrictions for this",
+    "scope": "Allow confirmed Data Hub dataset removal when the source belongs to workspaces or relationships. Includes workspace cleanup, focused tests, and contract updates."
+  },
+  "chat_dataset_dropdown_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-11-22",
+    "instruction": "in the ai chat, fix the Choose Dataset next to New Chat, make it nice looking dropdown",
+    "owner": "Codex",
+    "scope": "AI Chat toolbar and its dataset picker. Selecting a saved dataset uses the existing draft mention and BI request flow.",
+    "acceptance": "A compact, keyboard-accessible dropdown opens beside New Chat, lists saved datasets, and adds a dataset to the current question without sending it.",
+    "codex_frontend_implementation_authorized": true
+  },
+  "analytics_implementation_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-11-16",
+    "instruction": "I want you to get this all up and running with a shell for the UI, then have antigravity give it a completely polish end to end, go",
+    "scope": "Codex implements and verifies Analytics backend, persistence, functional frontend shell and integration; Antigravity then polishes the working product through bounded assignments.",
+    "codex_frontend_implementation_authorized": true
+  },
+  "chat_design_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-11-14",
+    "instruction": "no this is messy, the placement is find but the look of the ai chat needs a design now",
+    "scope": "Codex may redesign the docked AI Chat interface while preserving the accepted placement, existing chat features, and shared themes.",
+    "codex_frontend_implementation_authorized": true
+  },
+  "chat_design_verification": {
+    "frontend": "31 focused tests and the production build passed with existing build warnings.",
+    "browser": "Codex inspected the local Chrome layout in light and dark themes, checked the empty results view, resized to the minimum dock width, and restored the original theme and width. User acceptance remains pending."
+  },
+  "chat_dock_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-11-13",
+    "instruction": "go ahead and make this change, make sure you make it clean, do not lose feature and the feel relevant to the theme.",
+    "scope": "Codex may implement and verify an adjustable docked AI Chat panel with collapse, expansion, optional pop-out, and shared theme styling.",
+    "codex_frontend_implementation_authorized": true
+  },
+  "chat_dock_verification": {
+    "frontend": "39 focused tests passed for AI Chat, the dock, window sizing, theme propagation, and window state. The production build passed with existing warnings.",
+    "acceptance": "User browser acceptance is pending in chat."
   },
   "dark_theme_acceptance": {
     "accepted_by": "User",
@@ -146,8 +264,8 @@
     "scope": "Codex may redesign the AI Chat window hierarchy, header, conversation, composer, results panel and responsive styling while retaining implemented BI and dashboard behavior.",
     "codex_frontend_implementation_authorized": true
   },
-  "diff_baseline": "815c37008bd83465eb12af73bfb085aa431efd8b",
-  "authority_kind": "direct_user_instruction",
+  "diff_baseline": "d1e948b48b85e3ee94aa91299eacd980270f063e",
+  "authority_kind": "product_review",
   "ai_chat_improvement_authorization": {
     "approved_by": "User",
     "approved_at": "2026-10-10",
@@ -225,14 +343,35 @@
     "instruction": "Implement this work — project_docs/active/active_gate/README.md",
     "scope": "Inspect source and contracts, write and verify one bounded Stay/Open Power Query opening handoff, and transfer ownership to Antigravity. Codex frontend implementation remains excluded."
   },
-  "ml_studio_user_implementation_authorization": {
+  "pending_analytics_workbench_acceptance": {
+    "gate": "Customize the Analytics workbench layout",
+    "state": "AWAITING USER ACCEPTANCE",
+    "owner": "User",
+    "verification": "34 focused Analytics and WindowContext tests, scoped ESLint, production build, and Chrome fixture verification passed. The user owns the browser decision.",
+    "implementation_authorization": {
+      "approved_by": "User",
+      "approved_at": "2026-11-18",
+      "evidence": "Direct user request for movable, resizable, and individually lockable Analysis workbench panels.",
+      "instruction": "Redesign Analytics Studio and keep its features available.",
+      "scope": "Codex owns the Analytics frontend redesign, related backend repairs, and focused integration verification.",
+      "current_instruction": "Implement a snapping layout for Fields, Visual Builder, and Results with per-panel locks.",
+      "current_approved_at": "2026-11-19"
+    }
+  },
+  "data_hub_rebuild_implementation_authorization": {
     "approved_by": "User",
-    "approved_at": "2026-09-27",
-    "evidence": "Direct user message in this Codex session referencing the sole active gate.",
-    "instruction": "accepted, proceed to the step step",
-    "scope": "Codex in the receiving chat may complete ML Studio backend and frontend, all five task journeys and the theme-aligned UI makeover under the completion gate.",
-    "current_instruction": "Execute the completion plan continuously through meaningful, verified steps until engineering completion or a concrete blocker, including backend, frontend and the whole-studio redesign.",
-    "current_approved_at": "2026-10-04"
+    "approved_at": "2026-11-21",
+    "evidence": "The user explicitly assigned frontend implementation to Codex in the Data Hub rebuild chat.",
+    "instruction": "just do the frontend yourself",
+    "scope": "Codex implements and verifies the Welcome actions, full Data Hub destination, and persistent header in the roadmap order. The current gate authorizes one phase at a time. The user owns final browser acceptance."
+  },
+  "business_object_user_implementation_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-11-22",
+    "evidence": "The user confirmed the configurable Business Objects proposal and directly asked to start it in a brand-new Codex chat.",
+    "instruction": "Ok not in the other chat u started but in a brand new chat, get them started and setup with this new work",
+    "scope": "Codex owns the first Business Objects backend slice, tests, contract, and implementation coordination. Phase 1 covers workspace-scoped definitions and their API. Frontend ownership follows the project guardrail. The user owns browser acceptance.",
+    "codex_frontend_implementation_authorized": false
   },
   "preparation_authorization": {
     "approved_by": "User",
@@ -271,13 +410,71 @@
     "clarification": "Saved ML Studio experiments",
     "scope": "Codex may implement saved experiment deletion in the ML Studio home, its backend draft route and persistence, contract, and focused tests."
   },
+  "data_platform_review_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-11-21",
+    "scope": "Review Devstream, Context Ledger, and Slipstream together and record the ranked product recommendations in Codex future planning. Documentation only."
+  },
+  "publishing_portal_planning_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-11-22",
+    "scope": "Prepare and index the deferred standalone Datastream Publishing Portal build plan. This authorization covers planning documentation."
+  },
+  "data_hub_rebuild_planning_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-11-21",
+    "scope": "Prepare the Data Hub, landing-action, and header rebuild roadmap and give it to a separate Codex chat. This record permits the planning document and its index entry."
+  },
+  "data_hub_rebuild_verification": {
+    "frontend": "28 focused shell, Data Hub, Analytics, and WindowContext tests passed. The production build passed with existing warnings.",
+    "backend_contract": "Six focused tests passed for catalog migration and public source metadata, dependency-safe deletion, and explicit Analytics source resolution.",
+    "browser": "Chrome fixture checks passed at 1440, 390, and 320 pixels. The existing external Whiteboard asset was unavailable in the isolated browser.",
+    "acceptance": "Accepted by the user in chat on 2026-11-22."
+  },
   "allowed_paths": [
     "backend/routes/sql_fetch.py",
-    "backend/routes/datahub_routes.py",
     "backend/services/postgres_workspace.py",
     "backend/repositories/source_workspace_repository.py",
     "tests/test_postgres_workspace.py",
     "project_docs/active/contracts/postgres_workspace.md",
+    "README.md",
+    "CLAUDE.md",
+    "frontend/frontend/README.md",
+    "document_studio/README.md",
+    "document_studio/backend/src/document_studio/**",
+    "frontend/frontend/public/**",
+    "project_docs/archive/data_hub_navigation_rebuild_accepted_2026_11_22.md",
+    "project_docs/active/ai_chat/claude_plain_language_bi_handoff.md",
+    "project_docs/active/future/codex/context_engineering_and_login_memory_plan.md",
+    "project_docs/active/reviews/**",
+    "backend/routes/analysis.py",
+    "backend/repositories/saved_dataset_repository.py",
+    "backend/services/saved_datasets.py",
+    "backend/services/relationship_execution.py",
+    "tests/test_saved_datasets.py",
+    "project_docs/active/saved_datasets/README.md",
+    "project_docs/active/ai_hand_off/saved_dataset_open.md",
+    "project_docs/archive/business_object_definitions_repair_paused_2026_11_22.md",
+    "project_docs/archive/saved_dataset_activation_handoff_superseded_2026_11_22.md",
+    "backend/routes/datahub_routes.py",
+    "tests/test_source_workspace_context.py",
+    "tests/test_source_relationships.py",
+    "project_docs/active/contracts/multiple_data_source_workspace.md",
+    "project_docs/active/contracts/multiple_data_source_relationships.md",
+    "project_docs/active/business_objects/README.md",
+    "project_docs/active/ai_hand_off/business_object_definitions.md",
+    "backend/repositories/business_object_repository.py",
+    "backend/services/business_objects.py",
+    "backend/routes/data_workspaces.py",
+    "tests/test_business_objects.py",
+    "backend/analytics/**",
+    "backend/routes/analytics.py",
+    "backend/app.py",
+    "tests/test_analytics*.py",
+    "project_docs/active/analytics/**",
+    "project_docs/active/contracts/analytics_workspace.md",
+    "project_docs/active/future/codex/analytics_workspace_overhaul_plan.md",
+    "project_docs/active/ai_hand_off/analytics_polish.md",
     "frontend/frontend/src/**",
     "backend/services/chat_model_router.py",
     "tests/test_chat_model_router.py",
@@ -313,6 +510,11 @@
     "project_docs/active/ai_hand_off/ml_studio_power_query_preview_cancel.md",
     "project_docs/active/future/codex/ml_studio_power_query_preview_cancel.md",
     "project_docs/active/future/codex/README.md",
+    "project_docs/active/future/codex/three_project_data_platform_review.md",
+    "project_docs/active/future/codex/datastream_publishing_portal_standalone_application_build_plan.md",
+    "project_docs/active/future/codex/datastream_business_integration_goal.md",
+    "project_docs/archive/data_hub_navigation_rebuild_accepted_2026_11_22.md",
+    "project_docs/archive/README.md",
     "project_docs/archive/ml_studio_power_query_opening_superseded_2026_10_01.md",
     "project_docs/active/ai_hand_off/ml_studio_power_query_opening.md",
     "frontend/frontend/src/App.jsx",
@@ -389,8 +591,9 @@
     "project_docs/active/ai_hand_off/ml_studio_duplicate_draft.md",
     "project_docs/active/README.md",
     "project_docs/active/ai_hand_off/README.md",
-    "project_docs/archive/ml_studio_duplicate_draft_reviewed_2026_09_26.md"
+    "project_docs/archive/ml_studio_duplicate_draft_reviewed_2026_09_26.md",
+    "project_docs/archive/datastream_hub_platform_entry_accepted_2026_11_25.md"
   ],
   "accepted_change_snapshot": "project_docs/active/status/accepted_change_snapshot.json",
-  "codex_frontend_edits_allowed": true
+  "codex_frontend_edits_allowed": false
 }

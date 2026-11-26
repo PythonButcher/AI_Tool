@@ -37,7 +37,8 @@ const SmartChartWindow = ({
   const [semanticResolution, setSemanticResolution] = useState(null);
   const [semanticStatus, setSemanticStatus] = useState('idle');
   const [semanticError, setSemanticError] = useState('');
-  const { updateChart, updateDashboardItem } = useWindowContext();
+  const { updateChart, updateDashboardItem, addDashboardChart, analyticsWorkspace } = useWindowContext();
+  const [pinTarget, setPinTarget] = useState('');
   const activeDataset = useActiveDataset();
   const semanticModel = useSemanticModel();
 
@@ -287,17 +288,20 @@ const SmartChartWindow = ({
 
       {chartSpec?.schemaVersion === 'chart_spec_v1' && (
         <div className="chart-actions-mini">
+          <select aria-label="Chart pin dashboard" value={pinTarget || analyticsWorkspace?.activeDashboardId || ''} onChange={event => setPinTarget(event.target.value)}>
+            {(analyticsWorkspace?.dashboards || []).map(board => <option key={board.state.id} value={board.state.id}>{board.state.name}</option>)}
+          </select>
           <button
             className="mode-btn pin-btn"
             onClick={() => {
-              updateDashboardItem(`dashboard-chart-${Date.now()}`, {
+              const savedId = addDashboardChart({
                 chartType: type,
                 mapping,
                 dataSourceMode,
                 semanticConfig,
                 chartSpec,
-              });
-              setPinFeedback(true);
+              }, pinTarget || analyticsWorkspace?.activeDashboardId);
+              setPinFeedback(!!savedId);
               setTimeout(() => setPinFeedback(false), 2000);
             }}
           >

@@ -1,76 +1,51 @@
-.workflow-shell {
+.destination-nav {
   display: flex;
-  height: 100%;
-  background: var(--sidebar-surface);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border-right: 1px solid var(--border-color);
-  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  z-index: 50;
-  width: 72px; /* Fixed narrow width for the rail */
-  box-shadow: 4px 0 20px var(--shadow-color-soft);
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
 }
 
-.workflow-rail {
-  display: flex;
-  flex-direction: column;
-  width: 72px;
-  height: 100%;
+.destination-nav button,
+.destination-nav > span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 3px 3px 0 0;
   background: transparent;
-  padding: 12px 0;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.workflow-rail__top, .workflow-rail__bottom {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  width: 100%;
-  align-items: center;
-}
-
-.workflow-rail__button {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  background: transparent;
-  border: 1px solid transparent;
   color: var(--text-secondary);
-  cursor: pointer;
-  transition: all 0.2s ease;
-  gap: 4px;
+  font: inherit;
+  font-size: .84rem;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
-.workflow-rail__button:hover {
-  background: var(--bg-primary);
-  border-color: var(--border-color);
+.destination-nav button {
+  cursor: pointer;
+}
+
+.destination-nav button:hover {
+  background: var(--bg-secondary);
   color: var(--text-primary);
 }
 
-.workflow-rail__button.is-active {
-  background: linear-gradient(145deg, var(--accent-blue-soft), var(--accent-teal-soft));
-  color: var(--accent-blue);
-  border-color: color-mix(in srgb, var(--accent-blue) 35%, var(--border-color));
-  box-shadow: var(--shadow-sm);
+.destination-nav [aria-current='page'] {
+  border-bottom-color: var(--accent-blue);
+  color: var(--text-primary);
 }
 
-.workflow-rail__icon {
-  font-size: 1.2rem;
-}
+@media (max-width: 590px) {
+  .destination-nav {
+    gap: 1px;
+  }
 
-.workflow-rail__label {
-  font-size: 0.65rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-  opacity: 0.8;
-  display: none; /* Keep rail ultra-compact as requested */
+  .destination-nav button,
+  .destination-nav > span {
+    min-height: 32px;
+    padding-inline: 7px;
+    font-size: .76rem;
+  }
 }
-
-/* Tooltip behavior or label on hover can be added if needed, 
-   but for now we prioritize horizontal space recovery. */

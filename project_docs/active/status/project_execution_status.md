@@ -1,27 +1,45 @@
 # Project Execution Status
 
-## Current Gate: PostgreSQL workspace
+## Current Gate: Awaiting User Epic Goal
 
-- **Current Gate**: PostgreSQL workspace
-- **Roadmap Phase**: Phase 15 — PostgreSQL Workspace
-- **Phase State**: `AWAITING USER ACCEPTANCE`
-- **What This State Means**: Engineering verification is complete for the PostgreSQL import and saved model workflow.
-- **Current Milestone**: PostgreSQL workspace workflow verified
+- **Current Gate**: Awaiting User Epic Goal
+- **Roadmap Phase**: Pending product selection
+- **Phase State**: `NOT STARTED`
+- **What This State Means**: The project is open for product review while the user chooses the next outcome.
+- **Current Milestone**: Choose the next Datastream product outcome
 - **Automatic Continuation**: `WAIT_FOR_USER`
 - **Current Owner**: User
-- **Backend Readiness**: `backend_contract_ready`
-- **Frontend Readiness**: `backend_contract_ready`
-- **Next Action**: User browser acceptance in chat.
-- **Required Action**: Await user acceptance or feedback in chat.
+- **Backend Readiness**: `implementation_required`
+- **Frontend Readiness**: `not_applicable`
+- **Next Action**: The user selects a product outcome in chat.
+- **Required Action**: Codex records the chosen scope and any implementation authorization.
 - **Active Gate**: `project_docs/active/active_gate/README.md`
 - **Authorization Record**: `project_docs/active/status/phase_authorization.json`
-- **Roadmap**: `project_docs/active/contracts/postgres_workspace.md`
-- **Active Handoff**: None.
-- **Latest Verification**: The 61 focused backend tests, 30 frontend tests, Python compilation, frontend production build, and repository harness passed. A disposable PostgreSQL 17.4 fixture verified projected imports, catalog rollback, reopening, AI Chat totals and lineage, Data Hub, semantic metrics, and ML Studio snapshot resolution.
+- **Roadmap**: `project_docs/active/active_gate/README.md`
+- **Active Handoff**: None
+- **Latest Verification**: The user accepted the [Datastream Hub](../../archive/datastream_hub_platform_entry_accepted_2026_11_25.md) on November 25, 2026. All 16 focused Hub and app tests passed at `32c65f2e`, and the production build passed with warnings.
+
+## Pending Data Tools Acceptance
+
+The Data Tools tab, Workspace landing, and initial Power Query preview remain awaiting the user's browser decision. The repair passed 97 focused frontend tests, 48 backend regression tests, seven App tests after the phone-width pane fix, Chrome fixtures at 1440 and 390 pixels, and the production build with existing warnings.
+
+The inline Data Tools workbench also awaits the user's browser decision. It passed 101 focused frontend tests, 48 backend regression tests, and the production build with existing warnings. Chrome fixtures at 1440 and 390 pixels verified inline API and SQL, upload, quality tools, preview filters, Refine, explicit save, and reopening after reload. See the [UI workflow inventory](../reviews/devstream_ui_workflow_inventory.md).
+
+Validate values, Check keys, and Summarize rows are available in the toolbox and await browser acceptance. The follow-up passed 26 focused frontend tests, the production build with existing warnings, and Chrome fixture checks at 1440 and 390 pixels.
+
+The [Business Object repair](../../archive/business_object_definitions_repair_paused_2026_11_22.md) is paused pending Codex review. The current source contains fixes and regression tests for the saved-list race and model-choice refresh described in that assignment.
+
+## Pending Analytics Workbench Acceptance
+
+The customizable Analysis workbench remains **awaiting user acceptance** in chat. The user owns the browser decision. Engineering verification passed 34 focused Analytics and WindowContext tests, scoped ESLint, and the production build. Chrome with fixture data verified pointer and keyboard snapping, visible resize handles and placement preview, per-panel locks, chart and draft preservation, compact stacking, reload, reset, and print layout. See the [Analytics roadmap](../analytics/README.md) and the preserved authorization in [phase_authorization.json](phase_authorization.json).
+
+## Pending PostgreSQL Workspace Acceptance
+
+PostgreSQL imports and saved-model reopening are available from Devstream's Connect database workflow. [The PostgreSQL contract](../contracts/postgres_workspace.md) describes discovery, snapshots, and saved models. Local branch integration passed 53 focused backend tests with a disposable PostgreSQL 17 instance, 82 focused frontend tests, and the production build with warnings. The user owns browser acceptance.
 
 ## Preserved Interface Verification
 
-The unified AI Chat header, larger controls, wider conversation, optional sidebar, composer and results are engineering-complete. Its 22 focused frontend tests, scoped ESLint, 46 backend tests and Python compilation passed. The shared production build includes its final source. ML Studio's home and learning experience remains awaiting user acceptance. No AI Chat browser verification or user acceptance occurred.
+AI Chat retains its conversation controls, optional navigation rail, composer, model modes, and BI results. The authorization record holds the verification evidence for model routing, conversation management, and dock behavior. ML Studio's home and learning experience remains awaiting user acceptance.
 
 ## Preserved ML Studio State
 
@@ -31,4 +49,4 @@ The [ML Studio contract](../contracts/ml_studio.md) retains capability limitatio
 
 ## Completion Rule
 
-New implementation requires a user-authorized outcome and a matching active gate.
+The user owns the final browser decision in chat.

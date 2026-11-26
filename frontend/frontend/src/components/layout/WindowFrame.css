@@ -26,6 +26,18 @@
   overflow: hidden;
 }
 
+.window-frame.fits-canvas {
+  inset: 8px !important;
+  width: auto !important;
+  height: auto !important;
+  transform: none !important;
+  touch-action: auto;
+}
+
+.window-frame.fits-canvas .window-header:active {
+  cursor: default !important;
+}
+
 [data-theme='dark'] .window-surface {
   background-image: var(--dark-surface-finish);
 }

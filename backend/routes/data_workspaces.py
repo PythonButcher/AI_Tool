@@ -1,8 +1,16 @@
 """Durable source and workspace routes for governed analysis context."""
 
-from flask import Blueprint, jsonify, request
+import sqlite3
+
+from flask import Blueprint, current_app, jsonify, request
 
 from backend.repositories.source_workspace_repository import get_source, get_workspace, list_sources
+from backend.services.business_objects import (
+    BusinessObjectError,
+    create_business_object,
+    get_business_object,
+    list_business_objects,
+)
 from backend.services.workspace_context import (
     WorkspaceContextError,
     add_source_to_workspace,
@@ -14,13 +22,19 @@ from backend.services.workspace_context import (
 data_workspaces_bp = Blueprint("data_workspaces_bp", __name__, url_prefix="/api")
 
 
-def _workspace_error(error: WorkspaceContextError):
+def _workspace_error(error: WorkspaceContextError | BusinessObjectError):
     """Translate stable domain errors without leaking filesystem details."""
     status_by_code = {
         "workspace_not_found": 404,
         "source_not_found": 404,
+        "relationship_not_found": 404,
+        "business_object_not_found": 404,
         "source_not_in_workspace": 409,
         "managed_source_unavailable": 409,
+        "source_schema_unavailable": 409,
+        "source_field_not_found": 409,
+        "relationship_not_applicable": 409,
+        "relationship_field_not_found": 409,
         "duplicate_workspace_membership": 409,
         "workspace_alias_conflict": 409,
         "workspace_membership_conflict": 409,
@@ -31,6 +45,13 @@ def _workspace_error(error: WorkspaceContextError):
         "invalid_workspace_position": 400,
     }
     return jsonify({"error": {"code": error.code, "message": str(error)}}), status_by_code.get(error.code, 400)
+
+
+def _business_object_storage_error():
+    current_app.logger.exception("Business Object storage operation failed")
+    return jsonify({"error": {
+        "code": "business_object_storage_error", "message": "Business Object storage is unavailable."
+    }}), 500
 
 
 @data_workspaces_bp.route("/data-sources", methods=["GET"])
@@ -55,6 +76,31 @@ def get_data_workspace(workspace_id):
     if workspace is None:
         return jsonify({"error": {"code": "workspace_not_found", "message": f"Workspace '{workspace_id}' was not found."}}), 404
     return jsonify({"workspace": workspace}), 200
+
+
+@data_workspaces_bp.route("/data-workspaces/<workspace_id>/business-objects", methods=["GET", "POST"])
+def business_object_collection(workspace_id):
+    """Create or list configuration in the named workspace."""
+    try:
+        if request.method == "POST":
+            definition = create_business_object(workspace_id, request.get_json(silent=True))
+            return jsonify({"business_object": definition}), 201
+        return jsonify({"business_objects": list_business_objects(workspace_id)}), 200
+    except BusinessObjectError as exc:
+        return _workspace_error(exc)
+    except sqlite3.Error:
+        return _business_object_storage_error()
+
+
+@data_workspaces_bp.route("/data-workspaces/<workspace_id>/business-objects/<object_id>", methods=["GET"])
+def business_object_detail(workspace_id, object_id):
+    """Retrieve one saved definition in the named workspace."""
+    try:
+        return jsonify({"business_object": get_business_object(workspace_id, object_id)}), 200
+    except BusinessObjectError as exc:
+        return _workspace_error(exc)
+    except sqlite3.Error:
+        return _business_object_storage_error()
 
 
 @data_workspaces_bp.route("/data-workspaces/<workspace_id>/sources", methods=["POST"])

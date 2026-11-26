@@ -12,31 +12,17 @@ import {
   normalizeDashboardFilters,
 } from '../utils/dashboardFilterUtils';
 import {
-  createDefaultDashboardCanvasSettings,
-  createDefaultDashboardSharingSkeleton,
   normalizeDashboardItemLayout,
   normalizeDashboardItemDisplay,
   normalizeDashboardItemSourceMetadata
 } from '../utils/dashboardCanvasUtils';
 import { appendDashboardResults } from '../utils/aiDashboardResults';
+import useAnalyticsWorkspace from '../features/analytics/useAnalyticsWorkspace';
+import { newId } from '../features/analytics/analyticsStorage';
 
 export const WindowContext = createContext();
 
 const WINDOW_STATES_STORAGE_KEY = 'windowStates';
-const DASHBOARD_STORAGE_KEY = 'businessMonitoringDashboard';
-const DASHBOARD_V1_STORAGE_KEY = 'chartStudioDashboard:v1';
-
-const createDefaultDashboardState = () => ({
-  id: 'dashboard-primary',
-  name: 'Business Dashboard',
-  isVisible: false,
-  mode: 'edit',
-  filters: createDefaultDashboardFilters(),
-  canvas: createDefaultDashboardCanvasSettings(),
-  sharing: createDefaultDashboardSharingSkeleton(),
-  layoutVersion: 1,
-});
-
 const normalizeSemanticConfig = (semanticConfig) => ({
   metricId: semanticConfig?.metricId || '',
   groupBy: semanticConfig?.groupBy || '',
@@ -44,10 +30,11 @@ const normalizeSemanticConfig = (semanticConfig) => ({
 
 const normalizeDashboardItem = (item, index = 0) => {
   const baseItem = {
+    ...item,
     layout: normalizeDashboardItemLayout(item?.layout, index, item?.itemType || 'chart'),
     locked: item?.locked || false,
     display: normalizeDashboardItemDisplay(item?.display),
-    sourceMetadata: normalizeDashboardItemSourceMetadata(item?.sourceMetadata),
+    sourceMetadata: { ...item?.sourceMetadata, ...normalizeDashboardItemSourceMetadata(item?.sourceMetadata) },
     resultSnapshot: item?.resultSnapshot || null,
     createdAt: item?.createdAt,
     updatedAt: item?.updatedAt,
@@ -78,34 +65,6 @@ const normalizeDashboardItem = (item, index = 0) => {
   };
 };
 
-const loadDashboardStorage = () => {
-  for (const key of [DASHBOARD_V1_STORAGE_KEY, DASHBOARD_STORAGE_KEY]) {
-    try {
-    const stored = localStorage.getItem(key);
-    if (!stored) continue;
-    const parsed = JSON.parse(stored);
-    if (!parsed || !Array.isArray(parsed.items) || !parsed.state || typeof parsed.state !== 'object') continue;
-    const dashboardState = {
-      ...createDefaultDashboardState(),
-      ...parsed?.state,
-      filters: normalizeDashboardFilters(parsed?.state?.filters),
-      canvas: parsed?.state?.canvas || createDefaultDashboardCanvasSettings(),
-      sharing: parsed?.state?.sharing || createDefaultDashboardSharingSkeleton(),
-      mode: parsed?.state?.mode || 'edit',
-    };
-
-    return {
-      state: dashboardState,
-      items: Array.isArray(parsed?.items) ? parsed.items.map((item, index) => normalizeDashboardItem(item, index)) : [],
-    };
-  } catch (error) {
-    // A damaged v1 value must not prevent recovery from the untouched legacy key.
-    console.warn('Could not load dashboard storage', key);
-  }
-  }
-  return { state: createDefaultDashboardState(), items: [] };
-};
-
 export const WindowProvider = ({ children }) => {
   const [openWindows, setOpenWindows] = useState([]);
   const [charts, setCharts] = useState([]);
@@ -113,13 +72,22 @@ export const WindowProvider = ({ children }) => {
   const [windowStates, setWindowStates] = useState({});
   const [lockedWindows, setLockedWindows] = useState({});
   const [windowContentStates, setWindowContentStates] = useState({});
-  const [initialDashboard] = useState(loadDashboardStorage);
-  const [dashboardState, setDashboardState] = useState(initialDashboard.state);
-  const [dashboardItems, setDashboardItems] = useState(initialDashboard.items);
-  const [dashboardStorageError, setDashboardStorageError] = useState(null);
-  const dashboardRef = useRef({ state: dashboardState, items: dashboardItems });
-  dashboardRef.current = { state: dashboardState, items: dashboardItems };
+  const analytics = useAnalyticsWorkspace();
+  const { workspace: analyticsWorkspace, commit: updateAnalyticsWorkspace } = analytics;
+  const selectedDashboard = analyticsWorkspace.dashboards.find(board => board.state.id === analyticsWorkspace.activeDashboardId);
+  const dashboardState = selectedDashboard.state;
+  const dashboardItems = selectedDashboard.items;
+  const dashboardStorageError = analytics.error;
+  const setDashboardState = useCallback(update => updateAnalyticsWorkspace(workspace => ({ ...workspace,
+    dashboards: workspace.dashboards.map(board => board.state.id === workspace.activeDashboardId
+      ? { ...board, state: typeof update === 'function' ? update(board.state) : update } : board),
+  })), [updateAnalyticsWorkspace]);
+  const setDashboardItems = useCallback(update => updateAnalyticsWorkspace(workspace => ({ ...workspace,
+    dashboards: workspace.dashboards.map(board => board.state.id === workspace.activeDashboardId
+      ? { ...board, items: typeof update === 'function' ? update(board.items) : update } : board),
+  })), [updateAnalyticsWorkspace]);
   const [isSlicerPanelOpen, setIsSlicerPanelOpen] = useState(false);
+  const pendingAiSave = useRef(null);
 
   const openWindow = useCallback((id) => {
     setOpenWindows((prev) => (prev.includes(id) ? prev : [...prev, id]));
@@ -200,37 +168,30 @@ export const WindowProvider = ({ children }) => {
     }
   }, [windowStates]);
 
-  useEffect(() => {
-    try {
-    localStorage.setItem(DASHBOARD_V1_STORAGE_KEY, JSON.stringify({
-      state: dashboardState,
-      items: dashboardItems,
-    }));
-    setDashboardStorageError(null);
-    } catch (error) {
-      setDashboardStorageError('Dashboard changes could not be saved in this browser. Free local storage and try again.');
+  const addDashboardResults = useCallback((selections, targetDashboardId) => {
+    const selectionKey = JSON.stringify([targetDashboardId || analyticsWorkspace.activeDashboardId, selections]);
+    if (pendingAiSave.current?.key === selectionKey && analytics.pending) {
+      if (!analytics.retry()) throw new Error('Could not save these results; your draft is still here. Retry the Analytics save.');
+      const savedResult = pendingAiSave.current.result;
+      pendingAiSave.current = null;
+      return savedResult;
     }
-  }, [dashboardItems, dashboardState]);
-
-  const addDashboardResults = useCallback((selections) => {
-    const current = dashboardRef.current;
-    const result = appendDashboardResults(current.items, selections);
-    const next = { state: { ...current.state, isVisible: true }, items: result.items.map(normalizeDashboardItem) };
-    // Write before acknowledging success. A quota/storage failure leaves the
-    // reviewable draft and existing dashboard intact for a deliberate retry.
-    try {
-      localStorage.setItem(DASHBOARD_V1_STORAGE_KEY, JSON.stringify(next));
-    } catch (error) {
-      const message = 'Could not save these results. Free browser storage and try again; your draft is still here.';
-      setDashboardStorageError(message);
-      throw new Error(message);
+    let result;
+    const saved = updateAnalyticsWorkspace(workspace => {
+      const target = targetDashboardId || workspace.activeDashboardId;
+      if (!workspace.dashboards.some(board => board.state.id === target)) throw new Error('Choose an available target dashboard.');
+      return { ...workspace, activeDashboardId: target, lastView: 'dashboards', dashboards: workspace.dashboards.map(board => {
+      if (board.state.id !== target) return board;
+      result = appendDashboardResults(board.items, selections);
+      return { ...board, state: { ...board.state, isVisible: true }, items: result.items.map(normalizeDashboardItem) };
+    }) }; });
+    if (!saved) {
+      if (result) pendingAiSave.current = { key: selectionKey, result: { added: result.added, skipped: result.skipped } };
+      throw new Error('Could not save these results; your draft is still here. Retry the Analytics save.');
     }
-    dashboardRef.current = next;
-    setDashboardItems(next.items);
-    setDashboardState(next.state);
-    setDashboardStorageError(null);
+    pendingAiSave.current = null;
     return { added: result.added, skipped: result.skipped };
-  }, []);
+  }, [updateAnalyticsWorkspace, analytics, analyticsWorkspace.activeDashboardId]);
 
   const saveWindowState = useCallback((id, layout) => {
     setWindowStates((prev) => ({ ...prev, [id]: layout }));
@@ -255,11 +216,11 @@ export const WindowProvider = ({ children }) => {
 
   const openDashboard = useCallback(() => {
     setDashboardState((prev) => ({ ...prev, isVisible: true }));
-  }, []);
+  }, [setDashboardState]);
 
   const closeDashboard = useCallback(() => {
     setDashboardState((prev) => ({ ...prev, isVisible: false }));
-  }, []);
+  }, [setDashboardState]);
 
   const updateDashboard = useCallback((updates) => {
     setDashboardState((prev) => ({
@@ -267,7 +228,7 @@ export const WindowProvider = ({ children }) => {
       ...updates,
       filters: updates?.filters ? normalizeDashboardFilters(updates.filters) : prev.filters,
     }));
-  }, []);
+  }, [setDashboardState]);
 
   const setDashboardFilters = useCallback((nextFilters) => {
     setDashboardState((prev) => ({
@@ -276,49 +237,29 @@ export const WindowProvider = ({ children }) => {
         typeof nextFilters === 'function' ? nextFilters(prev.filters) : nextFilters
       ),
     }));
-  }, []);
+  }, [setDashboardState]);
 
   const clearDashboardFilters = useCallback(() => {
     setDashboardState((prev) => ({
       ...prev,
       filters: createDefaultDashboardFilters(),
     }));
-  }, []);
+  }, [setDashboardState]);
 
-  const addDashboardChart = useCallback((chartConfig = {}) => {
-    setDashboardItems((prev) => {
-      const newId = `dashboard-chart-${Date.now()}`;
-      const item = normalizeDashboardItem({
-        id: newId,
-        itemType: 'chart',
-        chartType: 'Bar',
-        mapping: {},
-        dataSourceMode: 'raw',
-        semanticConfig: { metricId: '', groupBy: '' },
-        ...chartConfig,
-      }, prev.length);
-      return [...prev, item];
+  const addDashboardTile = useCallback((config, itemType, targetDashboardId) => {
+    const id = newId(`dashboard-${itemType}`);
+    const success = updateAnalyticsWorkspace(workspace => {
+      const target = targetDashboardId || workspace.activeDashboardId;
+      if (!workspace.dashboards.some(board => board.state.id === target)) throw new Error('Choose an available target dashboard.');
+      return { ...workspace, activeDashboardId: target, lastView: 'dashboards', dashboards: workspace.dashboards.map(board => board.state.id !== target ? board : {
+        ...board, state: { ...board.state, isVisible: true },
+        items: [...board.items, normalizeDashboardItem({ ...config, id, itemType }, board.items.length)],
+      }) };
     });
-    setDashboardState((prev) => ({ ...prev, isVisible: true }));
-    return `dashboard-chart-${Date.now()}`;
-  }, []);
-
-  const addDashboardKpi = useCallback((kpiConfig = {}) => {
-    setDashboardItems((prev) => {
-      const newId = `dashboard-kpi-${Date.now()}`;
-      const item = normalizeDashboardItem({
-        id: newId,
-        itemType: 'kpi',
-        title: 'KPI Card',
-        semanticConfig: { metricId: '', groupBy: '' },
-        comparisonEnabled: true,
-        ...kpiConfig,
-      }, prev.length);
-      return [...prev, item];
-    });
-    setDashboardState((prev) => ({ ...prev, isVisible: true }));
-    return `dashboard-kpi-${Date.now()}`;
-  }, []);
+    return success ? id : null;
+  }, [updateAnalyticsWorkspace]);
+  const addDashboardChart = useCallback((config = {}, target) => addDashboardTile(config, 'chart', target), [addDashboardTile]);
+  const addDashboardKpi = useCallback((config = {}, target) => addDashboardTile(config, 'kpi', target), [addDashboardTile]);
 
   const updateDashboardItem = useCallback((id, updates) => {
     setDashboardItems((prev) => prev.map((item) => {
@@ -331,10 +272,10 @@ export const WindowProvider = ({ children }) => {
           : item.semanticConfig,
       });
     }));
-  }, []);
+  }, [setDashboardItems]);
 
   const removeDashboardItem = useCallback((id) => {
-    setDashboardItems((prev) => prev.filter((item) => item.id !== id));
+    if (!setDashboardItems((prev) => prev.filter((item) => item.id !== id))) return;
     setMinimizedWindows((prev) => {
       const next = { ...prev };
       delete next[id];
@@ -345,7 +286,7 @@ export const WindowProvider = ({ children }) => {
       delete next[id];
       return next;
     });
-  }, []);
+  }, [setDashboardItems]);
 
   const toggleSlicerPanel = useCallback(() => {
     setIsSlicerPanelOpen((prev) => !prev);
@@ -353,29 +294,29 @@ export const WindowProvider = ({ children }) => {
 
   const setDashboardMode = useCallback((mode) => {
     setDashboardState((prev) => ({ ...prev, mode }));
-  }, []);
+  }, [setDashboardState]);
 
   const updateDashboardCanvas = useCallback((canvasUpdates) => {
     setDashboardState((prev) => ({ ...prev, canvas: { ...prev.canvas, ...canvasUpdates } }));
-  }, []);
+  }, [setDashboardState]);
 
   const updateDashboardSharing = useCallback((sharingUpdates) => {
     setDashboardState((prev) => ({ ...prev, sharing: { ...prev.sharing, ...sharingUpdates } }));
-  }, []);
+  }, [setDashboardState]);
 
   const toggleDashboardItemLock = useCallback((id) => {
     setDashboardItems((prev) => prev.map((item) => {
       if (item.id !== id) return item;
       return { ...item, locked: !item.locked };
     }));
-  }, []);
+  }, [setDashboardItems]);
 
   const updateDashboardItemLayout = useCallback((id, layoutUpdates) => {
     setDashboardItems((prev) => prev.map((item) => {
       if (item.id !== id) return item;
       return { ...item, layout: { ...item.layout, ...layoutUpdates } };
     }));
-  }, []);
+  }, [setDashboardItems]);
 
   const value = useMemo(
     () => ({
@@ -399,6 +340,9 @@ export const WindowProvider = ({ children }) => {
       dashboardState,
       dashboardItems,
       dashboardStorageError,
+      analyticsWorkspace,
+      updateAnalyticsWorkspace,
+      analyticsStorage: analytics,
       addDashboardResults,
       openDashboard,
       closeDashboard,
@@ -439,6 +383,9 @@ export const WindowProvider = ({ children }) => {
       dashboardState,
       dashboardItems,
       dashboardStorageError,
+      analyticsWorkspace,
+      updateAnalyticsWorkspace,
+      analytics,
       addDashboardResults,
       openDashboard,
       closeDashboard,

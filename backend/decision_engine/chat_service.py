@@ -12,7 +12,16 @@ from datetime import date
 from typing import Any, Dict, List, Optional, Tuple
 
 from backend.decision_engine.grounding import build_grounding_summary
-from backend.decision_engine.bi_intent import clarification, is_temporal, time_grain
+import backend.decision_engine.bi_intent as _bi_intent
+from backend.decision_engine.bi_intent import (
+    clarification,
+    is_comparison_request,
+    is_temporal,
+    mentions_explicit_period,
+    previous_calendar_month,
+    relative_month_mentions,
+    time_grain,
+)
 from backend.decision_engine.bi_dashboard import build_dashboard_response, is_dashboard_request
 from backend.decision_engine.mode_detection import (
     detect_chat_mode_details,
@@ -432,7 +441,7 @@ class DecisionChatService:
                         "reason_code": "dataset_change_requires_explicit_context",
                     },
                 })
-            elif is_visualization_request(user_message):
+            elif is_visualization_request(user_message) or is_comparison_request(user_message):
                 analytics_result = DecisionChatService._build_analytics_response(
                     user_message=user_message,
                     dataset=dataset,
@@ -2398,6 +2407,8 @@ class DecisionChatService:
             return True
         if DecisionChatService._find_semantic_metric_reference(user_message, semantic_model):
             return True
+        if relative_month_mentions(user_message) or is_comparison_request(user_message):
+            return True
         return any(keyword in lowered for keyword in DecisionChatService.ANALYTICS_INTENT_KEYWORDS)
 
     @staticmethod
@@ -2426,7 +2437,11 @@ class DecisionChatService:
 
         # Output-only chart commands are valid refinements even when the user
         # omits the prior metric and dimension (for example, "show it as a chart").
-        if is_visualization_request(user_message):
+        if (
+            is_visualization_request(user_message)
+            or is_comparison_request(user_message)
+            or relative_month_mentions(user_message)
+        ):
             return True
 
         # A dimension value or time range grounded in the current model is
@@ -2490,20 +2505,37 @@ class DecisionChatService:
         """
         analytic_state = DecisionChatService._normalize_analytic_state(analytic_state)
         lowered = str(user_message or "").strip().lower()
-        if is_dashboard_request(user_message):
-            return build_dashboard_response(DecisionChatService, user_message, dataset, semantic_model, analytic_state)
+        dashboard_request = is_dashboard_request(user_message)
         has_current_metric = bool(
             DecisionChatService._find_semantic_metric_reference(user_message, semantic_model)
         )
         has_current_analytic_intent = bool(
             is_visualization_request(user_message)
+            or is_comparison_request(user_message)
+            or relative_month_mentions(user_message)
             or any(keyword in lowered for keyword in DecisionChatService.ANALYTICS_INTENT_KEYWORDS)
         )
-        if not analytic_state and not analytics_refinement and not has_current_metric and not has_current_analytic_intent:
+        if (
+            not dashboard_request
+            and not analytic_state
+            and not analytics_refinement
+            and not has_current_metric
+            and not has_current_analytic_intent
+        ):
             # An explicit Explore-mode request is not automatically a metric
             # refinement. Let grounded chat answer dataset-shape or general
             # questions instead of allowing the raw parser to guess a measure.
             return None
+        if dashboard_request:
+            period_guard = DecisionChatService._relative_period_guard(
+                user_message=user_message,
+                dataset=dataset,
+                semantic_model=semantic_model,
+                analytic_state=analytic_state,
+            )
+            if period_guard is not None:
+                return period_guard
+            return build_dashboard_response(DecisionChatService, user_message, dataset, semantic_model, analytic_state)
         semantic_response = DecisionChatService._build_semantic_metric_response(
             user_message=user_message,
             dataset=dataset,
@@ -2514,6 +2546,10 @@ class DecisionChatService:
         )
         if semantic_response is not None:
             return semantic_response
+        if relative_month_mentions(user_message):
+            raise DecisionServiceError("The time period requires a semantic metric and a date dimension in the current semantic model.")
+        if is_comparison_request(user_message) and isinstance(semantic_model, dict):
+            raise DecisionServiceError("The comparison requires a semantic metric and categorical dimension in the current semantic model.")
 
         raw_response = DecisionChatService._build_raw_analytics_response(
             user_message=user_message,
@@ -2538,10 +2574,20 @@ class DecisionChatService:
         if len(metric_matches) > 1:
             return clarification("Which metric should I use?", metric_matches, user_message, "metric", analytic_state)
         metric_ref = DecisionChatService._find_semantic_metric_reference(user_message, semantic_model)
-        dimension_matches = DecisionChatService._find_semantic_reference_matches(user_message, semantic_model.get("dimensions"))
+        requested_grain = time_grain(user_message)
+        wants_trend = bool(requested_grain or re.search(r"\btrend\b", user_message, re.I))
+        wants_period = bool(mentions_explicit_period(user_message) or relative_month_mentions(user_message))
+        all_dimensions = semantic_model.get("dimensions") or []
+        breakdown_candidates = (
+            [item for item in all_dimensions if isinstance(item, dict) and not is_temporal(item)]
+            if wants_period and not wants_trend
+            else all_dimensions
+        )
+        dimension_matches = DecisionChatService._find_semantic_reference_matches(user_message, breakdown_candidates)
         if len(dimension_matches) > 1:
             return clarification("Which field should I use for the breakdown?", dimension_matches, user_message, "dimension", analytic_state)
-        dimension_ref = DecisionChatService._find_semantic_dimension_reference(user_message, semantic_model)
+        explicit_dimension_ref = DecisionChatService._find_semantic_reference(user_message, breakdown_candidates)
+        dimension_ref = explicit_dimension_ref
         prior_group_by = list(analytic_state.get("group_by") or [])
         prior_metric_id = analytic_state.get("metric_id")
         prior_metric_name = analytic_state.get("metric_name")
@@ -2558,15 +2604,21 @@ class DecisionChatService:
                 return clarification("Which metric would you like to analyze?", semantic_model["metrics"], user_message, "metric", analytic_state)
             return None
 
-        requested_grain = time_grain(user_message)
-        wants_trend = bool(requested_grain or re.search(r"\btrend\b", user_message, re.I))
-        wants_period = bool(re.search(r"\b(?:from\s+\d{4}-|q[1-4][ -]?20\d{2}|(?:january|february|march|april|may|june|july|august|september|october|november|december)\s+20\d{2})", user_message, re.I))
-        if wants_period:
-            temporal_fields = [item for item in semantic_model.get("dimensions", []) if is_temporal(item)]
+        if relative_month_mentions(user_message):
+            period_guard = DecisionChatService._relative_period_guard(
+                user_message=user_message,
+                dataset=dataset,
+                semantic_model=semantic_model,
+                analytic_state=analytic_state,
+            )
+            if period_guard is not None:
+                return period_guard
+        elif wants_period:
+            temporal_fields = [item for item in all_dimensions if isinstance(item, dict) and is_temporal(item)]
             if len(temporal_fields) > 1 and not DecisionChatService._find_semantic_reference(user_message, temporal_fields):
                 return clarification("Which date should the time filter use?", temporal_fields, user_message, "dimension", analytic_state)
         if wants_trend:
-            temporal = [item for item in semantic_model.get("dimensions", []) if is_temporal(item)]
+            temporal = [item for item in all_dimensions if isinstance(item, dict) and is_temporal(item)]
             explicit_time = DecisionChatService._find_semantic_dimension_reference(user_message, {"dimensions": temporal})
             if not explicit_time and len(temporal) != 1:
                 return clarification(
@@ -2574,6 +2626,21 @@ class DecisionChatService:
                     temporal, user_message, "dimension", analytic_state,
                 )
             dimension_ref = explicit_time or temporal[0]
+
+        excluded_filter_fields: set[str] = set()
+        comparison_request = bool(is_comparison_request(user_message) and not wants_trend and not analytics_refinement)
+        if comparison_request:
+            comparison_resolution = DecisionChatService._resolve_category_comparison(
+                user_message=user_message,
+                dataset=dataset,
+                semantic_model=semantic_model,
+                analytic_state=analytic_state,
+                explicit_dimension=explicit_dimension_ref,
+            )
+            if comparison_resolution.get("clarification") is not None:
+                return comparison_resolution["clarification"]
+            dimension_ref = comparison_resolution.get("dimension") or dimension_ref
+            excluded_filter_fields = set(comparison_resolution.get("excluded_filter_fields") or set())
 
         refinement_operation = str((analytics_refinement or {}).get("operation") or "")
         refinement_arguments = (
@@ -2618,6 +2685,7 @@ class DecisionChatService:
             semantic_model=semantic_model,
             analytic_state=analytic_state,
             analytics_refinement=analytics_refinement,
+            excluded_fields=excluded_filter_fields,
         )
 
         metric_definition = DecisionChatService._find_semantic_metric_by_reference(
@@ -2836,28 +2904,84 @@ class DecisionChatService:
         return "structured_session_state"
 
     @staticmethod
-    def _build_semantic_filters(
+    def _current_utc_date() -> date:
+        """Deterministic UTC date seam for relative-month calculations."""
+        return _bi_intent.utc_today()
+
+    @staticmethod
+    def _relative_period_guard(
         *,
         user_message: str,
         dataset: List[Dict[str, Any]],
-        semantic_model: Dict[str, Any],
+        semantic_model: Dict[str, Any] | None,
         analytic_state: Dict[str, Any],
-        analytics_refinement: Dict[str, Any] | None = None,
-    ) -> List[Dict[str, Any]]:
-        """Carry and refine only filters grounded in current dimensions and values."""
-        carried = (
-            [dict(item) for item in (analytic_state.get("filters") or []) if isinstance(item, dict)]
-            if analytic_state.get("source") == "semantic_metric"
-            else []
+    ) -> Dict[str, Any] | None:
+        """Ensure relative-month requests resolve to one verified date field or fail safely."""
+        relative_months = relative_month_mentions(user_message)
+        if not relative_months:
+            return None
+        if relative_months > 1 or mentions_explicit_period(user_message):
+            raise DecisionServiceError(
+                "Comparing or combining multiple time periods in one query is not supported; ask for one period at a time or a monthly trend."
+            )
+        model = semantic_model if isinstance(semantic_model, dict) else {}
+        temporal_fields = [
+            item
+            for item in (model.get("dimensions") or [])
+            if isinstance(item, dict) and is_temporal(item) and item.get("field")
+        ]
+        if not temporal_fields:
+            raise DecisionServiceError("The time period requires a date dimension in the current semantic model.")
+        explicit_temporal = DecisionChatService._find_semantic_reference_matches(user_message, temporal_fields)
+        if len(explicit_temporal) > 1:
+            return clarification(
+                "Which date should the time filter use?",
+                explicit_temporal,
+                user_message,
+                "dimension",
+                analytic_state,
+            )
+        resolved_temporal = (
+            explicit_temporal[0]
+            if len(explicit_temporal) == 1
+            else (temporal_fields[0] if len(temporal_fields) == 1 else None)
         )
-        dimensions = semantic_model.get("dimensions") if isinstance(semantic_model, dict) else []
-        # Qualified field identities are valid execution references, but their
-        # namespace words are not evidence that a dimension value was asked
-        # for. Remove them before comparing the prompt with row values.
+        if resolved_temporal is None:
+            prior_time = (
+                analytic_state.get("time_period")
+                if isinstance(analytic_state.get("time_period"), dict)
+                else {}
+            )
+            prior_field = prior_time.get("field")
+            resolved_temporal = next(
+                (item for item in temporal_fields if item.get("field") == prior_field),
+                None,
+            )
+        if resolved_temporal is None:
+            return clarification(
+                "Which date should the time filter use?",
+                temporal_fields,
+                user_message,
+                "dimension",
+                analytic_state,
+            )
+        field = str(resolved_temporal.get("field") or "").strip()
+        if not field or not any(isinstance(row, dict) and field in row for row in dataset):
+            raise DecisionServiceError(f"Date dimension '{field or 'unknown'}' does not exist in the active dataset.")
+        return None
+
+    @staticmethod
+    def _clean_filter_query(
+        user_message: str,
+        semantic_model: Dict[str, Any] | None,
+    ) -> str:
+        """Strip technical identifiers and explicit choice tokens before matching row values."""
         filter_query = str(user_message or "")
+        filter_query = re.sub(r"\b(?:metric|dimension):[^\s]+", " ", filter_query, flags=re.IGNORECASE)
         technical_references: List[str] = []
+        model = semantic_model if isinstance(semantic_model, dict) else {}
         for collection in ("metrics", "dimensions"):
-            for definition in semantic_model.get(collection) or []:
+            for definition in model.get(collection) or []:
                 if not isinstance(definition, dict):
                     continue
                 for key in ("field", "name", "id", "qualified_label"):
@@ -2876,13 +3000,190 @@ class DecisionChatService:
             " ",
             filter_query,
         )
-        normalized_query = DecisionChatService._normalize_text(filter_query)
+        return DecisionChatService._normalize_text(filter_query)
+
+    @staticmethod
+    def _match_categorical_dimension_values(
+        *,
+        user_message: str,
+        dataset: List[Dict[str, Any]],
+        semantic_model: Dict[str, Any],
+        dimensions: List[Dict[str, Any]],
+    ) -> List[Tuple[Dict[str, Any], List[Any]]]:
+        """Match grounded dataset values per categorical dimension."""
+        normalized_query = DecisionChatService._clean_filter_query(user_message, semantic_model)
+        matched: List[Tuple[Dict[str, Any], List[Any]]] = []
+        for dimension in dimensions or []:
+            if not isinstance(dimension, dict) or is_temporal(dimension):
+                continue
+            field = str(dimension.get("field") or "").strip()
+            if not field or not any(isinstance(row, dict) and field in row for row in dataset):
+                continue
+            dimension_terms = {
+                DecisionChatService._normalize_text(dimension.get("label")),
+                DecisionChatService._normalize_text(dimension.get("name")),
+                DecisionChatService._normalize_text(field),
+            } - {""}
+            if any(f"all {term}" in normalized_query for term in dimension_terms):
+                continue
+            values: List[Any] = []
+            seen_values: set[str] = set()
+            for row in dataset:
+                value = row.get(field) if isinstance(row, dict) else None
+                normalized_value = DecisionChatService._normalize_text(value)
+                if not normalized_value or normalized_value in seen_values:
+                    continue
+                seen_values.add(normalized_value)
+                if re.search(rf"(?<!\w){re.escape(normalized_value)}(?!\w)", normalized_query):
+                    values.append(value)
+                if len(seen_values) >= 100:
+                    break
+            if values:
+                matched.append((dimension, values))
+        return matched
+
+    @staticmethod
+    def _resolve_category_comparison(
+        *,
+        user_message: str,
+        dataset: List[Dict[str, Any]],
+        semantic_model: Dict[str, Any],
+        analytic_state: Dict[str, Any],
+        explicit_dimension: Dict[str, Any] | None,
+    ) -> Dict[str, Any]:
+        """Resolve category comparisons to a verified shared dimension or fail safely."""
+        categorical_dimensions = [
+            item
+            for item in (semantic_model.get("dimensions") or [])
+            if isinstance(item, dict) and not is_temporal(item) and item.get("field")
+        ]
+        available_categorical = [
+            item
+            for item in categorical_dimensions
+            if any(isinstance(row, dict) and str(item.get("field") or "").strip() in row for row in dataset)
+        ]
+        if explicit_dimension is not None and explicit_dimension not in available_categorical:
+            raise DecisionServiceError(
+                f"Category dimension '{explicit_dimension.get('field') or explicit_dimension.get('id')}' does not exist in the active dataset."
+            )
+        if not available_categorical:
+            raise DecisionServiceError("No categorical dimension is available in the active dataset for a comparison.")
+
+        matched = DecisionChatService._match_categorical_dimension_values(
+            user_message=user_message,
+            dataset=dataset,
+            semantic_model=semantic_model,
+            dimensions=available_categorical,
+        )
+        multi_match = [(dim, vals) for dim, vals in matched if len(vals) >= 2]
+        single_match = [(dim, vals) for dim, vals in matched if len(vals) == 1]
+
+        if len(multi_match) > 1:
+            candidate_dims = [dim for dim, _ in multi_match]
+            chosen = DecisionChatService._find_semantic_reference_matches(user_message, candidate_dims)
+            if len(chosen) != 1:
+                return {
+                    "clarification": clarification(
+                        "Which category field should I use to compare those values?",
+                        candidate_dims,
+                        user_message,
+                        "dimension",
+                        analytic_state,
+                    )
+                }
+            comparison_dim = chosen[0]
+            comparison_vals = next(vals for dim, vals in multi_match if dim is comparison_dim)
+            chosen_norm = {DecisionChatService._normalize_text(v) for v in comparison_vals}
+            excluded_fields = {
+                str(dim.get("field"))
+                for dim, vals in matched
+                if dim is not comparison_dim
+                and {DecisionChatService._normalize_text(v) for v in vals}.issubset(chosen_norm)
+            }
+            return {
+                "dimension": comparison_dim,
+                "excluded_filter_fields": excluded_fields,
+            }
+
+        if len(multi_match) == 1:
+            comparison_dim, comparison_vals = multi_match[0]
+            chosen_norm = {DecisionChatService._normalize_text(v) for v in comparison_vals}
+            excluded_fields = {
+                str(dim.get("field"))
+                for dim, vals in matched
+                if dim is not comparison_dim
+                and {DecisionChatService._normalize_text(v) for v in vals}.issubset(chosen_norm)
+            }
+            selected_dim = (
+                explicit_dimension
+                if explicit_dimension is not None
+                and explicit_dimension is not comparison_dim
+                and re.search(r"\b(?:by|per)\b", user_message, re.I)
+                else comparison_dim
+            )
+            return {
+                "dimension": selected_dim,
+                "excluded_filter_fields": excluded_fields,
+            }
+
+        has_pair_connector = bool(re.search(r"\b(?:vs|versus|and|between)\b", user_message, re.I))
+        if explicit_dimension is not None and not has_pair_connector:
+            return {
+                "dimension": explicit_dimension,
+                "excluded_filter_fields": set(),
+            }
+        if not has_pair_connector and not single_match:
+            if analytic_state.get("source") == "semantic_metric" and analytic_state.get("group_by"):
+                prior_field = analytic_state["group_by"][0]
+                prior_dim = DecisionChatService._find_semantic_dimension_by_reference(prior_field, semantic_model)
+                if prior_dim in available_categorical:
+                    return {
+                        "dimension": prior_dim,
+                        "excluded_filter_fields": set(),
+                    }
+            if len(available_categorical) == 1:
+                return {
+                    "dimension": available_categorical[0],
+                    "excluded_filter_fields": set(),
+                }
+            return {
+                "clarification": clarification(
+                    "Which category field should I use for the comparison?",
+                    available_categorical,
+                    user_message,
+                    "dimension",
+                    analytic_state,
+                )
+            }
+        raise DecisionServiceError(
+            "The compared categories could not be resolved to a shared dimension in the active dataset."
+        )
+
+    @staticmethod
+    def _build_semantic_filters(
+        *,
+        user_message: str,
+        dataset: List[Dict[str, Any]],
+        semantic_model: Dict[str, Any],
+        analytic_state: Dict[str, Any],
+        analytics_refinement: Dict[str, Any] | None = None,
+        excluded_fields: Optional[set[str]] = None,
+    ) -> List[Dict[str, Any]]:
+        """Carry and refine only filters grounded in current dimensions and values."""
+        carried = (
+            [dict(item) for item in (analytic_state.get("filters") or []) if isinstance(item, dict)]
+            if analytic_state.get("source") == "semantic_metric"
+            else []
+        )
+        dimensions = semantic_model.get("dimensions") if isinstance(semantic_model, dict) else []
+        excluded = set(excluded_fields or set())
+        normalized_query = DecisionChatService._clean_filter_query(user_message, semantic_model)
 
         for dimension in dimensions or []:
             if not isinstance(dimension, dict):
                 continue
             field = str(dimension.get("field") or "").strip()
-            if not field or not any(field in row for row in dataset if isinstance(row, dict)):
+            if not field or field in excluded or not any(field in row for row in dataset if isinstance(row, dict)):
                 continue
             semantic_kind = str(dimension.get("semantic_kind") or "").strip().lower()
             data_type = str(dimension.get("data_type") or "").strip().lower()
@@ -2923,10 +3224,19 @@ class DecisionChatService:
             user_message=user_message,
             dataset=dataset,
             dimensions=dimensions or [],
+            analytic_state=analytic_state,
         )
         if period_update:
+            temporal_names = {
+                str(item.get("field"))
+                for item in (dimensions or [])
+                if isinstance(item, dict) and is_temporal(item) and item.get("field")
+            }
             period_field = period_update[0]["field"]
-            carried = [item for item in carried if item.get("field") != period_field]
+            carried = [
+                item for item in carried
+                if item.get("field") != period_field and item.get("field") not in temporal_names
+            ]
             carried.extend(period_update)
         carried = DecisionChatService._apply_refinement_to_filters(
             filters=carried,
@@ -2941,11 +3251,16 @@ class DecisionChatService:
         user_message: str,
         dataset: List[Dict[str, Any]],
         dimensions: List[Dict[str, Any]],
+        analytic_state: Dict[str, Any] | None = None,
     ) -> List[Dict[str, Any]]:
         temporal_fields = [item for item in dimensions if isinstance(item, dict) and is_temporal(item) and item.get("field")]
         temporal = DecisionChatService._find_semantic_reference(user_message, temporal_fields)
         if not temporal and len(temporal_fields) == 1:
             temporal = temporal_fields[0]
+        if not temporal and isinstance(analytic_state, dict):
+            prior_time = analytic_state.get("time_period") if isinstance(analytic_state.get("time_period"), dict) else {}
+            prior_field = prior_time.get("field")
+            temporal = next((item for item in temporal_fields if item.get("field") == prior_field), None)
         if not temporal:
             return []
         field = str(temporal.get("field"))
@@ -2999,6 +3314,13 @@ class DecisionChatService:
                     "operator": "lte",
                     "value": f"{year:04d}-{month:02d}-{monthrange(year, month)[1]:02d}",
                 },
+            ]
+
+        if relative_month_mentions(user_message) == 1:
+            start, end = previous_calendar_month(DecisionChatService._current_utc_date())
+            return [
+                {"field": field, "operator": "gte", "value": start},
+                {"field": field, "operator": "lte", "value": end},
             ]
         return []
 
@@ -3257,7 +3579,7 @@ class DecisionChatService:
 
     @staticmethod
     def _should_return_chart(user_message: str, analytic_state: Dict[str, Any]) -> bool:
-        if is_visualization_request(user_message):
+        if is_visualization_request(user_message) or is_comparison_request(user_message):
             return True
         return (
             analytic_state.get("output_preference") == "chart"

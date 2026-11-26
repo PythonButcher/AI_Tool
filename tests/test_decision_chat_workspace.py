@@ -1,7 +1,9 @@
 """Synthetic business journeys; all numeric assertions execute the real resolver."""
 
 import copy
+from datetime import date
 import unittest
+from unittest.mock import patch
 
 from flask import Flask
 
@@ -146,6 +148,265 @@ class ChatWorkspaceTests(unittest.TestCase):
             reply = self.turn("Break that down by region", reply["session_state"], semantic_model=model).get_json()
         self.assertEqual(len(reply["bi_grounding"]["filters"]), 1)
         self.assertEqual(reply["artifacts"][0]["content"]["summary"]["value"], 235)
+
+    def test_relative_month_paraphrases_and_inclusive_utc_boundaries(self):
+        rows = [
+            {**DATASET[0], "Order Date": "2026-01-31T23:59:59Z", "Revenue": 90.0},
+            {**DATASET[1], "Order Date": "2026-02-01T00:00:00Z", "Revenue": 120.0},
+            {**DATASET[1], "Order Date": "2026-02-28T22:15:00Z", "Revenue": 45.0},
+            {**DATASET[2], "Order Date": "2026-03-01T00:05:00Z", "Revenue": 135.0},
+        ]
+        with patch("backend.decision_engine.bi_intent.utc_today", return_value=date(2026, 3, 18)):
+            for prompt in (
+                "How much revenue did we make last month?",
+                "What was revenue in the previous month?",
+            ):
+                with self.subTest(prompt=prompt):
+                    response = self.turn(prompt, dataset=rows)
+                    self.assertEqual(response.status_code, 200)
+                    reply = response.get_json()
+                    self.assertEqual(reply["contract_version"], "ai_chat_bi_result_v1")
+                    self.assertEqual(reply["artifacts"][0]["type"], "answer")
+                    self.assertEqual(reply["artifacts"][0]["content"]["summary"]["value"], 165.0)
+                    expected_period = {"field": "Order Date", "start": "2026-02-01", "end": "2026-02-28"}
+                    self.assertEqual(reply["bi_grounding"]["time_period"], expected_period)
+                    self.assertEqual(reply["bi_grounding"]["row_count"], 2)
+                    self.assertEqual(
+                        [(f["field"], f["operator"], f["value"]) for f in reply["bi_grounding"]["filters"]],
+                        [("Order Date", "gte", "2026-02-01"), ("Order Date", "lte", "2026-02-28")],
+                    )
+                    state = reply["session_state"]["analytics_state"]
+                    self.assertEqual(state["metric_id"], "metric_revenue_sum")
+                    self.assertEqual(state["group_by"], [])
+                    self.assertEqual(state["time_period"], expected_period)
+
+    def test_relative_month_january_rolls_over_to_previous_december(self):
+        rows = [
+            {**DATASET[0], "Order Date": "2025-11-30T23:00:00Z", "Revenue": 50.0},
+            {**DATASET[1], "Order Date": "2025-12-01T00:00:00Z", "Revenue": 110.0},
+            {**DATASET[2], "Order Date": "2025-12-31T18:30:00Z", "Revenue": 95.0},
+            {**DATASET[3], "Order Date": "2026-01-01T00:00:00Z", "Revenue": 150.0},
+        ]
+        with patch("backend.decision_engine.bi_intent.utc_today", return_value=date(2026, 1, 10)):
+            reply = self.turn("How much revenue did we make last month?", dataset=rows).get_json()
+        self.assertEqual(
+            reply["bi_grounding"]["time_period"],
+            {"field": "Order Date", "start": "2025-12-01", "end": "2025-12-31"},
+        )
+        self.assertEqual(reply["bi_grounding"]["row_count"], 2)
+        self.assertEqual(reply["artifacts"][0]["content"]["summary"]["value"], 205.0)
+
+    def test_relative_month_replaces_prior_period_and_retains_unrelated_filters(self):
+        first = self.turn("What is revenue for Online in March 2026?").get_json()
+        self.assertEqual(first["artifacts"][0]["content"]["summary"]["value"], 135.0)
+        self.assertEqual(
+            first["bi_grounding"]["time_period"],
+            {"field": "Order Date", "start": "2026-03-01", "end": "2026-03-31"},
+        )
+        with patch("backend.decision_engine.bi_intent.utc_today", return_value=date(2026, 2, 14)):
+            follow_up = self.turn("What about last month?", first["session_state"]).get_json()
+        self.assertEqual(follow_up["artifacts"][0]["content"]["summary"]["value"], 100.0)
+        self.assertEqual(follow_up["bi_grounding"]["row_count"], 1)
+        self.assertEqual(
+            follow_up["bi_grounding"]["time_period"],
+            {"field": "Order Date", "start": "2026-01-01", "end": "2026-01-31"},
+        )
+        self.assertEqual(
+            [(f["field"], f["operator"], f["value"]) for f in follow_up["bi_grounding"]["filters"]],
+            [
+                ("Channel", "eq", "Online"),
+                ("Order Date", "gte", "2026-01-01"),
+                ("Order Date", "lte", "2026-01-31"),
+            ],
+        )
+
+    def test_relative_month_ambiguous_and_unavailable_date_fields(self):
+        model = copy.deepcopy(SEMANTIC_MODEL)
+        model["dimensions"].append({
+            **model["dimensions"][0],
+            "id": "ship_date",
+            "field": "Ship Date",
+            "label": "Ship Date",
+            "name": "Ship Date",
+        })
+        rows = [
+            {**DATASET[0], "Order Date": "2026-02-10", "Ship Date": "2026-03-02", "Revenue": 100.0},
+            {**DATASET[1], "Order Date": "2026-01-15", "Ship Date": "2026-02-18", "Revenue": 240.0},
+        ]
+        with patch("backend.decision_engine.bi_intent.utc_today", return_value=date(2026, 3, 15)):
+            clarify = self.turn(
+                "How much revenue did we make last month?",
+                semantic_model=model,
+                dataset=rows,
+            ).get_json()
+            content = clarify["artifacts"][0]["content"]
+            self.assertEqual(content["reason_code"], "analytics_clarification_required")
+            self.assertNotIn("summary", content)
+            self.assertEqual(len(content["choices"]), 2)
+
+            resolved = self.turn(
+                content["choices"][1]["user_message"],
+                semantic_model=model,
+                dataset=rows,
+            ).get_json()
+            self.assertEqual(resolved["bi_grounding"]["dimensions"], [])
+            self.assertEqual(
+                resolved["bi_grounding"]["time_period"],
+                {"field": "Ship Date", "start": "2026-02-01", "end": "2026-02-28"},
+            )
+            self.assertEqual(resolved["artifacts"][0]["content"]["summary"]["value"], 240.0)
+
+            no_date_model = copy.deepcopy(SEMANTIC_MODEL)
+            no_date_model["dimensions"] = [
+                dim for dim in no_date_model["dimensions"] if dim["id"] != "dimension_order_date"
+            ]
+            missing_date = self.turn(
+                "How much revenue did we make last month?",
+                semantic_model=no_date_model,
+            )
+            self.assertEqual(missing_date.status_code, 400)
+
+    def test_category_comparison_paraphrases_and_ordinary_multi_value_filter(self):
+        for prompt in (
+            "Compare revenue for Online and Retail",
+            "Compare Online and Retail revenue",
+            "Online vs Retail revenue",
+        ):
+            with self.subTest(prompt=prompt):
+                response = self.turn(prompt)
+                self.assertEqual(response.status_code, 200)
+                reply = response.get_json()
+                artifact = reply["artifacts"][0]
+                self.assertEqual(artifact["type"], "chart")
+                chart = artifact["content"]["chartData"]
+                self.assertEqual(chart["labels"], ["Retail", "Online"])
+                self.assertEqual(chart["datasets"][0]["data"], [270.0, 235.0])
+                self.assertEqual(
+                    [dim["field"] for dim in reply["bi_grounding"]["dimensions"]],
+                    ["Channel"],
+                )
+                self.assertEqual(
+                    reply["bi_grounding"]["filters"],
+                    [{
+                        "dimension_id": "dimension_channel",
+                        "field": "Channel",
+                        "label": "Channel",
+                        "operator": "in",
+                        "value": None,
+                        "values": ["Online", "Retail"],
+                    }],
+                )
+                self.assertEqual(reply["bi_grounding"]["row_count"], 4)
+                self.assertEqual(reply["session_state"]["analytics_state"]["group_by"], ["Channel"])
+
+        ordinary = self.turn("What is revenue for Online and Retail?").get_json()
+        self.assertEqual(ordinary["artifacts"][0]["type"], "answer")
+        self.assertEqual(ordinary["artifacts"][0]["content"]["summary"]["value"], 505.0)
+        self.assertEqual(ordinary["bi_grounding"]["dimensions"], [])
+        self.assertEqual(ordinary["bi_grounding"]["filters"][0]["values"], ["Online", "Retail"])
+
+    def test_category_comparison_preserves_date_and_unrelated_category_filters(self):
+        first = self.turn("What is revenue for East in Q1 2026?").get_json()
+        self.assertEqual(first["artifacts"][0]["content"]["summary"]["value"], 220.0)
+        reply = self.turn("Compare Online and Retail", first["session_state"]).get_json()
+        chart = reply["artifacts"][0]["content"]["chartData"]
+        self.assertEqual(chart["labels"], ["Retail", "Online"])
+        self.assertEqual(chart["datasets"][0]["data"], [120.0, 100.0])
+        self.assertEqual([dim["field"] for dim in reply["bi_grounding"]["dimensions"]], ["Channel"])
+        self.assertEqual(reply["bi_grounding"]["row_count"], 2)
+        self.assertEqual(
+            reply["bi_grounding"]["time_period"],
+            {"field": "Order Date", "start": "2026-01-01", "end": "2026-03-31"},
+        )
+        filter_fields = [item["field"] for item in reply["bi_grounding"]["filters"]]
+        self.assertIn("Region", filter_fields)
+        self.assertIn("Channel", filter_fields)
+        self.assertIn("Order Date", filter_fields)
+
+    def test_category_comparison_ambiguous_and_unresolvable_cases(self):
+        model = copy.deepcopy(SEMANTIC_MODEL)
+        model["dimensions"].append({
+            "id": "dimension_sales_channel",
+            "name": "Sales Channel",
+            "label": "Sales Channel",
+            "field": "Sales Channel",
+            "semantic_kind": "categorical",
+            "data_type": "string",
+        })
+        rows = [
+            {**DATASET[0], "Channel": "Online", "Sales Channel": "Retail", "Revenue": 80.0},
+            {**DATASET[1], "Channel": "Retail", "Sales Channel": "Online", "Revenue": 190.0},
+        ]
+        clarify = self.turn(
+            "Compare Online and Retail revenue",
+            semantic_model=model,
+            dataset=rows,
+        ).get_json()
+        content = clarify["artifacts"][0]["content"]
+        self.assertEqual(content["reason_code"], "analytics_clarification_required")
+        self.assertEqual(len(content["choices"]), 2)
+
+        selected = self.turn(
+            content["choices"][1]["user_message"],
+            semantic_model=model,
+            dataset=rows,
+        ).get_json()
+        self.assertEqual(
+            [dim["field"] for dim in selected["bi_grounding"]["dimensions"]],
+            ["Sales Channel"],
+        )
+        self.assertEqual(
+            [item["field"] for item in selected["bi_grounding"]["filters"]],
+            ["Sales Channel"],
+        )
+        chart = selected["artifacts"][0]["content"]["chartData"]
+        self.assertEqual(chart["labels"], ["Online", "Retail"])
+        self.assertEqual(chart["datasets"][0]["data"], [190.0, 80.0])
+
+        for invalid_prompt in (
+            "Compare revenue for Online and Wholesale",
+            "Compare Direct and Partner revenue",
+            "Online vs East revenue",
+        ):
+            with self.subTest(invalid_prompt=invalid_prompt):
+                invalid = self.turn(invalid_prompt)
+                self.assertEqual(invalid.status_code, 400)
+
+    def test_combined_category_comparison_and_relative_month(self):
+        rows = [
+            {**DATASET[0], "Order Date": "2026-01-20", "Channel": "Online", "Revenue": 100.0},
+            {**DATASET[0], "Order Date": "2026-02-05", "Channel": "Online", "Revenue": 125.0},
+            {**DATASET[2], "Order Date": "2026-02-19", "Channel": "Online", "Revenue": 85.0},
+            {**DATASET[1], "Order Date": "2026-02-14", "Channel": "Retail", "Revenue": 120.0},
+            {**DATASET[1], "Order Date": "2026-02-22", "Channel": "Wholesale", "Revenue": 999.0},
+            {**DATASET[3], "Order Date": "2026-03-10", "Channel": "Retail", "Revenue": 150.0},
+        ]
+        with patch("backend.decision_engine.bi_intent.utc_today", return_value=date(2026, 3, 15)):
+            response = self.turn("Compare Online and Retail revenue last month", dataset=rows)
+        self.assertEqual(response.status_code, 200)
+        reply = response.get_json()
+        artifact = reply["artifacts"][0]
+        self.assertEqual(artifact["type"], "chart")
+        chart = artifact["content"]["chartData"]
+        self.assertEqual(chart["labels"], ["Online", "Retail"])
+        self.assertEqual(chart["datasets"][0]["data"], [210.0, 120.0])
+        self.assertEqual(
+            [dim["field"] for dim in reply["bi_grounding"]["dimensions"]],
+            ["Channel"],
+        )
+        self.assertEqual(
+            reply["bi_grounding"]["time_period"],
+            {"field": "Order Date", "start": "2026-02-01", "end": "2026-02-28"},
+        )
+        self.assertEqual(reply["bi_grounding"]["row_count"], 3)
+        self.assertEqual(artifact["bi_grounding"], reply["bi_grounding"])
+        state = reply["session_state"]["analytics_state"]
+        self.assertEqual(state["metric_id"], "metric_revenue_sum")
+        self.assertEqual(state["group_by"], ["Channel"])
+        self.assertEqual(
+            state["time_period"],
+            {"field": "Order Date", "start": "2026-02-01", "end": "2026-02-28"},
+        )
 
 
 if __name__ == "__main__":

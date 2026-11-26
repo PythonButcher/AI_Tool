@@ -2,6 +2,7 @@ from flask import Blueprint, jsonify, request
 import io
 
 from backend.services.ml_logic import detect_anomalies
+from backend.services.dataset_context import resolve_analysis_dataset_bundle
 from backend.services.semantic_model import infer_semantic_model_from_dataframe
 from backend.utils.global_state import get_semantic_model, get_uploaded_df, set_semantic_model, set_uploaded_df
 
@@ -10,11 +11,14 @@ analysis_bp = Blueprint('analysis_bp', __name__, url_prefix='/api')
 
 def _run_outlier_detection():
     try:
-        uploaded_df = get_uploaded_df()
+        payload = request.get_json(silent=True) or {}
+        if isinstance(payload, dict) and 'analysis_context' in payload:
+            uploaded_df = resolve_analysis_dataset_bundle(payload['analysis_context'])['dataframe']
+        else:
+            uploaded_df = get_uploaded_df()
         if uploaded_df is None:
             return jsonify({'error': 'No file has been uploaded yet'}), 400
 
-        payload = request.get_json(silent=True) or {}
         contamination = payload.get('contamination') if isinstance(payload, dict) else None
 
         outlier_indices = detect_anomalies(uploaded_df, contamination)
@@ -38,13 +42,19 @@ def detect_outliers_legacy():
     return _run_outlier_detection()
 
 
-@analysis_bp.route('/numbers', methods=['GET'])
+@analysis_bp.route('/numbers', methods=['GET', 'POST'])
 def numbers_endpoint():
-    uploaded_df = get_uploaded_df()
-    if uploaded_df is None:
-        return jsonify({'error': 'No file has been uploaded yet'}), 400
-
     try:
+        if request.method == 'POST':
+            payload = request.get_json(silent=True)
+            if not isinstance(payload, dict) or not isinstance(payload.get('analysis_context'), dict):
+                return jsonify({'error': 'A working dataset context is required.'}), 400
+            uploaded_df = resolve_analysis_dataset_bundle(payload['analysis_context'])['dataframe']
+        else:
+            uploaded_df = get_uploaded_df()
+        if uploaded_df is None:
+            return jsonify({'error': 'No file has been uploaded yet'}), 400
+
         buffer = io.StringIO()
         uploaded_df.info(buf=buffer)
         info_output = buffer.getvalue()
@@ -62,6 +72,8 @@ def numbers_endpoint():
             'categorical_summary': categorical_summary,
         }), 200
 
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
     except Exception as e:
         return jsonify({'error': f'Failed to retrieve data information: {str(e)}'}), 500
 

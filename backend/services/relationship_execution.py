@@ -7,11 +7,16 @@ relationship truth is reloaded and revalidated on every execution.
 
 from __future__ import annotations
 
+from contextlib import closing
 from copy import deepcopy
 from typing import Any, Dict, Iterable
 
 import pandas as pd
 
+from backend.db.backend_db import get_db_connection
+from backend.repositories.saved_dataset_repository import (
+    DatasetDependencyError, activation_dependencies, verify_dependencies,
+)
 from backend.repositories.source_relationship_repository import (
     SourceRelationshipRepositoryError,
     list_relationships as list_persisted_relationships,
@@ -436,6 +441,17 @@ def execute_analysis_context(value: Any) -> Dict[str, Any]:
         raise RelationshipExecutionError(
             "source_not_in_workspace", "Every selected source must belong to the requested workspace."
         )
+    with closing(get_db_connection()) as conn:
+        dependencies = activation_dependencies(conn, workspace['workspace_id'])
+        try:
+            verify_dependencies(conn, {
+                source_id: dependencies[source_id] for source_id in context['source_ids']
+                if dependencies and source_id in dependencies
+            })
+        except DatasetDependencyError as exc:
+            raise RelationshipExecutionError('saved_dataset_dependency_changed', str(exc), [
+                {'source_id': exc.source_id},
+            ]) from exc
     sources = []
     frames: Dict[str, pd.DataFrame] = {}
     models: Dict[str, Dict[str, Any]] = {}

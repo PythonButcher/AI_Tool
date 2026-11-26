@@ -43,6 +43,9 @@ The user accepted the shared dark theme. AI Chat's model routing, layout and con
 | PostgreSQL workspace | `project_docs/active/contracts/postgres_workspace.md` | Database discovery, selected snapshots, and reopening saved models |
 | Multiple-source relationship contract | `project_docs/active/contracts/multiple_data_source_relationships.md` | Relationship persistence, validation, diagnostics, and activation truth |
 | Project active gate | `project_docs/active/active_gate/README.md` | The only active work workspace |
+| Saved datasets | `project_docs/active/saved_datasets/README.md` | Named persistence, governed activation, and integration order |
+| Analytics product rebuild | `project_docs/active/analytics/README.md` | Product requirements and verification scope |
+| Business Objects | `project_docs/active/business_objects/README.md` | Configurable definitions, record browsing, and Analytics integration |
 | ML Studio roadmap | `project_docs/active/ml_studio/README.md` | Durable whole-product requirements and acceptance boundaries; status owns delivery truth |
 | Completed data and backend roadmap | `project_docs/archive/multiple_data_sources_implementation_plan_completed.md` | Historical delivery record; not active scope |
 | Deferred planning | `project_docs/active/future/README.md` | The one home for all deferred active-folder plans; not active until promoted |

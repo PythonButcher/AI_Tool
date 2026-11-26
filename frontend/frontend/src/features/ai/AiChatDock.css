@@ -1,0 +1,91 @@
+.ai-chat-dock {
+  position: relative;
+  flex: 0 0 var(--ai-chat-dock-width);
+  z-index: 1;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 0;
+  border-left: 1px solid var(--border-color);
+  background: var(--bg-primary);
+  box-shadow: -4px 0 20px var(--shadow-color-soft);
+}
+
+.ai-chat-dock.is-expanded {
+  flex-basis: 100%;
+  border-left: 0;
+  box-shadow: none;
+}
+
+.ai-chat-dock__slot,
+.ai-chat-dock__host,
+.ai-chat-popup {
+  height: 100%;
+  min-height: 0;
+}
+
+.ai-chat-dock__host {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.ai-chat-popup { margin: 0; height: 100dvh; }
+.ai-chat-dock__host > .ai-shell { flex: 1; min-height: 0; }
+
+.ai-chat-dock__resize {
+  position: absolute;
+  inset: 0 auto 0 -5px;
+  z-index: 2;
+  width: 10px;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.ai-chat-dock__resize:hover,
+.ai-chat-dock__resize:focus-visible {
+  background: linear-gradient(var(--accent-blue), var(--accent-blue)) center / 2px 100% no-repeat;
+  outline: 0;
+}
+
+.ai-chat-dock__controls {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 4px;
+  margin-inline-start: auto;
+  color: var(--text-secondary);
+}
+
+.ai-chat-dock__controls button {
+  display: inline-grid;
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: inherit;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.ai-chat-dock__controls button svg { display: block; pointer-events: none; }
+
+.ai-chat-dock__controls button:hover:not(:disabled) {
+  border-color: var(--border-color-soft);
+  background: var(--bg-secondary-soft);
+  color: var(--text-primary);
+}
+
+.ai-chat-dock__controls button:focus-visible {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: -2px;
+}
+
+@container workspace-canvas (max-width: 760px) {
+  .ai-chat-dock { flex-basis: 100%; border-left: 0; box-shadow: none; }
+  .ai-chat-dock__resize, .ai-chat-dock__expand { display: none !important; }
+}

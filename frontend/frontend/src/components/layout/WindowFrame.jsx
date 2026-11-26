@@ -31,6 +31,7 @@ const WindowFrame = ({
   headerActions,
   isMinimized = false,
   isExternalWindow = false,
+  fitCanvas = false,
 }) => {
   const [isMinimizing, setIsMinimizing] = React.useState(false);
 
@@ -94,7 +95,7 @@ const WindowFrame = ({
   return (
     <div
       ref={windowRef}
-      className={`window-frame ${isActive ? 'active' : ''} ${isDragging ? 'is-dragging' : ''} ${isResizing ? 'is-resizing' : ''} ${isMinimizing ? 'minimizing' : ''} ${isExternalWindow ? 'is-external-window' : ''}`}
+      className={`window-frame ${isActive ? 'active' : ''} ${isDragging ? 'is-dragging' : ''} ${isResizing ? 'is-resizing' : ''} ${isMinimizing ? 'minimizing' : ''} ${isExternalWindow ? 'is-external-window' : ''} ${fitCanvas ? 'fits-canvas' : ''}`}
       style={{
         zIndex,
         position: 'absolute',
@@ -107,8 +108,8 @@ const WindowFrame = ({
       <div className="window-surface">
         <div
           className="window-header"
-          onPointerDown={isExternalWindow ? undefined : handleDragStart}
-          style={{ cursor: isExternalWindow ? 'default' : 'grab' }}
+          onPointerDown={isExternalWindow || fitCanvas ? undefined : handleDragStart}
+          style={{ cursor: isExternalWindow || fitCanvas ? 'default' : 'grab' }}
         >
           <div className="header-title-container">
             <span className="header-title">{title}</span>
@@ -118,7 +119,7 @@ const WindowFrame = ({
             className="header-button-group"
             onPointerDown={(event) => event.stopPropagation()}
           >
-            {onToggleLock && (
+            {onToggleLock && !fitCanvas && (
               <button
                 className="header-button-lock"
                 onClick={(event) => { event.stopPropagation(); onToggleLock(id); }}
@@ -145,7 +146,7 @@ const WindowFrame = ({
         )}
       </div>
 
-      {!isLocked && !isExternalWindow && (
+      {!isLocked && !isExternalWindow && !fitCanvas && (
         <>
           <div className="resize-handle n" onPointerDown={(event) => handleResizeStart(event, 'n')} />
           <div className="resize-handle s" onPointerDown={(event) => handleResizeStart(event, 's')} />

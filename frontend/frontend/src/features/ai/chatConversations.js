@@ -14,7 +14,8 @@ export const createConversation = () => {
 // transcript cannot prove that the data selected after a reload is unchanged.
 export const sameChatScope = (left, right) => Boolean(left && right)
   && ['workspaceId', 'version', 'semanticModel', 'cleanedData', 'fullData']
-    .every(key => left[key] === right[key]);
+    .every(key => left[key] === right[key])
+  && (left.analyticsContext || null) === (right.analyticsContext || null);
 
 const mapMessageArtifacts = (message, mapArtifact) => ({
   ...message,

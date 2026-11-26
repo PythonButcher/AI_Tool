@@ -1,4 +1,4 @@
-# AI_Tool Agent Rules
+# Datastream Agent Rules
 
 Use this file as the repository entrypoint. It defines authority, ownership, safety, and required verification. Current product details belong in `project_docs/`, not here.
 

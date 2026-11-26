@@ -17,6 +17,28 @@ from backend.services.workspace_context import (
 )
 
 
+def prepare_source(source: dict, steps: object) -> tuple[pd.DataFrame, bytes, int]:
+    """Apply a recipe to the full durable source and round-trip the result format."""
+    engine = ManualCleaningEngine(strict_columns=True)
+    if not isinstance(steps, list) or len(steps) > 100 or any(
+        not isinstance(step, dict) or set(step) - {"type", "params"}
+        or not isinstance(step.get("type"), str) or step.get("type") not in engine.registry
+        or not isinstance(step.get("params", {}), dict)
+        for step in steps
+    ):
+        raise WorkspaceContextError("invalid_cleaning_steps", "Supply at most 100 supported cleaning steps.")
+    try:
+        original = load_datahub_dataset(source["source_id"])["dataframe"]
+        cleaned = engine.apply_steps(steps, original)
+        # The receipt must describe the actual durable representation, including
+        # timestamp precision and dtype reconstruction, rather than a transient frame.
+        encoded = cleaned.reset_index(drop=True).to_json(orient="table", date_format="iso", date_unit="ns", index=False)
+        cleaned = pd.read_json(StringIO(encoded), orient="table")
+    except Exception as exc:
+        raise WorkspaceContextError("cleaning_failed", "Unable to apply these steps to the governed source.") from exc
+    return cleaned, encoded.encode('utf-8'), len(original)
+
+
 def clean_workspace(workspace_id: str, payload: object, *, preparation_id: str | None = None) -> dict:
     """Preview without writes, or atomically publish an isolated derived source."""
     required = {"workspace_version", "source_id", "steps", "preview_only"}
@@ -40,24 +62,7 @@ def clean_workspace(workspace_id: str, payload: object, *, preparation_id: str |
     if has_relationships:
         raise WorkspaceContextError("preparation_relationships_unsupported", "Relationship workspaces require a separate preparation contract.")
     source = get_source(payload["source_id"])
-    engine = ManualCleaningEngine(strict_columns=True)
-    steps = payload["steps"]
-    if not isinstance(steps, list) or len(steps) > 100 or any(
-        not isinstance(step, dict) or set(step) - {"type", "params"}
-        or not isinstance(step.get("type"), str) or step.get("type") not in engine.registry
-        or not isinstance(step.get("params", {}), dict)
-        for step in steps
-    ):
-        raise WorkspaceContextError("invalid_cleaning_steps", "Supply at most 100 supported cleaning steps.")
-    try:
-        original = load_datahub_dataset(source["source_id"])["dataframe"]
-        cleaned = engine.apply_steps(steps, original)
-        # The receipt must describe the actual durable representation, including
-        # timestamp precision and dtype reconstruction, rather than a transient frame.
-        encoded = cleaned.reset_index(drop=True).to_json(orient="table", date_format="iso", date_unit="ns", index=False)
-        cleaned = pd.read_json(StringIO(encoded), orient="table")
-    except Exception as exc:
-        raise WorkspaceContextError("cleaning_failed", "Unable to apply these steps to the governed source.") from exc
+    cleaned, encoded, input_row_count = prepare_source(source, payload['steps'])
     if not payload["preview_only"] and (cleaned.empty or len(cleaned.columns) == 0):
         raise WorkspaceContextError("empty_cleaning_result", "Apply requires nonempty data and columns.")
     readiness = evaluate_dataset_readiness(cleaned, source["governance_policy"], operation="manual_cleaning")
@@ -66,14 +71,14 @@ def clean_workspace(workspace_id: str, payload: object, *, preparation_id: str |
     preview = json.loads(cleaned.head(100).to_json(orient="records", date_format="iso"))
     result = {"committed": False, "workspace_id": workspace_id, "workspace_version": version,
               "preview": preview, "row_count": len(cleaned), "schema": dataframe_schema(cleaned),
-              "input_row_count": len(original), "removed_row_count": max(0, len(original) - len(cleaned)),
-              "added_row_count": max(0, len(cleaned) - len(original)),
+              "input_row_count": input_row_count, "removed_row_count": max(0, input_row_count - len(cleaned)),
+              "added_row_count": max(0, len(cleaned) - input_row_count),
               "governance_readiness": readiness, "receipt": None}
     if payload["preview_only"]:
         return result
     model = infer_semantic_model_from_dataframe(cleaned, source="manual_cleaning", existing_model=source["semantic_model"], preserve_user_metrics=True)
     committed = register_managed_upload(
-        file_bytes=encoded.encode("utf-8"), filename="prepared.table.json", dataframe=cleaned,
+        file_bytes=encoded, filename="prepared.table.json", dataframe=cleaned,
         semantic_model=model, governance_policy=readiness["policy"], governance_readiness=readiness,
         preview=preview, workspace_id=workspace_id, workspace_version=version, replace_source=source,
         preparation_id=preparation_id,

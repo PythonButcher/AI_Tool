@@ -76,3 +76,21 @@ test('reopens a saved workspace without credentials and keeps it available after
   await waitFor(() => expect(activate).toHaveBeenCalledWith(response));
   expect(axios.post).toHaveBeenLastCalledWith(`${base}/workspaces/ws_sales/open`, undefined, expect.any(Object));
 });
+
+test('can still load a single table preview without saving a workspace', async () => {
+  axios.post.mockResolvedValueOnce({ data: { tables: [{ table_name: 'orders' }] } });
+  const preview = { data_preview: [{ revenue: 35 }] };
+  axios.post.mockResolvedValueOnce({ data: preview });
+  const activate = jest.fn();
+  render(<DatabaseConnectForm handleDatabaseData={activate} />);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Preview without saving' }));
+  fireEvent.submit(screen.getByRole('form', { name: 'Preview PostgreSQL table' }));
+  fireEvent.change(await screen.findByLabelText('Select a Table'), { target: { value: 'orders' } });
+
+  await waitFor(() => expect(activate).toHaveBeenCalledWith(preview));
+  expect(axios.post.mock.calls.map(([url]) => url)).toEqual([
+    'http://localhost:5000/api/db/connect',
+    'http://localhost:5000/api/preview',
+  ]);
+});

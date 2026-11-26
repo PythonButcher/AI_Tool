@@ -1,74 +1,29 @@
 import React from 'react';
-import {
-  FaChartBar,
-  FaDatabase,
-  FaRobot,
-  FaTachometerAlt,
-  FaProjectDiagram,
-  FaFlask,
-} from 'react-icons/fa';
 import './SideBar.css';
 
-const DESTINATIONS = {
-  WORKSPACE: 'workspace',
-  DATA_MODEL: 'data_model',
-  EXPLORE: 'explore',
-  ML_STUDIO: 'ml_studio',
-  DASHBOARDS: 'dashboards',
-  AI: 'ai',
-};
-
-const navigationItems = [
-  { id: DESTINATIONS.WORKSPACE, label: 'Workspace', icon: <FaDatabase /> },
-  { id: DESTINATIONS.DATA_MODEL, label: 'Data Model', icon: <FaProjectDiagram /> },
-  { id: DESTINATIONS.EXPLORE, label: 'Explore', icon: <FaChartBar /> },
-  { id: DESTINATIONS.ML_STUDIO, label: 'ML Studio', icon: <FaFlask /> },
-  { id: DESTINATIONS.DASHBOARDS, label: 'Dashboards', icon: <FaTachometerAlt /> },
+const destinations = [
+  { id: 'workspace', label: 'Workspace' },
+  { id: 'data_tools', label: 'Data Tools' },
+  { id: 'data_hub', label: 'Data Hub' },
+  { id: 'data_model', label: 'Data Model' },
+  { id: 'analytics', label: 'Analytics' },
+  { id: 'ml_studio', label: 'ML Studio' },
 ];
 
-/**
- * SideBar (Optimized)
- * 
- * Consistently narrow navigation rail.
- * Secondary destination actions have been relocated to the top ribbon.
- */
-function SideBar({
-  activeDestination,
-  onDestinationSelect,
-}) {
+export default function DestinationNav({ activeDestination, onDestinationSelect }) {
   return (
-    <aside className="workflow-shell">
-      <div className="workflow-rail" aria-label="Global navigation">
-        <div className="workflow-rail__top">
-          {navigationItems.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              className={`workflow-rail__button ${activeDestination === item.id ? 'is-active' : ''}`}
-              onClick={() => onDestinationSelect(item.id)}
-              aria-pressed={activeDestination === item.id}
-              title={item.label}
-            >
-              <span className="workflow-rail__icon" aria-hidden="true">{item.icon}</span>
-              <span className="workflow-rail__label">{item.label}</span>
-            </button>
-          ))}
-        </div>
-        <div className="workflow-rail__bottom">
-          <button
-            type="button"
-            className={`workflow-rail__button ${activeDestination === DESTINATIONS.AI ? 'is-active' : ''}`}
-            onClick={() => onDestinationSelect(DESTINATIONS.AI)}
-            aria-pressed={activeDestination === DESTINATIONS.AI}
-            title="AI Suite"
-          >
-            <span className="workflow-rail__icon" aria-hidden="true"><FaRobot /></span>
-            <span className="workflow-rail__label">AI Suite</span>
-          </button>
-        </div>
-      </div>
-    </aside>
+    <nav className="destination-nav" aria-label="Main navigation">
+      {destinations.map(({ id, label }) => (
+        <button
+          key={id}
+          type="button"
+          aria-current={activeDestination === id ? 'page' : undefined}
+          onClick={() => onDestinationSelect(id)}
+        >
+          {label}
+        </button>
+      ))}
+      {activeDestination === 'ai' && <span aria-current="page">AI Suite</span>}
+    </nav>
   );
 }
-
-export default SideBar;

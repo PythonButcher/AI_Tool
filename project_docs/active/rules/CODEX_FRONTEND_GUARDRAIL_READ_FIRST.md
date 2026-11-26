@@ -48,7 +48,7 @@ Codex must not mark a frontend phase complete from another agent's claim alone. 
 
 When active docs disagree, Codex must call out the conflict and treat source plus the active contract as the gate until the status file is corrected. The active status file must not be used as proof of completion when it is the item being audited.
 
-Every substantial AI Tool wrap-up must state exactly whose turn is next: Codex, Antigravity, user validation, or no one. Codex determines that next owner from verified project evidence. If Antigravity is next, Codex must put the `Goal:` prompt in the active handoff file and reference that file in the final response instead of pasting the full prompt into chat.
+Every substantial Datastream wrap-up must state exactly whose turn is next: Codex, Antigravity, user validation, or no one. Codex determines that next owner from verified project evidence. If Antigravity is next, Codex must put the `Goal:` prompt in the active handoff file and reference that file in the final response instead of pasting the full prompt into chat.
 
 ## Handoff Sizing
 

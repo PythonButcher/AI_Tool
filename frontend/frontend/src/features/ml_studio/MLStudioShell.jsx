@@ -2,6 +2,7 @@
 import React, { useContext, useEffect, useState, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { DataContext, useDatasetMeta } from '../../context/DataContext';
+import { getWorkspacePortalContainer } from '../../components/layout/workspacePortal';
 import {
   FaDatabase, FaLayerGroup, FaChevronDown, FaChevronUp,
   FaSearch, FaInfoCircle, FaExclamationTriangle,
@@ -1359,7 +1360,7 @@ function PowerQueryOpeningDialog({ field, onStay, onOpen }) {
         </div>
       </section>
     </div>,
-    document.body
+    getWorkspacePortalContainer()
   );
 }
 
