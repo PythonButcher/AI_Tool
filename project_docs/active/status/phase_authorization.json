@@ -1,36 +1,28 @@
 {
   "schema_version": 1,
   "authorized_work": {
-    "name": "Open Devstream from the Datastream hub",
+    "name": "Awaiting User Epic Goal",
     "allowed_paths": [
-      "frontend/frontend/src/App.jsx",
-      "frontend/frontend/src/App.test.jsx",
-      "frontend/frontend/src/components/layout/MenuBar.jsx",
-      "frontend/frontend/src/components/layout/MenuBar.css",
-      "frontend/frontend/src/components/layout/PlatformHub.jsx",
-      "frontend/frontend/src/components/layout/PlatformHub.css",
-      "frontend/frontend/src/components/layout/PlatformHub.test.jsx",
-      "frontend/frontend/src/components/layout/PlatformShell.jsx",
-      "frontend/frontend/src/components/layout/workspacePortal.js",
-      "frontend/frontend/src/context/MuiThemeContext.jsx",
-      "frontend/frontend/src/features/ai/AIShell.jsx",
-      "frontend/frontend/src/features/analytics/AnalyticsShell.jsx",
-      "frontend/frontend/src/features/ml_studio/MLStudioShell.jsx",
-      "frontend/frontend/src/features/semantic/SemanticMetricEditor.jsx",
       "project_docs/active/active_gate/README.md",
       "project_docs/active/status/project_execution_status.md",
       "project_docs/active/status/phase_authorization.json"
     ]
   },
-  "authorization_state": "AUTHORIZED",
-  "lifecycle_state": "AWAITING USER ACCEPTANCE",
+  "authorization_state": "REVIEW_ONLY",
+  "lifecycle_state": "NOT STARTED",
+  "platform_entry_acceptance": {
+    "accepted_by": "User",
+    "accepted_at": "2026-11-25",
+    "evidence": "The user said the Datastream Hub polish was good and the project could move on.",
+    "record": "project_docs/archive/datastream_hub_platform_entry_accepted_2026_11_25.md"
+  },
   "platform_branding_authorization": {
     "approved_by": "User",
     "approved_at": "2026-11-24",
     "scope": "Rename the platform to Datastream and the existing tool to Devstream across product copy, assets, code, tests, and documentation. The user owns browser acceptance.",
     "codex_frontend_implementation_authorized": true
   },
-  "user_implementation_authorization": {
+  "platform_entry_implementation_authorization": {
     "approved_by": "User",
     "approved_at": "2026-11-23",
     "evidence": "The user directed a separate Codex chat to implement the hub in the frontend now named Devstream and authorized the bounded edits through that chat's kickoff. The recorded instruction uses the workspace name at the time.",
@@ -73,7 +65,7 @@
     "owner": "Antigravity",
     "state": "Paused for the saved-dataset priority",
     "handoff": "project_docs/archive/business_object_definitions_repair_paused_2026_11_22.md",
-    "verification": "Antigravity reported five focused tests and a production build passing. Codex identified a late-list race and missing model-choice refresh after a save conflict. The repair and browser acceptance are outstanding."
+    "verification": "Current source contains fixes and regression tests for the late-list race and model-choice refresh. Focused Codex review and user browser acceptance are outstanding."
   },
   "data_hub_delete_all_authorization": {
     "approved_by": "User",
@@ -256,8 +248,8 @@
     "scope": "Codex may redesign the AI Chat window hierarchy, header, conversation, composer, results panel and responsive styling while retaining implemented BI and dashboard behavior.",
     "codex_frontend_implementation_authorized": true
   },
-  "diff_baseline": "e0275d7cd31bb0ea035f05a50741124d80b68083",
-  "authority_kind": "direct_user_instruction",
+  "diff_baseline": "32c65f2ec8784e2fece13db224600df2be80192a",
+  "authority_kind": "product_review",
   "ai_chat_improvement_authorization": {
     "approved_by": "User",
     "approved_at": "2026-10-10",
@@ -578,8 +570,9 @@
     "project_docs/active/ai_hand_off/ml_studio_duplicate_draft.md",
     "project_docs/active/README.md",
     "project_docs/active/ai_hand_off/README.md",
-    "project_docs/archive/ml_studio_duplicate_draft_reviewed_2026_09_26.md"
+    "project_docs/archive/ml_studio_duplicate_draft_reviewed_2026_09_26.md",
+    "project_docs/archive/datastream_hub_platform_entry_accepted_2026_11_25.md"
   ],
   "accepted_change_snapshot": "project_docs/active/status/accepted_change_snapshot.json",
-  "codex_frontend_edits_allowed": true
+  "codex_frontend_edits_allowed": false
 }

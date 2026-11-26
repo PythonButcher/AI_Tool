@@ -1,23 +1,23 @@
 # Project Execution Status
 
-## Current Gate: Open Devstream from the Datastream hub
+## Current Gate: Awaiting User Epic Goal
 
-- **Current Gate**: Open Devstream from the Datastream hub
-- **Roadmap Phase**: Phase 0 — Platform entry
-- **Phase State**: `AWAITING USER ACCEPTANCE`
-- **What This State Means**: The Datastream hub, Devstream entry, and workspace return are engineering-verified.
-- **Current Milestone**: User reviews the Datastream hub in the browser
+- **Current Gate**: Awaiting User Epic Goal
+- **Roadmap Phase**: Pending product selection
+- **Phase State**: `NOT STARTED`
+- **What This State Means**: The project is open for product review while the user chooses the next outcome.
+- **Current Milestone**: Choose the next Datastream product outcome
 - **Automatic Continuation**: `WAIT_FOR_USER`
 - **Current Owner**: User
-- **Backend Readiness**: `complete`
-- **Frontend Readiness**: `backend_contract_ready`
-- **Next Action**: The user owns browser acceptance in chat.
-- **Required Action**: Record the user's browser decision.
+- **Backend Readiness**: `implementation_required`
+- **Frontend Readiness**: `not_applicable`
+- **Next Action**: The user selects a product outcome in chat.
+- **Required Action**: Codex records the chosen scope and any implementation authorization.
 - **Active Gate**: `project_docs/active/active_gate/README.md`
 - **Authorization Record**: `project_docs/active/status/phase_authorization.json`
 - **Roadmap**: `project_docs/active/active_gate/README.md`
 - **Active Handoff**: None
-- **Latest Verification**: All 111 tests across nine focused frontend suites passed, including Devstream entry, legacy bookmarks, and hub navigation. The production build passed with existing warnings. Repository CI, active-gate validation, and whitespace checks passed.
+- **Latest Verification**: The user accepted the [Datastream Hub](../../archive/datastream_hub_platform_entry_accepted_2026_11_25.md) on November 25, 2026. All 16 focused Hub and app tests passed at `32c65f2e`, and the production build passed with warnings.
 
 ## Pending Data Tools Acceptance
 
@@ -27,7 +27,7 @@ The inline Data Tools workbench also awaits the user's browser decision. It pass
 
 Validate values, Check keys, and Summarize rows are available in the toolbox and await browser acceptance. The follow-up passed 26 focused frontend tests, the production build with existing warnings, and Chrome fixture checks at 1440 and 390 pixels.
 
-The [Business Object repair](../../archive/business_object_definitions_repair_paused_2026_11_22.md) is paused. Antigravity retains its assignment and the [authorization record](phase_authorization.json) records the outstanding review.
+The [Business Object repair](../../archive/business_object_definitions_repair_paused_2026_11_22.md) is paused pending Codex review. The current source contains fixes and regression tests for the saved-list race and model-choice refresh described in that assignment.
 
 ## Pending Analytics Workbench Acceptance
 
