@@ -143,6 +143,29 @@ def _ensure_schema(conn):
         '''
     )
 
+    # Keep broken references visible in saved definitions after catalog or model edits.
+    conn.execute(
+        '''
+        CREATE TABLE IF NOT EXISTS workspace_business_objects (
+            object_id TEXT PRIMARY KEY,
+            workspace_id TEXT NOT NULL,
+            display_name TEXT NOT NULL,
+            source_id TEXT NOT NULL,
+            record_key_field TEXT NOT NULL,
+            display_field TEXT,
+            relationship_ids_json TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            FOREIGN KEY (workspace_id) REFERENCES data_workspaces(workspace_id) ON DELETE CASCADE
+        )
+        '''
+    )
+    conn.execute(
+        '''
+        CREATE INDEX IF NOT EXISTS idx_workspace_business_objects_workspace
+        ON workspace_business_objects (workspace_id, created_at, object_id)
+        '''
+    )
+
     conn.execute(
         '''
         CREATE TABLE IF NOT EXISTS decision_assets (
@@ -178,6 +201,45 @@ def _ensure_schema(conn):
             workspace_id TEXT NOT NULL,
             receipt_json TEXT NOT NULL,
             FOREIGN KEY (workspace_id) REFERENCES data_workspaces(workspace_id) ON DELETE CASCADE
+        )
+    ''')
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS saved_datasets (
+            dataset_id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            kind TEXT NOT NULL CHECK (kind IN ('source', 'model', 'refined')),
+            revision INTEGER NOT NULL CHECK (revision > 0),
+            workspace_id TEXT NOT NULL,
+            definition_json TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+    ''')
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS saved_dataset_operations (
+            request_id TEXT PRIMARY KEY,
+            request_hash TEXT NOT NULL,
+            dataset_id TEXT NOT NULL REFERENCES saved_datasets(dataset_id) ON DELETE CASCADE,
+            receipt_json TEXT NOT NULL
+        )
+    ''')
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS dataset_activation_workspaces (
+            workspace_id TEXT PRIMARY KEY REFERENCES data_workspaces(workspace_id) ON DELETE CASCADE,
+            dependencies_json TEXT
+        )
+    ''')
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS saved_dataset_derivations (
+            source_id TEXT PRIMARY KEY REFERENCES datahub_datasets(id) ON DELETE CASCADE,
+            lineage_json TEXT NOT NULL
+        )
+    ''')
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS workspace_refine_operations (
+            request_id TEXT PRIMARY KEY,
+            request_hash TEXT NOT NULL,
+            workspace_id TEXT NOT NULL REFERENCES data_workspaces(workspace_id) ON DELETE CASCADE
         )
     ''')
     conn.commit()

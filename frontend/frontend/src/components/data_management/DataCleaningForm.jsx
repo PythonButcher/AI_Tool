@@ -1,8 +1,9 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
+import Modal from '@mui/material/Modal';
 import './DataCleaningForm.css';
 import CloseButton from '../buttons/CloseButton';
-import { DataContext } from '../../context/DataContext';
+import { DataContext, normalizeDatasetRows } from '../../context/DataContext';
 import { useHelpOverlay } from '../../context/HelpOverlayContext';
 import {
   TRANSFORM_LIBRARY,
@@ -16,28 +17,11 @@ import PreparationEditor from '../../features/ml_studio/PreparationEditor';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
-const parsePreviewArray = (data) => {
-  if (Array.isArray(data)) return data;
-  if (data?.data_preview && Array.isArray(data.data_preview)) return data.data_preview;
-  if (typeof data?.data_preview === 'string') {
-    try {
-      return JSON.parse(data.data_preview);
-    } catch (error) {
-      return [];
-    }
-  }
-  return [];
-};
+const PREVIEW_LIMIT = 100;
 
-const columnListFromData = (dataset) => {
-  const sample = Array.isArray(dataset) && dataset.length > 0 ? dataset[0] : null;
-  if (sample && typeof sample === 'object') return Object.keys(sample);
-  if (dataset?.data_preview) {
-    const preview = parsePreviewArray(dataset) || [];
-    if (preview.length > 0) return Object.keys(preview[0]);
-  }
-  return [];
-};
+function previewColumns(rows, schema) {
+  return Array.from(new Set([...(schema ?? []).map(field => field.name), ...rows.flatMap(row => Object.keys(row ?? {}))]));
+}
 
 function DataCleaningForm(props) {
   if (props.mlStudioMode && (props.mlStudioOpeningContext?.base_etag || props.mlStudioOpeningContext?.preparation)) {
@@ -46,7 +30,10 @@ function DataCleaningForm(props) {
   return <LegacyDataCleaningForm {...props} />;
 }
 
-function LegacyDataCleaningForm({ closeForm, setShowDataPreview, initialSteps = [], onApplyComplete, mlStudioMode, mlStudioOpeningContext }) {
+function LegacyDataCleaningForm({
+  closeForm, setShowDataPreview, initialSteps = [], onApplyComplete, mlStudioMode, mlStudioOpeningContext,
+  workingWorkspace, workingDatasetName, onWorkingRefine, onApplyingRefine, embedded = false, visible = true,
+}) {
   const {
     uploadedData,
     fullData,
@@ -59,28 +46,41 @@ function LegacyDataCleaningForm({ closeForm, setShowDataPreview, initialSteps = 
   const [selectedTransform, setSelectedTransform] = useState(null); // No default selected initially
   const [formValues, setFormValues] = useState({});
   const [steps, setSteps] = useState(initialSteps);
-  const [previewRows, setPreviewRows] = useState([]);
+  const [previewResult, setPreviewResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [editingId, setEditingId] = useState(null);
+  const refineInFlight = useRef(null);
+  const refinePreview = useRef(null);
+  const refineOperation = useRef(null);
   const { isHelpVisible, toggleHelp, closeHelp } = useHelpOverlay();
 
   const helpId = 'dataCleaning';
 
-  const columns = useMemo(() => {
-    const source = cleanedData ?? fullData ?? uploadedData;
-    return columnListFromData(source);
-  }, [cleanedData, fullData, uploadedData]);
+  const sourceRows = useMemo(() => normalizeDatasetRows(cleanedData ?? fullData ?? uploadedData), [cleanedData, fullData, uploadedData]);
+  const sourcePreview = useMemo(() => sourceRows.slice(0, PREVIEW_LIMIT), [sourceRows]);
+  const schema = uploadedData?.schema ?? uploadedData?.source?.schema;
+  const sourceColumns = useMemo(() => previewColumns(sourcePreview, schema), [sourcePreview, schema]);
+  const datasetName = workingDatasetName || uploadedData?.source?.name || uploadedData?.semantic_model?.dataset?.name;
+  const workspaceVersion = workingWorkspace?.version;
+  const sourceId = workingWorkspace?.primary_source_id;
+  const currentPreview = previewResult?.recipe === steps && previewResult.sourceRows === sourceRows &&
+    previewResult.sourceId === sourceId && previewResult.workspaceVersion === workspaceVersion ? previewResult : null;
+  const columns = currentPreview ? Array.from(new Set([...sourceColumns, ...currentPreview.columns])) : sourceColumns;
+  const hasDataset = Boolean(sourceId || uploadedData || sourceRows.length);
 
   useEffect(() => {
-    if (selectedTransform) {
-      const activeTransform = transformLookup[selectedTransform];
-      setFormValues(buildDefaultValues(activeTransform?.fields));
-    } else {
-      setFormValues({});
-    }
-  }, [selectedTransform]);
+    setLoading(false);
+    return () => {
+      refineInFlight.current?.abort();
+      refineInFlight.current = null;
+    };
+  }, [sourceRows, sourceId, workspaceVersion]);
+
+  const recordPreview = (rows, rowCount, schema) => {
+    setPreviewResult({ rows, rowCount, columns: previewColumns(rows, schema), recipe: steps, sourceRows, sourceId, workspaceVersion });
+  };
 
   const handleFieldChange = (name, value) => {
     setFormValues((prev) => ({ ...prev, [name]: value }));
@@ -119,7 +119,7 @@ function LegacyDataCleaningForm({ closeForm, setShowDataPreview, initialSteps = 
   };
 
   const addStep = () => {
-    if (mlStudioMode) return;
+    if (mlStudioMode || loading || !sourceRows.length) return;
     setError(null);
     setSuccess(null);
     const active = transformLookup[selectedTransform];
@@ -136,7 +136,7 @@ function LegacyDataCleaningForm({ closeForm, setShowDataPreview, initialSteps = 
   };
 
   const editStep = (step) => {
-    if (mlStudioMode) return;
+    if (mlStudioMode || loading) return;
     const category = TRANSFORM_LIBRARY.find((c) => c.transforms.some((t) => t.type === step.type))?.category;
     if (category) setSelectedCategory(category);
     setSelectedTransform(step.type);
@@ -147,7 +147,8 @@ function LegacyDataCleaningForm({ closeForm, setShowDataPreview, initialSteps = 
   };
 
   const deleteStep = (id) => {
-    if (mlStudioMode) return;
+    if (mlStudioMode || loading) return;
+    setSuccess(null);
     setSteps((prev) => prev.filter((s) => s.id !== id));
     if (editingId === id) {
       setEditingId(null);
@@ -157,7 +158,8 @@ function LegacyDataCleaningForm({ closeForm, setShowDataPreview, initialSteps = 
   };
 
   const moveStep = (index, direction) => {
-    if (mlStudioMode) return;
+    if (mlStudioMode || loading) return;
+    setSuccess(null);
     setSteps((prev) => {
       const newSteps = [...prev];
       const targetIndex = index + direction;
@@ -481,18 +483,65 @@ function LegacyDataCleaningForm({ closeForm, setShowDataPreview, initialSteps = 
       return { type, params };
     });
 
+  const runWorkingRefine = async (steps, previewOnly) => {
+    const controller = new AbortController();
+    refineInFlight.current = controller;
+    const fields = {
+      workspace_id: workingWorkspace.workspace_id, workspace_version: workingWorkspace.version,
+      source_id: workingWorkspace.primary_source_id, steps,
+    };
+    const signature = JSON.stringify(fields);
+    const fingerprint = refinePreview.current?.signature === signature ? refinePreview.current.fingerprint : undefined;
+    if (!previewOnly && (refineOperation.current?.signature !== signature || refineOperation.current?.fingerprint !== fingerprint)) {
+      refineOperation.current = { signature, fingerprint, id: window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}` };
+    }
+    const payload = previewOnly ? fields : { ...fields, request_id: refineOperation.current.id, ...(fingerprint && { source_fingerprint: fingerprint }) };
+    const endpoint = previewOnly ? 'refine-preview' : 'refine-working';
+    try {
+      const { data } = await axios.post(`${API_URL}/api/datahub/${endpoint}`, payload, { signal: controller.signal });
+      if (controller.signal.aborted) return;
+      if (previewOnly) {
+        refinePreview.current = { signature, fingerprint: data.source_fingerprint };
+        recordPreview(data.preview || [], data.row_count, data.schema);
+        setSuccess('Preview updated');
+      } else {
+        if (!data.workspace?.workspace_id || !data.analysis_context || !Array.isArray(data.full_data)) throw new Error('Incomplete Refine result. Try again.');
+        onWorkingRefine(data);
+      }
+    } catch (err) {
+      if (!controller.signal.aborted) setError(err.response?.data?.error?.message || err.message || 'Failed to apply cleaning steps.');
+    } finally {
+      if (!controller.signal.aborted) {
+        refineInFlight.current = null;
+        setLoading(false);
+      }
+    }
+  };
+
   const runCleaning = async (previewOnly = true) => {
-    if (mlStudioMode) return;
+    if (mlStudioMode || loading || refineInFlight.current || !sourceRows.length) return;
     setLoading(true);
     setError(null);
     setSuccess(null);
+    if (workingWorkspace && onWorkingRefine) {
+      if (!previewOnly) onApplyingRefine?.(true);
+      try {
+        await runWorkingRefine(buildStepPayload(), previewOnly);
+      } finally {
+        if (!previewOnly) onApplyingRefine?.(false);
+      }
+      return;
+    }
+    const controller = new AbortController();
+    refineInFlight.current = controller;
     try {
       const response = await axios.post(`${API_URL}/api/manual_cleaning`, {
         steps: buildStepPayload(),
         preview_only: previewOnly,
-      });
+      }, { signal: controller.signal });
+      if (controller.signal.aborted) return;
       const { preview, cleaned_data, semantic_model } = response.data;
-      setPreviewRows(preview || []);
+      recordPreview(preview || [], response.data.row_count ?? cleaned_data?.length);
       if (!previewOnly) {
         setCleanedData(cleaned_data);
         if (semantic_model) {
@@ -501,43 +550,54 @@ function LegacyDataCleaningForm({ closeForm, setShowDataPreview, initialSteps = 
           refreshSemanticModelFromDataset(cleaned_data, { source: 'manual_cleaning_apply', preserveUserMetrics: true });
         }
         setSuccess('Cleaning applied and dataset updated.');
+        if (embedded) {
+          setSteps([]);
+          setEditingId(null);
+          setSelectedTransform(null);
+        }
         if (setShowDataPreview) setShowDataPreview(true);
         if (onApplyComplete) onApplyComplete();
       } else {
         setSuccess('Preview updated');
       }
     } catch (err) {
-      setError(err.response?.data?.error || err.message || 'Failed to apply cleaning steps.');
+      if (!controller.signal.aborted) setError(err.response?.data?.error?.message || err.response?.data?.error || err.message || 'Failed to apply cleaning steps.');
     } finally {
-      setLoading(false);
+      if (!controller.signal.aborted) {
+        refineInFlight.current = null;
+        setLoading(false);
+      }
     }
   };
 
+  if (embedded && !visible) return null;
+
   const activeTransform = transformLookup[selectedTransform];
 
-  return (
-    <div className="cleaning-form-overlay">
-      <div className="manual-cleaning-shell">
+  const editor = (
+      <div className={`manual-cleaning-shell${embedded ? ' manual-cleaning-shell--embedded' : ''}`}
+        role={mlStudioMode ? undefined : embedded ? 'region' : 'dialog'}
+        aria-modal={mlStudioMode || embedded ? undefined : true} aria-labelledby="refine-editor-title">
         <div className="manual-cleaning-header">
           <div className="header-left">
             <div className="header-title">
-              <h2>Power Query Editor</h2>
+              <h2 id="refine-editor-title">Power Query Editor</h2>
               {mlStudioMode ? (
                  <p className="subtitle">
                    Experiment: {mlStudioOpeningContext?.title} ({mlStudioOpeningContext?.experiment_id}) | Workspace: {mlStudioOpeningContext?.workspace_id} | Snapshot: {mlStudioOpeningContext?.snapshot_id}
                  </p>
               ) : (
-                 <p className="subtitle">Visual Data Transformation Interface</p>
+                 <p className="subtitle">{datasetName || (hasDataset ? 'Current dataset' : 'No dataset selected')}</p>
               )}
             </div>
           </div>
           <div className="header-actions">
             {!mlStudioMode && (
               <>
-                <button className="preview-trigger" onClick={() => runCleaning(true)} disabled={steps.length === 0 || loading}>
+                <button className="preview-trigger" onClick={() => runCleaning(true)} disabled={!sourceRows.length || steps.length === 0 || loading}>
                   Run Preview
                 </button>
-                <button className="apply-trigger" onClick={() => runCleaning(false)} disabled={steps.length === 0 || loading}>
+                <button className="apply-trigger" onClick={() => runCleaning(false)} disabled={!sourceRows.length || steps.length === 0 || loading}>
                   Apply All
                 </button>
               </>
@@ -554,7 +614,7 @@ function LegacyDataCleaningForm({ closeForm, setShowDataPreview, initialSteps = 
             >
               ❓
             </button>
-            <CloseButton onClick={closeForm} />
+            {!embedded && <CloseButton onClick={closeForm} />}
           </div>
         </div>
 
@@ -567,6 +627,8 @@ function LegacyDataCleaningForm({ closeForm, setShowDataPreview, initialSteps = 
                selectedTransform={selectedTransform}
                onSelectTransform={(type) => {
                  setSelectedTransform(type);
+                 setEditingId(null);
+                 setFormValues(buildDefaultValues(transformLookup[type]?.fields));
                  setSuccess(null);
                  setError(null);
                }}
@@ -592,7 +654,7 @@ function LegacyDataCleaningForm({ closeForm, setShowDataPreview, initialSteps = 
                   </div>
                </div>
                <div className="config-footer">
-                  <button type="button" onClick={addStep} className="add-step-btn">
+                  <button type="button" onClick={addStep} className="add-step-btn" disabled={loading || !sourceRows.length}>
                     {editingId ? 'Update Step' : 'Add Step'}
                   </button>
                </div>
@@ -601,7 +663,7 @@ function LegacyDataCleaningForm({ closeForm, setShowDataPreview, initialSteps = 
 
           {/* Messages */}
           {(error || success) && (
-            <div className={`status-bar ${error ? 'error' : 'success'}`}>
+            <div className={`status-bar ${error ? 'error' : 'success'}`} role={error ? 'alert' : 'status'}>
               {error || success}
             </div>
           )}
@@ -634,7 +696,13 @@ function LegacyDataCleaningForm({ closeForm, setShowDataPreview, initialSteps = 
                </div>
              ) : (
                <>
-                 <DataCleaningPreview previewRows={previewRows} />
+                 <DataCleaningPreview
+                   rows={currentPreview?.rows ?? sourcePreview}
+                   columns={currentPreview?.columns ?? sourceColumns}
+                   totalRows={currentPreview?.rowCount ?? sourceRows.length}
+                   isResult={Boolean(currentPreview)}
+                   hasDataset={hasDataset}
+                 />
                  <div className="sidebar-right">
                     <AppliedStepsList
                       steps={steps}
@@ -668,8 +736,12 @@ function LegacyDataCleaningForm({ closeForm, setShowDataPreview, initialSteps = 
           )}
         </div>
       </div>
-    </div>
   );
+
+  if (mlStudioMode) return <div className="cleaning-form-overlay">{editor}</div>;
+  if (embedded) return editor;
+
+  return <Modal open onClose={closeForm} hideBackdrop className="cleaning-form-overlay">{editor}</Modal>;
 }
 
 export default DataCleaningForm;

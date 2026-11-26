@@ -27,6 +27,7 @@ from backend.routes.ml_studio import get_ml_studio_service, ml_studio_bp
 from backend.routes.automl import automl_bp
 from backend.routes.semantic_model import semantic_model_bp
 from backend.routes.semantic_metrics import semantic_metrics_bp
+from backend.routes.analytics import analytics_bp
 from backend.routes.decision_chat import decision_chat_bp
 from backend.routes.workflows import workflow_bp
 from backend.services.workflow_run_repository import recover_incomplete_runs
@@ -79,6 +80,7 @@ def create_app(config=None):
     app.register_blueprint(automl_bp)
     app.register_blueprint(semantic_model_bp)
     app.register_blueprint(semantic_metrics_bp)
+    app.register_blueprint(analytics_bp)
     app.register_blueprint(decision_chat_bp)
     if compatibility_enabled:
         # Importing the compatibility blueprint loads legacy workspaces,

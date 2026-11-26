@@ -1,134 +1,979 @@
-/* Scoped to the landing page. Colors inherit the host's light/dark theme. */
-.ml-studio-shell .ml-welcome-canvas { flex-direction: column; padding: clamp(18px, 3cqi, 40px); }
-.ml-welcome { width: 100%; max-width: 1240px; margin: 0 auto; display: grid; gap: 34px; }
+/* Scoped to the landing page. Unified studio canvas inheriting host light/dark tokens. */
+.ml-studio-shell .ml-welcome-canvas {
+  flex-direction: column;
+  justify-content: flex-start;
+  padding: clamp(16px, 1.8cqi, 24px) clamp(20px, 2.5cqi, 34px);
+  background:
+    radial-gradient(ellipse at 10% 8%, var(--accent-blue-soft), transparent 46%),
+    radial-gradient(ellipse at 90% 88%, var(--accent-teal-soft), transparent 48%),
+    var(--bg-primary);
+}
+.ml-welcome {
+  width: 100%;
+  max-width: 1480px;
+  flex: 1 0 auto;
+  min-height: 100%;
+  margin: 0 auto;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 14px;
+}
 .ml-welcome :is(h1, h2, h3, h4, p) { margin: 0; }
-.ml-welcome :is(a, button, h2):focus-visible { outline: 3px solid var(--accent-blue); outline-offset: 5px; }
+.ml-welcome :is(a, button, h2):focus-visible { outline: 2px solid var(--accent-blue); outline-offset: 3px; }
 .ml-welcome a { color: var(--accent-blue); text-decoration: none; }
 .ml-welcome a:hover { text-decoration: underline; text-underline-offset: 4px; }
-.ml-welcome-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
-.ml-welcome-hero { position: relative; isolation: isolate; display: grid; grid-template-columns: 1.12fr 1fr; align-items: center; gap: 32px; padding: clamp(24px, 4cqi, 48px); border: 1px solid var(--border-color); border-radius: 22px; background: radial-gradient(ellipse at 95% 5%, var(--accent-blue-soft), transparent 65%), var(--bg-primary); overflow: hidden; }
-.ml-welcome-hero::after { content: ''; position: absolute; z-index: -1; inset: 0; opacity: .35; background-image: radial-gradient(var(--border-color) 1px, transparent 1px); background-size: 20px 20px; mask-image: linear-gradient(90deg, transparent 30%, #000); }
-.ml-welcome-kicker { display: flex; gap: 8px; align-items: center; color: var(--text-secondary); font-size: 11px; font-weight: 600; letter-spacing: .025em; margin-bottom: 22px; }
-.ml-welcome-kicker > span { width: 7px; height: 7px; border-radius: 50%; background: var(--accent-blue); box-shadow: 0 0 0 4px var(--accent-blue-soft); flex-shrink: 0; }
-.ml-welcome h1 { font-size: clamp(34px, 4.6cqi, 58px); font-weight: 750; line-height: 1.08; letter-spacing: -.055em; color: var(--text-primary); }
-.ml-welcome h1 > span { color: var(--accent-blue); }
-.ml-welcome-intro > p { max-width: 480px; margin-top: 20px; font-size: 14px; line-height: 1.8; color: var(--text-secondary); }
-.ml-welcome-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-top: 26px; }
-.ml-studio-shell .ml-welcome-actions .start-run-button { display: inline-flex; align-items: center; justify-content: center; gap: 10px; margin: 0; padding: 12px 16px; font-size: 13px; border-radius: 9px; min-height: 44px; }
-.ml-welcome-secondary { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; border: 1px solid var(--border-color); border-radius: 9px; padding: 11px 14px; background: var(--bg-primary); color: var(--text-primary); font-size: 12px; font-weight: 600; }
-.ml-welcome-secondary:hover { border-color: var(--accent-blue); color: var(--accent-blue); }
-.ml-welcome-assurances { display: flex; flex-wrap: wrap; gap: 10px 16px; margin-top: 22px; color: var(--text-secondary); font-size: 10px; }
-.ml-welcome-assurances > span { display: inline-flex; align-items: center; gap: 5px; }
-.ml-welcome-assurances svg { color: var(--accent-blue); font-size: 9px; }
-.ml-welcome-lab { min-width: 0; border: 1px solid color-mix(in srgb, var(--accent-blue) 26%, var(--border-color)); background: var(--bg-primary); border-radius: 15px; box-shadow: 0 18px 45px color-mix(in srgb, var(--accent-blue) 9%, transparent); transform: rotate(-2deg); }
-.ml-welcome-lab-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 16px; border-bottom: 1px solid var(--border-color); font-size: 9px; letter-spacing: .06em; color: var(--text-secondary); }
-.ml-welcome-lab-heading > span:first-child { display: flex; align-items: center; gap: 7px; }
-.ml-welcome-concept { border-radius: 5px; background: var(--bg-secondary); padding: 4px 6px; letter-spacing: 0; }
-.ml-welcome-lab-flow { display: flex; align-items: center; padding: 22px 22px 0; gap: 10px; color: var(--text-secondary); font-size: 11px; }
-.ml-welcome-lab-flow span { display: flex; gap: 7px; align-items: center; }
-.ml-welcome-lab-flow svg { color: var(--accent-blue); }
-.ml-welcome-lab-flow i { flex: 1; height: 1px; background: var(--border-color); }
-.ml-welcome-plot { display: block; width: 100%; height: auto; padding: 5px 12px 0; }
-.plot-grid { stroke: var(--border-color); stroke-width: 1; stroke-dasharray: 2 5; }
-.plot-fit { stroke: var(--accent-blue); fill: none; stroke-width: 3; stroke-linecap: round; stroke-dasharray: 500; animation: ml-welcome-draw 1.2s ease-out both; }
-.plot-sample { fill: var(--accent-blue); opacity: .55; }
-.plot-boundary { stroke: var(--text-secondary); stroke-dasharray: 4 6; fill: none; opacity: .6; }
-.plot-projection { stroke-dasharray: 5 6; animation: none; }
-.plot-forecast-area { fill: var(--accent-blue-soft); }
+.ml-welcome-sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+
+/* Balanced two-column studio layout with top-aligned visual baselines */
+.ml-welcome-cockpit {
+  display: grid;
+  grid-template-columns: minmax(310px, 0.82fr) minmax(0, 1.38fr);
+  gap: clamp(22px, 2.8cqi, 38px);
+  min-height: 0;
+  align-items: stretch;
+}
+.ml-welcome-left {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 16px;
+  min-width: 0;
+  min-height: 0;
+  padding: 4px clamp(18px, 2.2cqi, 30px) 4px 0;
+  border-right: 1px solid var(--border-color-soft);
+}
+
+/* Editorial Hero — top-anchored so left and right headers align cleanly */
+.ml-welcome-hero {
+  position: relative;
+  isolation: isolate;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 18px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.ml-welcome-hero-body {
+  display: flex;
+  flex-direction: column;
+}
+.ml-welcome-hero-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  min-height: 28px;
+  margin-bottom: clamp(12px, 1.6cqi, 20px);
+}
+.ml-welcome-kicker {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.ml-welcome-kicker > span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent-blue);
+  box-shadow: 0 0 0 4px var(--accent-blue-soft);
+  flex-shrink: 0;
+}
+.ml-welcome-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-size: 11px;
+  font-weight: 600;
+}
+.ml-welcome-status.is-ready {
+  color: var(--accent-green);
+  background: var(--accent-green-soft);
+  border-color: color-mix(in srgb, var(--accent-green) 22%, transparent);
+}
+.ml-welcome-status.is-waiting {
+  color: var(--accent-warning);
+  background: var(--accent-yellow-soft);
+  border-color: color-mix(in srgb, var(--accent-warning) 22%, transparent);
+}
+.ml-welcome h1 {
+  font-size: clamp(28px, 3cqi, 44px);
+  font-weight: 750;
+  line-height: 1.06;
+  letter-spacing: -.04em;
+  color: var(--text-primary);
+}
+.ml-welcome h1 > span {
+  color: var(--accent-blue);
+  background: linear-gradient(125deg, var(--accent-blue), var(--accent-teal));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.ml-welcome-hero-body > p {
+  margin-top: clamp(10px, 1.3cqi, 16px);
+  font-size: clamp(13px, 1.1cqi, 14.5px);
+  line-height: 1.62;
+  color: var(--text-secondary);
+  max-width: 44ch;
+}
+.ml-welcome-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: clamp(16px, 2cqi, 24px);
+}
+.ml-studio-shell .ml-welcome-actions .start-run-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  margin: 0;
+  padding: 10px 18px !important;
+  font-size: 13px !important;
+  font-weight: 650;
+  border-radius: 10px !important;
+  border: 0 !important;
+  min-height: 40px;
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--accent-blue) 22%, transparent) !important;
+}
+.ml-welcome-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  border: 1px solid var(--border-color-soft);
+  border-radius: 10px;
+  padding: 8px 14px;
+  background: color-mix(in srgb, var(--bg-secondary) 65%, var(--bg-primary));
+  color: var(--text-primary);
+  font-size: 12.5px;
+  font-weight: 600;
+  transition: color .18s, background-color .18s, border-color .18s;
+}
+.ml-welcome-secondary:hover {
+  color: var(--accent-blue);
+  background: var(--accent-blue-soft);
+  border-color: color-mix(in srgb, var(--accent-blue) 25%, var(--border-color-soft));
+}
+
+/* Stacked 3-row capability list — eliminates narrow 3-column text wrapping */
+.ml-welcome-pillars {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 7px;
+  margin-top: auto;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-color-soft);
+}
+.ml-welcome-pillar {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 8px 11px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--border-color-soft) 75%, transparent);
+  background: color-mix(in srgb, var(--bg-secondary) 48%, transparent);
+}
+.ml-welcome-pillar-icon {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--accent-blue-soft);
+  color: var(--accent-blue);
+  font-size: 12px;
+  flex-shrink: 0;
+}
+.ml-welcome-pillar > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  flex: 1;
+  min-width: 0;
+}
+.ml-welcome-pillar strong {
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--text-primary);
+  line-height: 1.3;
+}
+.ml-welcome-pillar span {
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--text-secondary);
+}
+
+/* Dataset notice & Workspace experiments */
+.ml-welcome-dataset {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 11px 14px;
+  background: color-mix(in srgb, var(--bg-secondary) 72%, transparent);
+  border: 1px solid var(--border-color-soft);
+  border-left: 3px solid var(--accent-blue);
+  border-radius: 6px 12px 12px 6px;
+}
+.ml-welcome-dataset > svg {
+  color: var(--accent-blue);
+  flex-shrink: 0;
+  font-size: 15px;
+  margin-top: 2px;
+}
+.ml-welcome-dataset h2 {
+  font-size: 12.5px;
+  font-weight: 650;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+.ml-welcome-dataset p {
+  color: var(--text-secondary);
+  font-size: 11.5px;
+  line-height: 1.48;
+}
+
+.ml-welcome-saved {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding-top: 14px;
+  border: 0;
+  border-top: 1px solid var(--border-color-soft);
+  background: transparent;
+}
+.ml-welcome-saved-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.ml-welcome-saved-header h2 {
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--text-primary);
+  margin-top: 2px;
+}
+.ml-welcome-saved-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ml-welcome-count {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border: 1px solid var(--border-color-soft);
+  background: color-mix(in srgb, var(--bg-secondary) 75%, transparent);
+  border-radius: 999px;
+  color: var(--text-secondary);
+  font-size: 10.5px;
+  font-weight: 600;
+}
+.ml-welcome-collapse-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border: 1px solid var(--border-color-soft);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--bg-secondary) 75%, transparent);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+}
+.ml-welcome-collapse-btn:hover { background: var(--accent-blue-soft); color: var(--accent-blue); }
+.ml-welcome-collapse-btn svg {
+  font-size: 9px;
+  transition: transform .18s ease;
+}
+.ml-welcome-collapse-btn[aria-expanded='true'] svg { transform: rotate(180deg); }
+.ml-welcome-saved-body { margin-top: 10px; }
+.ml-welcome-saved.has-drafts .ml-welcome-saved-body {
+  max-height: 175px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.ml-welcome-empty {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 13px;
+  background: color-mix(in srgb, var(--bg-secondary) 55%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border-color-soft) 80%, transparent);
+  border-radius: 10px;
+}
+.ml-welcome-empty > svg { color: var(--accent-blue); flex-shrink: 0; font-size: 15px; }
+.ml-welcome-empty h3 { font-size: 12.5px; font-weight: 650; margin-bottom: 2px; }
+.ml-welcome-empty p { font-size: 11.5px; line-height: 1.45; color: var(--text-secondary); }
+
+.ml-welcome-saved .ml-home-toolbar {
+  margin: 0 0 10px;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.ml-welcome-saved .ml-home-toolbar > span { display: none; }
+.ml-welcome-saved .ml-home-toolbar label {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+}
+.ml-welcome-saved .ml-home-toolbar input {
+  flex: 1;
+  min-height: 32px;
+  padding: 5px 10px;
+  font-size: 12px;
+  border: 1px solid var(--border-color-soft);
+  background: color-mix(in srgb, var(--bg-secondary) 75%, var(--bg-primary));
+}
+.ml-welcome-saved .drafts-list { gap: 8px; }
+.ml-studio-shell .ml-welcome-saved .draft-card {
+  padding: 10px 12px;
+  gap: 12px;
+  border: 1px solid var(--border-color-soft);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--bg-secondary) 55%, var(--bg-primary));
+}
+.ml-studio-shell .ml-welcome-saved .draft-card:hover {
+  border-color: color-mix(in srgb, var(--accent-blue) 35%, var(--border-color));
+  background: color-mix(in srgb, var(--accent-blue-soft) 50%, var(--bg-primary));
+}
+.ml-studio-shell .ml-welcome-saved .draft-info { gap: 4px; }
+.ml-studio-shell .ml-welcome-saved .draft-info h4 { font-size: 13.5px; margin: 0; }
+.ml-studio-shell .ml-welcome-saved .draft-stage { font-size: 10.5px; padding: 2px 6px; margin: 0; }
+.ml-studio-shell .ml-welcome-saved .draft-updated { font-size: 10.5px; }
+.ml-studio-shell .ml-welcome-saved .draft-actions { gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.ml-studio-shell .ml-welcome-saved :is(.reopen-btn, .duplicate-btn, .delete-btn) {
+  padding: 5px 10px !important;
+  font-size: 11.5px !important;
+  border-radius: 7px !important;
+}
+
+/* Right column: Cohesive interactive explorer */
+.ml-welcome-explorer {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  gap: 12px;
+  min-width: 0;
+  min-height: 0;
+  padding: 4px 0;
+  border: 0;
+  border-radius: 16px;
+  background: transparent;
+  transition: box-shadow .25s ease, background-color .25s ease;
+}
+.ml-welcome-explorer.is-highlighted {
+  background: color-mix(in srgb, var(--accent-blue-soft) 35%, transparent);
+  box-shadow: 0 0 0 12px color-mix(in srgb, var(--accent-blue-soft) 35%, transparent);
+}
+.ml-welcome-explorer-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.ml-welcome-explorer-head h2 {
+  margin-top: 2px;
+  color: var(--text-primary);
+  font-size: clamp(18px, 1.8cqi, 23px);
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -.03em;
+}
+.ml-welcome-tag {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  padding: 4px 11px;
+  border: 1px solid var(--border-color-soft);
+  background: color-mix(in srgb, var(--bg-secondary) 70%, var(--bg-primary));
+  border-radius: 999px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Precision 5-tab segmented selector — uniform height, zero awkward wrapping */
+.ml-welcome-task-picker {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 5px;
+  padding: 4px;
+  border: 1px solid var(--border-color-soft);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--bg-secondary) 75%, transparent);
+}
+.ml-welcome-task-picker button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 2px;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  color: var(--text-secondary);
+  background: transparent;
+  text-align: left;
+  transition: background-color .16s, color .16s, border-color .16s, box-shadow .16s;
+}
+.ml-welcome-task-tab-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+}
+.ml-welcome-task-tab-top > svg {
+  font-size: 12px;
+  flex-shrink: 0;
+  color: var(--text-secondary);
+}
+.ml-welcome-task-picker strong {
+  color: var(--text-primary);
+  font-size: 11.5px;
+  font-weight: 650;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ml-welcome-task-tab-verb {
+  font-size: 10px;
+  line-height: 1.25;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+}
+.ml-welcome-task-picker button:hover {
+  background: color-mix(in srgb, var(--bg-primary) 68%, transparent);
+}
+.ml-welcome-task-picker button[aria-pressed='true'] {
+  color: var(--accent-blue);
+  background: var(--bg-primary);
+  border-color: color-mix(in srgb, var(--accent-blue) 28%, var(--border-color-soft));
+  box-shadow: var(--shadow-sm);
+}
+.ml-welcome-task-picker button[aria-pressed='true'] strong,
+.ml-welcome-task-picker button[aria-pressed='true'] .ml-welcome-task-tab-top > svg {
+  color: var(--accent-blue);
+}
+
+/* Unified task workbench — combines story, concept plot, and algorithms in one cohesive frame */
+.ml-welcome-task-detail {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  min-height: 0;
+  border-radius: 16px;
+  border: 1px solid var(--border-color-soft);
+  background:
+    radial-gradient(circle at 80% 28%, var(--accent-blue-soft), transparent 58%),
+    color-mix(in srgb, var(--bg-secondary) 42%, var(--bg-primary));
+  overflow: hidden;
+}
+.ml-welcome-task-stage {
+  display: grid;
+  grid-template-columns: minmax(0, 1.04fr) minmax(240px, 1fr);
+  gap: 18px;
+  padding: clamp(14px, 1.6cqi, 20px);
+  border: 0;
+  background: transparent;
+  min-height: 0;
+  align-items: stretch;
+}
+.ml-welcome-task-story {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  min-width: 0;
+  animation: ml-welcome-appear .22s ease-out;
+}
+.ml-welcome-task-title {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+.ml-welcome-task-icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border: 1px solid var(--border-color-soft);
+  border-radius: 10px;
+  color: var(--accent-blue);
+  background: var(--bg-primary);
+  font-size: 15px;
+  box-shadow: var(--shadow-sm);
+}
+.ml-welcome-task-story h3 {
+  font-size: clamp(16px, 1.5cqi, 20px);
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -.025em;
+  color: var(--text-primary);
+}
+.ml-welcome-task-story p {
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+.ml-welcome-task-story .ml-welcome-example {
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  padding: 7px 10px;
+  border: 1px solid color-mix(in srgb, var(--border-color-soft) 80%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--bg-primary) 78%, transparent);
+}
+.ml-welcome-task-story .ml-welcome-example strong {
+  color: var(--text-primary);
+  font-weight: 650;
+}
+.ml-welcome-task-story dl {
+  margin: auto 0 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-color-soft);
+}
+.ml-welcome-task-story dt {
+  font-size: 9.5px;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  color: var(--text-secondary);
+}
+.ml-welcome-task-story dd {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 2px 0 0;
+  line-height: 1.35;
+}
+
+/* Streamlined Concept Lab Surface — single top header bar + illustration + caption */
+.ml-welcome-lab {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  border: 1px solid var(--border-color-soft);
+  background: color-mix(in srgb, var(--bg-primary) 92%, transparent);
+  border-radius: 12px;
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+.ml-welcome-lab-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 7px 12px;
+  border-bottom: 1px solid var(--border-color-soft);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+.ml-welcome-concept {
+  border: 0;
+  border-radius: 999px;
+  background: var(--accent-blue-soft);
+  color: var(--accent-blue);
+  padding: 2px 8px;
+  font-size: 9.5px;
+  font-weight: 650;
+}
+.ml-welcome-lab-flow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 600;
+}
+.ml-welcome-lab-flow span { display: inline-flex; gap: 4px; align-items: center; }
+.ml-welcome-lab-flow svg { color: var(--accent-blue); font-size: 10px; }
+.ml-welcome-lab-flow i { width: 10px; height: 1px; background: var(--border-color); }
+.ml-welcome-plot-wrap {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  padding: 4px 10px;
+}
+.ml-welcome-plot {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-height: 175px;
+}
+.plot-grid { stroke: var(--border-color); stroke-width: 1; stroke-dasharray: 2 5; opacity: .65; }
+.plot-fit { stroke: var(--accent-blue); fill: none; stroke-width: 3; stroke-linecap: round; stroke-dasharray: 500; animation: ml-welcome-draw 1.05s ease-out both; }
+.plot-sample { fill: var(--accent-blue); opacity: .82; }
+.plot-residual { stroke: var(--accent-blue); stroke-width: 1.25; stroke-dasharray: 2 3; opacity: .45; }
+.plot-band { opacity: .65; }
+.plot-boundary { stroke: var(--text-secondary); stroke-dasharray: 5 5; fill: none; opacity: .7; stroke-width: 1.5; }
+.plot-projection { stroke-dasharray: 5 6; stroke: var(--accent-teal); animation: none; }
+.plot-horizon-dot { fill: var(--bg-primary); stroke: var(--accent-blue); stroke-width: 2.5; }
+.plot-region-a { fill: var(--accent-blue-soft); opacity: .65; }
+.plot-region-b { fill: var(--accent-green-soft); opacity: .65; }
 .plot-group { fill: var(--accent-blue); }
 .plot-group-1 { fill: var(--accent-green); }
-.plot-group-2 { fill: var(--text-secondary); }
-.plot-clusters { fill: var(--accent-blue-soft); stroke: var(--accent-blue); stroke-dasharray: 3 5; }
-.plot-outlier { stroke: var(--accent-blue); fill: var(--accent-blue-soft); }
-.plot-outlier circle:last-child { fill: var(--accent-blue); }
-.ml-welcome-lab-caption { display: flex; flex-wrap: wrap; gap: 7px; justify-content: space-between; padding: 14px 18px; border-top: 1px solid var(--border-color); font-size: 10px; color: var(--text-secondary); }
-.ml-welcome-lab-caption > span:first-child { color: var(--accent-blue); font-weight: 600; }
-.ml-welcome-section-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 20px; }
-.ml-welcome h2 { margin-top: 6px; color: var(--text-primary); font-size: 24px; font-weight: 650; line-height: 1.3; letter-spacing: -.035em; }
-.ml-welcome-section-heading p { margin-top: 9px; color: var(--text-secondary); font-size: 13px; line-height: 1.6; }
-.ml-welcome-tag, .ml-welcome-count { display: inline-flex; gap: 7px; align-items: center; padding: 8px 10px; border: 1px solid var(--border-color); background: var(--bg-primary); border-radius: 7px; color: var(--text-secondary); font-size: 11px; }
-.ml-welcome-task-picker { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; margin-bottom: 16px; }
-.ml-welcome-task-picker button { display: flex; flex-direction: column; align-items: flex-start; gap: 9px; min-width: 0; min-height: 120px; padding: 18px 14px; border: 1px solid var(--border-color); border-radius: 11px; color: var(--text-secondary); background: var(--bg-primary); text-align: left; transition: border-color .18s, transform .18s, background .18s; }
-.ml-welcome-task-picker button > svg { font-size: 18px; margin-bottom: 3px; }
-.ml-welcome-task-picker strong { color: var(--text-primary); font-size: 12px; font-weight: 650; overflow-wrap: anywhere; }
-.ml-welcome-task-picker button > span { font-size: 10px; line-height: 1.4; }
-.ml-welcome-task-picker button:hover { transform: translateY(-2px); border-color: var(--accent-blue); }
-.ml-welcome-task-picker button[aria-pressed='true'] { color: var(--accent-blue); background: var(--accent-blue-soft); border-color: var(--accent-blue); box-shadow: inset 0 0 0 1px var(--accent-blue); }
-.ml-welcome-task-detail { display: grid; grid-template-columns: .95fr 1.3fr; border: 1px solid var(--border-color); border-radius: 14px; overflow: hidden; background: var(--bg-primary); }
-.ml-welcome-task-story { padding: 30px; background: linear-gradient(145deg, var(--accent-blue-soft), transparent); animation: ml-welcome-appear .25s ease-out; }
-.ml-welcome-task-icon { display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid color-mix(in srgb, var(--accent-blue) 25%, var(--border-color)); border-radius: 12px; color: var(--accent-blue); background: var(--bg-primary); margin-bottom: 22px; font-size: 20px; }
-.ml-welcome-task-story h3 { font-size: 27px; line-height: 1.2; letter-spacing: -.035em; margin: 8px 0 14px; }
-.ml-welcome-task-story p { font-size: 13px; line-height: 1.8; color: var(--text-secondary); }
-.ml-welcome-task-story .ml-welcome-example { margin: 14px 0 24px; font-size: 12px; }
-.ml-welcome-task-story dl { margin: 0; display: grid; gap: 16px; border-top: 1px solid var(--border-color); padding-top: 20px; }
-.ml-welcome-task-story dt { font-size: 10px; text-transform: uppercase; letter-spacing: .07em; color: var(--text-secondary); }
-.ml-welcome-task-story dd { font-size: 12px; margin: 6px 0 0; line-height: 1.5; }
-.ml-welcome-models { min-width: 0; padding: 28px; display: grid; align-content: start; gap: 12px; }
-.ml-welcome-models-heading { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 2px; }
-.ml-welcome-models-heading h3 { font-size: 14px; font-weight: 650; }
-.ml-welcome-models-heading > span { font-size: 10px; color: var(--text-secondary); }
-.ml-welcome a.ml-welcome-model { display: flex; align-items: center; gap: 18px; justify-content: space-between; padding: 18px; border: 1px solid var(--border-color); border-radius: 9px; color: var(--text-primary); transition: border-color .18s, background .18s; text-decoration: none; }
-.ml-welcome-model > svg { color: var(--text-secondary); flex-shrink: 0; font-size: 11px; }
-.ml-welcome a.ml-welcome-model:hover { border-color: var(--accent-blue); background: var(--accent-blue-soft); }
-.ml-welcome-source { color: var(--text-secondary); font-size: 9px; font-weight: 600; letter-spacing: .06em; }
-.ml-welcome-model h4 { font-size: 15px; margin: 8px 0; font-weight: 650; }
-.ml-welcome-model p { font-size: 12px; line-height: 1.6; color: var(--text-secondary); }
-.ml-welcome-read { display: inline-flex; gap: 7px; align-items: center; font-size: 11px; color: var(--accent-blue); margin-top: 12px; font-weight: 600; }
-.ml-welcome-tip { display: flex; gap: 9px; color: var(--text-secondary); font-size: 11px; line-height: 1.7; padding-top: 4px; }
-.ml-welcome-tip > svg { flex-shrink: 0; margin-top: 3px; color: var(--accent-blue); }
+.plot-group-2 { fill: var(--accent-teal); }
+.plot-clusters ellipse { fill: var(--accent-blue-soft); stroke: var(--accent-blue); stroke-dasharray: 4 4; stroke-width: 1.25; }
+.plot-centroid { stroke: var(--accent-blue); stroke-width: 1.75; stroke-linecap: round; }
+.plot-normal-zone { fill: var(--accent-blue-soft); stroke: var(--border-color); stroke-dasharray: 4 4; opacity: .55; }
+.plot-outlier circle { stroke: var(--accent-red); fill: var(--accent-red-soft); stroke-width: 1.5; }
+.plot-outlier circle:last-child { fill: var(--accent-red); stroke: none; }
+.plot-outlier-pulse { fill: none !important; stroke: var(--accent-red); stroke-opacity: .45; stroke-dasharray: 3 3; animation: ml-welcome-pulse 2.4s ease-in-out infinite; transform-origin: 324px 41px; }
+.ml-welcome-lab-caption {
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  padding: 6px 12px;
+  border-top: 1px solid var(--border-color-soft);
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+.ml-welcome-lab-caption > span:first-child { color: var(--accent-blue); font-weight: 650; }
+
+/* Integrated Algorithms section inside the workbench */
+.ml-welcome-models {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: clamp(12px, 1.4cqi, 16px) clamp(14px, 1.6cqi, 20px);
+  border-top: 1px solid var(--border-color-soft);
+  background: color-mix(in srgb, var(--bg-secondary) 28%, transparent);
+}
+.ml-welcome-models-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.ml-welcome-models-heading h3 { font-size: 12.5px; font-weight: 650; color: var(--text-primary); }
+.ml-welcome-models-heading > span { font-size: 10.5px; color: var(--text-secondary); }
+.ml-welcome-models-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.ml-welcome a.ml-welcome-model {
+  display: flex;
+  padding: 11px 13px;
+  border: 1px solid var(--border-color-soft);
+  border-radius: 11px;
+  color: var(--text-primary);
+  background: var(--bg-primary);
+  transition: background-color .16s, border-color .16s, transform .16s, box-shadow .16s;
+  text-decoration: none;
+}
+.ml-welcome a.ml-welcome-model:hover {
+  background: color-mix(in srgb, var(--accent-blue-soft) 45%, var(--bg-primary));
+  border-color: color-mix(in srgb, var(--accent-blue) 35%, var(--border-color));
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+.ml-welcome-model-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 5px;
+  width: 100%;
+  min-width: 0;
+}
+.ml-welcome-model-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.ml-welcome-model h4 {
+  font-size: 13px;
+  margin: 0;
+  font-weight: 650;
+  color: var(--text-primary);
+}
+.ml-welcome-model-badge {
+  border: 0;
+  font-size: 9.5px;
+  font-weight: 600;
+  color: var(--accent-blue);
+  background: var(--accent-blue-soft);
+  padding: 2px 7px;
+  border-radius: 999px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.ml-welcome-model p {
+  font-size: 11.5px;
+  line-height: 1.42;
+  color: var(--text-secondary);
+}
+.ml-welcome-model-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 3px;
+  padding-top: 6px;
+  border-top: 1px solid color-mix(in srgb, var(--border-color-soft) 70%, transparent);
+}
+.ml-welcome-source {
+  color: var(--text-secondary);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .06em;
+}
+.ml-welcome-read {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+  font-size: 11px;
+  color: var(--accent-blue);
+  font-weight: 600;
+}
+.ml-welcome-read svg { font-size: 9px; }
+.ml-welcome-notes {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  padding-top: 2px;
+}
+.ml-welcome-tip {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  padding: 2px 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 11.5px;
+  line-height: 1.42;
+}
+.ml-welcome-tip > svg { flex-shrink: 0; color: var(--accent-blue); font-size: 10.5px; transform: translateY(1px); }
 .ml-welcome-tip strong { color: var(--text-primary); font-weight: 600; }
-.ml-welcome-extra a { display: inline-flex; gap: 8px; align-items: center; font-size: 12px; line-height: 1.6; }
-.ml-welcome-extra p { color: var(--text-secondary); font-size: 11px; line-height: 1.6; margin-top: 6px; }
-.ml-welcome-path { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px; border-block: 1px solid var(--border-color); padding: 28px 0; }
-.ml-welcome-path > div > span { display: block; color: var(--accent-blue); font-size: 11px; font-family: Consolas, monospace; margin-bottom: 12px; }
-.ml-welcome-path h3 { font-size: 14px; font-weight: 650; margin-bottom: 8px; }
-.ml-welcome-path p { color: var(--text-secondary); font-size: 12px; line-height: 1.7; max-width: 300px; }
-.ml-welcome-foundations { display: flex; align-items: center; gap: 20px; padding: 24px; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 12px; }
-.ml-welcome-book { display: grid; place-items: center; flex-shrink: 0; width: 48px; height: 48px; border-radius: 12px; color: var(--accent-blue); background: var(--accent-blue-soft); font-size: 22px; }
+.ml-welcome-extra {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+.ml-welcome-extra a { display: inline-flex; gap: 6px; align-items: center; font-weight: 600; }
+
+/* Bottom dropdown dock — opens drawer panels smoothly above the trigger bar */
+.ml-welcome-drawers {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-color-soft);
+}
+.ml-welcome-drawer-bar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+.ml-welcome-drawer-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 13px;
+  border: 1px solid var(--border-color-soft);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--bg-secondary) 55%, var(--bg-primary));
+  color: var(--text-primary);
+  text-align: left;
+  transition: background-color .18s, border-color .18s;
+}
+.ml-welcome-drawer-trigger:hover {
+  background: color-mix(in srgb, var(--bg-secondary) 90%, transparent);
+}
+.ml-welcome-drawer-trigger.is-open {
+  background: var(--accent-blue-soft);
+  border-color: color-mix(in srgb, var(--accent-blue) 30%, var(--border-color-soft));
+}
+.ml-welcome-drawer-label {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 9px;
+  min-width: 0;
+}
+.ml-welcome-drawer-label > svg { color: var(--accent-blue); font-size: 12.5px; flex-shrink: 0; }
+.ml-welcome-drawer-label strong { font-size: 12px; font-weight: 650; }
+.ml-welcome-drawer-hint {
+  border: 0;
+  font-size: 10.5px;
+  color: var(--text-secondary);
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bg-primary) 78%, transparent);
+}
+.ml-welcome-drawer-chevron {
+  font-size: 11px;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+  transition: transform .18s ease;
+}
+.ml-welcome-drawer-trigger.is-open .ml-welcome-drawer-chevron {
+  transform: rotate(180deg);
+  color: var(--accent-blue);
+}
+
+.ml-welcome-drawer-panel {
+  border: 1px solid var(--border-color-soft);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--bg-secondary) 52%, var(--bg-primary));
+  padding: 14px 18px;
+  animation: ml-welcome-appear .2s ease-out;
+}
+.ml-welcome-path {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+.ml-welcome-path-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+}
+.ml-welcome-path-step > span {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: var(--accent-blue-soft);
+  color: var(--accent-blue);
+  font-size: 11px;
+  font-family: Consolas, monospace;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.ml-welcome-path h3 { font-size: 13px; font-weight: 650; margin-bottom: 3px; color: var(--text-primary); }
+.ml-welcome-path p { color: var(--text-secondary); font-size: 11.5px; line-height: 1.48; }
+
+.ml-welcome-foundations {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.ml-welcome-book {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  color: var(--accent-blue);
+  background: var(--accent-blue-soft);
+  font-size: 17px;
+}
 .ml-welcome-foundations > div:nth-child(2) { flex: 1; }
-.ml-welcome-foundations h2 { font-size: 19px; }
-.ml-welcome-foundations p { margin-top: 8px; color: var(--text-secondary); font-size: 12px; line-height: 1.7; max-width: 620px; }
-.ml-welcome-foundations > a { display: inline-flex; align-items: center; gap: 10px; flex-shrink: 0; font-size: 12px; font-weight: 600; padding: 12px 0; }
-.ml-welcome-footer { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; color: var(--text-secondary); font-size: 10px; line-height: 1.6; }
-.ml-welcome-dataset, .ml-welcome-empty { display: flex; align-items: center; gap: 16px; padding: 20px 24px; background: var(--bg-primary); border: 1px dashed var(--border-color); border-radius: 12px; }
-.ml-welcome-dataset > svg, .ml-welcome-empty > svg { color: var(--accent-blue); flex-shrink: 0; font-size: 22px; }
-.ml-welcome-dataset h2, .ml-welcome-empty h3 { font-size: 14px; font-weight: 600; margin: 0 0 5px; }
-.ml-welcome-dataset p, .ml-welcome-empty p { color: var(--text-secondary); font-size: 12px; line-height: 1.7; }
-.ml-welcome-saved .ml-home-toolbar { margin: 0 0 16px; }
+.ml-welcome-foundations h2 { font-size: 14.5px; font-weight: 650; margin-top: 2px; }
+.ml-welcome-foundations p { margin-top: 3px; color: var(--text-secondary); font-size: 12px; line-height: 1.48; }
+.ml-welcome-foundations > a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 8px 13px;
+  border: 1px solid var(--border-color-soft);
+  border-radius: 8px;
+  background: var(--bg-primary);
+  box-shadow: var(--shadow-sm);
+}
+.ml-welcome-foundations > a:hover {
+  background: var(--accent-blue-soft);
+}
+
+.ml-welcome-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+  color: var(--text-secondary);
+  font-size: 10px;
+  line-height: 1.35;
+  white-space: nowrap;
+}
+
 @keyframes ml-welcome-draw { from { stroke-dashoffset: 500; } to { stroke-dashoffset: 0; } }
 @keyframes ml-welcome-appear { from { opacity: .5; transform: translateY(4px); } to { opacity: 1; transform: none; } }
-@container ml-studio (max-width: 900px) {
-  .ml-welcome-hero { gap: 22px; padding: 26px; }
-  .ml-welcome-lab { transform: none; }
-  .ml-welcome-lab-caption > span:last-child { display: none; }
-  .ml-welcome-task-picker { gap: 7px; }
-  .ml-welcome-task-picker button { padding: 14px 10px; }
-  .ml-welcome-task-picker button > span { display: none; }
-  .ml-welcome-task-picker button { min-height: 95px; }
-  .ml-welcome-task-story, .ml-welcome-models { padding: 22px; }
-  .ml-welcome-foundations { flex-wrap: wrap; }
-  .ml-welcome-foundations > a { margin-left: 68px; }
+@keyframes ml-welcome-pulse {
+  0%, 100% { transform: scale(1); stroke-opacity: .45; }
+  50% { transform: scale(1.16); stroke-opacity: .18; }
+}
+
+@container ml-studio (max-width: 1080px) {
+  .ml-welcome-cockpit { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+  .ml-welcome-left { padding-right: 0; border-right: 0; padding-bottom: 18px; border-bottom: 1px solid var(--border-color-soft); }
+  .ml-welcome-pillars { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .ml-welcome-drawer-bar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ml-welcome-footer { grid-column: 1 / -1; flex-direction: row; justify-content: space-between; }
+}
+@container ml-studio (max-width: 720px) {
+  .ml-welcome-pillars { grid-template-columns: minmax(0, 1fr); }
+  .ml-welcome-task-tab-verb { display: none; }
+  .ml-welcome-task-stage { grid-template-columns: minmax(0, 1fr); }
+  .ml-welcome-plot { max-height: 170px; }
 }
 @container ml-studio (max-width: 640px) {
-  .ml-welcome { gap: 28px; }
-  .ml-welcome-hero, .ml-welcome-task-detail { grid-template-columns: minmax(0, 1fr); }
-  .ml-welcome-hero { padding: 24px; }
-  .ml-welcome h1 { font-size: 40px; }
-  .ml-welcome-lab { width: 100%; max-width: 390px; justify-self: center; }
-  .ml-welcome-plot { max-height: 200px; }
   .ml-welcome-task-picker { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .ml-welcome-task-picker button { min-height: 76px; gap: 8px; }
   .ml-welcome-task-picker button:last-child { grid-column: 1 / -1; }
-  .ml-welcome-path { grid-template-columns: minmax(0, 1fr); gap: 22px; }
-  .ml-welcome-path p { max-width: none; }
-  .ml-welcome-foundations { padding: 20px; align-items: flex-start; }
-  .ml-welcome-foundations > div:nth-child(2) { flex-basis: calc(100% - 68px); }
-  .ml-welcome-foundations > a { margin-left: 0; }
+  .ml-welcome-models-grid,
+  .ml-welcome-drawer-bar,
+  .ml-welcome-path { grid-template-columns: minmax(0, 1fr); }
   .ml-welcome-tag { display: none; }
   .ml-welcome-actions { align-items: stretch; flex-direction: column; }
   .ml-welcome-secondary { justify-content: center; }
+  .ml-welcome-foundations { flex-wrap: wrap; }
+  .ml-welcome-footer { flex-direction: column; align-items: flex-start; white-space: normal; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .ml-welcome *, .ml-welcome *::before, .ml-welcome *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  .ml-welcome *, .ml-welcome *::before, .ml-welcome *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+  .ml-welcome a.ml-welcome-model:hover,
   .ml-welcome-task-picker button:hover { transform: none; }
 }

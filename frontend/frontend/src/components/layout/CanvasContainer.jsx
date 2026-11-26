@@ -1,12 +1,10 @@
 import React, { useState, useRef, useMemo, useContext, useEffect, useCallback } from 'react';
-import { createPortal, flushSync } from 'react-dom';
-import usePortalTheme from '../../hooks/usePortalTheme';
 import './CanvasContainer.css';
 import WindowFrame from './WindowFrame';
 import MinimizedDock from './MinimizedDock';
 import SmartChartWindow from '../../features/charts/SmartChartWindow';
 import AICharts from '../../features/ai/AICharts';
-import AIShell from '../../features/ai/AIShell';
+import AiChatDock from '../../features/ai/AiChatDock';
 import AiAutopilot from '../../features/ai/AiAutopilot';
 import AiWorkflowLab from '../../features/workflow/AiWorkflowLab';
 import PreviewModeSelector from '../../features/viewing/PreviewModeSelector';
@@ -14,7 +12,6 @@ import DataTablePreview from '../../features/viewing/DataTablePreview';
 import DataStoryPanel from '../insights/DataStoryPanel';
 import Whiteboard from '../../features/whiteboard/WhiteBoard';
 import { JsonViewer } from 'view-json-react';
-import { useActiveDataset } from '../../context/DataContext';
 import AIReporter from '../../features/workflow/AIReporter';
 import { getWorkflowWindows } from '../../utils/workflow_output_router';
 import { useWindowContext } from '../../context/WindowContext';
@@ -26,10 +23,11 @@ import DashboardCommandBar from '../../features/dashboard/DashboardCommandBar';
 import DashboardCanvas from '../../features/dashboard/DashboardCanvas';
 import KpiCardWindow from '../../features/dashboard/KpiCardWindow';
 import { WINDOW_SIZING } from '../../utils/windowSizing';
-import { getAiChatWindowState, getAiChatPopupFeatures } from '../../utils/aiChatWindowSizing';
 import DestinationHome from './DestinationHome';
 import SourceModelCanvas from '../../features/data-model/SourceModelCanvas';
 import MLStudioShell from '../../features/ml_studio/MLStudioShell';
+import AnalyticsShell from '../../features/analytics/AnalyticsShell';
+import DataHubWindow from '../../features/database/DataHubWindow';
 import {
   FaSave,
   FaUndo,
@@ -39,13 +37,13 @@ import {
   FaFileExport,
   FaCogs,
   FaBookOpen,
-  FaRobot,
-  FaCompress,
-  FaExternalLinkAlt
+  FaRobot
 } from 'react-icons/fa';
 
 const DESTINATIONS = {
   WORKSPACE: 'workspace',
+  DATA_TOOLS: 'data_tools',
+  DATA_HUB: 'data_hub',
   EXPLORE: 'explore',
   DATA_MODEL: 'data_model',
   DASHBOARDS: 'dashboards',
@@ -55,9 +53,12 @@ const DESTINATIONS = {
 
 function CanvasContainer({
   activeDestination,
+  workingDataSurface,
+  hasWorkingDataset,
   children,
   uploadedData,
   showDataPreview,
+  previewData,
   handleClosePreview,
   cleanedData,
   selectedChartType,
@@ -77,7 +78,6 @@ function CanvasContainer({
   chartMapping,
   previewMode,
   setPreviewMode,
-  setShowDataPreview,
   showWhiteBoard,
   setShowWhiteBoard,
   pipelineResults,
@@ -96,6 +96,10 @@ function CanvasContainer({
   onDestinationSelect,
   setShowDataVisual,
   setIsDataPaneOpen,
+  onOpenSourcePanel,
+  onOpenDataHub,
+  onOpenDataset,
+  workingDatasetName,
   onOpenCleaningForm,
 }) {
   const {
@@ -114,14 +118,15 @@ function CanvasContainer({
     removeDashboardItem,
     addDashboardKpi,
     addDashboardChart,
-    isAiChatOpen,
-    toggleAiChat,
     restoreWindow,
   } = useWindowContext();
 
   const isDashboardDest = activeDestination === DESTINATIONS.DASHBOARDS;
+  const isAnalyticsDest = activeDestination === 'analytics';
   const isExploreDest = activeDestination === DESTINATIONS.EXPLORE;
   const isWorkspaceDest = activeDestination === DESTINATIONS.WORKSPACE;
+  const isDataToolsDest = activeDestination === DESTINATIONS.DATA_TOOLS;
+  const isDataHubDest = activeDestination === DESTINATIONS.DATA_HUB;
   const isDataModelDest = activeDestination === DESTINATIONS.DATA_MODEL;
   const isMlStudioDest = activeDestination === DESTINATIONS.ML_STUDIO;
   const isAiDest = activeDestination === DESTINATIONS.AI;
@@ -138,10 +143,11 @@ function CanvasContainer({
         setShowAiWorkflow(true);
         restoreWindow('aiWorkflowLab');
         break;
+      case 'upload':
+        onOpenSourcePanel('upload');
+        break;
       case 'hub':
-        // In the new shell, 'hub' is basically the data preview/management window
-        setShowDataPreview(true);
-        restoreWindow('dataPreview');
+        onOpenDataHub();
         break;
       case 'definitions':
         // Orient user toward the semantic definitions in the DataPane
@@ -164,9 +170,8 @@ function CanvasContainer({
     onOpenAiChat,
     setShowAiWorkflow,
     restoreWindow,
-    onDestinationSelect,
-    activeDestination,
-    setShowDataPreview,
+    onOpenSourcePanel,
+    onOpenDataHub,
     addDashboardKpi,
     addDashboardChart,
     isDashboardDest,
@@ -176,11 +181,6 @@ function CanvasContainer({
   const containerRef = useRef(null);
   const [containerBounds, setContainerBounds] = useState({ left: 0, top: 0, width: 1920, height: 1080 });
   const [focusStack, setFocusStack] = useState([]);
-  const [isAiChatPoppedOut, setIsAiChatPoppedOut] = useState(false);
-  const [aiChatPopupRoot, setAiChatPopupRoot] = useState(null);
-  usePortalTheme(aiChatPopupRoot);
-  const aiChatPopupWindowRef = useRef(null);
-  const isClosingAiChatPopupRef = useRef(false);
   const windowRegistry = useRef(new Map());
   const initializedWindows = useRef(new Set());
 
@@ -210,21 +210,6 @@ function CanvasContainer({
   }, []);
 
   const { fullData, activeWorkspace } = useContext(DataContext);
-  const dataset = useActiveDataset();
-
-  const previewData = useMemo(() => {
-    if (Array.isArray(dataset)) return dataset.slice(0, 100);
-    if (typeof dataset?.data_preview === 'string') {
-      try {
-        const arr = JSON.parse(dataset.data_preview);
-        return arr.slice(0, 100);
-      } catch (error) {
-        console.error('Failed to parse dataset data_preview', error);
-      }
-    }
-    return [];
-  }, [dataset]);
-
   let outputWindows = getWorkflowWindows(pipelineResults || {});
   if (!showAiReport) {
     outputWindows = outputWindows.filter((windowItem) => windowItem.type !== 'report');
@@ -599,12 +584,35 @@ function CanvasContainer({
       );
     });
 
-  const dataPreviewElement = (dataset && previewData.length > 0 && showDataPreview && !minimizedWindows.dataPreview) ? (
+  const getDataWindowLayout = (id, { defW, defH, minW, minH }) => {
+    const availableWidth = Math.max(1, containerBounds.width - 16);
+    const availableHeight = Math.max(1, containerBounds.height - 16);
+    if (availableWidth < minW || availableHeight < minH) {
+      return { fitCanvas: true, initialState: { x: 0, y: 0, w: availableWidth, h: availableHeight }, registerWindow: null };
+    }
+
+    const initial = getInitialState(id, 8, 20, defW, defH, minW, minH);
+    const w = Math.min(initial.w, availableWidth);
+    const h = Math.min(initial.h, availableHeight);
+    return {
+      initialState: {
+        ...initial,
+        x: Math.max(0, Math.min(initial.x, containerBounds.width - w)),
+        y: Math.max(0, Math.min(initial.y, containerBounds.height - h)),
+        w,
+        h,
+      },
+      minWidth: minW,
+      minHeight: minH,
+    };
+  };
+
+  const showRawDataWindow = showRawViewer && !minimizedWindows.rawViewer;
+  const rawDataWindowLayout = showRawDataWindow ? getDataWindowLayout('rawViewer', WINDOW_SIZING.RAW_VIEWER) : null;
+  const dataPreviewElement = (showDataPreview && !minimizedWindows.dataPreview && !rawDataWindowLayout?.fitCanvas && (previewData.length > 0 || activeWorkspace?.primary_source_id)) ? (
     <WindowFrame
       {...getWindowProps('dataPreview', '📄 Data Preview', handleClosePreview, () => minimizeWindow('dataPreview', 'Data Preview'))}
-      initialState={getInitialState('dataPreview', 8, 20, WINDOW_SIZING.DATA_PREVIEW.defW, WINDOW_SIZING.DATA_PREVIEW.defH, WINDOW_SIZING.DATA_PREVIEW.minW, WINDOW_SIZING.DATA_PREVIEW.minH)}
-      minWidth={WINDOW_SIZING.DATA_PREVIEW.minW}
-      minHeight={WINDOW_SIZING.DATA_PREVIEW.minH}
+      {...getDataWindowLayout('dataPreview', WINDOW_SIZING.DATA_PREVIEW)}
     >
       <div className="uploaded-data-preview">
         <div style={{ padding: '0 10px 10px 10px' }}>
@@ -628,12 +636,10 @@ function CanvasContainer({
     </WindowFrame>
   ) : null;
 
-  const rawDataElement = (showRawViewer && !minimizedWindows.rawViewer) ? (
+  const rawDataElement = showRawDataWindow ? (
     <WindowFrame
       {...getWindowProps('rawViewer', '📜 Raw Data (All Rows)', handleCloseRawViewer, () => minimizeWindow('rawViewer', 'Raw Data'))}
-      initialState={getInitialState('rawViewer', 8, 20, WINDOW_SIZING.RAW_VIEWER.defW, WINDOW_SIZING.RAW_VIEWER.defH, WINDOW_SIZING.RAW_VIEWER.minW, WINDOW_SIZING.RAW_VIEWER.minH)}
-      minWidth={WINDOW_SIZING.RAW_VIEWER.minW}
-      minHeight={WINDOW_SIZING.RAW_VIEWER.minH}
+      {...rawDataWindowLayout}
     >
       <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
         <RawDataViewer rows={fullData || []} pageSize={500} />
@@ -741,219 +747,36 @@ function CanvasContainer({
     </WindowFrame>
   ) : null;
 
-  const closeAiChatPopupWindow = useCallback(() => {
-    const popupWindow = aiChatPopupWindowRef.current;
-    aiChatPopupWindowRef.current = null;
-    setAiChatPopupRoot(null);
-
-    if (popupWindow && !popupWindow.closed) {
-      popupWindow.close();
-    }
-  }, []);
-
-  const prepareAiChatPopupWindow = useCallback((popupWindow) => {
-    const popupDocument = popupWindow.document;
-
-    popupDocument.open();
-    popupDocument.write('<!doctype html><html><head><title>AI Chat</title></head><body><div id="ai-chat-popout-root"></div></body></html>');
-    popupDocument.close();
-
-    popupDocument.documentElement.className = document.documentElement.className;
-    popupDocument.body.className = document.body.className;
-
-    document.querySelectorAll('link[rel="stylesheet"], style').forEach((styleNode) => {
-      popupDocument.head.appendChild(styleNode.cloneNode(true));
-    });
-
-    const popupBaseStyle = popupDocument.createElement('style');
-    popupBaseStyle.textContent = `
-      html,
-      body,
-      #ai-chat-popout-root {
-        width: 100%;
-        height: 100%;
-        margin: 0;
-        overflow: hidden;
-        background: var(--bg-primary, #ffffff);
-      }
-
-      body {
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      }
-    `;
-    popupDocument.head.appendChild(popupBaseStyle);
-
-    return popupDocument.getElementById('ai-chat-popout-root');
-  }, []);
-
-  const handleDockAiChat = useCallback(() => {
-    isClosingAiChatPopupRef.current = true;
-    closeAiChatPopupWindow();
-    setIsAiChatPoppedOut(false);
-    restoreWindow('aiChat');
-    window.setTimeout(() => {
-      isClosingAiChatPopupRef.current = false;
-    }, 0);
-  }, [closeAiChatPopupWindow, restoreWindow]);
-
-  const handleToggleAiChatPopout = useCallback(() => {
-    if (isAiChatPoppedOut) {
-      handleDockAiChat();
-      return;
-    }
-
-    const popupWindow = window.open(
-      '',
-      'ai-chat-popout',
-      getAiChatPopupFeatures(window.screen)
-    );
-
-    if (!popupWindow) {
-      console.warn('AI Chat pop-out was blocked by the browser.');
-      return;
-    }
-
-    const popupRoot = prepareAiChatPopupWindow(popupWindow);
-    aiChatPopupWindowRef.current = popupWindow;
-    setAiChatPopupRoot(popupRoot);
-    setIsAiChatPoppedOut(true);
-    restoreWindow('aiChat');
-    popupWindow.focus();
-  }, [handleDockAiChat, isAiChatPoppedOut, prepareAiChatPopupWindow, restoreWindow]);
-
-  useEffect(() => {
-    if (!isAiChatPoppedOut) return undefined;
-
-    const checkPopupWindow = window.setInterval(() => {
-      const popupWindow = aiChatPopupWindowRef.current;
-      if (popupWindow && !popupWindow.closed) return;
-
-      aiChatPopupWindowRef.current = null;
-      setAiChatPopupRoot(null);
-      setIsAiChatPoppedOut(false);
-
-      if (!isClosingAiChatPopupRef.current) {
-        restoreWindow('aiChat');
-      }
-    }, 500);
-
-    return () => window.clearInterval(checkPopupWindow);
-  }, [isAiChatPoppedOut, restoreWindow]);
-
-  useEffect(() => () => {
-    isClosingAiChatPopupRef.current = true;
-    closeAiChatPopupWindow();
-  }, [closeAiChatPopupWindow]);
-
-  const handleMinimizeAiChat = useCallback(() => {
-    isClosingAiChatPopupRef.current = true;
-
-    flushSync(() => {
-      setIsAiChatPoppedOut(false);
-      setAiChatPopupRoot(null);
-      minimizeWindow('aiChat', 'AI Chat');
-    });
-
-    const popupWindow = aiChatPopupWindowRef.current;
-    aiChatPopupWindowRef.current = null;
-
-    if (popupWindow && !popupWindow.closed) {
-      popupWindow.close();
-    }
-
-    window.setTimeout(() => {
-      isClosingAiChatPopupRef.current = false;
-    }, 0);
-  }, [minimizeWindow]);
-
-  const handleCloseAiChat = useCallback(() => {
-    isClosingAiChatPopupRef.current = true;
-    closeAiChatPopupWindow();
-    setIsAiChatPoppedOut(false);
-    setShowAiChat(false);
-    window.setTimeout(() => {
-      isClosingAiChatPopupRef.current = false;
-    }, 0);
-  }, [closeAiChatPopupWindow, setShowAiChat]);
-
-  const aiChatHeaderActions = (
-    <button
-      className={`header-button ai-chat-popout-button ${isAiChatPoppedOut ? 'is-active' : ''}`}
-      onClick={(event) => {
-        event.stopPropagation();
-        handleToggleAiChatPopout();
-      }}
-      aria-label={isAiChatPoppedOut ? 'Dock AI Chat in app' : 'Open AI Chat in separate window'}
-      title={isAiChatPoppedOut ? 'Dock AI Chat in app' : 'Open AI Chat in separate window'}
-    >
-      {isAiChatPoppedOut ? <FaCompress /> : <FaExternalLinkAlt />}
-    </button>
+  const aiChatDock = showAiChat && (
+    <AiChatDock
+      minimized={!!minimizedWindows.aiChat}
+      onMinimize={() => minimizeWindow('aiChat', 'AI Chat')}
+      onClose={() => setShowAiChat(false)}
+      onOpenDashboard={() => onDestinationSelect?.(DESTINATIONS.DASHBOARDS)}
+    />
   );
 
-  const aiChatOpeningState = getAiChatWindowState(containerBounds, getWindowState('aiChat'));
-  const aiChatElement = showAiChat ? (
-    <WindowFrame
-      {...getWindowProps('aiChat', '🤖 AI Analysis Suite', handleCloseAiChat, handleMinimizeAiChat)}
-      initialState={aiChatOpeningState}
-      minWidth={Math.min(800, aiChatOpeningState.w)}
-      minHeight={Math.min(500, aiChatOpeningState.h)}
-      headerActions={aiChatHeaderActions}
-      isMinimized={!!minimizedWindows.aiChat}
-      isExternalWindow={isAiChatPoppedOut && !!aiChatPopupRoot}
-    >
-      <AIShell
-        onOpenDashboard={() => {
-          onDestinationSelect?.(DESTINATIONS.DASHBOARDS);
-          handleMinimizeAiChat();
-        }}
-        setShowAIChart={setShowAIChart}
-        setAiChartType={setAiChartType}
-        setAiChartData={setAiChartData}
-      />
-    </WindowFrame>
-  ) : null;
-
-  const aiChatPortal = showAiChat && typeof document !== 'undefined'
-    ? isAiChatPoppedOut && aiChatPopupRoot
-      ? createPortal(aiChatElement, aiChatPopupRoot, 'ai-chat-popout-window')
-      : createPortal(
-        <div
-          className="ai-chat-window-portal"
-          style={{
-            left: `${containerBounds.left}px`,
-            top: `${containerBounds.top}px`,
-            width: `${containerBounds.width}px`,
-            height: `${containerBounds.height}px`,
-          }}
-        >
-          {aiChatElement}
-        </div>,
-        document.body,
-        'ai-chat-docked-window'
-      )
-    : null;
-
   const shouldShowHome = useMemo(() => {
-    if (isWorkspaceDest) return !showDataPreview && !showRawViewer && !showMachineLearning;
-    if (isDataModelDest) return false; // Data model has its own canvas UI
+    if (isWorkspaceDest || isDataToolsDest) return false;
+    if (isDataModelDest || isDataHubDest) return false;
     if (isMlStudioDest) return false; // ML Studio has its own full-canvas shell
     if (isExploreDest) return charts.length === 0 && !showDataPreview;
     if (isDashboardDest) return dashboardItems.length === 0;
     if (isAiDest) {
       const hasAiWorkflowWindows = outputWindows.length > 0;
-      return !showAiWorkflow && !showAIChart && !showStoryPanel && !showWhiteBoard && !hasAiWorkflowWindows && !showAiChat;
+      return !showAiWorkflow && !showAIChart && !showStoryPanel && !showWhiteBoard && !hasAiWorkflowWindows;
     }
     return true;
   }, [
     isWorkspaceDest,
+    isDataToolsDest,
     isDataModelDest,
+    isDataHubDest,
     isExploreDest,
     isDashboardDest,
     isMlStudioDest,
     isAiDest,
     showDataPreview,
-    showRawViewer,
-    showMachineLearning,
     charts.length,
     dashboardItems.length,
     showAiWorkflow,
@@ -961,53 +784,65 @@ function CanvasContainer({
     showStoryPanel,
     showWhiteBoard,
     outputWindows.length,
-    showAiChat,
   ]);
+  const hasWorkspaceOverlay = Boolean(dataPreviewElement || rawDataElement || machineLearningElement || workflowElements.length);
+  const hideCanvas = isDataToolsDest || (isWorkspaceDest && !hasWorkspaceOverlay);
 
   return (
-    <div className="canvas-dnd-wrapper" style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-      {isDashboardDest && <DashboardCommandBar />}
-      <div
-        ref={containerRef}
-        className="canvas-container desktop-surface"
-        style={{ width: '100%', flex: 1, position: 'relative' }}
-      >
-        {isDashboardDest && <DashboardSlicerPanel />}
-        {shouldShowHome && (
-          <DestinationHome
-            activeDestination={activeDestination}
-            onAction={handleDestinationHomeAction}
-            readiness={decisionReadiness}
-          />
-        )}
+    <div className="canvas-dnd-wrapper">
+      <div className="canvas-workspace">
+        {workingDataSurface}
+        {isDashboardDest && <DashboardCommandBar />}
+        <div
+          ref={containerRef}
+          className="canvas-container desktop-surface"
+          hidden={hideCanvas}
+          style={{ width: '100%', flex: 1, position: 'relative' }}
+        >
+          {isDashboardDest && <DashboardSlicerPanel />}
+          {shouldShowHome && !isAnalyticsDest && (
+            <DestinationHome
+              activeDestination={activeDestination}
+              onAction={handleDestinationHomeAction}
+              readiness={decisionReadiness}
+            />
+          )}
 
-        {/* Render relevant windows for the active destination */}
-        {(isAiDest || isWorkspaceDest) && workflowElements}
-        {(isWorkspaceDest || isExploreDest) && dataPreviewElement}
-        {isWorkspaceDest && rawDataElement}
-        {isWorkspaceDest && machineLearningElement}
-        {(isExploreDest || isAiDest) && aiChartElement}
-        {isAiDest && workflowLabElement}
-        {isAiDest && whiteBoardElement}
-        {isAiDest && storyPanelElement}
-        {isExploreDest && chartElements}
-        {isDashboardDest && (dashboardItems.length > 0 || dashboardState.isVisible) && (
-          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1 }}>
-            <DashboardCanvas />
-          </div>
-        )}
-        {isDataModelDest && (
-          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1, backgroundColor: 'var(--bg-canvas, #f8f9fa)' }}>
-            <SourceModelCanvas workspaceId={activeWorkspace?.workspace_id} />
-          </div>
-        )}
-        {isMlStudioDest && (
-          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1, backgroundColor: 'var(--bg-canvas, #f8f9fa)' }}>
-            <MLStudioShell onOpenCleaningForm={onOpenCleaningForm} />
-          </div>
-        )}
+          {/* Render relevant windows for the active destination */}
+          {isDataHubDest && (
+            <DataHubWindow
+              onUpload={() => onOpenSourcePanel('upload')}
+              onOpenDataset={onOpenDataset}
+            />
+          )}
+          {isAnalyticsDest && <AnalyticsShell workingDatasetName={workingDatasetName} onOpenAiChat={onOpenAiChat} onOpenGallery={() => setShowDataVisual(true)} onOpenAiChart={() => { setShowAIChart(true); restoreWindow('aiChartWindow'); }} />}
+          {(isAiDest || isWorkspaceDest) && workflowElements}
+          {(isWorkspaceDest || isExploreDest) && dataPreviewElement}
+          {isWorkspaceDest && rawDataElement}
+          {isWorkspaceDest && machineLearningElement}
+          {(isExploreDest || isAiDest || isAnalyticsDest) && aiChartElement}
+          {isAiDest && workflowLabElement}
+          {(isAiDest || isAnalyticsDest) && whiteBoardElement}
+          {(isAiDest || isAnalyticsDest) && storyPanelElement}
+          {isExploreDest && chartElements}
+          {isDashboardDest && (dashboardItems.length > 0 || dashboardState.isVisible) && (
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1 }}>
+              <DashboardCanvas />
+            </div>
+          )}
+          {isDataModelDest && (
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1, backgroundColor: 'var(--bg-canvas, #f8f9fa)' }}>
+              <SourceModelCanvas workspaceId={activeWorkspace?.workspace_id} />
+            </div>
+          )}
+          {isMlStudioDest && (
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1, backgroundColor: 'var(--bg-canvas, #f8f9fa)' }}>
+              <MLStudioShell onOpenCleaningForm={onOpenCleaningForm} />
+            </div>
+          )}
+        </div>
       </div>
-      {aiChatPortal}
+      {aiChatDock}
       <MinimizedDock />
     </div>
   );

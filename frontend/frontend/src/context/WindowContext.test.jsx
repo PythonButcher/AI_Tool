@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, act } from '@testing-library/react';
 import { WindowProvider, useWindowContext } from './WindowContext';
+import { emptyDashboard } from '../features/analytics/analyticsStorage';
 
 const artifact = {
   type: 'chart', title: 'Sales', content: { chartType: 'Bar', chartData: { labels: ['East'], datasets: [{ data: [42] }] } },
@@ -45,4 +46,23 @@ test('storage failure preserves dashboard and permits a deliberate retry', () =>
   act(() => context.addDashboardResults([{ artifact }]));
   expect(context.dashboardItems).toHaveLength(1);
   expect(context.dashboardStorageError).toBeNull();
+});
+
+test('explicit dashboard targeting preserves the other board and deduplicates per board', () => {
+  mount();
+  act(() => context.updateAnalyticsWorkspace(workspace => ({ ...workspace, dashboards: [...workspace.dashboards, emptyDashboard('Other', 'other')] })));
+  act(() => context.addDashboardResults([{ artifact }], 'other'));
+  expect(context.analyticsWorkspace.activeDashboardId).toBe('other');
+  expect(context.analyticsWorkspace.dashboards[0].items).toHaveLength(0);
+  act(() => expect(context.addDashboardResults([{ artifact }], 'other').skipped).toBe(1));
+  act(() => expect(context.addDashboardResults([{ artifact }], 'dashboard-primary').added).toHaveLength(1));
+});
+
+test('chart insertion returns its actual persisted identity and failure returns no identity', () => {
+  mount(); let id;
+  act(() => { id = context.addDashboardChart({ title: 'Chart' }); });
+  expect(context.dashboardItems[0].id).toBe(id);
+  jest.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('quota'); });
+  act(() => expect(context.addDashboardChart({ title: 'Unsaved' })).toBeNull());
+  expect(context.dashboardItems).toHaveLength(1);
 });

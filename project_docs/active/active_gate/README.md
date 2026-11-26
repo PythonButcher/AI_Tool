@@ -1,29 +1,29 @@
-Goal: Establish the next user-authorized project outcome before opening implementation.
+Goal: Choose the next Datastream product outcome.
 
 ## User Outcome
 
-One clearly scoped priority with an owner, observable acceptance criteria and appropriate verification.
+The user selects one product outcome for Codex to scope into an executable plan.
 
 ## Scope
 
-No executable implementation step or specialist handoff is active. Await direction in chat.
+Review the product options with the user. This gate authorizes product review only.
 
 ## Contracts
 
 - [Documentation governance](../rules/DOCUMENTATION_GOVERNANCE.md)
+- [Product proposals](../future/codex/README.md)
 
 ## Acceptance
 
-- The user chooses the outcome and authorizes implementation.
-- Status and the authorization record agree with the next active gate.
+The user chooses one product outcome in chat. Codex records the chosen scope and any implementation authorization before work begins.
 
 ## Verification
 
 - `python .codex/hooks/agent_harness_check.py`
-- `python .codex/hooks/ci_harness_check.py`
 - `python C:/Users/18022/.codex/skills/active-gate-governance/scripts/check_active_gate.py project_docs/active/active_gate .`
+- `python .codex/hooks/ci_harness_check.py`
 - `git diff --check`
 
 ## Owner And Control Return
 
-The user owns the next decision in chat. Codex records the chosen scope before implementation.
+The user owns the product choice. Codex takes ownership of scoping after the user selects an outcome.

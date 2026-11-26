@@ -8,7 +8,7 @@ import { DataContext } from '../../context/DataContext';
 import { WarehouseContext } from '../../context/WarehouseContext';
 import { WindowProvider } from '../../context/WindowContext';
 
-jest.mock('axios', () => ({ post: jest.fn() }));
+jest.mock('axios', () => ({ get: jest.fn(), post: jest.fn() }));
 jest.mock('../../context/DataContext', () => ({ DataContext: require('react').createContext({}) }));
 jest.mock('../../context/WarehouseContext', () => ({ WarehouseContext: require('react').createContext({}) }));
 jest.mock('../../components/data_management/MentionDropdown', () => () => null);
@@ -31,13 +31,28 @@ const send = message => {
   fireEvent.click(screen.getByRole('button', { name: 'Send Message' }));
 };
 const deferred = () => { let resolve, reject; const promise = new Promise((yes, no) => { resolve = yes; reject = no; }); return { promise, resolve, reject }; };
-beforeEach(() => { localStorage.clear(); jest.clearAllMocks(); });
+beforeEach(() => { localStorage.clear(); sessionStorage.clear(); jest.clearAllMocks(); });
 
 test('suggestions use real model fields and preserve a draft for editing', () => {
   render(tree());
   fireEvent.click(screen.getByRole('button', { name: 'What is Revenue?' }));
   expect(screen.getByRole('textbox', { name: 'Business question' })).toHaveValue('What is Revenue?');
   expect(axios.post).not.toHaveBeenCalled();
+});
+
+test('Analytics context fills the composer and sends only the explicitly chosen Data Hub source', async () => {
+  sessionStorage.setItem('analytics:chat-context', JSON.stringify({ source: { kind: 'datahub', id: 'other', name: 'Other orders' }, title: 'Selected segment', query: { measures: [{ id: 'value', aggregation: 'count_rows' }] } }));
+  axios.post.mockResolvedValue(success());
+  render(tree());
+  expect(screen.getByRole('textbox', { name: 'Business question' }).value).toContain('Selected segment');
+  expect(axios.post).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: 'Send Message' }));
+  await screen.findByText('Revenue is 100.');
+  const request = axios.post.mock.calls[0][1];
+  expect(request.dataset_ref).toMatchObject({ source: 'datahub', dataset_id: 'other' });
+  expect(request.dataset).toBeUndefined();
+  expect(request.workspace_id).toBeUndefined();
+  expect(request.session_state).toEqual({ active_mode: 'explore' });
 });
 
 test('grounded answer supports a contextual refinement and dashboard save', async () => {
@@ -52,7 +67,7 @@ test('grounded answer supports a contextual refinement and dashboard save', asyn
   await waitFor(() => expect(screen.queryByText('Analyzing your data…')).not.toBeInTheDocument());
   fireEvent.click(screen.getAllByRole('button', { name: 'Open chart' })[0]);
   fireEvent.click(screen.getByRole('button', { name: 'Save to Dashboard' }));
-  const saved = JSON.parse(localStorage.getItem('chartStudioDashboard:v1')).items;
+  const saved = JSON.parse(localStorage.getItem('analyticsWorkspace:v1')).dashboards[0].items;
   expect(saved).toHaveLength(1);
   expect(saved[0].resultSnapshot.artifact.bi_grounding.dataset.dataset_id).toBe('sales');
 });
@@ -120,7 +135,7 @@ test('review draft supports title edits, selection and duplicate-safe additions'
   fireEvent.change(within(draft).getByLabelText('Title for Regional breakdown'), { target: { value: 'My regional revenue' } });
   fireEvent.click(within(draft).getByRole('button', { name: 'Add 1 selected to dashboard' }));
   fireEvent.click(within(draft).getByRole('button', { name: 'Add 1 selected to dashboard' }));
-  const saved = JSON.parse(localStorage.getItem('chartStudioDashboard:v1')).items;
+  const saved = JSON.parse(localStorage.getItem('analyticsWorkspace:v1')).dashboards[0].items;
   expect(saved).toHaveLength(1);
   expect(saved[0].title).toBe('My regional revenue');
   expect(within(draft).getByText(/already present/)).toBeInTheDocument();
@@ -140,15 +155,43 @@ test('unmount aborts the request and IME Enter does not submit', async () => {
   await act(async () => pending.resolve(success()));
 });
 
-test('explicit catalog selection omits an unrelated active workspace and inline data', async () => {
+test('the toolbar dropdown adds a saved dataset to the draft and sends its catalog reference', async () => {
+  const catalog = deferred();
+  axios.get.mockReturnValue(catalog.promise);
   axios.post.mockResolvedValue(success());
-  render(tree(context, {}, [{ id: 'other', name: 'Other' }]));
-  send('Show revenue @Other');
+  function ChatWithCatalog() {
+    const [datasets, refreshDatasets] = React.useState([]);
+    return (
+      <WindowProvider>
+        <DataContext.Provider value={context}>
+          <WarehouseContext.Provider value={{ datasets, refreshDatasets }}>
+            <AIShell />
+          </WarehouseContext.Provider>
+        </DataContext.Provider>
+      </WindowProvider>
+    );
+  }
+  render(<ChatWithCatalog />);
+  const trigger = screen.getByRole('button', { name: 'Choose dataset' });
+  expect(screen.getByRole('button', { name: 'New chat' }).nextElementSibling).toBe(trigger);
+  const input = screen.getByRole('textbox', { name: 'Business question' });
+  fireEvent.change(input, { target: { value: 'Show revenue @' } });
+  fireEvent.click(trigger);
+  const menu = screen.getByRole('menu', { name: 'Choose dataset' });
+  expect(within(menu).getByText('Loading saved datasets…')).toBeVisible();
+  expect(axios.get).toHaveBeenCalledWith(expect.stringContaining('/api/data-sources'), expect.any(Object));
+  await act(async () => catalog.resolve({ data: { sources: [{ source_id: 'other', name: 'Other orders' }] } }));
+  fireEvent.click(within(menu).getByRole('menuitem', { name: 'Other orders' }));
+  expect(trigger).toHaveAttribute('aria-expanded', 'false');
+  expect(input).toHaveValue('Show revenue @Other orders ');
+  expect(input).toHaveFocus();
+  expect(axios.post).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: 'Send Message' }));
   await screen.findByText('Revenue is 100.');
   const payload = axios.post.mock.calls[0][1];
   expect(payload.workspace_id).toBeUndefined();
   expect(payload.dataset).toBeUndefined();
-  expect(payload.dataset_ref).toEqual({ source: 'datahub', dataset_id: 'other', dataset_name: 'Other' });
+  expect(payload.dataset_ref).toEqual({ source: 'datahub', dataset_id: 'other', dataset_name: 'Other orders' });
 });
 
 test('dashboard control delegates to the live app navigation', () => {
@@ -399,4 +442,21 @@ test('a chat-storage failure leaves conversation switching usable in memory', as
     fireEvent.click(within(screen.getByRole('dialog', { name: 'Your chats' })).getByRole('button', { name: 'Open chat: Keep this conversation' }));
     expect(screen.getByText('Revenue is 100.')).toBeInTheDocument();
   } finally { spy.mockRestore(); }
+});
+
+test('centered Devstream logo shows in a new chat and disappears once output is present', async () => {
+  axios.post.mockResolvedValue(success());
+  render(tree());
+  const emptyBrand = screen.getByTestId('ai-chat-empty-brand');
+  const mark = within(emptyBrand).getByAltText('');
+  expect(mark).toHaveAttribute('src', '/stream-mark.png');
+  expect(within(emptyBrand).getByText('Devstream')).toBeInTheDocument();
+
+  send('Show revenue');
+  expect(screen.queryByTestId('ai-chat-empty-brand')).not.toBeInTheDocument();
+  await screen.findByText('Revenue is 100.');
+  expect(screen.queryByTestId('ai-chat-empty-brand')).not.toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: 'New chat' }));
+  expect(screen.getByTestId('ai-chat-empty-brand')).toBeInTheDocument();
 });

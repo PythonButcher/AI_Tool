@@ -1,0 +1,151 @@
+.analytics-workbench { min-width: 0; flex: none; }
+.analytics-workbench-toolbar {
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 0 8px;
+}
+.analytics-workbench-context, .analytics-workbench-tools {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.analytics-workbench-context { font-size: 12px; font-weight: 650; white-space: nowrap; }
+.analytics-workbench-context svg { font-size: 16px; color: var(--accent-blue); }
+.analytics-workbench-tools { margin-inline-start: auto; }
+.analytics-shell .analytics-workbench-tools button { min-height: 29px; padding: 3px 9px; gap: 5px; white-space: nowrap; }
+.analytics-workbench-instructions, .analytics-workbench-compact-hint { color: var(--text-secondary); font-size: 12px; }
+.analytics-workbench-compact-hint { margin: 0 0 8px; }
+.analytics-workbench-announcement {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.analytics-workbench.is-editing .analytics-workbench-grid {
+  border-radius: 10px;
+  background-image: linear-gradient(to right, var(--border-subtle) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--border-subtle) 1px, transparent 1px);
+  background-size: var(--analytics-workbench-step-x) var(--analytics-workbench-step-y);
+  padding-bottom: var(--analytics-workbench-step-y);
+  box-sizing: content-box;
+}
+.analytics-workbench .react-grid-placeholder {
+  opacity: 1;
+  background: var(--accent-blue-soft);
+  border: 2px dashed var(--accent-blue);
+  border-radius: 10px;
+}
+.analytics-workbench-panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+}
+.analytics-workbench-panel-header {
+  display: flex;
+  align-items: center;
+  flex: none;
+  min-height: 49px;
+  gap: 7px;
+  padding: 6px 9px;
+  border-bottom: 1px solid var(--border-subtle);
+  border-radius: 9px 9px 0 0;
+}
+.analytics-workbench-panel-icon { flex: none; font-size: 17px; color: var(--accent-blue); }
+.analytics-workbench-panel-name { flex: 1; min-width: 0; }
+.analytics-workbench-panel-name h2 { margin: 0; font-size: 13px; line-height: 1.18; font-weight: 700; }
+.analytics-workbench-panel-name small { display: block; margin-top: 2px; }
+.analytics-workbench-panel-body { flex: 1; min-height: 0; min-width: 0; overflow: auto; border-radius: 0 0 9px 9px; }
+.analytics-workbench-panel-body:focus-visible { outline: 2px solid var(--accent-blue); outline-offset: -2px; }
+.analytics-workbench.is-editing .analytics-workbench-panel { border-color: var(--studio-blue-border); }
+.analytics-workbench.is-editing .analytics-workbench-panel-header { background: var(--accent-blue-soft); }
+.analytics-workbench.is-editing .analytics-workbench-panel.is-locked { border-color: var(--border-subtle); }
+.analytics-workbench.is-editing .analytics-workbench-panel.is-locked .analytics-workbench-panel-header { background: var(--bg-panel-subtle); }
+.analytics-shell .analytics-workbench-grip, .analytics-shell .analytics-workbench-lock {
+  display: grid;
+  place-items: center;
+  width: 27px;
+  min-height: 28px;
+  flex: none;
+  padding: 0;
+  font-size: 16px;
+}
+.analytics-shell .analytics-workbench-grip { color: var(--accent-blue); cursor: grab; touch-action: none; }
+.analytics-shell .react-draggable-dragging .analytics-workbench-grip { cursor: grabbing; }
+.analytics-workbench-locked-mark { display: grid; place-items: center; width: 22px; color: var(--text-secondary); }
+.analytics-workbench .react-draggable-dragging, .analytics-workbench .react-grid-item.resizing {
+  border-color: var(--accent-blue);
+  box-shadow: 0 12px 28px rgba(9, 24, 43, 0.18);
+}
+.analytics-workbench .react-grid-item > .react-resizable-handle {
+  z-index: 1;
+  background: none;
+  padding: 0;
+  touch-action: none;
+}
+.analytics-workbench .react-grid-item > .react-resizable-handle::after {
+  border: 0;
+  background: var(--accent-blue);
+  border-radius: 2px;
+  opacity: 0.75;
+}
+.analytics-workbench .react-grid-item > .react-resizable-handle:hover::after { opacity: 1; }
+.analytics-workbench .react-grid-item > .react-resizable-handle-e { width: 10px; height: 44px; margin-top: -22px; right: -5px; transform: none; }
+.analytics-workbench .react-resizable-handle-e::after { width: 3px; height: 30px; right: 3px; bottom: 7px; }
+.analytics-workbench .react-grid-item > .react-resizable-handle-s { width: 44px; height: 10px; margin-left: -22px; bottom: -5px; transform: none; }
+.analytics-workbench .react-resizable-handle-s::after { width: 30px; height: 3px; bottom: 3px; right: 7px; }
+.analytics-workbench .react-grid-item > .react-resizable-handle-se::after {
+  width: 12px;
+  height: 12px;
+  right: 4px;
+  bottom: 4px;
+  border-right: 2px solid var(--accent-blue);
+  border-bottom: 2px solid var(--accent-blue);
+  background: none;
+}
+.analytics-workbench-panel--results .analytics-result-panel { min-height: 100%; }
+.analytics-workbench-panel--results .analytics-empty-canvas { flex: 1; min-height: 170px; }
+.analytics-workbench:not(.analytics-workbench--stacked) .analytics-workbench-panel--results .analytics-workbench-panel-body { container-type: size; }
+.analytics-workbench:not(.analytics-workbench--stacked) .analytics-result-panel .analytics-chart {
+  height: clamp(155px, calc(100cqh - 150px), 850px);
+}
+.analytics-workbench--stacked .analytics-workbench-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  height: auto !important;
+}
+.analytics-workbench--stacked .analytics-workbench-panel {
+  order: var(--analytics-panel-order);
+  position: relative !important;
+  inset: auto !important;
+  width: auto !important;
+  height: auto !important;
+  transform: none !important;
+  transition: none;
+}
+.analytics-workbench--stacked .analytics-workbench-panel-body { max-height: min(660px, 76vh); }
+.analytics-workbench--stacked .analytics-workbench-panel--results .analytics-empty-canvas { min-height: 260px; }
+
+@media print {
+  .analytics-workbench-toolbar, .analytics-workbench-compact-hint,
+  .analytics-workbench-panel--fields, .analytics-workbench-panel--builder,
+  .analytics-workbench .react-resizable-handle, .analytics-workbench-locked-mark { display: none; }
+  .analytics-workbench .analytics-workbench-grid { height: auto !important; background: none !important; padding: 0 !important; }
+  .analytics-workbench .analytics-workbench-panel--results {
+    position: relative !important;
+    inset: auto !important;
+    width: auto !important;
+    height: auto !important;
+    transform: none !important;
+    border: 0;
+  }
+  .analytics-workbench-panel--results .analytics-workbench-panel-body { max-height: none; overflow: visible; }
+  .analytics-workbench:not(.analytics-workbench--stacked) .analytics-workbench-panel--results .analytics-workbench-panel-body { container-type: normal; }
+  .analytics-workbench:not(.analytics-workbench--stacked) .analytics-result-panel .analytics-chart { height: 300px; }
+}

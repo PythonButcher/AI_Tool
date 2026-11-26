@@ -57,4 +57,52 @@ describe('ML Studio home learning explorer', () => {
     expect(heading).toHaveFocus();
     expect(canvas.scrollTo).toHaveBeenCalledWith({ top: expect.any(Number) });
   });
+
+  it('keeps workflow and foundations dropdown sections collapsed initially and toggles them cleanly', () => {
+    render(<MLStudioHome />);
+    const workflowToggle = screen.getByRole('button', { name: /How the 3-step workflow works/i });
+    const foundationsToggle = screen.getByRole('button', { name: /New to machine learning\?/i });
+
+    expect(workflowToggle).toHaveAttribute('aria-expanded', 'false');
+    expect(foundationsToggle).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('heading', { name: 'Prepare with purpose' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'New to machine learning? Start here.' })).not.toBeInTheDocument();
+
+    fireEvent.click(workflowToggle);
+    expect(workflowToggle).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('heading', { name: 'Prepare with purpose' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Put models to the test' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Make an informed choice' })).toBeInTheDocument();
+
+    fireEvent.click(foundationsToggle);
+    expect(workflowToggle).toHaveAttribute('aria-expanded', 'false');
+    expect(foundationsToggle).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('heading', { name: 'New to machine learning? Start here.' })).toBeInTheDocument();
+    const courseLink = screen.getByRole('link', { name: /Explore the course/i });
+    expect(courseLink).toHaveAttribute('href', 'https://developers.google.com/machine-learning/crash-course');
+    expect(courseLink).toHaveAttribute('target', '_blank');
+    expect(courseLink).toHaveAttribute('rel', 'noopener noreferrer');
+
+    fireEvent.click(foundationsToggle);
+    expect(foundationsToggle).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('heading', { name: 'New to machine learning? Start here.' })).not.toBeInTheDocument();
+  });
+
+  it('allows collapsing and expanding saved workspace experiments when drafts exist', () => {
+    render(
+      <MLStudioHome savedCount={1}>
+        <div>Draft Alpha</div>
+      </MLStudioHome>
+    );
+    expect(screen.getByText('1 saved')).toBeInTheDocument();
+    expect(screen.getByText('Draft Alpha')).toBeInTheDocument();
+    const toggle = screen.getByRole('button', { name: /Hide/i });
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    fireEvent.click(toggle);
+    expect(screen.queryByText('Draft Alpha')).not.toBeInTheDocument();
+    const showBtn = screen.getByRole('button', { name: /Show/i });
+    expect(showBtn).toHaveAttribute('aria-expanded', 'false');
+    fireEvent.click(showBtn);
+    expect(screen.getByText('Draft Alpha')).toBeInTheDocument();
+  });
 });

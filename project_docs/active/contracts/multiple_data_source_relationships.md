@@ -70,7 +70,7 @@ Successful single-record responses use `{ relationship }`; list responses use `{
 
 Errors use `{ error: { code, message } }`, with validation diagnostics added to `error.diagnostics` when activation fails. Missing workspaces, sources, and workspace-scoped relationships return HTTP 404. `source_not_in_workspace`, `relationship_version_conflict`, and `relationship_confirmation_required` return HTTP 409. Unavailable source storage returns HTTP 409. A freshly invalid or blocked relationship cannot activate and returns HTTP 422 with `relationship_not_activatable` plus the persisted diagnostics.
 
-Relationship lookup always includes both `workspace_id` and `relationship_id`. A relationship ID requested through another workspace returns `relationship_not_found` and does not reveal its real owner. The public source-deletion boundary refuses any source with workspace or relationship dependencies, so it never relies on a foreign-key cascade as product behavior. Database foreign keys remain a last-resort integrity guard. Relationship deletion never removes sources or memberships.
+Relationship lookup always includes both `workspace_id` and `relationship_id`. A relationship ID requested through another workspace returns `relationship_not_found` and does not reveal its real owner. Removing a source through Data Hub also removes every relationship with that source as an endpoint, using the database foreign keys in the same transaction. Relationships between remaining sources are retained. Deleting a relationship through its own endpoint only removes that relationship.
 
 ## Verified Execution Semantics
 

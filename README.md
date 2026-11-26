@@ -1,8 +1,10 @@
-AI Data Visualization & Cleaning Tool
+# Datastream
 
-Overview
+## Overview
 
-This project is a data visualization and cleaning tool built with React (frontend) and Flask (backend). It allows users to upload, clean, preview, analyze, visualize, and export datasets with an interactive UI and multiple charting options.
+Datastream is the platform hub. Open Devstream to upload, clean, analyze, visualize, and export datasets, work with AI Chat, or train models in ML Studio. Devstream uses React and Flask.
+
+Open the app's default address for the Datastream hub or add `?app=devstream` to go directly to Devstream.
 
 Features
 

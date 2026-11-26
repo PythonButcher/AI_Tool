@@ -1,4 +1,4 @@
-import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useContext, useEffect, useId, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
 import {
   FaChartBar,
@@ -35,6 +35,9 @@ import {
   DialogTitle,
   Chip,
   IconButton,
+  ListSubheader,
+  Menu,
+  MenuItem,
   TextField,
   Tooltip,
   Typography,
@@ -43,6 +46,7 @@ import { DataContext } from '../../context/DataContext';
 import { WarehouseContext } from '../../context/WarehouseContext';
 import { useWindowContext } from '../../context/WindowContext';
 import MentionDropdown from '../../components/data_management/MentionDropdown';
+import { getWorkspacePortalContainer } from '../../components/layout/workspacePortal';
 import { detectToken, extractTokens } from '../../utils/mentionUtils';
 import { AICommands } from '../workflow/AiCommandBlock';
 import { generateAiResultPdf } from '../../utils/aiResultPdfExport';
@@ -53,6 +57,7 @@ import useChatConversations from './useChatConversations';
 import { restoreConversation } from './chatConversations';
 import { buildChatSuggestions } from './chatSuggestions';
 import { canSaveResult, resultKey } from '../../utils/aiDashboardResults';
+import { analyticsChatPrompt, analyticsChatRequest, CHAT_CONTEXT_KEY } from '../analytics/analyticsChatBridge';
 import './AIShell.css';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
@@ -206,7 +211,7 @@ const TrustedResultCard = ({ biGrounding, analysisLineage }) => {
  * AI Chat keeps its established split-pane layout while returning to a focused
  * workflow: grounded answers, tables, charts, and conversational refinements.
  */
-function AIChatConversation({ onOpenDashboard, conversation, conversations, storageError, onSnapshot, onNewChat, onSelectChat, onRenameChat, onDeleteChat, onResetChat, isSidebarOpen, setIsSidebarOpen }) {
+function AIChatConversation({ onOpenDashboard, windowActions, windowNotice, conversation, conversations, storageError, onSnapshot, onNewChat, onSelectChat, onRenameChat, onDeleteChat, onResetChat, isSidebarOpen, setIsSidebarOpen }) {
   const {
     activeWorkspace,
     cleanedData,
@@ -215,10 +220,13 @@ function AIChatConversation({ onOpenDashboard, conversation, conversations, stor
     semanticModel,
     refreshSemanticModelFromDataset,
   } = useContext(DataContext);
-  const { datasets = [] } = useContext(WarehouseContext);
-  const { addDashboardResults, openDashboard, dashboardItems = [] } = useWindowContext();
+  const { datasets = [], refreshDatasets } = useContext(WarehouseContext);
+  const { addDashboardResults, openDashboard, dashboardItems: currentDashboardItems = [], analyticsWorkspace } = useWindowContext();
+  const [saveTarget, setSaveTarget] = useState('');
+  const [analyticsContext, setAnalyticsContext] = useState(null);
+  const dashboardItems = analyticsWorkspace?.dashboards.find(board => board.state.id === (saveTarget || analyticsWorkspace.activeDashboardId))?.items || currentDashboardItems;
 
-  const dataScope = useMemo(() => ({ workspaceId: activeWorkspace?.workspace_id, version: activeWorkspace?.version, semanticModel, cleanedData, fullData }), [activeWorkspace?.workspace_id, activeWorkspace?.version, semanticModel, cleanedData, fullData]);
+  const dataScope = useMemo(() => ({ workspaceId: activeWorkspace?.workspace_id, version: activeWorkspace?.version, semanticModel, cleanedData, fullData, analyticsContext }), [activeWorkspace?.workspace_id, activeWorkspace?.version, semanticModel, cleanedData, fullData, analyticsContext]);
   const [initial] = useState(() => restoreConversation(conversation, dataScope));
   const [userMessages, setUserMessages] = useState(initial.messages);
   const [userInput, setUserInput] = useState(initial.draft);
@@ -237,6 +245,9 @@ function AIChatConversation({ onOpenDashboard, conversation, conversations, stor
   const [chatAction, setChatAction] = useState(null);
   const [isChatActionOpen, setIsChatActionOpen] = useState(false);
   const [chatName, setChatName] = useState('');
+  const [datasetMenuAnchor, setDatasetMenuAnchor] = useState(null);
+  const [datasetMenuStatus, setDatasetMenuStatus] = useState('idle');
+  const datasetMenuId = useId();
 
   const [mentionQuery, setMentionQuery] = useState(null);
   const [isMentionOpen, setIsMentionOpen] = useState(false);
@@ -245,6 +256,7 @@ function AIChatConversation({ onOpenDashboard, conversation, conversations, stor
   const [highlightedIndex, setHighlightedIndex] = useState(0);
 
   const shellRef = useRef(null);
+  const getOverlayContainer = () => getWorkspacePortalContainer(shellRef.current?.ownerDocument);
   const inputRef = useRef(null);
   const resultsToggleRef = useRef(null);
   const resultsHeadingRef = useRef(null);
@@ -261,6 +273,35 @@ function AIChatConversation({ onOpenDashboard, conversation, conversations, stor
     awaitingCleanInstructions, failedRequest, error, governanceWarning, notice]);
 
   useEffect(() => { inputRef.current?.focus(); }, []);
+  useEffect(() => {
+    if (!datasetMenuAnchor || !refreshDatasets) return undefined;
+    const controller = new AbortController();
+    axios.get(`${API_URL}/api/data-sources`, { signal: controller.signal }).then(({ data }) => {
+      if (controller.signal.aborted) return;
+      if (!Array.isArray(data?.sources)) throw new Error('Invalid catalog response');
+      refreshDatasets(data.sources.map(({ source_id, name }) => ({ id: source_id, name })));
+      setDatasetMenuStatus('ready');
+    }).catch(() => {
+      if (!controller.signal.aborted) setDatasetMenuStatus('error');
+    });
+    return () => controller.abort();
+  }, [datasetMenuAnchor, refreshDatasets]);
+
+  useEffect(() => {
+    const receive = () => {
+      try {
+        const raw = sessionStorage.getItem(CHAT_CONTEXT_KEY);
+        if (!raw) return;
+        const context = JSON.parse(raw);
+        if (!context.source || !context.query) throw new Error('Invalid Analytics context.');
+        sessionStorage.removeItem(CHAT_CONTEXT_KEY);
+        setAnalyticsContext(context);
+        setUserInput(previous => [previous, analyticsChatPrompt(context)].filter(Boolean).join('\n\n'));
+      } catch (failure) { setError(failure.message); }
+    };
+    receive(); window.addEventListener(CHAT_CONTEXT_KEY, receive);
+    return () => window.removeEventListener(CHAT_CONTEXT_KEY, receive);
+  }, []);
 
   const navigationSnapshot = () => {
     const pending = requestRef.current;
@@ -616,6 +657,31 @@ function AIChatConversation({ onOpenDashboard, conversation, conversations, stor
     inputRef.current?.focus();
   };
 
+  const openDatasetMenu = (event) => {
+    setIsMentionOpen(false);
+    setDatasetMenuStatus(refreshDatasets ? 'loading' : 'idle');
+    setDatasetMenuAnchor(event.currentTarget);
+  };
+
+  const closeDatasetMenu = () => {
+    setDatasetMenuAnchor(null);
+    datasetMenuAnchor?.focus();
+  };
+
+  const addDatasetToQuestion = (name) => {
+    setUserInput(current => {
+      if (extractTokens(current, datasets).includes(name)) return current;
+      const draft = current.trimEnd().replace(/(^|\s)@$/, '$1').trimEnd();
+      return `${draft}${draft ? ' ' : ''}@${name} `;
+    });
+    setMentionStartIndex(-1);
+    setDatasetMenuAnchor(null);
+    inputRef.current?.focus();
+  };
+
+  const isDatasetMenuOpen = Boolean(datasetMenuAnchor);
+  const draftDatasets = isDatasetMenuOpen ? extractTokens(userInput, datasets) : [];
+
   const handleInputChange = (event) => {
     const value = event.target.value;
     const cursorPosition = event.target.selectionStart;
@@ -686,12 +752,14 @@ function AIChatConversation({ onOpenDashboard, conversation, conversations, stor
     }
 
     try {
+      if (analyticsContext && ((AICommands.isCommand(message) && message.startsWith('/clean')) || awaitingCleanInstructions)) throw new Error('Clear the Analytics context before using dataset-cleaning commands.');
       if ((AICommands.isCommand(message) && message.split(' ')[0] === '/clean') || awaitingCleanInstructions) {
         const reply = await runCleanCommand(message, resolveDatasetForNlp(), awaitingCleanInstructions, controller.signal, isCurrent);
         if (isCurrent()) setUserMessages(previous => [...previous, { role: 'assistant', content: reply, scope: dataScope }]);
         return;
       }
       const { payloadDataset, payloadSemanticModel, datasetRef } = resolveRequestContext(biSessionState, tokens);
+      const analyticsPayload = analyticsContext ? analyticsChatRequest(analyticsContext, resolveDatasetForNlp(), semanticModel) : null;
       const response = await axios.post(`${API_URL}/api/decision/chat/turns`, {
         workspace_id: tokens.length || datasetRef?.source === 'datahub' ? undefined : activeWorkspace?.workspace_id,
         user_message: message,
@@ -704,6 +772,8 @@ function AIChatConversation({ onOpenDashboard, conversation, conversations, stor
         conversation_history: userMessages.filter(item => item.scope === dataScope)
           .map(({ role, content, ai_commentary }) => ({ role, content, ...(ai_commentary ? { ai_commentary } : {}) })).slice(-10),
         session_state: biSessionState,
+        ...(analyticsPayload ? { workspace_id: undefined, dataset: undefined, semantic_model: undefined, dataset_ref: undefined,
+          ...analyticsPayload, resolved_datasets: [], session_state: { active_mode: 'explore' }, requested_mode: 'explore' } : {}),
         ...(refinement ? { analytics_refinement: refinement } : {}),
       }, { signal: controller.signal, timeout: 120000 });
       if (!isCurrent()) return;
@@ -767,7 +837,7 @@ function AIChatConversation({ onOpenDashboard, conversation, conversations, stor
 
   const saveResult = artifact => {
     try {
-      const result = addDashboardResults([{ artifact }]);
+      const result = addDashboardResults([{ artifact }], saveTarget || analyticsWorkspace?.activeDashboardId);
       setError(null);
       setPinFeedbackIds(previous => ({ ...previous, [resultKey(artifact)]: true }));
       setNotice(result.added.length ? 'Result saved to your dashboard.' : 'This result is already on your dashboard.');
@@ -817,39 +887,52 @@ function AIChatConversation({ onOpenDashboard, conversation, conversations, stor
   return (
     <div ref={shellRef} className={`ai-shell ${isResultsPaneOpen ? 'has-open-results' : ''}`}>
       <header className="ai-shell__header">
-        <div className="ai-shell__header-left">
-          <Tooltip title={isSidebarOpen ? 'Hide sidebar for more chat space' : 'Show chat sidebar'}>
-            <button type="button" className="ai-shell__sidebar-toggle"
-              aria-label={isSidebarOpen ? 'Hide chat sidebar' : 'Show chat sidebar'}
-              aria-expanded={isSidebarOpen} aria-controls="ai-chat-navigation"
-              onClick={() => setIsSidebarOpen(open => !open)}><FaBars /></button>
-          </Tooltip>
+        <div className="ai-shell__masthead">
           <div className="ai-shell__brand-mark" aria-hidden="true"><FaLayerGroup /></div>
-          <div className="ai-shell__titles">
-            <h1 className="ai-shell__main-title">AI Chat <span>Business intelligence</span></h1>
+          <h1 className="ai-shell__main-title">AI Chat</h1>
+          {windowActions}
+        </div>
+        {windowNotice && <div className="ai-shell__window-notice" role="status">{windowNotice}</div>}
+        <div className="ai-shell__chat-toolbar">
+          <div className="ai-shell__header-left">
+            <Tooltip title={isSidebarOpen ? 'Hide sidebar for more chat space' : 'Show chat sidebar'}>
+              <button type="button" className="ai-shell__sidebar-toggle"
+                aria-label={isSidebarOpen ? 'Hide chat sidebar' : 'Show chat sidebar'}
+                aria-expanded={isSidebarOpen} aria-controls="ai-chat-navigation"
+                onClick={() => setIsSidebarOpen(open => !open)}><FaBars /></button>
+            </Tooltip>
             <button type="button" className="ai-shell__conversation-title" aria-label="Show chat history" onClick={() => setIsHistoryOpen(true)}>
-              <span>{conversation.title}</span><FaChevronDown />
+              <span>{conversation.title === 'New chat' && !conversation.customTitle ? 'Chat history' : conversation.title}</span><FaChevronDown />
             </button>
           </div>
-        </div>
-        <div className="ai-shell__header-right">
-          <Tooltip title="Start a new chat">
-            <button type="button" className="ai-shell__header-action ai-shell__new-chat" aria-label="New chat" onClick={startNewChat}>
-              <FaPlus /><span>New chat</span>
+          <div className="ai-shell__header-right">
+            <Tooltip title="Start a new chat">
+              <button type="button" className="ai-shell__header-action ai-shell__new-chat" aria-label="New chat" onClick={startNewChat}>
+                <FaPlus /><span>New chat</span>
+              </button>
+            </Tooltip>
+            <button type="button" className="ai-shell__dataset-trigger" id={`${datasetMenuId}-trigger`}
+              aria-label="Choose dataset" aria-haspopup="menu" aria-expanded={isDatasetMenuOpen}
+              aria-controls={isDatasetMenuOpen ? datasetMenuId : undefined}
+              disabled={Boolean(analyticsContext)} title={analyticsContext ? 'Clear the Analytics context to choose a dataset' : 'Choose dataset'}
+              onClick={openDatasetMenu}>
+              <FaDatabase aria-hidden="true" />
+              <span className="ai-shell__dataset-trigger-label"><span className="ai-shell__dataset-trigger-verb">Choose </span>dataset</span>
+              <FaChevronDown className="ai-shell__dataset-trigger-chevron" aria-hidden="true" />
             </button>
-          </Tooltip>
-          <Tooltip title="Reset this chat and start fresh">
-            <span><button type="button" className="ai-shell__header-action ai-shell__reset-chat" aria-label="Reset current chat"
-              disabled={!userMessages.length && !userInput.trim()} onClick={() => prepareChatAction('reset')}><FaRedo /></button></span>
-          </Tooltip>
-          <button type="button" className="ai-shell__header-action ai-shell__dashboard-link" aria-label="Open dashboard" onClick={viewDashboard}>
-            <FaChartBar /><span>Dashboard</span><FaExternalLinkAlt className="ai-shell__external-icon" />
-          </button>
-          <button ref={resultsToggleRef} type="button" className={`ai-shell__header-action ${isResultsPaneOpen ? 'is-selected' : ''}`}
-            aria-label="Toggle Results Pane" aria-expanded={isResultsPaneOpen} aria-controls="ai-chat-results"
-            onClick={() => setIsResultsPaneOpen(open => !open)}>
-            <FaEye /><span>Results</span>{activeArtifact && <span className="ai-shell__result-dot" />}
-          </button>
+            <Tooltip title="Reset this chat and start fresh">
+              <span><button type="button" className="ai-shell__header-action ai-shell__reset-chat" aria-label="Reset current chat"
+                disabled={!userMessages.length && !userInput.trim()} onClick={() => prepareChatAction('reset')}><FaRedo /></button></span>
+            </Tooltip>
+            <button type="button" className="ai-shell__header-action ai-shell__dashboard-link" aria-label="Open dashboard" onClick={viewDashboard}>
+              <FaChartBar /><span>Dashboard</span><FaExternalLinkAlt className="ai-shell__external-icon" />
+            </button>
+            <button ref={resultsToggleRef} type="button" className={`ai-shell__header-action ${isResultsPaneOpen ? 'is-selected' : ''}`}
+              aria-label="Toggle Results Pane" aria-expanded={isResultsPaneOpen} aria-controls="ai-chat-results"
+              onClick={() => setIsResultsPaneOpen(open => !open)}>
+              <FaEye /><span>Results</span>{activeArtifact && <span className="ai-shell__result-dot" />}
+            </button>
+          </div>
         </div>
       </header>
 
@@ -890,8 +973,10 @@ function AIChatConversation({ onOpenDashboard, conversation, conversations, stor
         <details className="ai-shell__data-context">
           <summary>
             <span className="ai-shell__source-icon"><FaDatabase /></span>
-            <span className="ai-shell__source-name"><span>Working with</span><strong>{datasetLabel}</strong></span>
-            <span className="ai-shell__source-status"><FaCircle className={`ai-shell__indicator is-${connectionStatus.data.toLowerCase()}`} />{semanticModel?.metrics?.length || 0} metrics</span>
+            <span className="ai-shell__source-name"><strong>{datasetLabel}</strong></span>
+            {semanticModel?.metrics?.length > 0 && (
+              <span className="ai-shell__source-status"><FaCircle className={`ai-shell__indicator is-${connectionStatus.data.toLowerCase()}`} />{semanticModel.metrics.length} metrics</span>
+            )}
             <FaChevronDown className="ai-shell__details-chevron" />
           </summary>
           <div className="ai-shell__data-details">
@@ -901,32 +986,40 @@ function AIChatConversation({ onOpenDashboard, conversation, conversations, stor
           </div>
         </details>
 
-        <div className={`ai-shell__conversation ${userMessages.length === 0 ? 'is-empty' : ''}`} ref={chatBodyRef} aria-label="Conversation">
+        <div className="ai-shell__conversation" ref={chatBodyRef} aria-label="Conversation">
           {storageError && <div className="ai-shell__alert-bar" role="alert"><FaInfoCircle />{storageError}</div>}
-          {userMessages.length === 0 && (
+          {userMessages.length === 0 && !loading && (
             <div className="ai-shell__welcome-hero">
-              <div className="ai-shell__hero-eyebrow"><span className="ai-shell__hero-icon"><FaChartLine /></span>Your data, a little clearer</div>
-              <Typography component="h2" className="ai-shell__hero-title">A clearer view of<br /><span>your business.</span></Typography>
-              <Typography variant="body1" className="ai-shell__hero-subtitle">
-                Ask a question. Explore a trend. Find the story in your data.
-              </Typography>
-              {suggestions.length > 0 ? <>
-                <div className="ai-shell__section-label">A few places to start</div>
-                <div className="ai-shell__starter-grid" aria-label="Suggested business questions">
-                  {suggestions.map(question => {
-                    const kind = question.startsWith('Build') ? 'dashboard' : question.includes('monthly') ? 'trend' : question.includes('as a chart') ? 'breakdown' : 'metric';
-                    const label = { dashboard: 'Build a dashboard', trend: 'Follow a trend', breakdown: 'Compare a breakdown', metric: 'Explore a metric' }[kind];
-                    const QuestionIcon = { dashboard: FaLayerGroup, trend: FaChartLine, breakdown: FaChartBar, metric: FaDatabase }[kind];
-                    return <button key={question} type="button" aria-label={question} onClick={() => { setUserInput(question); inputRef.current?.focus(); }}>
-                      <span className="ai-shell__starter-heading"><QuestionIcon /><span>{label}</span><FaArrowRight /></span>
-                      <span className="ai-shell__starter-question">{question}</span>
-                    </button>;
-                  })}
+              <div className="ai-shell__welcome-intro">
+                <Typography component="h2" className="ai-shell__hero-title">Ask about your data</Typography>
+                <Typography variant="body1" className="ai-shell__hero-subtitle">
+                  Compare metrics, explore trends, or draft a dashboard from your data.
+                </Typography>
+              </div>
+              <div className="ai-shell__empty-brand" data-testid="ai-chat-empty-brand" aria-hidden="true">
+                <img
+                  className="ai-shell__empty-brand-logo"
+                  src={`${process.env.PUBLIC_URL || ''}/stream-mark.png`}
+                  alt=""
+                />
+                <span className="ai-shell__empty-brand-name">Devstream</span>
+              </div>
+              {suggestions.length > 0 && (
+                <div className="ai-shell__welcome-actions">
+                  <div className="ai-shell__section-label">Suggested questions</div>
+                  <div className="ai-shell__starter-grid" aria-label="Suggested business questions">
+                    {suggestions.map(question => {
+                      const kind = question.startsWith('Build') ? 'dashboard' : question.includes('monthly') ? 'trend' : question.includes('as a chart') ? 'breakdown' : 'metric';
+                      const QuestionIcon = { dashboard: FaLayerGroup, trend: FaChartLine, breakdown: FaChartBar, metric: FaDatabase }[kind];
+                      return <button key={question} type="button" aria-label={question} onClick={() => { setUserInput(question); inputRef.current?.focus(); }}>
+                        <QuestionIcon aria-hidden="true" />
+                        <span className="ai-shell__starter-question">{question}</span>
+                        <FaArrowRight aria-hidden="true" />
+                      </button>;
+                    })}
+                  </div>
                 </div>
-              </> : <div className="ai-shell__connect-card">
-                <FaDatabase /><div><strong>Start with your data</strong><p>Choose a dataset to ask questions in context.</p></div>
-                <button type="button" onClick={chooseData}>Choose Dataset <FaArrowRight /></button>
-              </div>}
+              )}
             </div>
           )}
 
@@ -952,7 +1045,7 @@ function AIChatConversation({ onOpenDashboard, conversation, conversations, stor
                   <p>Interpretation may contain errors. Check the calculated results and source data.</p>
                 </section>}
 
-                {message.dashboard_draft && <DashboardDraft draft={message.dashboard_draft} onAdd={addDashboardResults} onInspect={handleInspect} onOpenDashboard={viewDashboard} />}
+                {message.dashboard_draft && <DashboardDraft draft={message.dashboard_draft} onAdd={selections => addDashboardResults(selections, saveTarget || analyticsWorkspace?.activeDashboardId)} onInspect={handleInspect} onOpenDashboard={viewDashboard} />}
 
                 {!message.dashboard_draft && message.artifacts?.length > 0 && (
                   <div className="ai-shell__artifact-container">
@@ -1005,13 +1098,15 @@ function AIChatConversation({ onOpenDashboard, conversation, conversations, stor
               <FaExclamationTriangle /> {governanceWarning}
             </div>
           )}
-          {notice && <div className="ai-shell__notice" role="status">{notice}</div>}
+          {notice && userMessages.length > 0 && <div className="ai-shell__notice" role="status">{notice}</div>}
           {error && <div className="ai-shell__alert-bar" role="alert"><FaInfoCircle /> {error}
             {failedRequest?.scope === dataScope && <button type="button" disabled={loading} onClick={() => submitTurn({ ...failedRequest, retry: true })}>Retry last question</button>}
           </div>}
         </div>
 
         <div className="ai-shell__footer">
+          {analyticsWorkspace && <label>Save results to <select aria-label="AI result dashboard" value={saveTarget || analyticsWorkspace.activeDashboardId} onChange={event => { setSaveTarget(event.target.value); setPinFeedbackIds({}); }}>{analyticsWorkspace.dashboards.map(board => <option key={board.state.id} value={board.state.id}>{board.state.name}</option>)}</select></label>}
+          {analyticsContext && <div role="status">Analytics context: {analyticsContext.title} · {analyticsContext.source.name || analyticsContext.source.id}<button type="button" onClick={() => setAnalyticsContext(null)}>Clear Analytics context</button></div>}
           <div className="ai-shell__input-wrapper">
             {isMentionOpen && (
               <MentionDropdown
@@ -1055,7 +1150,7 @@ function AIChatConversation({ onOpenDashboard, conversation, conversations, stor
                 disabled={loading || !userInput.trim()}
                 aria-label="Send Message"
               >
-                {loading ? <div className="ai-shell__spinner" /> : <><span>Send</span><FaArrowUp className="ai-shell__send-icon" /></>}
+                {loading ? <div className="ai-shell__spinner" /> : <FaArrowUp className="ai-shell__send-icon" />}
               </button>
             </div>
             <fieldset className="ai-shell__model-controls" disabled={loading} aria-describedby="ai-chat-model-hint">
@@ -1081,13 +1176,12 @@ function AIChatConversation({ onOpenDashboard, conversation, conversations, stor
                   : 'Local calculations first · Models chosen to fit your question'}</p>
             </fieldset>
           </div>
-          <div className="ai-shell__composer-hint"><FaShieldAlt /><span>Answers grounded in your data. Review the details behind each result.</span></div>
         </div>
       </main>
 
       <aside id="ai-chat-results" aria-label="BI Results" hidden={!isResultsPaneOpen} className={`ai-shell__results-pane ${isResultsPaneOpen ? 'is-open' : 'is-closed'} ${activeArtifact ? 'has-result' : ''}`}>
         <div className="ai-shell__pane-header">
-          <div><span className="ai-shell__section-label">Your analysis</span><h2 ref={resultsHeadingRef} tabIndex={-1}>Result details</h2></div>
+          <h2 ref={resultsHeadingRef} tabIndex={-1}>Result details</h2>
           <IconButton onClick={closeResults} size="small" aria-label="Close Results Pane">
             <FaTimes />
           </IconButton>
@@ -1099,22 +1193,39 @@ function AIChatConversation({ onOpenDashboard, conversation, conversations, stor
             renderArtifact(activeArtifact, true)
           ) : (
             <div className="ai-shell__viewer-empty">
-              <div className="ai-shell__viewer-empty-icon"><FaChartBar /></div>
-              <h3>Room for a closer look</h3>
-              <p>Your charts and business results appear here, with the details behind every answer.</p>
-              <div className="ai-shell__result-guide">
-                <div><FaEye /><span><strong>Explore the result</strong><span>Inspect charts and key numbers.</span></span></div>
-                <div><FaDatabase /><span><strong>See the source</strong><span>Review metrics, filters and data.</span></span></div>
-                <div><FaLayerGroup /><span><strong>Keep what matters</strong><span>Save useful results to a dashboard.</span></span></div>
-              </div>
+              <div className="ai-shell__viewer-empty-icon" aria-hidden="true"><FaChartBar /></div>
+              <h3>No result selected</h3>
+              <p>Open a chart or table from the conversation to inspect it here.</p>
             </div>
           )}
         </div>
       </aside>
       </div>
 
+      <Menu anchorEl={datasetMenuAnchor} open={isDatasetMenuOpen} onClose={closeDatasetMenu}
+        container={getOverlayContainer} className="ai-shell__dataset-menu"
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }} transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+        disableScrollLock disableRestoreFocus disableEnforceFocus
+        slotProps={{ list: { id: datasetMenuId, 'aria-labelledby': `${datasetMenuId}-trigger` } }}>
+        <ListSubheader disableSticky>Datasets for this question</ListSubheader>
+        {datasetMenuStatus === 'loading' ? (
+          <MenuItem disabled>Loading saved datasets…</MenuItem>
+        ) : [
+          datasetMenuStatus === 'error' && <MenuItem key="error" disabled>Couldn’t load saved datasets.</MenuItem>,
+          datasets.length === 0 && datasetMenuStatus !== 'error' && <MenuItem key="empty" disabled>No saved datasets yet.</MenuItem>,
+          ...datasets.map(({ id, name }) => (
+            <MenuItem key={id} selected={draftDatasets.includes(name)} onClick={() => addDatasetToQuestion(name)}>
+              <span className="ai-shell__dataset-menu-icon"><FaDatabase aria-hidden="true" /></span>
+              <span className="ai-shell__dataset-menu-name">{name}</span>
+              {draftDatasets.includes(name) && <FaCheckCircle className="ai-shell__dataset-menu-check" aria-hidden="true" />}
+            </MenuItem>
+          )),
+        ]}
+      </Menu>
+
       <Dialog open={isHistoryOpen} onClose={() => setIsHistoryOpen(false)} fullWidth maxWidth="sm"
-        container={() => shellRef.current?.ownerDocument.body}
+        container={getOverlayContainer}
+        disableEnforceFocus={shellRef.current?.ownerDocument === document ? undefined : false}
         className="ai-shell__chat-dialog" aria-labelledby="ai-chat-history-title">
         <DialogTitle id="ai-chat-history-title">Your chats</DialogTitle>
         <DialogContent>
@@ -1126,7 +1237,8 @@ function AIChatConversation({ onOpenDashboard, conversation, conversations, stor
       </Dialog>
 
       <Dialog open={isChatActionOpen} onClose={() => setIsChatActionOpen(false)} fullWidth maxWidth="xs"
-        container={() => shellRef.current?.ownerDocument.body}
+        container={getOverlayContainer}
+        disableEnforceFocus={shellRef.current?.ownerDocument === document ? undefined : false}
         TransitionProps={{ onExited: () => setChatAction(null) }}
         className="ai-shell__chat-dialog ai-shell__chat-action-dialog" aria-labelledby="ai-chat-action-title">
         <DialogTitle id="ai-chat-action-title">{chatAction?.kind === 'rename' ? 'Rename chat' : chatAction?.kind === 'delete' ? 'Delete this chat?' : 'Reset this chat?'}</DialogTitle>
@@ -1150,14 +1262,15 @@ function AIChatConversation({ onOpenDashboard, conversation, conversations, stor
   );
 }
 
-function AIShell({ onOpenDashboard } = {}) {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+function AIShell({ onOpenDashboard, initialSidebarOpen = true, windowActions, windowNotice } = {}) {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(initialSidebarOpen);
   const { conversations, activeId, storageError, saveActive, newChat, selectChat, renameChat, deleteChat, resetChat } = useChatConversations();
   const conversation = conversations.find(chat => chat.id === activeId);
   const saveSnapshot = useCallback(snapshot => saveActive(activeId, snapshot), [activeId, saveActive]);
   return <AIChatConversation key={conversation.id} conversation={conversation} conversations={conversations}
     isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen}
     storageError={storageError} onSnapshot={saveSnapshot} onOpenDashboard={onOpenDashboard}
+    windowActions={windowActions} windowNotice={windowNotice}
     onNewChat={newChat} onSelectChat={selectChat} onRenameChat={renameChat} onDeleteChat={deleteChat} onResetChat={resetChat} />;
 }
 

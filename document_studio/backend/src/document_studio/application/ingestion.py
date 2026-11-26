@@ -4,7 +4,7 @@ Defines the abstract ingestion service that accepts server-received bytes
 and produces a normalized document or a structured requires-ocr result.
 
 This module may import domain contracts but must not import parser
-libraries, FastAPI, Flask, SQLite, filesystem paths, or AI_Tool state.
+libraries, FastAPI, Flask, SQLite, filesystem paths, or Devstream state.
 """
 
 from __future__ import annotations

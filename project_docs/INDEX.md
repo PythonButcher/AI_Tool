@@ -1,4 +1,4 @@
-# AI_Tool Documentation Map
+# Datastream Documentation Map
 
 Give Codex and frontend agents a map, not a 1000 page instruction manual.
 
@@ -19,6 +19,10 @@ This is the top-level routing file. Use it to find the smallest current document
 | Check concise current status | `project_docs/active/status/project_execution_status.md` |
 | Check implementation authorization | `project_docs/active/status/phase_authorization.json` |
 | Work on the current project gate | `project_docs/active/active_gate/README.md` |
+| Save and reopen working datasets | `project_docs/active/saved_datasets/README.md` |
+| Find data tools and review missing UI capabilities | `project_docs/active/reviews/devstream_ui_workflow_inventory.md` |
+| Implement Analytics | `project_docs/active/analytics/README.md` |
+| Implement configurable Business Objects in Data Model | `project_docs/active/business_objects/README.md` |
 | Improve the AI Chat business workspace | `project_docs/active/ai_chat/README.md` |
 | Review the active ML Studio roadmap | `project_docs/active/ml_studio/README.md` |
 | Review ML Studio implementation and supported boundaries | `project_docs/active/contracts/ml_studio.md` and `project_docs/active/status/project_execution_status.md` |
@@ -45,7 +49,7 @@ AI Chat is a BI-first NLP workspace. Existing grounded answers, semantic-model r
 
 Decision Intelligence output has been removed from the AI Chat product path. Isolated backend services remain for compatibility only and must not be treated as active UI scope.
 
-Phase 13 establishes ML Studio as a first-class AI Tool destination. All five local task workflows and the theme-aligned frontend are engineering-complete; final browser acceptance belongs to the user. Status records verification and remaining limitations.
+Phase 13 establishes ML Studio as a first-class Devstream destination. All five local task workflows and the theme-aligned frontend are engineering-complete; final browser acceptance belongs to the user. Status records verification and remaining limitations.
 
 ## Ownership
 
@@ -57,7 +61,7 @@ Phase 13 establishes ML Studio as a first-class AI Tool destination. All five lo
 
 Codex must not edit frontend files unless the user explicitly authorizes Codex frontend edits in the current session.
 
-Codex manages the current gate for the broader AI Tool and AI Chat. After substantial work, Codex states whether backend work, an Antigravity UI handoff, Codex integration review, or user verification is required next. Do not make the user infer who acts next.
+Codex manages the current gate for the broader Datastream platform and AI Chat. After substantial work, Codex states whether backend work, an Antigravity UI handoff, Codex integration review, or user verification is required next. Do not make the user infer who acts next.
 
 ## Do Not Do This
 

@@ -1,4 +1,6 @@
-# Getting Started with Create React App
+# Datastream frontend
+
+The React frontend serves the Datastream hub at the default address and the Devstream workspace at `?app=devstream`.
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 

@@ -1,24 +1,34 @@
 import React from 'react';
 import { FaTable } from 'react-icons/fa';
 
-const DataCleaningPreview = ({ previewRows }) => {
+const renderCell = value => {
+  if (value == null) return '—';
+  return typeof value === 'object' ? JSON.stringify(value) : String(value);
+};
+
+const DataCleaningPreview = ({ rows, columns, totalRows, isResult, hasDataset }) => {
+  const heading = isResult ? 'Preview of applied steps' : 'Current data';
   return (
     <div className="preview-container">
-      {previewRows && previewRows.length > 0 ? (
+      <div className="cleaning-preview-heading">
+        <h3>{heading}</h3>
+        {hasDataset && <span>{rows.length.toLocaleString()} of {totalRows.toLocaleString()} rows · {columns.length} fields</span>}
+      </div>
+      {rows.length > 0 ? (
         <div className="table-scroll">
-          <table className="preview-table">
+          <table className="preview-table" aria-label={heading}>
             <thead>
               <tr>
-                {Object.keys(previewRows[0]).map((key) => (
-                  <th key={key}>{key}</th>
+                {columns.map((key) => (
+                  <th key={key} scope="col">{key}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {previewRows.map((row, idx) => (
+              {rows.map((row, idx) => (
                 <tr key={idx}>
-                  {Object.keys(previewRows[0]).map((key) => (
-                    <td key={`${idx}-${key}`}>{row[key]}</td>
+                  {columns.map((key) => (
+                    <td key={key}>{renderCell(row?.[key])}</td>
                   ))}
                 </tr>
               ))}
@@ -27,8 +37,8 @@ const DataCleaningPreview = ({ previewRows }) => {
         </div>
       ) : (
         <div className="empty-state">
-          <FaTable className="empty-icon" />
-          <p>Add steps from the ribbon above and click "Run Preview" to see results.</p>
+          <FaTable className="empty-icon" aria-hidden="true" />
+          <p>{isResult ? 'These steps returned no rows.' : hasDataset ? 'This dataset has no rows.' : 'Upload data or open a saved dataset to begin.'}</p>
         </div>
       )}
     </div>

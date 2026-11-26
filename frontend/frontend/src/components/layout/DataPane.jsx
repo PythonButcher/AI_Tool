@@ -1,4 +1,4 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext } from 'react';
 import { 
   FaDatabase, 
   FaChevronRight, 
@@ -16,7 +16,6 @@ import SemanticModelPanel from '../insights/SemanticModelPanel';
 import FileUpload from '../data_management/FileUpload';
 import ApiDataForm from '../../features/api/APiDataForm';
 import DatabaseConnectForm from '../../features/database/DatabaseConnectForm';
-import DataHubWindow from '../../features/database/DataHubWindow';
 import { DataContext } from '../../context/DataContext';
 import './DataPane.css';
 
@@ -41,10 +40,12 @@ const DataPane = ({
   handleDatabaseData,
   activeTab = 'catalog',
   setActiveTab,
+  activeSource,
+  setActiveSource,
+  onOpenDataHub,
 }) => {
   const { semanticModel, semanticModelStatus, uploadedData } = useContext(DataContext);
   const postgresReadiness = uploadedData?.source?.source_kind === 'sql' ? uploadedData.governance_readiness : null;
-  const [activeSource, setActiveSource] = useState(null); // 'upload', 'api', 'db', 'hub'
 
   // Determine which panel to show based on destination
   const showSemantic = activeDestination === DESTINATIONS.DASHBOARDS;
@@ -90,7 +91,7 @@ const DataPane = ({
               <p>Import tables or open a saved model</p>
             </div>
           </button>
-          <button className="source-card" onClick={() => setActiveSource('hub')}>
+          <button className="source-card" onClick={onOpenDataHub}>
             <FaBoxOpen className="source-card__icon" />
             <div className="source-card__info">
               <h4>Data Hub</h4>
@@ -111,6 +112,7 @@ const DataPane = ({
             <FileUpload 
               onUploadComplete={() => {setActiveSource(null); setActiveTab('catalog');}} 
               onFileUploadSuccess={onFileUploadSuccess} 
+              onOpenDataHub={onOpenDataHub}
             />
           )}
           {activeSource === 'api' && (
@@ -124,9 +126,6 @@ const DataPane = ({
               handleDatabaseData={(data) => { handleDatabaseData(data); setActiveSource(null); setActiveTab('catalog'); }} 
               onClose={() => setActiveSource(null)} 
             />
-          )}
-          {activeSource === 'hub' && (
-            <DataHubWindow />
           )}
         </div>
       </div>
@@ -143,7 +142,7 @@ const DataPane = ({
         {isCollapsed ? <FaChevronLeft /> : <FaChevronRight />}
       </button>
 
-      <div className="data-pane__content">
+      <div className="data-pane__content" aria-hidden={isCollapsed} inert={isCollapsed ? '' : undefined}>
         <header className="data-pane__header">
           <div className="data-pane__title-group">
             <span className="data-pane__eyebrow">{header.eyebrow}</span>

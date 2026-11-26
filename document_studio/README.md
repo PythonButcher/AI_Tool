@@ -41,9 +41,9 @@ document_studio/
 | Layer            | May Import                        | Must Not Import                          |
 | ---------------- | --------------------------------- | ---------------------------------------- |
 | `api/`           | FastAPI, `application`, `domain`  | `infrastructure` internals directly      |
-| `application/`   | `domain`                          | FastAPI, Flask, AI_Tool state             |
-| `domain/`        | Python stdlib only                | FastAPI, Flask, AI_Tool state, SQLAlchemy |
-| `infrastructure/`| `domain`, third-party adapters    | FastAPI, Flask, AI_Tool state             |
+| `application/`   | `domain`                          | FastAPI, Flask, Devstream state             |
+| `domain/`        | Python stdlib only                | FastAPI, Flask, Devstream state, SQLAlchemy |
+| `infrastructure/`| `domain`, third-party adapters    | FastAPI, Flask, Devstream state             |
 
 ## Local Record Boundary
 
