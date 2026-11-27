@@ -20,6 +20,38 @@ function Workbench({ sourceContext, dataRows = rows }) {
     sourceContext={sourceContext} actions={{}} />;
 }
 
+test('toggles the selected inline tool back to working rows and switches directly between tools', () => {
+  render(<Workbench />);
+  const inspect = screen.getByRole('button', { name: 'Inspect rows' });
+  const validate = screen.getByRole('button', { name: 'Validate values' });
+  const checkKeys = screen.getByRole('button', { name: 'Check keys' });
+  const expectWorkingRows = () => {
+    expect(inspect).toHaveAttribute('aria-pressed', 'true');
+    expect(within(screen.getByRole('table', { name: 'Working rows' })).getAllByText('North')).toHaveLength(25);
+    expect(screen.getByText('1–25 of 28 rows')).toBeVisible();
+  };
+
+  fireEvent.click(validate);
+  expect(screen.getByRole('heading', { name: 'Validate values' })).toBeVisible();
+  expect(validate).toHaveAttribute('aria-pressed', 'true');
+  expect(inspect).toHaveAttribute('aria-pressed', 'false');
+
+  fireEvent.click(validate);
+  expect(validate).toHaveAttribute('aria-pressed', 'false');
+  expectWorkingRows();
+
+  fireEvent.click(validate);
+  fireEvent.click(checkKeys);
+  expect(screen.getByRole('heading', { name: 'Check keys' })).toBeVisible();
+  expect(checkKeys).toHaveAttribute('aria-pressed', 'true');
+  expect(validate).toHaveAttribute('aria-pressed', 'false');
+  expect(screen.queryByRole('table', { name: 'Working rows' })).not.toBeInTheDocument();
+
+  fireEvent.click(checkKeys);
+  expect(checkKeys).toHaveAttribute('aria-pressed', 'false');
+  expectWorkingRows();
+});
+
 test('pages the original rows and checks duplicates and completeness outside the first page', () => {
   render(<Workbench />);
   expect(screen.getByText('1–25 of 28 rows')).toBeVisible();
@@ -74,7 +106,7 @@ test('combines preview rules and leaves quality checks on the complete working r
   const matching = within(screen.getByRole('table', { name: 'Matching rows' }));
   expect(matching.getAllByRole('row')).toHaveLength(3);
   expect(matching.queryByText('28')).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: 'Inspect rows' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Filter rows' }));
   expect(screen.getByText('1–2 of 2 rows')).toBeVisible();
   fireEvent.click(screen.getByRole('button', { name: 'Filter rows' }));
   expect(screen.getByRole('group', { name: 'Rule 2' })).toBeVisible();

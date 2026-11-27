@@ -260,7 +260,7 @@ export default function DataToolsWorkbench({
                   <button type="button" key={id} disabled={isDisabled(id)}
                     aria-pressed={id === 'model' ? undefined : currentTool === id}
                     aria-describedby={id === 'query' && dataset && !canRefine ? 'dt-refine-limit' : undefined}
-                    onClick={id === 'model' ? actions.openModel : () => setTool(id)}>
+                    onClick={id === 'model' ? actions.openModel : () => setTool(currentTool === id ? 'rows' : id)}>
                     <Icon aria-hidden="true" /><span>{name}</span>{id === 'model' && <FaArrowRight aria-hidden="true" />}
                   </button>
                 ))}
