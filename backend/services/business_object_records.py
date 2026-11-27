@@ -1,5 +1,6 @@
 """Read governed records from the sources of a saved Business Object."""
 
+from collections import Counter
 from contextlib import closing
 from datetime import date
 import math
@@ -30,6 +31,7 @@ MAX_SOURCE_BYTES = 32 * 1024 * 1024
 MAX_EXPANDED_WORKBOOK_BYTES = 64 * 1024 * 1024
 MAX_KEY_LENGTH = 512
 KEY_TYPES = {"string", "integer", "number", "boolean", "datetime"}
+RecordKey = tuple[str, str]
 
 
 class RecordAccessDenied(BusinessObjectError):
@@ -38,7 +40,7 @@ class RecordAccessDenied(BusinessObjectError):
         self.readiness = readiness
 
 
-def _typed_key(value: Any) -> tuple[str, str] | None:
+def _typed_key(value: Any) -> RecordKey | None:
     if isinstance(value, str) and value.strip() and len(value) <= MAX_KEY_LENGTH:
         return "string", value
     if value is None or value is pd.NA or value is pd.NaT:
@@ -86,7 +88,7 @@ def _load_frame(workspace_id: str, source_id: str) -> tuple[pd.DataFrame, dict]:
     return frame, readiness
 
 
-def _read_object(workspace_id: str, object_id: str) -> tuple[dict, dict, pd.DataFrame, dict, dict]:
+def _read_object(workspace_id: str, object_id: str) -> tuple[dict, dict, pd.DataFrame, list[RecordKey | None], dict]:
     workspace = get_workspace(workspace_id)
     definition = get_business_object(workspace_id, object_id)
     error = definition["configuration_error"]
@@ -96,15 +98,7 @@ def _read_object(workspace_id: str, object_id: str) -> tuple[dict, dict, pd.Data
     field = definition["record_key_field"]
     if field not in frame or (definition["display_field"] and definition["display_field"] not in frame):
         raise BusinessObjectError("record_configuration_unavailable", "A configured record field is missing.")
-    positions = {}
-    for position, value in enumerate(frame[field]):
-        key = _typed_key(value)
-        if key is None:
-            raise BusinessObjectError("record_key_missing", "The record key field contains blank or unsupported values.")
-        if key in positions:
-            raise BusinessObjectError("record_key_duplicate", "The record key field contains duplicate values.")
-        positions[key] = position
-    return workspace, definition, frame, positions, readiness
+    return workspace, definition, frame, [_typed_key(value) for value in frame[field]], readiness
 
 
 def _check_workspace(workspace: dict) -> None:
@@ -112,33 +106,55 @@ def _check_workspace(workspace: dict) -> None:
         raise BusinessObjectError("workspace_version_conflict", "The model changed while reading records. Try again.")
 
 
-def _summary(key: tuple[str, str], label: Any) -> dict:
+def _summary(key: RecordKey, label: Any) -> dict:
     return {"key": {"type": key[0], "value": key[1]}, "label": label}
 
 
 def search_records(workspace_id: str, object_id: str, query: str) -> dict:
     if len(query) > 200:
         raise BusinessObjectError("invalid_record_request", "The search can contain up to 200 characters.")
-    workspace, definition, frame, positions, readiness = _read_object(workspace_id, object_id)
+    workspace, definition, frame, keys, readiness = _read_object(workspace_id, object_id)
+    frequency = Counter(keys)
     field = definition["display_field"]
     labels = frame[field].astype("string").fillna("") if field else None
     query = query.strip().casefold()
     matches = []
     exact = []
     match_count = 0
-    for key, position in positions.items():
+    issues = []
+    issue_count = 0
+    for position, key in enumerate(keys):
         label = labels.iat[position] if labels is not None else ""
-        key_text = key[1].casefold()
-        if not query or query in key_text or query in label.casefold():
-            bucket = exact if query and key_text == query else matches
-            match_count += 1
-            if len(bucket) < RESULT_LIMIT:
-                bucket.append((key, label))
+        key_value = key[1] if key is not None else ""
+        key_text = key_value.casefold()
+        if query and query not in key_text and query not in label.casefold():
+            continue
+        if key is None or frequency[key] > 1:
+            issue_count += 1
+            if len(issues) < RESULT_LIMIT:
+                issues.append({
+                    "row_number": position + 1,
+                    "label": (label or key_value)[:MAX_KEY_LENGTH],
+                    "key_value": key_value or None,
+                    "reason": "duplicate" if key is not None else "missing_or_unsupported",
+                })
+            continue
+        bucket = exact if query and key_text == query else matches
+        match_count += 1
+        if len(bucket) < RESULT_LIMIT:
+            bucket.append(_summary(key, label or key_value))
     _check_workspace(workspace)
     return {
         "object_id": object_id,
-        "records": [_summary(key, label or key[1]) for key, label in (exact + matches)[:RESULT_LIMIT]],
+        "records": (exact + matches)[:RESULT_LIMIT],
         "has_more": match_count > RESULT_LIMIT,
+        "key_issues": {
+            "field": definition["record_key_field"],
+            "duplicate_rows": sum(count for key, count in frequency.items() if key is not None and count > 1),
+            "missing_or_unsupported_rows": frequency[None],
+            "matching_rows": issue_count,
+            "matches": issues,
+        },
         "governance_readiness": readiness,
     }
 
@@ -196,9 +212,13 @@ def get_record(workspace_id: str, object_id: str, payload: Any) -> dict:
     # The relationship service can mark stale evidence and advance the version
     # during a read. Retry once so the response sees a consistent model.
     for _ in range(2):
-        workspace, definition, frame, positions, readiness = _read_object(workspace_id, object_id)
-        position = positions.get((key["type"], key["value"]))
-        if position is None:
+        workspace, definition, frame, keys, readiness = _read_object(workspace_id, object_id)
+        typed_key = (key["type"], key["value"])
+        if keys.count(typed_key) > 1:
+            raise BusinessObjectError("record_key_duplicate", "This ID matches more than one row. Review the matching rows in search.")
+        try:
+            position = keys.index(typed_key)
+        except ValueError:
             raise BusinessObjectError("record_not_found", "The record was not found in this Business Object.")
         relationships = definition["relationship_ids"]
         if len(relationships) > MAX_RELATIONSHIPS:
@@ -210,7 +230,7 @@ def get_record(workspace_id: str, object_id: str, payload: Any) -> dict:
         if get_workspace(workspace_id) == workspace:
             field = definition["display_field"]
             label = row[field].astype("string").fillna("").iat[0] if field else ""
-            record = _summary((key["type"], key["value"]), label or key["value"])
+            record = _summary(typed_key, label or key["value"])
             record["fields"] = safe_json_records(row)[0]
             return {
                 "object_id": object_id,

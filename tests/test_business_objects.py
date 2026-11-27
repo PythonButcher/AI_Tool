@@ -151,21 +151,35 @@ def test_record_search_and_detail_use_configured_sources_and_relationships(clien
     assert client.post(f"{customers.replace(workspace, model['other_workspace'])}/detail", json={"key": key}).status_code == 404
 
 
-@pytest.mark.parametrize(("rows", "error"), [
-    (b"1,Acme\n1,Other\n", "record_key_duplicate"),
-    (b"1,Acme\n,Other\n", "record_key_missing"),
-])
-def test_record_identity_refuses_blank_or_duplicate_keys(client, rows, error):
-    uploaded = _upload(client, "customers.csv", b"identifier,name\n" + rows)
+def test_search_includes_rows_with_key_issues_and_detail_refuses_only_ambiguous_keys(client):
+    uploaded = _upload(client, "products.csv", b"sku,name\nD-1,Drill\nS-2,Saw\nD-1,Drill Kit\n,Clamp\n")
     url = _record_url({"workspace": uploaded["workspace"]["workspace_id"]}, {
-        "display_name": "Customer", "source_id": uploaded["source"]["source_id"],
-        "record_key_field": "identifier", "display_field": "name", "relationship_ids": [],
+        "display_name": "Products", "source_id": uploaded["source"]["source_id"],
+        "record_key_field": "sku", "display_field": "name", "relationship_ids": [],
     })
-    for response in (client.get(url), client.post(f"{url}/detail", json={
-        "key": {"type": "integer", "value": "1"}
-    })):
-        assert response.status_code == 409
-        assert response.get_json()["error"]["code"] == error
+    def search(query):
+        response = client.get(url, query_string={"q": query})
+        assert response.status_code == 200, response.get_json()
+        return response.get_json()
+
+    assert search("")["key_issues"]["matching_rows"] == 3
+    issue = search("Drill")["key_issues"]
+    assert issue == search("d-1")["key_issues"] == {
+        "field": "sku", "duplicate_rows": 2, "missing_or_unsupported_rows": 1, "matching_rows": 2,
+        "matches": [
+            {"row_number": 1, "label": "Drill", "key_value": "D-1", "reason": "duplicate"},
+            {"row_number": 3, "label": "Drill Kit", "key_value": "D-1", "reason": "duplicate"},
+        ],
+    }
+    assert search("Clamp")["key_issues"]["matches"] == [
+        {"row_number": 4, "label": "Clamp", "key_value": None, "reason": "missing_or_unsupported"},
+    ]
+    key = {"type": "string", "value": "S-2"}
+    assert search("Saw")["records"] == [{"key": key, "label": "Saw"}]
+    assert client.post(f"{url}/detail", json={"key": key}).get_json()["record"]["label"] == "Saw"
+    ambiguous = client.post(f"{url}/detail", json={"key": {"type": "string", "value": "D-1"}})
+    assert ambiguous.status_code == 409
+    assert ambiguous.get_json()["error"]["code"] == "record_key_duplicate"
 
 
 def test_bounds_and_lossless_integer_identity(client, monkeypatch):

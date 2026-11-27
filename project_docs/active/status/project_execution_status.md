@@ -19,6 +19,8 @@
 - **Active Handoff**: None
 - **Latest Verification**: The [record browser engineering review](../../archive/business_object_record_browser_reviewed_2026_11_26.md) passed nine focused panel tests, a production build with warnings, and Chrome layout fixtures at 320 and 1440 pixels.
 
+Business Object search returns matching rows with repeated or missing keys and shows the checked field and dataset row positions. Opening details still requires an exact unique key. Backend verification passed 83 focused tests, including the duplicate-key search regression. Final Business Objects browser acceptance remains pending.
+
 ## Pending Data Tools Acceptance
 
 The Data Tools tab, Workspace landing, and initial Power Query preview remain awaiting the user's browser decision. The repair passed 97 focused frontend tests, 48 backend regression tests, seven App tests after the phone-width pane fix, Chrome fixtures at 1440 and 390 pixels, and the production build with existing warnings.

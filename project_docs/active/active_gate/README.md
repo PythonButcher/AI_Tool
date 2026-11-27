@@ -8,9 +8,11 @@ A user can open a selected Business Object record in Analytics, see its name and
 
 **Current Step**: Step 1: Implement and verify exact record scope
 
-**Target Files**: `backend/services/business_object_records.py`, `backend/services/relationship_execution.py`, `backend/analytics/query.py`, `backend/routes/data_workspaces.py`, `tests/test_business_objects.py`, `tests/test_analytics_query.py`, and the Business Objects and Analytics contracts.
+**Target Files**: `backend/services/business_object_records.py`, `backend/services/relationship_execution.py`, `backend/analytics/query.py`, `backend/routes/data_workspaces.py`, `tests/test_business_objects.py`, `tests/test_analytics_query.py`, the Business Objects panel and its focused tests, and the Business Objects and Analytics contracts.
 
 **Step Acceptance**: Resolve the saved workspace, object, and typed key on the server. Restrict the analysis to that record and its selected, verified relationships. Use the object source as the record anchor even when it is a lookup source. Refuse changed, missing, ambiguous, or blocked scope visibly.
+
+Search must surface duplicate or missing key values without blocking unrelated usable records. Show the configured field and affected matching row positions in the record browser. Ambiguous identities cannot open record detail or Analytics.
 
 **Step Verification**: Exercise the normal Analytics query endpoint with Acme and its Orders, Equipment and Maintenance, a second customer with excluded orders, and stale or denied scope. Reconcile an Acme grouped order sum of 20 to the selected order rows.
 

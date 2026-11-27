@@ -576,6 +576,40 @@ describe('BusinessObjectsPanel and SourceModelCanvas integration', () => {
   const recPage = (object_id, records, has_more = false) => ({ object_id, records, has_more, governance_readiness: READY_GOV });
   const okPayload = (body, status = 200) => ({ ok: status >= 200 && status < 300, status, json: () => Promise.resolve(body) });
 
+  test('shows matching repeated IDs and their row numbers without blocking record search', async () => {
+    const repeatRows = [
+      { row_number: 3, label: 'Acme', key_value: '1', reason: 'duplicate' },
+      { row_number: 7, label: 'Acme East', key_value: '1', reason: 'duplicate' },
+    ];
+    global.fetch.mockImplementation((url, options = {}) => {
+      if (url.endsWith('/ws_demo/business-objects')) return jsonResponse({ business_objects: [CUSTOMER_OBJ] });
+      if (options.method === 'POST') return jsonResponse(LIN_DETAIL);
+      const issueOnly = url.endsWith('?q=Acme');
+      return jsonResponse({
+        ...recPage('obj_customer', issueOnly ? [] : [{ key: LIN_KEY, label: 'Lin' }]),
+        key_issues: { field: 'customer_id', duplicate_rows: 2, missing_or_unsupported_rows: 0, matching_rows: 2, matches: repeatRows },
+      });
+    });
+    render(<BusinessObjectsPanel workspaceId="ws_demo" sources={HYDRATED_SOURCES} relationships={DEMO_RELATIONSHIPS} onClose={jest.fn()} />);
+    fireEvent.click(await screen.findByRole('button', { name: /Customer/i }));
+    const browser = await screen.findByRole('region', { name: 'Record Browser' });
+    await within(browser).findByRole('button', { name: /Lin\s*2/ });
+    fireEvent.change(within(browser).getByLabelText('Search Customer records'), { target: { value: 'Acme' } });
+    fireEvent.click(within(browser).getByRole('button', { name: /^Search$/ }));
+    expect(await within(browser).findByText('Key field checked: customer_id')).toBeVisible();
+    const matches = within(browser).getByRole('table', { name: 'Matching rows with key issues' });
+    expect(within(matches).getAllByRole('rowheader').map(cell => cell.textContent)).toEqual(['3', '7']);
+    expect(within(matches).getByText('Acme East')).toBeVisible();
+    expect(within(browser).queryByText('No matching records found.')).not.toBeInTheDocument();
+    expect(within(browser).queryByRole('button', { name: /Acme/ })).not.toBeInTheDocument();
+
+    fireEvent.change(within(browser).getByLabelText('Search Customer records'), { target: { value: 'Lin' } });
+    fireEvent.click(within(browser).getByRole('button', { name: /^Search$/ }));
+    fireEvent.click(await within(browser).findByRole('button', { name: /Lin\s*2/ }));
+    const detail = await within(browser).findByRole('region', { name: 'Record Detail' });
+    expect(await within(detail).findByText('55')).toBeVisible();
+  });
+
   test('browses Customer (Acme by name and ID) and Equipment (Pump), sends exact typed keys, and renders empty, unavailable, truncated, warning, and blocked states', async () => {
     let mode = 'acme';
     global.fetch.mockImplementation((url, options = {}) => {

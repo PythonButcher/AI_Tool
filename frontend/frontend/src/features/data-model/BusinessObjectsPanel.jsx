@@ -9,7 +9,7 @@ const sortDefinitions = (list) =>
     return byTime !== 0 ? byTime : String(a.object_id || '').localeCompare(String(b.object_id || ''));
   });
 
-const INITIAL_SEARCH = { status: 'idle', records: [], hasMore: false, governance: null, error: null };
+const INITIAL_SEARCH = { status: 'idle', records: [], hasMore: false, keyIssues: null, governance: null, error: null };
 const INITIAL_DETAIL = { status: 'idle', record: null, relationships: [], governance: null, error: null };
 const INITIAL_BROWSER = { objectId: null, query: '', submittedQuery: '', search: INITIAL_SEARCH, selectedKey: null, detail: INITIAL_DETAIL };
 const formatCellValue = (v) => (v === null || v === undefined || v === '' ? '—' : typeof v === 'boolean' ? String(v) : typeof v === 'object' ? JSON.stringify(v) : String(v));
@@ -38,6 +38,42 @@ const renderBrowserError = (state, retryLabel, onRetry) => (
     <div className="bo-alert-actions"><button type="button" className="btn btn-secondary" onClick={onRetry}>{retryLabel}</button></div>
   </div>
 );
+
+function RecordKeyIssues({ issues }) {
+  if (!issues || (!issues.duplicate_rows && !issues.missing_or_unsupported_rows)) return null;
+  return (
+    <section className="bo-rel-section" aria-label="Record key issues">
+      <div className="bo-gov-warning" role="status">
+        <strong>Key field checked: {issues.field}</strong>
+        <span>{issues.duplicate_rows} rows with repeated IDs · {issues.missing_or_unsupported_rows} rows with blank or unsupported IDs.</span>
+      </div>
+      {issues.matching_rows > 0 && (
+        <>
+          <h4 className="bo-rel-title">Matching rows without a unique usable ID</h4>
+          <p className="bo-truncation-note">These matches are visible here. A unique ID is required to open record details.</p>
+          <div className="bo-table-wrap">
+            <table className="bo-table" aria-label="Matching rows with key issues">
+              <thead><tr><th scope="col">Dataset row</th><th scope="col">Record</th><th scope="col">{issues.field}</th><th scope="col">Issue</th></tr></thead>
+              <tbody>
+                {issues.matches.map(row => (
+                  <tr key={row.row_number}>
+                    <th scope="row">{row.row_number}</th>
+                    <td>{formatCellValue(row.label)}</td>
+                    <td>{formatCellValue(row.key_value)}</td>
+                    <td>{row.reason === 'duplicate' ? 'Repeated ID' : 'Blank or unsupported ID'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {issues.matching_rows > issues.matches.length && (
+            <p className="bo-truncation-note">Showing {issues.matches.length} of {issues.matching_rows} matching rows with key issues. Refine your search to narrow the list.</p>
+          )}
+        </>
+      )}
+    </section>
+  );
+}
 
 const BusinessObjectsPanel = ({ workspaceId, sources = [], relationships = [], onRefreshModel, onClose, triggerRef }) => {
   const [objectsByWorkspace, setObjectsByWorkspace] = useState({});
@@ -399,7 +435,7 @@ const BusinessObjectsPanel = ({ workspaceId, sources = [], relationships = [], o
       if (!isMountedRef.current || activeWorkspaceIdRef.current !== targetWs || b.objectId !== targetObj || b.searchId !== reqId) return;
       b.pendingSearch = null;
       const search = ok
-        ? { status: 'ready', records: Array.isArray(data?.records) ? data.records : [], hasMore: Boolean(data?.has_more), governance: data?.governance_readiness || null, error: null }
+        ? { status: 'ready', records: Array.isArray(data?.records) ? data.records : [], hasMore: Boolean(data?.has_more), keyIssues: data?.key_issues || null, governance: data?.governance_readiness || null, error: null }
         : { status: 'error', records: [], hasMore: false, governance: data?.governance_readiness || null, error: { code: data?.error?.code || 'record_search_failed', message: data?.error?.message || fallback, status } };
       setBrowser((p) => ({ ...p, search }));
     } catch (err) {
@@ -557,7 +593,9 @@ const BusinessObjectsPanel = ({ workspaceId, sources = [], relationships = [], o
             {browser.search.status === 'ready' && (
               <>
                 {renderGovernanceNotice(browser.search.governance)}
-                {browser.search.records.length === 0 ? <div className="bo-state-box" role="status">No matching records found.</div> : (
+                {browser.search.records.length === 0 ? (
+                  !browser.search.keyIssues?.matching_rows && <div className="bo-state-box" role="status">No matching records found.</div>
+                ) : (
                   <div className="bo-record-results">
                     <ul className="bo-record-list" aria-label="Matching records">
                       {browser.search.records.map((rec) => {
@@ -575,6 +613,7 @@ const BusinessObjectsPanel = ({ workspaceId, sources = [], relationships = [], o
                     {browser.search.hasMore && <div className="bo-truncation-note" role="status">Showing first {browser.search.records.length} matching records. Refine your search for more.</div>}
                   </div>
                 )}
+                <RecordKeyIssues issues={browser.search.keyIssues} />
               </>
             )}
             {browser.selectedKey && browser.detail.status !== 'idle' && (

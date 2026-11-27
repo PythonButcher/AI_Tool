@@ -69,10 +69,12 @@ Both paths start with `/api/data-workspaces/<workspace_id>/business-objects/<obj
 
 | Method and suffix | Request | Success |
 | --- | --- | --- |
-| `GET` with no suffix | Optional `q`, a single literal string up to 200 characters. The server searches key and label text case-insensitively. A blank query shows the first records. | `200` with `object_id`, `records`, `has_more`, and `governance_readiness`. Each record summary contains `key` and `label`. Exact key-text matches come first, then other matches in source order. No matches returns `records: []`. |
+| `GET` with no suffix | Optional `q`, a single literal string up to 200 characters. The server searches key and label text case-insensitively. A blank query shows the first records. | `200` with `object_id`, `records`, `has_more`, `key_issues`, and `governance_readiness`. Each openable record summary contains `key` and `label`. Exact key-text matches come first, then other matches in source order. Matches with key issues appear in `key_issues.matches`. |
 | `POST /detail` | JSON `{ key }` with the exact key object returned by search. | `200` with `object_id`, `record`, `relationships`, and `governance_readiness`. The record contains `key`, `label`, and `fields` (one row keyed by source field). |
 
-The key object contains `type` and `value`. Types are `string`, `integer`, `number`, `boolean`, and `datetime`. Values are strings for every type to preserve lossless identity. The client submits them verbatim. The label falls back to the key text when there is no configured label or its value is blank. The complete key field must have unique usable values. The server refuses the definition at runtime when the key column contains blanks, unsupported keys, or duplicate identities.
+The key object contains `type` and `value`. Types are `string`, `integer`, `number`, `boolean`, and `datetime`. Values are strings for every type to preserve lossless identity. The client submits them verbatim. The label falls back to the key text when there is no configured label or its value is blank. A detail request requires that its exact typed key identify one source row. A repeated key returns `record_key_duplicate` even if the search text matched only one of its labels.
+
+Search returns `key_issues.field`, `duplicate_rows`, and `missing_or_unsupported_rows` for the configured key field. The counts describe all source rows. `matching_rows` counts the rows with a key issue that match the current search. Up to 50 of those appear in `matches`, in source order, with a 1-based `row_number`, `label`, `key_value` (or `null`), and `reason` (`duplicate` or `missing_or_unsupported`). These rows remain visible in search. Openable matches have a separate 50-row limit and `has_more` flag. Search and detail apply the same source governance rules.
 
 Sections in `relationships` follow the definition's order. Each contains `relationship_id`, `source_id`, and `status`. A `ready` section also contains `rows`, `total_count`, `has_more`, and `governance_readiness`. Related rows match all configured field pairs and exclude null join keys. A ready section with zero matches has `rows: []` and `total_count: 0`. An `unavailable` section contains `error: { code, message }` and omits rows and counts. Stale, inactive, or unconfirmed evidence uses `record_relationship_unavailable`. Unsupported many-to-many execution uses `record_relationship_unsupported`. A removed reference blocks the request with `record_configuration_unavailable`. Rows serialize with the existing Data Hub rules, including string representation for integers beyond the browser's safe integer range.
 
@@ -84,7 +86,7 @@ The endpoints apply the existing workspace and [dataset governance](../contracts
 | --- | --- |
 | `400` | `invalid_record_request` for unsupported search parameters or invalid typed-key payload. |
 | `404` | `workspace_not_found`, `business_object_not_found`, or `record_not_found`. A foreign object ID is indistinguishable from an absent object ID. |
-| `409` | `record_configuration_unavailable`, `record_source_unavailable`, `record_key_missing`, `record_key_duplicate`, `saved_dataset_dependency_changed`, or `workspace_version_conflict`. |
+| `409` | `record_configuration_unavailable`, `record_source_unavailable`, `record_key_duplicate`, `saved_dataset_dependency_changed`, or `workspace_version_conflict`. |
 | `413` | `record_read_limit`. |
 | `422` | `record_access_denied`. The body includes `governance_readiness` alongside `error`. |
 | `500` | `business_object_storage_error`. |

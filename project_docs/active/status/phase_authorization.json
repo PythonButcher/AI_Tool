@@ -14,6 +14,8 @@
       "backend/services/relationship_execution.py",
       "backend/analytics/query.py",
       "backend/routes/data_workspaces.py",
+      "frontend/frontend/src/features/data-model/BusinessObjectsPanel.jsx",
+      "frontend/frontend/src/features/data-model/BusinessObjectsPanel.test.jsx",
       "tests/test_business_objects.py",
       "tests/test_analytics_query.py"
     ]
@@ -31,6 +33,12 @@
     "approved_by": "User",
     "scope": "Resolve conflicts locally on feature/platform-revisions-2 while preserving PostgreSQL and Devstream features. The user owns the GitHub merge into main-dev-branch.",
     "verification": "53 focused backend tests passed with a disposable PostgreSQL 17 instance. All 82 tests across nine focused frontend suites passed. The production build passed with warnings."
+  },
+  "business_object_key_search_repair_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-11-26",
+    "scope": "Fix the reported duplicate-key search blocker in Business Objects. Codex owns the record search and detail repair, in-panel key diagnostics, contract, and focused verification.",
+    "codex_frontend_implementation_authorized": true
   },
   "postgres_workspace_verification": {
     "backend": "Before branch integration, 61 focused tests passed, including real PostgreSQL 17.4 import, rollback, relationship and filtered Auto chat totals, reopening, Data Hub, semantic metrics, and ML Studio snapshot resolution.",
