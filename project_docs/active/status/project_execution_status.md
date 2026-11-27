@@ -1,23 +1,23 @@
 # Project Execution Status
 
-## Current Gate: Awaiting User Epic Goal
+## Current Gate: Open a Business Object record in Analytics
 
-- **Current Gate**: Awaiting User Epic Goal
-- **Roadmap Phase**: Pending product selection
-- **Phase State**: `NOT STARTED`
-- **What This State Means**: The project is open for product review while the user chooses the next outcome.
-- **Current Milestone**: Choose the next Datastream product outcome
-- **Automatic Continuation**: `WAIT_FOR_USER`
-- **Current Owner**: User
+- **Current Gate**: Open a Business Object record in Analytics
+- **Roadmap Phase**: 3
+- **Phase State**: `IN PROGRESS`
+- **What This State Means**: Codex owns the Analytics record scope and final product acceptance remains pending.
+- **Current Milestone**: Step 1: Implement and verify exact record scope
+- **Automatic Continuation**: `CONTINUE`
+- **Current Owner**: Codex
 - **Backend Readiness**: `implementation_required`
 - **Frontend Readiness**: `not_applicable`
-- **Next Action**: The user selects a product outcome in chat.
-- **Required Action**: Codex records the chosen scope and any implementation authorization.
+- **Next Action**: Codex verifies and implements the typed, server-scoped Analytics source.
+- **Required Action**: Verify Acme's order total and generic record scope before assigning the Analytics UI integration.
 - **Active Gate**: `project_docs/active/active_gate/README.md`
 - **Authorization Record**: `project_docs/active/status/phase_authorization.json`
-- **Roadmap**: `project_docs/active/active_gate/README.md`
+- **Roadmap**: `project_docs/active/business_objects/README.md`
 - **Active Handoff**: None
-- **Latest Verification**: The user accepted the [Datastream Hub](../../archive/datastream_hub_platform_entry_accepted_2026_11_25.md) on November 25, 2026. All 16 focused Hub and app tests passed at `32c65f2e`, and the production build passed with warnings.
+- **Latest Verification**: The [record browser engineering review](../../archive/business_object_record_browser_reviewed_2026_11_26.md) passed nine focused panel tests, a production build with warnings, and Chrome layout fixtures at 320 and 1440 pixels.
 
 ## Pending Data Tools Acceptance
 
@@ -26,8 +26,6 @@ The Data Tools tab, Workspace landing, and initial Power Query preview remain aw
 The inline Data Tools workbench also awaits the user's browser decision. It passed 101 focused frontend tests, 48 backend regression tests, and the production build with existing warnings. Chrome fixtures at 1440 and 390 pixels verified inline API and SQL, upload, quality tools, preview filters, Refine, explicit save, and reopening after reload. See the [UI workflow inventory](../reviews/devstream_ui_workflow_inventory.md).
 
 Validate values, Check keys, and Summarize rows are available in the toolbox and await browser acceptance. The follow-up passed 26 focused frontend tests, the production build with existing warnings, and Chrome fixture checks at 1440 and 390 pixels.
-
-The [Business Object repair](../../archive/business_object_definitions_repair_paused_2026_11_22.md) is paused pending Codex review. The current source contains fixes and regression tests for the saved-list race and model-choice refresh described in that assignment.
 
 ## Pending Analytics Workbench Acceptance
 

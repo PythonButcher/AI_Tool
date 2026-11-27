@@ -399,13 +399,14 @@ def _open_named(conn, record):
     _verify_dependencies(conn, definition)
     workspace = get_workspace(record['workspace_id'], connection=conn)
     activation = definition['activation']
-    # A changed working copy may still be referenced by an Analytics draft.
-    # Restore the save into a new workspace so the draft keeps its identities.
+    # Adding a Business Object persists it on this activation without changing
+    # the saved revision or analysis scope. Only missing snapshot objects or
+    # model changes require a replacement, which preserves existing draft IDs.
     if workspace is not None and workspace['version'] == 1:
         object_ids = {row['object_id'] for row in conn.execute(
             'SELECT object_id FROM workspace_business_objects WHERE workspace_id = ?', (workspace['workspace_id'],),
         )}
-        if object_ids != set(activation['object_ids'].values()):
+        if not set(activation['object_ids'].values()).issubset(object_ids):
             workspace = None
     if workspace is None or workspace['version'] != 1:
         workspace, relationships, objects = repository.restore_workspace(conn, record['name'], definition, _utc_now())

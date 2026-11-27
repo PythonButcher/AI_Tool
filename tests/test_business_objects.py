@@ -32,12 +32,12 @@ def _upload(client, filename, csv):
     return response.get_json()
 
 
-def _relationship(workspace, left, right, left_field, right_field):
+def _relationship(workspace, left, right, left_field, right_field, cardinality="one_to_many"):
     return source_relationships.create_relationship(workspace, {
         "left_source_id": left,
         "right_source_id": right,
         "field_pairs": [{"left_field": left_field, "right_field": right_field}],
-        "cardinality": "one_to_many",
+        "cardinality": cardinality,
         "join_behavior": "left",
         "filter_direction": "left_to_right",
     })["relationship_id"]
@@ -51,10 +51,10 @@ def _attach(workspace, source):
 
 @pytest.fixture
 def model(client):
-    customers = _upload(client, "customers.csv", b"customer_id,name\n1,Ada\n2,Lin\n")
+    customers = _upload(client, "customers.csv", b"customer_id,name\n1,Acme\n2,Lin\n3,Orchid\n")
     equipment = _upload(client, "equipment.csv", b"asset_tag,title\nA-1,Pump\nA-2,Motor\n")
-    orders = _upload(client, "orders.csv", b"buyer,total\n1,12\n1,8\n")
-    maintenance = _upload(client, "maintenance.csv", b"equipment_ref,work\nA-1,Inspect\nA-2,Replace\n")
+    orders = _upload(client, "orders.csv", b"buyer,total\n1,12\n1,8\n2,55\n")
+    maintenance = _upload(client, "maintenance.csv", b"equipment_ref,work\nA-1,Inspect\nA-2,Replace\nA-1,Test\n")
     workspace = customers["workspace"]["workspace_id"]
     customer, asset, order, service = [
         item["source"]["source_id"] for item in (customers, equipment, orders, maintenance)
@@ -63,7 +63,7 @@ def model(client):
         _attach(workspace, source)
     customer_orders = _relationship(workspace, customer, order, "customer_id", "buyer")
     # Equipment is the right endpoint to exercise both relationship directions.
-    equipment_maintenance = _relationship(workspace, service, asset, "equipment_ref", "asset_tag")
+    equipment_maintenance = _relationship(workspace, service, asset, "equipment_ref", "asset_tag", "many_to_one")
     return {
         "workspace": workspace,
         "other_workspace": equipment["workspace"]["workspace_id"],
@@ -99,6 +99,156 @@ def test_two_definitions_reload_with_stable_identity_and_workspace_scope(model, 
     with pytest.raises(business_objects.BusinessObjectError) as caught:
         business_objects.get_business_object(model["other_workspace"], definitions[0]["object_id"])
     assert caught.value.code == "business_object_not_found"
+
+
+def _record_url(model, definition):
+    item = business_objects.create_business_object(model["workspace"], definition)
+    return f"/api/data-workspaces/{model['workspace']}/business-objects/{item['object_id']}/records"
+
+
+def _activate(workspace, relationship_id):
+    source_relationships.update_relationship(workspace, relationship_id, {"is_confirmed": True, "is_active": True})
+
+
+def test_record_search_and_detail_use_configured_sources_and_relationships(client, model):
+    workspace = model["workspace"]
+    customer = model["customer"]
+    equipment = model["equipment"]
+    for config in (customer, equipment):
+        _activate(workspace, config["relationship_ids"][0])
+    customers = _record_url(model, customer)
+    assets = _record_url(model, equipment)
+    by_name = client.get(customers, query_string={"q": "aCmE"})
+    by_id = client.get(customers, query_string={"q": "1"})
+    assert by_name.status_code == by_id.status_code == 200
+    key = {"type": "integer", "value": "1"}
+    assert by_name.get_json()["records"] == by_id.get_json()["records"] == [{"key": key, "label": "Acme"}]
+    assert client.get(customers, query_string={"q": "Customer"}).get_json()["records"] == []
+    assert client.post(f"{customers}/detail", json={"key": {**key, "type": "string"}}).status_code == 404
+    response = client.post(f"{customers}/detail", json={"key": key})
+    assert response.status_code == 200, response.get_json()
+    details = response.get_json()
+    assert details["record"] == {"key": key, "label": "Acme", "fields": {"customer_id": 1, "name": "Acme"}}
+    section, = details["relationships"]
+    assert section["governance_readiness"]["status"] in {"ready", "warning"}
+    assert {key: value for key, value in section.items() if key != "governance_readiness"} == {
+        "relationship_id": customer["relationship_ids"][0], "source_id": model["order_source"],
+        "status": "ready", "rows": [{"buyer": 1, "total": 12}, {"buyer": 1, "total": 8}],
+        "total_count": 2, "has_more": False,
+    }
+    empty = client.post(f"{customers}/detail", json={"key": {**key, "value": "3"}}).get_json()
+    assert empty["relationships"][0]["status"] == "ready"
+    assert empty["relationships"][0]["rows"] == []
+    matches = client.get(assets, query_string={"q": "Pump"}).get_json()["records"]
+    assert matches == [{"key": {"type": "string", "value": "A-1"}, "label": "Pump"}]
+    asset = client.post(f"{assets}/detail", json={"key": matches[0]["key"]}).get_json()
+    assert asset["relationships"][0]["rows"] == [
+        {"equipment_ref": "A-1", "work": "Inspect"}, {"equipment_ref": "A-1", "work": "Test"},
+    ]
+    assert client.get(customers.replace(workspace, model["other_workspace"])).get_json()["error"]["code"] == (
+        "business_object_not_found"
+    )
+    assert client.post(f"{customers.replace(workspace, model['other_workspace'])}/detail", json={"key": key}).status_code == 404
+
+
+@pytest.mark.parametrize(("rows", "error"), [
+    (b"1,Acme\n1,Other\n", "record_key_duplicate"),
+    (b"1,Acme\n,Other\n", "record_key_missing"),
+])
+def test_record_identity_refuses_blank_or_duplicate_keys(client, rows, error):
+    uploaded = _upload(client, "customers.csv", b"identifier,name\n" + rows)
+    url = _record_url({"workspace": uploaded["workspace"]["workspace_id"]}, {
+        "display_name": "Customer", "source_id": uploaded["source"]["source_id"],
+        "record_key_field": "identifier", "display_field": "name", "relationship_ids": [],
+    })
+    for response in (client.get(url), client.post(f"{url}/detail", json={
+        "key": {"type": "integer", "value": "1"}
+    })):
+        assert response.status_code == 409
+        assert response.get_json()["error"]["code"] == error
+
+
+def test_bounds_and_lossless_integer_identity(client, monkeypatch):
+    key_value = 9223372036854775806
+    rows = b"id,value\n" + b"".join(f"{key_value - index},{index}\n".encode() for index in range(55))
+    uploaded = _upload(client, "orders.csv", rows)
+    url = _record_url({"workspace": uploaded["workspace"]["workspace_id"]}, {
+        "display_name": "Order", "source_id": uploaded["source"]["source_id"],
+        "record_key_field": "id", "relationship_ids": [],
+    })
+    response = client.get(url).get_json()
+    assert len(response["records"]) == 50 and response["has_more"]
+    key = response["records"][0]["key"]
+    assert key == {"type": "integer", "value": str(key_value)}
+    record = client.post(f"{url}/detail", json={"key": key}).get_json()["record"]
+    assert record["fields"]["id"] == str(key_value)
+    assert record["label"] == str(key_value)
+    assert client.post(f"{url}/detail", json={"key": {**key, "value": key_value}}).status_code == 400
+    assert client.get(url, query_string={"q": "x" * 201}).status_code == 400
+    monkeypatch.setattr("backend.services.business_object_records.MAX_SOURCE_BYTES", 1)
+    assert client.get(url).status_code == 413
+
+
+def test_related_rows_respect_every_composite_field_and_report_truncation(client):
+    invoices = _upload(client, "invoices.csv", b"id,account,region\n1,Acme,US\n2,Acme,EU\n")
+    items = _upload(client, "items.csv", b"buyer,market,amount\n" + b"Acme,US,2\n" * 55 + b"Acme,EU,900\n")
+    workspace = invoices["workspace"]["workspace_id"]
+    invoice_source, item_source = invoices["source"]["source_id"], items["source"]["source_id"]
+    _attach(workspace, item_source)
+    relationship = source_relationships.create_relationship(workspace, {
+        "left_source_id": invoice_source, "right_source_id": item_source,
+        "field_pairs": [
+            {"left_field": "account", "right_field": "buyer"},
+            {"left_field": "region", "right_field": "market"},
+        ],
+        "cardinality": "one_to_many", "join_behavior": "left", "filter_direction": "left_to_right",
+    })
+    relationship_id = relationship["relationship_id"]
+    _activate(workspace, relationship_id)
+    url = _record_url({"workspace": workspace}, {
+        "display_name": "Invoice", "source_id": invoice_source, "record_key_field": "id",
+        "relationship_ids": [relationship_id],
+    })
+    response = client.post(f"{url}/detail", json={"key": {"type": "integer", "value": "1"}})
+    assert response.status_code == 200, response.get_json()
+    related, = response.get_json()["relationships"]
+    assert related["total_count"] == 55
+    assert related["has_more"]
+    assert related["rows"] == [{"buyer": "Acme", "market": "US", "amount": 2}] * 50
+
+
+def test_stale_relationship_is_distinct_from_empty_and_governance_denies_values(client, model):
+    customer = model["customer"]
+    workspace = model["workspace"]
+    relationship_id = customer["relationship_ids"][0]
+    _activate(workspace, relationship_id)
+    url = _record_url(model, customer)
+    payload = {"key": {"type": "integer", "value": "1"}}
+    policy = '{"required_fields":["approval"]}'
+    with closing(backend_db.get_db_connection()) as conn, conn:
+        conn.execute("UPDATE datahub_datasets SET governance_policy_json = ? WHERE id = ?", (
+            policy, model["order_source"],
+        ))
+    denied = client.post(f"{url}/detail", json=payload)
+    assert denied.status_code == 422
+    assert set(denied.get_json()) == {"error", "governance_readiness"}
+    assert denied.get_json()["error"]["code"] == "record_access_denied"
+    assert denied.get_json()["governance_readiness"]["status"] == "blocked"
+    with closing(backend_db.get_db_connection()) as conn, conn:
+        conn.execute("UPDATE datahub_datasets SET schema_version = schema_version + 1 WHERE id = ?", (
+            model["order_source"],
+        ))
+    stale = client.post(f"{url}/detail", json=payload)
+    assert stale.status_code == 200, stale.get_json()
+    section = stale.get_json()["relationships"][0]
+    assert section["status"] == "unavailable"
+    assert section["error"]["code"] == "record_relationship_unavailable"
+    assert "rows" not in section
+    with closing(backend_db.get_db_connection()) as conn, conn:
+        conn.execute("UPDATE datahub_datasets SET governance_policy_json = ? WHERE id = ?", (
+            policy, customer["source_id"],
+        ))
+    assert client.get(url).status_code == 422
 
 
 def test_invalid_references_leave_no_definitions(model):

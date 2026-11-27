@@ -1,15 +1,32 @@
 {
   "schema_version": 1,
   "authorized_work": {
-    "name": "Awaiting User Epic Goal",
+    "name": "Open a Business Object record in Analytics",
     "allowed_paths": [
       "project_docs/active/active_gate/README.md",
       "project_docs/active/status/project_execution_status.md",
-      "project_docs/active/status/phase_authorization.json"
+      "project_docs/active/status/phase_authorization.json",
+      "project_docs/active/business_objects/README.md",
+      "project_docs/active/ai_hand_off/README.md",
+      "project_docs/archive/business_object_record_browser_reviewed_2026_11_26.md",
+      "project_docs/active/contracts/analytics_workspace.md",
+      "backend/services/business_object_records.py",
+      "backend/services/relationship_execution.py",
+      "backend/analytics/query.py",
+      "backend/routes/data_workspaces.py",
+      "tests/test_business_objects.py",
+      "tests/test_analytics_query.py"
     ]
   },
-  "authorization_state": "REVIEW_ONLY",
-  "lifecycle_state": "NOT STARTED",
+  "authorization_state": "AUTHORIZED",
+  "lifecycle_state": "IN PROGRESS",
+  "user_implementation_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-11-26",
+    "evidence": "User-directed implementation kickoff and follow-up reporting a definition lost when reopening a named dataset.",
+    "instruction": "Implement the definition, record browsing, and exact-record Analytics workflow in roadmap order. Repair named dataset reactivation first. Follow frontend ownership and return final browser acceptance to the user. Do not push or merge.",
+    "codex_frontend_implementation_authorized": false
+  },
   "local_branch_integration_authorization": {
     "approved_by": "User",
     "scope": "Resolve conflicts locally on feature/platform-revisions-2 while preserving PostgreSQL and Devstream features. The user owns the GitHub merge into main-dev-branch.",
@@ -74,14 +91,14 @@
     "scope": "Codex owns the saved-dataset backend, Data Hub and working dataset frontend, and integration verification. The user owns browser acceptance.",
     "codex_frontend_implementation_authorized": true
   },
-  "paused_business_object_repair": {
+  "business_object_definition_repair_review": {
     "gate": "Configure Business Objects in Data Model",
     "roadmap_phase": "Phase 1 — Business Object definitions",
     "milestone": "Step 1: Repair Business Object save and refresh behavior",
     "owner": "Antigravity",
-    "state": "Paused for the saved-dataset priority",
+    "state": "Reviewed by Codex; Business Objects awaits end-to-end browser acceptance",
     "handoff": "project_docs/archive/business_object_definitions_repair_paused_2026_11_22.md",
-    "verification": "Current source contains fixes and regression tests for the late-list race and model-choice refresh. Focused Codex review and user browser acceptance are outstanding."
+    "verification": "Six focused panel tests passed for save, reopen, late lists, model-choice refresh, and workspace changes. The named dataset reopen regression also passed after the activation fix."
   },
   "data_hub_delete_all_authorization": {
     "approved_by": "User",
@@ -470,6 +487,8 @@
     "project_docs/active/ai_hand_off/business_object_definitions.md",
     "backend/repositories/business_object_repository.py",
     "backend/services/business_objects.py",
+    "backend/services/business_object_records.py",
+    "project_docs/archive/business_object_record_browser_reviewed_2026_11_26.md",
     "backend/routes/data_workspaces.py",
     "tests/test_business_objects.py",
     "backend/analytics/**",

@@ -9,6 +9,36 @@ const sortDefinitions = (list) =>
     return byTime !== 0 ? byTime : String(a.object_id || '').localeCompare(String(b.object_id || ''));
   });
 
+const INITIAL_SEARCH = { status: 'idle', records: [], hasMore: false, governance: null, error: null };
+const INITIAL_DETAIL = { status: 'idle', record: null, relationships: [], governance: null, error: null };
+const INITIAL_BROWSER = { objectId: null, query: '', submittedQuery: '', search: INITIAL_SEARCH, selectedKey: null, detail: INITIAL_DETAIL };
+const formatCellValue = (v) => (v === null || v === undefined || v === '' ? '—' : typeof v === 'boolean' ? String(v) : typeof v === 'object' ? JSON.stringify(v) : String(v));
+const readRecordJson = async (url, options, fallback) => {
+  const res = options ? await fetch(url, options) : await fetch(url);
+  let data = null;
+  try { data = await res.json(); } catch { data = null; }
+  return { ok: res.ok, status: res.status, data, fallback };
+};
+const renderGovernanceNotice = (readiness, fallbackMessage) => {
+  if (!readiness || readiness.status === 'ready') return null;
+  const isBlocked = readiness.status === 'blocked';
+  const primary = readiness.next_action || fallbackMessage || (isBlocked ? 'Access blocked by data governance.' : 'Governance warning detected.');
+  const extra = (Array.isArray(readiness.reasons) ? readiness.reasons : []).map((r) => r?.message).filter((m) => m && m !== primary);
+  return (
+    <div className={isBlocked ? 'bo-gov-block' : 'bo-gov-warning'} role={isBlocked ? 'alert' : 'status'}>
+      <strong className="bo-gov-title">{isBlocked ? 'Access Blocked' : 'Governance Warning'}</strong>
+      <span>{primary}</span>
+      {extra.length > 0 && <span className="bo-gov-reasons">{extra.join(' ')}</span>}
+    </div>
+  );
+};
+const renderBrowserError = (state, retryLabel, onRetry) => (
+  <div className="bo-browser-error">
+    {state.governance?.status === 'blocked' ? renderGovernanceNotice(state.governance, state.error?.message) : <div className="bo-alert" role="alert"><span>{state.error?.message}</span></div>}
+    <div className="bo-alert-actions"><button type="button" className="btn btn-secondary" onClick={onRetry}>{retryLabel}</button></div>
+  </div>
+);
+
 const BusinessObjectsPanel = ({ workspaceId, sources = [], relationships = [], onRefreshModel, onClose, triggerRef }) => {
   const [objectsByWorkspace, setObjectsByWorkspace] = useState({});
   const [listStateByWorkspace, setListStateByWorkspace] = useState({});
@@ -24,6 +54,7 @@ const BusinessObjectsPanel = ({ workspaceId, sources = [], relationships = [], o
   const [canRefreshModelAfterConflict, setCanRefreshModelAfterConflict] = useState(false);
   const [isRefreshingModel, setIsRefreshingModel] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [browser, setBrowser] = useState(INITIAL_BROWSER);
 
   const isMountedRef = useRef(true);
   const activeWorkspaceIdRef = useRef(workspaceId);
@@ -31,9 +62,15 @@ const BusinessObjectsPanel = ({ workspaceId, sources = [], relationships = [], o
   const fetchRequestIdRef = useRef(0);
   const saveRequestIdRef = useRef(0);
   const modelRefreshIdRef = useRef(0);
+  const browserRef = useRef({ objectId: null, key: null, searchId: 0, detailId: 0, pendingSearch: null, pendingDetail: null });
   const isSavingRef = useRef(false);
   const previousFocusRef = useRef(null);
   const displayNameInputRef = useRef(null);
+
+  const invalidateBrowser = (nextObjectId = null) => {
+    const b = browserRef.current;
+    b.objectId = nextObjectId; b.key = null; b.searchId += 1; b.detailId += 1; b.pendingSearch = null; b.pendingDetail = null;
+  };
 
   if (draftWorkspaceId !== workspaceId) {
     setDraftWorkspaceId(workspaceId);
@@ -48,9 +85,11 @@ const BusinessObjectsPanel = ({ workspaceId, sources = [], relationships = [], o
     setCanRefreshModelAfterConflict(false);
     setIsRefreshingModel(false);
     setIsSaving(false);
+    setBrowser(INITIAL_BROWSER);
     isSavingRef.current = false;
     saveRequestIdRef.current += 1;
     modelRefreshIdRef.current += 1;
+    invalidateBrowser(null);
   }
 
   useEffect(() => {
@@ -62,10 +101,12 @@ const BusinessObjectsPanel = ({ workspaceId, sources = [], relationships = [], o
       fetchRequestIdRef.current += 1;
       saveRequestIdRef.current += 1;
       modelRefreshIdRef.current += 1;
+      invalidateBrowser(null);
     };
   }, []);
 
   const handleClose = useCallback(() => {
+    invalidateBrowser(null);
     const focusTarget = triggerRef?.current || previousFocusRef.current;
     onClose?.();
     if (focusTarget && typeof focusTarget.focus === 'function') {
@@ -343,8 +384,73 @@ const BusinessObjectsPanel = ({ workspaceId, sources = [], relationships = [], o
     }
   };
 
+  const runRecordSearch = useCallback(async (targetWs, targetObj, queryText) => {
+    if (!targetWs || !targetObj) return;
+    const b = browserRef.current;
+    const sig = `${targetWs}|${targetObj}|${queryText}`;
+    if (b.pendingSearch === sig) return;
+    const reqId = ++b.searchId;
+    b.detailId += 1; b.pendingSearch = sig; b.pendingDetail = null; b.key = null;
+    setBrowser((p) => ({ ...p, objectId: targetObj, submittedQuery: queryText, selectedKey: null, detail: INITIAL_DETAIL, search: { ...INITIAL_SEARCH, status: 'loading' } }));
+    try {
+      const base = `${API_URL}/api/data-workspaces/${encodeURIComponent(targetWs)}/business-objects/${encodeURIComponent(targetObj)}/records`;
+      const url = queryText ? `${base}?${new URLSearchParams({ q: queryText }).toString()}` : base;
+      const { ok, status, data, fallback } = await readRecordJson(url, null, 'Failed to load records for this Business Object.');
+      if (!isMountedRef.current || activeWorkspaceIdRef.current !== targetWs || b.objectId !== targetObj || b.searchId !== reqId) return;
+      b.pendingSearch = null;
+      const search = ok
+        ? { status: 'ready', records: Array.isArray(data?.records) ? data.records : [], hasMore: Boolean(data?.has_more), governance: data?.governance_readiness || null, error: null }
+        : { status: 'error', records: [], hasMore: false, governance: data?.governance_readiness || null, error: { code: data?.error?.code || 'record_search_failed', message: data?.error?.message || fallback, status } };
+      setBrowser((p) => ({ ...p, search }));
+    } catch (err) {
+      if (!isMountedRef.current || activeWorkspaceIdRef.current !== targetWs || b.objectId !== targetObj || b.searchId !== reqId) return;
+      b.pendingSearch = null;
+      setBrowser((p) => ({ ...p, search: { status: 'error', records: [], hasMore: false, governance: null, error: { code: 'network_error', message: err.message || 'Network error while searching records.', status: 0 } } }));
+    }
+  }, []);
+
+  const loadRecordDetail = useCallback(async (targetWs, targetObj, key) => {
+    if (!targetWs || !targetObj || !key || typeof key.type !== 'string' || typeof key.value !== 'string') return;
+    const b = browserRef.current;
+    const typedKey = { type: key.type, value: key.value };
+    const sig = `${targetWs}|${targetObj}|${typedKey.type}|${typedKey.value}`;
+    if (b.pendingDetail === sig) return;
+    const reqId = ++b.detailId;
+    b.pendingDetail = sig; b.key = typedKey;
+    setBrowser((p) => ({ ...p, selectedKey: typedKey, detail: { ...INITIAL_DETAIL, status: 'loading' } }));
+    try {
+      const url = `${API_URL}/api/data-workspaces/${encodeURIComponent(targetWs)}/business-objects/${encodeURIComponent(targetObj)}/records/detail`;
+      const { ok, status, data, fallback } = await readRecordJson(
+        url,
+        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key: typedKey }) },
+        'Failed to load record details.'
+      );
+      if (!isMountedRef.current || activeWorkspaceIdRef.current !== targetWs || b.objectId !== targetObj || b.detailId !== reqId || b.key?.type !== typedKey.type || b.key?.value !== typedKey.value) return;
+      b.pendingDetail = null;
+      const detail = ok
+        ? { status: 'ready', record: data?.record || null, relationships: Array.isArray(data?.relationships) ? data.relationships : [], governance: data?.governance_readiness || null, error: null }
+        : { status: 'error', record: null, relationships: [], governance: data?.governance_readiness || null, error: { code: data?.error?.code || 'record_detail_failed', message: data?.error?.message || fallback, status } };
+      setBrowser((p) => ({ ...p, detail }));
+    } catch (err) {
+      if (!isMountedRef.current || activeWorkspaceIdRef.current !== targetWs || b.objectId !== targetObj || b.detailId !== reqId) return;
+      b.pendingDetail = null;
+      setBrowser((p) => ({ ...p, detail: { status: 'error', record: null, relationships: [], governance: null, error: { code: 'network_error', message: err.message || 'Network error while loading record details.', status: 0 } } }));
+    }
+  }, []);
+
+  const handleSelectDefinition = useCallback((item) => {
+    if (!item?.object_id || (browserRef.current.objectId === item.object_id && browserRef.current.pendingSearch === `${workspaceId}|${item.object_id}|`)) return;
+    invalidateBrowser(item.object_id);
+    setBrowser({ ...INITIAL_BROWSER, objectId: item.object_id, search: { ...INITIAL_SEARCH, status: 'loading' } });
+    runRecordSearch(workspaceId, item.object_id, '');
+  }, [workspaceId, runRecordSearch]);
+
+  const handleCloseBrowser = useCallback(() => { invalidateBrowser(null); setBrowser(INITIAL_BROWSER); }, []);
+  const handleSearchSubmit = (e) => { e.preventDefault(); if (browser.objectId) runRecordSearch(workspaceId, browser.objectId, browser.query); };
+
   const currentListState = listStateByWorkspace[workspaceId] || { loading: true, error: null };
   const savedDefinitions = objectsByWorkspace[workspaceId] || [];
+  const activeDefinition = savedDefinitions.find((i) => i.object_id === browser.objectId) || null;
   const relationshipById = useMemo(
     () => new Map(workspaceRelationships.map((r) => [r.relationship_id, r])),
     [workspaceRelationships]
@@ -352,7 +458,7 @@ const BusinessObjectsPanel = ({ workspaceId, sources = [], relationships = [], o
 
   return (
     <aside
-      className="bo-panel"
+      className={`bo-panel${activeDefinition ? ' bo-panel-browsing' : ''}`}
       role="dialog"
       aria-labelledby="business-objects-panel-title"
       onKeyDown={(e) => {
@@ -408,31 +514,119 @@ const BusinessObjectsPanel = ({ workspaceId, sources = [], relationships = [], o
                   const rel = relationshipById.get(relId);
                   return rel ? formatRelationshipLabel(rel, item.source_id) : relId;
                 });
+                const isSelected = browser.objectId === item.object_id;
                 return (
-                  <li
-                    key={item.object_id}
-                    className={`bo-card ${item.configuration_error ? 'bo-card-error' : ''}`}
-                  >
-                    <div className="bo-card-header">
-                      <span className="bo-card-title">{item.display_name}</span>
-                      <span className="bo-help-text">{srcLabel}</span>
-                    </div>
-                    <div className="bo-card-meta">
-                      <span>Key: {item.record_key_field}</span>
-                      <span>Label: {item.display_field || 'None'}</span>
-                      <span>Relationships: {relLabels.length > 0 ? relLabels.join(', ') : 'None'}</span>
-                    </div>
-                    {item.configuration_error && (
-                      <div className="bo-config-warning">
-                        {item.configuration_error.message}
-                      </div>
-                    )}
+                  <li key={item.object_id} className={`bo-card${item.configuration_error ? ' bo-card-error' : ''}${isSelected ? ' bo-card-selected' : ''}`}>
+                    <button type="button" className="bo-card-btn" aria-pressed={isSelected} onClick={() => handleSelectDefinition(item)}>
+                      <span className="bo-card-header">
+                        <span className="bo-card-title">{item.display_name}</span>
+                        <span className="bo-help-text">{srcLabel}</span>
+                      </span>
+                      <span className="bo-card-meta">
+                        <span>Key: {item.record_key_field}</span>
+                        <span>Label: {item.display_field || 'None'}</span>
+                        <span>Relationships: {relLabels.length > 0 ? relLabels.join(', ') : 'None'}</span>
+                      </span>
+                    </button>
+                    {item.configuration_error && <div className="bo-config-warning">{item.configuration_error.message}</div>}
                   </li>
                 );
               })}
             </ul>
           )}
         </section>
+
+        {activeDefinition && (
+          <section className="bo-section bo-browser" aria-label="Record Browser">
+            <div className="bo-browser-header">
+              <div className="bo-browser-heading">
+                <h3 className="bo-browser-title">{activeDefinition.display_name} Records</h3>
+                <span className="bo-help-text">{(memberById.get(activeDefinition.source_id)?.alias || memberById.get(activeDefinition.source_id)?.name || activeDefinition.source_id)} · Key: {activeDefinition.record_key_field}</span>
+              </div>
+              <button type="button" className="bo-text-btn" onClick={handleCloseBrowser} aria-label="Close Record Browser">Done</button>
+            </div>
+            <form className="bo-search-form" onSubmit={handleSearchSubmit}>
+              <label htmlFor="bo-record-search" className="bo-search-label">Search {activeDefinition.display_name} records</label>
+              <div className="bo-search-row">
+                <input id="bo-record-search" type="search" maxLength={200} value={browser.query} onChange={(e) => setBrowser((p) => ({ ...p, query: e.target.value }))} placeholder="Search by name or ID..." />
+                <button type="submit" className="btn btn-primary bo-search-btn">{browser.search.status === 'loading' ? 'Searching...' : 'Search'}</button>
+              </div>
+            </form>
+            {browser.search.status === 'loading' && <div className="bo-state-box" role="status" aria-live="polite">Searching records...</div>}
+            {browser.search.status === 'error' && renderBrowserError(browser.search, 'Retry Search', () => runRecordSearch(workspaceId, activeDefinition.object_id, browser.submittedQuery))}
+            {browser.search.status === 'ready' && (
+              <>
+                {renderGovernanceNotice(browser.search.governance)}
+                {browser.search.records.length === 0 ? <div className="bo-state-box" role="status">No matching records found.</div> : (
+                  <div className="bo-record-results">
+                    <ul className="bo-record-list" aria-label="Matching records">
+                      {browser.search.records.map((rec) => {
+                        const recSelected = browser.selectedKey?.type === rec.key.type && browser.selectedKey?.value === rec.key.value;
+                        return (
+                          <li key={`${rec.key.type}:${rec.key.value}`} className="bo-record-item">
+                            <button type="button" className={`bo-record-btn${recSelected ? ' bo-record-btn-selected' : ''}`} aria-pressed={recSelected} onClick={() => loadRecordDetail(workspaceId, activeDefinition.object_id, rec.key)}>
+                              <span className="bo-record-label" title={rec.label}>{rec.label}</span>
+                              <span className="bo-record-key" title={rec.key.value}>{rec.key.value}</span>
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                    {browser.search.hasMore && <div className="bo-truncation-note" role="status">Showing first {browser.search.records.length} matching records. Refine your search for more.</div>}
+                  </div>
+                )}
+              </>
+            )}
+            {browser.selectedKey && browser.detail.status !== 'idle' && (
+              <section className="bo-detail" aria-label="Record Detail">
+                {browser.detail.status === 'loading' && <div className="bo-state-box" role="status" aria-live="polite">Loading record details...</div>}
+                {browser.detail.status === 'error' && renderBrowserError(browser.detail, 'Retry Record', () => loadRecordDetail(workspaceId, activeDefinition.object_id, browser.selectedKey))}
+                {browser.detail.status === 'ready' && browser.detail.record && (
+                  <div className="bo-detail-body">
+                    <div className="bo-detail-header">
+                      <h4 className="bo-detail-title">{browser.detail.record.label}</h4>
+                      <span className="bo-detail-id">{activeDefinition.record_key_field}: {browser.detail.record.key.value}</span>
+                    </div>
+                    {renderGovernanceNotice(browser.detail.governance)}
+                    <dl className="bo-kv-grid">{Object.entries(browser.detail.record.fields || {}).map(([k, v]) => <div key={k} className="bo-kv-row"><dt>{k}</dt><dd>{formatCellValue(v)}</dd></div>)}</dl>
+                    {browser.detail.relationships.map((relSec) => {
+                      const relSrc = memberById.get(relSec.source_id);
+                      const relTitle = relSrc?.alias || relSrc?.name || relSec.source_id;
+                      const relRows = Array.isArray(relSec.rows) ? relSec.rows : [];
+                      const relCols = relRows.length > 0 ? Array.from(new Set(relRows.flatMap((row) => Object.keys(row || {})))) : [];
+                      return (
+                        <section key={relSec.relationship_id} className="bo-rel-section" aria-label={`Related ${relTitle}`}>
+                          <div className="bo-rel-header">
+                            <h5 className="bo-rel-title">{relTitle}</h5>
+                            {relSec.status === 'ready' && <span className="bo-rel-count">{relSec.has_more ? `${relRows.length} of ${relSec.total_count}` : `${relSec.total_count} ${relSec.total_count === 1 ? 'row' : 'rows'}`}</span>}
+                          </div>
+                          {relSec.status === 'unavailable' ? (
+                            <div className="bo-rel-unavailable" role="status"><strong>Relationship unavailable</strong><span>{relSec.error?.message || 'This relationship is currently unavailable.'}</span></div>
+                          ) : (
+                            <>
+                              {renderGovernanceNotice(relSec.governance_readiness)}
+                              {relRows.length === 0 ? <div className="bo-rel-empty">No related rows for this record.</div> : (
+                                <>
+                                  <div className="bo-table-wrap">
+                                    <table className="bo-table">
+                                      <thead><tr>{relCols.map((col) => <th key={col} scope="col">{col}</th>)}</tr></thead>
+                                      <tbody>{relRows.map((row, idx) => <tr key={idx}>{relCols.map((col) => <td key={col}>{formatCellValue(row?.[col])}</td>)}</tr>)}</tbody>
+                                    </table>
+                                  </div>
+                                  {relSec.has_more && <div className="bo-truncation-note" role="status">Showing first {relRows.length} of {relSec.total_count} related rows.</div>}
+                                </>
+                              )}
+                            </>
+                          )}
+                        </section>
+                      );
+                    })}
+                  </div>
+                )}
+              </section>
+            )}
+          </section>
+        )}
 
         <section className="bo-section" aria-label="Create Business Object">
           <h3 className="bo-section-title">Configure New Object</h3>

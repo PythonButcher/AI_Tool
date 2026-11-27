@@ -1,29 +1,48 @@
-Goal: Choose the next Datastream product outcome.
+Goal: Open a Business Object record in a new Analytics analysis scoped to that exact record.
 
 ## User Outcome
 
-The user selects one product outcome for Codex to scope into an executable plan.
+A user can open a selected Business Object record in Analytics, see its name and relationship scope, and group and measure the associated rows. The analysis they were editing stays available.
 
 ## Scope
 
-Review the product options with the user. This gate authorizes product review only.
+**Current Step**: Step 1: Implement and verify exact record scope
+
+**Target Files**: `backend/services/business_object_records.py`, `backend/services/relationship_execution.py`, `backend/analytics/query.py`, `backend/routes/data_workspaces.py`, `tests/test_business_objects.py`, `tests/test_analytics_query.py`, and the Business Objects and Analytics contracts.
+
+**Step Acceptance**: Resolve the saved workspace, object, and typed key on the server. Restrict the analysis to that record and its selected, verified relationships. Use the object source as the record anchor even when it is a lookup source. Refuse changed, missing, ambiguous, or blocked scope visibly.
+
+**Step Verification**: Exercise the normal Analytics query endpoint with Acme and its Orders, Equipment and Maintenance, a second customer with excluded orders, and stale or denied scope. Reconcile an Acme grouped order sum of 20 to the selected order rows.
+
+**Next Step**: Step 2: Connect the selected record to a new Analytics draft
+
+**Continuation Rule**: CONTINUE through the backend scope and focused verification.
+
+**Stop Condition**: Transfer ownership through one bounded frontend handoff once the Analytics record source contract and failure behavior are verified.
+
+- [ ] **Step 1: Implement and verify exact record scope** — [IN PROGRESS]
+- [ ] **Step 2: Connect the selected record to a new Analytics draft** — [PENDING]
+- [ ] **Step 3: Verify the complete workflow** — [PENDING]
 
 ## Contracts
 
-- [Documentation governance](../rules/DOCUMENTATION_GOVERNANCE.md)
-- [Product proposals](../future/codex/README.md)
+- [Business Objects](../business_objects/README.md)
+- [Analytics workspace](../contracts/analytics_workspace.md)
+- [Workspace identity and scope](../contracts/multiple_data_source_workspace.md)
+- [Relationship execution](../contracts/multiple_data_source_relationships.md)
+- [Dataset governance](../contracts/data_catalog_lineage.md)
 
 ## Acceptance
 
-The user chooses one product outcome in chat. Codex records the chosen scope and any implementation authorization before work begins.
+Acme opens with a visible record identity and group scope. Its total matches only Acme's orders. Equipment uses the same path with its own key and Maintenance relationship. The current Analytics draft remains available, and invalid scope produces a visible refusal.
 
 ## Verification
 
-- `python .codex/hooks/agent_harness_check.py`
-- `python C:/Users/18022/.codex/skills/active-gate-governance/scripts/check_active_gate.py project_docs/active/active_gate .`
+- `python -m pytest -q tests/test_analytics_query.py tests/test_business_objects.py tests/test_relationship_execution.py tests/test_saved_datasets.py`
+- `python -m py_compile backend/analytics/query.py backend/services/business_object_records.py backend/services/relationship_execution.py backend/routes/data_workspaces.py`
 - `python .codex/hooks/ci_harness_check.py`
 - `git diff --check`
 
 ## Owner And Control Return
 
-The user owns the product choice. Codex takes ownership of scoping after the user selects an outcome.
+Codex owns the backend scope and tests. Antigravity takes the frontend integration from a verified contract. The user owns final browser acceptance in chat.

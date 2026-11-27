@@ -144,6 +144,41 @@ def test_named_upload_reuses_bytes_and_reopens_all_pages_with_distinct_ids(app):
     assert full['full_data'] == rows
 
 
+def test_definition_survives_named_dataset_reopen_without_another_save(app):
+    client = app.test_client()
+    uploaded = upload(client, b'order_id,total\n1,5\n')
+    saved = save(client, **save_request(uploaded['workspace'], 'save-orders', kind='current'))
+    copy = save(client, **save_request(uploaded['workspace'], 'copy-orders', kind='current'))
+    opened = reopen(client, saved['dataset_id'])
+    workspace_id = opened['workspace']['workspace_id']
+    path = f'/api/data-workspaces/{workspace_id}/business-objects'
+    response = client.post(path, json={
+        'display_name': 'Order', 'source_id': uploaded['source']['source_id'],
+        'record_key_field': 'order_id', 'relationship_ids': [],
+    })
+    assert response.status_code == 201, response.get_json()
+    definition = response.get_json()['business_object']
+
+    refreshed = reopen_in_new_process(saved['dataset_id'], expected_revision=saved['revision'])
+    assert refreshed['dataset'] == saved
+    assert refreshed['workspace'] == opened['workspace']
+    assert refreshed['analysis_context'] == opened['analysis_context']
+    assert refreshed['identity_map'] == opened['identity_map']
+    assert refreshed['capabilities']['save_kind'] == 'model'
+    refreshed_path = f"/api/data-workspaces/{refreshed['workspace']['workspace_id']}/business-objects"
+    assert client.get(refreshed_path).get_json() == {'business_objects': [definition]}
+    assert client.get(f"{refreshed_path}/{definition['object_id']}").get_json() == {
+        'business_object': definition,
+    }
+    assert execute_analysis_context(opened['analysis_context'])['dataframe']['total'].tolist() == [5]
+
+    copy_workspace = reopen(client, copy['dataset_id'])['workspace']['workspace_id']
+    assert copy_workspace != workspace_id
+    assert client.get(f'/api/data-workspaces/{copy_workspace}/business-objects').get_json() == {
+        'business_objects': [],
+    }
+
+
 def test_retry_and_competing_updates_preserve_saved_revisions(app):
     client = app.test_client()
     uploaded = upload(client, b'id,units\n1,5\n')
@@ -220,9 +255,11 @@ def test_related_model_restores_selected_scope_relationship_and_object(app):
     edited = business_objects.create_business_object(context['workspace_id'], {
         **object_payload, 'display_name': 'Buyer', 'relationship_ids': [active_relationship],
     })
-    last_confirmed = reopen(client, saved['dataset_id'])
-    assert last_confirmed['workspace']['workspace_id'] != context['workspace_id']
-    assert [obj['display_name'] for obj in business_objects.list_business_objects(last_confirmed['workspace']['workspace_id'])] == ['Customer']
+    reopened = reopen(client, saved['dataset_id'])
+    assert reopened['workspace'] == activated['workspace']
+    assert reopened['dataset'] == saved
+    assert reopened['identity_map'] == activated['identity_map']
+    assert business_objects.list_business_objects(context['workspace_id']) == [loaded[0], edited]
     updated = save(client, **save_request(
         get_workspace(context['workspace_id']), 'update-model', kind='model', dataset_id=saved['dataset_id'],
         expected_revision=1, analysis_context=context,

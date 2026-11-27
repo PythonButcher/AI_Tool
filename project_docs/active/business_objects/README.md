@@ -26,6 +26,8 @@ Use workspace and source identities from the existing catalog. Validate that sel
 
 The definition service validates and saves configuration in one SQLite transaction. Definitions are scoped to a workspace and stored separately from the workspace canvas. Their IDs remain stable across reads. Creation leaves the workspace and relationship versions intact.
 
+Saving a definition on an activated named dataset preserves that definition when Data Hub reopens the same unchanged model. A named dataset revision records the model snapshot at an explicit Save Dataset. The [saved dataset opening contract](../saved_datasets/README.md#opening-and-inspecting) describes workspace identity and recovery for detached definitions.
+
 ## Definition API
 
 All paths are relative to the existing workspace API on the Devstream backend. Encode IDs as path segments. These endpoints have no query parameters and use the same access boundary as other workspace routes.
@@ -60,5 +62,31 @@ Errors outside a saved definition use `{ error: { code, message } }`.
 | `404` | `workspace_not_found`, `business_object_not_found`, `source_not_found`, `relationship_not_found`. Scoped object and relationship lookups use the same miss response for absent and foreign IDs. |
 | `409` | `source_not_in_workspace`, `managed_source_unavailable`, `source_schema_unavailable`, `source_field_not_found`, `relationship_not_applicable`, `relationship_field_not_found`. |
 | `500` | `business_object_storage_error` for a database failure. The response has no private storage or database details. |
+
+## Record browsing API
+
+Both paths start with `/api/data-workspaces/<workspace_id>/business-objects/<object_id>/records`. Encode workspace and object IDs as path segments. The server resolves the source, key, optional label, and selected relationships from that definition. Clients never supply a source, filter field, or relationship ID.
+
+| Method and suffix | Request | Success |
+| --- | --- | --- |
+| `GET` with no suffix | Optional `q`, a single literal string up to 200 characters. The server searches key and label text case-insensitively. A blank query shows the first records. | `200` with `object_id`, `records`, `has_more`, and `governance_readiness`. Each record summary contains `key` and `label`. Exact key-text matches come first, then other matches in source order. No matches returns `records: []`. |
+| `POST /detail` | JSON `{ key }` with the exact key object returned by search. | `200` with `object_id`, `record`, `relationships`, and `governance_readiness`. The record contains `key`, `label`, and `fields` (one row keyed by source field). |
+
+The key object contains `type` and `value`. Types are `string`, `integer`, `number`, `boolean`, and `datetime`. Values are strings for every type to preserve lossless identity. The client submits them verbatim. The label falls back to the key text when there is no configured label or its value is blank. The complete key field must have unique usable values. The server refuses the definition at runtime when the key column contains blanks, unsupported keys, or duplicate identities.
+
+Sections in `relationships` follow the definition's order. Each contains `relationship_id`, `source_id`, and `status`. A `ready` section also contains `rows`, `total_count`, `has_more`, and `governance_readiness`. Related rows match all configured field pairs and exclude null join keys. A ready section with zero matches has `rows: []` and `total_count: 0`. An `unavailable` section contains `error: { code, message }` and omits rows and counts. Stale, inactive, or unconfirmed evidence uses `record_relationship_unavailable`. Unsupported many-to-many execution uses `record_relationship_unsupported`. A removed reference blocks the request with `record_configuration_unavailable`. Rows serialize with the existing Data Hub rules, including string representation for integers beyond the browser's safe integer range.
+
+Search and each related section return up to 50 rows, with `has_more` showing that the result is partial. The record detail supports up to eight selected relationships. Each source read is limited to 32 MiB and 250,000 rows, with an additional 64 MiB expanded workbook cap. Keys can contain up to 512 characters. A detail request is capped at 8 KiB and a successful response at 2 MiB.
+
+The endpoints apply the existing workspace and [dataset governance](../contracts/data_catalog_lineage.md) rules. Search checks the object source. Detail checks the object source and each related source it can read. A blocked source refuses the entire request before returning any records. A source or relationship outside the definition's workspace cannot be selected by the caller.
+
+| Status | Error columns |
+| --- | --- |
+| `400` | `invalid_record_request` for unsupported search parameters or invalid typed-key payload. |
+| `404` | `workspace_not_found`, `business_object_not_found`, or `record_not_found`. A foreign object ID is indistinguishable from an absent object ID. |
+| `409` | `record_configuration_unavailable`, `record_source_unavailable`, `record_key_missing`, `record_key_duplicate`, `saved_dataset_dependency_changed`, or `workspace_version_conflict`. |
+| `413` | `record_read_limit`. |
+| `422` | `record_access_denied`. The body includes `governance_readiness` alongside `error`. |
+| `500` | `business_object_storage_error`. |
 
 Published products, shared investigations, and integration with Context Ledger and Slipstream can build on stable Business Object identities. Deliver those after the user-directed Business Objects release.

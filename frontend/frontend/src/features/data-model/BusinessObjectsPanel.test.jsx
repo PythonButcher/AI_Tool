@@ -565,4 +565,189 @@ describe('BusinessObjectsPanel and SourceModelCanvas integration', () => {
       'Invoices',
     ]);
   });
+
+  const READY_GOV = { status: 'ready', severity: 'none', operation: 'business_object_records', next_action: '', reasons: [], policy: {}, row_count: 3, column_count: 2 };
+  const WARN_GOV = { ...READY_GOV, status: 'warning', severity: 'warning', next_action: 'Review null values in Orders.' };
+  const BLOCKED_GOV = { ...READY_GOV, status: 'blocked', severity: 'critical', next_action: 'Add required field approval to Orders.', reasons: [{ code: 'missing_required_field', severity: 'critical', message: 'Required field approval is missing.', next_action: 'Add required field approval to Orders.' }], policy: { required_fields: ['approval'] } };
+  const [ACME_KEY, LIN_KEY, PUMP_KEY] = [{ type: 'integer', value: '1' }, { type: 'integer', value: '2' }, { type: 'string', value: 'A-1' }];
+  const ACME_DETAIL = { object_id: 'obj_customer', record: { key: ACME_KEY, label: 'Acme', fields: { customer_id: 1, name: 'Acme' } }, relationships: [{ relationship_id: 'rel_orders', source_id: 'src_orders', status: 'ready', rows: [{ buyer: 1, total: 12 }, { buyer: 1, total: 8 }], total_count: 2, has_more: false, governance_readiness: WARN_GOV }], governance_readiness: READY_GOV };
+  const LIN_DETAIL = { object_id: 'obj_customer', record: { key: LIN_KEY, label: 'Lin', fields: { customer_id: 2, name: 'Lin' } }, relationships: [{ relationship_id: 'rel_orders', source_id: 'src_orders', status: 'ready', rows: [{ buyer: 2, total: 55 }], total_count: 1, has_more: false, governance_readiness: READY_GOV }], governance_readiness: READY_GOV };
+  const PUMP_DETAIL = { object_id: 'obj_equipment', record: { key: PUMP_KEY, label: 'Pump', fields: { asset_tag: 'A-1', title: 'Pump' } }, relationships: [{ relationship_id: 'rel_maintenance', source_id: 'src_maintenance', status: 'ready', rows: [{ equipment_ref: 'A-1', work: 'Inspect' }, { equipment_ref: 'A-1', work: 'Test' }], total_count: 2, has_more: false, governance_readiness: READY_GOV }], governance_readiness: READY_GOV };
+  const recPage = (object_id, records, has_more = false) => ({ object_id, records, has_more, governance_readiness: READY_GOV });
+  const okPayload = (body, status = 200) => ({ ok: status >= 200 && status < 300, status, json: () => Promise.resolve(body) });
+
+  test('browses Customer (Acme by name and ID) and Equipment (Pump), sends exact typed keys, and renders empty, unavailable, truncated, warning, and blocked states', async () => {
+    let mode = 'acme';
+    global.fetch.mockImplementation((url, options = {}) => {
+      if (url.endsWith('/ws_demo/business-objects')) return jsonResponse({ business_objects: [CUSTOMER_OBJ, EQUIPMENT_OBJ] });
+      if (url.includes('/obj_customer/records/detail') && options.method === 'POST') {
+        if (mode === 'states') return jsonResponse({ ...ACME_DETAIL, relationships: [
+          { relationship_id: 'rel_orders', source_id: 'src_orders', status: 'ready', rows: [], total_count: 0, has_more: false, governance_readiness: READY_GOV },
+          { relationship_id: 'rel_stale', source_id: 'src_unknown', status: 'unavailable', error: { code: 'record_relationship_unavailable', message: 'Validate, confirm, and activate this relationship to view its records.' } },
+          { relationship_id: 'rel_trunc', source_id: 'src_orders', status: 'ready', rows: [{ buyer: 1, total: 12 }], total_count: 55, has_more: true, governance_readiness: READY_GOV },
+        ] });
+        if (mode === 'blocked') return jsonResponse({ error: { code: 'record_access_denied', message: BLOCKED_GOV.next_action }, governance_readiness: BLOCKED_GOV }, 422);
+        return jsonResponse(ACME_DETAIL);
+      }
+      if (url.includes('/obj_customer/records')) {
+        if (url.includes('q=Nobody')) return jsonResponse(recPage('obj_customer', []));
+        if (url.includes('q=Acme') || url.includes('q=1')) return jsonResponse(recPage('obj_customer', [{ key: ACME_KEY, label: 'Acme' }]));
+        return jsonResponse(recPage('obj_customer', [{ key: ACME_KEY, label: 'Acme' }], true));
+      }
+      if (url.includes('/obj_equipment/records/detail') && options.method === 'POST') return jsonResponse(PUMP_DETAIL);
+      if (url.includes('/obj_equipment/records')) return jsonResponse(recPage('obj_equipment', [{ key: PUMP_KEY, label: 'Pump' }]));
+      return jsonResponse({});
+    });
+    render(<BusinessObjectsPanel workspaceId="ws_demo" sources={HYDRATED_SOURCES} relationships={DEMO_RELATIONSHIPS} onClose={jest.fn()} />);
+    fireEvent.click(await screen.findByRole('button', { name: /Customer/i }));
+    const browser = await screen.findByRole('region', { name: 'Record Browser' });
+    expect(await within(browser).findByText(/Showing first 1 matching records/i)).toBeInTheDocument();
+    const searchInput = within(browser).getByLabelText('Search Customer records');
+    const submitSearch = (q) => { fireEvent.change(searchInput, { target: { value: q } }); fireEvent.click(within(browser).getByRole('button', { name: /^Search/i })); };
+    submitSearch('Nobody'); expect(await within(browser).findByText('No matching records found.')).toBeInTheDocument();
+    submitSearch('Acme'); expect(await within(browser).findByRole('button', { name: /Acme\s*1/ })).toBeInTheDocument();
+    submitSearch('1'); fireEvent.click(await within(browser).findByRole('button', { name: /Acme\s*1/ }));
+    const detail = await screen.findByRole('region', { name: 'Record Detail' });
+    expect(await within(detail).findByText('12')).toBeInTheDocument();
+    expect(within(detail).getByText('8')).toBeInTheDocument();
+    expect(within(detail).getByText(WARN_GOV.next_action)).toBeInTheDocument();
+    expect(within(detail).queryByText('55')).not.toBeInTheDocument();
+    expect(JSON.parse(global.fetch.mock.calls.find(([u, o]) => u.endsWith('/records/detail') && o?.method === 'POST')[1].body)).toEqual({ key: ACME_KEY });
+    mode = 'states'; fireEvent.click(within(browser).getByRole('button', { name: /Acme\s*1/ }));
+    expect(await within(detail).findByText('No related rows for this record.')).toBeInTheDocument();
+    expect(within(detail).getByText('Validate, confirm, and activate this relationship to view its records.')).toBeInTheDocument();
+    expect(within(detail).getByRole('region', { name: 'Related src_unknown' })).toBeInTheDocument();
+    expect(within(detail).getByText('Showing first 1 of 55 related rows.')).toBeInTheDocument();
+    mode = 'blocked'; fireEvent.click(within(browser).getByRole('button', { name: /Acme\s*1/ }));
+    expect(await within(detail).findByText('Access Blocked')).toBeInTheDocument();
+    expect(within(detail).getByText(BLOCKED_GOV.next_action)).toBeInTheDocument();
+    expect(within(detail).queryByText('12')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Equipment/i }));
+    await within(browser).findByRole('button', { name: /Pump\s*A-1/ });
+    fireEvent.change(within(browser).getByLabelText('Search Equipment records'), { target: { value: 'Pump' } });
+    fireEvent.click(within(browser).getByRole('button', { name: /^Search/i }));
+    fireEvent.click(await within(browser).findByRole('button', { name: /Pump\s*A-1/ }));
+    expect(await within(screen.getByRole('region', { name: 'Record Detail' })).findByText('Inspect')).toBeInTheDocument();
+    expect(screen.getByText('Test')).toBeInTheDocument();
+    expect(JSON.parse(global.fetch.mock.calls.find(([u]) => u.includes('/obj_equipment/records/detail'))[1].body)).toEqual({ key: PUMP_KEY });
+  });
+
+  test('Record Browser Async Mutations: In-Flight Navigation, Concurrent Edits, Failure Retry, Conflict Or Duplicate, and Identity And Unmount', async () => {
+    const [defCustDetail, defSearch1, defSearch2, defDetail1, defDetail2, defConflict, defWsSwitch, defClose] = Array.from({ length: 8 }, createDeferred);
+    let failSearchOnce = true; let failDetailOnce = true;
+    global.fetch.mockImplementation((url, options = {}) => {
+      if (url.endsWith('/ws_demo/business-objects')) return jsonResponse({ business_objects: [CUSTOMER_OBJ, EQUIPMENT_OBJ] });
+      if (url.endsWith('/ws_other/business-objects')) return jsonResponse({ business_objects: [] });
+      if (url.includes('/obj_customer/records/detail') && options.method === 'POST') {
+        const val = JSON.parse(options.body).key.value;
+        if (val === '1' && defCustDetail.active) return defCustDetail.promise;
+        if (val === '1' && defDetail1.active) return defDetail1.promise;
+        if (val === '2' && defDetail2.active) return defDetail2.promise;
+        if (val === '2' && defConflict.active) return defConflict.promise;
+        if (val === '1' && failDetailOnce) { failDetailOnce = false; return jsonResponse({ error: { code: 'business_object_storage_error', message: 'Temporary detail error.' } }, 500); }
+        return jsonResponse(ACME_DETAIL);
+      }
+      if (url.includes('/obj_customer/records')) {
+        if (url.includes('q=First')) return defSearch1.promise;
+        if (url.includes('q=Second')) return defSearch2.promise;
+        if (url.includes('q=RetryMe') && failSearchOnce) { failSearchOnce = false; return jsonResponse({ error: { code: 'business_object_storage_error', message: 'Temporary search error.' } }, 500); }
+        if (url.includes('q=WsRace')) return defWsSwitch.promise;
+        if (url.includes('q=CloseRace')) return defClose.promise;
+        return jsonResponse(recPage('obj_customer', [{ key: ACME_KEY, label: 'Acme' }, { key: LIN_KEY, label: 'Lin' }]));
+      }
+      if (url.includes('/obj_equipment/records')) return jsonResponse(recPage('obj_equipment', [{ key: PUMP_KEY, label: 'Pump' }]));
+      return jsonResponse({});
+    });
+    const { rerender, unmount } = render(<BusinessObjectsPanel workspaceId="ws_demo" sources={HYDRATED_SOURCES} relationships={DEMO_RELATIONSHIPS} onClose={jest.fn()} />);
+    fireEvent.click(await screen.findByRole('button', { name: /Customer/i }));
+    const browser = await screen.findByRole('region', { name: 'Record Browser' });
+    await within(browser).findByRole('button', { name: /Acme\s*1/ });
+    // In-Flight Navigation
+    defCustDetail.active = true; fireEvent.click(within(browser).getByRole('button', { name: /Acme\s*1/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Equipment/i }));
+    expect(await within(browser).findByRole('button', { name: /Pump\s*A-1/ })).toBeInTheDocument();
+    defCustDetail.active = false; defCustDetail.resolve(okPayload(ACME_DETAIL));
+    await waitFor(() => expect(within(browser).queryByText('12')).not.toBeInTheDocument());
+    // Concurrent Edits (search & detail out-of-order)
+    fireEvent.click(screen.getByRole('button', { name: /Customer/i }));
+    await within(browser).findByRole('button', { name: /Acme\s*1/ });
+    const searchInput = within(browser).getByLabelText('Search Customer records');
+    const runSearch = (q) => { fireEvent.change(searchInput, { target: { value: q } }); fireEvent.click(within(browser).getByRole('button', { name: /^Search/i })); };
+    runSearch('First'); runSearch('Second');
+    defSearch2.resolve(okPayload(recPage('obj_customer', [{ key: ACME_KEY, label: 'Acme' }, { key: LIN_KEY, label: 'Lin' }])));
+    expect(await within(browser).findByRole('button', { name: /Lin\s*2/ })).toBeInTheDocument();
+    defSearch1.resolve(okPayload(recPage('obj_customer', [{ key: { type: 'integer', value: '9' }, label: 'StaleRecord' }])));
+    await waitFor(() => expect(within(browser).queryByText('StaleRecord')).not.toBeInTheDocument());
+    defDetail1.active = true; defDetail2.active = true;
+    fireEvent.click(within(browser).getByRole('button', { name: /Acme\s*1/ }));
+    fireEvent.click(within(browser).getByRole('button', { name: /Lin\s*2/ }));
+    defDetail1.active = false; defDetail2.active = false; defDetail2.resolve(okPayload(LIN_DETAIL));
+    const detail = screen.getByRole('region', { name: 'Record Detail' });
+    expect(await within(detail).findByText('55')).toBeInTheDocument();
+    defDetail1.resolve(okPayload(ACME_DETAIL));
+    await waitFor(() => expect(within(detail).queryByText('12')).not.toBeInTheDocument());
+    // Failure Retry (search & detail)
+    runSearch('RetryMe'); expect(await within(browser).findByText('Temporary search error.')).toBeInTheDocument();
+    expect(searchInput).toHaveValue('RetryMe');
+    fireEvent.click(within(browser).getByRole('button', { name: 'Retry Search' }));
+    await within(browser).findByRole('button', { name: /Acme\s*1/ });
+    expect(global.fetch.mock.calls.filter(([u]) => u.endsWith('/ws_demo/business-objects/obj_customer/records?q=RetryMe'))).toHaveLength(2);
+    const countKeyCalls = (val) => global.fetch.mock.calls.filter(([u, o]) => u.endsWith('/ws_demo/business-objects/obj_customer/records/detail') && JSON.parse(o.body).key.value === val).length;
+    const beforeRetry = countKeyCalls('1'); fireEvent.click(within(browser).getByRole('button', { name: /Acme\s*1/ }));
+    expect(await within(screen.getByRole('region', { name: 'Record Detail' })).findByText('Temporary detail error.')).toBeInTheDocument();
+    fireEvent.click(within(browser).getByRole('button', { name: 'Retry Record' }));
+    expect(await within(screen.getByRole('region', { name: 'Record Detail' })).findByText('12')).toBeInTheDocument();
+    expect(countKeyCalls('1') - beforeRetry).toBe(2);
+    // Conflict Or Duplicate (double-click pending record, return 409)
+    defConflict.active = true; const beforeConflict = countKeyCalls('2');
+    const linBtn = within(browser).getByRole('button', { name: /Lin\s*2/ });
+    fireEvent.click(linBtn); fireEvent.click(linBtn); defConflict.active = false;
+    expect(countKeyCalls('2') - beforeConflict).toBe(1);
+    defConflict.resolve(okPayload({ error: { code: 'record_key_duplicate', message: 'The record key field contains duplicate values.' } }, 409));
+    expect(await within(screen.getByRole('region', { name: 'Record Detail' })).findByText('The record key field contains duplicate values.')).toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Record Detail' })).queryByText('12')).not.toBeInTheDocument();
+    // Identity And Unmount (workspace switch + unmount/reopen)
+    runSearch('WsRace'); rerender(<BusinessObjectsPanel workspaceId="ws_other" sources={HYDRATED_SOURCES} relationships={DEMO_RELATIONSHIPS} onClose={jest.fn()} />);
+    defWsSwitch.resolve(okPayload(recPage('obj_customer', [{ key: ACME_KEY, label: 'ForeignAcme' }])));
+    await screen.findByText('No Business Objects saved in this workspace yet.'); expect(screen.queryByText('ForeignAcme')).not.toBeInTheDocument();
+    rerender(<BusinessObjectsPanel workspaceId="ws_demo" sources={HYDRATED_SOURCES} relationships={DEMO_RELATIONSHIPS} onClose={jest.fn()} />);
+    fireEvent.click(await screen.findByRole('button', { name: /Customer/i }));
+    const reopened = await screen.findByRole('region', { name: 'Record Browser' });
+    fireEvent.change(within(reopened).getByLabelText('Search Customer records'), { target: { value: 'CloseRace' } });
+    fireEvent.click(within(reopened).getByRole('button', { name: /^Search/i })); unmount();
+    render(<BusinessObjectsPanel workspaceId="ws_demo" sources={HYDRATED_SOURCES} relationships={DEMO_RELATIONSHIPS} onClose={jest.fn()} />);
+    defClose.resolve(okPayload(recPage('obj_customer', [{ key: ACME_KEY, label: 'ClosedAcme' }])));
+    await screen.findByRole('button', { name: /Customer/i }); expect(screen.queryByText('ClosedAcme')).not.toBeInTheDocument();
+  });
+
+  test('opens a labeled record with a 512-character ID', async () => {
+    const fs = require('fs');
+    const path = require('path');
+    const longId = 'K'.repeat(512);
+    const longKey = { type: 'string', value: longId };
+    global.fetch.mockImplementation((url, options = {}) => {
+      if (url.endsWith('/ws_demo/business-objects')) return jsonResponse({ business_objects: [CUSTOMER_OBJ] });
+      if (url.includes('/obj_customer/records/detail') && options.method === 'POST') {
+        return jsonResponse({ object_id: 'obj_customer', record: { key: longKey, label: 'Acme Long Key', fields: { customer_id: longId, name: 'Acme Long Key' } }, relationships: [], governance_readiness: READY_GOV });
+      }
+      if (url.includes('/obj_customer/records')) return jsonResponse(recPage('obj_customer', [{ key: longKey, label: 'Acme Long Key' }]));
+      return jsonResponse({});
+    });
+    render(<BusinessObjectsPanel workspaceId="ws_demo" sources={HYDRATED_SOURCES} relationships={DEMO_RELATIONSHIPS} onClose={jest.fn()} />);
+    fireEvent.click(await screen.findByRole('button', { name: /Customer/i }));
+    const browser = await screen.findByRole('region', { name: 'Record Browser' });
+    const recordBtn = await within(browser).findByRole('button', { name: /Acme Long Key/ });
+    expect(within(recordBtn).getByText('Acme Long Key')).toBeInTheDocument();
+    const keyNode = within(recordBtn).getByText(longId);
+    expect(keyNode).toHaveAttribute('title', longId);
+    fireEvent.click(recordBtn);
+    const detail = await screen.findByRole('region', { name: 'Record Detail' });
+    expect(await within(detail).findByRole('heading', { name: 'Acme Long Key' })).toBeInTheDocument();
+    expect(within(detail).getByText(`customer_id: ${longId}`)).toBeInTheDocument();
+    expect(JSON.parse(global.fetch.mock.calls.find(([u, o]) => u.endsWith('/records/detail') && o?.method === 'POST')[1].body)).toEqual({ key: longKey });
+    const css = fs.readFileSync(path.join(__dirname, 'BusinessObjectsPanel.css'), 'utf8');
+    expect(css).toMatch(/\.bo-record-btn\s*\{[^}]*flex-direction:\s*column/);
+    expect(css).not.toMatch(/\.bo-record-key\s*\{[^}]*flex-shrink:\s*0/);
+    expect(css).toMatch(/\.bo-detail-id\s*\{[^}]*overflow-wrap:\s*anywhere/);
+  });
 });

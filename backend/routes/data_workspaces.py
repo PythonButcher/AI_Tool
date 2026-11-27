@@ -5,6 +5,7 @@ import sqlite3
 from flask import Blueprint, current_app, jsonify, request
 
 from backend.repositories.source_workspace_repository import get_source, get_workspace, list_sources
+from backend.services.business_object_records import RecordAccessDenied, get_record, search_records
 from backend.services.business_objects import (
     BusinessObjectError,
     create_business_object,
@@ -29,6 +30,13 @@ def _workspace_error(error: WorkspaceContextError | BusinessObjectError):
         "source_not_found": 404,
         "relationship_not_found": 404,
         "business_object_not_found": 404,
+        "record_not_found": 404,
+        "record_read_limit": 413,
+        "record_configuration_unavailable": 409,
+        "record_source_unavailable": 409,
+        "record_key_missing": 409,
+        "record_key_duplicate": 409,
+        "saved_dataset_dependency_changed": 409,
         "source_not_in_workspace": 409,
         "managed_source_unavailable": 409,
         "source_schema_unavailable": 409,
@@ -97,6 +105,37 @@ def business_object_detail(workspace_id, object_id):
     """Retrieve one saved definition in the named workspace."""
     try:
         return jsonify({"business_object": get_business_object(workspace_id, object_id)}), 200
+    except BusinessObjectError as exc:
+        return _workspace_error(exc)
+    except sqlite3.Error:
+        return _business_object_storage_error()
+
+
+@data_workspaces_bp.route("/data-workspaces/<workspace_id>/business-objects/<object_id>/records", methods=["GET"])
+@data_workspaces_bp.route(
+    "/data-workspaces/<workspace_id>/business-objects/<object_id>/records/detail", methods=["POST"]
+)
+def business_object_records(workspace_id, object_id):
+    """Search or retrieve rows exclusively through a saved object definition."""
+    try:
+        if request.method == "POST":
+            if request.content_length is not None and request.content_length > 8192:
+                raise BusinessObjectError("record_read_limit", "The record request is too large.")
+            result = get_record(workspace_id, object_id, request.get_json(silent=True))
+        else:
+            if request.args.keys() - {"q"} or len(request.args.getlist("q")) > 1:
+                raise BusinessObjectError("invalid_record_request", "Supply at most one q search parameter.")
+            result = search_records(workspace_id, object_id, request.args.get("q", ""))
+        response = jsonify(result)
+        if response.calculate_content_length() > 2 * 1024 * 1024:
+            raise BusinessObjectError("record_read_limit", "The matching record data exceeds the response limit.")
+        response.headers["Cache-Control"] = "no-store"
+        return response
+    except RecordAccessDenied as exc:
+        return jsonify({
+            "error": {"code": exc.code, "message": str(exc)},
+            "governance_readiness": exc.readiness,
+        }), 422
     except BusinessObjectError as exc:
         return _workspace_error(exc)
     except sqlite3.Error:
