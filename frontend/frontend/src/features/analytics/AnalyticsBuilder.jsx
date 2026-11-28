@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   TbAlertCircle, TbArrowBarToDown, TbCalendar, TbCheck, TbChevronRight, TbColumns, TbGripVertical,
-  TbHash, TbLetterCase, TbPlus, TbSearch, TbSwitchHorizontal, TbX,
+  TbHash, TbLetterCase, TbPlus, TbRotateClockwise, TbSearch, TbSwitchHorizontal, TbX,
 } from 'react-icons/tb';
 import AnalyticsMeasureEditor, { AGGREGATION_LABELS } from './AnalyticsMeasureEditor';
 import AnalyticsQueryOptions from './AnalyticsQueryOptions';
@@ -158,6 +158,7 @@ export default function AnalyticsBuilder({ config, fields, metrics = [], sourceL
   const [choosing, setChoosing] = useState(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [editingMeasure, setEditingMeasure] = useState(null);
+  const [clearedValue, setClearedValue] = useState(false);
   const [showRemap, setShowRemap] = useState(false);
   const [oldField, setOldField] = useState('');
   const [newField, setNewField] = useState('');
@@ -168,9 +169,11 @@ export default function AnalyticsBuilder({ config, fields, metrics = [], sourceL
   const groups = query.group_by || [];
   const measures = query.measures || [];
   const firstMeasure = measures[0];
-  const fallback = replaceDefaultValue && measures.length === 1 && firstMeasure.id === 'value' && firstMeasure.label === 'Rows' &&
+  const isDefaultRows = measures.length === 1 && firstMeasure?.id === 'value' && firstMeasure.label === 'Rows' &&
     firstMeasure.aggregation === 'count_rows' && !firstMeasure.field && !firstMeasure.metric_id && !firstMeasure.formula &&
     (!firstMeasure.post || firstMeasure.post === 'none');
+  const clearedDefault = clearedValue && isDefaultRows;
+  const fallback = (replaceDefaultValue || clearedValue) && isDefaultRows;
   const singleSeries = view === 'pie' || view === 'doughnut';
   const detailRows = view === 'table' && query.mode === 'rows';
   const timeAxis = ['line', 'area', 'stacked_area'].includes(view);
@@ -193,7 +196,12 @@ export default function AnalyticsBuilder({ config, fields, metrics = [], sourceL
     ? { sort: nextName ? { ...query.sort, field: nextName } : undefined } : {};
   const removeGroup = name => changeQuery({ group_by: groups.filter(group => group.field !== name), ...replaceSort(name) });
   const removeMeasure = index => {
-    changeQuery({ measures: measures.filter((_, position) => position !== index), ...replaceSort(measures[index].id) });
+    if (measures.length <= 1) {
+      changeQuery({ measures: [{ id: 'value', aggregation: 'count_rows', label: 'Rows' }], ...replaceSort(measures[index]?.id) });
+      setClearedValue(true);
+    } else {
+      changeQuery({ measures: measures.filter((_, position) => position !== index), ...replaceSort(measures[index].id) });
+    }
     setEditingMeasure(null);
   };
   const chooseView = nextView => {
@@ -201,6 +209,25 @@ export default function AnalyticsBuilder({ config, fields, metrics = [], sourceL
     setPickerOpen(false);
     setEditingMeasure(null);
     setChoosing(null);
+  };
+  const hasFilters = Array.isArray(query.filters) ? query.filters.length > 0 : !!(query.filters?.rules?.length || query.filters?.field);
+  const canReset = groups.length > 0 || !clearedDefault || hasFilters || !!query.period || !!query.comparison || !!query.sort ||
+    columns.length > 0 || !!query.field || (query.limit != null && query.limit !== 1000) || detailRows || view !== 'bar';
+  const resetBuilder = () => {
+    onChange({
+      ...config,
+      view: 'bar',
+      query: { mode: 'aggregate', measures: [{ id: 'value', aggregation: 'count_rows', label: 'Rows' }], group_by: [], filters: [], limit: 1000 },
+    });
+    setClearedValue(true);
+    setSelectedName(null);
+    setDraggedName(null);
+    setHovered(null);
+    setChoosing(null);
+    setEditingMeasure(null);
+    setPickerOpen(false);
+    setShowRemap(false);
+    setAnnouncement('Analysis builder cleared.');
   };
   const assign = (target, field) => {
     if (!target.candidates.some(candidate => candidate.name === field?.name)) return;
@@ -249,19 +276,20 @@ export default function AnalyticsBuilder({ config, fields, metrics = [], sourceL
     id: 'values', title: singleSeries ? 'Value' : 'Values', icon: TbHash,
     purpose: view === 'kpi' ? 'Headline metrics to highlight' : singleSeries ? 'Numeric share for each slice' : 'Metrics plotted and summarized',
     acceptsLabel: 'Numbers or counts',
-    hint: fallback ? 'Choose a field to replace the default row count.' : singleSeries ? 'Use one measure. Choose a field to replace the value.' : 'Add fields to summarize or configure a measure.',
+    hint: clearedDefault ? 'Using row count until you drop or choose a field.' : fallback ? 'Choose a field to replace the default row count.' : singleSeries ? 'Use one measure. Choose a field to replace the value.' : 'Add fields to summarize or configure a measure.',
     blocked: 'Remove a measure before adding another.',
-    count: measures.length,
+    count: clearedDefault ? 0 : measures.length,
     maxSlots: singleSeries ? 1 : undefined,
-    required: true,
+    required: !clearedDefault,
     alwaysHint: fallback,
-    replace: fallback || (singleSeries && measures.length === 1),
+    replace: (!clearedDefault && fallback) || (singleSeries && !clearedDefault && measures.length === 1),
     candidates: measures.length >= (singleSeries ? 2 : 12) ? [] : fields,
     assign: field => {
+      setClearedValue(false);
       if (fallback || (singleSeries && measures.length)) changeQuery({ measures: [fromField(field, measures[0].id)] });
       else changeQuery({ measures: [...measures, fromField(field)] });
     },
-    entries: measures.length ? measures.map((measure, index) => <MeasureRow key={index} measure={measure} index={index} editing={editingMeasure === index} fallback={fallback}
+    entries: !clearedDefault && measures.length ? measures.map((measure, index) => <MeasureRow key={index} measure={measure} index={index} editing={editingMeasure === index} fallback={fallback}
       fields={fields} metrics={metrics} onToggle={() => setEditingMeasure(previous => previous === index ? null : index)}
       onRemove={() => removeMeasure(index)}
       onChange={patch => changeQuery({
@@ -269,6 +297,8 @@ export default function AnalyticsBuilder({ config, fields, metrics = [], sourceL
         ...(patch.id === undefined ? {} : replaceSort(measure.id, patch.id)),
       })} />) : null,
     footer: !singleSeries && measures.length < 12 && <button type="button" className="analytics-author-link" onClick={() => {
+      setClearedValue(false);
+      if (clearedDefault) { setEditingMeasure(0); return; }
       changeQuery({ measures: [...measures, { id: nextMeasureId(), aggregation: 'count_rows' }] });
       setEditingMeasure(measures.length);
     }}>New measure <TbChevronRight aria-hidden="true" /></button>,
@@ -437,7 +467,14 @@ export default function AnalyticsBuilder({ config, fields, metrics = [], sourceL
         <div className="analytics-section-bar">
           <span className="analytics-step-index" aria-hidden="true">02</span>
           <h3>Field assignment</h3>
-          {activeField && <button type="button" className="analytics-author-link" aria-label="Clear field selection" onClick={() => setSelectedName(null)}>Cancel</button>}
+          {activeField ? (
+            <button type="button" className="analytics-author-link" aria-label="Clear field selection" onClick={() => setSelectedName(null)}>Cancel</button>
+          ) : (
+            <button type="button" className="analytics-reset-btn" aria-label="Reset all fields and options"
+              title="Clear all assigned fields, filters, sort, and visual settings" disabled={!canReset} onClick={resetBuilder}>
+              <TbRotateClockwise aria-hidden="true" /> Reset all
+            </button>
+          )}
         </div>
         {activeField ? (
           <div className="analytics-placement-banner">

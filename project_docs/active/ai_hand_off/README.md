@@ -10,7 +10,7 @@ Antigravity owns bounded frontend implementation, React/CSS, UI rendering, and f
 
 ## Active Handoffs And Goal Prompts
 
-[Redesign field assignment in the Analytics builder](analytics_visual_builder.md) is the active Antigravity assignment. Consult [status](../status/project_execution_status.md) and the [sole gate](../active_gate/README.md) before acting.
+There is no active Antigravity assignment. Consult [status](../status/project_execution_status.md) and the [sole gate](../active_gate/README.md) before acting.
 
 Completed handoffs belong outside this active folder.
 

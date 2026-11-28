@@ -205,14 +205,43 @@ export default function AnalyticsShell({ onOpenAiChat, onOpenGallery, onOpenAiCh
     cancel(); setDraft({ ...clone(analysis.config), requiresSourceReview: !!analysis.requiresSourceReview }); setResult(analysis.result || null); setResultConfig(analysis.config); setDirty(false); setOrigin(null); setHistory({ past: [], future: [] });
     if (analysis.requiresSourceReview) setError('Review the imported source and select a dataset before running.');
   };
-  const startAnalysis = (view = 'bar', title, starter) => {
+  const startDraft = (config, { replaceDefaultValue = false, hasEdits = false } = {}) => {
     if (!commit(next => ({ ...preserveDraft(next, true), lastView: 'explore', activeAnalysisId: null }))) return false;
-    resetComposer(!starter && !title && view === 'bar');
+    resetComposer(replaceDefaultValue);
     cancel();
-    setDraft(starter || { ...defaultAnalysis(selectedSource), view, ...(title ? { title } : {}) });
-    setResult(null); setResultConfig(null); setDirty(!!(starter || title)); setOrigin(null); setHistory({ past: [], future: [] }); setDrillHistory([]); setError('');
-    if (mode === 'dashboards') setTargetBoard(board.state.id);
+    setDraft(config);
+    setResult(null);
+    setResultConfig(null);
+    setDirty(hasEdits);
+    setOrigin(null);
+    setHistory({ past: [], future: [] });
+    setDrillHistory([]);
+    setError('');
     return true;
+  };
+  const startAnalysis = (view = 'bar', title, starter) => {
+    const config = starter || { ...defaultAnalysis(selectedSource), view, ...(title ? { title } : {}) };
+    const started = startDraft(config, {
+      replaceDefaultValue: !starter && !title && view === 'bar',
+      hasEdits: !!(starter || title),
+    });
+    if (started && mode === 'dashboards') setTargetBoard(board.state.id);
+    return started;
+  };
+  const resetAnalytics = () => {
+    if (!startDraft(defaultAnalysis(defaultSource), { replaceDefaultValue: true })) return;
+    if (switcherRef.current) switcherRef.current.open = false;
+    setToolPanel(null);
+    setActiveMenuId(null);
+    setSearch('');
+    setSort('recent');
+    setFavorites(false);
+    setLineageOpen(false);
+    setSelectedTile(null);
+    setTargetBoard(workspace.activeDashboardId);
+    setFocus(false);
+    setDense(false);
+    setNotice(dirty ? 'Analytics reset. Your previous draft is in the Library.' : 'Analytics reset.');
   };
   const saveAnalysis = useCallback(() => {
     if (!draftRef.current.title.trim()) { setError('Give this analysis a name.'); return; }
@@ -541,6 +570,10 @@ export default function AnalyticsShell({ onOpenAiChat, onOpenGallery, onOpenAiCh
         {mode === 'explore' && <button type="button" className="is-primary analytics-run-btn" onClick={run} disabled={status === 'loading' || !draft.source} aria-label="Run analysis" title="Run analysis">
           <FaPlay /><span>{status === 'loading' ? 'Running…' : 'Run analysis'}</span>
         </button>}
+        <button type="button" className="analytics-reset-workspace" onClick={resetAnalytics}
+          aria-label="Reset Analytics" title="Reset Analytics and start a fresh analysis">
+          <FaUndo aria-hidden="true" /><span>Reset<span className="analytics-reset-workspace-label"> Analytics</span></span>
+        </button>
         <button ref={focusButtonRef} type="button" className={`analytics-focus-button ${focus ? 'is-primary' : ''}`}
           title={focus ? 'Exit focus (Esc)' : 'Enter focus mode'} aria-pressed={focus} onClick={() => setFocus(value => !value)}>
           {focus ? <FaCompress /> : <FaExpand />}<span>{focus ? 'Exit focus' : 'Focus'}</span>

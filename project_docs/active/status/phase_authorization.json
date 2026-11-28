@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "authorized_work": {
-    "name": "Redesign field assignment in the Analytics visual builder",
+    "name": "Reset the current Analytics session",
     "allowed_paths": [
       "project_docs/active/active_gate/README.md",
       "project_docs/active/status/project_execution_status.md",
@@ -9,6 +9,7 @@
       "project_docs/active/ai_hand_off/README.md",
       "project_docs/active/ai_hand_off/analytics_visual_builder.md",
       "project_docs/archive/analytics_visual_builder_reviewed_2026_11_27.md",
+      "project_docs/archive/analytics_field_assignment_redesign_return_2026_11_27.md",
       "project_docs/active/analytics/README.md",
       "project_docs/active/contracts/analytics_workspace.md",
       "project_docs/active/business_objects/README.md",
@@ -16,17 +17,19 @@
       "frontend/frontend/src/features/analytics/AnalyticsBuilder.jsx",
       "frontend/frontend/src/features/analytics/AnalyticsBuilder.css",
       "frontend/frontend/src/features/analytics/AnalyticsVisualPicker.jsx",
+      "frontend/frontend/src/features/analytics/AnalyticsShell.jsx",
+      "frontend/frontend/src/features/analytics/AnalyticsShell.css",
       "frontend/frontend/src/features/analytics/AnalyticsShell.test.jsx"
     ]
   },
   "authorization_state": "AUTHORIZED",
-  "lifecycle_state": "IN PROGRESS",
+  "lifecycle_state": "AWAITING USER ACCEPTANCE",
   "user_implementation_authorization": {
     "approved_by": "User",
     "approved_at": "2026-11-27",
-    "evidence": "The user rejected the visual builder after reviewing the field drop area and asked for a complete redesign of field assignment.",
-    "instruction": "Redesign the field-assignment area of the existing visual builder so users can tell what to do. Preserve existing features. Gemini owns the design and frontend implementation. The Analytics roadmap retains Analysis-first navigation, Dashboard authoring, and Publishing as separate assignments.",
-    "codex_frontend_implementation_authorized": false
+    "evidence": "The user reported Gemini was done and directly asked Codex to add a master reset button on the Analytics page.",
+    "instruction": "Add a workspace-level Reset Analytics control that clears current selections and starts a fresh analysis. Reuse existing recovery and preserve saved work and the field-assignment redesign.",
+    "codex_frontend_implementation_authorized": true
   },
   "business_object_record_analytics_authorization": {
     "approved_by": "User",
@@ -534,6 +537,7 @@
     "project_docs/active/ai_hand_off/analytics_polish.md",
     "project_docs/active/ai_hand_off/analytics_visual_builder.md",
     "project_docs/archive/analytics_visual_builder_reviewed_2026_11_27.md",
+    "project_docs/archive/analytics_field_assignment_redesign_return_2026_11_27.md",
     "project_docs/archive/business_object_record_analytics_checkpoint_2026_11_27.md",
     "frontend/frontend/src/**",
     "backend/services/chat_model_router.py",
@@ -656,5 +660,5 @@
     "project_docs/archive/datastream_hub_platform_entry_accepted_2026_11_25.md"
   ],
   "accepted_change_snapshot": "project_docs/active/status/accepted_change_snapshot.json",
-  "codex_frontend_edits_allowed": false
+  "codex_frontend_edits_allowed": true
 }

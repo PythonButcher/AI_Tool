@@ -1,23 +1,23 @@
 # Project Execution Status
 
-## Current Gate: Redesign field assignment in the Analytics visual builder
+## Current Gate: Reset the current Analytics session
 
-- **Current Gate**: Redesign field assignment in the Analytics visual builder
+- **Current Gate**: Reset the current Analytics session
 - **Roadmap Phase**: 1
-- **Phase State**: `IN PROGRESS`
-- **What This State Means**: The frontend handoff returned and requires Codex source and build review.
-- **Current Milestone**: Step 1: Redesign the field-assignment area
-- **Automatic Continuation**: `CONTINUE`
-- **Current Owner**: Codex
-- **Backend Readiness**: `backend_contract_ready`
-- **Frontend Readiness**: `backend_contract_ready`
-- **Next Action**: Antigravity redesigns field assignment using the existing Analytics builder and query contract.
-- **Required Action**: Review `project_docs/active/ai_hand_off/analytics_visual_builder.md` and its returned evidence.
+- **Phase State**: `AWAITING USER ACCEPTANCE`
+- **What This State Means**: Reset Analytics passed engineering verification. The user owns the browser decision in chat.
+- **Current Milestone**: Reset Analytics engineering verification passed
+- **Automatic Continuation**: `WAIT_FOR_USER`
+- **Current Owner**: User
+- **Backend Readiness**: `complete`
+- **Frontend Readiness**: `not_applicable`
+- **Next Action**: User browser decision in chat.
+- **Required Action**: Wait for the user's decision on Reset Analytics.
 - **Active Gate**: `project_docs/active/active_gate/README.md`
 - **Authorization Record**: `project_docs/active/status/phase_authorization.json`
 - **Roadmap**: `project_docs/active/analytics/README.md`, Improve the existing Analytics workflow
-- **Active Handoff**: `project_docs/active/ai_hand_off/analytics_visual_builder.md` — returned for Codex review: Redesigned Analytics field assignment with live setup readiness strip, self-explaining role shelves, searchable typed field chooser, aggregation tags, and placement banner (17/17 tests, build, and harness passed).
-- **Latest Verification**: The [prior engineering review](../../archive/analytics_visual_builder_reviewed_2026_11_27.md) verified the shortcut fix. The user's browser review found field assignment still unclear.
+- **Active Handoff**: None
+- **Latest Verification**: All 19 Analytics shell tests passed, including reset from Analysis and Dashboard, draft recovery after reload, and ignoring a late result. The production build passed with warnings in other areas. [Field-assignment redesign return](../../archive/analytics_field_assignment_redesign_return_2026_11_27.md)
 
 ## Paused Business Object Work
 

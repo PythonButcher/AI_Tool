@@ -131,7 +131,8 @@
 .analytics-header-tools { display: flex; align-items: center; min-width: 0; gap: 10px; }
 .analytics-header-tools { justify-self: end; gap: 3px; }
 
-.analytics-shell .analytics-focus-button {
+.analytics-shell .analytics-focus-button,
+.analytics-shell .analytics-reset-workspace {
   flex: none;
   min-height: 30px;
   padding: 4px 8px;
@@ -1292,6 +1293,7 @@
   .analytics-header-context { gap: 5px; }
   .analytics-header .analytics-run-btn span { display: none; }
   .analytics-header .analytics-run-btn { width: 32px; padding: 0 !important; }
+  .analytics-header .analytics-reset-workspace-label { display: none; }
   .analytics-main { padding: 9px; }
   .analytics-blueprint-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: auto; }
   .analytics-blueprint-slot.is-chart { grid-column: auto; }

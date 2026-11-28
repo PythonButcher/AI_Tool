@@ -1,27 +1,12 @@
-Goal: Redesign field assignment in the existing Analytics visual builder so users can tell what to place where.
+Goal: Reset the current Analytics session and open a fresh Analysis.
 
 ## User Outcome
 
-A user can tell which fields a visual needs, assign or change them directly, and see when the visual is ready to run. The builder keeps its chart types, advanced controls, and customizable workbench.
+A user can clear current Analytics selections and start over in one action. Saved work remains accessible and the Library retains the edited draft for recovery.
 
 ## Scope
 
-**Current Step**: Step 1: Redesign the field-assignment area
-
-**Target Files**: AnalyticsBuilder.jsx, AnalyticsBuilder.css, AnalyticsVisualPicker.jsx, and AnalyticsShell.test.jsx, as listed in the [frontend handoff](../ai_hand_off/analytics_visual_builder.md).
-
-**Step Acceptance**: Field assignment has a clear starting point. The visual's field roles, compatible choices, current assignments, and next action are understandable before and after placement.
-
-**Step Verification**: Check direct selection and editing, keyboard and drag interaction, invalid placement, and query preservation in the focused Analytics suite. Run the production build.
-
-**Next Step**: Step 2: Review the redesigned field-assignment experience
-
-**Continuation Rule**: WAIT_FOR_AGENT. Antigravity owns frontend design and implementation.
-
-**Stop Condition**: Return the changed files, verification results, and a brief description of the redesigned workflow to Codex.
-
-- [ ] **Step 1: Redesign the field-assignment area** — [IN PROGRESS]
-- [ ] **Step 2: Review the redesigned field-assignment experience** — [PENDING]
+Reset Analytics is available from Analysis and Dashboard. It opens a default Analysis, clears current selections, results, and panels, and cancels the active query. The Library can reopen the last edited draft.
 
 ## Contracts
 
@@ -30,7 +15,7 @@ A user can tell which fields a visual needs, assign or change them directly, and
 
 ## Acceptance
 
-The field-assignment area helps users understand the visual's inputs, choose where a field goes, and see what remains to do. Pointer and keyboard actions work at compact widths. Existing visual types, query behavior, and workbench controls remain usable.
+Reset clears the active analysis and transient Analytics controls. A manually selected source resets to the default attached source, when available. Saved analyses, dashboards, and workbench layout remain accessible.
 
 ## Verification
 
@@ -41,4 +26,4 @@ The field-assignment area helps users understand the visual's inputs, choose whe
 
 ## Owner And Control Return
 
-Antigravity owns the redesign under the [frontend handoff](../ai_hand_off/analytics_visual_builder.md). Codex reviews the return. The user owns the browser decision in chat.
+The user owns the browser decision in chat. The [execution status](../status/project_execution_status.md) records ownership and continuation.

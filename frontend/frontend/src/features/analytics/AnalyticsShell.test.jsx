@@ -35,6 +35,90 @@ beforeEach(() => {
 });
 afterEach(() => jest.restoreAllMocks());
 
+test('Reset Analytics clears the current session and retains the draft and saved work', async () => {
+  const workspace = stored();
+  const savedConfig = { ...defaultAnalysis(source), title: 'Saved analysis' };
+  const draftConfig = {
+    ...savedConfig,
+    title: 'Draft analysis',
+    source: { kind: 'datahub', id: 'warehouse', name: 'Warehouse' },
+    view: 'line',
+    query: {
+      ...savedConfig.query,
+      group_by: [{ field: 'region' }],
+      filters: [{ field: 'region', operator: 'eq', value: 'East' }],
+    },
+  };
+  workspace.activeAnalysisId = 'saved-analysis';
+  workspace.explorations = [{ id: 'saved-analysis', name: savedConfig.title, config: savedConfig }];
+  workspace.drafts.current = { config: draftConfig, result, resultConfig: draftConfig };
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(workspace));
+
+  let resolveRun;
+  const respond = fetch.getMockImplementation();
+  fetch.mockImplementation((url, options) => options?.body && !JSON.parse(options.body).metadata_only
+    ? new Promise(resolve => { resolveRun = resolve; })
+    : respond(url, options));
+
+  const view = mount();
+  expect(screen.getByTestId('result')).toHaveTextContent('line:12');
+  expect(screen.getByLabelText('Analytics dataset')).toHaveValue('datahub:warehouse');
+  await screen.findByRole('button', { name: 'Select field region' });
+  fireEvent.change(screen.getByLabelText('Search fields'), { target: { value: 'region' } });
+  const tools = within(screen.getByRole('navigation', { name: 'Analytics tools' }));
+  fireEvent.click(tools.getByRole('button', { name: 'Library' }));
+  fireEvent.change(screen.getByLabelText('Search Analytics library'), { target: { value: 'saved' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Run analysis' }));
+  const runSignal = fetch.mock.calls.at(-1)[1].signal;
+  fireEvent.click(screen.getByRole('button', { name: 'Reset Analytics' }));
+
+  expect(runSignal.aborted).toBe(true);
+  await act(async () => resolveRun({ ok: true, json: async () => result }));
+  expect(screen.getByTestId('result')).toHaveTextContent('No result');
+  expect(screen.getByLabelText('Analysis name')).toHaveValue('Untitled analysis');
+  expect(screen.getByLabelText('Analytics dataset')).toHaveValue(`inline:${source.id}`);
+  expect(screen.getByLabelText('Search fields')).toHaveValue('');
+  expect(screen.getByRole('button', { name: 'Change visual, current visual is Column' })).toBeVisible();
+  expect(screen.queryByRole('button', { name: 'Remove grouping region' })).not.toBeInTheDocument();
+  expect(tools.getByRole('button', { name: 'Library' })).toHaveAttribute('aria-expanded', 'false');
+  expect(stored()).toMatchObject({
+    activeAnalysisId: null,
+    drafts: { current: null },
+    explorations: workspace.explorations,
+    dashboards: workspace.dashboards,
+  });
+  expect(Object.values(stored().drafts).filter(Boolean)).toEqual([
+    expect.objectContaining({ config: draftConfig, result }),
+  ]);
+
+  view.unmount();
+  mount();
+  expect(screen.getByLabelText('Analysis name')).toHaveValue('Untitled analysis');
+  fireEvent.click(screen.getByRole('button', { name: 'Library' }));
+  expect(screen.getByLabelText('Search Analytics library')).toHaveValue('');
+  fireEvent.click(screen.getByRole('button', { name: 'Recover draft: Draft analysis' }));
+  expect(screen.getByLabelText('Analysis name')).toHaveValue('Draft analysis');
+});
+
+test('Reset Analytics is available from Dashboard and preserves the board', async () => {
+  const workspace = stored();
+  workspace.lastView = 'dashboards';
+  workspace.drafts = {};
+  const board = workspace.dashboards[0];
+  board.items = [{ id: 'note', itemType: 'text', title: 'Notes', text: 'Keep this', layout: { x: 0, y: 0, w: 6, h: 4 } }];
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(workspace));
+
+  mount();
+  expect(screen.getByRole('button', { name: 'Dashboard', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  fireEvent.click(screen.getByRole('button', { name: 'Inspect Notes' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Reset Analytics' }));
+
+  expect(screen.getByRole('button', { name: 'Analysis', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  expect(screen.getByLabelText('Analysis name')).toHaveValue('Untitled analysis');
+  expect(stored().dashboards).toEqual(workspace.dashboards);
+  await screen.findByRole('button', { name: 'Select field sales' });
+});
+
 test('run, save, pin and reopen use one persisted query result', async () => {
   const view = mount();
   fireEvent.change(screen.getByLabelText('Analysis name'), { target: { value: 'Revenue' } });
@@ -437,8 +521,10 @@ test('redesigned field assignment guides setup readiness, inline revision, and p
   expect(screen.getByText('Row count, Average of sales by region')).toBeVisible();
   fireEvent.click(values.getByRole('button', { name: 'Remove measure Rows' }));
   fireEvent.click(values.getByRole('button', { name: 'Remove measure sales' }));
-  expect(values.getByText('Required')).toBeVisible();
-  expect(screen.getByText('Needs at least 1 value')).toBeVisible();
+  expect(values.queryByRole('button', { name: 'Configure measure sales' })).not.toBeInTheDocument();
+  expect(values.getByText('Drop field here')).toBeVisible();
+  fireEvent.click(screen.getByRole('button', { name: 'Save analysis' }));
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   fireEvent.click(values.getByRole('button', { name: 'Add field to Values' }));
   fireEvent.click(values.getByRole('button', { name: 'Assign sales to Values' }));
   expect(screen.getByText('Sum of sales by region')).toBeVisible();
@@ -450,4 +536,11 @@ test('redesigned field assignment guides setup readiness, inline revision, and p
   expect(screen.getByText('Needs 1 more numeric field')).toBeVisible();
   expect(within(screen.getByRole('region', { name: 'X axis' })).getByText('1 / 1')).toBeVisible();
   expect(within(screen.getByRole('region', { name: 'Y axis' })).getByText('Required')).toBeVisible();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Reset all fields and options' }));
+  expect(screen.getByRole('button', { name: 'Change visual, current visual is Column' })).toBeVisible();
+  expect(within(screen.getByRole('region', { name: 'Category axis' })).getByText('Optional')).toBeVisible();
+  expect(within(screen.getByRole('region', { name: 'Values' })).getByText('Drop field here')).toBeVisible();
+  fireEvent.click(screen.getByRole('button', { name: 'Save analysis' }));
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument();
 });

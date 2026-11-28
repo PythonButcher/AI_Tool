@@ -17,6 +17,7 @@ You are a highly capable engineering agent. Please provide advanced-level code f
 - **DO NOT CUT CORNERS:** If a component requires a custom absolute-positioned drawer or sophisticated animation to feel native to a specific container, implement it correctly instead of relying on default global popups.
 
 ### AGENT HARNESS & SCOPE:
+- **FULL FRONTEND JSX AUTHORITY:** You have full authority to edit any frontend JSX file (and its paired styles) needed to complete a frontend task, even if a Codex handoff lists a narrower target file set. Direct user instructions always overrule handoff file restrictions for frontend JSX files.
 - **FRONTEND FOCUS & AI CHAT LEADERSHIP:** You own frontend UI work. For the AI Chat BI pivot, you are the Lead Orchestrator. You MUST automatically update the execution status/progress Markdown files (e.g., `project_docs/active/status/ai_chat_execution_status.md`) immediately after completing any phase or task, without the user having to ask.
 - **BACKEND PROTOCOL:** If backend logic is missing, document it in a handoff file, then Codex will review and build it for you.
 - **FEATURE PRESERVATION:** Do not remove, downgrade, hide, or simplify existing features unless the user explicitly asks for that and the instruction is clear. If a feature feels messy, preserve capability first and improve clarity second. Gemini is never allowed to decide on its own to hide, remove, disable, de-scope, or retire a feature during development.
