@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { FieldSelect, RowsGrid } from './WorkbenchControls';
-import { findDuplicateRows, findInvalidRows, summarizeWorkingRows } from './workingRows';
+import { findInvalidRows, summarizeWorkingRows } from './workingRows';
 
 export function ValidateValues({ rows, fields }) {
   const [field, setField] = useState(fields[0].name);
@@ -65,70 +65,6 @@ export function ValidateValues({ rows, fields }) {
         <>
           <p className="dt-result" role="status">{invalid.length ? `${invalid.length.toLocaleString()} of ${rows.length.toLocaleString()} rows failed.` : `All ${rows.length.toLocaleString()} rows passed.`}</p>
           {invalid.length > 0 && <RowsGrid rows={rows} fields={fields} indices={invalid} caption="Rows that failed validation" />}
-        </>
-      )}
-    </>
-  );
-}
-
-export function CheckKeys({ rows, fields }) {
-  const [selected, setSelected] = useState([fields[0].name]);
-  const [result, setResult] = useState(null);
-  const [view, setView] = useState('all');
-  const report = result?.source === rows ? result : null;
-  const issues = report?.views[view];
-
-  function toggle(field) {
-    setSelected(current => current.includes(field) ? current.filter(name => name !== field) : [...current, field]);
-    setResult(null);
-  }
-
-  function run(event) {
-    event.preventDefault();
-    if (!selected.length) return;
-    const { indices, missingIndices } = findDuplicateRows(rows, selected, { skipMissing: true });
-    setResult({ source: rows, views: {
-      all: [...missingIndices, ...indices].sort((a, b) => a - b),
-      missing: missingIndices,
-      repeated: indices,
-    } });
-    setView('all');
-  }
-
-  return (
-    <>
-      <header className="dt-panel__intro">
-        <h2>Check keys</h2>
-        <p>Check whether one field or a combination of fields identifies each loaded row. Use this before choosing join fields in Data Model.</p>
-      </header>
-      <form className="dt-controls" onSubmit={run}>
-        <fieldset className="dt-key-fields">
-          <legend>Key fields</legend>
-          {fields.map(({ name }) => (
-            <label key={name}><input type="checkbox" checked={selected.includes(name)} onChange={() => toggle(name)} />{name}</label>
-          ))}
-        </fieldset>
-        <button className="dt-button dt-button--primary" type="submit" disabled={!selected.length}>Run key check</button>
-      </form>
-      {report && (
-        <>
-          <p className="dt-result" role="status">{report.views.all.length
-            ? `${report.views.missing.length.toLocaleString()} rows with missing key values · ${report.views.repeated.length.toLocaleString()} rows with repeated keys.`
-            : `The selected key is complete and unique across ${rows.length.toLocaleString()} loaded rows.`}</p>
-          {report.views.all.length > 0 && (
-            <>
-              <div className="dt-controls">
-                <label className="dt-field">Show issue
-                  <select value={view} onChange={event => setView(event.target.value)}>
-                    <option value="all">All issues</option>
-                    <option value="missing">Missing key values</option>
-                    <option value="repeated">Repeated keys</option>
-                  </select>
-                </label>
-              </div>
-              <RowsGrid key={view} rows={rows} fields={fields} indices={issues} caption="Key issues" />
-            </>
-          )}
         </>
       )}
     </>

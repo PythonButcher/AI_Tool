@@ -175,6 +175,42 @@ class SourceRelationshipTests(unittest.TestCase):
         self.assertTrue(profile["evidence"]["left_unique"])
         self.assertFalse(profile["evidence"]["right_unique"])
 
+    def test_preview_compares_unsaved_single_and_composite_keys_without_writing(self):
+        workspace_id, (left, right) = self._workspace([
+            ("products.csv", b"sku,warehouse\nS-1,A\nS-1,B\nS-2,A\n,A\n"),
+            ("stock.csv", b"sku,warehouse\nS-1,A\nS-1,B\nS-2,A\n"),
+        ])
+        base = f"/api/data-workspaces/{workspace_id}"
+        payload = {
+            "left_source_id": left,
+            "right_source_id": right,
+            "field_pairs": [{"left_field": "sku", "right_field": "sku"}],
+            "cardinality": "one_to_one",
+        }
+
+        def preview():
+            response = self.client.post(f"{base}/relationship-key-preview", json=payload)
+            self.assertEqual(response.status_code, 200, response.get_json())
+            return {item["code"]: item for item in response.get_json()["diagnostics"]}
+
+        single = preview()
+        self.assertIn("declared_cardinality_mismatch", single)
+        self.assertEqual(single["relationship_key_profile"]["evidence"]["left_issue_sample"], [
+            {"row_number": 1, "reason": "repeated"},
+            {"row_number": 2, "reason": "repeated"},
+            {"row_number": 4, "reason": "missing"},
+        ])
+        payload["field_pairs"].append({"left_field": "warehouse", "right_field": "warehouse"})
+        composite = preview()
+        self.assertNotIn("declared_cardinality_mismatch", composite)
+        evidence = composite["relationship_key_profile"]["evidence"]
+        self.assertTrue(evidence["left_unique"] and evidence["right_unique"])
+        self.assertEqual(evidence["left_missing_rows"], 1)
+        self.assertEqual(evidence["left_repeated_rows"], 0)
+        self.assertEqual(self.client.get(f"{base}/relationships").get_json()["relationships"], [])
+        invalid = self.client.post(f"{base}/relationship-key-preview", json={**payload, "cardinality": []})
+        self.assertEqual(invalid.status_code, 400)
+
     def test_missing_fields_and_type_mismatch_are_deterministically_invalid(self):
         workspace_id, source_ids = self._workspace(
             [

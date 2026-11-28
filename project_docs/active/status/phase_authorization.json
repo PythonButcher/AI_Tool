@@ -71,6 +71,13 @@
     "scope": "Codex owns the Datastream hub, Devstream entry and return, workspace state preservation, planned app entries, and focused verification. The user owns browser acceptance.",
     "codex_frontend_implementation_authorized": true
   },
+  "key_checks_relocation_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-11-27",
+    "instruction": "Make the agreed Gemini suggestion happen.",
+    "scope": "Codex moves key checks from Data Tools to relationship and Business Object configuration, improves record detail placement and issue counts, and fixes the collapsed Data Pane overlap. The Analytics gate retains its existing scope and owner.",
+    "codex_frontend_implementation_authorized": true
+  },
   "data_tools_expansion_authorization": {
     "approved_by": "User",
     "approved_at": "2026-11-23",
@@ -462,6 +469,18 @@
     "acceptance": "Accepted by the user in chat on 2026-11-22."
   },
   "allowed_paths": [
+    "backend/routes/source_relationships.py",
+    "backend/services/source_relationships.py",
+    "tests/test_source_relationships.py",
+    "project_docs/active/contracts/multiple_data_source_relationships.md",
+    "project_docs/active/reviews/devstream_ui_workflow_inventory.md",
+    "frontend/frontend/src/features/data-model/KeyCheckButton.jsx",
+    "frontend/frontend/src/features/data-model/RelationshipInspector.jsx",
+    "frontend/frontend/src/features/data-model/RelationshipInspector.test.jsx",
+    "frontend/frontend/src/features/data-tools/DatasetChecks.jsx",
+    "frontend/frontend/src/features/data-tools/DataToolsWorkbench.jsx",
+    "frontend/frontend/src/features/data-tools/DataToolsWorkbench.test.jsx",
+    "frontend/frontend/src/features/data-tools/DataToolsWorkbench.css",
     "backend/routes/sql_fetch.py",
     "backend/services/postgres_workspace.py",
     "backend/repositories/source_workspace_repository.py",

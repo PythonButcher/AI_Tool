@@ -1,12 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   FaArrowRight, FaChartBar, FaCheck, FaClipboardCheck, FaCode, FaColumns, FaCopy, FaDatabase, FaFilter, FaFolderOpen,
-  FaKey, FaProjectDiagram, FaSave, FaSlidersH, FaTable, FaThList, FaUpload, FaWaveSquare,
+  FaProjectDiagram, FaSave, FaSlidersH, FaTable, FaThList, FaUpload, FaWaveSquare,
 } from 'react-icons/fa';
 import ApiDataForm from '../api/APiDataForm';
 import DatabaseConnectForm from '../database/DatabaseConnectForm';
 import { describeFields, displayCell, filterWorkingRows, findDuplicateRows, profileField } from './workingRows';
-import { CheckKeys, SummarizeRows, ValidateValues } from './DatasetChecks';
+import { SummarizeRows, ValidateValues } from './DatasetChecks';
 import { FieldSelect, RowsGrid } from './WorkbenchControls';
 import './DataToolsWorkbench.css';
 
@@ -25,7 +25,6 @@ const TOOL_GROUPS = [
     { id: 'profile', label: 'Column profile', icon: FaChartBar },
     { id: 'duplicates', label: 'Duplicate rows', icon: FaCopy },
     { id: 'validate', label: 'Validate values', icon: FaClipboardCheck },
-    { id: 'keys', label: 'Check keys', icon: FaKey },
     { id: 'outliers', label: 'Outliers', icon: FaWaveSquare },
   ] },
   { label: 'Sources', tools: [
@@ -223,7 +222,7 @@ export default function DataToolsWorkbench({
     if (id === 'api' || id === 'sql') return false;
     if (id === 'query') return !canRefine;
     if (id === 'model') return !dataset?.canModel;
-    if (['filter', 'profile', 'duplicates', 'validate', 'keys', 'summary'].includes(id)) return !hasRows || !fields.length;
+    if (['filter', 'profile', 'duplicates', 'validate', 'summary'].includes(id)) return !hasRows || !fields.length;
     return !dataset;
   };
   const currentTool = isDisabled(tool) ? 'rows' : tool;
@@ -287,7 +286,6 @@ export default function DataToolsWorkbench({
           {currentTool === 'profile' && <ColumnProfile rows={rows} fields={fields} />}
           {currentTool === 'duplicates' && <DuplicateRows rows={rows} fields={fields} onOpenQuery={openQuery} />}
           {currentTool === 'validate' && <ValidateValues rows={rows} fields={fields} />}
-          {currentTool === 'keys' && <CheckKeys rows={rows} fields={fields} />}
           {currentTool === 'summary' && <SummarizeRows rows={rows} fields={fields} />}
           {currentTool === 'outliers' && <Outliers context={sourceContext} />}
           {currentTool === 'fields' && <FieldsAndMetrics fields={fields} metrics={metrics} />}

@@ -36,6 +36,10 @@ body {
   grid-column: 1 / -1;
 }
 
+.app-container:has(> .data-pane.is-collapsed) {
+  grid-template-columns: minmax(0, 1fr) 36px;
+}
+
 @media (max-width: 720px) {
   .app-container > .data-pane {
     position: absolute;
@@ -44,6 +48,10 @@ body {
     inset-block: 0;
     right: 0;
     width: min(360px, calc(100% - 36px));
+  }
+
+  .app-container > .data-pane.is-collapsed {
+    width: 36px;
   }
 }
 

@@ -18,9 +18,11 @@
 }
 
 .data-pane.is-collapsed {
-  width: 0 !important;
+  width: 36px;
   border-left: none;
-  transform: translateX(100%);
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
   box-shadow: none;
 }
 
@@ -46,7 +48,7 @@
 }
 
 .data-pane.is-collapsed .data-pane__toggle {
-  left: -36px;
+  left: 0;
   border-right: 1px solid var(--border-color);
   border-radius: 12px;
   width: 36px;
@@ -300,6 +302,10 @@
   height: 100%;
   display: flex;
   flex-direction: column;
+}
+
+.data-pane.is-collapsed .data-pane__content {
+  visibility: hidden;
 }
 
 .data-pane .fields-panel-body,

@@ -46,6 +46,8 @@ After validation, each read compares the stored left and right source fingerprin
 
 Every diagnostic contains stable `code`, `severity`, `message`, and `next_action` fields. Aggregate evidence is nested under `evidence`. Diagnostics do not expose source rows, key values, private locators, or filesystem paths.
 
+`POST /api/data-workspaces/<workspace_id>/relationship-key-preview` accepts the proposed `left_source_id`, `right_source_id`, `field_pairs`, `cardinality`, `join_behavior`, and `filter_direction`. It returns `{ diagnostics }` without writing, joining sources, or checking whether activation would create a competing path. The key profile includes exact missing and repeated row counts per side and preview-only `left_issue_sample` and `right_issue_sample` lists of up to 50 source row positions each. Each item contains a 1-based `row_number` and a `reason` of `missing` or `repeated`.
+
 ## Candidate Profiling
 
 `POST /api/data-workspaces/<workspace_id>/relationship-candidates` conservatively compares workspace source pairs. It proposes compatible fields only when normalized field names match and profiled keys overlap. Each proposal explains name match, type family, matched-key ratio, observed uniqueness, inferred cardinality, and bounded confidence.

@@ -5,7 +5,7 @@ import sqlite3
 from flask import Blueprint, current_app, jsonify, request
 
 from backend.repositories.source_workspace_repository import get_source, get_workspace, list_sources
-from backend.services.business_object_records import RecordAccessDenied, get_record, search_records
+from backend.services.business_object_records import RecordAccessDenied, get_record, preview_record_key, search_records
 from backend.services.business_objects import (
     BusinessObjectError,
     create_business_object,
@@ -94,6 +94,19 @@ def business_object_collection(workspace_id):
             definition = create_business_object(workspace_id, request.get_json(silent=True))
             return jsonify({"business_object": definition}), 201
         return jsonify({"business_objects": list_business_objects(workspace_id)}), 200
+    except BusinessObjectError as exc:
+        return _workspace_error(exc)
+    except sqlite3.Error:
+        return _business_object_storage_error()
+
+
+@data_workspaces_bp.route("/data-workspaces/<workspace_id>/business-object-key-preview", methods=["POST"])
+def business_object_key_preview(workspace_id):
+    """Check the proposed key against the current governed source."""
+    try:
+        return jsonify(preview_record_key(workspace_id, request.get_json(silent=True))), 200
+    except RecordAccessDenied as exc:
+        return jsonify({"error": {"code": exc.code, "message": str(exc)}}), 403
     except BusinessObjectError as exc:
         return _workspace_error(exc)
     except sqlite3.Error:

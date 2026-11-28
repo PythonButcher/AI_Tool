@@ -27,7 +27,7 @@ The Data Tools tab, Workspace landing, and initial Power Query preview remain aw
 
 The inline Data Tools workbench also awaits the user's browser decision. It passed 101 focused frontend tests, 48 backend regression tests, and the production build with existing warnings. Chrome fixtures at 1440 and 390 pixels verified inline API and SQL, upload, quality tools, preview filters, Refine, explicit save, and reopening after reload. See the [UI workflow inventory](../reviews/devstream_ui_workflow_inventory.md).
 
-Validate values, Check keys, and Summarize rows are available in the toolbox and await browser acceptance. The follow-up passed 26 focused frontend tests, the production build with existing warnings, and Chrome fixture checks at 1440 and 390 pixels.
+Validate values and Summarize rows are available in Data Tools. Key checks are available before saving a relationship in Data Model or a definition in Business Objects. The relocation passed 45 backend tests, 32 frontend tests, and the production build with existing warnings. Chrome layout fixtures verified the collapsed Data Pane at 320, 390, and 1440 pixels. User browser acceptance remains pending.
 
 ## Pending Analytics Workbench Acceptance
 

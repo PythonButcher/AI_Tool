@@ -151,6 +151,34 @@ def test_record_search_and_detail_use_configured_sources_and_relationships(clien
     assert client.post(f"{customers.replace(workspace, model['other_workspace'])}/detail", json={"key": key}).status_code == 404
 
 
+def test_record_key_preview_matches_search_without_saving_an_object(client):
+    uploaded = _upload(client, "products.csv", b"sku,name\nD-1,Drill\nS-2,Saw\nD-1,Drill Kit\n,Clamp\n")
+    workspace = uploaded["workspace"]["workspace_id"]
+    source = uploaded["source"]["source_id"]
+    base = f"/api/data-workspaces/{workspace}"
+    response = client.post(f"{base}/business-object-key-preview", json={
+        "source_id": source, "record_key_field": "sku",
+    })
+    assert response.status_code == 200
+    assert response.get_json() == {
+        "row_count": 4,
+        "duplicate_rows": 2,
+        "missing_or_unsupported_rows": 1,
+        "issue_sample": [
+            {"row_number": 1, "reason": "duplicate"},
+            {"row_number": 3, "reason": "duplicate"},
+            {"row_number": 4, "reason": "missing_or_unsupported"},
+        ],
+    }
+    assert client.get(f"{base}/business-objects").get_json()["business_objects"] == []
+    outsider = _upload(client, "other.csv", b"sku\nA-1\n")["source"]["source_id"]
+    rejected = client.post(f"{base}/business-object-key-preview", json={
+        "source_id": outsider, "record_key_field": "sku",
+    })
+    assert rejected.status_code == 409
+    assert rejected.get_json()["error"]["code"] == "source_not_in_workspace"
+
+
 def test_search_includes_rows_with_key_issues_and_detail_refuses_only_ambiguous_keys(client):
     uploaded = _upload(client, "products.csv", b"sku,name\nD-1,Drill\nS-2,Saw\nD-1,Drill Kit\n,Clamp\n")
     url = _record_url({"workspace": uploaded["workspace"]["workspace_id"]}, {

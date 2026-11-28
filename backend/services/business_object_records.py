@@ -59,7 +59,7 @@ def _typed_key(value: Any) -> RecordKey | None:
 def _load_frame(workspace_id: str, source_id: str) -> tuple[pd.DataFrame, dict]:
     locator = get_source_private_locator(source_id)
     try:
-        path = Path(locator["path"])
+        path = Path((locator or {})["path"])
         if path.stat().st_size > MAX_SOURCE_BYTES:
             raise BusinessObjectError("record_read_limit", "A selected source exceeds the record browsing size limit.")
         if path.suffix.lower() == ".xlsx":
@@ -110,6 +110,47 @@ def _summary(key: RecordKey, label: Any) -> dict:
     return {"key": {"type": key[0], "value": key[1]}, "label": label}
 
 
+def _key_issue_counts(frequency: Counter) -> dict:
+    return {
+        "duplicate_rows": sum(count for key, count in frequency.items() if key is not None and count > 1),
+        "missing_or_unsupported_rows": frequency[None],
+    }
+
+
+def preview_record_key(workspace_id: str, payload: Any) -> dict:
+    """Check a proposed record key using the same rules as record browsing."""
+    if not isinstance(payload, dict) or set(payload) != {"source_id", "record_key_field"}:
+        raise BusinessObjectError("invalid_record_request", "Select a source and a record key field.")
+    source_id, field = payload["source_id"], payload["record_key_field"]
+    if not all(isinstance(value, str) and value.strip() for value in (source_id, field)):
+        raise BusinessObjectError("invalid_record_request", "Select a source and a record key field.")
+    workspace = get_workspace(workspace_id)
+    if workspace is None:
+        raise BusinessObjectError("workspace_not_found", "The workspace was not found.")
+    if not any(member["source_id"] == source_id for member in workspace["sources"]):
+        raise BusinessObjectError("source_not_in_workspace", "The selected source is not in this workspace.")
+    frame, _ = _load_frame(workspace_id, source_id)
+    if field not in frame:
+        raise BusinessObjectError("source_field_not_found", "The selected key field is missing.")
+    keys = [_typed_key(value) for value in frame[field]]
+    frequency = Counter(keys)
+    issues = []
+    for row_number, key in enumerate(keys, start=1):
+        if key is None or frequency[key] > 1:
+            issues.append({
+                "row_number": row_number,
+                "reason": "missing_or_unsupported" if key is None else "duplicate",
+            })
+        if len(issues) == RESULT_LIMIT:
+            break
+    _check_workspace(workspace)
+    return {
+        "row_count": len(keys),
+        **_key_issue_counts(frequency),
+        "issue_sample": issues,
+    }
+
+
 def search_records(workspace_id: str, object_id: str, query: str) -> dict:
     if len(query) > 200:
         raise BusinessObjectError("invalid_record_request", "The search can contain up to 200 characters.")
@@ -150,8 +191,7 @@ def search_records(workspace_id: str, object_id: str, query: str) -> dict:
         "has_more": match_count > RESULT_LIMIT,
         "key_issues": {
             "field": definition["record_key_field"],
-            "duplicate_rows": sum(count for key, count in frequency.items() if key is not None and count > 1),
-            "missing_or_unsupported_rows": frequency[None],
+            **_key_issue_counts(frequency),
             "matching_rows": issue_count,
             "matches": issues,
         },

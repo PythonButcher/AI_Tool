@@ -38,6 +38,7 @@ CARDINALITIES = {"one_to_one", "one_to_many", "many_to_one", "many_to_many"}
 JOIN_BEHAVIORS = {"inner", "left", "right", "full"}
 FILTER_DIRECTIONS = {"none", "left_to_right", "right_to_left", "both"}
 ROW_MULTIPLICATION_WARNING = 2.0
+KEY_ISSUE_SAMPLE_LIMIT = 50
 
 
 class SourceRelationshipError(ValueError):
@@ -141,7 +142,7 @@ def _normalize_contract(payload: Dict[str, Any], *, require_sources: bool) -> Di
     for field, (allowed, default) in enum_fields.items():
         if require_sources or field in payload:
             value = payload.get(field, default)
-            if value not in allowed:
+            if not isinstance(value, str) or value not in allowed:
                 raise SourceRelationshipError(
                     "invalid_relationship",
                     f"{field} must be one of {sorted(allowed)}.",
@@ -201,6 +202,8 @@ def _profile_keys(
     right: pd.DataFrame,
     left_fields: list[str],
     right_fields: list[str],
+    *,
+    sample_issues: bool = False,
 ) -> Dict[str, Any]:
     """Compute aggregate trust evidence without exposing source values."""
     left_complete = left[left_fields].notna().all(axis=1)
@@ -215,7 +218,7 @@ def _profile_keys(
     estimated_rows = int(sum(int(left_counts[key]) * int(right_counts[key]) for key in overlap))
     left_rows = int(left.shape[0])
     right_rows = int(right.shape[0])
-    return {
+    profile = {
         "left_row_count": left_rows,
         "right_row_count": right_rows,
         "left_null_rate": round(1.0 - (float(left_complete.sum()) / max(left_rows, 1)), 6),
@@ -224,6 +227,10 @@ def _profile_keys(
         "right_unique": bool(right_counts.empty or (right_counts <= 1).all()),
         "left_distinct_keys": int(len(left_key_set)),
         "right_distinct_keys": int(len(right_key_set)),
+        "left_missing_rows": left_rows - len(left_keys),
+        "right_missing_rows": right_rows - len(right_keys),
+        "left_repeated_rows": int(left_counts[left_counts > 1].sum()),
+        "right_repeated_rows": int(right_counts[right_counts > 1].sum()),
         "left_unmatched_key_count": int(len(left_key_set - right_key_set)),
         "right_unmatched_key_count": int(len(right_key_set - left_key_set)),
         "left_unmatched_rate": round(float(len(left_key_set - right_key_set)) / max(len(left_key_set), 1), 6),
@@ -231,6 +238,21 @@ def _profile_keys(
         "estimated_join_rows": estimated_rows,
         "estimated_row_multiplication": round(float(estimated_rows) / max(left_rows, 1), 6),
     }
+    if sample_issues:
+        for side, complete, keys in (
+            ("left", left_complete, left_keys), ("right", right_complete, right_keys)
+        ):
+            repeated = iter(keys.duplicated(keep=False))
+            issues = []
+            for row_number, present in enumerate(complete, start=1):
+                if not present:
+                    issues.append({"row_number": row_number, "reason": "missing"})
+                elif next(repeated):
+                    issues.append({"row_number": row_number, "reason": "repeated"})
+                if len(issues) == KEY_ISSUE_SAMPLE_LIMIT:
+                    break
+            profile[f"{side}_issue_sample"] = issues
+    return profile
 
 
 def _declared_cardinality_matches(cardinality: str, profile: Dict[str, Any]) -> bool:
@@ -324,7 +346,9 @@ def _load_validation_inputs(relationship: Dict[str, Any]):
     return sources[0], sources[1], frames[0], frames[1]
 
 
-def _evaluate_relationship(relationship: Dict[str, Any]) -> Dict[str, Any]:
+def _evaluate_relationship(
+    relationship: Dict[str, Any], *, preview: bool = False
+) -> Dict[str, Any]:
     """Produce a complete validation result without persisting joined data."""
     left_source, right_source, left, right = _load_validation_inputs(relationship)
     diagnostics: list[Dict[str, Any]] = []
@@ -378,7 +402,7 @@ def _evaluate_relationship(relationship: Dict[str, Any]) -> Dict[str, Any]:
             "source_fingerprints": _source_fingerprints(left_source, right_source),
         }
 
-    profile = _profile_keys(left, right, left_fields, right_fields)
+    profile = _profile_keys(left, right, left_fields, right_fields, sample_issues=preview)
     diagnostics.append(
         _diagnostic(
             "relationship_key_profile",
@@ -436,7 +460,8 @@ def _evaluate_relationship(relationship: Dict[str, Any]) -> Dict[str, Any]:
                 warning_threshold=ROW_MULTIPLICATION_WARNING,
             )
         )
-    diagnostics.extend(_topology_diagnostics(relationship))
+    if not preview:
+        diagnostics.extend(_topology_diagnostics(relationship))
 
     error_codes = {item["code"] for item in diagnostics if item["severity"] == "error"}
     if relationship["cardinality"] == "many_to_many":
@@ -460,6 +485,13 @@ def _evaluate_relationship(relationship: Dict[str, Any]) -> Dict[str, Any]:
         "diagnostics": diagnostics,
         "source_fingerprints": _source_fingerprints(left_source, right_source),
     }
+
+
+def preview_relationship_keys(workspace_id: str, payload: Dict[str, Any]) -> list[Dict[str, Any]]:
+    """Check selected join fields and cardinality without saving or activating a relationship."""
+    contract = _normalize_contract(payload, require_sources=True)
+    result = _evaluate_relationship({"workspace_id": workspace_id, **contract}, preview=True)
+    return result["diagnostics"]
 
 
 def create_relationship(workspace_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:

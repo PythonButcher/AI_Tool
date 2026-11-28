@@ -24,7 +24,8 @@ test('toggles the selected inline tool back to working rows and switches directl
   render(<Workbench />);
   const inspect = screen.getByRole('button', { name: 'Inspect rows' });
   const validate = screen.getByRole('button', { name: 'Validate values' });
-  const checkKeys = screen.getByRole('button', { name: 'Check keys' });
+  const summary = screen.getByRole('button', { name: 'Summarize rows' });
+  expect(screen.queryByRole('button', { name: 'Check keys' })).not.toBeInTheDocument();
   const expectWorkingRows = () => {
     expect(inspect).toHaveAttribute('aria-pressed', 'true');
     expect(within(screen.getByRole('table', { name: 'Working rows' })).getAllByText('North')).toHaveLength(25);
@@ -41,14 +42,14 @@ test('toggles the selected inline tool back to working rows and switches directl
   expectWorkingRows();
 
   fireEvent.click(validate);
-  fireEvent.click(checkKeys);
-  expect(screen.getByRole('heading', { name: 'Check keys' })).toBeVisible();
-  expect(checkKeys).toHaveAttribute('aria-pressed', 'true');
+  fireEvent.click(summary);
+  expect(screen.getByRole('heading', { name: 'Summarize rows' })).toBeVisible();
+  expect(summary).toHaveAttribute('aria-pressed', 'true');
   expect(validate).toHaveAttribute('aria-pressed', 'false');
   expect(screen.queryByRole('table', { name: 'Working rows' })).not.toBeInTheDocument();
 
-  fireEvent.click(checkKeys);
-  expect(checkKeys).toHaveAttribute('aria-pressed', 'false');
+  fireEvent.click(summary);
+  expect(summary).toHaveAttribute('aria-pressed', 'false');
   expectWorkingRows();
 });
 
@@ -145,24 +146,6 @@ test('validates values beyond the first page and independently of a preview filt
   expect(failureRows()).toEqual(['27', '28']);
 });
 
-test('checks a composite key and separates repeated keys from incomplete rows', () => {
-  const orders = [
-    ...Array.from({ length: 25 }, (_, i) => ({ Id: i + 1, Region: 'North' })),
-    { Id: 1, Region: 'South' }, { Id: 2, Region: 'North' }, { Id: 3, Region: ' ' }, { Id: null, Region: 'North' },
-  ];
-  render(<Workbench dataRows={orders} />);
-  fireEvent.click(screen.getByRole('button', { name: 'Check keys' }));
-  fireEvent.click(screen.getByRole('checkbox', { name: 'Region' }));
-  fireEvent.click(screen.getByRole('button', { name: 'Run key check' }));
-  expect(screen.getByRole('status')).toHaveTextContent('2 rows with missing key values · 2 rows with repeated keys.');
-  const issueRows = () => within(screen.getByRole('table', { name: 'Key issues' })).getAllByRole('rowheader').map(cell => cell.textContent);
-  expect(issueRows()).toEqual(['2', '27', '28', '29']);
-  fireEvent.change(screen.getByRole('combobox', { name: 'Show issue' }), { target: { value: 'missing' } });
-  expect(issueRows()).toEqual(['28', '29']);
-  fireEvent.change(screen.getByRole('combobox', { name: 'Show issue' }), { target: { value: 'repeated' } });
-  expect(issueRows()).toEqual(['2', '27']);
-});
-
 test('summarizes by two fields while counting null and nonnumeric measures as rows', () => {
   const orders = [
     ...Array.from({ length: 25 }, () => ({ Region: 'North', Status: 'Open', Amount: 5 })),
@@ -186,7 +169,7 @@ test('summarizes by two fields while counting null and nonnumeric measures as ro
 
 test('requires loaded rows before enabling the new checks', () => {
   render(<Workbench dataRows={[]} />);
-  for (const name of ['Summarize rows', 'Validate values', 'Check keys']) {
+  for (const name of ['Summarize rows', 'Validate values']) {
     expect(screen.getByRole('button', { name })).toBeDisabled();
   }
 });

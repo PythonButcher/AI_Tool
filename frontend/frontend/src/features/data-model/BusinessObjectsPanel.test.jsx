@@ -576,6 +576,26 @@ describe('BusinessObjectsPanel and SourceModelCanvas integration', () => {
   const recPage = (object_id, records, has_more = false) => ({ object_id, records, has_more, governance_readiness: READY_GOV });
   const okPayload = (body, status = 200) => ({ ok: status >= 200 && status < 300, status, json: () => Promise.resolve(body) });
 
+  test('previews the selected field before saving and clears the result when the field changes', async () => {
+    global.fetch.mockImplementation((url) => {
+      if (url.endsWith('/business-object-key-preview')) return jsonResponse({
+        row_count: 3, duplicate_rows: 2, missing_or_unsupported_rows: 0,
+        issue_sample: [{ row_number: 2, reason: 'duplicate' }, { row_number: 3, reason: 'duplicate' }],
+      });
+      return jsonResponse({ business_objects: [] });
+    });
+    render(<BusinessObjectsPanel workspaceId="ws_demo" sources={HYDRATED_SOURCES} relationships={DEMO_RELATIONSHIPS} onClose={jest.fn()} />);
+    fireEvent.change(screen.getByLabelText('Member Source'), { target: { value: 'src_customer' } });
+    const keyField = screen.getByLabelText('Record Key Field');
+    fireEvent.change(keyField, { target: { value: 'customer_id' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Check keys' }));
+    expect(await screen.findByText(/Across 3 source rows: 2 rows with repeated IDs/)).toBeVisible();
+    expect(global.fetch).toHaveBeenCalledWith(expect.stringMatching(/\/ws_demo\/business-object-key-preview$/),
+      expect.objectContaining({ method: 'POST', body: JSON.stringify({ source_id: 'src_customer', record_key_field: 'customer_id' }) }));
+    fireEvent.change(keyField, { target: { value: 'name' } });
+    expect(screen.queryByText(/Across 3 source rows/)).not.toBeInTheDocument();
+  });
+
   test('shows matching repeated IDs and their row numbers without blocking record search', async () => {
     const repeatRows = [
       { row_number: 3, label: 'Acme', key_value: '1', reason: 'duplicate' },
@@ -600,6 +620,8 @@ describe('BusinessObjectsPanel and SourceModelCanvas integration', () => {
     const matches = within(browser).getByRole('table', { name: 'Matching rows with key issues' });
     expect(within(matches).getAllByRole('rowheader').map(cell => cell.textContent)).toEqual(['3', '7']);
     expect(within(matches).getByText('Acme East')).toBeVisible();
+    expect(within(browser).getByText(/Across the full source: 2 rows/)).toBeVisible();
+    expect(within(browser).getByRole('heading', { name: 'Matching rows without a unique usable ID (2)' })).toBeVisible();
     expect(within(browser).queryByText('No matching records found.')).not.toBeInTheDocument();
     expect(within(browser).queryByRole('button', { name: /Acme/ })).not.toBeInTheDocument();
 
@@ -608,6 +630,8 @@ describe('BusinessObjectsPanel and SourceModelCanvas integration', () => {
     fireEvent.click(await within(browser).findByRole('button', { name: /Lin\s*2/ }));
     const detail = await within(browser).findByRole('region', { name: 'Record Detail' });
     expect(await within(detail).findByText('55')).toBeVisible();
+    const currentIssues = within(browser).getByRole('table', { name: 'Matching rows with key issues' });
+    expect(detail.compareDocumentPosition(currentIssues) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   test('browses Customer (Acme by name and ID) and Equipment (Pump), sends exact typed keys, and renders empty, unavailable, truncated, warning, and blocked states', async () => {

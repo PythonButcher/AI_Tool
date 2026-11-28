@@ -1,7 +1,47 @@
 import React, { useState, useEffect, useRef } from 'react';
+import KeyCheckButton, { KeyIssueRows } from './KeyCheckButton';
 import './RelationshipInspector.css';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+
+function JoinKeyEvidence({ evidence, labels }) {
+  return (
+    <ul>
+      {['left', 'right'].map((side) => {
+        const rows = evidence[`${side}_row_count`];
+        const missing = evidence[`${side}_missing_rows`];
+        const repeated = evidence[`${side}_repeated_rows`];
+        const nullRate = evidence[`${side}_null_rate`];
+        const complete = missing == null ? nullRate < 1 : rows > missing;
+        return (
+          <li key={side}>
+            <strong>{labels[side]}</strong>
+            {' · '}{!complete || !rows ? 'No complete keys' : evidence[`${side}_unique`] ? 'Unique among complete keys' : 'Repeated keys'}
+            {missing == null ? ` · ${(nullRate * 100).toLocaleString()}% missing` : ` · ${missing} missing · ${repeated} rows with repeated keys`}
+            {' · '}{evidence[`${side}_unmatched_key_count`]} unmatched distinct keys
+            <KeyIssueRows issues={evidence[`${side}_issue_sample`]} issueCount={missing + repeated} />
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+function RelationshipDiagnostics({ diagnostics, labels }) {
+  return (
+    <ul className="diagnostics-list">
+      {diagnostics.map((diag) => (
+        <li key={diag.code} className={`diagnostic-item severity-${diag.severity}`}>
+          {diag.message}
+          {diag.code === 'relationship_key_profile' && diag.evidence && (
+            <JoinKeyEvidence evidence={diag.evidence} labels={labels} />
+          )}
+          {diag.next_action && <div className="next-action">{diag.next_action}</div>}
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 const RelationshipInspector = ({ workspaceId, relationship, sources, onSave, onCancel, onRefresh }) => {
   const isDraft = !relationship.relationship_id;
@@ -22,6 +62,16 @@ const RelationshipInspector = ({ workspaceId, relationship, sources, onSave, onC
 
   const leftSource = sources.find(s => s.source_id === formData.left_source_id);
   const rightSource = sources.find(s => s.source_id === formData.right_source_id);
+  const sourceLabels = {
+    left: leftSource?.alias || leftSource?.name || 'Left source',
+    right: rightSource?.alias || rightSource?.name || 'Right source',
+  };
+  const canCheckKeys = leftSource && rightSource && leftSource.source_id !== rightSource.source_id
+    && formData.field_pairs.length > 0
+    && formData.field_pairs.every(pair => pair.left_field && pair.right_field);
+  const showingSavedDiagnostics = !isDraft
+    && formData.cardinality === relationship.cardinality
+    && JSON.stringify(formData.field_pairs) === JSON.stringify(relationship.field_pairs);
 
   const currentRelIdRef = useRef(relationship.relationship_id || relationship._draftId);
 
@@ -37,10 +87,10 @@ const RelationshipInspector = ({ workspaceId, relationship, sources, onSave, onC
         filter_direction: relationship.filter_direction || 'none',
         field_pairs: relationship.field_pairs || [],
       });
-      setDiagnostics(relationship.diagnostics || []);
       setError(null);
       currentRelIdRef.current = currentId;
     }
+    setDiagnostics(relationship.diagnostics || []);
     // Always sync authoritative version
     setVersion(relationship.version);
   }, [relationship]);
@@ -379,17 +429,24 @@ const RelationshipInspector = ({ workspaceId, relationship, sources, onSave, onC
           </div>
         </div>
 
-        {diagnostics && diagnostics.length > 0 && (
+        {canCheckKeys && (
+          <div className="diagnostics-section" aria-label="Join key check">
+            <KeyCheckButton
+              key={JSON.stringify([workspaceId, relationship.relationship_id || relationship._draftId, version, formData])}
+              endpoint={`/api/data-workspaces/${encodeURIComponent(workspaceId)}/relationship-key-preview`}
+              payload={formData}
+              className="btn-secondary"
+              disabled={isSubmitting}
+            >
+              {({ diagnostics: preview }) => <RelationshipDiagnostics diagnostics={preview} labels={sourceLabels} />}
+            </KeyCheckButton>
+          </div>
+        )}
+
+        {showingSavedDiagnostics && diagnostics.length > 0 && (
           <div className="diagnostics-section">
             <h4>Diagnostics</h4>
-            <ul className="diagnostics-list">
-              {diagnostics.map((diag, i) => (
-                <li key={i} className={`diagnostic-item severity-${diag.severity}`}>
-                  <strong>{diag.code}:</strong> {diag.message}
-                  {diag.next_action && <div className="next-action">Action: {diag.next_action}</div>}
-                </li>
-              ))}
-            </ul>
+            <RelationshipDiagnostics diagnostics={diagnostics} labels={sourceLabels} />
           </div>
         )}
 

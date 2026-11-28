@@ -8,6 +8,7 @@ from backend.services.source_relationships import (
     delete_relationship,
     get_relationship,
     list_relationships,
+    preview_relationship_keys,
     profile_candidates,
     update_relationship,
     validate_relationship,
@@ -114,6 +115,18 @@ def post_relationship_validation(workspace_id, relationship_id):
     try:
         relationship = validate_relationship(workspace_id, relationship_id)
         return jsonify({"relationship": relationship}), 200
+    except SourceRelationshipError as exc:
+        return _relationship_error(exc)
+
+
+@source_relationships_bp.route(
+    "/<workspace_id>/relationship-key-preview", methods=["POST"]
+)
+def post_relationship_key_preview(workspace_id):
+    """Profile the proposed join fields without updating the workspace."""
+    try:
+        diagnostics = preview_relationship_keys(workspace_id, request.get_json(silent=True))
+        return jsonify({"diagnostics": diagnostics}), 200
     except SourceRelationshipError as exc:
         return _relationship_error(exc)
 

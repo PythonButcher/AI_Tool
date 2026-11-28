@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import KeyCheckButton, { KeyIssueRows } from './KeyCheckButton';
 import './BusinessObjectsPanel.css';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
@@ -45,11 +46,11 @@ function RecordKeyIssues({ issues }) {
     <section className="bo-rel-section" aria-label="Record key issues">
       <div className="bo-gov-warning" role="status">
         <strong>Key field checked: {issues.field}</strong>
-        <span>{issues.duplicate_rows} rows with repeated IDs · {issues.missing_or_unsupported_rows} rows with blank or unsupported IDs.</span>
+        <span>Across the full source: {issues.duplicate_rows} rows with repeated IDs · {issues.missing_or_unsupported_rows} rows with blank or unsupported IDs.</span>
       </div>
       {issues.matching_rows > 0 && (
         <>
-          <h4 className="bo-rel-title">Matching rows without a unique usable ID</h4>
+          <h4 className="bo-rel-title">Matching rows without a unique usable ID ({issues.matching_rows})</h4>
           <p className="bo-truncation-note">These matches are visible here. A unique ID is required to open record details.</p>
           <div className="bo-table-wrap">
             <table className="bo-table" aria-label="Matching rows with key issues">
@@ -613,7 +614,6 @@ const BusinessObjectsPanel = ({ workspaceId, sources = [], relationships = [], o
                     {browser.search.hasMore && <div className="bo-truncation-note" role="status">Showing first {browser.search.records.length} matching records. Refine your search for more.</div>}
                   </div>
                 )}
-                <RecordKeyIssues issues={browser.search.keyIssues} />
               </>
             )}
             {browser.selectedKey && browser.detail.status !== 'idle' && (
@@ -664,6 +664,7 @@ const BusinessObjectsPanel = ({ workspaceId, sources = [], relationships = [], o
                 )}
               </section>
             )}
+            {browser.search.status === 'ready' && <RecordKeyIssues issues={browser.search.keyIssues} />}
           </section>
         )}
 
@@ -753,6 +754,25 @@ const BusinessObjectsPanel = ({ workspaceId, sources = [], relationships = [], o
                 ))}
               </select>
             </div>
+
+            {selectedSource && recordKeyField && (
+              <KeyCheckButton
+                key={JSON.stringify([draftWorkspaceId, sourceId, recordKeyField])}
+                endpoint={`/api/data-workspaces/${encodeURIComponent(draftWorkspaceId)}/business-object-key-preview`}
+                payload={{ source_id: sourceId, record_key_field: recordKeyField }}
+                className="btn btn-secondary"
+                disabled={isSaving}
+              >
+                {({ row_count, duplicate_rows, missing_or_unsupported_rows, issue_sample }) => (
+                  <>
+                    <p>{row_count === 0 ? 'This source has no rows.' : duplicate_rows || missing_or_unsupported_rows
+                      ? `Across ${row_count} source rows: ${duplicate_rows} rows with repeated IDs · ${missing_or_unsupported_rows} rows with blank or unsupported IDs.`
+                      : `Every row has a unique usable ID (${row_count} rows).`}</p>
+                    <KeyIssueRows issues={issue_sample} issueCount={duplicate_rows + missing_or_unsupported_rows} />
+                  </>
+                )}
+              </KeyCheckButton>
+            )}
 
             <div className="bo-field">
               <label htmlFor="bo-display-field-select">Label Field (optional)</label>
