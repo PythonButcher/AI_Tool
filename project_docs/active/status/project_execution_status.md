@@ -1,25 +1,27 @@
 # Project Execution Status
 
-## Current Gate: Open a Business Object record in Analytics
+## Current Gate: Redesign field assignment in the Analytics visual builder
 
-- **Current Gate**: Open a Business Object record in Analytics
-- **Roadmap Phase**: 3
+- **Current Gate**: Redesign field assignment in the Analytics visual builder
+- **Roadmap Phase**: 1
 - **Phase State**: `IN PROGRESS`
-- **What This State Means**: Codex owns the Analytics record scope and final product acceptance remains pending.
-- **Current Milestone**: Step 1: Implement and verify exact record scope
+- **What This State Means**: The frontend handoff returned and requires Codex source and build review.
+- **Current Milestone**: Step 1: Redesign the field-assignment area
 - **Automatic Continuation**: `CONTINUE`
 - **Current Owner**: Codex
-- **Backend Readiness**: `implementation_required`
-- **Frontend Readiness**: `not_applicable`
-- **Next Action**: Codex verifies and implements the typed, server-scoped Analytics source.
-- **Required Action**: Verify Acme's order total and generic record scope before assigning the Analytics UI integration.
+- **Backend Readiness**: `backend_contract_ready`
+- **Frontend Readiness**: `backend_contract_ready`
+- **Next Action**: Antigravity redesigns field assignment using the existing Analytics builder and query contract.
+- **Required Action**: Review `project_docs/active/ai_hand_off/analytics_visual_builder.md` and its returned evidence.
 - **Active Gate**: `project_docs/active/active_gate/README.md`
 - **Authorization Record**: `project_docs/active/status/phase_authorization.json`
-- **Roadmap**: `project_docs/active/business_objects/README.md`
-- **Active Handoff**: None
-- **Latest Verification**: The [record browser engineering review](../../archive/business_object_record_browser_reviewed_2026_11_26.md) passed nine focused panel tests, a production build with warnings, and Chrome layout fixtures at 320 and 1440 pixels.
+- **Roadmap**: `project_docs/active/analytics/README.md`, Improve the existing Analytics workflow
+- **Active Handoff**: `project_docs/active/ai_hand_off/analytics_visual_builder.md` — returned for Codex review: Redesigned Analytics field assignment with live setup readiness strip, self-explaining role shelves, searchable typed field chooser, aggregation tags, and placement banner (17/17 tests, build, and harness passed).
+- **Latest Verification**: The [prior engineering review](../../archive/analytics_visual_builder_reviewed_2026_11_27.md) verified the shortcut fix. The user's browser review found field assignment still unclear.
 
-Business Object search returns matching rows with repeated or missing keys and shows the checked field and dataset row positions. Opening details still requires an exact unique key. Backend verification passed 83 focused tests, including the duplicate-key search regression. Final Business Objects browser acceptance remains pending.
+## Paused Business Object Work
+
+The [record-to-Analytics checkpoint](../../archive/business_object_record_analytics_checkpoint_2026_11_27.md) preserves the exact server scope step. The [record browser engineering review](../../archive/business_object_record_browser_reviewed_2026_11_26.md) records passing tests and layout evidence. Final Business Objects browser acceptance remains pending.
 
 ## Pending Data Tools Acceptance
 

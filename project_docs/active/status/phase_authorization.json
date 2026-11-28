@@ -1,28 +1,34 @@
 {
   "schema_version": 1,
   "authorized_work": {
-    "name": "Open a Business Object record in Analytics",
+    "name": "Redesign field assignment in the Analytics visual builder",
     "allowed_paths": [
       "project_docs/active/active_gate/README.md",
       "project_docs/active/status/project_execution_status.md",
       "project_docs/active/status/phase_authorization.json",
-      "project_docs/active/business_objects/README.md",
       "project_docs/active/ai_hand_off/README.md",
-      "project_docs/archive/business_object_record_browser_reviewed_2026_11_26.md",
+      "project_docs/active/ai_hand_off/analytics_visual_builder.md",
+      "project_docs/archive/analytics_visual_builder_reviewed_2026_11_27.md",
+      "project_docs/active/analytics/README.md",
       "project_docs/active/contracts/analytics_workspace.md",
-      "backend/services/business_object_records.py",
-      "backend/services/relationship_execution.py",
-      "backend/analytics/query.py",
-      "backend/routes/data_workspaces.py",
-      "frontend/frontend/src/features/data-model/BusinessObjectsPanel.jsx",
-      "frontend/frontend/src/features/data-model/BusinessObjectsPanel.test.jsx",
-      "tests/test_business_objects.py",
-      "tests/test_analytics_query.py"
+      "project_docs/active/business_objects/README.md",
+      "project_docs/archive/business_object_record_analytics_checkpoint_2026_11_27.md",
+      "frontend/frontend/src/features/analytics/AnalyticsBuilder.jsx",
+      "frontend/frontend/src/features/analytics/AnalyticsBuilder.css",
+      "frontend/frontend/src/features/analytics/AnalyticsVisualPicker.jsx",
+      "frontend/frontend/src/features/analytics/AnalyticsShell.test.jsx"
     ]
   },
   "authorization_state": "AUTHORIZED",
   "lifecycle_state": "IN PROGRESS",
   "user_implementation_authorization": {
+    "approved_by": "User",
+    "approved_at": "2026-11-27",
+    "evidence": "The user rejected the visual builder after reviewing the field drop area and asked for a complete redesign of field assignment.",
+    "instruction": "Redesign the field-assignment area of the existing visual builder so users can tell what to do. Preserve existing features. Gemini owns the design and frontend implementation. The Analytics roadmap retains Analysis-first navigation, Dashboard authoring, and Publishing as separate assignments.",
+    "codex_frontend_implementation_authorized": false
+  },
+  "business_object_record_analytics_authorization": {
     "approved_by": "User",
     "approved_at": "2026-11-26",
     "evidence": "User-directed implementation kickoff and follow-up reporting a definition lost when reopening a named dataset.",
@@ -526,6 +532,9 @@
     "project_docs/active/contracts/analytics_workspace.md",
     "project_docs/active/future/codex/analytics_workspace_overhaul_plan.md",
     "project_docs/active/ai_hand_off/analytics_polish.md",
+    "project_docs/active/ai_hand_off/analytics_visual_builder.md",
+    "project_docs/archive/analytics_visual_builder_reviewed_2026_11_27.md",
+    "project_docs/archive/business_object_record_analytics_checkpoint_2026_11_27.md",
     "frontend/frontend/src/**",
     "backend/services/chat_model_router.py",
     "tests/test_chat_model_router.py",

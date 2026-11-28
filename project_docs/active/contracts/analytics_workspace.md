@@ -2,7 +2,7 @@
 
 ## Ownership and boundaries
 
-Codex owns the engine and studio redesign under the user's explicit authorization. The [roadmap](../analytics/README.md) defines required scope and [delivery evidence](../analytics/capability_evidence.md) tracks verification. Analytics runs as a local, single-user workspace.
+Codex owns the query engine and this contract. The [active gate](../active_gate/README.md) and [authorization record](../status/phase_authorization.json) determine frontend ownership for each assignment. The [roadmap](../analytics/README.md) defines required scope and [delivery evidence](../analytics/capability_evidence.md) tracks verification. Analytics runs as a local, single-user workspace.
 
 ## Query API
 

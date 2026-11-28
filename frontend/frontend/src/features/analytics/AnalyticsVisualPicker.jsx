@@ -1,4 +1,4 @@
-import React, { useLayoutEffect, useRef } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   TbChartArea, TbChartAreaLine, TbChartBar, TbChartDonut, TbChartHistogram, TbChartLine,
   TbChartPie, TbChartScatter, TbCheck, TbChevronDown, TbLayoutGrid, TbNumber123, TbSparkles, TbTable,
@@ -31,6 +31,8 @@ const GROUPS = [
 ];
 
 const VISUALS = new Map(GROUPS.flatMap(group => group.visuals.map(visual => [visual[0], visual])));
+const QUICK_IDS = ['bar', 'line', 'area', 'pie', 'table', 'kpi'];
+const QUICK_VISUALS = QUICK_IDS.map(id => VISUALS.get(id));
 
 function VisualMark({ visual }) {
   const [id, , Icon] = visual;
@@ -44,30 +46,59 @@ function VisualMark({ visual }) {
 
 export default function AnalyticsVisualPicker({ view, open, onToggle, onSelect, onSuggest }) {
   const visual = VISUALS.get(view) || VISUALS.get('bar');
+  const [previewId, setPreviewId] = useState(null);
+  const root = useRef(null);
   const toggle = useRef(null);
   const gallery = useRef(null);
+  const preview = VISUALS.get(previewId) || visual;
+
   useLayoutEffect(() => {
     if (open) gallery.current?.querySelector('button[aria-pressed="true"]')?.focus({ preventScroll: true });
+    else setPreviewId(null);
   }, [open]);
 
-  return <div className="analytics-visual-picker" onKeyDown={event => {
+  useEffect(() => {
+    if (!open) return undefined;
+    const dismiss = event => {
+      if (!root.current?.contains(event.target)) onToggle();
+    };
+    document.addEventListener('pointerdown', dismiss);
+    return () => document.removeEventListener('pointerdown', dismiss);
+  }, [open, onToggle]);
+
+  return <div ref={root} className="analytics-visual-picker" onKeyDown={event => {
     if (event.key === 'Escape' && open) {
       event.stopPropagation();
       onToggle();
       toggle.current?.focus();
     }
   }}>
+    <div className="analytics-section-bar">
+      <span className="analytics-step-index" aria-hidden="true">01</span>
+      <h3>Visualization</h3>
+      <button type="button" className="analytics-author-link" onClick={() => { onSuggest(); toggle.current?.focus({ preventScroll: true }); }}>
+        <TbSparkles aria-hidden="true" /> Suggest from fields
+      </button>
+    </div>
     <button type="button" className="analytics-visual-selected" ref={toggle} onClick={onToggle}
       aria-label={`Change visual, current visual is ${visual[1]}`} aria-expanded={open}>
       <VisualMark visual={visual} />
-      <span className="analytics-visual-label"><small>Visualization</small><strong>{visual[1]}</strong></span>
-      <span className="analytics-visual-change">Change <TbChevronDown aria-hidden="true" /></span>
+      <span className="analytics-visual-label"><strong>{visual[1]}</strong><small>{visual[3]}</small></span>
+      <span className="analytics-visual-change">{open ? 'Close' : 'All 15'} <TbChevronDown aria-hidden="true" /></span>
     </button>
-    {open && <div ref={gallery} className="analytics-visual-gallery" aria-label="Visual gallery">
+    {!open && <div className="analytics-visual-quick" role="group" aria-label="Quick visual switcher">
+      {QUICK_VISUALS.map(type => (
+        <button key={type[0]} type="button" title={type[3]} aria-pressed={type[0] === view} onClick={() => onSelect(type[0])}>
+          <VisualMark visual={type} /><span>{type[1]}</span>
+        </button>
+      ))}
+    </div>}
+    {open && <div ref={gallery} className="analytics-visual-gallery" aria-label="Visual gallery" onMouseLeave={() => setPreviewId(null)}>
       {GROUPS.map(group => <section key={group.label} aria-label={group.label}>
         <h3>{group.label}</h3>
         <div className="analytics-visual-grid">
           {group.visuals.map(type => <button key={type[0]} type="button" title={type[3]} aria-pressed={type[0] === view}
+            onMouseEnter={() => setPreviewId(type[0])} onFocus={() => setPreviewId(type[0])}
             onClick={() => { onSelect(type[0]); toggle.current?.focus({ preventScroll: true }); }}>
             <VisualMark visual={type} />
             <span>{type[1]}</span>
@@ -75,9 +106,7 @@ export default function AnalyticsVisualPicker({ view, open, onToggle, onSelect, 
           </button>)}
         </div>
       </section>)}
-      <button type="button" className="analytics-author-link" onClick={() => { onSuggest(); toggle.current?.focus({ preventScroll: true }); }}>
-        <TbSparkles aria-hidden="true" /> Suggest from fields
-      </button>
+      <p className="analytics-visual-preview"><strong>{preview[1]}</strong><span>{preview[3]}</span></p>
     </div>}
   </div>;
 }

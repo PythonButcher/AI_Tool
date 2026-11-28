@@ -1,50 +1,44 @@
-Goal: Open a Business Object record in a new Analytics analysis scoped to that exact record.
+Goal: Redesign field assignment in the existing Analytics visual builder so users can tell what to place where.
 
 ## User Outcome
 
-A user can open a selected Business Object record in Analytics, see its name and relationship scope, and group and measure the associated rows. The analysis they were editing stays available.
+A user can tell which fields a visual needs, assign or change them directly, and see when the visual is ready to run. The builder keeps its chart types, advanced controls, and customizable workbench.
 
 ## Scope
 
-**Current Step**: Step 1: Implement and verify exact record scope
+**Current Step**: Step 1: Redesign the field-assignment area
 
-**Target Files**: `backend/services/business_object_records.py`, `backend/services/relationship_execution.py`, `backend/analytics/query.py`, `backend/routes/data_workspaces.py`, `tests/test_business_objects.py`, `tests/test_analytics_query.py`, the Business Objects panel and its focused tests, and the Business Objects and Analytics contracts.
+**Target Files**: AnalyticsBuilder.jsx, AnalyticsBuilder.css, AnalyticsVisualPicker.jsx, and AnalyticsShell.test.jsx, as listed in the [frontend handoff](../ai_hand_off/analytics_visual_builder.md).
 
-**Step Acceptance**: Resolve the saved workspace, object, and typed key on the server. Restrict the analysis to that record and its selected, verified relationships. Use the object source as the record anchor even when it is a lookup source. Refuse changed, missing, ambiguous, or blocked scope visibly.
+**Step Acceptance**: Field assignment has a clear starting point. The visual's field roles, compatible choices, current assignments, and next action are understandable before and after placement.
 
-Search must surface duplicate or missing key values without blocking unrelated usable records. Show the configured field and affected matching row positions in the record browser. Ambiguous identities cannot open record detail or Analytics.
+**Step Verification**: Check direct selection and editing, keyboard and drag interaction, invalid placement, and query preservation in the focused Analytics suite. Run the production build.
 
-**Step Verification**: Exercise the normal Analytics query endpoint with Acme and its Orders, Equipment and Maintenance, a second customer with excluded orders, and stale or denied scope. Reconcile an Acme grouped order sum of 20 to the selected order rows.
+**Next Step**: Step 2: Review the redesigned field-assignment experience
 
-**Next Step**: Step 2: Connect the selected record to a new Analytics draft
+**Continuation Rule**: WAIT_FOR_AGENT. Antigravity owns frontend design and implementation.
 
-**Continuation Rule**: CONTINUE through the backend scope and focused verification.
+**Stop Condition**: Return the changed files, verification results, and a brief description of the redesigned workflow to Codex.
 
-**Stop Condition**: Transfer ownership through one bounded frontend handoff once the Analytics record source contract and failure behavior are verified.
-
-- [ ] **Step 1: Implement and verify exact record scope** — [IN PROGRESS]
-- [ ] **Step 2: Connect the selected record to a new Analytics draft** — [PENDING]
-- [ ] **Step 3: Verify the complete workflow** — [PENDING]
+- [ ] **Step 1: Redesign the field-assignment area** — [IN PROGRESS]
+- [ ] **Step 2: Review the redesigned field-assignment experience** — [PENDING]
 
 ## Contracts
 
-- [Business Objects](../business_objects/README.md)
+- [Analytics workflow roadmap](../analytics/README.md#improve-the-existing-analytics-workflow)
 - [Analytics workspace](../contracts/analytics_workspace.md)
-- [Workspace identity and scope](../contracts/multiple_data_source_workspace.md)
-- [Relationship execution](../contracts/multiple_data_source_relationships.md)
-- [Dataset governance](../contracts/data_catalog_lineage.md)
 
 ## Acceptance
 
-Acme opens with a visible record identity and group scope. Its total matches only Acme's orders. Equipment uses the same path with its own key and Maintenance relationship. The current Analytics draft remains available, and invalid scope produces a visible refusal.
+The field-assignment area helps users understand the visual's inputs, choose where a field goes, and see what remains to do. Pointer and keyboard actions work at compact widths. Existing visual types, query behavior, and workbench controls remain usable.
 
 ## Verification
 
-- `python -m pytest -q tests/test_analytics_query.py tests/test_business_objects.py tests/test_relationship_execution.py tests/test_saved_datasets.py`
-- `python -m py_compile backend/analytics/query.py backend/services/business_object_records.py backend/services/relationship_execution.py backend/routes/data_workspaces.py`
-- `python .codex/hooks/ci_harness_check.py`
+- `npm --prefix frontend/frontend test -- --watchAll=false --runInBand AnalyticsShell.test.jsx`
+- `npm --prefix frontend/frontend run build`
+- `python .codex/hooks/agent_harness_check.py`
 - `git diff --check`
 
 ## Owner And Control Return
 
-Codex owns the backend scope and tests. Antigravity takes the frontend integration from a verified contract. The user owns final browser acceptance in chat.
+Antigravity owns the redesign under the [frontend handoff](../ai_hand_off/analytics_visual_builder.md). Codex reviews the return. The user owns the browser decision in chat.

@@ -361,3 +361,93 @@ test('Change Explorer keeps its result across drawer sections and opens an exact
   const edited = fetch.mock.calls.filter(([url, options]) => url.endsWith('/query') && !JSON.parse(options.body).metadata_only).pop()[1];
   expect(JSON.parse(edited.body).query.filters.rules).toEqual([{ field: 'region', operator: 'contains', value: 'East' }]);
 });
+
+test('visual builder supports direct well field menus, double-click quick assign, and scannable visual switching', async () => {
+  mount();
+  const salesField = await screen.findByRole('button', { name: 'Select field sales' });
+  const category = within(screen.getByRole('region', { name: 'Category axis' }));
+  fireEvent.click(category.getByRole('button', { name: 'Add field to Category axis' }));
+  const menu = category.getByRole('group', { name: 'Choose field for Category axis' });
+  fireEvent.keyDown(menu, { key: 'Escape' });
+  expect(category.queryByRole('group', { name: 'Choose field for Category axis' })).not.toBeInTheDocument();
+
+  fireEvent.click(category.getByRole('button', { name: 'Add field to Category axis' }));
+  fireEvent.click(category.getByRole('button', { name: 'Assign region to Category axis' }));
+  expect(category.getByText('region')).toBeVisible();
+
+  fireEvent.doubleClick(salesField);
+  expect(within(screen.getByRole('region', { name: 'Values' })).getByRole('button', { name: 'Configure measure sales' })).toBeVisible();
+
+  const visualTrigger = screen.getByRole('button', { name: 'Change visual, current visual is Column' });
+  expect(visualTrigger).toHaveTextContent('Compare values across categories');
+  fireEvent.click(visualTrigger);
+  const gallery = within(screen.getByLabelText('Visual gallery'));
+  fireEvent.focus(gallery.getByRole('button', { name: 'Line' }));
+  expect(screen.getByText('Track values over an ordered axis')).toBeVisible();
+  fireEvent.pointerDown(document.body);
+  expect(screen.queryByLabelText('Visual gallery')).not.toBeInTheDocument();
+
+  fireEvent.click(visualTrigger);
+  fireEvent.click(screen.getByRole('button', { name: 'KPI' }));
+  expect(screen.getByRole('button', { name: 'Change visual, current visual is KPI' })).toBeVisible();
+  fireEvent.click(screen.getByRole('button', { name: 'Change visual, current visual is KPI' }));
+  fireEvent.click(screen.getByRole('button', { name: /Suggest from fields/ }));
+  expect(screen.getByRole('button', { name: 'Change visual, current visual is Column' })).toBeVisible();
+});
+
+test('repeating quick assignment keeps a grouped field out of measures', async () => {
+  mount();
+  const regionField = await screen.findByRole('button', { name: 'Select field region' });
+  fireEvent.doubleClick(regionField);
+  fireEvent.doubleClick(regionField);
+  expect(within(screen.getByRole('region', { name: 'Category axis' })).getByText('region')).toBeVisible();
+  expect(within(screen.getByRole('region', { name: 'Values' })).queryByRole('button', { name: 'Configure measure region' })).not.toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Run analysis' }));
+  await screen.findByText('bar:12');
+  const queryRequest = fetch.mock.calls.filter(([, options]) => options?.body && !JSON.parse(options.body).metadata_only).pop()[1];
+  expect(JSON.parse(queryRequest.body).query).toMatchObject({
+    group_by: [{ field: 'region' }],
+    measures: [{ id: 'value', label: 'Rows', aggregation: 'count_rows' }],
+  });
+});
+
+test('redesigned field assignment guides setup readiness, inline revision, and placement cancellation', async () => {
+  mount();
+  await screen.findByRole('button', { name: 'Select field sales' });
+  const category = within(screen.getByRole('region', { name: 'Category axis' }));
+  const values = within(screen.getByRole('region', { name: 'Values' }));
+  expect(category.getByText('Optional')).toBeVisible();
+  expect(category.getByText('Splits bars along the horizontal axis')).toBeVisible();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Select field region' }));
+  expect(screen.getByText('Placing region')).toBeVisible();
+  fireEvent.click(screen.getByRole('button', { name: 'Clear field selection' }));
+  expect(screen.queryByText('Placing region')).not.toBeInTheDocument();
+
+  fireEvent.click(category.getByRole('button', { name: 'Add field to Category axis' }));
+  fireEvent.click(category.getByRole('button', { name: 'Assign region to Category axis' }));
+  fireEvent.click(values.getByRole('button', { name: 'Add field to Values' }));
+  fireEvent.click(values.getByRole('button', { name: 'Assign sales to Values' }));
+  expect(screen.getByText('Ready to run')).toBeVisible();
+  expect(screen.getByText('Row count, Sum of sales by region')).toBeVisible();
+
+  fireEvent.click(values.getByRole('button', { name: 'Configure measure sales' }));
+  fireEvent.change(values.getByLabelText('Measure 2 aggregation'), { target: { value: 'avg' } });
+  expect(screen.getByText('Row count, Average of sales by region')).toBeVisible();
+  fireEvent.click(values.getByRole('button', { name: 'Remove measure Rows' }));
+  fireEvent.click(values.getByRole('button', { name: 'Remove measure sales' }));
+  expect(values.getByText('Required')).toBeVisible();
+  expect(screen.getByText('Needs at least 1 value')).toBeVisible();
+  fireEvent.click(values.getByRole('button', { name: 'Add field to Values' }));
+  fireEvent.click(values.getByRole('button', { name: 'Assign sales to Values' }));
+  expect(screen.getByText('Sum of sales by region')).toBeVisible();
+  fireEvent.click(category.getByRole('button', { name: 'Remove grouping region' }));
+  expect(category.getByText('Optional')).toBeVisible();
+
+  fireEvent.click(screen.getByRole('button', { name: /^Change visual/ }));
+  fireEvent.click(screen.getByRole('button', { name: 'Scatter' }));
+  expect(screen.getByText('Needs 1 more numeric field')).toBeVisible();
+  expect(within(screen.getByRole('region', { name: 'X axis' })).getByText('1 / 1')).toBeVisible();
+  expect(within(screen.getByRole('region', { name: 'Y axis' })).getByText('Required')).toBeVisible();
+});

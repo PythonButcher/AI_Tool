@@ -1,24 +1,38 @@
 # Analytics Product Rebuild
 
-**Direction** — Replace Explore and Business Monitoring with one substantial Analytics product. The user requires an aggressive feature and interface expansion. The catalogue below is required release scope, not optional enhancements. Migration or a navigation merge alone cannot complete this plan.
+**Direction** — Improve the existing Analytics workspace. Preserve the capabilities that brought Explore and Business Monitoring together, and make the path from a dataset to a visual, dashboard, or report easier to follow.
 
-**Execution ownership** — The user authorizes Codex to implement and verify the Analytics backend and frontend redesign directly. Status and the sole active gate record current ownership. Final browser acceptance belongs to the user.
+**Execution ownership** — The [active gate](../active_gate/README.md) and [execution status](../status/project_execution_status.md) name the current owner and authorized work. Final browser acceptance belongs to the user.
+
+## Improve the existing Analytics workflow
+
+**Analysis** is where you build, run, investigate, and save visuals. **Dashboard** is where you assemble, arrange, and monitor them. **Publishing** will be where you prepare individual visuals, dashboards, and reports for readers. Use these terms consistently in navigation and actions. Keep the existing shell, local collection, builder, query engine, and renderers. This direction governs the authoring experience and first-use order below. The feature catalogue continues to apply.
+
+| Phase | User outcome | Scope and acceptance |
+| --- | --- | --- |
+| **1 — Visual builder** | Choose a visual, see which fields it takes, and tell what to do next. | Redesign the field-assignment layout and interaction so compatible fields, placement, and assigned values are easy to understand. Keep every visual type, drag and drop, measure editing, and query options accessible. Antigravity owns the design and implementation and returns focused tests and build evidence to Codex. |
+| **2 — Analysis-first navigation** | Analysis comes before Dashboard and is the starting view for first-time users. Each view has a clear purpose. | Use Analysis then Dashboard in the shared switcher. Preserve explicit saved-view restoration, migrated dashboards, and destination-specific launches. Make the current object and creation action clear. Consolidate duplicate menu entries around the task they perform and retain access to every existing tool. Antigravity implements after Codex verifies the builder return. |
+| **3 — Add existing visuals to a dashboard** | Choose a saved visual from Dashboard and return directly to the board with the new tile selected. | Offer **Add existing visual** in the empty board and board toolbar. Reuse saved analyses and the existing tile storage path. Copy the selected definition with its exact source, filters, and presentation. Any cached result must match the definition. A live definition without a matching cached result uses normal tile execution and exposes source or query errors. Preserve the source analysis, the board layout, and the working draft. Codex verifies copy behavior and persistence before a bounded Antigravity assignment. |
+| **4 — Create visuals on a dashboard** | Build and preview a chart, table, or KPI from Dashboard, then add it to that board in one step. | Reuse the same builder and query path in a board-scoped editor. **Add to dashboard** commits the current successful result to the board that opened the editor. Cancel or a failed run preserves the board and the Analysis draft. Existing tile format controls stay available. Keep **Investigate in Analysis** as an explicit separate action with origin-aware return and update behavior. Codex verifies the editor and write boundaries before handing off the React work. |
+| **5 — Prepare for Publishing** | Open a Publishing preview from a visual, dashboard, or report and see what will be handed off when the portal is ready. | Reuse the existing Publishing Portal destination concept. Define a local preview input with an asset kind, title, and stable saved reference where available. Reserve visual, dashboard, and report kinds. Add an honest availability state with an explicit return to the originating asset. Keep local CSV, PNG, PDF/print and JSON actions available. The preview sends no data, creates no publication or link, and claims no audience or access control. Use the [deferred portal plan](../future/codex/datastream_publishing_portal_standalone_application_build_plan.md#from-analytics-to-publishing) when defining the future release contract. Codex defines the preview boundary before assigning Antigravity the UI. |
+
+Each phase uses one active assignment at a time. Codex reviews the return before assigning the next work. Engineering verification covers fresh and restored views, a dashboard with existing tiles, independent drafts, live and snapshot behavior, errors, and both shared themes. The user owns browser acceptance in chat.
 
 ## Product outcome
 
 [Change Explorer](change_explorer.md) extends the Analytics tools drawer with metric-change attribution and segment investigation.
 
-Replace both old destinations with one **Analytics** entry and a full-width workbench. Dashboards and analyses are objects inside the same workspace, with a shared library, dataset selector, query engine, filters and inspector. Users move from monitoring to investigation to reporting without relaunching windows, rebuilding charts or reselecting data.
+Keep one **Analytics** entry and a full-width workbench. Dashboards and analyses are objects inside the same workspace, with a shared library, dataset selector, query engine, filters and inspector. Users move between authoring, monitoring, investigation, and reporting inside the workspace.
 
-Provide a compact shared header, searchable library/fields rail, large dashboard or analysis canvas, contextual inspector and expandable results table. A first visit offers a useful dashboard-starting workspace; return visits restore the selected object and mode. Empty states create real work. Existing dashboards survive. AI Chat and ML Studio remain separate products with direct Analytics entry points.
+Provide a compact shared header, searchable library/fields rail, large dashboard or analysis canvas, contextual inspector and expandable results table. A first visit opens Analysis. Return visits restore the selected object and mode. Empty states create real work. Existing dashboards survive. AI Chat and ML Studio remain separate products with direct Analytics entry points.
 
 Retire Explore & Visualize and Business Monitoring as primary landing pages. Renaming them, placing them behind two tabs, or retaining floating windows as the main authoring experience fails this plan. Existing renderers may be reused behind the new application. Ordinary field analysis must work without semantic-model setup; governed metrics retain their authoritative definitions.
 
-## Starting point in the code
+## Existing authoring path
 
-- [SideBar.jsx](../../../frontend/frontend/src/components/layout/SideBar.jsx), [DestinationHome.jsx](../../../frontend/frontend/src/components/layout/DestinationHome.jsx), and [CanvasContainer.jsx](../../../frontend/frontend/src/components/layout/CanvasContainer.jsx) expose separate destinations. Explore offers Gallery and AI Chart. Dashboards uses the Business Monitoring home and offers KPI and Chart creation.
-- [SmartChartWindow.jsx](../../../frontend/frontend/src/features/charts/SmartChartWindow.jsx) exposes a Pin action, but inspected source calls updateDashboardItem with a new ID and inserts nothing. Repair this interaction. [AIShell.jsx](../../../frontend/frontend/src/features/ai/AIShell.jsx) saves AI results through the dashboard context. Both must target an explicitly selected dashboard.
-- [WindowContext.jsx](../../../frontend/frontend/src/context/WindowContext.jsx) and the [dashboard canvas contract](../contracts/dashboard_canvas_state.md) define the single local dashboard. [Semantic metric resolution](../../../backend/routes/semantic_metrics.py) is a baseline execution path; verify rather than assume its capabilities.
+- [AnalyticsShell.jsx](../../../frontend/frontend/src/features/analytics/AnalyticsShell.jsx) owns the working analysis draft, selected board, and current query result. The toolbar lists Dashboard first and [analyticsStorage.js](../../../frontend/frontend/src/features/analytics/analyticsStorage.js) defaults new collections to Dashboard.
+- [AnalyticsDashboard.jsx](../../../frontend/frontend/src/features/analytics/AnalyticsDashboard.jsx) sends new chart and KPI actions through the shell's `startAnalysis` callback. It opens Analysis, where the user can run the draft and then use `pin` to insert a copy into a dashboard. Notes and sections are added directly on the board.
+- [AnalyticsBuilder.jsx](../../../frontend/frontend/src/features/analytics/AnalyticsBuilder.jsx) and [AnalyticsVisualPicker.jsx](../../../frontend/frontend/src/features/analytics/AnalyticsVisualPicker.jsx) already implement field assignment and visual types. The [query and collection contract](../contracts/analytics_workspace.md) covers the backend request, local persistence, AI integration, and existing exports.
 
 ## Required feature catalogue
 
@@ -52,7 +66,7 @@ The main canvas receives most of the screen. The header contains the current obj
 
 Dashboard mode provides a working board with edit/view/presentation controls. Analysis mode provides a visual builder with measure, dimension, time and filter roles and an immediate chart/table result area. They share selection, source context, style language and saved objects. Opening a tile for investigation changes the working object inside this shell, retains origin/breadcrumb context and offers separate Save analysis, Pin copy and Update original actions.
 
-First use offers blank or template dashboard creation and Start analysis from a dataset. Templates must generate editable real objects, not static screenshots or invented business results. Returning users see their actual saved work and recoverable drafts. The library is a functional navigation tool with search, favorites and recents, not a decorative row of cards.
+First use opens Analysis with a dataset selection and a visible path to the builder. Dashboard retains blank and template creation. Templates must generate editable real objects. Returning users see their actual saved work and recoverable drafts. The library provides search, favorites, and recents.
 
 Use the existing themes as the foundation but redesign spacing, typography, hierarchy, chart framing, controls and panel composition throughout Analytics. Match the visual quality of a dedicated analytics application. Both themes, keyboard focus, field selection, validation, pending queries, save errors and empty states are part of the design requirement.
 
@@ -66,7 +80,7 @@ Define typed versioned query/result contracts for multiple measures, pivots, cal
 
 Codex must verify current source before assuming any earlier backend patch or migration exists. Extend contracts and tests before dependent UI implementation. Required features unsupported today remain implementation obligations; they are not automatically deferred. Preserve AI Chat, ML Studio, Data Hub and Data Model outside the replaced Analytics paths.
 
-## Implementation sequence
+## Foundational implementation sequence
 
 ### 1. Establish the Analytics architecture and execution contracts
 

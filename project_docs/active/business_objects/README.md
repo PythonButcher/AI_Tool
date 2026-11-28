@@ -8,6 +8,8 @@ Customer with Orders and Equipment with Maintenance are useful verification exam
 
 The [active gate](../active_gate/README.md) names the one executable step. [Execution status](../status/project_execution_status.md) records readiness and ownership. This product area implements the first capability in the [three-project platform strategy](../future/codex/three_project_data_platform_review.md).
 
+The [record-to-Analytics checkpoint](../../archive/business_object_record_analytics_checkpoint_2026_11_27.md) preserves the remaining Phase 3 work while the Analytics authoring improvements have the active gate.
+
 ## Reuse existing Devstream behavior
 
 Data Hub remains the place to find datasets. Data Model already defines, validates, and activates relationships within a workspace. Business Objects attach a name and record identity to those sources and relationships. Analytics already accepts an explicit server-verified `analysis_context`; its default workspace selection starts with the primary dataset. The record handoff must request the exact validated scope, preserve the previous analysis draft, and make the selected object and record visible in the new analysis. [Source workspace contract](../contracts/multiple_data_source_workspace.md) · [Relationship contract](../contracts/multiple_data_source_relationships.md) · [Analytics contract](../contracts/analytics_workspace.md)
